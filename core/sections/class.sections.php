@@ -48,12 +48,7 @@ class sections extends common {
 	* Si se le pasa sólo el tipo, se espera un listado (modo list)
 	* Si se le pasa sólo el section_id, se espera una ficha (modo edit)
 	*/
-	private function __construct($ar_locators, $search_query_object, $caller_tipo, $modo, $lang) {
-
-		if(SHOW_DEBUG===true) {
-			#$section_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
-			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$modo.'_'.$ar_locators.'_'.microtime(1)]=microtime(1);
-		}
+	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $modo, string $lang) {
 
 		// Set general vars
 			$this->ar_locators			= $ar_locators;
@@ -99,7 +94,7 @@ class sections extends common {
 	* GET_AR_SECTION_TIPO : alias of $this->get_tipo()
 	* @return array $this->ar_section_tipo
 	*/
-	public function get_ar_section_tipo() {
+	public function get_ar_section_tipo() : array {
 
 		// already calculated case
 			if (isset($this->ar_section_tipo)) {
@@ -148,7 +143,7 @@ class sections extends common {
 	* GET_AR_ALL_SECTION_ID
 	* @return array $ar_all_section_id
 	*/
-	public function get_ar_all_section_id() {
+	public function get_ar_all_section_id() : array {
 
 		$ar_all_section_id = isset($this->search_query_object)
 			? (function($sqo){

@@ -47,24 +47,15 @@ class button_common extends common {
 	* GET_HTML
 	* return include file __class__.php
 	*/
-	public function get_html() {
+		// public function get_html() {
 
-		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
-		}
+		// 	ob_start();
+		// 	include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() . '.php' );
+		// 	$html =  ob_get_clean();
 
-		ob_start();
-		include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() . '.php' );
-		$html =  ob_get_clean();
-
-		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
-		}
-
-		return $html;
-	}//end get_html
+		// 	return $html;
+		// }//end get_html
 
 
 
 }//end button_common
-?>

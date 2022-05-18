@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time = hrtime(true);
 include( DEDALO_CONFIG_PATH.'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
@@ -8,7 +8,7 @@ common::trigger_manager();
 
 /**
 * DEL
-* @return 
+* @return
 */
 function Del($json_data) {
 	global $start_time;
@@ -59,7 +59,7 @@ function Del($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end Del
 

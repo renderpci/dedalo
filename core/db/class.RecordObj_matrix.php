@@ -279,7 +279,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	* @return int $id
 	*/
 	public function Save() {
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		// test_can_save
 			$test_can_save = $this->test_can_save();
@@ -324,7 +324,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			$this->time_machine_last_id = $this->save_time_machine();	// Está desactiva de momento
 			if(SHOW_DEBUG===true) {
 				#error_log("time_machine_last_id: ".$this->time_machine_last_id);
-				#$total_time   = round(microtime(1)-$start_time,4);
+				#$total_time   = round(start_time()-$start_time,4);
 				#error_log("Save $this->tipo : $total_time sec");
 			}
 		}

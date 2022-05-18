@@ -92,7 +92,7 @@
 	}
 
 	if(SHOW_DEBUG) {
-		echo "<span style=\"position:absolute;right:30px\">".exec_time($start_time)."</span>";
+		echo "<span style=\"position:absolute;right:30px\">".exec_time_unit($start_time)."</span>";
 	}
 
 	#print "<pre>";

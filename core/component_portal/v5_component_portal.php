@@ -10,7 +10,7 @@
 	* @return string | null
 	*/
 	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
-		$start_time = microtime(1);
+		$start_time = start_time();
 
 		$options = new stdClass();
 			$options->lang 				= $lang;
@@ -26,7 +26,7 @@
 		*/
 		$get_valor_from_ar_locators = function ( $request_options ) {
 
-			$start_time = microtime(1);
+			$start_time = start_time();
 			$valor_from_ar_locators	= new stdClass();
 
 			$options = new stdClass();
@@ -139,7 +139,7 @@
 			if(SHOW_DEBUG===true) {
 				$html_info='';
 				$limit_time=SLOW_QUERY_MS/100;
-				$total_list_time = round(microtime(1)-$start_time,3);
+				$total_list_time = round(start_time()-$start_time,3);
 				$style='';
 				if ($total_list_time>$limit_time || $total_list_time>0.020) {
 					$style = "color:red";
@@ -161,7 +161,7 @@
 		$valor_from_ar_locators 	= $get_valor_from_ar_locators($options);
 
 		if(SHOW_DEBUG===true) {
-			#$total_list_time = round(microtime(1)-$start_time,3);
+			#$total_list_time = round(start_time()-$start_time,3);
 			#$bt = debug_backtrace();
 			#dump($bt, ' bt');
 			#debug_log(__METHOD__." WARNING CALLED GET VALOR IN COMPONENT PORTAL !! ({$total_list_time}ms) ".$this->tipo, logger::WARNING);

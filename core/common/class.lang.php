@@ -129,7 +129,7 @@ class lang {
 	public static function get_name_from_code( string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true ) : string {
 
 		if(SHOW_DEBUG===true) {
-			$start_time = microtime(1);
+			$start_time = start_time();
 		}
 
 		# NO LANG : When lang code is lg-nolan, null is returned
@@ -144,7 +144,7 @@ class lang {
 
 		# RESOLVE
 		$result = lang::resolve( $code, $lang );
-			#dump($total=round(microtime(1)-$start_time,3)*1000, '$total=round(microtime(1)-$start_time,3)*1000 ++ '.to_string($result));
+			#dump($total=round(start_time()-$start_time,3)*1000, '$total=round(start_time()-$start_time,3)*1000 ++ '.to_string($result));
 
 		# NOT FOUNDED NAME
 		if(!isset($result->names)) {
@@ -175,7 +175,7 @@ class lang {
 			}
 		}
 		#dump($name, ' name ++ '.to_string());
-		#dump($total=round(microtime(1)-$start_time,3)*1000, '$total=round(microtime(1)-$start_time,3)*1000 ++ '.to_string());
+		#dump($total=round(start_time()-$start_time,3)*1000, '$total=round(start_time()-$start_time,3)*1000 ++ '.to_string());
 
 		if($from_cache===true){
 			$_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid] = $name;

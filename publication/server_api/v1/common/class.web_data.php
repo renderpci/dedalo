@@ -93,7 +93,7 @@ class web_data {
 				$response->result = false;
 				$response->msg    = "Error on get data";
 
-			$start_time = microtime(1);
+			$start_time = start_time();
 
 			# Options defaults
 			$sql_options = new stdClass();
@@ -328,7 +328,7 @@ class web_data {
 				$response->debug['count_query']= $count_query;
 				}
 				$response->debug['strQuery']= $strQuery;
-				$response->debug['time'] 	= round(microtime(1)-$start_time,3);
+				$response->debug['time'] 	= round(start_time()-$start_time,3);
 				#error_log("strQuery: ".$strQuery);
 			}
 			# Fixed properties
@@ -659,7 +659,7 @@ class web_data {
 		*//* UNUSED NOW !!
 		public static function get_data($request_options) {
 
-			$start_time = microtime(1);
+			$start_time = start_time();
 
 			$WORKING_MODE = WORKING_MODE;	//'remote';
 
@@ -712,7 +712,7 @@ class web_data {
 			#error_log( to_string($dedalo_data->debug) );
 
 			$dedalo_data->debug = isset($dedalo_data->debug) && is_object($dedalo_data->debug) ? $dedalo_data->debug : new stdClass();
-			$dedalo_data->debug->total_time = round(microtime(1)-$start_time,3);
+			$dedalo_data->debug->total_time = round(start_time()-$start_time,3);
 
 			return (object)$dedalo_data;
 		}//end get_data
@@ -2608,7 +2608,7 @@ class web_data {
 		public static function get_thesaurus_parents( $request_options ) {
 			global $table_thesaurus_map; // From server api config
 
-			$start_time = microtime(1);
+			$start_time = start_time();
 
 			$options = new stdClass();
 				$options->term_id  		= null;
@@ -2673,7 +2673,7 @@ class web_data {
 				$response->result 	= $ar_parent;
 				$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
 				if(SHOW_DEBUG===true) {
-					$response->debug['time'] = round(microtime(1)-$start_time,3);
+					$response->debug['time'] = round(start_time()-$start_time,3);
 				}
 
 

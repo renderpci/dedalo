@@ -122,7 +122,7 @@ abstract class label {
 	*/
 	protected static function set_static_label_vars( $lang=DEDALO_APPLICATION_LANG ) {
 
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		// lang valencian fallback to catalan to unify
 			if ($lang==='lg-vlca') {
@@ -151,7 +151,6 @@ abstract class label {
 		}
 
 		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated labels ".count($ar_term));
 			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms', logger::WARNING);
 		}
@@ -168,22 +167,21 @@ abstract class label {
 	*/
 	public static function get_terminoID_from_label( $label ) {
 
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+		}
 
 		$terminoID = null;
 
-		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);
-		}
 
 		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
 			#dump($ar_terminoID_by_modelo_name,'$ar_terminoID_by_modelo_name',"label: label ");
 
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
 
-			$RecordObj_dd 	= new RecordObj_dd($current_terminoID);
-			$properties 	= $RecordObj_dd->get_properties();
-			$vars_obj 		= json_decode($properties);
+			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
+			$properties		= $RecordObj_dd->get_properties();
+			$vars_obj		= json_decode($properties);
 
 			# No data in field 'properties'
 			if(empty($vars_obj) || empty($vars_obj->name)) {
@@ -198,7 +196,6 @@ abstract class label {
 		}
 
 		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
 			debug_log(__METHOD__." Total  ".exec_time_unit($start_time,'ms').' ms');
 		}

@@ -133,7 +133,7 @@ class component_layout extends component_common {
 
 
 		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$section_tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$section_tipo.'_'.$modo.'_'.start_time()]=start_time();
 		}
 
 		# Datos de mapeo (Forzamos NULL de momento..)
@@ -392,7 +392,7 @@ class component_layout extends component_common {
 		}
 		#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo");
 		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$modo.'_'.start_time()]=start_time();
 		}
 
 		#$_SESSION['dedalo']['config']['get_layout_map_from_section'][$cache_uid] = $layout_map;

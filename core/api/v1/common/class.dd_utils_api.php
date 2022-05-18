@@ -298,7 +298,7 @@ class dd_utils_api {
 				$response->msg	.= $res_export_structure->msg;
 				# Exec time
 				$export_exec_time	= exec_time_unit($start_time,'ms')." ms";
-				$prev_time			= microtime(1);
+				$prev_time			= start_time();
 			}
 
 		# IMPORT

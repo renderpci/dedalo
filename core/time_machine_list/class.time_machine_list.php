@@ -22,7 +22,7 @@ class time_machine_list extends common {
 	/**
 	* CONSTRUCT
 	*/
-	public function __construct($tipo, $section_id, $section_tipo, $modo='edit') {
+	public function __construct(string $tipo, $section_id, string $section_tipo, string $modo='edit') {
 
 		$this->tipo			= $tipo;
 		$this->section_id	= $section_id;
@@ -34,13 +34,14 @@ class time_machine_list extends common {
 	}//end __construct
 
 
+
 	/**
 	* GET_TIME_MACHINE_RECORDS
 	* Get the last time_machine records of the current section
 	* @see search_development2::calculate_inverse_locator
 	* @return array $inverse_locators
 	*/
-	public function get_time_machine_list_obj($limit=1, $offset=0, $count=false) {
+	public function get_time_machine_list_obj($limit=1, $offset=0, $count=false) : array {
 
 		if (empty($this->section_id)) {
 			# Section not exists yet. Return empty array
@@ -183,7 +184,7 @@ class time_machine_list extends common {
 	* GET_AR_DATA
 	* @return array of component objects $data
 	*/
-	public function get_ar_data($locator, $ar_components, $value_resolved=false){
+	public function get_ar_data(object $locator, array $ar_components, bool $value_resolved=false) : array {
 
 		$data = [];
 
@@ -231,17 +232,8 @@ class time_machine_list extends common {
 	*/
 	public function get_json() : object {
 
-		if(SHOW_DEBUG===true) $start_time = start_time();
-
-			#dump(DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php', '++++++++++++++++++++');
-
-			# Class name is called class (ex. component_input_text), not this class (common)
-			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
-
-		if(SHOW_DEBUG===true) {
-			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
+		# Class name is called class (ex. component_input_text), not this class (common)
+		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
 
 		return $json;
 	}//end get_json

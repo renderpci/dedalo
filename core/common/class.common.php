@@ -693,17 +693,10 @@ abstract class common {
 	*/
 		// public function get_html_DES() {
 
-		// 	if(SHOW_DEBUG===true) $start_time = start_time();
-
 		// 		# Class name is called class (ex. component_input_text), not this class (common)
 		// 		ob_start();
 		// 		include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
 		// 		$html = ob_get_clean();
-
-		// 	if(SHOW_DEBUG===true) {
-		// 		#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-		// 		// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		// 	}
 
 		// 	return (string)$html;
 		// }//end get_html
@@ -1334,8 +1327,7 @@ abstract class common {
 	public function get_structure_context(int $permissions=0, bool $add_request_config=false, callable $callback=null) : object {
 
 		if(SHOW_DEBUG===true) {
-			// $start_hrtime = start_hrtime();
-			$start_time=microtime(1);
+			$start_time = start_time();
 		}
 
 		// short vars
@@ -1620,7 +1612,7 @@ abstract class common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$start_time=microtime(1);
+				$start_time = start_time();
 
 				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
 				$log = "------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
@@ -2834,7 +2826,7 @@ abstract class common {
 	* @return object $query_object
 	*/
 	public static function build_search_query_object( object $request_options ) : object {
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		$options = new stdClass();
 			$options->q						= null;
@@ -3146,7 +3138,7 @@ abstract class common {
 	* @return array $context
 	*/
 	public static function get_section_elements_context(object $request_options) : array {
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		$options = new stdClass();
 			$options->context_type				= 'simple';

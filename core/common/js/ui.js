@@ -2536,7 +2536,6 @@ export const ui = {
 	* @return bool
 	*/
 	hilite : function(options) {
-		console.log("//// hilite options:",options);
 
 		// options
 			const hilite	= options.hilite // boll

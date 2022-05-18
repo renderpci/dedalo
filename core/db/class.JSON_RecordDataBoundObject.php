@@ -78,7 +78,7 @@ abstract class JSON_RecordDataBoundObject {
 
 		// debug info showed in footer
 			if(SHOW_DEBUG===true) {
-				$start_time=microtime(1);;
+				$start_time=start_time();
 			}
 
 		// verify mandatory vars
@@ -446,7 +446,7 @@ abstract class JSON_RecordDataBoundObject {
 					#dump(debug_backtrace()[2],' DEBUG_BACKTRACE  ') ;
 					error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery ");
 				}
-				#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.microtime(1)]=microtime(1);
+				#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.start_time()]=start_time();
 				#error_log("search_free - Loaded: $total_time_ms ms ");
 			}
 
@@ -580,8 +580,6 @@ abstract class JSON_RecordDataBoundObject {
 
 			# DEBUG
 			if(SHOW_DEBUG===true) {
-				#$totaltime = exec_time($start_time);
-				#$_SESSION['debug_content'][__METHOD__.' cache'][] = "<em> --". str_replace("\n",'',$strQuery) ."</em> [$totaltime ms]";
 				error_log(__METHOD__." --> Used cache run-in for query: $strQuery");
 			}
 
@@ -620,7 +618,7 @@ abstract class JSON_RecordDataBoundObject {
 					$total_time_ms = exec_time_unit($start_time,'ms');
 					#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
 					if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".$n_records);
-					#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.microtime(1)]=microtime(1);
+					#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.start_time()]=start_time();
 				}
 		}
 

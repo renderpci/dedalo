@@ -937,7 +937,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	#    (
 	#       [dd9] => dd296
 	#   )
-	public function get_relaciones($modo=false) {
+	public function get_relaciones($modo=false) : ?array {
 
 		#$dato = $this->relaciones;
 		$dato = parent::get_relaciones();
@@ -1036,9 +1036,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 			$ar_relaciones = $ar_terminos_relacionados;
 		}
-		#if(SHOW_DEBUG===true) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_relaciones);
-
 		#$ar_terminos_relacionados_data[$uid] = $ar_relaciones;
+
 
 		return (array)$ar_relaciones;
 	}//end get_ar_terminos_relacionados
@@ -1247,7 +1246,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$get_ar_terminoID_by_modelo_name_and_relation_data[$uid] = $result;
 
-		#if(SHOW_DEBUG===true) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $result );
 
 		return (array)$result;
 	}//end get_ar_terminoID_by_modelo_name_and_relation

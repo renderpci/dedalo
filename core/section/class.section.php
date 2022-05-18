@@ -143,7 +143,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			#$section_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
-			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);
+			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$modo.'_'.$section_id.'_'.start_time()]=start_time();
 		}
 
 		// Set general vars
@@ -176,7 +176,7 @@ class section extends common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);
+				#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.start_time()]=start_time();
 			}
 
 		return true;
@@ -253,7 +253,7 @@ class section extends common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				#$start_time = start_time();
-				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 			}
 
 
@@ -1108,7 +1108,7 @@ class section extends common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 			}
 
 
@@ -1323,7 +1323,7 @@ class section extends common {
 
 		// 	if(SHOW_DEBUG===true){
 		// 		$start_time = start_time();
-		// 		global$TIMER;$TIMER[__METHOD__.'_in_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		// 		global$TIMER;$TIMER[__METHOD__.'_in_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 		// 	}
 
 
@@ -1335,7 +1335,7 @@ class section extends common {
 
 		// 	if(SHOW_DEBUG===true) {
 		// 		#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' ' );
-		// 		global$TIMER;$TIMER[__METHOD__.'_out_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		// 		global$TIMER;$TIMER[__METHOD__.'_out_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 		// 	}
 
 		// 	return $html;
@@ -1402,7 +1402,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 		}
 
 		$parent  = intval($this->get_section_id());
@@ -1431,7 +1431,7 @@ class section extends common {
 		if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
 
 			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 				#debug_log(__METHOD__." Returned '$modelo_name_required' for tipo:$this->tipo FROM STATIC CACHE");
 			}
 			return $ar_children_objects_by_modelo_name_in_section[$uid];
@@ -1500,16 +1500,9 @@ class section extends common {
 				}
 		}
 
-
-		# STORE CACHE DATA
+		// STORE CACHE DATA
 		$ar_children_objects_by_modelo_name_in_section[$uid] = $ar_section_obj ;
 
-
-		if(SHOW_DEBUG===true) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__,' - modelo_name_required:'.$modelo_name_required ." - ar_section_obj count:". count($ar_section_obj) );
-			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-			#debug_log( __METHOD__." get_ar_children_objects_by_modelo_name_in_section: ".json_encode($modelo_name_required).' '. exec_time($start_time,'ms') );
-		}
 
 		return $ar_section_obj;
 	}//end get_ar_children_objects_by_modelo_name_in_section
@@ -1787,7 +1780,7 @@ class section extends common {
 		// 	if (isset($this->ar_buttons)) return $this->ar_buttons;
 
 		// 	if(SHOW_DEBUG===true) {
-		// 		global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		// 		global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 		// 	}
 
 		// 	# SECTION_REAL_TIPO
@@ -1835,7 +1828,7 @@ class section extends common {
 		// 	}
 
 		// 	if(SHOW_DEBUG===true) {
-		// 		global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		// 		global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
 		// 	}
 
 		// 	return $this->ar_buttons;
@@ -3131,7 +3124,7 @@ class section extends common {
 	*
 	*	public function build_search_query_object_DES( $request_options=array() ) {
 	*
-	*		$start_time=microtime(1);
+	*		$start_time=start_time();
 	*
 	*		$options = new stdClass();
 	*			$options->q 	 			= null;

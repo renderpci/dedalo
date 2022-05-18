@@ -1,15 +1,15 @@
 <?php
-$start_time=microtime(1);
-	
+$start_time = hrtime(true);
+
 	// Turn off output buffering
 	ini_set('output_buffering', 'off');
 	// Turn off PHP output compression
 	// ini_set('zlib.output_compression', false);
-			
+
 	//Flush (send) the output buffer and turn off output buffering
 	//ob_end_flush();
 	// while (@ob_end_flush());
-			
+
 	// Implicitly flush the buffer(s)
 	// ini_set('implicit_flush', true);
 	// ob_implicit_flush(true);
@@ -63,7 +63,7 @@ $start_time=microtime(1);
 			session_write_close();
 		}
 
-		
+
 
 	// dd_dd_manager
 		// try {
@@ -77,7 +77,7 @@ $start_time=microtime(1);
 
 
 		// } catch (Throwable $e) { // For PHP 7
-			
+
 		// 	$result = new stdClass();
 		// 		$result->result	= false;
 		// 		$result->msg	= (SHOW_DEBUG===true)
@@ -86,11 +86,11 @@ $start_time=microtime(1);
 		// 		$result->debug	= (object)[
 		// 			'rqo' => $rqo
 		// 		];
-			
+
 		// 	trigger_error($e->getMessage());
-		
+
 		// } catch (Exception $e) { // For PHP 5
-			
+
 		// 	$result = new stdClass();
 		// 		$result->result	= false;
 		// 		$result->msg	= (SHOW_DEBUG===true)
@@ -102,12 +102,12 @@ $start_time=microtime(1);
 
 		// 	trigger_error($e->getMessage());
 		// }
-		
-	
+
+
 	// output the result json string
 		$output_string = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-	
+
 	// output_string_and_close_connection
 		function output_string_and_close_connection($string_to_output) {
 			// set_time_limit(0);
@@ -118,7 +118,7 @@ $start_time=microtime(1);
 			echo $string_to_output;
 			// get the size of the output
 			$size = ob_get_length();
-			// send headers to tell the browser to close the connection   
+			// send headers to tell the browser to close the connection
 			header("Content-Length: $size");
 			header('Connection: close');
 			// flush all output

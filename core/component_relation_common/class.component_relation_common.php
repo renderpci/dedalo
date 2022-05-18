@@ -989,7 +989,7 @@ class component_relation_common extends component_common {
 	*/
 	public static function get_locator_value($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true) {
 		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);
+			$start_time=start_time();
 			#dump($ar_components_related, ' ar_components_related ++ '.to_string());
 		}
 
@@ -1341,7 +1341,7 @@ class component_relation_common extends component_common {
 	* @return dato
 	*/
 	public function set_dato_external($save=false, $changed=false, $current_dato=false, $references_limit=10) {
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		// dato set
 			$dato = ($current_dato!==false)
@@ -1450,7 +1450,7 @@ class component_relation_common extends component_common {
 				// $result = search::calculate_inverse_locators( $locator );
 
 			// sqo. new way done in relations field with standard sqo
-				$start_time2=microtime(1);
+				$start_time2=start_time();
 				$target_section_to_search = $ar_section_to_search ?? ['all'];
 				$sqo = new search_query_object();
 					$sqo->set_section_tipo($target_section_to_search);
@@ -1569,7 +1569,7 @@ class component_relation_common extends component_common {
 	* 	Array of locators
 	*/
 		// private function DES_get_external_result_from_relations_table($new_dato, $ar_component_to_search) {
-		// 	$start_time=microtime(1);
+		// 	$start_time=start_time();
 
 		// 	if (empty($new_dato)) {
 		// 		debug_log(__METHOD__." ERROR. Empty new_dato is received !! Skipped search of external results from relations table. ".to_string(), logger::ERROR);

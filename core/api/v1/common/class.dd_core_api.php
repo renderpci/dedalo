@@ -1120,7 +1120,7 @@ class dd_core_api {
 	* @return object $result
 	*/
 	private static function build_json_rows(object $rqo) : object {
-		$start_time=microtime(1);
+		$start_time	= start_time();
 
 		// default result
 			$result = new stdClass();
@@ -1326,7 +1326,7 @@ class dd_core_api {
 		// DATA
 			// $data = [];
 
-				$data_start_time=microtime(1);
+				$data_start_time = start_time();
 
 				unset($element);
 
@@ -1378,12 +1378,15 @@ class dd_core_api {
 								// component
 									$RecordObj_dd	= new RecordObj_dd($tipo);
 									$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-									$element		= component_common::get_instance($model,
-																					 $tipo,
-																					 $section_id,
-																					 $mode,
-																					 $component_lang,
-																					 $section_tipo);
+									$element		= component_common::get_instance(
+										$model,
+										$tipo,
+										$section_id,
+										$mode,
+										$component_lang,
+										$section_tipo,
+										true // cache
+									);
 									if ($mode==='tm') {
 										// set matrix_id value to component to allow it search dato in
 										// matrix_time_machine component function 'get_dato' will be

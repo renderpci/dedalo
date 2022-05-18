@@ -7,7 +7,7 @@
  * link where it will send a certified response via $_POST.
  */
 
-$start_time=microtime(1);
+$start_time=start_time();
 
 // Require files
 	require_once(dirname(dirname(dirname(__FILE__))).'/config/config.php');

@@ -916,7 +916,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 		if(SHOW_DEBUG===true) {
-			// $time_complete = round(microtime(1)-$start_time,3);
+			// $time_complete = round(start_time()-$start_time,3);
 			// debug_log(__METHOD__." /////////////////////////////// build_table_columns_data complete time: $time_complete ms. ".to_string(), logger::ERROR);
 		}
 
@@ -1272,7 +1272,7 @@ class diffusion_sql extends diffusion  {
 	* @param array $options
 	* @return array $this->ar_diffusion_map
 	*/
-	public function get_ar_diffusion_map_sql($options=array()) {
+	public function get_ar_diffusion_map_sql($options=[]) : array {
 
 		// EN PROCESO
 
@@ -1310,11 +1310,9 @@ class diffusion_sql extends diffusion  {
 
 			}//end foreach ($ar_diffusion_database as $diffusion_section_tipo
 
-		#if(SHOW_DEBUG===true) dump( exec_time($start_time, __METHOD__) );
-
 		# Fix
 		$this->ar_diffusion_map = $ar_diffusion_map;
-			#dump($this->ar_diffusion_map,"this->ar_diffusion_map ");#die();
+
 
 		return (array)$this->ar_diffusion_map;
 	}//end get_ar_diffusion_map_sql
@@ -1724,7 +1722,7 @@ class diffusion_sql extends diffusion  {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// $time_complete = round(microtime(1)-$start_time,3);
+				// $time_complete = round(start_time()-$start_time,3);
 				// debug_log(__METHOD__." /////////////////////////////// update_record complete time: $time_complete ms. ".to_string(), logger::ERROR);
 			}
 

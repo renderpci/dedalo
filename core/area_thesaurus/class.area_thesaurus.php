@@ -421,7 +421,7 @@ class area_thesaurus extends area_common {
 	* @return object $response
 	*/
 	public function search_thesaurus(object $search_query_object) : object {
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -469,7 +469,7 @@ class area_thesaurus extends area_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$response->strQuery = $search_result->strQuery;
-				$response->debug[] = exec_time($start_time," result");
+				$response->debug[] = exec_time_unit($start_time);
 			}
 
 
