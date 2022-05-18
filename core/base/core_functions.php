@@ -1801,7 +1801,7 @@ function check_basic_system() : object {
 * @return mixed
 * Return null when nothing is found
 */
-function array_find(array $ar_value, $fn) {
+function array_find(array $ar_value=null, $fn) {
 
 	if (is_array($ar_value)) {
 		// foreach ($ar_value as $x) {
