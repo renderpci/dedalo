@@ -27,7 +27,7 @@ class dd_manager {
 	* @return mixed array|object
 	*/
 	public function manage_request( object $rqo ) : object {
-		$api_manager_start_time=microtime(1);
+		$api_manager_start_time = start_time();
 
 		// debug
 			// dump($rqo, ' MANAGE_REQUEST rqo ++++++++++++++++++++++++++++++ '.to_string());

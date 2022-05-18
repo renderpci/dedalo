@@ -92,7 +92,7 @@ abstract class component_common extends common {
 	* @return array array of component objects by key
 	*/
 	public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) {
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -768,9 +768,9 @@ abstract class component_common extends common {
 		$component_name = get_called_class();
 
 		if(SHOW_DEBUG===true) {
-			$this->start_time= microtime(1);
+			$this->start_time= start_time();
 			$start_time 	 = start_time();
-			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
+			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.start_time()]=start_time();
 		}
 
 
@@ -798,8 +798,8 @@ abstract class component_common extends common {
 
 
 		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
-			$total=round(microtime(1)-$this->start_time,3)*1000;
+			// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.start_time()]=start_time();
+			$total=round(start_time()-$this->start_time,3)*1000;
 			if ($total>0.080) {
 				#dump($total, ' total ++ '.$this->tipo .' '. $component_name );
 			}
@@ -1437,7 +1437,7 @@ abstract class component_common extends common {
 	*/
 	public function get_ar_list_of_values2($lang=DEDALO_DATA_LANG, $include_negative=false) {
 
-		$start_time = microtime(1);
+		$start_time = start_time();
 
 		switch (true) {
 			case isset($this->properties->filtered_by_search_dynamic) || isset($this->properties->filtered_by_search):

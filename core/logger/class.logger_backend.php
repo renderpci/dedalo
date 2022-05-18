@@ -6,15 +6,26 @@ require_once( DEDALO_CORE_PATH .'/logger/class.logger.php' );
 */
 abstract class logger_backend {
 
+
+
 	protected $url_data;
 
 
-	public function __construct($url_data) {
+
+	public function __construct(array $url_data) {
 		$this->url_data = $url_data;
 	}
 
 
-	abstract function log_message( $message, $log_level=logger::INFO, $tipo_donde=NULL, $projects=NULL, $datos=NULL );	#$message, $log_level=logger::INFO,  $tipo_donde=NULL, $projects=NULL, $datos=NULL
+
+	abstract function log_message(
+		string $message,
+		int $log_level=logger::INFO,
+		string $tipo_donde=null,
+		string $operations=null,
+		array $datos=null
+	);
+
 
 
 }//end class logger_backend

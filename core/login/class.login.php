@@ -647,7 +647,7 @@ class login extends common {
 	* @return object $response
 	*/
 	private static function init_user_login_sequence($user_id, $username, $full_username, $init_test=true, $login_type='default') : object {
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result			= false;

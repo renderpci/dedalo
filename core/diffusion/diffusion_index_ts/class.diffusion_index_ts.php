@@ -126,10 +126,6 @@ class diffusion_index_ts extends diffusion {
 
 			}#end foreach ($ar_diffusion_section as $diffusion_section_tipo
 
-		if(SHOW_DEBUG===true) {
-			#dump( $ar_diffusion_map, 'ar_diffusion_map' );
-			#echo "<span style=\"position:absolute;right:30px;margin-top:-25px\">".exec_time($start_time)."</span>";
-		}
 
 		return $this->ar_diffusion_map = $ar_diffusion_map;
 	}//end get_ar_diffusion_map_index_ts
@@ -141,7 +137,7 @@ class diffusion_index_ts extends diffusion {
 	* Get all indexations (locators) of current termino (terminoID like ts574)
 	* @return array of locator objects $ar_locators
 	*/
-	public function get_ar_locators() {
+	public function get_ar_locators() : array {
 
 		#if (isset($this->ar_locators)) {
 		#	return $this->ar_locators;
@@ -160,7 +156,7 @@ class diffusion_index_ts extends diffusion {
 														 DEDALO_DATA_NOLAN,
 														 $this->section_tipo);
 
-		$ar_locators = $component->get_dato();
+		$ar_locators = $component->get_dato() ?? [];
 
 		return (array)$ar_locators;
 	}
@@ -173,9 +169,9 @@ class diffusion_index_ts extends diffusion {
 	* Filter locators for current user (by project)
 	* @return array $ar_section_top_tipo
 	*/
-	protected function get_ar_section_top_tipo() {
+	protected function get_ar_section_top_tipo() : array  {
 
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		$ar_section_top_tipo= array();
 		$user_id 			= navigator::get_user_id();
@@ -264,7 +260,7 @@ class diffusion_index_ts extends diffusion {
 		}//end if( ($is_global_admin = security::is_global_admin($user_id))!==true ) {
 
 		if(SHOW_DEBUG===true) {
-			$total=round(microtime(1)-$start_time,3);
+			$total=round(start_time()-$start_time,3);
 			$slow = 0.125;
 			if ($total>$slow) {
 				dump($total,"SLOW METHOD (>$slow): total secs $total");

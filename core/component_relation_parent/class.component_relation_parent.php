@@ -449,7 +449,7 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables=null) {
 		if(SHOW_DEBUG===true) {
-			// $start_time=microtime(1);
+			// $start_time=start_time();
 		}
 
 		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
@@ -572,7 +572,7 @@ class component_relation_parent extends component_relation_common {
 		}//end while
 
 		if(SHOW_DEBUG===true) {
-			#$total=round(microtime(1)-$start_time,3);
+			#$total=round(start_time()-$start_time,3);
 			#debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
 			// $total = exec_time_unit($start_time,'ms')." ms";
 			// dump($total, ' ///////// total ++ '.to_string("$section_id, $section_tipo, $from_component_tipo, $ar_tables") .PHP_EOL. " $strQuery");
@@ -593,7 +593,7 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false) {
 		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);
+			$start_time=start_time();
 		}
 
 		// static vars set

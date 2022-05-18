@@ -194,7 +194,7 @@ class css {
 	* @return object $response
 	*/
 	public static function build_structure_css() {
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result	= true;

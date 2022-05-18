@@ -174,12 +174,12 @@ abstract class counter {
 
 
 	/**
-	* CHECK_counters
+	* CHECK_COUNTERS
 	* @return stdClass object $response
 	*/
 	public static function check_counters() : object {
 
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result 	= true;
@@ -197,7 +197,7 @@ abstract class counter {
 		$i=0;
 		while ($rows = pg_fetch_assoc($result)) {
 
-			$start_time=microtime(1);
+			$start_time = start_time();
 
 			$section_tipo 		= $rows['tipo'];
 			$counter_section_id = (int)$rows['dato'];

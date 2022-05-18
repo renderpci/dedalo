@@ -17,7 +17,6 @@ class layout_map {
 	* @return array $layout_map
 	*/
 	public static function get_layout_map($request_options, $request_config) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
-		// $start_time=microtime(1);
 
 		// debug
 			// $bt = debug_backtrace();

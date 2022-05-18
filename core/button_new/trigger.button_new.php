@@ -1,5 +1,5 @@
 <?php
-$start_time=microtime(1);
+$start_time = hrtime(true);
 include( DEDALO_CONFIG_PATH.'/config.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
@@ -31,7 +31,7 @@ function new_record($json_data) {
 
 	# FIX SECTION TIPO
 	define('SECTION_TIPO', $section_tipo);
-	
+
 	$section = section::get_instance( NULL, $section_tipo );
 
 	$options = new stdClass();
@@ -47,7 +47,7 @@ function new_record($json_data) {
 		$search_options->search_query_object->full_count = true; // Force re-count records
 	}
 
-	
+
 	$response->result 	= $section_id;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -61,7 +61,7 @@ function new_record($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end new_record
 

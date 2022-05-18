@@ -1301,7 +1301,7 @@ abstract class backup {
 	* @return bool
 	*/
 	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		$data = (object)[
 			'code'	=> STRUCTURE_SERVER_CODE,

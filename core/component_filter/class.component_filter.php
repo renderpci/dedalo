@@ -356,7 +356,7 @@ class component_filter extends component_relation_common {
 	* @return array $ar_datalist
 	*/
 	public function get_datalist() : array {
-		$start_time=microtime(1);
+		$start_time = start_time();
 
 		// ar_projects. Projects authorized to the current user
 			$user_id		= navigator::get_user_id();

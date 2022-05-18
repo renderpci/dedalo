@@ -57,16 +57,9 @@ class ts_object {
 	*/
 	public function get_html() : string {
 
-		#if(SHOW_DEBUG===true) $start_time = start_time();
-
 		ob_start();
 		include ( dirname(__FILE__) .'/'. get_class() .'.php' );
 		$html = ob_get_clean();
-
-		#if(SHOW_DEBUG===true) {
-			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			#global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		#}
 
 		return (string)$html;
 	}//end get_html
@@ -215,7 +208,7 @@ class ts_object {
 	* @return object $children_data
 	*/
 	public function get_children_data() : object {
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) $start_time=start_time();
 
 		# Global object
 		$children_data = new stdClass();
@@ -389,7 +382,7 @@ class ts_object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// $total = round( (microtime(1)-$start_time), 3 );
+				// $total = round( (start_time()-$start_time), 3 );
 				#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
 				// $children_data->total_time = $total;
 				// error_log('********************* get_children_data total:'. exec_time_unit($start_time,'ms'));

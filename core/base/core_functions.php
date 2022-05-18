@@ -43,7 +43,7 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 
 		# EXEC_TIME
 		if(isset($start_time)) {
-			$html .= PHP_EOL . " exec_time: <em> ".exec_time($start_time)." </em>";
+			$html .= PHP_EOL . " exec_time: <em> ".exec_time_unit($start_time)." </em>";
 		}
 
 		# arguments (optional)
@@ -379,18 +379,28 @@ function curl_request(object $options) : object {
 
 
 
-# START_TIME
+/**
+* START_TIME
+* Returns the system's high resolution time, counted from an arbitrary point in time.
+* The delivered timestamp is monotonic and can not be adjusted.
+* @return float $time (nanoseconds)
+*/
 function start_time() {
-	$mtime = explode(' ',microtime());
 
-	return $mtime[1]+$mtime[0];
-}
-# EXEC_TIME
-function exec_time($start, string $method=null, $result=null) {
+	return hrtime(true); // nanoseconds
+}//end start_time
 
-	$end	= start_time();
+
+
+/**
+* EXEC_TIME
+* @return string
+*/
+function exec_time($start, string $method=null, $result=null) : string {
+
+	$end	= start_time(); // nanoseconds
 	$total	= $end - $start;
-	$total	= $total*1000;
+	$total	= $total/1000;
 
 	$exec = ($total>100)
 		? sprintf(' Exec in <span style=\'color:red\'>%.3f ms.</span>', $total)
@@ -405,16 +415,25 @@ function exec_time($start, string $method=null, $result=null) {
 
 	return '<pre>'.$final_string.'</pre>' ;
 }//end exec_time
-# EXEC_TIME_UNIT
+
+
+
+/**
+* EXEC_TIME
+* @return string
+*/
 function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
+
+	$unit='ms';
 
 	$end	= start_time();
 	$total	= $end - $start;
 	$total	= ($unit==='ms')
-		? ($total*1000)
+		// ? $total*1000 // ($total*1000) microseconds to milliseconds
+		? $total/1e+6 // ($total/1e+6) nanoseconds to milliseconds
 		: $total;
 
-	$result = number_format($total, 3);
+	$result = $total; // number_format($total, 3);
 
 	return $result;
 }//end exec_time_unit
@@ -1295,25 +1314,33 @@ function notice_to_active_users(array $ar_options) {
 * GET_REQUEST_VAR
 * Check if var exists in $_REQUEST environment. If not do a fallback to search var in php://input (for
 * example in trigger json requests)
-* @return mixed string | bool $var_value
+* @return mixed|bool $var_value
 */
 function get_request_var(string $var_name) {
 
-	$var_value = false;
+	$var_value = null;
 
 	if(isset($_REQUEST[$var_name]))  {
+
+		// get from page request (GET/POST)
 		$var_value = $_REQUEST[$var_name];
+
 	}else{
-		#get the change modo from portal list to edit
+		// get from php://input . Ex. the change modo from portal list to edit
 		$str_json = file_get_contents('php://input');
-		$get_submit_vars = json_decode($str_json);
-		if (isset($get_submit_vars->{$var_name})) {
-			$var_value = $get_submit_vars->{$var_name};
+		if (!empty($str_json )) {
+			$get_submit_vars = json_decode($str_json);
+			if (isset($get_submit_vars->{$var_name})) {
+				$var_value = $get_submit_vars->{$var_name};
+			}
 		}
 	}
 
-	# Safe XSS
-	$var_value = safe_xss($var_value);
+	// Safe XSS
+		if (!is_null($var_value)) {
+			$var_value = safe_xss($var_value);
+		}
+
 
 	return $var_value;
 }//end get_request_var
@@ -1331,6 +1358,7 @@ function safe_xss($value) {
 		if ($decode_json=json_decode($value)) {
 			// If var is a stringify json, not verify string now
 		}else{
+			// It's NOT json data
 			$value = strip_tags($value,'<br><strong><em>');
 			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 		}

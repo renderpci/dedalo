@@ -265,7 +265,7 @@ class dato_v4_to_section_data_v5 {
 			$min	= ($table==='matrix_users') ? -1 : 1;
 
 			// iterate from 1 to last id
-			$i_ref = 0; $start_time=microtime(1);
+			$i_ref = 0; $start_time = start_time();
 			for ($i=$min; $i<=$max; $i++) {
 
 				$strQuery 	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
