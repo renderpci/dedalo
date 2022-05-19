@@ -1179,8 +1179,8 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 			: (sqo_config && sqo_config.limit)
 				? sqo_config.limit
 				: self.mode==='edit'
-					? (self.context.model==='section' ? 1 : 10)
-					: (self.context.model==='section' ? 10 : 1)
+					? (self.model==='section' ? 1 : 10) // section in edit mode = 1 or component_portal in edit mode = 10
+					: (self.model==='section' ? 10 : 1) // section in list mode = 10 or component_portal in list mode = 1
 
 		sqo.offset = (sqo.offset)
 			? sqo.offset
@@ -1200,7 +1200,10 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 				? sqo.filter_by_locators
 				: (sqo_config && sqo_config.filter_by_locators)
 					? sqo_config.filter_by_locators
-					: null
+					// if the section send a section_id and it has mode in edit and doesn't have defined filter_by_locators, create a default locator with section_tipo and section_id
+					: (self.mode==='edit' && self.model==='section' && self.section_id)
+						? [{section_tipo: self.section_tipo, section_id: self.section_id}]
+						: null
 			if (filter_by_locators) {
 				sqo.filter_by_locators = filter_by_locators
 			}
