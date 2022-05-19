@@ -41,9 +41,9 @@ class ontology {
 	/**
 	* PARSE
 	* Get and convert ontology term and children to JSON format
-	* @return
+	* @return array $ar_data
 	*/
-	public static function parse(string $tipo) {
+	public static function parse(string $tipo) : array {
 
 		$ar_data = [];
 
@@ -68,7 +68,7 @@ class ontology {
 	* @param string $tipo
 	* @return object $item
 	*/
-	public static function tipo_to_json_item(string $tipo, $request_options=[
+	public static function tipo_to_json_item(string $tipo, array $request_options=[
 		'tipo' 			=> true,
 		'tld'			=> true,
 		'is_model'		=> true,
@@ -82,7 +82,7 @@ class ontology {
 		'relations'		=> true,
 		'descriptors'	=> true,
 		'label'			=> false
-		]) {
+		]) : object {
 
 		$options = new stdClass();
 			$options->tipo			= false;
@@ -188,7 +188,7 @@ class ontology {
 	* update terms, only insert new terms (!)
 	* @return bool true
 	*/
-	public static function import(array $data) {
+	public static function import(array $data) : bool {
 
 		foreach ($data as $key => $item) {
 
@@ -246,7 +246,7 @@ class ontology {
 	* @param string $tld
 	* @return bool true
 	*/
-	public static function clean_structure_data(string $tld) {
+	public static function clean_structure_data(string $tld) : bool {
 
 		// jer_dd. delete terms (jer_dd)
 			$sql_query = '
@@ -274,9 +274,9 @@ class ontology {
 
 	/**
 	* RENUMERATE_TERM_ID
-	* @return
+	* @return array $ontology
 	*/
-	public static function renumerate_term_id($ontology, &$counter) {
+	public static function renumerate_term_id(array $ontology, int &$counter) : array {
 
 		foreach ($ontology as $item) {
 			$tipo = $item->tipo;
@@ -305,7 +305,7 @@ class ontology {
 	* @return array $ar_tesauro
 	*	array recursive of thesaurus structure children
 	*/
-	public static function get_children_recursive(string $tipo) {
+	public static function get_children_recursive(string $tipo) : array {
 
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
@@ -392,9 +392,9 @@ class ontology {
 	/**
 	* ADD_TERM
 	* @param object $options
-	* @return int $section_id
+	* @return int|false $section_id
 	*/
-	public static function add_term($options) {
+	public static function add_term(object $options) {
 
 		// options
 			$term_id = $options->term_id;
@@ -425,7 +425,7 @@ class ontology {
 			$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 			$section		= section::get_instance(null, $section_tipo, 'edit', false);
 			$section->Save();
-			$section_id = $section->get_section_id();
+			$section_id = (int)$section->get_section_id();
 
 		// component term_id
 			(function($value) use($section_tipo, $section_id, $lang) {
@@ -584,7 +584,7 @@ class ontology {
 	* @param object $options
 	* @return bool
 	*/
-	public static function edit_term($options) {
+	public static function edit_term(object $options) : bool {
 
 		// options
 			$term_id	= $options->term_id;
@@ -671,10 +671,10 @@ class ontology {
 	/**
 	* GET_SECTION_ID_BY_TERM_ID
 	* Search in DDBB for records in section Ontology where term_id is requested term_id
-	* @return int | null
 	* @param string $term_id
+	* @return int|null
 	*/
-	public static function get_section_id_by_term_id(string $term_id) {
+	public static function get_section_id_by_term_id(string $term_id) : ?int {
 
 		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 		$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
@@ -752,7 +752,7 @@ class ontology {
 	* 	object created using method: ontology::tipo_to_json_item($term_id)
 	* @return object $response
 	*/
-	public static function save_json_ontology_item(string $term_id, $json_item=null) {
+	public static function save_json_ontology_item(string $term_id, ?object $json_item=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -817,7 +817,7 @@ class ontology {
 	* Propagate (save/update) current Ontology data to the section 'Ontology' (dd1500) at 'JSON Ontology Item' field. Only changes will be saved
 	* @return object $response
 	*/
-	public static function update_json_ontology_items() {
+	public static function update_json_ontology_items() : object {
 
 		$response = new stdClass();
 			$response->result	= false;

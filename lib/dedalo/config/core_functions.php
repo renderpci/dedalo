@@ -790,7 +790,7 @@ function array_flatten($array) {
 * VERIFY_DEDALO_PREFIX_TIPOS
 * @return bool()
 */
-function verify_dedalo_prefix_tipos($tipo=null) {
+function verify_dedalo_prefix_tipos($tipo=null) : bool {
 
 	return true; # Temporal hasta que se valore lo de los prefijos dinámicos de hierarchy
 
