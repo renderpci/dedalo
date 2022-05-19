@@ -89,6 +89,8 @@ const add_events = function(self, wrapper) {
 					// label		: e.target.nextElementSibling.textContent,
 					refresh			: false
 				})
+				// publish the publication locator value. (ex: used to change state of notes tag)
+					event_manager.publish('change_publication_value_'+self.id_base, changed_value)
 
 				return true
 			}

@@ -77,8 +77,8 @@
 
 				// Notes
 				// Add the section_tipo for the annotations
-					$this->context->notes_section_tipo = DEDALO_NOTES_SECTION_TIPO;
-
+					$this->context->notes_section_tipo		= DEDALO_NOTES_SECTION_TIPO;
+					$this->context->notes_publication_tipo	= DEDALO_NOTES_PUBLICATION_TIPO;
 				// Av Player
 					$this->context->av_player = (object)[
 						'av_play_pause_code'	=> 'Escape', // ESC
