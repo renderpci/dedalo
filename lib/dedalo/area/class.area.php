@@ -60,7 +60,7 @@ class area extends common  {
 	*	bool(true) Optional default true
 	* @see component_security_access - Get all major areas
 	*/
-	public static function get_ar_ts_children_all_areas_plain($include_main_tipo=true) {
+	public static function get_ar_ts_children_all_areas_plain(bool $include_main_tipo=true) : array {
 
 		# First retrieve hierarchized list
 		$ar_ts_children_all_areas_hierarchized = area::get_ar_ts_children_all_areas_hierarchized($include_main_tipo);
@@ -82,21 +82,19 @@ class area extends common  {
 	* @param $include_main_tipo
 	*	bool(true) Optional default true
 	* @see menu
+	* @return array $ar_all
 	*/
-	public static function get_ar_ts_children_all_areas_hierarchized($include_main_tipo=true) {
+	public static function get_ar_ts_children_all_areas_hierarchized($include_main_tipo=true) : array {
 		gc_disable();
 
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
-
-
-		if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {
-			if(SHOW_DEBUG===true) {
-				#return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
-			}else{
-
-			}
-			return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
+		if(SHOW_DEBUG===true) {
+			$start_time=microtime(1);
 		}
+
+		// cache (session)
+			if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {
+				return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
+			}
 
 		# AREA_ROOT
 			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
@@ -144,12 +142,12 @@ class area extends common  {
 				$ar_ts_childrens_thesaurus 		= array();
 			}
 
-		# AREA_ADMIN
+		# AREA_ADMIN
 			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
 			$area_admin 						= new area_admin($current_tipo);
 			$ar_ts_childrens_admin 				= $area_admin->get_ar_ts_children_areas($include_main_tipo);
 
-		# AREA_DEVELOPMENT
+		# AREA_DEVELOPMENT
 			$ar_ts_childrens_dev 		 		= [];
 			$logged_user_is_global_admin 		= component_security_administrator::is_global_admin(navigator::get_user_id());
 			if((SHOW_DEBUG===true || SHOW_DEVELOPER===true) && $logged_user_is_global_admin===true) {
@@ -158,35 +156,44 @@ class area extends common  {
 					$area_development 			= new area_development($ar_current_tipo[0]);
 					$ar_ts_childrens_dev 		= $area_development->get_ar_ts_children_areas($include_main_tipo);
 				}
-
 			}
 
 		# ar_all merged
-		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_tools, $ar_ts_childrens_thesaurus, $ar_ts_childrens_admin, $ar_ts_childrens_dev);
-
-		#
-		# ALLOW DENY AREAS
-		if (SHOW_DEBUG===true) { //  || SHOW_DEVELOPER===true
-			# All elements are accepted
-		}else{
-			# Remove not accepted elements
-
-		}
-		# Remove always for clarity
-		$ar_all = area::walk_recursive_remove($ar_all, 'area::area_to_remove');
+			$ar_all = array_merge(
+				$ar_ts_childrens_root,
+				$ar_ts_childrens_activity,
+				$ar_ts_childrens_publication,
+				$ar_ts_childrens_resource,
+				$ar_ts_childrens_tools,
+				$ar_ts_childrens_thesaurus,
+				$ar_ts_childrens_admin,
+				$ar_ts_childrens_dev
+			);
 
 
-		# Store in session for speed
-		$_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
+		// ALLOW DENY AREAS
+			if (SHOW_DEBUG===true) { //  || SHOW_DEVELOPER===true
+				# All elements are accepted
+			}else{
+				# Remove not accepted elements
+			}
+			# Remove always for clarity
+			$ar_all = area::walk_recursive_remove($ar_all, 'area::area_to_remove');
 
 
-		if(SHOW_DEBUG===true) {
-			$total 	= round(microtime(1)-$start_time,3);
-			$n 		= count($ar_all);
-			debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-		}
+		// cache. Store in session for speed
+			$_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
+
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$total 	= round(microtime(1)-$start_time,3);
+				$n 		= count($ar_all);
+				debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+			}
 
 		 gc_enable();
+
 
 		return $ar_all;
 	}//end get_ar_ts_children_all_areas_hierarchized
@@ -197,7 +204,7 @@ class area extends common  {
 	* AREA_TO_REMOVE
 	* @return bool
 	*/
-	public static function area_to_remove($tipo) {
+	public static function area_to_remove(string $tipo) : bool {
 
 		if( !include(DEDALO_LIB_BASE_PATH . '/config/config4_areas.php') ) {
 			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empy values as default ".to_string(), logger::ERROR);
@@ -226,7 +233,7 @@ class area extends common  {
 	* @param callable $callback Function must return boolean value indicating whether to remove the node.
 	* @return array
 	*/
-	public static function walk_recursive_remove(array $array, callable $callback) {
+	public static function walk_recursive_remove(array $array, callable $callback) : array {
 
 		$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];
 
@@ -261,7 +268,7 @@ class area extends common  {
 	*	bool(true) default true. Case 'false', current tipo is omited as parent in results
 	* @see menu
 	*/
-	public function get_ar_ts_children_areas($include_main_tipo=true) {
+	public function get_ar_ts_children_areas(bool $include_main_tipo=true) : array {
 
 		$terminoID = $this->get_tipo();
 		if(empty($terminoID)) throw new Exception("Error Processing Request: terminoID is empty !", 1);
@@ -296,7 +303,7 @@ class area extends common  {
 	*	array recursive of tesauro structure childrens filtered by acepted model name
 	* @see get_ar_ts_children_areas
 	*/
-	protected function get_ar_ts_children_areas_recursive($terminoID) {
+	protected function get_ar_ts_children_areas_recursive(string $terminoID) : array {
 
 		$ar_ts_children_areas_recursive = array();
 		$RecordObj_dd					= new RecordObj_dd($terminoID);
