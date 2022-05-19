@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -798,130 +799,22 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 	*
 	* @return
 	*/
-	component_text_area.prototype.create_note_tag = function(options) {
+	component_text_area.prototype.create_note_tag = async function(options) {
 
 		const self = this
 		// get the text_editor sent by the event (button_note event)
-		const text_editor = options.text_editor
+		const text_editor	= options.text_editor
 
-			console.log("text_editor:---------------",text_editor);
-			return
-		// Select text editor
-		//var ed 		 	= tinyMCE.activeEditor
-		const tag_type 	= 'note'
-		const last_tag_id = self.get_last_tag_id(tag_type, text_editor)
-		const note_number = parseInt(last_tag_id) + 1
-
-		const trigger_vars = {
-			mode 		 	: 'create_new_note',
-			note_number		: note_number,
-		}
-		//console.log(trigger_vars); return;
-
-		let js_promise 	 = common.get_json_data(component_text_area.url_trigger, trigger_vars).then(function(response) {
-			if(SHOW_DEBUG===true) {
-				console.log("[component_text_area.create_new_note] response", response);
+		// Create the new note in the server, it will send the section_id created in the database
+			const rqo = {
+				action			: 'create',
+				section_tipo	: self.context.notes_section_tipo
 			}
+			const current_data_manager	= new data_manager()
+			const api_response			= await current_data_manager.request({body:rqo})
+			const note_section_id 		= api_response.result || null;
 
-			if (response===null) {
-				alert("Error on create annotation tag")
-			}else{
-
-				let label = note_number
-				let state = 'a'
-				let data  = JSON.stringify(response.result)
-					data  = replaceAll('"', '\'', data); // Format data Important !!
-
-				// IMG : Create and insert image in text
-				//var img_html = component_text_area.build_note_img(label, state, data)
-				let img = component_text_area.build_dom_element_from_data(tag_type, note_number, state, label, data)
-
-				if (component_text_area.is_tiny(ed)===false) {
-					// Insert html on editor
-					let selection = document.getSelection()
-						//console.log(selection)
-					let rg = selection.getRangeAt( 0 )
-						//console.log(rg)
-						// Set collapse false to go to end of range
-						rg.collapse(false);
-						// Insert node
-						rg.insertNode(img)
-
-					tool_structuration.update_titles_on_save=false
-
-					component_text_area.set_reload_on_save(false)
-					component_text_area.set_content_is_changed(true)
-
-					var component_obj = ed
-
-				}else{
-					let img_html 	= img.outerHTML
-
-					ed.selection.collapse()
-
-					// Insert html on editor
-					ed.selection.setContent( img_html, {format:'raw'} )
-
-					// Set editor as modified and save
-					ed.setDirty(true)
-					ed.save(); // updates this instance's textarea
-
-					var component_obj = text_area_component
-				}
-
-				let text_area_wrapper = component_common.get_wrapper_from_element(component_obj)
-
-				// Fix data in global class
-				// Fix selected_tag_data
-				component_text_area.selected_tag_data = {
-					type 			: tag_type,
-					tag_id 			: note_number,
-					component_tipo 	: text_area_wrapper.dataset.tipo,
-					lang 			: text_area_wrapper.dataset.lang
-				}
-				if(SHOW_DEBUG===true) {
-					console.log("[component_text_area.create_new_note] Fixed class var selected_tag_data:",component_text_area.selected_tag_data);
-				}
-
-
-				// Save text area
-				var js_promise_save = component_text_area.Save( component_obj, null, ed )
-				if (js_promise_save) {
-					js_promise_save.then(function(response){
-
-						setTimeout(function(){
-							// On finish save, select created tag (the last) and trigger click action
-							if (component_text_area.is_tiny(ed)===false) {
-								var last_tag_obj = component_text_area.get_last_element(ed, 'note')
-								if (last_tag_obj) {
-
-									// Fix var
-									component_text_area.tag_obj = last_tag_obj
-
-									// Click event of section tag
-									img.addEventListener("click", function(evt_click){
-										// Show note info
-										component_text_area.show_note_info( ed, evt_click, component_obj )
-									},false)
-
-									img.click()
-								}
-							}else{
-								var last_tag_obj = component_text_area.get_last_element(ed, 'note')
-								if (last_tag_obj) {
-									// Select image in text editor
-									ed.selection.select(last_tag_obj).click(); //select the inserted element // .scrollIntoView(false)
-									// Trigger exec click on selected tag
-									//last_tag_obj.click();
-								}
-							}
-						},150)
-					});
-				}
-			}
-		})
-
-		return js_promise
+		return note_section_id;
 	}//end create_new_note
 
 
