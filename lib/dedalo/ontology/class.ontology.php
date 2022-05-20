@@ -415,8 +415,13 @@ class ontology {
 		// id
 			$id = str_replace($tld, '', $term_id); // remove tld. from 'oh123' to '123'. id is a internal counter and it is not saved or set to the object
 
-		// to do: verify is term already exists in the section (!)
-
+		// verify if term already exists in the section
+			// section_id. search and locate the ontology record by term_id
+			$section_id = ontology::get_section_id_by_term_id($term_id);
+			if (!empty($section_id)) {
+				debug_log(__METHOD__." Ignored add term request. Section: '$section_id' already exists! . term: ".to_string($term_id), logger::ERROR);
+				return false;
+			}
 
 		// lang. At this time, is still 'lg-spa'
 			$lang = DEDALO_STRUCTURE_LANG;
@@ -474,7 +479,7 @@ class ontology {
 
 		// JSON Ontology Item
 			$json_item	= ontology::tipo_to_json_item($term_id);
-			$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+			$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// returns object response
 
 		// component parent
 			// (function($value) use($section_tipo, $section_id, $lang) {
@@ -587,10 +592,10 @@ class ontology {
 	public static function edit_term(object $options) : bool {
 
 		// options
-			$term_id	= $options->term_id;
-			$dato		= $options->dato;
-			$dato_tipo	= $options->dato_tipo; // termino | def | obs
-			$lang		= $options->lang;
+			$term_id	= $options->term_id; // string as 'dd1582'
+			$dato		= $options->dato; // string as 'Oral History'
+			$dato_tipo	= $options->dato_tipo; // string options: termino | def | obs
+			$lang		= $options->lang; // string as 'lg-spa'
 
 		// check term_id
 			if (empty($term_id)) {
@@ -598,27 +603,33 @@ class ontology {
 				return false;
 			}
 
-		$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
-
-		// section_id. locate the ontology record by term_id
+		// section_id. search and locate the ontology record by term_id
 			$section_id = ontology::get_section_id_by_term_id($term_id);
+			// empty case. Create a new one
 			if (empty($section_id)) {
 				$section_id = ontology::add_term((object)[
 					'term_id' => $term_id
 				]);
+				if (empty($section_id)) {
+					// prevent dead loops stopping here !
+					throw new Exception("Error. Unable to create term record in Ontology section (term_id:'$term_id')", 1);
+				}
+				debug_log(__METHOD__." [CREATED] get_section_id_by_term_id section_id +++ section_id: '$section_id' +++ term_id: $term_id", logger::WARNING);
 			}
 
 		// update value
 			if (!empty($section_id)) {
 
-				$component_tipo = (function($dato_tipo){
-					switch ($dato_tipo) {
-						case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
-						case 'def':		return ONTOLOGY_SECTION_TIPOS['definition'];	break;
-						case 'obs':		return ONTOLOGY_SECTION_TIPOS['observations'];	break;
-					}
-					return null;
-				})($dato_tipo);
+				// short vars
+					$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
+					$component_tipo	= (function($dato_tipo){
+						switch ($dato_tipo) {
+							case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
+							case 'def':		return ONTOLOGY_SECTION_TIPOS['definition'];	break;
+							case 'obs':		return ONTOLOGY_SECTION_TIPOS['observations'];	break;
+						}
+						return null;
+					})($dato_tipo);
 
 				// component save value
 				if (!empty($component_tipo)) {
@@ -662,6 +673,7 @@ class ontology {
 			}else{
 				trigger_error('edit_term : Invalid section_id '.$section_id);
 			}
+
 
 		return false;
 	}//end edit_term
@@ -729,11 +741,19 @@ class ontology {
 		$count = count($ar_records);
 
 		if ($count===0) {
+			if(SHOW_DEBUG===true) {
+				dump($term_id, ' count zero. get_section_id_by_term_id sqo ++ '.to_string($sqo));
+			}
 			return null;
 		}else if ($count===1) {
 			return reset($ar_records)->section_id;
 		}else{
-			trigger_error('ERROR. Term is duplicate. Fix ASAP: '.to_string($term_id));
+			if(SHOW_DEBUG===true) {
+				dump($count, ' count ++ '.to_string($sqo));
+			}
+			$msg = 'ERROR. Term is duplicate. Fix ASAP: '.to_string($term_id);
+			// (!) added throw to prevent infinite loop! Do not change this line
+			throw new Exception("Error Processing Request.". $msg, 1);
 		}
 
 		return null;
