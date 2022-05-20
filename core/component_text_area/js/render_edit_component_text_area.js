@@ -349,8 +349,8 @@ const get_input_element = (i, current_value, self) => {
 
 			// editor_config
 				const editor_config = {
-					plugins			: ['paste','image','print','searchreplace','code','noneditable'], // ,'fullscreen'
-					toolbar			: 'bold italic underline undo redo searchreplace pastetext code | '+self.context.toolbar_buttons.join(' ')+' | button_save', // fullscreen
+					plugins			: ['paste','image','print','searchreplace','code','noneditable','fullscreen'], // ,'fullscreen'
+					toolbar			: 'bold italic underline undo redo searchreplace pastetext code fullscreen | '+self.context.toolbar_buttons.join(' ')+' button_lang | button_save', // fullscreen
 					custom_buttons	: get_custom_buttons(self, current_text_editor, i),
 					custom_events	: get_custom_events(self, i, current_text_editor)
 				}
@@ -606,6 +606,21 @@ const get_custom_buttons = (self, text_editor, i) => {
 				onclick	: function(evt) {
 					alert("Changing structuration !");
 					// tool_lang.change_structuration(ed, evt, text_area_component)
+				}
+			}
+		})
+
+	// button_lang
+		custom_buttons.push({
+			name	: "button_lang",
+			options	: {
+				tooltip	: 'Add lang',
+				image	: '../themes/default/icons/lang.svg',
+				onclick	: function(evt) {
+					event_manager.publish('create_geo_tag_'+ self.id_base, {
+						caller		: self,
+						text_editor	: text_editor
+					})
 				}
 			}
 		})
