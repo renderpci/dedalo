@@ -741,9 +741,7 @@ class ontology {
 		$count = count($ar_records);
 
 		if ($count===0) {
-			if(SHOW_DEBUG===true) {
-				dump($term_id, ' count zero. get_section_id_by_term_id sqo ++ '.to_string($sqo));
-			}
+			debug_log(__METHOD__." count zero. get_section_id_by_term_id sqo ".to_string($sqo), logger::DEBUG);
 			return null;
 		}else if ($count===1) {
 			return reset($ar_records)->section_id;
