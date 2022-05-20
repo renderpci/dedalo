@@ -1176,17 +1176,18 @@ function get_http_response_code(string $theURL) : int {
 
 /**
 * DD_MEMORY_USAGE
+* Get total memory allocated from system, including unused pages
+* @return string $total
 */
 function dd_memory_usage() : string {
 
-	$mem_usage = memory_get_usage(true);
-	$total='';
-	if ($mem_usage < 1024)
-		$total .= $mem_usage." BYTES";
-	elseif ($mem_usage < 1048576)
-		$total .= round($mem_usage/1024,2).' KB';
-	else
-		$total .= round($mem_usage/1048576,2).' MB';
+	$mem_usage = memory_get_usage(true); // bytes
+
+	$total = ($mem_usage < 1024)
+		? $mem_usage.' BYTES'
+		: (($mem_usage < 1048576)
+			? round($mem_usage/1024, 3).' KB'
+			: round($mem_usage/1048576, 3).' MB');
 
 	return $total;
 }//end dd_memory_usage

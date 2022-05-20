@@ -11,22 +11,24 @@ class dd_manager {
 	static $version = "1.0.0"; // 05-06-2019
 
 
+
 	/**
 	* __CONSTRUCT
-	* @return
+	* @return bool
 	*/
 	public function __construct() {
 
-
+		return true;
 	}//end __construct
 
 
 
 	/**
 	* MANAGE_REQUEST
-	* @return mixed array|object
+	* @param object $rqo
+	* @return object $reponse
 	*/
-	public function manage_request( object $rqo ) : object {
+	final public function manage_request( object $rqo ) : object {
 		$api_manager_start_time = start_time();
 
 		// debug
@@ -39,7 +41,7 @@ class dd_manager {
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
 
-		// logged
+		// logged check
 			$no_loggin_needed_actions = [
 				'start',
 				'change_lang',
@@ -63,7 +65,7 @@ class dd_manager {
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Invalid action var (not found in rqo)";
-					$response->error		= 'undefined_method';
+					$response->error	= 'Undefined method';
 
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 
@@ -77,9 +79,9 @@ class dd_manager {
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Error. Undefined $dd_api_type method (action) : ".$rqo->action;
-					$response->error		= 'undefined_method';
+					$response->error	= 'Undefined method';
 			}else{
-				$response = (object)$dd_api::{$rqo->action}( $rqo );
+				$response = $dd_api::{$rqo->action}( $rqo );
 			}
 
 		// debug
@@ -88,7 +90,9 @@ class dd_manager {
 				$api_debug = new stdClass();
 					$api_debug->api_exec_time	= $total_time_api_exec;
 					$api_debug->memory_usage	= dd_memory_usage();
-					$api_debug->rqo				= json_encode($rqo, JSON_PRETTY_PRINT);
+					$api_debug->rqo				= is_object($rqo)
+						? json_encode($rqo, JSON_PRETTY_PRINT)
+						: $rqo;
 
 				if (isset($response->debug)) {
 					// add to existing debug properties
@@ -116,7 +120,6 @@ class dd_manager {
 					$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL;
 					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
-
 
 
 		return $response;
