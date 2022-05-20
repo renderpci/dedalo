@@ -101,6 +101,7 @@ class ontology {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
+		$RecordObj_dd->use_cache = false; // (!) prevents using previous db results
 		$RecordObj_dd->get_dato();
 
 		$item = new stdClass();
@@ -682,9 +683,9 @@ class ontology {
 
 	/**
 	* GET_SECTION_ID_BY_TERM_ID
-	* Search in DDBB for records in section Ontology where term_id is requested term_id
+	* Search in DDBB for records in section Ontology where term_id is th request term_id
 	* @param string $term_id
-	* @return int|null
+	* @return int|null $section_id
 	*/
 	public static function get_section_id_by_term_id(string $term_id) : ?int {
 
@@ -738,21 +739,39 @@ class ontology {
 			$search_result			= $search_development2->search();
 			$ar_records				= $search_result->ar_records;
 		}
-		$count = count($ar_records);
 
-		if ($count===0) {
-			debug_log(__METHOD__." count zero. get_section_id_by_term_id sqo ".to_string($sqo), logger::DEBUG);
-			return null;
-		}else if ($count===1) {
-			return reset($ar_records)->section_id;
-		}else{
-			if(SHOW_DEBUG===true) {
-				dump($count, ' count ++ '.to_string($sqo));
+		// total records check
+			$count = count($ar_records);
+			if ($count===0) {
+
+				// Zero records found. Record do not exists
+				debug_log(__METHOD__." count zero. get_section_id_by_term_id " . to_string($sqo), logger::DEBUG);
+				if(SHOW_DEBUG===true) {
+					// $bt = debug_backtrace();
+					// dump($bt, ' bt ++++++++++++++++++++++++++++++++ '.to_string());
+					// dump($term_id, ' term_id sqo +++++++ '.to_string($sqo));
+				}
+
+				return null;
+
+			}else if ($count===1) {
+
+				// OK case
+				return reset($ar_records)->section_id;
+
+			}else{
+
+				// Duplicates found
+				if(SHOW_DEBUG===true) {
+					dump($count, ' count ++ '.to_string($sqo));
+					// $bt = debug_backtrace();
+					// dump($bt, ' bt ++++++++++++++++++++++++++++++++ '.to_string());
+				}
+				$msg = 'ERROR. Term is duplicate. Fix ASAP: '.to_string($term_id);
+				// (!) added throw to prevent infinite loop! Do not change this line
+				throw new Exception("Error Processing Request.". $msg, 1);
 			}
-			$msg = 'ERROR. Term is duplicate. Fix ASAP: '.to_string($term_id);
-			// (!) added throw to prevent infinite loop! Do not change this line
-			throw new Exception("Error Processing Request.". $msg, 1);
-		}
+
 
 		return null;
 	}//end get_section_id_by_term_id
