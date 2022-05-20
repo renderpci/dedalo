@@ -2692,6 +2692,9 @@
 		Fixed issue on dd_init_test PSQL check with empty response
 		Updated sample.config4.php file with more constants and comments
 		Ontology code clean and PHP8 compatibility issues fixed
+		Fixed ontology form submit duplicity issue when a new term is created. Now enter the fields, press the ENTER key, don't submit the form, just click the 'Modify' button
+		Fixed ontology possible infinite loop when empty tern_id is received twice
+
 
 
 	[/HISTORY]
@@ -2723,7 +2726,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-05-2022T19:09:21');
+	define('DEDALO_BUILD'	, '20-05-2022T14:12:32');
 
 
 	/*
