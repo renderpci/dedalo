@@ -398,9 +398,7 @@ function start_time() {
 */
 function exec_time($start, string $method=null, $result=null) : string {
 
-	$end	= start_time(); // nanoseconds
-	$total	= $end - $start;
-	$total	= $total/1000;
+	$total = exec_time_unit($start, 'ms', 3);
 
 	$exec = ($total>100)
 		? sprintf(' Exec in <span style=\'color:red\'>%.3f ms.</span>', $total)
@@ -420,20 +418,23 @@ function exec_time($start, string $method=null, $result=null) : string {
 
 /**
 * EXEC_TIME
+* @param float $start
+* 	time in nanaseconds
+* @param string $ms default 'ms' (miliseconds)
+* 	unit: ns|ms|sec
+* @param int $round
+* 	Math total rounded to value. Default 3
 * @return string
 */
 function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
 
-	$unit='ms';
+	$total_ns	= start_time() - $start;
+	$total		= ($unit==='ms')
+		? $total_ns/1e+6 // ($total/1e+6) nanoseconds to milliseconds
+		: $total_ns;
 
-	$end	= start_time();
-	$total	= $end - $start;
-	$total	= ($unit==='ms')
-		// ? $total*1000 // ($total*1000) microseconds to milliseconds
-		? $total/1e+6 // ($total/1e+6) nanoseconds to milliseconds
-		: $total;
-
-	$result = $total; // number_format($total, 3);
+	// round
+		$result = round($total, $round);
 
 	return $result;
 }//end exec_time_unit
@@ -908,6 +909,7 @@ function sanitize_query(string $strQuery) : string {
 * @return mixed $var_value
 */
 function fix_cascade_config4_var(string $var_name, mixed $var_default_value) : mixed {
+// function fix_cascade_config4_var(string $var_name, $var_default_value) { // 7.4 compatible
 
 	switch (true) {
 		# REQUEST (GET/POST)
