@@ -205,7 +205,7 @@ if(!empty($data) && $data->mode==='edit_ts') {
 
 	// JSON Ontology Item save
 		$term_id	= $terminoID;
-		$json_item	= ontology::tipo_to_json_item($term_id);
+		$json_item	= (object)ontology::tipo_to_json_item($term_id);
 		$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
 
 	// css structure . For easy css edit, save
@@ -251,10 +251,9 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed on save_descriptor. ';
 
-
 	// mandatory vars
-		if(empty($data->terminoID)) {
-			$response->msg .= " terminoID is mandatory!";
+		if(empty($data->parent)) {
+			$response->msg .= " parent is mandatory!";
 			echo json_encode($response, JSON_UNESCAPED_UNICODE);
 			exit();
 		}
