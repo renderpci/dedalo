@@ -17,28 +17,28 @@ class dd_elements {
 	/**
 	* MAKETSLINE. CREA LINEA DE TESAURO CON ICONOS Y TÉRMINO
 	*/
-	protected function makeTSline(	$terminoID,
-									$termino,
-									$parent,
-									$children,
-									$def,
-									$obs,
-									$hijosD,
-									$hijosND,
-									$nIndexaciones,
-									$ncaptaciones,
-									$nordenV,
-									$resalte,
-									$modelo,
-									$propiedades,
-									$properties,
-									$traducible,
-									$norden) : string {
+	protected function makeTSline(	string $terminoID,
+									string $termino,
+									string $parent,
+									string $children,
+									string $def,
+									string $obs,
+									int $hijosD,
+									int $hijosND,
+									int $nIndexaciones,
+									int $ncaptaciones,
+									int $nordenV,
+									$resalte, // bool|int
+									?string $modelo,
+									?string $propiedades,
+									$properties, // null|object|array
+									?string $traducible,
+									string $norden) : string {
 
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
 
-		$html = '<div id="divTsIcons$terminoID" '.$resalte.' class="divTS">';
+		$html = '<div id="divTsIcons'.$terminoID.'" '.$resalte.' class="divTS">';
 
 			# Render Buttons
 			if($this->modo==='tesauro_edit' || $this->modo==='modelo_edit') {
@@ -56,8 +56,7 @@ class dd_elements {
 					$html .= $this->renderBtnEditTermino($terminoID);
 				// }
 			}
-
-			if($this->modo==='tesauro_rel') {
+			elseif($this->modo==='tesauro_rel') {
 				# Relacionar e Indexar
 				#if($usableIndex==='si') {
 
@@ -75,9 +74,9 @@ class dd_elements {
 			# Mostrar texto del término
 			$html .= $this->renderTextTermino($terminoID,$termino,$parent,$resalte);
 
-			if($traducible==='no')
-			$html .= ' <em>(no trad.)</em>';
-
+			if($traducible==='no') {
+				$html .= ' <em>(no trad.)</em>';
+			}
 
 			# BUTTON DESPLEGAR TERMINOS RELACIONADOS BtnTR
 			$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($terminoID);
@@ -637,32 +636,34 @@ class dd_elements {
 	* LISTADOND. Genera el listado de NO Descriptores
 	*/
 	protected function listadoND(string $terminoID) : string {
-		global $editar_title;
+		// global $editar_title;
 
 		$html = '' ;
 
 		$RecordObj_dd			= new RecordObj_dd($terminoID);
 		$ar_childrens_of_this	= $RecordObj_dd->get_ar_childrens_of_this($esdecriptor='no');
 
-		if(is_array($ar_childrens_of_this) && count($ar_childrens_of_this)>0) foreach($ar_childrens_of_this as $terminoID) {
+		if(is_array($ar_childrens_of_this) && count($ar_childrens_of_this)>0) foreach($ar_childrens_of_this as $current_terminoID) {
 
-			$terminoND = RecordObj_dd::get_termino_by_tipo($terminoID,false);
+			$terminoND = RecordObj_dd::get_termino_by_tipo($current_terminoID,false);
 
 			if($this->modo==='tesauro_edit') {
 
-				$RecordObj_dd2	= new RecordObj_dd($terminoID);
+				$RecordObj_dd2	= new RecordObj_dd($current_terminoID);
 				$parent			= $RecordObj_dd2->get_parent();
-				$html .= $this->renderBtnBorrar($terminoID, $children=0, $nIndexaciones=0, $parent, $terminoND);
-				$html .= $this->renderBtnEditTermino($terminoID,$parent);
+				$html .= $this->renderBtnBorrar($current_terminoID, $children=0, $nIndexaciones=0, $parent, $terminoND);
+				$html .= $this->renderBtnEditTermino($current_terminoID,$parent);
 			}
 
 			$html .= ' [ND] ';
 			#$html .= "<a href=\"javascript:dd.openTSedit('$tsNDID','$parent')\"  title=\"$editar_title\" >";
 			$html .= '<em class="terminoIDinList">'.$terminoND.'</em>';
 			#$html .= "</a>";
-			$html .= "<span class=\"terminoIDinList\"> [$terminoID] </span><br>";
-			$html .= "<div id=\"divCont$terminoID\" class=\"inline\"></div>";
+			$html .= "<span class=\"terminoIDinList\"> [$current_terminoID] </span><br>";
+			$html .= "<div id=\"divCont$current_terminoID\" class=\"inline\"></div>";
 		}
+
+
 		return $html ;
 	}//end listadoND
 

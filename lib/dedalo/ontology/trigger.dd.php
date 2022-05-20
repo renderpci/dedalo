@@ -248,8 +248,8 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 	session_write_close();
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on save_descriptor. ';
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed on save_descriptor. ';
 
 	// mandatory vars
 		if(empty($data->parent)) {
@@ -436,8 +436,6 @@ if($accion==='deleteTS') {
 				$RecordObj_dd_edit2->Save();
 			}
 
-	dump($ar_id," ar_id - terminoID:$terminoID");die();
-
 		# MODELO . Verificamos que nadie lo usa como modelo
 			/*
 			$prefijo 		= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
@@ -458,10 +456,10 @@ if($accion==='deleteTS') {
 			*/
 			$arguments=array();
 			#$arguments['terminoID']	= 'strPrimaryKeyName';
-			$arguments['modelo']		= $terminoID;
-			$prefijo = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
-			$RecordObj_dd_edit				= new RecordObj_dd_edit(NULL, $prefijo);
-			$ar_id						= $RecordObj_dd_edit->search($arguments);
+			$arguments['modelo']	= $terminoID;
+			$prefijo				= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+			$RecordObj_dd_edit		= new RecordObj_dd_edit(NULL, $prefijo);
+			$ar_id					= $RecordObj_dd_edit->search($arguments);
 
 			if(count($ar_id)>0) {
 
