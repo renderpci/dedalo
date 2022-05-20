@@ -9,7 +9,7 @@
 	import {ui} from '../../common/js/ui.js'
 	// import {tr} from '../../common/js/tr.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
-
+	import * as instances from '../../common/js/instances.js'
 
 
 /**
@@ -514,9 +514,42 @@ const get_custom_buttons = (self, text_editor, i) => {
 				tooltip	: 'Add note',
 				image	: '../themes/default/icons/note.svg',
 				onclick	: function(evt) {
-					event_manager.publish('create_note_tag_'+ self.id_base, {
+					event_manager.publish('create_note_tag_'+ self.id_base + '_' + i, {
 						caller		: self,
 						text_editor	: text_editor
+					})
+
+					self.create_note_tag({
+						text_editor	: text_editor
+					}).then((note_section_id)=>{
+						if (note_section_id){
+							const locator = {
+								section_tipo	: self.context.notes_section_tipo,
+								section_id		: note_section_id
+							};
+							const tag_type		='note'
+							const last_tag_id	= self.get_last_tag_id(tag_type, text_editor)
+							const note_number	= parseInt(last_tag_id) + 1
+							const note_tag		= {
+								type	: tag_type,
+								label	: note_number,
+								tag_id	: note_number,
+								state	: 'a',
+								data	: locator
+							}
+							const tag = build_node_tag(note_tag, note_tag.tag_id)
+							const inserted_tag = text_editor.set_content(tag.outerHTML)
+
+							render_note({
+								self		:self,
+								text_editor	: text_editor,
+								i			: i,
+								tag			: inserted_tag
+							}).then((section_node)=>{
+								self.node[0].appendChild(section_node)
+								}
+							)
+						}
 					})
 				}
 			}
@@ -744,7 +777,15 @@ const get_custom_events = (self, i, text_editor) => {
 						// Show note info
 						event_manager.publish('click_tag_note_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 
-						// component_text_area.show_note_info( ed, evt, text_area_component )
+						render_note({
+								self		: self,
+								text_editor	: text_editor,
+								i			: i,
+								tag			: tag_obj
+							}).then((section_node)=>{
+								self.node[0].appendChild(section_node)
+								}
+							)
 						break;
 
 					case 'reference':
@@ -1258,6 +1299,108 @@ const render_persons_list = function(self, text_editor, i){
 	return fragment
 };//end render_persons_list
 
+
+/**
+* RENDER_note
+* @return DOM node fragment
+*/
+const render_note = async function(options){
+
+	// short vars
+	const self				= options.self
+	const text_editor		= options.text_editor
+	const i					= options.i
+	const tag_node 			= options.tag
+	const data_string 		= tag_node.dataset.data
+	// convert the data_tag form string to json*-
+	const data				= data_string.replace(/\'/g, '"')
+	// replace the ' to " stored in the html data to JSON "
+	const locator	= JSON.parse(data)
+
+	const note_section_id	= locator.section_id
+	const note_section_tipo	= locator.section_tipo
+
+	const fragment = new DocumentFragment()
+
+	const instance_options = {
+		model			: 'section',
+		tipo			: note_section_tipo,
+		section_tipo	: note_section_tipo,
+		section_id		: note_section_id,
+		mode			: 'edit',
+		lang			: self.lang,
+		caller			: self,
+	}
+
+	const note_section = 	await instances.get_instance(instance_options)
+							await note_section.build(true)
+	const section_node = 	await note_section.render()
+
+	fragment.appendChild(section_node)
+	const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
+
+	// self.events_tokens.push(
+		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
+	// )
+	function fn_change_publication_state(changed_value) {
+
+		const state = changed_value.section_id === '2' // no active value
+			? 'a'
+			: 'b'
+		const current_tag_state = tag_node.dataset.state || 'a'
+		if (current_tag_state !== state){
+			const note_tag		= {
+				type	: 'note',
+				label	: tag_node.dataset.label,
+				tag_id	: tag_node.dataset.tag_id,
+				state	: state,
+				data	: locator
+			}
+			const tag = build_node_tag(note_tag, note_tag.tag_id)
+			tag_node.id = tag.id
+			tag_node.src = tag.src
+			tag_node.dataset.state = tag.dataset.state
+			text_editor.set_dirty(true)
+			text_editor.save()
+		}
+	}
+
+	console.log("note_section:",note_section);
+
+	// footer options
+		const footer_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'footer_container',
+			parent			: fragment
+		})
+		// button remove
+			const button_remove = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'button remove',
+				parent			: footer_container
+			})
+			button_remove.addEventListener("click", function(e){
+				e.stopPropagation()
+			})
+		// section info
+			const section_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button remove',
+				parent			: footer_container
+			})
+
+		// button_ok
+			const button_ok = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button icon close',
+				parent			: footer_container
+			})
+			button_ok.addEventListener("click", function(e){
+				e.stopPropagation()
+			})
+
+	return fragment
+};//end render_note
 
 
 
