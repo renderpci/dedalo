@@ -59,14 +59,15 @@ class dd_core_api {
 	*	"menu": true,
 	*	"prevent_lock": true
 	* }
-	* @return array $result
+	* @return object $reponse
 	*/
-	static function start(object $json_data) : object {
-		global $start_time;
+	public static function start(object $json_data) : object {
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// options
 			$search_obj = $json_data->search_obj ?? new StdClass(); // url vars
@@ -288,7 +289,6 @@ class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-
 				$response->debug = $debug;
 			}
 
@@ -298,15 +298,65 @@ class dd_core_api {
 
 
 	/**
-	* CREATE
-	* @return array $result
+	* READ
+	* @param request query object $rqo
+	*	array $json_data->context
+	* @return object $result
+	*	array $result->context
+	*	array $result->data
 	*/
-	static function create(object $json_data) : object {
-		global $start_time;
+	public static function read(object $rqo) : object {
+		$start_time = start_time();
+
+		// session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
+
+		// validate input data
+			if (empty($rqo->source->section_tipo)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				return $response;
+			}
+
+		// build rows (context & data)
+			$json_rows = self::build_json_rows($rqo);
+
+		// response success
+			$response->result	= $json_rows;
+			$response->msg		= 'OK. Request done';
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
+
+				$response->debug = $debug;
+
+				if (!empty(dd_core_api::$sql_query_searchs)) {
+					$response->debug->sql_query_searchs = dd_core_api::$sql_query_searchs;
+				}
+			}
+
+
+		return $response;
+	}//end read
+
+
+
+	/**
+	* CREATE
+	* @return array $result
+	*/
+	public static function create(object $json_data) : object {
+		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// section_tipo
 			$section_tipo = $json_data->section_tipo;
@@ -348,50 +398,108 @@ class dd_core_api {
 
 
 	/**
-	* READ
-	* @param request query object $rqo
-	*	array $json_data->context
-	* @return object $result
-	*	array $result->context
-	*	array $result->data
+	* DELETE
+	* Remove one or more section records from database
+	* If sqo is received, it will be used to search target sections
+	* Else a new sqo will be createds based on current section_ti, section_id
+	* Note that 'delete_mode' must be declared (delete_data|delete_record)
+	* @param object $rqo
+	* @return array $result
 	*/
-	static function read(object $rqo) : object {
-		global $start_time;
-
-		// session_write_close();
+	public static function delete(object $rqo) : object {
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed. ';
+			$response->error	= null;
 
-		// validate input data
-			if (empty($rqo->source->section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+		// ddo_source
+			$ddo_source = $rqo->source;
+
+		// source vars
+			$action			= $ddo_source->action ?? 'delete';
+			$delete_mode	= $ddo_source->delete_mode ?? 'delete_data';
+			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
+			$section_id		= $ddo_source->section_id ?? null;
+			$tipo			= $ddo_source->tipo;
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			if($model!=='section') {
+				$response->error = 1;
+				$response->msg 	.= 'Model is not expected section: '.$model;
 				return $response;
 			}
 
-		// build rows (context & data)
-			$json_rows = self::build_json_rows($rqo);
+		// sqo. search_query_object. If empty, we will create a new one with default values
+			$sqo = $rqo->sqo;
+			if(empty($sqo)){
+				// we build a new sqo based on the current source section_id
 
-		// response success
-			$response->result	= $json_rows;
-			$response->msg		= 'OK. Request done';
+				// section_id check (is mandatory when no sqo is received)
+					if (empty($section_id)) {
+						$response->error = 2;
+						$response->msg 	.= 'section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
+						return $response;
+					}
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
-
-				$response->debug = $debug;
-
-				if (!empty(dd_core_api::$sql_query_searchs)) {
-					$response->debug->sql_query_searchs = dd_core_api::$sql_query_searchs;
-				}
+				// sqo to create new one
+					$limit			= 0; // overwrite the default 10 records
+					$self_locator	= new locator();
+						$self_locator->set_section_tipo($section_tipo);
+						$self_locator->set_section_id($section_id);
+					$sqo = new search_query_object();
+						$sqo->set_section_tipo([$section_tipo]);
+						$sqo->set_limit($limit);
+						$sqo->set_filter_by_locators([$self_locator]);
 			}
+
+		// search the sections to delete
+			$search		= search::get_instance($sqo);
+			$rows_data	= $search->search();
+			$ar_records = $rows_data->ar_records;
+			// check empty records
+			if (empty($ar_records)) {
+				$response->result = [];
+				$response->msg 	.= 'no records found to delete ';
+				return $response;
+			}
+
+			foreach ($ar_records as $record) {
+				$current_section_tipo	= $record->section_tipo;
+				$current_section_id		= $record->section_id;
+
+				# Delete method
+				$section 	= section::get_instance($current_section_tipo, $current_section_id);
+				$delete 	= $section->Delete($delete_mode);
+			}
+
+		// ar_delete section_id
+			$ar_delete_section_id = array_map(function($record){
+				return $record->section_id;
+			}, $ar_records);
+
+		// check deleted all found sections. Exec the same search again expecting to obtain zero records
+			$check_search		= search::get_instance($sqo);
+			$check_rows_data	= $search->search();
+			$check_ar_records	= $check_rows_data->ar_records;
+			if(count($check_ar_records)>0) {
+
+				$check_ar_section_id = array_map(function($record){
+					return $record->section_id;
+				}, $check_ar_records);
+
+				$response->error = 3;
+				$response->msg 	.= 'Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
+				return $response;
+			}
+
+		// response OK
+			$response->result	= $ar_delete_section_id;
+			$response->msg		= 'OK. Request done. Deleted records: '.json_encode($ar_section_id, JSON_PRETTY_PRINT);
 
 
 		return $response;
-	}//end read
+	}//end delete
 
 
 
@@ -399,13 +507,14 @@ class dd_core_api {
 	* SAVE
 	* @return object $response
 	*/
-	static function save(object $json_data) : object {
-		global $start_time;
+	public static function save(object $json_data) : object {
+		$start_time = start_time();
 
 		// create the default save response
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// json_data. get the context and data sended
 			$context	= $json_data->context;
@@ -521,13 +630,14 @@ class dd_core_api {
 	* Used by component_portal to add created target section to current component with project values inheritance
 	* @return object $response
 	*/
-	static function add_new_element(object $json_data) : object {
-		global $start_time;
+	public static function add_new_element(object $json_data) : object {
+		$start_time = start_time();
 
 		// create the default response
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// json_data. get the context and data sent
 			$source					= $json_data->source;
@@ -596,28 +706,19 @@ class dd_core_api {
 
 
 	/**
-	* DELETE
-	* @return array $result
-	*/
-		// function delete($json_data) {
-
-		// }//end delete
-
-
-
-	/**
 	* COUNT
 	* @param object $json_data
 	* @return object $response
 	*/
-	static function count(object $json_data) : object {
-		global $start_time;
+	public static function count(object $json_data) : object {
+		$start_time = start_time();
 
 		session_write_close();
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		$search_query_object = $json_data->sqo;
 
@@ -659,13 +760,14 @@ class dd_core_api {
 	* @return object $response
 	*/
 	public static function get_element_context(object $json_data) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// vars from json_data
 			$source			= $json_data->source;
@@ -937,14 +1039,15 @@ class dd_core_api {
 	*	array $json_data->ar_section_tipo
 	* @return object $response
 	*/
-	static function get_section_elements_context(object $json_data) : object {
-		global $start_time;
+	public static function get_section_elements_context(object $json_data) : object {
+		$start_time = start_time();
 
 		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// json_data
 			$ar_section_tipo	= (array)$json_data->ar_section_tipo;
@@ -986,14 +1089,15 @@ class dd_core_api {
 	* FILTER_GET_EDITING_PRESET
 	* @return object $response
 	*/
-	static function filter_get_editing_preset(object $json_data) : object {
-		global $start_time;
+	public static function filter_get_editing_preset(object $json_data) : object {
+		$start_time = start_time();
 
 		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		$user_id				= navigator::get_user_id();
 		$target_section_tipo	= $json_data->target_section_tipo;
@@ -1018,12 +1122,13 @@ class dd_core_api {
 	* FILTER_SET_EDITING_PRESET
 	* @return object $response
 	*/
-	static function filter_set_editing_preset(object $json_data) : object {
-		global $start_time;
+	public static function filter_set_editing_preset(object $json_data) : object {
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		$user_id		= (int)navigator::get_user_id();
 		$section_tipo	= $json_data->section_tipo;
@@ -1049,14 +1154,15 @@ class dd_core_api {
 	* FILTER_GET_USER_PRESETS
 	* @return object $response
 	*/
-	static function filter_get_user_presets(object $json_data) : object {
-		global $start_time;
+	public static function filter_get_user_presets(object $json_data) : object {
+		$start_time = start_time();
 
 		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		$user_id				= navigator::get_user_id();
 		$target_section_tipo	= $json_data->target_section_tipo;
@@ -1083,14 +1189,15 @@ class dd_core_api {
 	* @param object $json_data
 	* @return object $response
 	*/
-	static function ontology_get_children_recursive(object $json_data) : object {
-		global $start_time;
+	public static function ontology_get_children_recursive(object $json_data) : object {
+		$start_time = start_time();
 
 		// session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// ontology call
 			$target_tipo	= $json_data->target_tipo;
@@ -1616,6 +1723,9 @@ class dd_core_api {
 
 
 
+	// en private methods ///////////////////////////////////
+
+
 
 	/**
 	* GET_INDEXATION_GRID
@@ -1627,6 +1737,7 @@ class dd_core_api {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// validate input data
 			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
@@ -1667,6 +1778,7 @@ class dd_core_api {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// validate input data
 			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
@@ -1702,6 +1814,7 @@ class dd_core_api {
 	}//end get_relation_list
 
 
+
 	/**
 	* SERVICE_REQUEST
 	* Call to service method given and return and object with the response
@@ -1726,11 +1839,12 @@ class dd_core_api {
 	* @return object response { result: mixed, msg: string }
 	*/
 	public static function service_request(object $request_options) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+			$response->error	= null;
 
 		// short vars
 			$source			= $request_options->source;
