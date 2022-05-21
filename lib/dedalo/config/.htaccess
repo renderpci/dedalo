@@ -1,8 +1,8 @@
-Deny from all
-
-Options None
-Options +FollowSymLinks
-
-<IfModule mod_php5.c>
-  php_flag engine off
+<IfModule mod_authz_core.c>
+# Deny access here (Apache 2.4)
+Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+# Deny access here (Apache <2.4)
+Order allow,deny
 </IfModule>
