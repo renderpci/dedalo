@@ -72,6 +72,7 @@
 
 
 // Dedalo information
+	// string to use in Dédalo cryptography
 	define('DEDALO_SALT_STRING', 'dedalo_six');
 
 
@@ -96,8 +97,9 @@
 
 
 
-// cache manager. redis | memcached | zebra_db | false . Default is false
-	define('DEDALO_CACHE_MANAGER', false );
+// cache
+	// dedalo_cache_manager. string|bool : redis | memcached | zebra_db | false . Default is false
+	define('DEDALO_CACHE_MANAGER', false);
 
 
 
@@ -114,7 +116,7 @@
 
 
 // session
-	if (session_status() !== PHP_SESSION_ACTIVE) {
+	if (session_status()!==PHP_SESSION_ACTIVE) {
 
 		# HANDLER
 		$SESSION_HANDLER = 'files';	// files | memcached | user | postgresql
@@ -126,21 +128,27 @@
 		# Use session_cache_expire to set duration of session
 		# Set duration max of session data in hours (default 8 hours)
 		# Set before session start
-		if(!isset($session_duration_hours)) $session_duration_hours = 8;
-		$timeout_seconds = intval($session_duration_hours*3600); // in seconds
+		$session_duration_hours	= $session_duration_hours ?? 8;
+		$timeout_seconds		= intval($session_duration_hours*3600); // in seconds
 
-		# Session
+		// session start
+		$cookie_secure		= (DEDALO_PROTOCOL==='https://');
+		$cookie_samesite	= (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
 		session_start_manager([
 			'save_handler'		=> 'files',
 			'timeout_seconds'	=> $timeout_seconds,
-			'session_name'		=> 'dedalo_'.DEDALO_ENTITY
+			'session_name'		=> 'dedalo_'.DEDALO_ENTITY,
+			// cookie params
+			'cookie_secure'		=> $cookie_secure, // Only https (true | false)
+			'cookie_samesite'	=> $cookie_samesite // (None | Lax | Strict)
 		]);
 
-	}//end if (session_status() !== PHP_SESSION_ACTIVE)
+	}//end if (session_status()!==PHP_SESSION_ACTIVE)
 
 
 
-// show_debug. Application debug config
+// show_debug
+	// Application debug config
 	define('SHOW_DEBUG',
 		(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
 			? true
@@ -149,7 +157,8 @@
 
 
 
-// is_developer. Logged user is developer value
+// is_developer
+	// Logged user is developer value
 	define('SHOW_DEVELOPER',
 		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
 			? true
@@ -222,35 +231,35 @@
 		'lg-eng'	=> 'English',
 		'lg-fra'	=> 'French',
 	]);
+	// dedalo_application_langs_default
 	define('DEDALO_APPLICATION_LANGS_DEFAULT'	, 'lg-spa');
-	define('DEDALO_APPLICATION_LANG'			, fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
-
-	# DATA LANG : Dedalo data lang
-	define('DEDALO_DATA_LANG_DEFAULT'			, 'lg-spa');
-	define('DEDALO_DATA_LANG'					, fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
-	define('DEDALO_DATA_LANG_SELECTOR' 			, false);
-
-	# DEDALO_DATA_NOLAN
-	define('DEDALO_DATA_NOLAN'					, 'lg-nolan');
-
-	# Projects langs
-	define('DEDALO_PROJECTS_DEFAULT_LANGS'		, [
+	// dedalo_application_lang. Current Dédalo application lang (cascade calculate from get, post, session vars, default)
+	define('DEDALO_APPLICATION_LANG'		, fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
+	// dedalo_data_lang
+	define('DEDALO_DATA_LANG_DEFAULT'		, 'lg-spa');
+	define('DEDALO_DATA_LANG'				, fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
+	// dedalo_data_lang_selector. Show/hide menu data lang selector. bool default true
+	define('DEDALO_DATA_LANG_SELECTOR' 		, true);
+	// dedalo_data_nolan. string default 'lg-nolan'. Do not change this
+	define('DEDALO_DATA_NOLAN'				, 'lg-nolan');
+	// Projects langs
+	define('DEDALO_PROJECTS_DEFAULT_LANGS'	, [
 		'lg-spa',
 		'lg-cat',
 		'lg-eng',
+		'lg-fra'
 	]);
-	# DEDALO_DIFFUSION_LANGS
-	# Default value is the same as proyect langs. Change for custom diffusion langs
+	// dedalo_diffusion_langs. Default value is the same as project langs. Change for custom diffusion langs
 	define('DEDALO_DIFFUSION_LANGS'				, DEDALO_PROJECTS_DEFAULT_LANGS);
-
 	// translator
-	// define('DEDALO_TRANSLATOR_URL'				, 'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
+	// define('DEDALO_TRANSLATOR_URL' , [
+	// 	'babel' => 'https://babel.render.es/babel_engine/'
+	// ]);	# default Babel: http://babel.render.net/babel_engine/
 
 
 
 // dedalo default config values
-	#
-	# DEDALO_PREFIX_TIPOS
+	// dedalo_prefix_tipos. Array of tipos to import and manage by Dédalo. mandatory: ['dd','rsc','tool','hierarchy','lg']
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
 		'rsc',
@@ -259,183 +268,176 @@
 		'oh',
 		'ich'
 	]);
-
-	# Fallback section
-	define('MAIN_FALLBACK_SECTION'				,'oh1'); # go after login (tipo inventory)
-	# NUMERICAL MATRIX VALUES. List of values 'yes/no' : used in login secuence before enter to system
-	define('NUMERICAL_MATRIX_VALUE_YES'			, 1);
-	define('NUMERICAL_MATRIX_VALUE_NO'			, 2);
-	# PERMISSIONS DEDALO DEFAULT ROOT
-	define('DEDALO_PERMISSIONS_ROOT'			, 1);
-	# MAX ROWS . ROWS LIST MAX RECORDS PER PAGE
-	define('DEDALO_MAX_ROWS_PER_PAGE'			, 10);
-	# USER PROFLE BY DEFAULT
-	define('DEDALO_PROFILE_DEFAULT'				, 2); // User (defined in profiles)
-	# DEDALO_DEFAULT_PROJECT. Default section_id of target filter section
-	define('DEDALO_DEFAULT_PROJECT'				, 1);
-	# DEDALO_FILTER_SECTION_TIPO_DEFAULT. Target filter section (actually dd153)
-	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT'	, DEDALO_SECTION_PROJECTS_TIPO); // dd153 Projects section (dd tipos)
+	// main_fallback_section. Default section tipo to go when it's not defined any
+	define('MAIN_FALLBACK_SECTION', 'oh1'); # go after login (tipo inventory)
+	// numerical matrix values of list of values 'yes/no'. Do not change this values !
+	define('NUMERICAL_MATRIX_VALUE_YES', 1);
+	define('NUMERICAL_MATRIX_VALUE_NO',  2);
+	// dedalo_permissions_root. Default permissions
+	// define('DEDALO_PERMISSIONS_ROOT', 1); DEPRECATED !
+	// dedalo_max_rows_per_page . Default max record per page. int default 10
+	define('DEDALO_MAX_ROWS_PER_PAGE', 10);
+	// user profile by default. Default profile id. int default 2 (regular user)
+	define('DEDALO_PROFILE_DEFAULT', 2);
+	// dedalo_default_project. Default section_id of target filter section. int default 1
+	define('DEDALO_DEFAULT_PROJECT', 1);
+	// dedalo_filter_section_tipo_default. Target filter section (current 'dd153' - Projects section). Do not change this
+	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT'	, DEDALO_SECTION_PROJECTS_TIPO);
 
 
 
 // media config
-	# MEDIA_BASE PATH
-	define('DEDALO_MEDIA_PATH'		, DEDALO_ROOT_PATH	. '/media');
-	define('DEDALO_MEDIA_URL'		, DEDALO_ROOT_WEB 	. '/media');
+	// media_base paths
+	define('DEDALO_MEDIA_PATH'	, DEDALO_ROOT_PATH	. '/media');
+	define('DEDALO_MEDIA_URL'	, DEDALO_ROOT_WEB 	. '/media');
 
-	#
-	# AV MEDIA
-		# AV FOLDER normally '/media/av'
+	// av media
+		// dedalo_av_folder. string default '/av'
 		define('DEDALO_AV_FOLDER'					, '/av');
-		# EXTENSION normally mp4, mov
+		// dedalo_av_extension string default 'mp4'
 		define('DEDALO_AV_EXTENSION'				, 'mp4');
-		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg']);
-		# MIME normally video/mp4, quicktime/mov
+		// dedalo_av_extensions_supported. array default ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']
+		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']);
+		// dedalo_av_mime_type. string default 'video/mp4'
 		define('DEDALO_AV_MIME_TYPE'				, 'video/mp4');
-		# TYPE normally h264/AAC
+		// dedalo_av_type. string default 'h264/AAC'
 		define('DEDALO_AV_TYPE'						, 'h264/AAC');
-		# QUALITY DEDALO_AV_QUALITY_ORIGINAL normally 'original'
+		// dedalo_av_quality_original. string default 'original'
 		define('DEDALO_AV_QUALITY_ORIGINAL'			, 'original');
-		# QUALITY DEFAULT normally '404' (estándar dedalo 72x404)
+		// quality default normally '404' (estándar dedalo 72x404)
 		define('DEDALO_AV_QUALITY_DEFAULT'			, '404');
-		# QUALITY FOLDERS ARRAY normally '404','audio' (Sort DESC quality)
+		// quality folders array normally '404','audio' (sort desc quality)
 		define('DEDALO_AV_AR_QUALITY'				, [DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']);
-		# EXTENSION normally mp4, mov
+
+		// av_posterframe_extension normally 'jpg'
 		define('DEDALO_AV_POSTERFRAME_EXTENSION'	, 'jpg');
-		# FFMPEG PATH
-		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/bin/ffmpeg'); # Like /usr/bin/ffmpeg
-		# FFMPEG SETTINGS
+		// ffmpeg path normally /usr/bin/ffmpeg
+		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/bin/ffmpeg');
+		// ffmpeg_settings (quality conversion and aspect ratio definitions)
 		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
-		# FAST START PATH
-		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');	# Like /usr/bin/qt-faststart
-		# DEDALO_AV_FFPROBE_PATH PATH usualmente /usr/bin/ffprobe
-		define('DEDALO_AV_FFPROBE_PATH'				, '/usr/bin/ffprobe'); # Like /usr/bin/ffprobe
-		# AV STREAMER
-		define('DEDALO_AV_STREAMER'					, NULL);
-		# AV DEDALO_AV_WATERMARK_FILE
+		// av_faststart_path normally /usr/bin/qt-faststart
+		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');
+		// av_ffprobe_path normally /usr/bin/ffprobe
+		define('DEDALO_AV_FFPROBE_PATH'				, '/usr/bin/ffprobe');
+		// av_streamer. Optional media streamer. Default is null
+		define('DEDALO_AV_STREAMER'					, null);
+		// av_watermark_file
 		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
 
-		# TEXT_SUBTITLES_ENGINE (tool_subtitles)
-		define('TEXT_SUBTITLES_ENGINE'				, DEDALO_CORE_PATH . '/tools/tool_subtitles');
-		# DEDALO_SUBTITLES_FOLDER (tool_subtitles)
+		// text_subtitles_engine (tool_subtitles)
+		// define('TEXT_SUBTITLES_ENGINE'			, DEDALO_CORE_PATH . '/tools/tool_subtitles'); (!) DEPRECATED
+		// dedalo_subtitles_folder (tool_subtitles)
 		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
-		# EXTENSION normally vtt
+		// dedalo_av_subtitles_extension . Default is 'vtt'
 		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
 
-		# DEDALO_AV_RECOMPRESS_ALL
+		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
 
-	#
-	# IMAGE MEDIA
-		# IMAGE FOLDER normally '/image'
+	// image media
+		// image_folder. Default: '/image'
 		define('DEDALO_IMAGE_FOLDER'				, '/image');
-		# EXTENSION normally jpg
+		// image_extension.  Default: 'jpg'
 		define('DEDALO_IMAGE_EXTENSION'				, 'jpg');
-		# MIME normally image/jpeg
+		// image_mime_type. Default: 'image/jpeg'
 		define('DEDALO_IMAGE_MIME_TYPE'				, 'image/jpeg');
-		# TYPE normally jpeg
+		// image_type. Default: 'jpeg'
 		define('DEDALO_IMAGE_TYPE'					, 'jpeg');
-		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, ['jpg','jpeg','png','tif','tiff','bmp','psd','raw']);
-		# QUALITY ORIGINAL normally 'original'
+		// image_extensions_supported. Array default: ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']
+		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']);
+		// image_quality_original. Default: 'original'
 		define('DEDALO_IMAGE_QUALITY_ORIGINAL'		, 'original');
-		# QUALITY MODIFY of original normally 'modify'
+		// image_quality_retouched of original. Default: 'modified' ('modificada' in old versions)
 		define('DEDALO_IMAGE_QUALITY_RETOUCHED'		, 'modified');
-		# QUALITY DEFAULT normally '1.5MB'
+		// quality default. Default: '1.5MB'
 		define('DEDALO_IMAGE_QUALITY_DEFAULT'		, '1.5MB');
-		# DEDALO_IMAGE_THUMB_DEFAULT
+		// dedalo_image_thumb_default. Default: 'thumb')
 		define('DEDALO_IMAGE_THUMB_DEFAULT'			, 'thumb');
-		# QUALITY FOLDERS ARRAY IN MB
+		// image_ar_quality. Array of image quality specifications like [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_IMAGE_THUMB_DEFAULT]
 		define('DEDALO_IMAGE_AR_QUALITY'			, [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
-		# PRINT DPI (default 150. Used to calculate print size of images -tool_image_versions-)
+		// image_print_dpi (default int 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
-		# IMAGE LIB
-		define('DEDALO_IMAGE_LIB'					, true);
-		# IMG FILE
+		// image lib
+		// define('DEDALO_IMAGE_LIB'				, true);  (!) DEPRECATED
+		// image_file_url
 		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_CORE_URL . '/media_engine/img.php');
-
-		# LIB ImageMagick MAGICK_PATH
+		// lib ImageMagick magick_path
 		define('MAGICK_PATH'						, '/usr/bin/'); 	# Like '/usr/bin/';
-		# COLOR_PROFILES_PATH
+		// color_profiles_path
 		define('COLOR_PROFILES_PATH'				, DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
-
+		// thumbs dedalo_image_thumb sizes. Integer as pixels
 		define('DEDALO_IMAGE_THUMB_WIDTH'			, 102);	// Default 102
 		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 57);	// Default 57
-
-		# DEDALO_IMAGE_WEB_FOLDER normally '/web' Used to save uploaded files from component_html_text
+		// image_web_folder normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
 
 
-	#
-	# PDF MEDIA
-		# PDF FOLDER normally '/image'
+
+	// pdf media
+		// pdf_folder. Default '/pdf'
 		define('DEDALO_PDF_FOLDER'					, '/pdf');
-		# EXTENSION normally pdf
+		// pdf_extension normally 'pdf'
 		define('DEDALO_PDF_EXTENSION'				, 'pdf');
-		# DEDALO_PDF_EXTENSIONS_SUPPORTED
+		// pdf_extensions_supported. Array default: ['pdf']
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
-		# QUALITY DEFAULT normally 'standar'
+		// pdf_quality_default. Default: 'standard'
 		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standard');
-		# QUALITY ORIGINAL normally 'original'
-		define('DEDALO_PDF_QUALITY_ORIGINAL'		, DEDALO_PDF_QUALITY_DEFAULT);
-
-
-		# QUALITY FOLDERS ARRAY
+		// pdf_ar_quality. Array of PDF quality definitions
 		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_DEFAULT]);
-		# MIME normally application/pdf
+		// pdf_mime_type. Default: 'application/pdf'
 		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
-		# TYPE normally jpeg
+		# pdf_type. Default: 'pdf'
 		define('DEDALO_PDF_TYPE'					, 'pdf');
-		# DEDALO_PDF_THUMB_DEFAULT
+		// pdf_thumb_default Default: 'thumb'
 		define('DEDALO_PDF_THUMB_DEFAULT'			, 'thumb');
-
-		# DEDALO_PDF_RENDERER (daemon for generate pdf from html files)
-		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');	# Like '/usr/bin/wkhtmltopdf'
-
-		# PDF_AUTOMATIC_TRANSCRIPTION_ENGINE (daemon for generate text files from pdf files)
-		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');	# Like '/usr/bin/pdftotext'
+		// pdf_renderer (path of daemon pdf generator from html) Normally wkhtmltopdf (https://wkhtmltopdf.org) lib is used
+		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');
+		// automatic_transcription_engine (path of daemon generator of text files from PDF) Using XPDF from http://www.foolabs.com/xpdf/ or https://pdftotext.com
+		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');
 
 
-	#
-	# HTML_FILES
+
+	// html_files
 		define('DEDALO_HTML_FILES_FOLDER'			, '/html_files');
 		define('DEDALO_HTML_FILES_EXTENSION'		, 'html');
 
 
-	#
-	# SVG MEDIA
-		# SVG FOLDER normally '/svg'
-		define('DEDALO_SVG_FOLDER'				, '/svg');
-		# EXTENSION normally svg
-		define('DEDALO_SVG_EXTENSION'			, 'svg');
-		# MIME normally image/svg+xml
-		define('DEDALO_SVG_MIME_TYPE'			, 'image/svg+xml');
-		# DEDALO_SVG_EXTENSIONS_SUPPORTED
-		define('DEDALO_SVG_EXTENSIONS_SUPPORTED', array('svg') );
-		# QUALITY DEFAULT normally 'standar'
-		define('DEDALO_SVG_QUALITY_DEFAULT'		, 'standard');
-		# QUALITY ORIGINAL normally 'original'
-		define('DEDALO_SVG_QUALITY_ORIGINAL'	, DEDALO_SVG_QUALITY_DEFAULT);
+
+	// svg media
+		// svg_folder. Default: '/svg'
+		define('DEDALO_SVG_FOLDER'					, '/svg');
+		// svg_extension normally 'svg'
+		define('DEDALO_SVG_EXTENSION'				, 'svg');
+		// svg_extensions_supported. Default ['svg']
+		define('DEDALO_SVG_EXTENSIONS_SUPPORTED'	, ['svg']);
+		// svg_quality_default. Default 'standard'
+		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'standard');
+		// svg_ar_quality
+		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_DEFAULT]);
+		// svg_mime_type. Default 'image/svg+xml'
+		define('DEDALO_SVG_MIME_TYPE'				, 'image/svg+xml');
 
 
 
-################################################################
-# UPLOADER CONFIG
-	define('DEDALO_UPLOADER_DIR'			, DEDALO_ROOT_PATH	. '/lib/jquery/jQuery-File-Upload');
-	define('DEDALO_UPLOADER_URL'			, DEDALO_ROOT_WEB	. '/lib/jquery/jQuery-File-Upload');
+// uploader config
+	define('DEDALO_UPLOADER_DIR', 	DEDALO_LIB_PATH . '/lib/jquery/jQuery-File-Upload');
+	define('DEDALO_UPLOADER_URL', 	DEDALO_LIB_URL . '/jquery/jQuery-File-Upload');
+	define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
 
 
 
-################################################################
-# GEO LOCATION
-	define('DEDALO_GEO_PROVIDER'			, 'VARIOUS');	# OSM, ARCGIS, GOOGLE, VARIOUS, ARCGIS
+// geo location. string from values: OSM | ARCGIS | GOOGLE | VARIOUS | ARCGIS . Default: 'VARIOUS'
+	define('DEDALO_GEO_PROVIDER', 'VARIOUS');
 
 
 
-################################################################
-# MEDIA ENTITY
+// rest_config
+	// Deprecated. Not used here.
+
+
+
+// media entity menu config
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
 	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...
@@ -443,109 +445,134 @@
 
 
 
-################################################################
-# DEDALO_TEST_INSTALL
-# If true, check current admin user credentials on login page
+// dedalo_test_install. bool
+	// On true, check current admin (root) user password on login page
 	define('DEDALO_TEST_INSTALL', true);
 
 
 
-################################################################
-# DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
+// dedalo_section_id_temp
+	// name / prefix of section_id temporal used to store special sections in memory or session. Do not change this
 	define('DEDALO_SECTION_ID_TEMP', 'tmp');
 
 
 
-################################################################
-# TOOLS VARS
-	# TOOL EXPORT
-	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/export/files');
-	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,	DEDALO_MEDIA_URL  . '/export/files');
-	# TOOL IMPORT
+// tools vars
+	// tool export
+	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',			DEDALO_MEDIA_PATH . '/export/files');
+	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,			DEDALO_MEDIA_URL  . '/export/files');
+	// tool import
 	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/import/files');
 
 
 
-################################################################
-# LOCK_COMPONENTS
-	# Lock and unlock components to avoid replacement data when more than one user edit the same component
-	define('DEDALO_LOCK_COMPONENTS', false);	# Default (bool)false
+// lock_components
+	// Set lock components function when users are editing fields. boolean
+	define('DEDALO_LOCK_COMPONENTS', false);
 
 
 
-################################################################
-# NOTIFICATIONS
-	# Send notifications to user browser. E.g. Current lock components..
+// notifications
+	// Send notifications to user browser. E.g. Current lock components..
 	define('DEDALO_NOTIFICATIONS'			, false);
-	define('DEDALO_NODEJS'					, '/usr/local/bin/node');
-	define('DEDALO_NODEJS_PM2'				, '/usr/local/bin/pm2');
+	define('DEDALO_NODEJS'					, '/usr/bin/node');
+	define('DEDALO_NODEJS_PM2'				, '/usr/bin/pm2');
 
 
 
-################################################################
-# STRUCTURE CSS
-	# Aditional css precessed from structure or created in aditional external files
-	define('DEDALO_STRUCTURE_CSS', true);
-	define('DEDALO_ADITIONAL_CSS', false);
-
-
-
-################################################################
-# DIFFUSION DOMAIN
+// diffusion domain
+	// Set publication diffusion domain. Default value is 'default'
 	define('DEDALO_DIFFUSION_DOMAIN'			, 'default');
 	define('DEDALO_DIFFUSION_RESOLVE_LEVELS'	, 2);
 	define('DEDALO_PUBLICATION_ALERT'			, false);
 
 
-################################################################
-# DIFFUSION_CUSTOM
-# Otional custom class to maniputate diffusion options
-	define('DIFFUSION_CUSTOM'					, false);
+
+// diffusion_custom
+	// Optional custom class to manipulate diffusion options. string|bool . Default: false
+	define('DIFFUSION_CUSTOM', false);
 
 
 
-################################################################
-# DEDALO_PROTECT_MEDIA
-	define('DEDALO_PROTECT_MEDIA_FILES'			, false);
+// dedalo_ar_exclude_components
+	// optional array of component tipo to exclude
+	define('DEDALO_AR_EXCLUDE_COMPONENTS', []);
 
 
 
-################################################################
-# DEDALO_FILTER_USER_RECORDS_BY_ID
-# Activate user records filter restriction
-	define('DEDALO_FILTER_USER_RECORDS_BY_ID'	, false);
+// dedalo_protect_media
+	// Deprecated. Not used here.
 
 
 
-################################################################
-# ENCRYPTION_MODE. If not is defined, will be calculated from current Dédalo data version
+// dedalo_filter_user_records_by_id
+	// Activate user records filter restriction
+	define('DEDALO_FILTER_USER_RECORDS_BY_ID', false);
+
+
+
+// geonames
+	// geonames_account_username. Only to development
+	define('GEONAMES_ACCOUNT_USERNAME', 'my_account');
+
+
+
+// encryption_mode
+	// If not is defined, will be calculated from current Dédalo data version
 	define('ENCRYPTION_MODE', 'openssl');
 
 
 
-################################################################
-# REMOTE_STRUCTURE_SERVER_CODE
+// remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER'		, true); # bool
 	define('STRUCTURE_SERVER_CODE'		, ''); 	 # string like aZdUs7asdasdhRsw4!sp
 	define('STRUCTURE_SERVER_URL'		, ''); 	 # string like https://master.render.es/dedalo/lib/dedalo/extras/str_manager/
-	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_CORE_PATH . '/backup/backups_structure/srt_download');
+	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_STRUCTURE . '/download');
 
 
 
-################################################################
-# API (PUBLICATION)
-	# Auth code for acces to rest api server
+// login init_cookie_auth
+	// Deprecated. Not used here.
+
+
+
+// export hierarchy
+	// This is ONLY for MASTER ! . Not use for other domains !
+
+
+
+// zotero_import
+	// Deprecated. Not used here.
+
+
+
+// api (publication)
 	define('API_WEB_USER_CODE_MULTIPLE' , [
 		[
 			'db_name'	=> '', // like web_my_entity
-			'code' 		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
 		]
 	]);
 
 
 
-################################################################
-# MAINTENACE : maintenance mode active / unactive
+// socrata config
+	// Custom connection config. Not used here.
+
+
+
+// saml config
+	// Custom connection config. Not used here.
+
+
+
+// mailer
+	// Custom connection config. Not used here.
+
+
+
+// maintenance
+	// maintenance mode active / inactive
 	$maintenance_mode = false;
 	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
 	if (DEDALO_MAINTENANCE_MODE) {
@@ -554,9 +581,8 @@
 
 
 
-################################################################
-# NOTICE_TO_ACTIVE_USERS  : Warning to print in all pages to logged users
-	$notice = "<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
+// notice_to_active_users : Warning to print in all pages to logged users
+	$notice = '<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
 	Please, save the unsaved work and log out as soon as possible.
-	After a few minutes, you can re-login to Dédalo and work again";
-	#notice_to_active_users(array('msg'=>$notice, 'mode'=>"warning"));
+	After a few minutes, you can re-login to Dédalo and work again';
+	// notice_to_active_users(array('msg'=>$notice, 'mode'=>'warning'));
