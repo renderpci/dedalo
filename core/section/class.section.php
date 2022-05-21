@@ -1122,30 +1122,34 @@ class section extends common {
 	* @param section id
 	* @param delete_mode (data / record)
 	* Delete section with options
+	* @return bool
 	*/
-	public function Delete( string $delete_mode ) {
+	public function Delete( string $delete_mode ) : bool {
 
-		if($this->section_id<1) return false;
+		// section_id
+			// force type int
+			$section_id = intval($this->section_id);
+			// prevent delete <1 records
+			if($section_id<1) {
+				return false;
+			}
 
-		# Force type int
-		$section_id = intval($this->section_id);
+		// section_tipo
+			$section_tipo = $this->tipo;
+			// section_real_tipo. If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
+			if(isset($this->properties->section_tipo) && $this->properties->section_tipo === "real"){
+				$section_tipo = $this->get_section_real_tipo();
+			}
 
-		$section_tipo = $this->tipo;
+		// matrix_table
+			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
-		#if the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-		if(isset($this->properties->section_tipo) && $this->properties->section_tipo === "real"){
-			$section_tipo = $this->get_section_real_tipo();
-		}
+		// delete_mode based actions
+			switch($delete_mode) {
 
-		# matrix_table
-		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+				case 'delete_data' :
 
-
-		switch($delete_mode) {
-
-			case 'delete_data' :
-
-					# CHILDRENS : Calculate component childrens of current section
+					# CHILDRENS : Calculate component children of current section
 					$children_components = (array)$this->get_ar_children_objects_by_modelo_name_in_section('component_', $resolve_virtual=true);
 
 					# No borraremos los datos de algunos componentes ('component_av', 'component_image' , 'component_pdf',...)
@@ -1166,8 +1170,7 @@ class section extends common {
 					$logger_msg = "Deleted section and children data";
 					break;
 
-
-			case 'delete_record' :
+				case 'delete_record' :
 
 					if(SHOW_DEBUG===true) {
 						if ((int)$this->section_id===0) {
@@ -1215,6 +1218,11 @@ class section extends common {
 					}
 					$dato_time_machine 	= $RecordObj_time_machine->get_dato();
 					$dato_section 		= $this->get_dato();
+
+					// before compare, encode and decode the objects to avoid comparison errors
+					$dato_time_machine_compare	= json_decode( json_encode($dato_time_machine) );
+					$dato_section_compare		= json_decode( json_encode($dato_section) );
+
 					if ($dato_time_machine != $dato_section) {
 						if(SHOW_DEBUG===true) {
 							dump($dato_time_machine,"SHOW_DEBUG COMPARE ERROR dato_time_machine");
@@ -1257,45 +1265,47 @@ class section extends common {
 					# ¿¿¿ TIME MACHINE DELETE ?????
 
 					break;
-		}
 
-		if (SHOW_DEBUG) {
-			debug_log(__METHOD__." Deleted section $this->section_id and their 'childrens'. delete_mode $delete_mode");
-		}
+				default:
 
+					debug_log(__METHOD__." Delete mode not defined ".to_string(), logger::ERROR);
+					return false;
+			}
+			debug_log(__METHOD__." Deleted section '$this->section_id' and their 'children'. delete_mode:'$delete_mode'", logger::DEBUG);
 
 		// publication . Remove published records in mysql, etc.
-			diffusion::delete_record($this->tipo, $this->section_id);
+			try {
+				diffusion::delete_record($this->tipo, $this->section_id);
+			} catch (Exception $e) {
+				debug_log(__METHOD__." Error on diffusion::delete_record: ".$e->getMessage(), logger::ERROR);
+			}
 
+		// log
+			$is_portal = (TOP_TIPO!==$this->tipo);
+			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'DELETE',
+				logger::INFO,
+				$this->get_tipo(),
+				null,
+				array(
+					'msg'			=> $logger_msg,
+					'section_id'	=> $this->section_id,
+					'tipo'			=> $this->tipo,
+					'is_portal'		=> intval($is_portal),
+					'top_id'		=> TOP_ID,
+					'top_tipo'		=> TOP_TIPO,
+					'table'			=> $matrix_table,
+					'delete_mode'	=> $delete_mode,
+					'section_tipo'	=> $this->tipo
+				)
+			);
 
-		if( TOP_TIPO != $this->tipo ){
-			$is_portal = true;
-		}else{
-			$is_portal 	= false;
-			$top_id 	= $this->section_id;
-			#$top_tipo 	= $this->tipo;
-		}
-		# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-		logger::$obj['activity']->log_message(
-			'DELETE',
-			logger::INFO,
-			$this->get_tipo(),
-			null,
-			#array("msg"=>$logger_msg)
-			array(	"msg"			=> $logger_msg,
-					"section_id"	=> $this->section_id,
-					"tipo"			=> $this->tipo,
-					"is_portal"		=> intval($is_portal),
-					"top_id"		=> TOP_ID,
-					"top_tipo"		=> TOP_TIPO,
-					"table"			=> $matrix_table,
-					"delete_mode"	=> $delete_mode,
-					"section_tipo"	=> $this->tipo
-					)
-		);
+		// DEDALO_CACHE_MANAGER : get_ar_filter_cache
+			if( DEDALO_CACHE_MANAGER===true ) {
+				cache::del_contains( $this->tipo );
+			}
 
-		# Reset session search_options
-		# fa falta aixó ?
 
 		return true;
 	}//end Delete
