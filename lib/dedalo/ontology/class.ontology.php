@@ -745,7 +745,7 @@ class ontology {
 			if ($count===0) {
 
 				// Zero records found. Record do not exists
-				debug_log(__METHOD__." count zero. get_section_id_by_term_id " . to_string($sqo), logger::DEBUG);
+				debug_log(__METHOD__." count zero. get_section_id_by_term_id " . to_string(), logger::DEBUG);
 				if(SHOW_DEBUG===true) {
 					// $bt = debug_backtrace();
 					// dump($bt, ' bt ++++++++++++++++++++++++++++++++ '.to_string());
