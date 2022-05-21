@@ -2695,7 +2695,7 @@
 		Fixed ontology form submit duplicity issue when a new term is created. Now enter the fields, press the ENTER key, don't submit the form, just click the 'Modify' button
 		Fixed ontology possible infinite loop when empty tern_id is received twice
 		Fixed ontology cache bug where method tipo_to_json_item returns inconsistent cached value from previous DB call
-
+		Added .htaccess old Apache versions (<2.4) compatibility
 
 
 	[/HISTORY]
@@ -2727,7 +2727,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-05-2022T15:16:11');
+	define('DEDALO_BUILD'	, '21-05-2022T12:11:33');
 
 
 	/*
