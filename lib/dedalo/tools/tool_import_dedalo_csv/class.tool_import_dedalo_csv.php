@@ -589,10 +589,6 @@ class tool_import_dedalo_csv extends tool_common {
 
 				try {
 
-					$fp = fopen($file, 'r');
-					$first_char = fgetc($fp);
-					$enclosure = 0x00; // $first_char!=='"' ? null : '"';
-
 					// data . extract csv data from file
 					// $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"'
 					$ar_data = tool_common::read_csv_file_as_array(
@@ -632,7 +628,6 @@ class tool_import_dedalo_csv extends tool_common {
 				$ar_reference_errors	= array();
 				$preview_max			= 10;
 				foreach ($ar_data as $dkey => $current_line) {
-						// dump($current_line, ' current_line ++ '.to_string($current_line));
 
 					if (empty($current_line)) {
 						continue;
@@ -643,8 +638,7 @@ class tool_import_dedalo_csv extends tool_common {
 							continue;
 						}
 
-						// $value	= to_string($value);
-						$value		= str_replace('U+003B', ';', $value);
+						$value = str_replace('U+003B', ';', $value);
 
 						# Test valid json
 						if (strpos($value,'[')===0 || strpos($value,'{')===0) {
@@ -658,6 +652,10 @@ class tool_import_dedalo_csv extends tool_common {
 
 								$ar_reference_errors[] = $current_line;
 							}
+						}
+
+						if(json_last_error()!==JSON_ERROR_NONE){
+							debug_log(__METHOD__." JSON decode error has occurred: ".json_last_error_msg(), logger::ERROR);
 						}
 					}
 					$ar_reference[] = $current_line;
