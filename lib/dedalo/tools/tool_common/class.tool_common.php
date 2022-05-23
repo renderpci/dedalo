@@ -7,7 +7,7 @@ abstract class tool_common extends common {
 	public $modo;
 
 	/**
-	* __CONSTRUCT 
+	* __CONSTRUCT
 	* @param object $element_obj (can be 'component' or 'section')
 	* @param string $modo (default is 'page' when is called from main page)
 	*/
@@ -27,8 +27,8 @@ abstract class tool_common extends common {
 
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
-		$html = ob_get_clean();		
-		
+		$html = ob_get_clean();
+
 
 		if(SHOW_DEBUG===true) {
 			#global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->modo.'_'.microtime(1)]=microtime(1);
@@ -46,8 +46,8 @@ abstract class tool_common extends common {
 	*/
 	public function get_json(){
 
-		if(SHOW_DEBUG===true) $start_time = start_time();		
-		
+		if(SHOW_DEBUG===true) $start_time = start_time();
+
 			# Class name is called class (ex. component_input_text), not this class (common)
 			include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'_json.php' );
 
@@ -55,7 +55,7 @@ abstract class tool_common extends common {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
 			#global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-		
+
 		return $json;
 	}//end get_json
 
@@ -64,19 +64,22 @@ abstract class tool_common extends common {
 	/**
 	* READ_CSV_FILE_AS_ARRAY
 	* @param string $file
-	* @return string $html
+	* @return array|bool $csv_array
 	*/
-	public static function read_csv_file_as_array( $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"' ) {
+	public static function read_csv_file_as_array(string $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"') {
 
 		if(!file_exists($file)) {
 			echo "File not found: $file";
 			return false;
 		}
-			
-		ini_set('auto_detect_line_endings',TRUE);
+
+		$is_php81 = (version_compare(PHP_VERSION, '8.1.0') >= 0);
+		if (!$is_php81) {
+			ini_set('auto_detect_line_endings', true);
+		}
 
 		$f = fopen($file, "r");
-		
+
 		$csv_array=array(); // , $enclosure
 		$i=0; while (($line = fgetcsv($f, 0, $csv_delimiter, $enclosure, $escape)) !== false) { //, $enclosure
 
@@ -85,20 +88,25 @@ abstract class tool_common extends common {
 				continue;
 			}
 			#if ($i>0) break;
-			
+
 			foreach ($line as $cell) {
-				
+
 				#$cell=nl2br($cell);
-				#$cell=htmlspecialchars($cell); // htmlspecialchars_decode($cell);				
-				#$cell = str_replace("\t", " <blockquote> </blockquote> ", $cell);			
+				#$cell=htmlspecialchars($cell); // htmlspecialchars_decode($cell);
+				#$cell = str_replace("\t", " <blockquote> </blockquote> ", $cell);
 
 				$csv_array[$i][] = trim($cell);
-			}	
+			}
 			$i++;
 		}
 		fclose($f);
-		ini_set('auto_detect_line_endings',FALSE);
-		
+
+
+		if (!$is_php81) {
+			ini_set('auto_detect_line_endings', false);
+		}
+
+
 		return $csv_array;
 	}//end read_csv_file_as_array
 
@@ -107,10 +115,10 @@ abstract class tool_common extends common {
 	/**
 	* READ_FILES
 	* Read files from directory and return all files array filtered by extension
-	* @return 
+	* @return array $ar_data
 	*/
-	public static function read_files($dir, $valid_extensions=array('csv')) {
-		
+	public static function read_files(string $dir, array $valid_extensions=array('csv')) : array {
+
 		$ar_data = array();
 		try {
 			/*
@@ -119,14 +127,16 @@ abstract class tool_common extends common {
 				if(!$create_dir) throw new Exception(" Error on create directory. Permission denied \"$dir\" (1)");
 			}
 			*/
-			$root 	 = scandir($dir);
+			$root = scandir($dir);
 		} catch (Exception $e) {
-			//return($e);
-		}
-		if (!$root) {
+			debug_log(__METHOD__." Error. Exception on read (scandir) root dir: ".to_string($dir), logger::ERROR);
 			return array();
 		}
-		
+		if ($root===false || empty($root)) {
+			debug_log(__METHOD__." Error on read (scandir) root dir: ".to_string($dir), logger::ERROR);
+			return array();
+		}
+
 		natsort($root);
 		foreach($root as $value) {
 
@@ -152,7 +162,7 @@ abstract class tool_common extends common {
 		# SORT ARRAY (By custom core function build_sorter)
 		#usort($ar_data, build_sorter('numero_recurso'));
 		#dump($ar_data,'$ar_data');
-		
+
 		return (array)$ar_data;
 	}//end read_files
 
@@ -175,7 +185,7 @@ abstract class tool_common extends common {
 
 			if ($current_section_tipo!==TOP_TIPO) {
 				continue;
-			}			
+			}
 			$ar_inverse[$current_section_id] = $section_name ." | ". $current_section_id;
 
 			# inverse_code
@@ -185,7 +195,7 @@ abstract class tool_common extends common {
 			}
 		}
 		natsort($ar_inverse);
-		
+
 		return $ar_inverse;
 	}//nd get_ar_inverse
 
@@ -203,9 +213,9 @@ abstract class tool_common extends common {
 			#dump($section_map, ' section_map ++ '.to_string());
 
 		$separator = ' - ';
-		
+
 		if (is_object($section_map) && property_exists($section_map, "default") && property_exists($section_map->default, $type)) {
-			
+
 			if (is_array($section_map->default->$type)) {
 				// Is json encoded array
 				$ar_component_tipo = $section_map->default->$type;
@@ -215,9 +225,9 @@ abstract class tool_common extends common {
 			}
 
 			$ar_labels = [];
-			$ar_values = [];			
+			$ar_values = [];
 			foreach ($ar_component_tipo as $key => $element_tipo) {
-				
+
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $element_tipo,
@@ -228,11 +238,11 @@ abstract class tool_common extends common {
 				$ar_labels[] = $component->get_label();
 
 				$value = $component->get_valor();
-				if (!empty($value)) {			
+				if (!empty($value)) {
 					$ar_values[] = $value;
-				}						
+				}
 			}
-						
+
 			$response = new stdClass();
 				$response->label = implode($separator, $ar_labels);
 				$response->value = implode($separator, $ar_values);
@@ -252,7 +262,7 @@ abstract class tool_common extends common {
 	* @return object $response
 	*/
 	public static function iterate_files($dir_path, $action) {
-				
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
@@ -269,20 +279,20 @@ abstract class tool_common extends common {
 		// iterate
 			$procesed_files = [];
 			foreach ($fileSystemIterator as $fileInfo){
-				
+
 				$file_name = $fileInfo->getFilename();
 				$file_type = $fileInfo->getType();
 
 				// exec function callback
 				$action_response = $action($fileInfo);
-				
+
 				if (!$action_response) {
 					debug_log(__METHOD__." Error. Ignored file: ".to_string($file_name), logger::WARNING);
 				}else{
 					$procesed_files[] = $file_name;
 				}
 			}
-		
+
 		$response->result	= true;
 		$response->msg		= 'Ok. Request done';
 
