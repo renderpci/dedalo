@@ -2696,6 +2696,7 @@
 		Fixed ontology possible infinite loop when empty tern_id is received twice
 		Fixed ontology cache bug where method tipo_to_json_item returns inconsistent cached value from previous DB call
 		Added .htaccess old Apache versions (<2.4) compatibility
+		Fixed tool_import_dedalo_csv issue with non-utf8 files blocking tool preview of files
 
 
 	[/HISTORY]
@@ -2727,7 +2728,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '21-05-2022T12:11:33');
+	define('DEDALO_BUILD'	, '23-05-2022T19:18:15');
 
 
 	/*
