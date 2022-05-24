@@ -403,9 +403,11 @@ class component_text_area extends component_common {
 			}
 
 		// clean dato
-			if ($clean_text) {
+			if ($clean_text && !empty($dato_current)) {
 				foreach ($dato_current as $key => $current_value) {
-					$dato_current[$key] = TR::limpiezaPOSTtr($current_value);
+					if (!empty($current_value)) {
+						$dato_current[$key] = TR::limpiezaPOSTtr($current_value);
+					}
 				}
 			}
 			#$dato_clean 	= mb_convert_encoding($dato_clean, "UTF-8", "auto");
