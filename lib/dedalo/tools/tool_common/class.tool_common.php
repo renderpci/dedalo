@@ -63,48 +63,78 @@ abstract class tool_common extends common {
 
 	/**
 	* READ_CSV_FILE_AS_ARRAY
+	* Reads given csv file as array of data.
+	* Note that expected encoding is UTF-8 and
+	* the locale settings are taken into account by php fgetcsv function.
+	* If LC_CTYPE is e.g. en_US.UTF-8, files in one-byte encodings may be read wrongly by fgetcsv.
+	* When file encoding is different from UTF-8, a conversion try will be made.
 	* @param string $file
-	* @return array|bool $csv_array
+	* @param bool $skip_header
+	* @param string $csv_delimiter
+	* @param string $enclosure
+	* @param string $escape
+	*
+	* @return array $csv_array
+	* 	An empty array is returned when something wrong happens, like when the file doesn't exist
 	*/
-	public static function read_csv_file_as_array(string $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"') {
+	public static function read_csv_file_as_array(string $file, bool $skip_header=false, string $csv_delimiter=';', string $enclosure='"', string $escape='"') : array {
 
-		if(!file_exists($file)) {
-			echo "File not found: $file";
-			return false;
-		}
+		// file not found case
+			if(!file_exists($file)) {
+				debug_log(__METHOD__." File not found ".to_string($file), logger::ERROR);
+				return [];
+			}
 
-		$is_php81 = (version_compare(PHP_VERSION, '8.1.0') >= 0);
-		if (!$is_php81) {
-			ini_set('auto_detect_line_endings', true);
-		}
+		// auto_detect_line_endings
+			$is_php81 = (version_compare(PHP_VERSION, '8.1.0') >= 0);
+			if (!$is_php81) {
+				ini_set('auto_detect_line_endings', true);
+			}
 
-		$f = fopen($file, "r");
+		// open file in read mode
+			$f = fopen($file, "r");
 
-		$csv_array=array(); // , $enclosure
-		$i=0; while (($line = fgetcsv($f, 0, $csv_delimiter, $enclosure, $escape)) !== false) { //, $enclosure
+		// read contents line by line and store data
+			$csv_array			= array();
+			$convert_to_utf8	= false;
+			$i=0;
+			while (($line = fgetcsv($f, 0, $csv_delimiter, $enclosure, $escape)) !== false) {
 
-			if ($skip_header && $i===0) {
+				// skip header case
+					if ($skip_header && $i===0) {
+						$i++;
+						continue;
+					}
+
+				// safe array type
+					if (!is_array($line)) {
+						$line = [$line];
+					}
+
+				// encoding check . Only UFT-8 is valid. Another encodings will be conteverted to UTF-8
+					$sample = reset($line);
+					if ($convert_to_utf8===true || !mb_check_encoding($sample, 'UTF-8')) {
+						foreach ($line as $key => $current_value) {
+							$line[$key] = utf8_encode($current_value);
+						}
+						$convert_to_utf8 = true; // prevent to check more than once
+					}
+
+				// iterate line cells (columns from split text line by $csv_delimiter)
+					foreach ($line as $cell) {
+						$csv_array[$i][] = trim($cell);
+					}
+
 				$i++;
-				continue;
+			}//end while
+
+		// close file a end
+			fclose($f);
+
+		// auto_detect_line_endings
+			if (!$is_php81) {
+				ini_set('auto_detect_line_endings', false);
 			}
-			#if ($i>0) break;
-
-			foreach ($line as $cell) {
-
-				#$cell=nl2br($cell);
-				#$cell=htmlspecialchars($cell); // htmlspecialchars_decode($cell);
-				#$cell = str_replace("\t", " <blockquote> </blockquote> ", $cell);
-
-				$csv_array[$i][] = trim($cell);
-			}
-			$i++;
-		}
-		fclose($f);
-
-
-		if (!$is_php81) {
-			ini_set('auto_detect_line_endings', false);
-		}
 
 
 		return $csv_array;
