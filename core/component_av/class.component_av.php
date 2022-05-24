@@ -107,7 +107,7 @@ class component_av extends component_media_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		$value = new dd_grid_cell_object();
 

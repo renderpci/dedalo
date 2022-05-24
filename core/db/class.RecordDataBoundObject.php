@@ -204,6 +204,8 @@ abstract class RecordDataBoundObject {
 				if(SHOW_DEBUG===true) {
 					#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					// throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
+					$bt = debug_backtrace();
+					dump($bt, ' bt ++ '.to_string());
 				}
 				trigger_error('WARNING: No result on Load arRow. $strQuery: ' .PHP_EOL. $strQuery);
 				return false;

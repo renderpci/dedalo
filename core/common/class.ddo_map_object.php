@@ -38,7 +38,7 @@ class ddo_map_object {
 	* @param object $data
 	*	optional . Default is null
 	*/
-	public function __construct( object $data=null ) {
+	public function __construct( ?object $data=null ) {
 
 		if (is_null($data)) return;
 
@@ -62,7 +62,7 @@ class ddo_map_object {
 	/**
 	* SET_TIPO
 	*/
-	public function set_tipo(string $value) {
+	public function set_tipo(string $value) : void {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
@@ -74,7 +74,7 @@ class ddo_map_object {
 	/**
 	* SET_SECTION_TIPO
 	*/
-	public function set_section_tipo(string $value) {
+	public function set_section_tipo(string $value) : void {
 		if (!isset($this->model)) {
 			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
@@ -88,7 +88,7 @@ class ddo_map_object {
 	/**
 	* SET_PARENT
 	*/
-	public function set_parent(string $value) {
+	public function set_parent(string $value) : void {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
@@ -100,7 +100,7 @@ class ddo_map_object {
 	/**
 	* SET_MODEL
 	*/
-	public function set_model(string $value) {
+	public function set_model(string $value) : void {
 
 		$this->model = $value;
 	}
@@ -110,7 +110,7 @@ class ddo_map_object {
 	/**
 	* SET_MODE
 	*/
-	public function set_mode(string $value) {
+	public function set_mode(string $value) : void {
 
 		$this->mode = $value;
 	}
@@ -120,7 +120,7 @@ class ddo_map_object {
 	/**
 	* SET_LABEL
 	*/
-	public function set_label(string $value) {
+	public function set_label(string $value) : void {
 
 		$this->label = $value;
 	}
@@ -129,7 +129,7 @@ class ddo_map_object {
 	/**
 	* SET_VALUE_WITH_PARENTS
 	*/
-	public function set_value_with_parents(bool $value) {
+	public function set_value_with_parents(bool $value) : void {
 
 		$this->value_with_parents = $value;
 	}
@@ -139,7 +139,7 @@ class ddo_map_object {
 	/**
 	* SET_SEPARATOR_FIELDS
 	*/
-	public function set_separator_fields(string $value) {
+	public function set_separator_fields(string $value) : void {
 
 		$this->separator_fields = $value;
 	}

@@ -32,7 +32,7 @@ class dd_date {
 		if (!is_object($data)) {
 			#trigger_error("wrong data format. object expected. Given type: ".gettype($data));
 		#	throw new Exception("Error Processing Request", 1);
-			
+
 			debug_log(__METHOD__." wrong data format. object expected. Given type: ".gettype($data).' - '.to_string($data), logger::ERROR);
 			if(SHOW_DEBUG===true) {
 				dump(debug_backtrace()[0], " wrong data format. object expected. Given type:".gettype($data).' - data:'.to_string($data)." from:");
@@ -42,14 +42,14 @@ class dd_date {
 
 		foreach ($data as $key => $value) {
 			//if ($key!=="year" && empty($value)) continue; // Skip empty values
-			if (!isset($value) || is_null($value)) continue; // Skip empty values	
+			if (!isset($value) || is_null($value)) continue; // Skip empty values
 
 			$method = 'set_'.$key;
 			if (method_exists($this, $method)) {
 				$this->$method($value, $constrain);
 			}else{
 				debug_log(__METHOD__." Ignored received property: $key not defined as set method. Data: ".to_string($data), logger::DEBUG);
-			}			
+			}
 		}
 
 		return true;
@@ -59,13 +59,11 @@ class dd_date {
 
 	/**
 	* SET_ERRORS
-	* @return bool true
 	*/
-	public function set_errors($value) {
-		debug_log(__METHOD__." Date error found. value: ".to_string($value), logger::WARNING);
-		#$this->errors = $value;
+	public function set_errors($value) : void {
 
-		return true;
+		#$this->errors = $value;
+		debug_log(__METHOD__." Date error found. value: ".to_string($value), logger::WARNING);
 	}//end set_errors
 
 
@@ -137,7 +135,7 @@ class dd_date {
 				debug_log(__METHOD__." Error on set day. Value is not standard ".to_string($value), logger::WARNING);
 				if ($constrain===true) return false;
 			}
-		
+
 		// set value
 			$this->day = (int)$value;
 
@@ -170,7 +168,7 @@ class dd_date {
 
 	/**
 	* SET_MINUTE
-	* @return bool 
+	* @return bool
 	*/
 	public function set_minute($value, $constrain=false) {
 
@@ -214,7 +212,7 @@ class dd_date {
 
 	/**
 	* SET_MS
-	* @return bool true 
+	* @return bool true
 	*/
 	public function set_ms($value, $constrain=false) {
 
@@ -282,7 +280,7 @@ class dd_date {
 
 		if (isset($this->ms)) {
 		$ms     = $this->ms;
-		}    
+		}
 
 
 		# year
@@ -311,7 +309,7 @@ class dd_date {
 			$hour = 0;
 		}
 		if($padding===true)
-		$hour = sprintf("%02d", $hour);	
+		$hour = sprintf("%02d", $hour);
 
 		# minute
 		if (!isset($minute)) {
@@ -327,12 +325,12 @@ class dd_date {
 		if($padding===true)
 		$second = sprintf("%02d", $second);
 
-		# ms	
+		# ms
 		if (isset($ms)) {
 			if($padding===true)
 			$ms = sprintf("%03d", $ms);
 		}else{
-			$ms=null;	
+			$ms=null;
 		}
 
 		/* OLD WORLD no compatible with negative years, etc..
@@ -340,7 +338,7 @@ class dd_date {
 		$dd_timestamp   = date($date_format, $time);
 		*/
 
-		$dd_timestamp = str_replace( array('Y','m','d','H','i','s','u'), 
+		$dd_timestamp = str_replace( array('Y','m','d','H','i','s','u'),
 									 array($year,$month,$day,$hour,$minute,$second,$ms),
 									 $date_format);
 
@@ -357,18 +355,18 @@ class dd_date {
 	public function get_date_from_timestamp( $timestamp ) {
 
 		$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
-		preg_match($regex, $timestamp, $matches);    
+		preg_match($regex, $timestamp, $matches);
 
-		if(isset($matches[1])) $this->set_year((int)$matches[1]); 
+		if(isset($matches[1])) $this->set_year((int)$matches[1]);
 		if(isset($matches[2])) $this->set_month((int)$matches[2]);
 		if(isset($matches[3])) $this->set_day((int)$matches[3]);
 		if(isset($matches[4])) $this->set_hour((int)$matches[4]);
 		if(isset($matches[5])) $this->set_minute((int)$matches[5]);
-		if(isset($matches[6])) $this->set_second((int)$matches[6]);	
-			
+		if(isset($matches[6])) $this->set_second((int)$matches[6]);
+
 		#if (!empty($this->year)) {
 		#	$this->correct_date();
-		#}	
+		#}
 
 		return $this;
 	}//end get_date_from_timestamp
@@ -383,14 +381,14 @@ class dd_date {
 
 		#$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 		$regex   = "/^(([0-9]{1,2})-)?(([0-9]{1,2})-)?(-?[0-9]{1,12}) ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
-		preg_match($regex, $search_field_value, $matches);    
+		preg_match($regex, $search_field_value, $matches);
 			#$elements = count($matches)-1;
 
 			# Year is mandatory
 			if (isset($matches[5])) {
-				$this->set_year((int)$matches[5]); 
+				$this->set_year((int)$matches[5]);
 			}
-			
+
 			# Month
 			if (!empty($matches[4])) {
 				$this->set_month((int)$matches[4]);
@@ -401,7 +399,7 @@ class dd_date {
 			}else if(!empty($matches[2])) {
 				$this->set_month((int)$matches[2]);
 			}
-		
+
 			# Hours
 			if (!empty($matches[6])) {
 				$this->set_hour((int)$matches[6]);
@@ -438,7 +436,7 @@ class dd_date {
 
 
 	/**
-	* CONVERT_DATE_TO_SECONDS	
+	* CONVERT_DATE_TO_SECONDS
 	* Calculate absolute "time" from dd_date object
 	* This operation is not reversible and is only for reference pourposes
 	* @return int $seconds
@@ -448,7 +446,7 @@ class dd_date {
 		$time = 0;
 
 		$dd_date = clone $source_dd_date; // IMPORTANT : Clone always dd_date whe you manipulate it
-		
+
 		$year  	= !empty($dd_date->year)   ? (int)$dd_date->year	: 0;
 		$month 	= !empty($dd_date->month)  ? (int)$dd_date->month  	: 0;
 		$day 	= !empty($dd_date->day)    ? (int)$dd_date->day    	: 0;
@@ -463,14 +461,14 @@ class dd_date {
 			if(!empty($day)) {
 				$day--; // Remove 1
 			}
-		
+
 			$year 	= $year   >= 0 ? $year   : 0;
 			$month 	= $month  >= 0 ? $month  : 0;
 			$day 	= $day 	  >= 0 ? $day 	 : 0;
 			$hour 	= $hour   >= 0 ? $hour 	 : 0;
 			$minute = $minute >= 0 ? $minute : 0;
 			$second = $second >= 0 ? $second : 0;
-	
+
 			// Add years (using virtual years of 372 days (31*12))
 			$time +=  ($year * 372 * 24 * 60 * 60);
 
@@ -488,7 +486,7 @@ class dd_date {
 
 			// Add seconds
 			$time += $second;
-		
+
 		return (int)$time;
 	}//end convert_date_to_seconds
 
@@ -497,26 +495,26 @@ class dd_date {
 	/**
 	* CONVERT_SECONDS_TO_PERIOD
 	* Calculate current seconds in minutes, hours, days, totals and aproximative partials.
-	* Note that non total values are aproximations because we need use 
+	* Note that non total values are aproximations because we need use
 	* a reference year of 365 days and a reference month of 30 days
 	* @param int $seconds
 	* @return object $response
 	*/
 	public static function convert_seconds_to_period( $seconds ) {
-		
+
 		$response = new stdClass();
 			$response->result	= new stdClass();
 			$response->msg		= '';
 
 		# minutes (reliable measurement)
-		$minutes_total = ceil( (int)$seconds / 60 ); // Round to up	
+		$minutes_total = ceil( (int)$seconds / 60 ); // Round to up
 
 		# hours_total (reliable measurement)
 		$hours_total = ceil( (int)$seconds / 60 / 60 ); // Round to up
 
 		# days_total (reliable measurement)
 		$days_total = ceil( (int)$seconds / 60 / 60 / 24 ); // Round to up
-		
+
 		# years (approximated measurement)
 		$years  	= $days_total/365;
 		$years_int  = floor($years); // Round to bottom
@@ -542,7 +540,7 @@ class dd_date {
 		$response->result->days		= (int)$days_int;
 
 		return (object)$response;
-	}//end convert_seconds_to_period 
+	}//end convert_seconds_to_period
 
 
 
@@ -551,7 +549,7 @@ class dd_date {
 	* Change the date to the unit (day, month, year)
 	*/
 	public function convert_date_to_unix_timestamp(){
-		
+
 		$time 			= $this->get_dd_timestamp();
 		#$unix_timestamp = strtotime($time);
 

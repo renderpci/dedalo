@@ -75,7 +75,7 @@ class component_input_text extends component_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_rows		= $ddo->separator_rows ?? null;
@@ -158,8 +158,8 @@ class component_input_text extends component_common {
 
 	/**
 	* LOAD TOOLS
-	*//**/
-	public function load_tools( $check_lang_tools=true ) {
+	*/
+	public function load_tools( bool $check_lang_tools=true ) : array {
 
 		$properties = $this->get_properties();
 		if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
@@ -211,7 +211,7 @@ class component_input_text extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return object $response
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version	= null;

@@ -128,7 +128,7 @@ class dd_object {
 	/**
 	* SET_TYPO
 	*/
-	public function set_typo(string $value) {
+	public function set_typo(string $value) : void {
 		if($value!=='ddo') {
 			debug_log(__METHOD__." Error. Fixed invalid typo ".to_string($value), logger::DEBUG);
 			$value = 'ddo';
@@ -142,7 +142,7 @@ class dd_object {
 	* SET_TYPE
 	* Only allow 'section','component','groupper','button'
 	*/
-	public function set_type(string $value) {
+	public function set_type(string $value) : void  {
 		$ar_type_allowed = self::$ar_type_allowed;
 		if( !in_array($value, $ar_type_allowed) ) {
 			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
@@ -156,7 +156,7 @@ class dd_object {
 	* SET_TIPO
 	* @param string $value
 	*/
-	public function set_tipo(string $value) {
+	public function set_tipo(string $value) : void  {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
@@ -170,7 +170,7 @@ class dd_object {
 	* @param string|array $value
 	* 	Could be array or string
 	*/
-	public function set_section_tipo($value) { // string|array
+	public function set_section_tipo($value) : void  { // string|array
 		if (!isset($this->model) && isset($this->tipo)) {
 			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
@@ -185,7 +185,7 @@ class dd_object {
 	/**
 	* SET_PARENT
 	*/
-	public function set_parent(string $value) {
+	public function set_parent(string $value) : void {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid parent: $value", 1);
 		}
@@ -197,7 +197,7 @@ class dd_object {
 	/**
 	* SET_PARENT_GROUPER
 	*/
-	public function set_parent_grouper(string $value) {
+	public function set_parent_grouper(string $value) : void {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid parent_grouper: $value", 1);
 		}
@@ -209,7 +209,7 @@ class dd_object {
 	/**
 	* SET_LANG
 	*/
-	public function set_lang(string $value) {
+	public function set_lang(string $value) : void {
 		if(strpos($value, 'lg-')!==0) {
 			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
 		}
@@ -221,7 +221,7 @@ class dd_object {
 	/**
 	* SET_MODE
 	*/
-	public function set_mode(string $value) {
+	public function set_mode(string $value) : void {
 
 		$this->mode = $value;
 	}//end set_mode
@@ -231,7 +231,7 @@ class dd_object {
 	/**
 	* SET_MODEL
 	*/
-	public function set_model(string $value) {
+	public function set_model(string $value) : void {
 
 		$this->model = $value;
 	}//end set_model
@@ -244,7 +244,7 @@ class dd_object {
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
 	* @param object|array|null
 	*/
-	public function set_properties($value) {
+	public function set_properties($value) : void {
 
 		$this->properties = $value;
 	}//end set_properties
@@ -254,7 +254,7 @@ class dd_object {
 	/**
 	* SET_PERMISSIONS
 	*/
-	public function set_permissions(int $value) {
+	public function set_permissions(int $value) : void {
 
 		$this->permissions = $value;
 	}//end set_permissions
@@ -264,7 +264,7 @@ class dd_object {
 	/**
 	* SET_LABEL
 	*/
-	public function set_label(string $value) {
+	public function set_label(string $value) : void {
 
 		$this->label = $value;
 	}//end set_label
@@ -276,7 +276,7 @@ class dd_object {
 	* Used by tools
 	* @param array|null $value
 	*/
-	public function set_labels(?array $value) {
+	public function set_labels(?array $value) : void {
 
 		$this->labels = $value;
 	}//end set_labels
@@ -286,7 +286,7 @@ class dd_object {
 	/**
 	* SET_TRANSLATABLE
 	*/
-	public function set_translatable(bool $value) {
+	public function set_translatable(bool $value) : void {
 
 		$this->translatable = $value;
 	}//end set_translatable
@@ -297,7 +297,7 @@ class dd_object {
 	* SET_TOOLS
 	* @param array|null $value
 	*/
-	public function set_tools(?array $value) {
+	public function set_tools(?array $value) : void {
 
 		if(!is_null($value) && !is_array($value)){
 			throw new Exception("Error Processing Request, Tools only had allowed array or null values. ".gettype($value). " is received" , 1);
@@ -312,7 +312,7 @@ class dd_object {
 	* SET_BUTTONS
 	* @param array|null $value
 	*/
-	public function set_buttons(?array $value) {
+	public function set_buttons(?array $value) : void {
 
 		if(!is_null($value) && !is_array($value)){
 			throw new Exception("Error Processing Request, Buttons only had allowed array or null values. ".gettype($value). " is received" , 1);
@@ -327,7 +327,7 @@ class dd_object {
 	* SET_CSS
 	* @param object|null $value
 	*/
-	public function set_css(?object $value) {
+	public function set_css(?object $value) : void {
 
 		$this->css = $value;
 	}//end set_css
@@ -337,7 +337,7 @@ class dd_object {
 	/**
 	* SET_TARGET_SECTIONS
 	*/
-	public function set_target_sections(array $value) {
+	public function set_target_sections(array $value) : void {
 
 		$this->target_sections = $value;
 	}//end set_target_sections
@@ -347,7 +347,7 @@ class dd_object {
 	/**
 	* SET_REQUEST_CONFIG
 	*/
-	public function set_request_config(?array $value) {
+	public function set_request_config(?array $value) : void {
 
 		$this->request_config = $value;
 	}//end set_request_config
@@ -357,7 +357,7 @@ class dd_object {
 	/**
 	* SET_AR_SECTIONS_TIPO
 	*/
-	public function set_ar_sections_tipo(array $value) {
+	public function set_ar_sections_tipo(array $value) : void {
 
 		$this->ar_sections_tipo = $value;
 	}//end set_ar_sections_tipo
@@ -367,7 +367,7 @@ class dd_object {
 	/**
 	* SET_COLUMNS_MAP
 	*/
-	public function set_columns_map(?array $value) {
+	public function set_columns_map(?array $value) : void {
 
 		$this->columns_map = $value;
 	}//end set_columns_map
@@ -377,7 +377,7 @@ class dd_object {
 	/**
 	* SET_VIEW
 	*/
-	public function set_view(string $value) {
+	public function set_view(string $value) : void {
 
 		$this->view = $value;
 	}//end set_view
@@ -387,7 +387,7 @@ class dd_object {
 	/**
 	* SET_FIXED_MODE
 	*/
-	public function set_fixed_mode(string $value) {
+	public function set_fixed_mode(string $value) : void {
 
 		$this->fixed_mode = $value;
 	}//end set_fixed_mode
@@ -399,7 +399,7 @@ class dd_object {
 	* Used by tools
 	* @param int|null $value
 	*/
-	public function set_section_id(?int $value) {
+	public function set_section_id(?int $value) : void {
 
 		$this->section_id = $value;
 	}//end set_section_id
@@ -410,7 +410,7 @@ class dd_object {
 	* SET_NAME
 	* Used by tools
 	*/
-	public function set_name(string $value) {
+	public function set_name(string $value) : void {
 
 		$this->name = $value;
 	}//end set_name
@@ -421,7 +421,7 @@ class dd_object {
 	* SET_DESCRIPTION
 	* Used by tools
 	*/
-	public function set_description(string $value) {
+	public function set_description(string $value) : void {
 
 		$this->description = $value;
 	}//end set_description
@@ -432,7 +432,7 @@ class dd_object {
 	* SET_ICON
 	* Used by tools
 	*/
-	public function set_icon(string $value) {
+	public function set_icon(string $value) : void {
 
 		$this->icon = $value;
 	}//end set_icon
@@ -442,7 +442,7 @@ class dd_object {
 	* SET_show_in_inspector
 	* Used by tools
 	*/
-	public function set_show_in_inspector(bool $value) {
+	public function set_show_in_inspector(bool $value) : void {
 
 		$this->show_in_inspector = $value;
 	}//end set_show_in_inspector
@@ -453,7 +453,7 @@ class dd_object {
 	* SET_show_in_component
 	* Used by tools
 	*/
-	public function set_show_in_component(bool $value) {
+	public function set_show_in_component(bool $value) : void {
 
 		$this->show_in_component = $value;
 	}//end set_show_in_component
@@ -464,7 +464,7 @@ class dd_object {
 	* SET_config
 	* Used by tools
 	*/
-	public function set_config(?object $value) {
+	public function set_config(?object $value) : void {
 
 		$this->config = $value;
 	}//end set_config

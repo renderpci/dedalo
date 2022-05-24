@@ -309,7 +309,7 @@ class locator extends stdClass {
 	* Get section_id value of current locator
 	* @return string|array $section_id
 	*/
-	public static function get_section_id_from_locator( object $locator ) : int {
+	public static function get_section_id_from_locator(object $locator) : int {
 
 		// if (is_string($locator)) {
 		// 	// Decode json
@@ -338,7 +338,7 @@ class locator extends stdClass {
 	* GET_STD_CLASS
 	* @return stdClass
 	*/
-	public static function get_std_class( object $locator ) : stdClass {
+	public static function get_std_class(object $locator) : stdClass {
 
 		$locator = json_encode($locator);
 		$locator = json_decode($locator);
@@ -359,7 +359,7 @@ class locator extends stdClass {
 	* Gets a lang like 'lg-spa' and it converts to lang locator like {"section_tipo":"lg-spa","section_id":17344}
 	* @return object $locator
 	*/
-	public static function lang_to_locator( string $lang ) : object {
+	public static function lang_to_locator(string $lang) : object {
 
 		$section_tipo = DEDALO_LANGS_SECTION_TIPO;	//$lang;
 
@@ -391,7 +391,7 @@ class locator extends stdClass {
 	* COMPARE_LOCATORS
 	* @return bool $equal
 	*/
-	public static function compare_locators( object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=['dataframe','ds'] ) : bool {
+	public static function compare_locators(object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=['dataframe','ds']) : bool {
 
 		if (!is_object($locator1) || !is_object($locator2)) {
 			return false;
@@ -472,7 +472,7 @@ class locator extends stdClass {
 	* IN_ARRAY_LOCATOR
 	* @return bool $founded
 	*/
-	public static function in_array_locator( object $locator, array $ar_locator, array $ar_properties=[] ) : bool {
+	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=[]) : bool {
 		$founded = false;
 
 		foreach ((array)$ar_locator as $current_locator) {
@@ -497,7 +497,7 @@ class locator extends stdClass {
 	* GET_KEY_IN_ARRAY_LOCATOR
 	* @return mixed bool | int $key_founded
 	*/
-	public static function get_key_in_array_locator( object $locator, array $ar_locator, array $ar_properties=array('section_id','section_tipo') ) : bool {
+	public static function get_key_in_array_locator(object $locator, array $ar_locator, array $ar_properties=['section_id','section_tipo']) : bool {
 		$key_founded = false;
 
 		foreach ((array)$ar_locator as $key => $current_locator) {

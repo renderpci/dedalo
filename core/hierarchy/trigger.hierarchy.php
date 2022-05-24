@@ -12,7 +12,7 @@ ignore_user_abort(true);
 * GENERATE_VIRTUAL_SECTION
 * @return object $response
 */
-function generate_virtual_section($json_data) {
+function generate_virtual_section(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -85,7 +85,7 @@ function generate_virtual_section($json_data) {
 * UPDATE_TARGET_SECTION
 * @return object $response
 */
-function update_target_section($json_data) {
+function update_target_section(object $json_data) : object {
 	global $start_time;
 
 	$response = new stdClass();
@@ -125,7 +125,3 @@ function update_target_section($json_data) {
 
 	return (object)$response;
 }//end update_target_section
-
-
-
-?>

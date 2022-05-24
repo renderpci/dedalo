@@ -46,7 +46,7 @@ class component_section_id extends component_common {
 	* The relation components will separate the locator in rows
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_NOLAN, $ddo=null) {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		if(isset($this->column_obj)){
 			$column_obj = $this->column_obj;

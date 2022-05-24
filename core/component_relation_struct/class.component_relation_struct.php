@@ -366,7 +366,7 @@ class component_relation_struct extends component_relation_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null

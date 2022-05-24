@@ -317,13 +317,13 @@ class update {
 						$reference_id 	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
 
 						$update_options = new stdClass();
-							$update_options->update_version = $update_version;
-							$update_options->dato_unchanged = $dato_unchanged;
-							$update_options->reference_id 	= $reference_id;
-							$update_options->tipo 			= $current_component_tipo;
-							$update_options->section_id 	= $section_id;
-							$update_options->section_tipo 	= $current_section_tipo;
-							$update_options->context 		= 'update_component_dato';
+							$update_options->update_version	= $update_version;
+							$update_options->dato_unchanged	= $dato_unchanged;
+							$update_options->reference_id	= $reference_id;
+							$update_options->tipo			= $current_component_tipo;
+							$update_options->section_id		= $section_id;
+							$update_options->section_tipo	= $current_section_tipo;
+							$update_options->context		= 'update_component_dato';
 
 						$response = $modelo_name::update_dato_version($update_options);
 						#debug_log(__METHOD__." UPDATE_DATO_VERSION COMPONENT RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
