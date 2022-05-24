@@ -272,7 +272,7 @@ class component_html_text extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null

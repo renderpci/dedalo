@@ -244,9 +244,9 @@ class component_external extends component_common {
 	/**
 	* LOAD TOOLS
 	*/
-	public function load_tools( $check_lang_tools=true ) {
+	public function load_tools( bool $check_lang_tools=true ) : array {
 
-		return false;
+		return [];
 	}//end load_tools
 
 

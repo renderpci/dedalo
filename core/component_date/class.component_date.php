@@ -243,7 +243,7 @@ class component_date extends component_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
@@ -658,7 +658,7 @@ class component_date extends component_common {
 	* @param $seconds (default false)
 	* Convert DB timestamp to date (American or European date) like '2013-04-23 19:47:05' to 23-04-2013 19:47:05
 	*/
-	public static function timestamp_to_date($timestamp, $full=true) {
+	public static function timestamp_to_date($timestamp, $full=true) : ?string {
 
 		if (empty($timestamp) || strlen($timestamp)<10) {
 			return null;
@@ -1088,7 +1088,7 @@ class component_date extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'>=' 	=> 'mayor_o_igual_que',
@@ -1269,7 +1269,7 @@ class component_date extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;

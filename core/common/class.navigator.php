@@ -118,7 +118,7 @@ class navigator {
 
 
 	# GET SELECTED VALUE FROM NAME
-	public static function get_selected($name) {
+	public static function get_selected(string $name) {
 
 		$var_name = 'selected_'. $name ;
 
@@ -139,7 +139,7 @@ class navigator {
 	* @param $value
 	*	String value
 	*/
-	public static function set_selected($name, $value) {
+	public static function set_selected(string $name, $value) {
 
 		$var_name = 'selected_'. $name ;
 
@@ -150,7 +150,7 @@ class navigator {
 
 
 
-	static function show_vars() {
+	static function show_vars() : string {
 
 		$distancia = '7px';
 

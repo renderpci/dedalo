@@ -220,7 +220,7 @@ class component_text_area extends component_common {
 	* if the mode is "relation_list" create the fragments of the indexation
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
@@ -518,7 +518,7 @@ class component_text_area extends component_common {
 	/*
 	* DECODE DATO HTML
 	*/
-	protected static function decode_dato_html($dato) {
+	protected static function decode_dato_html(string $dato) : string {
 
 		return !empty($dato)
 			? htmlspecialchars_decode($dato)
@@ -616,51 +616,45 @@ class component_text_area extends component_common {
 	* CHANGE TAG STATE
 	* Changes the tag state from given tag inside the text
 	* Sample: [index-n-1] -> [index-r-1]
-	* @param $ar_tag (formatted as tag in, like [index-n-1]. Can be string or array)
-	* @param $state (default 'r')
-	* @param $text_raw
-	* @return $text_raw_updated
+	* @param string $tag (formatted as tag in, like [index-n-1])
+	* @param string $state = 'r'
+	* @param string $text_raw = ''
+	*
+	* @return string $text_raw_updated
 	*/
-	public static function change_tag_state($ar_tag, string $state='r', string $text_raw='') : string {
-
-		# Force array format
-			$ar_tag = (is_string($ar_tag))
-				? [$ar_tag]
-				: $ar_tag;
+	public static function change_tag_state(string $tag, string $state='r', string $text_raw='') : string {
 
 		# Default unchanged text
 		$text_raw_updated = $text_raw;
 
-		foreach ($ar_tag as $tag) {
+		$id = TR::tag2value($tag);
 
-			$id = TR::tag2value($tag);
+		// match. Pattern allow both tags, in and out
+		$pattern = TR::get_mark_pattern($mark='index', $standalone=true, false, $data=false);
+		preg_match_all($pattern, $text_raw, $matches);
 
-			// match. Pattern allow both tags, in and out
-			$pattern = TR::get_mark_pattern($mark='index', $standalone=true, false, $data=false);
-			preg_match_all($pattern, $text_raw, $matches);
+		foreach ((array)$matches[3] as $value) {
+			if ($value==$id) {
 
-			foreach ((array)$matches[3] as $value) {
-				if ($value==$id) {
+				$type = strpos($tag, '[/index')!==false
+					? 'indexOut'
+					: (strpos($tag, '[index')!==false
+						? 'indexIn'
+						: $matches[1][0]);
 
-					$type = strpos($tag, '[/index')!==false
-						? 'indexOut'
-						: (strpos($tag, '[index')!==false
-							? 'indexIn'
-							: $matches[1][0]);
+				$label		= $matches[5][0];
+				$data		= $matches[6][0];
 
-					$label		= $matches[5][0];
-					$data		= $matches[6][0];
+				// new tag build
+				$new_tag	= TR::build_tag($type, $state, $id, $label, $data);
 
-					// new tag build
-					$new_tag	= TR::build_tag($type, $state, $id, $label, $data);
+				// replace only the state tag char
+				$text_raw_updated = str_replace($tag, $new_tag, $text_raw);
 
-					// replace only the state tag char
-					$text_raw_updated = str_replace($tag, $new_tag, $text_raw);
-
-					break; // actually, only first match is parsed
-				}
+				break; // actually, only first match is parsed
 			}
-		}//end foreach ($ar_tag as $tag)
+		}
+
 
 		return $text_raw_updated ;
 	}//end change_tag_state
@@ -1522,7 +1516,7 @@ class component_text_area extends component_common {
 	/**
 	* GET_DIFFUSION_OBJ
 	*/
-	public function get_diffusion_obj( $properties ) {
+	public function get_diffusion_obj(object $properties) : object {
 
 		$diffusion_obj = parent::get_diffusion_obj( $properties );
 		/*
@@ -1637,7 +1631,7 @@ class component_text_area extends component_common {
 	* Used in diffusion (see properties) for resolve the links of the svg and images inside the text_area
 	* @return string $diffusion_value_with_images
 	*/
-	public function get_diffusion_value_with_images() {
+	public function get_diffusion_value_with_images() : string {
 
 		$valor = $this->get_valor($this->lang);
 
@@ -1652,9 +1646,9 @@ class component_text_area extends component_common {
 
 	/**
 	* GET_RELATED_COMPONENT_select_lang
-	* @return string $tipo | null
+	* @return string|null $tipo
 	*/
-	public function get_related_component_select_lang() {
+	public function get_related_component_select_lang() : ?string {
 
 		$tipo = null;
 		$related_terms = $this->get_ar_related_by_model('component_select_lang');
@@ -1681,40 +1675,40 @@ class component_text_area extends component_common {
 	* looking for index in tags inside
 	* @return array $ar_descriptors
 	*/
-	public static function get_descriptors_DES( $raw_text, $section_tipo, $section_id, $component_tipo, $type='index' ) {
+		// public static function get_descriptors_DES( $raw_text, $section_tipo, $section_id, $component_tipo, $type='index' ) {
 
-		$ar_descriptors = array();
+		// 	$ar_descriptors = array();
 
-		# Search index in locators
-		# INDEX IN
-		#$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
-		$pattern = TR::get_mark_pattern($type.'In', $standalone=true);
-		preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
-		$total_indexIn = 0;
-		if (!empty($matches_indexIn[0])) {
-			$total_indexIn = count($matches_indexIn[0]);
-		}
+		// 	# Search index in locators
+		// 	# INDEX IN
+		// 	#$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
+		// 	$pattern = TR::get_mark_pattern($type.'In', $standalone=true);
+		// 	preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
+		// 	$total_indexIn = 0;
+		// 	if (!empty($matches_indexIn[0])) {
+		// 		$total_indexIn = count($matches_indexIn[0]);
+		// 	}
 
-		if ($total_indexIn===0) {
-			return $ar_descriptors;
-		}
+		// 	if ($total_indexIn===0) {
+		// 		return $ar_descriptors;
+		// 	}
 
-		$full_tag = $matches_indexIn[0][0];
-		$tag_id_key = 4;
-		foreach ($matches_indexIn[$tag_id_key] as $key => $tag_id) {
+		// 	$full_tag = $matches_indexIn[0][0];
+		// 	$tag_id_key = 4;
+		// 	foreach ($matches_indexIn[$tag_id_key] as $key => $tag_id) {
 
-			if ($type==="struct") {
-				$ar_index = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
-			}else{
-				$ar_index = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
-			}
+		// 		if ($type==="struct") {
+		// 			$ar_index = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
+		// 		}else{
+		// 			$ar_index = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
+		// 		}
 
-			$ar_descriptors[$full_tag] = $ar_index;
-		}
+		// 		$ar_descriptors[$full_tag] = $ar_index;
+		// 	}
 
 
-		return (array)$ar_descriptors;
-	}//end get_descriptors
+		// 	return (array)$ar_descriptors;
+		// }//end get_descriptors
 
 
 	/**
@@ -2097,7 +2091,7 @@ class component_text_area extends component_common {
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
-	public function regenerate_component() {
+	public function regenerate_component() : bool {
 
 		# Force loads dato always !IMPORTANT
 		$dato = $this->get_dato();
@@ -2195,9 +2189,10 @@ class component_text_area extends component_common {
 
 	/**
 	* BUILD_GEOLOCATION_DATA
+	* @param string $raw_text
 	* @return array $ar_elements
 	*/
-	public static function build_geolocation_data(string $raw_text) {
+	public static function build_geolocation_data(string $raw_text) : array {
 
 		// Test data
 			// $request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
@@ -2511,7 +2506,7 @@ class component_text_area extends component_common {
 	* UPDATE_DATO_VERSION
 	*
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version	= null;

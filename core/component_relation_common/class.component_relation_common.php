@@ -177,7 +177,7 @@ class component_relation_common extends component_common {
 	* @return array $dato
 	*	$dato is always an array of locators or an empty array
 	*/
-	public function get_dato_full()  {
+	public function get_dato_full() {
 
 		// load. Load matrix data and set this->dato
 			$this->load_component_dato();
@@ -238,7 +238,7 @@ class component_relation_common extends component_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
@@ -985,16 +985,16 @@ class component_relation_common extends component_common {
 	/**
 	* GET_LOCATOR_VALUE
 	* Resolve locator to string value to show in list etc.
-	* @return string $locator_value
+	* @return array|string|null $locator_value
 	*/
-	public static function get_locator_value($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true) {
+	public static function get_locator_value(object $locator, string $lang=DEDALO_DATA_LANG, bool $show_parents=false, $ar_components_related=false, ?string $divisor=', ', bool $include_self=true, bool $glue=true) {
 		if(SHOW_DEBUG===true) {
 			$start_time=start_time();
 			#dump($ar_components_related, ' ar_components_related ++ '.to_string());
 		}
 
 		if (empty($locator) || !is_object($locator)) {
-			return false;
+			return null;
 		}
 		$locator = new locator($locator);
 
@@ -1269,7 +1269,7 @@ class component_relation_common extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
 			'!='	=> 'distinto_de',
@@ -1340,7 +1340,7 @@ class component_relation_common extends component_common {
 	* @see used by component_autocomplete and component_portal
 	* @return dato
 	*/
-	public function set_dato_external($save=false, $changed=false, $current_dato=false, $references_limit=10) {
+	public function set_dato_external(bool $save=false, bool $changed=false, $current_dato=false, int $references_limit=10) {
 		$start_time=start_time();
 
 		// dato set
@@ -2016,7 +2016,7 @@ class component_relation_common extends component_common {
 	* GET_FIXED_FILTER
 	* @return array $ar_fixed_filter
 	*/
-	public static function get_fixed_filter($ar_fixed, string $section_tipo, $section_id) : array {
+	public static function get_fixed_filter(array $ar_fixed, string $section_tipo, $section_id) : array {
 
 		$ar_fixed_filter = [];
 

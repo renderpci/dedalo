@@ -263,7 +263,7 @@ abstract class tools extends common {
 	}
 
 
-	static public function build_link($string, $argumens) {
+	static public function build_link(string $string, $argumens) {
 
 		$url = NULL;
 		if( !empty($argumens['url']) ) $url = $argumens['url'];

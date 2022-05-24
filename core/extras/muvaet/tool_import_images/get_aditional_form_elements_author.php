@@ -29,25 +29,27 @@ require_once( DEDALO_CONFIG_PATH.'/config.php');
 
 	$html .=" Autor: ";
 	$html .= '<div id="wrap_author_select" style="display:inline-block;padding-left:5px;padding-right:5px;">';
-		
-		$author_html  = '';		
+
+		$author_html  = '';
 		$author_html .= "<select name=\"author\" id=\"author\">";
 		$author_html .= " <option value=\"\" ></option>";
-		foreach ($all_component_values->result as $key => $item) {
+		if (!empty($all_component_values->result)) {
+			foreach ($all_component_values->result as $key => $item) {
 
-			$author_id 	= json_encode($item->value);
-			$nombre 	= $item->label;
-			#$author_id = urlencode($author_id);
+				$author_id	= json_encode($item->value);
+				$nombre		= $item->label;
+				#$author_id = urlencode($author_id);
 
-			$author_html .= " <option value='$author_id' >";
-			$author_html .= $nombre;
-			if(SHOW_DEBUG) {
-				$author_html .= " [$author_id]";
+				$author_html .= " <option value='$author_id' >";
+				$author_html .= $nombre;
+				if(SHOW_DEBUG) {
+					$author_html .= " [$author_id]";
+				}
+				$author_html .= "</option>";
 			}
-			$author_html .= "</option>";
 		}
 		$author_html .= "</select>";
-		
+
 
 	$html .= $author_html ;
 	$html .= " <a href=\"?t=$referenced_section_tipo&m=list\" target=\"_blank\" style=\"text-transform: capitalize;\">".label::get_label('editar')."</a> ";
@@ -55,10 +57,10 @@ require_once( DEDALO_CONFIG_PATH.'/config.php');
 	$html .= '</div>';
 
 
-	
+
 	$html .= '<div id="wrap_codigo_anterior" style="display:inline-block;padding-left:5px;padding-right:5px;">';
 	$html .=" Codi anterior: ";
-	$html .= "<input name=\"codigo_anterior\" id=\"codigo_anterior\" style=\"padding: 4px;border: 1px solid #dddddd; margin-left:5px;\" value=\"\">";	
+	$html .= "<input name=\"codigo_anterior\" id=\"codigo_anterior\" style=\"padding: 4px;border: 1px solid #dddddd; margin-left:5px;\" value=\"\">";
 	$html .= '</div>';
 
 
