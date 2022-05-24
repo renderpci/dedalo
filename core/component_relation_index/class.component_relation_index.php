@@ -5,7 +5,7 @@
 *
 */
 class component_relation_index extends component_relation_common {
-	
+
 
 
 	// relation_type defaults
@@ -26,7 +26,7 @@ class component_relation_index extends component_relation_common {
 		# Custom properties external dato
 		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
 			(isset($this->properties->source->mode) && $this->properties->source->mode==='external')) {
-			
+
 			$reference_locator = new locator();
 				$reference_locator->set_type('dd96');
 				$reference_locator->set_section_tipo($this->section_tipo);
@@ -76,16 +76,16 @@ class component_relation_index extends component_relation_common {
 	* @return string | null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
-		
+
 		$dato = $this->get_dato();
 		if (empty($dato)) {
 			return null;
 		}
 
-		$ar_valor = array();		
+		$ar_valor = array();
 		foreach ((array)$dato as $key => $current_locator) {
-			$ar_valor[] = self::get_locator_value( $current_locator, $lang );			
-		}//end if (!empty($dato)) 
+			$ar_valor[] = self::get_locator_value( $current_locator, $lang );
+		}//end if (!empty($dato))
 
 		# Set component valor
 		$valor='';
@@ -94,8 +94,8 @@ class component_relation_index extends component_relation_common {
 				$valor .= $value;
 				if(end($ar_valor)!=$value) $valor .= ', ';
 			}
-		}		
-		
+		}
+
 
 		return (string)$valor;
 	}//end get_valor
@@ -132,7 +132,7 @@ class component_relation_index extends component_relation_common {
 		if (!$add_locator = $this->add_locator_to_dato($locator)) {
 			return false;
 		}
-		
+
 		return true;
 	}//end add_locator
 
@@ -167,12 +167,12 @@ class component_relation_index extends component_relation_common {
 			'tag_id',
 			'from_component_tipo'
 		];
-	
-		# Add current locator to component dato		
+
+		# Add current locator to component dato
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator, $ar_properties)) {
 			return false;
 		}
-		
+
 		return true;
 	}//end remove_locator
 
@@ -184,8 +184,8 @@ class component_relation_index extends component_relation_common {
 	* @return array $ar_indexations
 	*/
 	public static function get_indexations_from_tag_DES($component_tipo, $section_tipo, $section_id, $tag_id, $lang=DEDALO_DATA_LANG, $type=DEDALO_RELATION_TYPE_INDEX_TIPO) {
-		
-		# Search relation index in hierarchy tables		
+
+		# Search relation index in hierarchy tables
 		$options = new stdClass();
 			$options->fields 	= new stdClass();
 				$options->fields->section_tipo 	= $section_tipo;
@@ -211,9 +211,9 @@ class component_relation_index extends component_relation_common {
 				$locator_resolve_term->set_section_tipo($inverse_locator->from_section_tipo);
 			 	$locator_resolve_term->set_section_id($inverse_locator->from_section_id);
 
-			$term_label = ts_object::get_term_by_locator( $locator_resolve_term, $lang, $from_cache=true ); 
-			
-			$data = new stdClass();		
+			$term_label = ts_object::get_term_by_locator( $locator_resolve_term, $lang, $from_cache=true );
+
+			$data = new stdClass();
 				$data->section_tipo = $inverse_locator->from_section_tipo;
 				$data->section_id 	= $inverse_locator->from_section_id;
 				$data->term 		= strip_tags($term_label);
@@ -222,10 +222,10 @@ class component_relation_index extends component_relation_common {
 			$ar_indexations_resolved[] = $data;
 		}
 		$ar_indexations = $ar_indexations_resolved;
-		
+
 
 		return (array)$ar_indexations;
-	}//end get_indexations_from_tag	
+	}//end get_indexations_from_tag
 
 
 
@@ -234,7 +234,7 @@ class component_relation_index extends component_relation_common {
 	* @return resource $result
 	*/
 	public static function get_indexations_search_DES( $request_options ) {
-	
+
 		$options = new stdClass();
 			$options->fields = new stdClass();
 				$options->fields->section_tipo 	= false;
@@ -258,7 +258,7 @@ class component_relation_index extends component_relation_common {
 			if (isset($options->fields->tag_id) && $options->fields->tag_id!==false) {
 			$locator->set_tag_id($options->fields->tag_id);
 			}
-		
+
 		# calculate_inverse_locators: $locator, $limit=false, $offset=false, $count=false
 		$result = search::calculate_inverse_locators( $locator );
 
@@ -281,7 +281,7 @@ class component_relation_index extends component_relation_common {
 				$locator->set_section_tipo($section_tipo);
 				$locator->set_section_id($section_id);
 				$locator->set_type($type);
-				
+
 				if ($tag_id!==false) {
 					$locator->set_tag_id($tag_id);
 				}
@@ -289,14 +289,14 @@ class component_relation_index extends component_relation_common {
 		$ar_properties = array_keys((array)$locator);
 
 		foreach ((array)$relations as $current_locator) {
-			
+
 			if (true===locator::compare_locators($current_locator, $locator, $ar_properties) ) {
 				// Full locator (with from tipo)
 				return $current_locator;
 			}
 		}
 		debug_log(__METHOD__." Zero locators are located in relations data. This is abnormal situation. Please review this data. ar_relations: ".to_string($relations), logger::ERROR);
-		
+
 		return null;
 	}//end get_locator_from_ar_relations
 
@@ -307,8 +307,8 @@ class component_relation_index extends component_relation_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
-		
+	public function search_operators_info() : array {
+
 		$ar_operators = [
 			'*' 	 => 'no_vacio', // not null
 			'=' 	 => 'vacio'
@@ -316,7 +316,7 @@ class component_relation_index extends component_relation_common {
 
 		return $ar_operators;
 	}//end search_operators_info
-	
-	
+
+
 
 }//end component_relation_index

@@ -24,7 +24,7 @@ class lang {
 	*	like 'lg-eng'. Default is current dedalo data lang
 	* @return string $name
 	*/
-	private static function resolve( string $lang_tld, $lang=DEDALO_DATA_LANG ) : object {
+	private static function resolve( string $lang_tld, string $lang=DEDALO_DATA_LANG ) : object {
 
 		$name = null;
 

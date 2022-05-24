@@ -1634,6 +1634,7 @@ class hierarchy {
 	}//end get_hierarchy_type_from_section_tipo
 
 
+
 	/**
 	* GET_HIERARCHY_SECTION
 	* @param $section_tipo
@@ -1642,7 +1643,7 @@ class hierarchy {
 	*	Target component tipo where search section_tipo
 	* @return int|null $section_id
 	*/
-	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) {
+	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_component_tipo,true);
 
@@ -1672,7 +1673,8 @@ class hierarchy {
 			$record 		= reset($search_result->ar_records);
 
 		// section id
-			$section_id = isset($record->section_id) ? $record->section_id : null;
+			$section_id = isset($record->section_id) ? (int)$record->section_id : null;
+
 
 		return $section_id;
 	}//end get_hierarchy_section

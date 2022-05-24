@@ -45,7 +45,7 @@ class tool_indexation { // extends tool_common
 	* DELETE_TAG
 	* Deletes all tag relations (indexing_component) and finally removes
 	* the tag in all langs of main_component
-	* 
+	*
 	* @param object $request_options
 	* @return object $response
 	*/
@@ -55,7 +55,7 @@ class tool_indexation { // extends tool_common
 			$response->result 	= false;
 			$response->msg 		= [];
 
-		
+
 		// options get and set
 			$options = new stdClass();
 				$options->section_tipo				= null;
@@ -64,7 +64,7 @@ class tool_indexation { // extends tool_common
 				$options->main_component_lang		= null; // component_text_area lang
 				$options->indexing_component_tipo	= null; // component_relation_xxx used to store indexation locators
 				$options->tag_id					= null;
-				
+
 				foreach ($request_options as $key => $value) {
 					if (property_exists($options, $key)) {
 						$options->$key = $value;
@@ -97,9 +97,9 @@ class tool_indexation { // extends tool_common
 				$pseudo_locator->type	= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
 
 			$ar_properties = ['tag_id','type']; // properties to compare
-			
+
 			$removed = $indexing_component->remove_locator_from_dato($pseudo_locator, $ar_properties);
-			$response->msg[] = $removed===true 
+			$response->msg[] = $removed===true
 				? 'Removed locators with tag_id '.$options->tag_id
 				: 'No locators are removed with tag_id '.$options->tag_id;
 
@@ -121,7 +121,7 @@ class tool_indexation { // extends tool_common
 			$response->msg[]	= $n_deleted>0
 				? 'Deleted tag '.$options->tag_id.' in '.$n_deleted.' langs: '.to_string($ar_tag_deleted).' ('.$model_name.' - '.$options->main_component_tipo.')'
 				: 'No tags are deleted in '.$model_name.' tipo: '.$options->main_component_tipo.' with tag_id '.$options->tag_id;
-			
+
 			debug_log(__METHOD__." AR_TAG_DELETED: ".to_string($ar_tag_deleted), logger::DEBUG);
 
 
@@ -133,9 +133,9 @@ class tool_indexation { // extends tool_common
 			// 		$locator->set_section_tipo($section_tipo);
 			// 		$locator->set_section_id($section_id);
 			// 		$locator->set_component_tipo($component_tipo);
-			// 		$locator->set_tag_id($tag_id);				
+			// 		$locator->set_tag_id($tag_id);
 
-							
+
 			// 	$ar_locators = search::calculate_inverse_locators( $locator );
 			// 		dump($ar_locators, ' ar_locators ++ '.to_string());
 			// 		dump($locator, ' locator ++ '.to_string());
@@ -177,12 +177,12 @@ class tool_indexation { // extends tool_common
 			// 													  $section_id,
 			// 													  'edit',
 			// 													  $lang,
-			// 													  $section_tipo);		
+			// 													  $section_tipo);
 			// $ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs($tag_id, $tag_type='index'); // note that "tag" is complete in or out tag like [index-n-8]
 			// 	$response->msg[] = "Deleted in langs ".count($ar_tag_deleted)." the tag \"$tag_id\" from component_text_area $component_tipo [$section_tipo - $section_id]";
-			// 	$response->debug['ar_tag_deleted'] = $ar_tag_deleted;	
-				
-				
+			// 	$response->debug['ar_tag_deleted'] = $ar_tag_deleted;
+
+
 		$response->result = true;
 
 		return (object)$response;
@@ -224,15 +224,15 @@ class tool_indexation { // extends tool_common
 																	  'edit',
 																	  $options->main_component_lang,
 																	  $options->section_tipo);
-			$ar_tag		= [$options->tag_id];
+			$tag_id		= $options->tag_id;
 			$state		= $options->state;
 			$dato		= $component_text_area->get_dato();
 			$text_raw	= $dato[0];
-				dump($text_raw, ' text_raw ++ '.to_string());
+				// dump($text_raw, ' text_raw ++ '.to_string());
 
 			if (!empty($text_raw)) {
-				$result_text = component_text_area::change_tag_state($ar_tag, $state, $text_raw);
-					dump($result_text, ' result_text ++ '.to_string());
+				$result_text = component_text_area::change_tag_state($tag_id, $state, $text_raw);
+					// dump($result_text, ' result_text ++ '.to_string());
 
 				$component_text_area->set_dato([$result_text]);
 				$component_text_area->Save();

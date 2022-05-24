@@ -171,7 +171,7 @@ class component_security_access extends component_common {
 	* @param mixed $dato_unchanged
 	* @return object $response
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;

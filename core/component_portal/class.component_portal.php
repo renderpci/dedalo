@@ -27,84 +27,85 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* GET_properties
+	* GET_PROPERTIES DES
 	* Only to enable component_autocomplete_hi compatibility
 	* @return object $properties
 	*/
-	public function get_properties_DES() {
+		// public function get_properties_DES() {
 
-		$properties = parent::get_properties();
-			#dump($properties, ' properties ++ '.to_string($this->tipo));
+		// 	$properties = parent::get_properties();
+		// 		#dump($properties, ' properties ++ '.to_string($this->tipo));
 
-		// component_portal_hi compatibility
-		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
-		if ($real_model==='component_autocomplete_hi') {
-			// convert from
-			// {
-			//   "source": {
-			//     "mode": "autocomplete",
-			//     "hierarchy_types": [
-			//       2
-			//     ],
-			//     "hierarchy_sections": []
-			//   },
-			//   "value_with_parents": true,
-			//   "css": {
-			//     ".wrap_component": {
-			//       "mixin": [
-			//         ".vertical",
-			//         ".width_33",
-			//         ".line_top"
-			//       ],
-			//       "style": {
-			//         "clear": "left"
-			//       }
-			//     },
-			//     ".content_data": {
-			//       "style": {}
-			//     }
-			//   }
-			// }
+		// 	// component_portal_hi compatibility
+		// 	$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+		// 	if ($real_model==='component_autocomplete_hi') {
+		// 		// convert from
+		// 		// {
+		// 		//   "source": {
+		// 		//     "mode": "autocomplete",
+		// 		//     "hierarchy_types": [
+		// 		//       2
+		// 		//     ],
+		// 		//     "hierarchy_sections": []
+		// 		//   },
+		// 		//   "value_with_parents": true,
+		// 		//   "css": {
+		// 		//     ".wrap_component": {
+		// 		//       "mixin": [
+		// 		//         ".vertical",
+		// 		//         ".width_33",
+		// 		//         ".line_top"
+		// 		//       ],
+		// 		//       "style": {
+		// 		//         "clear": "left"
+		// 		//       }
+		// 		//     },
+		// 		//     ".content_data": {
+		// 		//       "style": {}
+		// 		//     }
+		// 		//   }
+		// 		// }
 
-			$source_string = trim('
-			{
-				"config_context": [
-			      {
-			        "type": "internal",
-			        "hierarchy_types": '.((isset($properties->source->hierarchy_types) && !empty($properties->source->hierarchy_types)) ? json_encode($properties->source->hierarchy_types) : '[2]').',
-			        "search": [
-			          "hierarchy25"
-			        ],
-			        "select": [
-			          "hierarchy25",
-			          "hierarchy41"
-			        ],
-			        "show": [
-			          "hierarchy25"
-			        ]
-			      }
-				],
-			    "section_to_search": '.((isset($properties->source->hierarchy_sections) && !empty($properties->source->hierarchy_sections)) ? json_encode($properties->source->hierarchy_sections) : '[]').',
-			    "filter_by_list": [],
-			    "divisor": " | ",
-			    "type_map": {},
-			    "operator": "or",
-			    "records_mode": "list"
-			}
-			');
-			// dump(json_decode($source_string), ' source_string ++ '.to_string($this->tipo));
+		// 		$source_string = trim('
+		// 		{
+		// 			"config_context": [
+		// 		      {
+		// 		        "type": "internal",
+		// 		        "hierarchy_types": '.((isset($properties->source->hierarchy_types) && !empty($properties->source->hierarchy_types)) ? json_encode($properties->source->hierarchy_types) : '[2]').',
+		// 		        "search": [
+		// 		          "hierarchy25"
+		// 		        ],
+		// 		        "select": [
+		// 		          "hierarchy25",
+		// 		          "hierarchy41"
+		// 		        ],
+		// 		        "show": [
+		// 		          "hierarchy25"
+		// 		        ]
+		// 		      }
+		// 			],
+		// 		    "section_to_search": '.((isset($properties->source->hierarchy_sections) && !empty($properties->source->hierarchy_sections)) ? json_encode($properties->source->hierarchy_sections) : '[]').',
+		// 		    "filter_by_list": [],
+		// 		    "divisor": " | ",
+		// 		    "type_map": {},
+		// 		    "operator": "or",
+		// 		    "records_mode": "list"
+		// 		}
+		// 		');
+		// 		// dump(json_decode($source_string), ' source_string ++ '.to_string($this->tipo));
 
-			$new_properties = new stdClass();
-				$new_properties->source 			= json_decode($source_string);
-				$new_properties->value_with_parents = isset($properties->value_with_parents) ? $properties->value_with_parents : false;
-				$new_properties->css  				= isset($properties->css) ? $properties->css : null;
+		// 		$new_properties = new stdClass();
+		// 			$new_properties->source 			= json_decode($source_string);
+		// 			$new_properties->value_with_parents = isset($properties->value_with_parents) ? $properties->value_with_parents : false;
+		// 			$new_properties->css  				= isset($properties->css) ? $properties->css : null;
 
-			$properties = $new_properties;
-		}//end if ($real_model==='component_portal_hi')
+		// 		$properties = $new_properties;
+		// 	}//end if ($real_model==='component_portal_hi')
 
 
-		return $properties;
-	}//end get_properties
+		// 	return $properties;
+		// }//end get_properties
+
 
 
 	/**
@@ -327,7 +328,7 @@ class component_portal extends component_relation_common {
 	* UPDATE_DATO_VERSION
 	* @return object $response
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;

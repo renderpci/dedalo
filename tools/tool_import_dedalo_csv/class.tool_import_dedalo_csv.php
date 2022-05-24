@@ -23,31 +23,57 @@ class tool_import_dedalo_csv extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// short vars
 			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
 
 		// read_files
-			$result	= tool_common::read_files($dir, $valid_extensions=['csv']);
+			$files_list	= tool_common::read_files($dir, $valid_extensions=['csv']);
 
 		// files info
 			$files_info = [];
-			foreach ($result as $current_file_name) {
+			foreach ($files_list as $current_file_name) {
 
-				$file		= $dir .'/'. $current_file_name;
-				$ar_data	= tool_common::read_csv_file_as_array($file, $skip_header=false, ';');
-				$file_info	= (array)$ar_data[0];
-				$n_records	= count($ar_data)-1;
-				$n_columns	= count($file_info);
+				$file = $dir .'/'. $current_file_name;
 
-				// ar_columns_map
-					$ar_columns_map = array_map(function($el){
-						return (object)[
-							'tipo'	=> $el,
-							'label'	=> RecordObj_dd::get_termino_by_tipo($el, DEDALO_APPLICATION_LANG, true),
-							'model'	=> RecordObj_dd::get_modelo_name_by_tipo($el, true)
-						];
-					}, $file_info);
+				try {
+
+					// data . extract csv data from file
+					// $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"'
+					$ar_data = tool_common::read_csv_file_as_array(
+						$file, // file string
+						false, // skip_header bool
+						';', // csv_delimiter string
+						'"', // enclosure string
+						'"' // escape string
+					);
+
+					if (empty($ar_data) || empty($ar_data[0])) {
+						debug_log(__METHOD__." Error on read file 1 : ".to_string($file).' The file will be ignored', logger::ERROR);
+						continue;
+					}
+
+					$file_info	= (array)$ar_data[0];
+					$n_records	= count($ar_data)-1;
+					$n_columns	= count($file_info);
+
+					// ar_columns_map
+						$ar_columns_map = array_map(function($el){
+							return (object)[
+								'tipo'	=> $el,
+								'label'	=> RecordObj_dd::get_termino_by_tipo($el, DEDALO_APPLICATION_LANG, true),
+								'model'	=> $el!=='section_id' ? RecordObj_dd::get_modelo_name_by_tipo($el, true) : $el
+							];
+						}, $file_info);
+
+				} catch (Exception $e) {
+
+					$response->error =  'Error on read file: '.to_string($file);
+
+					debug_log(__METHOD__." Error on read file 2: ".to_string($file).' The file will be ignored', logger::ERROR);
+					continue;
+				}
 
 				// sample data of first n rows to verify is valid
 					$sample_data		= [];
@@ -55,7 +81,14 @@ class tool_import_dedalo_csv extends tool_common {
 					$preview_max		= 10;
 					foreach ($ar_data as $dkey => $current_line) {
 
+						if (empty($current_line)) {
+							continue;
+						}
+
 						foreach ($current_line as $key => $value) {
+							if (empty($value)) {
+								continue;
+							}
 
 							$value = str_replace('U+003B', ';', $value);
 
@@ -95,19 +128,28 @@ class tool_import_dedalo_csv extends tool_common {
 					'n_columns'				=> $n_columns,
 					'file_info'				=> $file_info,
 					'ar_columns_map'		=> $ar_columns_map,
-					'sample_data'			=> $sample_data,
-					'sample_data_errors'	=> $sample_data_errors
+					'sample_data'			=> '$sample_data',
+					'sample_data_errors'	=> '$sample_data_errors'
 				];
 
 				$files_info[] = $item;
-			}//end foreach ($result as $current_file_name) {
+			}//end foreach ($files_list as $current_file_name)
+
+			// dump($response, ' response 2 ++ '.to_string());
+			// error_log( 'Type: '.gettype($files_info) );
+			// error_log( 'Count: '.count($files_info) );
+			// error_log( 'Type[0]: '.gettype($files_info[0]) );
+			// trigger_error( 'get_object_vars:'. get_object_vars($files_info[0]));
+			// error_log( json_encode($files_info) );
 
 		// response
 			$response->result	= $files_info;
-			$response->msg		= !empty($files_info) && is_array($files_info)
+			$response->msg		= !empty($files_info)
 				? "Found ".count($files_info)." files"
 				: "No files found at $dir";
+			$response->error	= $error ?? null;
 
+		dump($response, ' response 3  ++ '.json_encode($response));
 
 		return (object)$response;
 	}//end get_csv_files
@@ -699,7 +741,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* Value can be a int like 2 or an complete locator like {"type": "dd151","section_id": "2","section_tipo": "dd128","from_component_tipo": "dd197"}
 	* @return object|null $locator
 	*/
-	public static function build_user_locator(string $value, string $from_component_tipo) {
+	public static function build_user_locator(string $value, string $from_component_tipo) : ?object {
 
 		$value = trim($value);
 
@@ -750,11 +792,14 @@ class tool_import_dedalo_csv extends tool_common {
 	* @param string $value
 	* @return object|null $date
 	*/
-	public static function build_date_from_value(string $value) {
+	public static function build_date_from_value(string $value) : ?object {
 
 		$value = trim($value);
 
-		if (empty($value)) return null;
+		// empty case
+			if (empty($value)) {
+				return null;
+			}
 
 		if ( strpos($value, '{')===0 || strpos($value, '[')===0 ) {
 			// is full date. Check object to avoid errors
