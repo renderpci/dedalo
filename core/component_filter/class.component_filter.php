@@ -216,7 +216,7 @@ class component_filter extends component_relation_common {
 	* component filter return a array of values
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
@@ -615,7 +615,7 @@ class component_filter extends component_relation_common {
 	* UPDATE_DATO_VERSION
 	* @return object $response
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;
@@ -737,7 +737,7 @@ class component_filter extends component_relation_common {
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
-	public function regenerate_component() {
+	public function regenerate_component() : bool {
 
 		# Force loads dato always !IMPORTANT
 		$this->get_dato();

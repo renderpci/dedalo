@@ -178,7 +178,7 @@ class component_iri extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return object $response
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;

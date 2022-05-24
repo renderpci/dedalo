@@ -306,7 +306,7 @@ class state extends widget_common {
 					$item->widget 	= get_class($this);
 					$item->key  	= $key;
 					return $item;
-				},$ar_list_of_values->result);
+				}, $ar_list_of_values->result);
 
 				$data_list = array_merge($data_list, $list);
 			}

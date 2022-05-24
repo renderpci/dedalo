@@ -315,7 +315,7 @@ class section extends common {
 	* get all data of the component, with dato, valor, valor_list and dataframe
 	* this function will be the only comunication with the component for get the information (08-2017)
 	*/
-	public function get_all_component_data($component_tipo) {
+	public function get_all_component_data(string $component_tipo) {
 
 		$section_data = $this->get_dato();
 
@@ -432,7 +432,7 @@ class section extends common {
 
 
 		return $result;
-	}#end save_component_dato
+	}//end save_component_dato
 
 
 
@@ -665,7 +665,7 @@ class section extends common {
 	* @var portal_tipo
 	*		Tipo del portal desde donde se crea esta sección (si se crea desde un portal)
 	*/
-	public static function build_ar_section_creator($top_tipo=null, $portal_section_tipo=null, $portal_tipo=null) : array {
+	public static function build_ar_section_creator(string $top_tipo=null, string $portal_section_tipo=null, string $portal_tipo=null) : array {
 
 		# top_tipo
 		if (is_null($top_tipo) || empty($top_tipo) || !$top_tipo) {
@@ -1721,9 +1721,9 @@ class section extends common {
 	* Return portal tipo from section and portal inside component
 	* @param string $section_tipo
 	* @param string $component_tipo_inside_portal
-	* @return string $portal_tipo / bool false
+	* @return string|null $portal_tipo
 	*/
-	public static function get_portal_tipo_from_component(string $section_tipo, string $component_tipo_inside_portal) {
+	public static function get_portal_tipo_from_component(string $section_tipo, string $component_tipo_inside_portal) : ?string {
 
 		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section(
 			$section_tipo,
@@ -1733,16 +1733,22 @@ class section extends common {
 			$recursive=true,
 			$search_exact=true
 		);
-		if (empty($ar_portals)) return false;
+
+		// empty case
+			if (empty($ar_portals)) {
+				return false;
+			}
+
 		foreach ($ar_portals as $current_portal_tipo) {
 			# portal related terms
 			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($current_portal_tipo, true, true);
 			if (in_array($component_tipo_inside_portal, $ar_related)) {
+				// breakand return tipo
 				return $current_portal_tipo;
 			}
 		}
 
-		return false;
+		return null;
 	}//end get_portal_tipo_from_component
 
 
@@ -1754,10 +1760,15 @@ class section extends common {
 	* @param string $component_tipo_inside_portal
 	* @return string $portal_tipo / bool false
 	*/
-	public static function get_portal_tipo_from_component_in_search_list(string $section_tipo, string $component_tipo_inside_portal) {
+	public static function get_portal_tipo_from_component_in_search_list(string $section_tipo, string $component_tipo_inside_portal) : ?string {
 
 		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_portal'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-		if (empty($ar_portals)) return false;
+
+		// empty case
+			if (empty($ar_portals)) {
+				return null;
+			}
+
 		foreach ($ar_portals as $current_portal_tipo) {
 
 			# $portal search list =
@@ -1774,7 +1785,7 @@ class section extends common {
 			}
 		}
 
-		return false;
+		return null;
 	}//end get_portal_tipo_from_component_in_search_list
 
 
@@ -1922,8 +1933,9 @@ class section extends common {
 
 	/**
 	* GET_BUTTON
+	* @return object|null $button_object
 	*/
-	public function get_button(string $modelo_name) {
+	public function get_button(string $modelo_name) : ?object {
 
 		$ar_buttons = (array)$this->get_ar_children_objects_by_modelo_name_in_section($modelo_name,false);
 		foreach ($ar_buttons as $current_button_object) {
@@ -1953,58 +1965,58 @@ class section extends common {
 	/**
 	* GET_AR_PROJECTS_BY_SECTION
 	*/
-	private function get_ar_projects_by_section() {
+		// private function get_ar_projects_by_section() {
 
-		# "NO ESTA ACABADO.. !";
-		die("Stopped secuence get_ar_projects_by_section");
+		// 	# "NO ESTA ACABADO.. !";
+		// 	die("Stopped secuence get_ar_projects_by_section");
 
-		# Obtenemos los hijos de esta seccion
-		$section	 	= self::get_tipo();
-		$modelo_name	= 'filter_';
+		// 	# Obtenemos los hijos de esta seccion
+		// 	$section	 	= self::get_tipo();
+		// 	$modelo_name	= 'filter_';
 
-		# Obtenemos el filtro (terminoID)
-		$filtroID		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$section , $modelo_name, $relation_type='children');
+		// 	# Obtenemos el filtro (terminoID)
+		// 	$filtroID		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$section , $modelo_name, $relation_type='children');
 
-		# Obtenemos su filtro relacionado
-		$filtroID_rel	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID, $modelo_name, $relation_type='termino_relacionado');
+		// 	# Obtenemos su filtro relacionado
+		// 	$filtroID_rel	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID, $modelo_name, $relation_type='termino_relacionado');
 
-		# Buscamos el termino relacionado con el filtro encontrado
-		$filtroID_rel2	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID_rel, $modelo_name, $relation_type='termino_relacionado');
+		// 	# Buscamos el termino relacionado con el filtro encontrado
+		// 	$filtroID_rel2	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID_rel, $modelo_name, $relation_type='termino_relacionado');
 
-		/*
-		# los recorremos para filtrar por modelo
-		if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
+		// 	/*
+		// 	# los recorremos para filtrar por modelo
+		// 	if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
 
-			$RecordObj_dd	= new RecordObj_dd($terminoID);
-			$modelo			= $RecordObj_dd->get_modelo();
-			$modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
+		// 		$RecordObj_dd	= new RecordObj_dd($terminoID);
+		// 		$modelo			= $RecordObj_dd->get_modelo();
+		// 		$modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
 
-			if(strpos($modelo_name,'filter_') !== false) {
-				$filter_tipo = $terminoID;
-				break;
-			}
-		}
-		if(empty($filter_tipo)) return false;
-		*/
+		// 		if(strpos($modelo_name,'filter_') !== false) {
+		// 			$filter_tipo = $terminoID;
+		// 			break;
+		// 		}
+		// 	}
+		// 	if(empty($filter_tipo)) return false;
+		// 	*/
 
-		# del filtro, sacamos los términos relacionados
-		#$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($filter_tipo, $cache=true, $simple=true);
+		// 	# del filtro, sacamos los términos relacionados
+		// 	#$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($filter_tipo, $cache=true, $simple=true);
 
-		return false;
-	}//end get_ar_projects_by_section
+		// 	return false;
+		// }//end get_ar_projects_by_section
 
 
 
 	/**
 	* GET_AR_SECTION_CREATOR
 	*/
-	public function get_ar_section_creator() {
-		die("REHACER");
-		$dato = $this->get_dato();
-		if( isset($dato->created_date->ar_section_creator) )  return $dato->created_date->ar_section_creator;
+		// public function get_ar_section_creator() {
+		// 	die("REHACER");
+		// 	$dato = $this->get_dato();
+		// 	if( isset($dato->created_date->ar_section_creator) )  return $dato->created_date->ar_section_creator;
 
-		return false;
-	}//end get_ar_section_creator
+		// 	return false;
+		// }//end get_ar_section_creator
 
 
 
@@ -2024,15 +2036,13 @@ class section extends common {
 	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
 	* This method is used mainly in importations
 	*/
-	public function set_created_date( $timestamp ) {
+	public function set_created_date( string $timestamp ) : void {
 
 		$date = dd_date::get_date_with_format( $timestamp, $format="Y-m-d H:i:s" );
 
 		$dato = $this->get_dato(); // Force load
 		$dato->created_date = $date;
 		$this->set_dato($dato); // Force update
-
-		return true;
 	}#end set_created_date
 
 
@@ -2043,15 +2053,13 @@ class section extends common {
 	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
 	* This method is used mainly in importations
 	*/
-	public function set_modified_date( $timestamp ) {
+	public function set_modified_date( string $timestamp ) : void {
 
 		$date = dd_date::get_date_with_format( $timestamp, $format="Y-m-d H:i:s" );
 
 		$dato = $this->get_dato(); // Force load
 		$dato->modified_date = $date;
 		$this->set_dato($dato); // Force update
-
-		return true;
 	}#end set_modified_date
 
 
@@ -2100,20 +2108,30 @@ class section extends common {
 	/**
 	* GET_CREATED_BY_USER_NAME
 	*/
-	public function get_created_by_user_name($full_name=false) {
+	public function get_created_by_user_name(bool $full_name=false) : ?string {
+
 		$dato = $this->get_dato();
-		if( !isset($dato->created_by_userID) ){
-			return false;
+
+		if( !isset($dato->created_by_userID) ) {
+			return null;
 		}
 		$user_id = $dato->created_by_userID;
-		if( !$user_id ) return false;
-
-		if ($full_name===true) {
-			$username_tipo = DEDALO_FULL_USER_NAME_TIPO;
-		}else{
-			$username_tipo = DEDALO_USER_NAME_TIPO;
+		if( !$user_id ) {
+			return null;
 		}
-		$component_input_text = component_common::get_instance('component_input_text', $username_tipo, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+
+		$username_tipo = ($full_name===true)
+			? DEDALO_FULL_USER_NAME_TIPO
+			: DEDALO_USER_NAME_TIPO;
+
+		$component_input_text = component_common::get_instance(
+			'component_input_text',
+			$username_tipo,
+			$user_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
 		$user_name = $component_input_text->get_valor();
 
 		return $user_name;
@@ -2123,15 +2141,18 @@ class section extends common {
 
 	/**
 	* GET_MODIFIED_BY_USER_NAME
+	* @return string|null $user_name
 	*/
-	public function get_modified_by_user_name() : string {
+	public function get_modified_by_user_name() : ?string {
 
 		$dato = $this->get_dato();
 		if( !isset($dato->modified_by_userID) ){
-			return false;
+			return null;
 		}
 		$user_id = $dato->modified_by_userID;
-		if( !$user_id ) return false;
+		if( !$user_id ) {
+			return null;
+		}
 
 		$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 		$user_name = $component_input_text->get_valor();
@@ -2169,7 +2190,7 @@ class section extends common {
 	* GET_SECTION_INFO
 	* @param string $format
 	*/
-	public function get_section_info($format='json') {
+	public function get_section_info(string $format='json') {
 
 		$section_info = new stdClass();
 
@@ -2216,9 +2237,9 @@ class section extends common {
 
 	/**
 	* GET_PUBLICATION_DATE
-	* @return string $local_date
+	* @return string|null $local_date
 	*/
-	public function get_publication_date($component_tipo) {
+	public function get_publication_date(string $component_tipo) : ?string {
 
 		// tipos
 			#$component_tipo	= ($type==='first') ? diffusion::$publication_first_tipo : diffusion::$publication_last_tipo;
@@ -2245,8 +2266,9 @@ class section extends common {
 				$current_date 	= reset($dato);
 				$dd_date 		= new dd_date($current_date->start);
 				$timestamp 		= $dd_date->get_dd_timestamp();
-				$local_date 	= component_date::timestamp_to_date($timestamp, true);
+				$local_date 	= component_date::timestamp_to_date($timestamp, true); // string|null
 			}
+
 
 		return $local_date;
 	}//end get_publication_date
@@ -2255,13 +2277,13 @@ class section extends common {
 
 	/**
 	* GET_PUBLICATION_USER
-	* @return string $local_date
+	* @return string|null $user_name
 	*/
-	public function get_publication_user($component_tipo) {
+	public function get_publication_user(string $component_tipo) : ?string {
 
 		// tipos
-			$section_id 	= $this->section_id;
-			$section_tipo 	= $this->tipo;
+			$section_id		= $this->section_id;
+			$section_tipo	= $this->tipo;
 
 		// component
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -2279,8 +2301,8 @@ class section extends common {
 				$user_name = null;
 
 			}else{
-				$user_id 	= reset($dato)->section_id;
-				#$user_name 	= section::get_user_name_by_userID($user_id);
+				$user_id	= reset($dato)->section_id;
+				// $user_name	= section::get_user_name_by_userID($user_id);
 				$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 				$user_name = $component_input_text->get_valor();
 			}
@@ -2294,28 +2316,42 @@ class section extends common {
 	* GET_AR_CHILDRENS_BY_MODEL
 	* get the childrens of the section by modelo_name required
 	* childrens like relation_list or time machine_list
+	* @return string|null $first_child
 	*/
-	public static function get_ar_childrens_by_model($section_tipo, $modelo_name) {
+	public static function get_ar_childrens_by_model(string $section_tipo, array $ar_modelo_name_required) : ?string {
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
 		$current_section_tipo = $section_tipo;
 
-		$ar_modelo_name_required = $modelo_name;
-		$resolve_virtual 		 = false;
+		// $ar_modelo_name_required = [$modelo_name];
 
 		// Locate childrens element in current section (virtual ot not)
-		$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+		$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$current_section_tipo,
+			$ar_modelo_name_required, // ar_modelo_name_required
+			$from_cache=true,
+			false, // resolve_virtual
+			$recursive=false,
+			$search_exact=true
+		);
 
 		// If not found children, try resolving real section
 		if (empty($ar_childrens)) {
 			$resolve_virtual = true;
-			$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+			$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$current_section_tipo,
+				$ar_modelo_name_required,
+				$from_cache=true,
+				true, // resolve_virtual
+				$recursive=false,
+				$search_exact=true
+			);
 		}// end if (empty($ar_childrens))
 
 		if(isset($ar_childrens[0])){
-			$childrens = $ar_childrens[0];
-			return $childrens;
+			$first_child = $ar_childrens[0];
+			return $first_child;
 		}
 
 		return null;

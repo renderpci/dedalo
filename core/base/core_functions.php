@@ -419,11 +419,11 @@ function exec_time($start, string $method=null, $result=null) : string {
 /**
 * EXEC_TIME
 * @param float $start
-* 	time in nanaseconds
-* @param string $ms default 'ms' (miliseconds)
-* 	unit: ns|ms|sec
-* @param int $round
-* 	Math total rounded to value. Default 3
+* 	time in nanaseconds from function start_time()
+* @param string $unit = 'ms' (miliseconds)
+* 	possible values: ns|ms|sec
+* @param int $round = 3
+* 	Math total rounded to value
 * @return string
 */
 function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
@@ -442,34 +442,12 @@ function exec_time_unit(float $start, string $unit='ms', int $round=3) : string 
 
 
 /**
-* START_HRTIME
-*/
-function start_hrtime() {
-
-	return hrtime(true); // nanoseconds
-}//end start_hrtime
-
-
-
-/**
-* EXEC_HRTIME_UNIT
-* @return string $total
-* Time expresed in ms as '0,633262 ms'
-*/
-function exec_hrtime_unit($start) {
-
-	return (hrtime(true) - $start)/1e+6 ;//. ' ms';
-}//end exec_hrtime_unit
-
-
-
-
-/**
 * TO_STRING
 * Get input var as parsed string
 * @return string
 */
-function to_string(mixed $var=null) : string {
+// function to_string(mixed $var=null) : string {
+function to_string($var=null) : string {
 
 	if(is_null($var)) {
 		return 'null';
@@ -908,8 +886,8 @@ function sanitize_query(string $strQuery) : string {
 *
 * @return mixed $var_value
 */
-function fix_cascade_config4_var(string $var_name, mixed $var_default_value) : mixed {
-// function fix_cascade_config4_var(string $var_name, $var_default_value) { // 7.4 compatible
+// function fix_cascade_config4_var(string $var_name, mixed $var_default_value) : mixed {
+function fix_cascade_config4_var(string $var_name, $var_default_value) { // 7.4 compatible
 
 	switch (true) {
 		# REQUEST (GET/POST)

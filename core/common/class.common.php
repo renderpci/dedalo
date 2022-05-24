@@ -1232,7 +1232,7 @@ abstract class common {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				$start_hrtime = start_hrtime();
+				$start_time = start_time();
 			}
 
 		// options parse
@@ -1286,7 +1286,7 @@ abstract class common {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				// $exec_time = exec_time_unit($start_time,'ms').' ms';
-				$exec_time = exec_hrtime_unit($start_hrtime).' ms';
+				$exec_time = exec_time_unit($start_time).' ms';
 				#$element = json_decode($json);
 				#	$element->debug = new stdClass();
 				#	$element->debug->exec_time = $exec_time;
@@ -1298,15 +1298,15 @@ abstract class common {
 
 						$current = reset($json->data);
 							// $current->debug_time_json	= $exec_time;
-							$current->debug_model		= $called_model;
-							$current->debug_label		= $this->get_label();
-							$current->debug_mode		= $this->get_modo();
-						#$bt = debug_backtrace()[0];
-						#	dump($json->data, ' json->data ++ '.to_string($bt));
+							$current->debug_model			= $called_model;
+							$current->debug_label			= $this->get_label();
+							$current->debug_mode			= $this->get_modo();
+						// $bt = debug_backtrace()[0];
+						// dump($json->data, ' json->data ++ '.to_string($bt));
 					}
 				// error_log('--- get_json $exec_time '.$called_model.' - '.$called_tipo.' : '.$exec_time);
 				// error_log('------------------- get_structure_context -------- '. $called_tipo .' - '. $exec_time .' ms ---- '. $called_model);
-				error_log('------------------- get_json --------------------- '. $called_tipo .' - '. $exec_time .' ---- '. $called_model.' - '.($this->section_tipo ?? $this->tipo ?? '').'.'.($this->section_id ?? ''));
+				error_log('------------------- get_json --------------------- '. $called_tipo .' ---------- '. $exec_time .' ---- '. $called_model.' - '.($this->section_tipo ?? $this->tipo ?? '').'.'.($this->section_id ?? ''));
 			}
 
 		// cache
@@ -1322,6 +1322,11 @@ abstract class common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* 	Common function to resolve element context
+	* @param int $permissions = 0
+	* @param bool $add_request_config = false
+	* @param callable $callback = null
+	*
 	* @return object $dd_object
 	*/
 	public function get_structure_context(int $permissions=0, bool $add_request_config=false, callable $callback=null) : object {
@@ -1537,7 +1542,7 @@ abstract class common {
 					$dd_object->relation_list		= $this->get_relation_list();
 					$dd_object->time_machine_list	= $this->get_time_machine_list();
 				}
-				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_hrtime_unit($start_hrtime) );
+				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_time_unit($start_time) );
 
 		// callback
 			if ($callback!==null) {
@@ -1549,19 +1554,19 @@ abstract class common {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
+				$time = exec_time_unit($start_time,'ms');
+
 				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time = $time.' ms';
 
 				$dd_object->debug = $debug;
 
-				$time = exec_time_unit($start_time,'ms');
 				$time_string = $time>15
 					? sprintf("\033[31m%s\033[0m", $time)
 					: $time;
 				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
-				// error_log('+++++++++++++++++++++++++++++++++++ Time C : '.exec_hrtime_unit($start_hrtime) );
+				// error_log('+++++++++++++++++++++++++++++++++++ Time C : '.exec_time_unit($start_time) );
 				// error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
-
 			}
 
 
@@ -3494,9 +3499,9 @@ abstract class common {
 	/**
 	* GET_COLUMNS_MAP
 	* Columns_map define the order and how the section or component will build the columns in list, the columns maps was defined in the properties.
-	* @return object|null
+	* @return array|null $columns_map
 	*/
-	public function get_columns_map() {
+	public function get_columns_map() : ?array {
 
 		$mode = $this->get_modo();
 		$tipo = $this->get_tipo();

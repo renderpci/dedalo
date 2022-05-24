@@ -169,21 +169,22 @@ class component_ip extends component_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	public function search_operators_info() {
+	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null
-			'=' 	 => 'similar_a',
-			'!=' 	 => 'distinto_de',
-			'-' 	 => 'no_contiene',
-			'*text*' => 'contiene',
-			'text*'  => 'empieza_con',
-			'*text'  => 'acaba_con',
+			'*'			=> 'no_vacio', // not null
+			'!*'		=> 'campo_vacio', // null
+			'='			=> 'similar_a',
+			'!='		=> 'distinto_de',
+			'-'			=> 'no_contiene',
+			'*text*'	=> 'contiene',
+			'text*'		=> 'empieza_con',
+			'*text'		=> 'acaba_con'
 		];
 
 		return $ar_operators;
 	}//end search_operators_info
 
-}
-?>
+
+
+}//end class component_iri

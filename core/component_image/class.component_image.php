@@ -188,7 +188,7 @@ class component_image extends component_media_common {
 	* the relation components need to process the locator to resolve the value
 	* @return object $value
 	*/
-	public function get_value($lang=DEDALO_DATA_LANG, $ddo=null) {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$class_list 	= $ddo->class_list ?? null;
@@ -1588,7 +1588,7 @@ class component_image extends component_media_common {
 	* UPDATE_DATO_VERSION
 	* @return
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;

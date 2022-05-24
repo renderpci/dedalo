@@ -115,7 +115,7 @@ class component_json extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return
 	*/
-	public static function update_dato_version($request_options) {
+	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;

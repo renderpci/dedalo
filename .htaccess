@@ -33,9 +33,9 @@
 #RewriteEngine On
 #RewriteRule (config) - [F,L]
 
-<FilesMatch ".(eot|ttf|otf|woff|woff2)">
-  Header set Access-Control-Allow-Origin "*"
-</FilesMatch>
+# <FilesMatch ".(eot|ttf|otf|woff|woff2)">
+#   Header set Access-Control-Allow-Origin "*"
+# </FilesMatch>
 
 # Don't show directory listings for URLs which map to a directory.
 Options -Indexes
