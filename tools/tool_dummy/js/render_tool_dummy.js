@@ -72,7 +72,6 @@ const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-
 	// components container
 		const components_container = ui.create_dom_element({
 			element_type	: 'div',
