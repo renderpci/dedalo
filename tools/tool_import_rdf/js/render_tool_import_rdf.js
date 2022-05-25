@@ -117,8 +117,8 @@ const get_content_data_edit = async function(self) {
 
 				if (ar_values.length > 0){
 
-					const ontology_tipo = self.main_component.context.properties.ar_tools_name.tool_import_rdf.external_ontology
-						? self.main_component.context.properties.ar_tools_name.tool_import_rdf.external_ontology
+					const ontology_tipo = self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
+						? self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
 						: null
 
 
@@ -167,7 +167,7 @@ const get_content_data_edit = async function(self) {
 */
 const render_component_dato = function(self) {
 
-	const component_data	= self.main_component.data.value
+	const component_data	= self.main_element.data.value
 	const len				= component_data.length
 
 	const source_component_container = ui.create_dom_element({

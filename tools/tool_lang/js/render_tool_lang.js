@@ -123,12 +123,12 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// main_component unavailable case
-		if (!self.main_component) {
+	// main_element unavailable case
+		if (!self.main_element) {
 			const content_data = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'content_data ' + self.type,
-				inner_html		: 'Error loosed caller. main_component is not available. Please, try to reopen this tool again.'
+				inner_html		: 'Error loosed caller. main_element is not available. Please, try to reopen this tool again.'
 			})
 			return content_data
 		}
@@ -178,7 +178,7 @@ const get_content_data_edit = async function(self) {
 			// if (source_select_lang.value) {
 			// 	add_component(self, source_component_container, source_select_lang.value)
 			// }
-			self.main_component.render()
+			self.main_element.render()
 			.then(function(node){
 				node.classList.add('disabled_component')
 				source_component_container.appendChild(node)

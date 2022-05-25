@@ -83,9 +83,9 @@ tool_tc.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// main_component. fix main_component for convenience
-		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
-		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+	// main_element. fix main_element for convenience
+		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 
 	return common_build
@@ -104,10 +104,10 @@ tool_tc.prototype.load_component = async function(lang) {
 		const to_delete_instances = self.ar_instances.filter(el => el.lang!==lang)
 
 	// context (clone and edit)
-		const context = Object.assign(clone(self.main_component.context),{
+		const context = Object.assign(clone(self.main_element.context),{
 			lang		: lang,
 			mode		: 'edit',
-			section_id	: self.main_component.section_id
+			section_id	: self.main_element.section_id
 		})
 
 	// options

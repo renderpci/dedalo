@@ -27,7 +27,7 @@ export const tool_update_cache = function () {
 	this.ar_instances	= null
 	this.events_tokens	= null
 	this.status			= null
-	this.main_component	= null
+	this.main_element	= null
 	this.type			= null
 	this.source_lang	= null
 	this.target_lang	= null
@@ -90,7 +90,7 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 
-	// specific actions.. like fix main_component for convenience
+	// specific actions.. like fix main_element for convenience
 		self.component_list = await self.get_component_list()
 
 

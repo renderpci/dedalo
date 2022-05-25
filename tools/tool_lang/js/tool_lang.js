@@ -87,10 +87,10 @@ tool_lang.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// main_component. fix main_component for convenience
-		const main_component_ddo = self.tool_config.ddo_map.find(el => el.role==="main_component")
-		if (main_component_ddo) {
-			self.main_component = self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+	// main_element. fix main_element for convenience
+		const main_element_ddo = self.tool_config.ddo_map.find(el => el.role==="main_element")
+		if (main_element_ddo) {
+			self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 		}
 
 
@@ -106,15 +106,15 @@ tool_lang.prototype.load_component = async function(lang) {
 
 	const self = this
 
-	// to_delete_instances. Select instances with different lang to main_component
-		const to_delete_instances = self.ar_instances.filter(el => el.lang!==self.main_component.lang)
+	// to_delete_instances. Select instances with different lang to main_element
+		const to_delete_instances = self.ar_instances.filter(el => el.lang!==self.main_element.lang)
 
 
 	// context (clone and edit)
-		const context = Object.assign(clone(self.main_component.context),{
+		const context = Object.assign(clone(self.main_element.context),{
 			lang		: lang,
 			mode		: 'edit',
-			section_id	: self.main_component.section_id
+			section_id	: self.main_element.section_id
 		})
 
 	// options
@@ -156,9 +156,9 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 		source.arguments = {
 			source_lang		: source_lang,
 			target_lang		: target_lang,
-			component_tipo	: self.main_component.tipo,
-			section_id		: self.main_component.section_id,
-			section_tipo	: self.main_component.section_tipo,
+			component_tipo	: self.main_element.tipo,
+			section_id		: self.main_element.section_id,
+			section_tipo	: self.main_element.section_tipo,
 			translator		: JSON.parse(translator),
 			config			: self.config
 		}
@@ -185,7 +185,7 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 					//}
 
 				// reload target lang
-					const target_component = self.ar_instances.find(el => el.tipo===self.main_component.tipo && el.lang===target_lang)
+					const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
 					target_component.refresh()
 					dd_console('target_component', 'DEBUG', target_component)
 

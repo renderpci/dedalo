@@ -65,7 +65,7 @@ service_time_machine.prototype.init = function(options) {
 
 	self.caller			= options.caller || null
 
-	self.main_component	= options.main_component || null
+	self.main_element	= options.main_element || null
 	self.id_variant		= options.id_variant || self.model
 
 	self.datum			= options.datum || null
@@ -226,16 +226,15 @@ service_time_machine.prototype.build_context = function() {
 
 	const self = this
 
-	// component
-		const component = self.main_component
-			? self.main_component
+	// main_element
+		const main_element = self.main_element
+			? self.main_element
 			: null
 
-		// const component_tipo	= component.tipo
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
-		const lang				= component
-			? component.lang
+		const lang				= main_element
+			? main_element.lang
 			: page_globals.dedalo_data_nolan
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
@@ -276,42 +275,49 @@ service_time_machine.prototype.build_context = function() {
 			}
 		]
 
-		// component. add itself to the ddo_map when the caller set the main_component and set the component show if exists (portals) to ddo_map
-		if(component){
-			ddo_map.push({
-				tipo			: component.tipo,
-				type			: 'component',
-				typo			: 'ddo',
-				section_tipo	: section_tipo,
-				model			: component.model,
-				parent			: section_tipo,
-				label			: component.label,
-				mode			: 'list'
-			})
-
-			// component show . From rqo_config_show
-			const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-				? clone(component.rqo_config.show.ddo_map)
-				: null
-			if (component_show) {
-				for (let i = 0; i < component_show.length; i++) {
-					const item = component_show[i]
-						  item.mode = 'list'
-					ddo_map.push(item)
-				}
-			}
+		// component. add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
+		let component = null
+		if (main_element && main_element.model==='section') {
+			// nothing to add to ddo_map
 		}else{
-			ddo_map.push({
-				tipo			: 'dd1574', // generic tm info ontology item 'Value'
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_input_text',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				label			: 'Value',
-				mode			: 'list'
-			})
+			if(main_element){
+				// component defined
+				component = main_element
+				ddo_map.push({
+					tipo			: component.tipo,
+					type			: 'component',
+					typo			: 'ddo',
+					section_tipo	: section_tipo,
+					model			: component.model,
+					parent			: section_tipo,
+					label			: component.label,
+					mode			: 'list'
+				})
 
+				// component show . From rqo_config_show
+				const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
+					? clone(component.rqo_config.show.ddo_map)
+					: null
+				if (component_show) {
+					for (let i = 0; i < component_show.length; i++) {
+						const item = component_show[i]
+							  item.mode = 'list'
+						ddo_map.push(item)
+					}
+				}
+			}else{
+				// fallback (time machine list case)
+				ddo_map.push({
+					tipo			: 'dd1574', // generic tm info ontology item 'Value'
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_input_text',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					label			: 'Value',
+					mode			: 'list'
+				})
+			}
 		}
 
 	const filter_by_locators = (component)

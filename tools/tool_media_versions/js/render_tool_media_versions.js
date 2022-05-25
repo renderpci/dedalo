@@ -74,18 +74,18 @@ const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// main_component_container
-		const main_component_container = ui.create_dom_element({
+	// main_element_container
+		const main_element_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'main_component_container',
+			class_name		: 'main_element_container',
 			parent			: fragment
 		})
-		self.main_component.render()
+		self.main_element.render()
 		.then(function(component_node){
-			main_component_container.appendChild(component_node)
+			main_element_container.appendChild(component_node)
 		})
 		// fix
-		self.main_component_container = main_component_container
+		self.main_element_container = main_element_container
 
 	// versions_container
 		const versions_grid = get_versions_grid(self)
@@ -154,7 +154,7 @@ const get_versions_grid = function(self) {
 			versions_container.appendChild( get_line_build_version(ar_quality, self) )
 		}
 
-	// specific_actions. Special features based on main_component model. They are defined in tool properties.
+	// specific_actions. Special features based on main_element model. They are defined in tool properties.
 		// sample:
 		// {
 		//   "specific_actions": {
@@ -176,7 +176,7 @@ const get_versions_grid = function(self) {
 		for(const action_name in specific_actions) {
 
 			const ar_models = specific_actions[action_name]
-			if (ar_models.includes(self.main_component.model)) {
+			if (ar_models.includes(self.main_element.model)) {
 
 				// check valid function call
 					if(typeof fn_mapper[action_name]!=='function') {
@@ -290,8 +290,8 @@ const get_line_file_exists = function(ar_quality, self) {
 					button_file_av.addEventListener("click", async function() {
 						self.node[0].classList.add('loading')
 						// change component av quality and refresh
-						self.main_component.quality = quality
-						await self.main_component.refresh()
+						self.main_element.quality = quality
+						await self.main_element.refresh()
 						self.node[0].classList.remove('loading')
 					})
 				}else{
@@ -419,7 +419,7 @@ const get_line_file_upload = function(ar_quality, self) {
 							mode	: 'edit'
 						}
 
-					const caller = self.main_component
+					const caller = self.main_element
 
 					// update caller context quality
 						caller.context.target_quality = quality
@@ -431,11 +431,11 @@ const get_line_file_upload = function(ar_quality, self) {
 						})
 
 				// event on refresh caller
-					const token = event_manager.subscribe('render_'+self.main_component.id, fn_refresh)
+					const token = event_manager.subscribe('render_'+self.main_element.id, fn_refresh)
 					self.events_tokens.push(token)
 					function fn_refresh() {
 						event_manager.unsubscribe(token)
-						self.main_component_quality = quality
+						self.main_element_quality = quality
 						self.refresh()
 					}
 			})
@@ -572,7 +572,7 @@ const get_line_file_delete = function(ar_quality, self) {
 					// exec delete_file
 					const response = await self.delete_file(quality)
 					if (response===true) {
-						// self.main_component_quality = quality
+						// self.main_element_quality = quality
 						self.refresh()
 					}
 					self.node[0].classList.remove('loading')
@@ -649,7 +649,7 @@ const get_line_build_version = function(ar_quality, self) {
 								if (found && found.url) {
 									// processing_label.remove()
 									// button_build_version.classList.remove('hide')
-									self.main_component_quality = quality
+									self.main_element_quality = quality
 									self.refresh()
 								}else{
 									check_file()
@@ -717,7 +717,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 					// exec conform_headers
 					const result = await self.conform_headers(quality)
 					if (result===true) {
-						self.main_component_quality = quality
+						self.main_element_quality = quality
 						self.refresh()
 					}
 					self.node[0].classList.remove('loading')
@@ -780,8 +780,8 @@ const get_line_rotate = function(ar_quality, self) {
 					// exec rotate
 					const result = await self.rotate(quality, -90)
 					if (result===true) {
-						self.main_component.quality = quality
-						self.main_component.refresh()
+						self.main_element.quality = quality
+						self.main_element.refresh()
 					}
 					self.node[0].classList.remove('loading')
 				})
@@ -797,8 +797,8 @@ const get_line_rotate = function(ar_quality, self) {
 					// exec rotate
 					const result = await self.rotate(quality, 90)
 					if (result===true) {
-						self.main_component.quality = quality
-						self.main_component.refresh()
+						self.main_element.quality = quality
+						self.main_element.refresh()
 					}
 					self.node[0].classList.remove('loading')
 				})

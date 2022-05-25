@@ -106,7 +106,7 @@ const content_data_edit = async function(self) {
 			class_name		: 'current_component_container',
 			parent			: fragment
 		})
-		await add_component(self, current_component_container, self.main_component.lang, get_label.ahora, 'edit', null)
+		await add_component(self, current_component_container, self.main_element.lang, get_label.ahora, 'edit', null)
 
 	// preview_component_container
 		const preview_component_container = ui.create_dom_element({
@@ -124,7 +124,7 @@ const content_data_edit = async function(self) {
 			parent			: fragment
 		})
 		// lang selector
-		if (self.main_component.lang!=='lg-nolan') {
+		if (self.main_element.lang!=='lg-nolan') {
 
 			// label
 			ui.create_dom_element({
@@ -143,7 +143,7 @@ const content_data_edit = async function(self) {
 				const lang = e.target.value
 				if (lang!==self.lang) {
 					self.lang					= lang
-					self.main_component.lang	= lang
+					self.main_element.lang	= lang
 					self.refresh()
 				}
 			}
@@ -221,7 +221,7 @@ export const add_component = async (self, component_container, lang_value, label
 
 	// component load
 		const component = matrix_id===null
-			? self.main_component // self.caller
+			? self.main_element // self.caller
 			: await self.load_component(lang_value, mode, matrix_id)
 
 	// render node

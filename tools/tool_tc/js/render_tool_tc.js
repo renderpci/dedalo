@@ -112,8 +112,8 @@ const content_data_edit = async function(self) {
 		}
 		// source default value check
 			if (source_select_lang.value) {
-				// left side component (use already loaded on build, self.main_component)
-				self.main_component.render()
+				// left side component (use already loaded on build, self.main_element)
+				self.main_element.render()
 				.then(function(node){
 					node.classList.add('disabled_component')
 					source_component_container.appendChild(node)

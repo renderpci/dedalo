@@ -130,7 +130,7 @@ export const create_target_component = (lang, self) => {
 
 	if (lang.value===self.source_lang){
 		target_component_container.classList.add('source')
-		self.main_component.render()
+		self.main_element.render()
 		.then(function(node){
 			target_component_container.appendChild(node)
 		})

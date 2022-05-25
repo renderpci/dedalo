@@ -118,7 +118,7 @@ tool_common.prototype.init = async function(options) {
 									section_id		: self.caller.section_id,
 									model			: self.caller.model,
 									mode			: 'edit',
-									role			: 'main_component'
+									role			: 'main_element'
 								}]
 							}
 							console.log("fallback case self.tool_config:", self.tool_config);
@@ -582,7 +582,7 @@ const view_modal = async function(options) {
 		// 			section_id		: caller.section_id,
 		// 			model			: caller.model,
 		// 			mode			: 'edit',
-		// 			role			: 'main_component'
+		// 			role			: 'main_element'
 		// 		}]
 		// 	}
 		// }else{

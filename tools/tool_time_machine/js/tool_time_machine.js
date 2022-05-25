@@ -109,9 +109,9 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
-	// fix main_component for convenience
-		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
-		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+	// fix main_element for convenience
+		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 	// time_machine
 	// Create, build and assign the time machine service to the instance
@@ -120,10 +120,10 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			model			: 'service_time_machine',
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
-			tipo			: self.main_component.tipo,
+			tipo			: self.main_element.tipo,
 			mode			: 'tm',
 			lang			: page_globals.dedalo_data_nolan,
-			main_component	: self.main_component,
+			main_element	: self.main_element,
 			caller			: self,
 			id_variant		: self.model,
 			direct_path		: '../../services/service_time_machine/js/service_time_machine.js'
@@ -154,13 +154,13 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 	const self = this
 
 	// to_delete_instances. Select instances with same tipo and property matrix_id not empty
-		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_component.tipo && el.matrix_id)
+		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_element.tipo && el.matrix_id)
 
 	// context (clone and edit)
-		const context = Object.assign(clone(self.main_component.context),{
+		const context = Object.assign(clone(self.main_element.context),{
 			lang		: lang,
 			mode		: mode,
-			section_id	: self.main_component.section_id,
+			section_id	: self.main_element.section_id,
 			matrix_id	: matrix_id
 		})
 
@@ -195,10 +195,10 @@ tool_time_machine.prototype.apply_value = function() {
 		const source = create_source(self, 'apply_value')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			section_id		: self.main_component.section_id,
-			section_tipo	: self.main_component.section_tipo,
-			tipo			: self.main_component.tipo,
-			lang			: self.main_component.lang,
+			section_id		: self.main_element.section_id,
+			section_tipo	: self.main_element.section_tipo,
+			tipo			: self.main_element.tipo,
+			lang			: self.main_element.lang,
 			matrix_id		: self.selected_matrix_id
 		}
 

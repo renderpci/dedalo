@@ -45,27 +45,27 @@ render_tool_posterframe.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
-	// main_component_container
-		const main_component_container = ui.create_dom_element({
+	// main_element_container
+		const main_element_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'main_component_container',
+			class_name		: 'main_element_container',
 			// parent		: wrapper
 		})
-		wrapper.tool_header.after(main_component_container)
+		wrapper.tool_header.after(main_element_container)
 		// spinner
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: "spinner",
-			parent			: main_component_container
+			parent			: main_element_container
 		})
 		// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
-		self.main_component.mode = 'player'
-		self.main_component.build(true)
+		self.main_element.mode = 'player'
+		self.main_element.build(true)
 		.then(async function(){
 			setTimeout(function(){
-				self.main_component.render()
+				self.main_element.render()
 				.then(function(component_node){
-					main_component_container.appendChild(component_node)
+					main_element_container.appendChild(component_node)
 					spinner.remove()
 				})
 			}, 10)
@@ -99,25 +99,25 @@ const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// main_component_container
-		// const main_component_container = ui.create_dom_element({
+	// main_element_container
+		// const main_element_container = ui.create_dom_element({
 		// 	element_type	: 'div',
-		// 	class_name		: 'main_component_container',
+		// 	class_name		: 'main_element_container',
 		// 	parent			: fragment
 		// })
-		// // temporal image to show while main_component is rebuilt and rendered
-		// const main_component_image = ui.create_dom_element({
+		// // temporal image to show while main_element is rebuilt and rendered
+		// const main_element_image = ui.create_dom_element({
 		// 	element_type	: 'img',
-		// 	src				: self.main_component.data.posterframe_url,
-		// 	parent			: main_component_container
+		// 	src				: self.main_element.data.posterframe_url,
+		// 	parent			: main_element_container
 		// })
 		// // rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
-		// self.main_component.mode = 'player'
-		// self.main_component.build(true)
+		// self.main_element.mode = 'player'
+		// self.main_element.build(true)
 		// .then(async function(){
-		// 	const component_node = await self.main_component.render()
-		// 	main_component_image.remove()
-		// 	main_component_container.appendChild(component_node)
+		// 	const component_node = await self.main_element.render()
+		// 	main_element_image.remove()
+		// 	main_element_container.appendChild(component_node)
 		// })
 
 	// buttons_container
@@ -167,7 +167,7 @@ const get_buttons = function(self) {
 			button_create_identifying_image.addEventListener("click", async function(){
 				identifying_image_block.classList.add('loading')
 				const item_value	= JSON.parse(identifying_image_selector.value)
-				const current_time	= self.main_component.video.currentTime
+				const current_time	= self.main_element.video.currentTime
 				await self.create_identifying_image(item_value, current_time)
 				identifying_image_block.classList.remove('loading')
 			})
@@ -212,13 +212,13 @@ const get_buttons = function(self) {
 			})
 			button_create_posterframe.addEventListener("click", async function(){
 				image_posterframe.classList.add('loading')
-				const current_time = self.main_component.video.currentTime
+				const current_time = self.main_element.video.currentTime
 				await self.create_posterframe(current_time)
-				if (self.main_component.data.posterframe_url===page_globals.fallback_image) {
+				if (self.main_element.data.posterframe_url===page_globals.fallback_image) {
 					// initial no posterframe case
-					await self.main_component.refresh()
+					await self.main_element.refresh()
 				}
-				image_posterframe.src = self.main_component.data.posterframe_url + '?' + Math.random()
+				image_posterframe.src = self.main_element.data.posterframe_url + '?' + Math.random()
 				image_posterframe.classList.remove('loading')
 			})
 
@@ -234,7 +234,7 @@ const get_buttons = function(self) {
 				const deleted = await self.delete_posterframe()
 				image_posterframe.src = deleted===true
 					? page_globals.fallback_image
-					: self.main_component.data.posterframe_url + '?' + Math.random()
+					: self.main_element.data.posterframe_url + '?' + Math.random()
 				image_posterframe.classList.remove('loading')
 			})
 
@@ -242,13 +242,13 @@ const get_buttons = function(self) {
 			const image_posterframe = ui.create_dom_element({
 				element_type	: 'img',
 				class_name		: 'image_posterframe',
-				src				: self.main_component.data.posterframe_url + '?' + Math.random(),
+				src				: self.main_element.data.posterframe_url + '?' + Math.random(),
 				parent			: fragment
 			})
-			// const token = event_manager.subscribe('render_'+self.main_component.id, fn_update_posterframe)
+			// const token = event_manager.subscribe('render_'+self.main_element.id, fn_update_posterframe)
 			// self.events_tokens.push(token)
 			// function fn_update_posterframe() {
-			// 	image_posterframe.src = self.main_component.data.posterframe_url + '?' + Math.random()
+			// 	image_posterframe.src = self.main_element.data.posterframe_url + '?' + Math.random()
 			// 	console.log("updated image_posterframe.src:", image_posterframe.src);
 			// 	event_manager.unsubscribe(token)
 			// }

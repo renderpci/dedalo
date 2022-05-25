@@ -26,7 +26,7 @@ export const tool_diffusion = function () {
 	this.ar_instances	= null
 	this.events_tokens	= null
 	this.status			= null
-	this.main_component	= null
+	this.main_element	= null
 	this.type			= null
 	this.source_lang	= null
 	this.target_lang	= null
@@ -88,7 +88,7 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 
-	// specific actions.. like fix main_component for convenience
+	// specific actions.. like fix main_element for convenience
 		self.diffusion_info = await self.get_diffusion_info()
 
 

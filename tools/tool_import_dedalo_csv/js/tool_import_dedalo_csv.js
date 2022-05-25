@@ -29,7 +29,7 @@ export const tool_import_dedalo_csv = function () {
 	this.ar_instances	= null
 	this.events_tokens	= null
 	this.status			= null
-	this.main_component	= null
+	this.main_element	= null
 	this.type			= null
 	this.source_lang	= null
 	this.target_lang	= null
@@ -169,7 +169,7 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 					//}
 
 				// reload target lang
-					// const target_component = self.ar_instances.find(el => el.tipo===self.main_component.tipo && el.lang===target_lang)
+					// const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
 					// target_component.refresh()
 					// dd_console('target_component', 'DEBUG', target_component)
 
