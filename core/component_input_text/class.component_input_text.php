@@ -21,36 +21,38 @@ class component_input_text extends component_common {
 
 
 	/**
-	*  SET_DATO
-	* @param array $dato
+	* SET_DATO
+	* @param array|null $dato
 	* 	Dato now is multiple. For this expected type is array
 	*	but in some cases can be an array json encoded or some rare times a plain string
 	*/
 	public function set_dato($dato) {
 
-		if (is_string($dato)) { # Tool Time machine case, dato is string
+		// string case. (Tool Time machine case, dato is string)
+			if (is_string($dato)) {
 
-			//check the dato for determinate the original format and if the $dato is correct.
-			$dato_trim				= trim($dato);
-			$dato_first_character	= substr($dato_trim, 0, 1);
-			$dato_last_character	= substr($dato_trim, -1);
+				// check the dato for determinate the original format and if the $dato is correct.
+				$dato_trim				= trim($dato);
+				$dato_first_character	= substr($dato_trim, 0, 1);
+				$dato_last_character	= substr($dato_trim, -1);
 
-			if ($dato_first_character==='[' && $dato_last_character===']') {
-				# dato is json encoded
-				$dato = json_handler::decode($dato_trim);
-			}else{
-				# dato is string plain value
-				$dato = array($dato);
-				#debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
+				if ($dato_first_character==='[' && $dato_last_character===']') {
+					# dato is json encoded
+					$dato = json_handler::decode($dato_trim);
+				}else{
+					# dato is string plain value
+					$dato = array($dato);
+					#debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
+				}
 			}
-		}
 
-		if(SHOW_DEBUG===true) {
-			if (!is_array($dato)) {
-				debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
+		// debug
+			if(SHOW_DEBUG===true) {
+				if (!is_array($dato)) {
+					debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
+				}
+				#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 			}
-			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
-		}
 
 		$safe_dato=array();
 		foreach ((array)$dato as $key => $value) {
