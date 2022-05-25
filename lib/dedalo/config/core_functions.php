@@ -13,15 +13,15 @@
 *
 * @return
 *	Nothing
-*	Only print (formated as <pre>code</pre>) the info and value or dumped var
+*	Only print (formatted as <pre>code</pre>) the info and value or dumped var
 */
 #function dump($val, $var_name=NULL, $expected=NULL, $print=false){
-function dump($val, $var_name=NULL, $arguments=array()){
+function dump($val, $var_name=null, $arguments=array()){
 
 	$html = '';
 
 
-	// Backtrace info of current execution
+	// Back-trace info of current execution
 	$bt = debug_backtrace();
 
 
@@ -343,7 +343,7 @@ function exec_time_unit($start, $unit='ms', $round=3) {
 function to_string($var=null) : string {
 
 	if(is_null($var)) {
-		return 'null';
+		return '';
 	}
 
 	if (is_string($var) && (strpos($var, '{')===0 || strpos($var, '[')===0)) {
