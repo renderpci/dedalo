@@ -1058,8 +1058,8 @@ class component_image extends component_media_common {
 
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file vinculated to current component (all quality versions)
-	* Is triggered wen section tha contain media elements is deleted
+	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
+	* Is triggered when section that contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
 	public function remove_component_media_files(array $ar_quality=[]) : bool {
@@ -1079,7 +1079,7 @@ class component_image extends component_media_common {
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete dir
-					$folder_path_del = $this->get_target_dir()  . 'deleted';
+					$folder_path_del = $this->get_target_dir()  . '/deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0777,true) ) {
 							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
