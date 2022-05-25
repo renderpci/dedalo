@@ -118,10 +118,10 @@ render_list_section.prototype.list = async function(options) {
 
 
 	// list_header_node. Create and append if ar_instances is not empty
-		if (self.ar_instances.length>0) {
+		// if (self.ar_instances.length>0) {
 			const list_header_node = ui.render_list_header(columns_map, self)
 			list_body.appendChild(list_header_node)
-		}
+		// }
 
 	// content_data append
 		list_body.appendChild(content_data)
