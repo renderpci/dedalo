@@ -11,6 +11,7 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {get_ar_instances} from './section.js'
+	import * as instances from '../../common/js/instances.js'
 
 
 
@@ -703,12 +704,151 @@ const no_records_node = () => {
 */
 const delete_record = (button, self) => {
 
-	confirm(`delete_record:
-		section_tipo: ${self.section_tipo}
-		section_id: ${self.section_id}`)
+	const section = self.caller
+	const sqo = {
+		section_tipo		: [self.section_tipo],
+		filter_by_locators	: [{
+			section_tipo	: self.section_tipo,
+			section_id		: self.section_id
+		}],
+		limit				: 1
+	}
+	const element_id = 'delete_'+ self.section_tipo
+
+	const relation_list = render_relation_list(self)
+
+	ui.create_dialog({
+		element_id 		: element_id,
+		title			: 'Delete...',
+		msg				: get_label.are_you_sure_to_delete_this_record || 'Are you sure to delete this record?',
+		header_class	: 'light',
+		body_class 		: 'light',
+		body_content 	: relation_list,
+		footer_class 	: 'light',
+		user_options	:[{
+			id 			: 1,
+			label 		: get_label.delete_data_and_record || 'delete record',
+			class_name 	: 'danger'
+		},{
+			id 			: 2,
+			label 		: get_label.delete_data_only || 'delete data',
+			class_name 	: 'warning'
+		},{
+			id 			:3,
+			label 		: get_label.cancel || 'Cancel',
+			class_name 	: 'light'
+		}]
+	})
+
+	//
+	// section.events_tokens.push(
+		const token = event_manager.subscribe('user_option_'+element_id, fn_delete_option)
+	// )
+
+	function fn_delete_option(delete_option) {
+		switch (delete_option){
+			case 1:
+				section.delete_section({
+					sqo			:sqo,
+					delete_mode	:'delete_record'
+				})
+			break;
+
+			case 2:
+				section.delete_section({
+					sqo			:sqo,
+					delete_mode	:'delete_data'
+				})
+			break;
+
+			default:
+		}
+		event_manager.unsubscribe(token)
+	}
 
 
 	return false
 };//end delete_record
 
 
+
+
+/**
+* RENDER_RELATION_LIST
+* @return DOM node relation_list_container
+*/
+const render_relation_list = function(self) {
+
+	// wrapper
+		const relation_list_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_container'
+		})
+
+	// relation_list_head
+		const relation_list_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_head icon_arrow',
+			inner_html		: get_label.relaciones || "Relations",
+			parent			: relation_list_container
+		})
+
+	// relation_list_body
+		const relation_list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_body hide',
+			parent			: relation_list_container
+		})
+
+	// relation_list events
+		event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
+
+		function fn_relation_list_paginator(relation_list) {
+			relation_list_body.classList.add('loading')
+			load_relation_list(relation_list)
+			.then(function(){
+				relation_list_body.classList.remove('loading')
+			})
+		}
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: relation_list_head,
+			content_data		: relation_list_body,
+			collapsed_id		: 'inspector_relation_list',
+			collapse_callback	: unload_relation_list,
+			expose_callback		: load_relation_list,
+			default_state		: 'closed'
+		})
+		async function load_relation_list( instance ) {
+
+			relation_list_head.classList.add('up')
+
+			const relation_list	= (instance && instance.model==='relation_list')
+				? instance // pagination case do not need to init relation_list
+				: await instances.get_instance({
+					model			: 'relation_list',
+					tipo			: self.caller.context['relation_list'],
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					mode			: self.mode
+				})
+
+			await relation_list.build()
+			const relation_list_container = await relation_list.render()
+			while (relation_list_body.firstChild) {
+				relation_list_body.removeChild(relation_list_body.firstChild)
+			}
+			relation_list_body.appendChild(relation_list_container)
+		}
+		function unload_relation_list() {
+
+			while (relation_list_body.firstChild) {
+				relation_list_body.removeChild(relation_list_body.firstChild);
+			}
+			relation_list_head.classList.remove('up')
+		}
+
+
+	return relation_list_container
+};//end render_relation_list
