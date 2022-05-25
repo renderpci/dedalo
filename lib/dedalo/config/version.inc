@@ -2698,6 +2698,7 @@
 		Added .htaccess old Apache versions (<2.4) compatibility
 		Fixed tool_import_dedalo_csv issue with non-utf8 files blocking tool preview of files
 		Fixed auto_detect_line_endings error on method read_csv_file_as_array (class.tool_common.php)
+		Restored core_function 'to_string' null result values to '' instead 'null'
 
 
 
@@ -2730,7 +2731,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-05-2022T10:47:12');
+	define('DEDALO_BUILD'	, '25-05-2022T13:20:33');
 
 
 	/*
