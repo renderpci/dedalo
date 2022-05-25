@@ -450,7 +450,7 @@ function exec_time_unit(float $start, string $unit='ms', int $round=3) : string 
 function to_string($var=null) : string {
 
 	if(is_null($var)) {
-		return 'null';
+		return '';
 	}
 
 	if (is_string($var) && (strpos($var, '{')===0 || strpos($var, '[')===0)) {
