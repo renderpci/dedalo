@@ -105,7 +105,6 @@ tool_common.prototype.init = async function(options) {
 					console.log("component case tool_found:",tool_found);
 
 					self.tool_config = tool_found.tool_config
-
 				}
 
 				// final fallback
@@ -133,7 +132,6 @@ tool_common.prototype.init = async function(options) {
 						}
 					})
 				}
-
 
 			console.log("self.tool_config parsed:",self.tool_config);
 
