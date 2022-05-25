@@ -696,4 +696,35 @@ section.prototype.load_section_tool_files = function() {
 };//end load_section_tool_files
 
 
+/**
+* DELETE_SECTION
+* @return promise
+*/
+section.prototype.delete_section = async function (options) {
+
+	const self = this
+	// options
+	const sqo			= options.sqo
+	const delete_mode	= options.delete_mode
+
+	// source
+	const source		= create_source(self, 'delete')
+	source.section_id	= self.section_id
+	source.delete_mode 	= delete_mode
+
+	// data_manager. delete
+	const rqo = {
+		action	: 'delete',
+		source	: source,
+		sqo		: sqo
+	}
+
+	const current_data_manager	= new data_manager()
+	const api_response			= await current_data_manager.request({body:rqo})
+
+	if (api_response.result && api_response.result>0) {
+		const ar_section_id = api_response.result
+		self.refresh()
+	}
+};// delete_section
 
