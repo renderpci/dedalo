@@ -5,9 +5,10 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {create_source} from '../../common/js/common.js'
 	import {download_url} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import * as instances from '../../common/js/instances.js'
 
@@ -158,7 +159,7 @@ const get_content_data = function(self) {
 			const button_search = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light search',
-				inner_html		: get_label.buscar || "Search",
+				title			: get_label.buscar || "Search",
 				parent			: buttons_container
 			})
 			button_search.addEventListener('click', function(e){
@@ -170,12 +171,24 @@ const get_content_data = function(self) {
 			const button_new = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light add',
-				inner_html		: get_label.nuevo || "New",
+				title			: get_label.nuevo || "New",
 				parent			: buttons_container
 			})
 			button_new.addEventListener('click', (e) => {
 				e.stopPropagation()
 				event_manager.publish('new_section_' + self.caller.id)
+			})
+
+		// button_delete . Call API to delete current record
+			const button_delete = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light remove',
+				title			: get_label.borrar || "Delete",
+				parent			: buttons_container
+			})
+			button_delete.addEventListener('click', (e) => {
+				e.stopPropagation()
+				event_manager.publish('delete_section_' + self.caller.id)
 			})
 
 
@@ -228,7 +241,23 @@ const get_content_data = function(self) {
 			})
 			data_link.addEventListener("click", (e)=>{
 				e.preventDefault()
-				window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.caller.section_id )
+				// read from Dédloa API
+				data_manager.prototype.request({
+					body : {
+						action	: 'read',
+						source	: create_source(self.caller, 'get_data')
+						// {
+						// 	tipo			: self.caller.tipo,
+						// 	section_tipo	: self.section_tipo,
+						// 	section_id		: self.caller.section_id,
+						// 	lang			: self.caller.lang
+						// }
+					}
+				})
+				.then(function(api_response){
+					console.log("api_response:",api_response);
+				})
+				// window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.caller.section_id )
 			})
 		// tool register files.	dd1340
 			if (self.section_tipo==='dd1340') {

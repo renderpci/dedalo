@@ -314,37 +314,33 @@ paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, t
 /**
 * GO_TO_PAGE_JSON
 * Receive page value from input text and calculate offset and exec search_paginated
+* @param int page_number
 * @return bool
 */
-paginator.prototype.go_to_page_json = function(input_obj, e, total_pages, item_per_page) {
+paginator.prototype.go_to_page_json = function(page) {
 
 	const self = this
 
-	if (e.keyCode===13) {
-		e.preventDefault()
-		e.stopPropagation();
+	// short vars
+		const total_pages	= self.total_pages
+		const item_per_page	= self.limit
+		const current_page	= self.page_number
 
-		const page = parseInt(input_obj.value)
-			//console.log("page:",page);
-
-		total_pages   = parseInt(total_pages)
-		item_per_page = parseInt(item_per_page)
-
-		if (page<1 || page>total_pages) {
-			console.log("Invalid page:",page);
+	// check valid page
+		if (page==current_page || page<1 || page>total_pages) {
+			console.log("[go_to_page_json] Invalid page:", page);
 			return false
 		}
 
-		// new offset
-			const new_offset = ((page -1) * item_per_page)
-				//console.log("new_offset:",new_offset);
+	// new offset
+		const new_offset = ((page -1) * item_per_page)
+			//console.log("new_offset:",new_offset);
 
-		self.search_paginated(new_offset)
+	// search with new offset
+		self.paginate(new_offset)
 
-		return true
-	}
 
-	return false
+	return true
 };//end go_to_page_json
 
 

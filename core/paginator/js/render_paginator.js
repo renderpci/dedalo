@@ -45,7 +45,7 @@ render_paginator.prototype.edit = async function(options) {
 
 	// content data. Added when total is ready
 		self.get_total()
-		.then(function(response){
+		.then(function(){
 			const content_data_node = get_content_data(self)
 			wrapper.appendChild(content_data_node)
 		})
@@ -188,38 +188,85 @@ const get_content_data = function(self) {
 			parent			: fragment
 		})
 
-		const page_info = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'page_info',
-			inner_html		: (get_label.pagina || "Page") + ` ${page_number} ` + (get_label.de || "of") + ` ${total_pages} `,
-			parent			: paginator_info
-		})
+		// const page_info = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'page_info',
+		// 	inner_html		: (get_label.pagina || "Page") + ` ${page_number} ` + (get_label.de || "of") + ` ${total_pages} `,
+		// 	parent			: paginator_info
+		// })
 
-		const displayed_records = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'displayed_records',
-			inner_html		: `Showed ${page_row_begin}-${page_row_end} of ${total}. `,
-			parent			: paginator_info
-		})
+		// page_info
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'page_info',
+				inner_html		: (get_label.pagina || 'Page'),
+				parent			: paginator_info
+			})
+			// input_go_to_page
+				const input_go_to_page = ui.create_dom_element({
+					element_type	: 'input',
+					class_name		: 'input_go_to_page',
+					title			: get_label.go_to_page,
+					parent			: paginator_info
+				})
+				input_go_to_page.placeholder = page_number
+				// add the Even onchage to the select, whe it change the section selected will be loaded
+				input_go_to_page.addEventListener('keyup', function(e){
+					e.preventDefault()
+					if (e.key==='Enter' && input_go_to_page.value.length>0) {
+						const page = parseInt(input_go_to_page.value)
+						const result = self.go_to_page_json(page) // returns bool
+						if (result===false) {
+							input_go_to_page.classList.add('invalid')
+						}else{
+							if (input_go_to_page.classList.contains('invalid')) {
+								input_go_to_page.classList.remove('invalid')
+							}
+						}
+					}
+				})
+				input_go_to_page.addEventListener('blur', function(){
+					if (input_go_to_page.classList.contains('invalid')) {
+						input_go_to_page.classList.remove('invalid')
+					}
+					input_go_to_page.value = null
+				})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'page_info',
+				inner_html		: (get_label.de || 'of') + ` ${total_pages}`,
+				parent			: paginator_info
+			})
 
-		const goto_page = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'goto_page',
-			inner_html		: get_label.go_to_page,
-			parent			: paginator_info
-		})
+
+		// displayed_records (hidden on edit mode)
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'displayed_records',
+				inner_html		: `Showed ${page_row_begin}-${page_row_end} of ${total}. `,
+				parent			: paginator_info
+			})
+
+		// goto_page
+			// const goto_page = ui.create_dom_element({
+			// 	element_type	: 'span',
+			// 	class_name		: 'goto_page',
+			// 	inner_html		: get_label.go_to_page,
+			// 	parent			: paginator_info
+			// })
 
 		// input_go_to_page
-			const input_go_to_page = ui.create_dom_element({
-				element_type	: 'input',
-				class_name		: 'input_go_to_page',
-				parent			: goto_page
-			})
-			input_go_to_page.placeholder = page_number
-			// add the Even onchage to the select, whe it change the section selected will be loaded
-			input_go_to_page.addEventListener('keyup',function(event){
-				self.go_to_page_json(this, event, total_pages, limit)
-			})
+			// const input_go_to_page = ui.create_dom_element({
+			// 	element_type	: 'input',
+			// 	class_name		: 'input_go_to_page',
+			// 	title			: get_label.go_to_page,
+			// 	parent			: paginator_info
+			// })
+			// input_go_to_page.placeholder = page_number
+			// // add the Even onchage to the select, whe it change the section selected will be loaded
+			// input_go_to_page.addEventListener('keyup',function(event){
+			// 	self.go_to_page_json(this, event, total_pages, limit)
+			// })
 
 		// let text = ""
 		// 	text += get_label["pagina"] || "Page"
