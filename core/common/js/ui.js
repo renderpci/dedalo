@@ -2190,6 +2190,7 @@ export const ui = {
 		const msg			= options.msg 			|| ''
 		const header_class	= options.header_class 	|| 'light'
 		const body_class	= options.body_class 	|| 'light'
+		const body_content	= options.body_content
 		const footer_class	= options.footer_class 	|| 'light'
 		const user_options	= options.user_options 	|| [{
 									id			: 1,
@@ -2222,6 +2223,10 @@ export const ui = {
 					parent			: body,
 					text_node		: msg
 				})
+
+			if(body_content){
+				body.appendChild(body_content)
+			}
 
 		// footer
 			const footer = ui.create_dom_element({
