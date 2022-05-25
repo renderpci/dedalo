@@ -313,7 +313,7 @@ class section extends common {
 	* GET_ALL_COMPONENT_DATA
 	* @return component_data
 	* get all data of the component, with dato, valor, valor_list and dataframe
-	* this function will be the only comunication with the component for get the information (08-2017)
+	* this function will be the only communication with the component for get the information (08-2017)
 	*/
 	public function get_all_component_data(string $component_tipo) {
 
@@ -1140,8 +1140,9 @@ class section extends common {
 			if(isset($this->properties->section_tipo) && $this->properties->section_tipo === "real"){
 				$section_tipo = $this->get_section_real_tipo();
 			}
-
-		// matrix_table
+			// user id
+			$user_id = navigator::get_user_id();
+			// matrix_table
 			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
 		// delete_mode based actions
@@ -1149,23 +1150,77 @@ class section extends common {
 
 				case 'delete_data' :
 
-					# CHILDRENS : Calculate component children of current section
-					$children_components = (array)$this->get_ar_children_objects_by_modelo_name_in_section('component_', $resolve_virtual=true);
+					# CHILDREN : Calculate components children of current section
+					$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+						$section_tipo ,
+						['component_'],
+						true, // from_cache
+						true, // resolve virtual
+						true, // recursive
+						false, // search exact
+					);
 
-					# No borraremos los datos de algunos componentes ('component_av', 'component_image' , 'component_pdf',...)
-					$ar_components_modelo_no_delete_dato = array( 'component_av', 'component_image' , 'component_pdf', 'component_filter');
+					// don't delete some components
+					$ar_components_modelo_no_delete_dato = [
+						'component_section_id'
+					];
 
-					foreach ($children_components as $key => $current_component) {
+					$ar_models_of_media_components = section::get_media_components_modelo_name();
 
-						$current_tipo 		 = $current_component->get_tipo();
-						$current_modelo_name = get_class($current_component);
+					$ar_deleted_tipos = [];
+					foreach ($ar_component_tipo as $current_component_tipo) {
 
-						if (!in_array($current_modelo_name, $ar_components_modelo_no_delete_dato)) {
-							$dato_empty = null;
+						$current_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+
+						if (in_array($current_model_name, $ar_components_modelo_no_delete_dato)){
+							continue;
+						}
+
+						$is_translatable	= RecordObj_dd::get_translatable($current_component_tipo);
+						$ar_lang			= ($is_translatable === false)
+							? [DEDALO_DATA_NOLAN]
+							: DEDALO_PROJECTS_DEFAULT_LANGS;
+
+						foreach ($ar_lang as $current_lang) {
+
+							$current_component = component_common::get_instance(
+								$current_model_name,
+								$current_component_tipo,
+								$section_id,
+								'list',
+								$current_lang,
+								$section_tipo,
+								false
+							);
+
+							$current_component_dato = $current_component->get_dato();
+							if(empty($current_component_dato)){
+								continue;
+							}
+
+							$dato_empty = ($current_model_name === 'component_filter')
+								? $current_component->get_default_dato_for_user($user_id)
+								: null;
+
 							$current_component->set_dato($dato_empty);
 							$current_component->Save();
 						}
+
+						if(in_array($current_model_name, $ar_models_of_media_components)){
+							$current_component->remove_component_media_files();
+						}
+
+						$ar_deleted_tipos[] = $current_component_tipo;
 					}
+
+					// remove component inside section data in DDBB
+						$section_data = $this->get_dato();
+						foreach($ar_deleted_tipos as $current_component_tipo){
+							if(isset($section_data->components->$current_component_tipo)){
+								unset($section_data->components->$current_component_tipo);
+							}
+						}
+						$this->Save();
 
 					$logger_msg = "Deleted section and children data";
 					break;
@@ -1188,13 +1243,13 @@ class section extends common {
 					if (empty($ar_id_time_machine[0])) {
 						#return "Error on delete record. Time machine version of this record not exists. Please contact with your admin to delete this record";
 						$RecordObj_time_machine_new = new RecordObj_time_machine(null);
-						$RecordObj_time_machine_new->set_section_id((int)$this->section_id);
-						$RecordObj_time_machine_new->set_section_tipo((string)$section_tipo);
-						$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
-						$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
-						$RecordObj_time_machine_new->set_timestamp((string)component_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
-						$RecordObj_time_machine_new->set_userID((int)navigator::get_user_id());
-						$RecordObj_time_machine_new->set_dato((object)$this->dato);
+							$RecordObj_time_machine_new->set_section_id((int)$this->section_id);
+							$RecordObj_time_machine_new->set_section_tipo((string)$section_tipo);
+							$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
+							$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
+							$RecordObj_time_machine_new->set_timestamp((string)component_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
+							$RecordObj_time_machine_new->set_userID((int)navigator::get_user_id());
+							$RecordObj_time_machine_new->set_dato((object)$this->dato);
 						$id_time_machine = (int)$RecordObj_time_machine_new->Save();
 					}else{
 						$id_time_machine = (int)$ar_id_time_machine[0];
@@ -1204,9 +1259,9 @@ class section extends common {
 					}
 					# Update time machine record
 					$RecordObj_time_machine = new RecordObj_time_machine($id_time_machine);
-					$RecordObj_time_machine->set_dato($this->get_dato());	# Update dato with the last data stored in this section before is deleted
-					$RecordObj_time_machine->set_state('deleted');	# Mark state as 'deleted' for fast recovery
-					$tm_save = $RecordObj_time_machine->Save();		# Expected int id_time_machine returned if all is ok
+						$RecordObj_time_machine->set_dato($this->get_dato());	// Update dato with the last data stored in this section before is deleted
+						$RecordObj_time_machine->set_state('deleted');			// Mark state as 'deleted' for fast recovery
+					$tm_save = (int)$RecordObj_time_machine->Save();			// Expected int id_time_machine returned if all is ok
 					# Verify time machine is updated properly before delete this section
 					if ($tm_save!==$id_time_machine) {
 						# Something failed in time machine save
@@ -1220,8 +1275,8 @@ class section extends common {
 					$dato_section 		= $this->get_dato();
 
 					// before compare, encode and decode the objects to avoid comparison errors
-					$dato_time_machine_compare	= json_decode( json_encode($dato_time_machine) );
-					$dato_section_compare		= json_decode( json_encode($dato_section) );
+						// $dato_time_machine_compare	= json_decode( json_encode($dato_time_machine) );
+						// $dato_section_compare		= json_decode( json_encode($dato_section) );
 
 					if ($dato_time_machine != $dato_section) {
 						if(SHOW_DEBUG===true) {
@@ -1261,9 +1316,6 @@ class section extends common {
 
 
 					$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and children records. delete_mode $delete_mode";
-
-					# ¿¿¿ TIME MACHINE DELETE ?????
-
 					break;
 
 				default:
@@ -2420,7 +2472,7 @@ class section extends common {
 
 	/**
 	* REMOVE_SECTION_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file vinculated to current section (all quality versions)
+	* "Remove" (rename and move files to deleted folder) all media file linked to current section (all quality versions)
 	* @see section->Delete
 	* @return bool
 	*/
