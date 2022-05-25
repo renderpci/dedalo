@@ -464,13 +464,21 @@ class dd_core_api {
 				return $response;
 			}
 
+			$errors = [];
 			foreach ($ar_records as $record) {
 				$current_section_tipo	= $record->section_tipo;
 				$current_section_id		= $record->section_id;
 
 				# Delete method
-				$section 	= section::get_instance($current_section_tipo, $current_section_id);
-				$delete 	= $section->Delete($delete_mode);
+				$section 	= section::get_instance($current_section_id, $current_section_tipo);
+				$deleted 	= $section->Delete($delete_mode);
+
+				if ($deleted!==true) {
+					$errors[] = (object)[
+						'section_tipo'	=> $current_section_tipo,
+						'section_id'	=> $current_section_id
+					];
+				}
 			}
 
 		// ar_delete section_id
@@ -479,23 +487,30 @@ class dd_core_api {
 			}, $ar_records);
 
 		// check deleted all found sections. Exec the same search again expecting to obtain zero records
-			$check_search		= search::get_instance($sqo);
-			$check_rows_data	= $search->search();
-			$check_ar_records	= $check_rows_data->ar_records;
-			if(count($check_ar_records)>0) {
+			if ($delete_mode==='delete_record') {
 
-				$check_ar_section_id = array_map(function($record){
-					return $record->section_id;
-				}, $check_ar_records);
+				$check_search		= search::get_instance($sqo);
+				$check_rows_data	= $search->search();
+				$check_ar_records	= $check_rows_data->ar_records;
+				if(count($check_ar_records)>0) {
 
-				$response->error = 3;
-				$response->msg 	.= 'Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
-				return $response;
+					$check_ar_section_id = array_map(function($record){
+						return $record->section_id;
+					}, $check_ar_records);
+
+					$response->error = 3;
+					$response->msg 	.= 'Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
+					return $response;
+				}
 			}
 
 		// response OK
-			$response->result	= $ar_delete_section_id;
-			$response->msg		= 'OK. Request done. Deleted records: '.json_encode($ar_section_id, JSON_PRETTY_PRINT);
+			$response->result		= $ar_delete_section_id;
+			$response->error		= !empty($errors) ? $errors : null;
+			$response->delete_mode	= $delete_mode;
+			$response->msg			= !empty($errors)
+				? 'Some errors occurred when delete sections.'
+				: 'OK. Request done successfully.';
 
 
 		return $response;
