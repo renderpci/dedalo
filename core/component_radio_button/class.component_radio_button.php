@@ -22,7 +22,7 @@ class component_radio_button extends component_relation_common {
 	* Get resolved value in requested lang
 	* Note that no value is fixed here because 'valor' depends of requested lang
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG ) {
+	public function get_valor( string $lang=DEDALO_DATA_LANG ) {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -53,7 +53,7 @@ class component_radio_button extends component_relation_common {
 
 			default:
 				// list_of_values. Always run list of values. (!) Get values only in requested lang
-				$ar_list_of_values = $this->get_ar_list_of_values2($lang);
+				$ar_list_of_values = $this->get_ar_list_of_values($lang);
 				$valor = '';
 				foreach ($ar_list_of_values->result as $key => $item) {
 
@@ -97,17 +97,20 @@ class component_radio_button extends component_relation_common {
 	* GET_DIFFUSION_DATO
 	* @return string $diffusion_value
 	*/
-	public function get_diffusion_dato() {
+	public function get_diffusion_dato() : ?string {
 
 		$dato = $this->get_dato();
 		if (is_array($dato)) {
-			$ar_id =array();
+			$ar_id = array();
 			foreach ($dato as $current_locator) {
 				$ar_id[] = $current_locator->section_id;
 			}
 			$final_dato = $ar_id;
 		}
-		$diffusion_value = json_encode($final_dato);
+
+		$diffusion_value = !empty($final_dato)
+			? json_encode($final_dato)
+			: null;
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_dato

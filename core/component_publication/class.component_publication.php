@@ -80,7 +80,7 @@ class component_publication extends component_relation_common {
 				if (!empty($dato)) {
 
 					# Always run list of values
-					$ar_list_of_values	= $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual
+					$ar_list_of_values	= $this->get_ar_list_of_values($lang); # Importante: Buscamos el valor en el idioma actual
 					$component_locator  = reset($dato);
 					foreach ($ar_list_of_values->result as $key => $item) {
 
@@ -103,12 +103,13 @@ class component_publication extends component_relation_common {
 	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
-	* @param array $comparison_operators . Like array('=','!=')
+	* @param array $comparison_operators = ['=','!=']
 	* @return object stdClass $search_comparison_operators
 	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}//end build_search_comparison_operators
+		// public function build_search_comparison_operators( array $comparison_operators=['=','!='] ) {
+
+		// 	return (object)parent::build_search_comparison_operators($comparison_operators);
+		// }//end build_search_comparison_operators
 
 
 
@@ -127,29 +128,31 @@ class component_publication extends component_relation_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		$search_query='';
-		if ( empty($search_value) ) {
-			return $search_query;
-		}
+		// public static function get_search_query(string $json_field, string $search_tipo, string $tipo_de_dato_search, string $current_lang, string $search_value, string $comparison_operator='=') : string {
 
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+		// 	$search_query='';
+		// 	if ( empty($search_value) ) {
+		// 		return $search_query;
+		// 	}
 
-		switch (true) {
-			case $comparison_operator==='=':
-				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
-				break;
-			case $comparison_operator==='!=':
-				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
-				break;
-		}
+		// 	$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		}
-		return $search_query;
-	}//end get_search_query
+		// 	switch (true) {
+		// 		case $comparison_operator==='=':
+		// 			$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+		// 			break;
+		// 		case $comparison_operator==='!=':
+		// 			$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
+		// 			break;
+		// 	}
+
+		// 	if(SHOW_DEBUG===true) {
+		// 		$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+		// 		#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
+		// 	}
+
+		// 	return $search_query;
+		// }//end get_search_query
 
 
 

@@ -81,16 +81,21 @@ class component_relation_model extends component_relation_common {
 	* Select source section/s
 	* Overrides component common method
 	*/
-	public function get_ar_target_section_tipo() {
+	public function get_ar_target_section_tipo() : ?array {
 
-		if (!$this->tipo) return null;
+		// empty case
+			if (!$this->tipo) {
+				return null;
+			}
 
-		if(isset($this->ar_target_section_tipo)) {
-			return $this->ar_target_section_tipo;
-		}
+		// cache
+			if(isset($this->ar_target_section_tipo)) {
+				return $this->ar_target_section_tipo;
+			}
 
-		$target_mode = isset($this->properties->target_mode) ? $this->properties->target_mode : null;
+		$target_mode = $this->properties->target_mode ?? null;
 		switch ($target_mode) {
+
 			case 'free':
 				# Defined in structure
 				$ar_target_section_tipo = (array)$this->properties->target_values;
@@ -104,17 +109,17 @@ class component_relation_model extends component_relation_common {
 
 					if (!empty($section_id)) {
 						// get target section model component value
-							$model 			= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
-							$component 		= component_common::get_instance($model,
-																			 DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,
-																			 $section_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 DEDALO_HIERARCHY_SECTION_TIPO);
+							$model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
+							$component	= component_common::get_instance(
+								$model,
+								DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								DEDALO_HIERARCHY_SECTION_TIPO
+							);
 
-							$target_section_tipo 	= $component->get_valor();
-
-
+							$target_section_tipo = $component->get_valor();
 					}
 
 				// final fallback (calculated from current prefix)
@@ -131,6 +136,7 @@ class component_relation_model extends component_relation_common {
 
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
+
 
 		return (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo

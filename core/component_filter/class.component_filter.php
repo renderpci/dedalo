@@ -176,7 +176,7 @@ class component_filter extends component_relation_common {
 	* PROPAGATE_FILTER
 	* Propagate all current filter dato (triggered when save) to component_filters of children portals (recursive)
 	*/
-	public function propagate_filter() {
+	public function propagate_filter() : bool {
 
 		$section_id		= $this->get_parent();
 		$section_tipo	= $this->get_section_tipo();
@@ -363,7 +363,7 @@ class component_filter extends component_relation_common {
 			$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		// ar_projects_parsed
-			$ar_projects_parsed 	= [];
+			$ar_projects_parsed		= [];
 			$ar_typology_section_id	= [];
 			foreach ($ar_projects as $project_item) {
 
@@ -420,9 +420,9 @@ class component_filter extends component_relation_common {
 			$ar_groupers = [];
 			foreach ($search_result->ar_records as $row) {
 
-				$section_id 	= $row->section_id;
-				$section_tipo 	= $row->section_tipo;
-				$datos 			= $row->datos;
+				$section_id		= $row->section_id;
+				$section_tipo	= $row->section_tipo;
+				$datos			= $row->datos;
 
 				if(in_array($section_id, $ar_typology_section_id)) {
 					$ar_groupers = array_merge($ar_groupers, $this->get_project_groupers($section_tipo, $section_id, $datos));
@@ -604,10 +604,10 @@ class component_filter extends component_relation_common {
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
 	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		// public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}//end build_search_comparison_operators
+		// 	return (object)parent::build_search_comparison_operators($comparison_operators);
+		// }//end build_search_comparison_operators
 
 
 
@@ -870,12 +870,14 @@ class component_filter extends component_relation_common {
 	* GET_AR_TARGET_SECTION_TIPO
 	* Select source section/s
 	* Overrides component common method
-	* @return array ar_target_section_tipo
+	* @return array|null ar_target_section_tipo
 	* 	Array of string like ['dd153']
 	*/
-	public function get_ar_target_section_tipo() : array {
+	public function get_ar_target_section_tipo() : ?array {
 
-		return [DEDALO_SECTION_PROJECTS_TIPO];
+		return defined('DEDALO_SECTION_PROJECTS_TIPO')
+			? [DEDALO_SECTION_PROJECTS_TIPO]
+			: null;
 	}//end get_ar_target_section_tipo
 
 

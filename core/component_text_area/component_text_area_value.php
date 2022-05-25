@@ -66,8 +66,8 @@
 			default:
 
 				// tc
-					$tag_in_pos		= $fragment_info[1];
-					$tag_out_pos	= $fragment_info[2];
+					$tag_in_pos		= $fragment_info[1] ?? 0;
+					$tag_out_pos	= $fragment_info[2] ?? 0;
 					$tc_in			= OptimizeTC::optimize_tcIN($full_raw_text, false, $tag_in_pos, $in_margin=0);
 					$tc_out			= OptimizeTC::optimize_tcOUT($full_raw_text, false, $tag_out_pos, $in_margin=100);
 

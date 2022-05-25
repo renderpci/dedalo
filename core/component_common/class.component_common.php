@@ -1439,12 +1439,12 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_AR_LIST_OF_VALUES2
+	* GET_AR_LIST_OF_VALUES
 	* @param string $lang = DEDALO_DATA_LANG
 	* @param bool $include_negative = false
 	* @return array $ar_list_of_values
 	*/
-	public function get_ar_list_of_values2(string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
+	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
 
 		$start_time = start_time();
 
@@ -1639,7 +1639,7 @@ abstract class component_common extends common {
 
 
 		return $response;
-	}//end get_ar_list_of_values2
+	}//end get_ar_list_of_values
 
 
 

@@ -44,7 +44,7 @@ class component_select extends component_relation_common {
 			}
 		}
 
-		$ar_list_of_values = $this->get_ar_list_of_values2($lang, true); # Importante: Buscamos el valor en el idioma actual
+		$ar_list_of_values = $this->get_ar_list_of_values($lang, true); # Importante: Buscamos el valor en el idioma actual
 		$ar_values = [];
 		if (!empty($ar_list_of_values->result)) {
 			foreach ($ar_list_of_values->result as $key => $item) {
