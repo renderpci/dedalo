@@ -123,7 +123,11 @@ class component_semantic_node extends component_relation_common {
 	* UPDATE_PORTAL_DATO
 	* @return bool
 	*/
-	public function update_portal_dato($new_row_locator) {
+	public function update_portal_dato(?object $new_row_locator) : bool {
+
+		if(empty($new_row_locator)){
+			return false;
+		}
 
 		$portal_tipo			= $new_row_locator->from_component_tipo;
 		$portal_section_tipo	= $this->get_parent_section_tipo();
