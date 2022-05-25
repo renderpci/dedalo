@@ -22,7 +22,7 @@ require_once( DEDALO_CONFIG_PATH.'/config.php');
 
 	$modelo_name 		  	= 'component_autocomplete';
 	$component 			  	= component_common::get_instance($modelo_name,$author_tipo,null,'list',DEDALO_DATA_NOLAN, $referenced_section_tipo);
-	$all_component_values 	= $component->get_ar_list_of_values2(DEDALO_DATA_LANG);
+	$all_component_values 	= $component->get_ar_list_of_values(DEDALO_DATA_LANG);
 		#dump($all_component_values," all_component_values");
 	#dump($component," component");
 	#$html .= $component->get_html();

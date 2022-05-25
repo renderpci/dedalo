@@ -40,7 +40,7 @@ class component_check_box extends component_relation_common {
 			}
 		}
 
-		$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual
+		$ar_list_of_values = $this->get_ar_list_of_values($lang); # Importante: Buscamos el valor en el idioma actual
 		$ar_values = [];
 		foreach ($ar_list_of_values->result as $key => $item) {
 
@@ -77,6 +77,9 @@ class component_check_box extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	*
 	* @return string $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
@@ -95,10 +98,12 @@ class component_check_box extends component_relation_common {
 
 	/**
 	* GET_DATAFRAME_VALUE
+	* @param string $type
+	*
 	*/
-	public function get_dataframe_value($type){
+	public function get_dataframe_value(string $type) {
 
-		$dataframe_value = RecordObj_dd::get_termino_by_tipo($type,DEDALO_APPLICATION_LANG, true);
+		$dataframe_value = RecordObj_dd::get_termino_by_tipo($type, DEDALO_APPLICATION_LANG, true);
 
 		return $dataframe_value;
 	}//end get_dataframe_value

@@ -300,7 +300,7 @@ class state extends widget_common {
 															$section_tipo);
 
 				// get the list of values
-				$ar_list_of_values = $component->get_ar_list_of_values2();
+				$ar_list_of_values = $component->get_ar_list_of_values();
 				// format the list with the widget name and the array key of the ipo
 				$list = array_map(function($item) use($key){
 					$item->widget 	= get_class($this);
