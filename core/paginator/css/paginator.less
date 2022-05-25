@@ -49,17 +49,26 @@
 
 		// buttons (nav_buttons)
 		>.nav_buttons {
-			display: flex;
-			vertical-align: bottom;
-			font-size: small;
-			height: 1.5rem;
+			// min-height: 1.5rem;
 			background-color: white;
+			// background-color: #89e9f2;
+			display: flex;
+			align-items: center;
+			// font-size: small;
+			@media screen and (max-width: @width_break_point_0) {
+				display: contents;
+			}
 
 			>.btn {
 				height: 100%;
+				min-height: 1.5rem;
 				margin-right: 0px;
 				margin-left: 0px;
 				// user-select: none;
+
+				mask-size: contain;
+				// background-color: #f08447;
+				// -webkit-mask-image: none;
 
 				&.paginator_first_icon, &.paginator_last_icon {
 					// height: 1.2rem;
@@ -80,31 +89,42 @@
 
 		// text
 		>.paginator_info {
-
-			>* {
-
+			min-height: 1.5rem;
+			// background-color: orange;
+			margin-top: 0;
+			@media screen and (max-width: @width_break_point_0) {
+				// margin-top: 0;
+				margin-top: 0.5rem;
 			}
 
 			>.page_info {
 				padding-left: 0.25em;
 			}
 
-			>.displayed_records {
-				padding-left: 0.1em;
-				//display: none;
-			}
-
 			>.goto_page {
 				padding-left: 0.1em;
-
-				>input.input_go_to_page {
-					text-align: center;
-					padding: 0.25em;
-					margin-left: 0.5em;
-					width: 6em;
-					border-radius: 0.2em;
-					border: 1px solid #ececec;
+				@media screen and (max-width: @width_break_point_0) {
+					display: initial;
 				}
+			}
+
+			>input.input_go_to_page {
+				text-align: center;
+				padding: 0.25em;
+				margin-left: 0.33em;
+				margin-right: 0.33rem;
+				width: 4.5em;
+				border-radius: 0.2em;
+				border: 1px solid #ececec;
+
+				&.invalid {
+					background-color: @color_danger;
+				}
+			}
+
+			>.displayed_records {
+				padding-left: 0.5em;
+				//display: none;
 			}
 		}//end .paginator_info
 	}//end .content_data
@@ -124,16 +144,19 @@
 			padding: 0;
 
 			>.btn {
-				mask-size: contain;
-				-webkit-mask-size: contain;
+				// mask-size: contain;
+				// -webkit-mask-size: contain;
+				width: 1.6rem;
+				min-height: 1rem;
 			}
 		}//end .nav_buttons
 
 		// text
 		>.paginator_info {
-
+			min-height: unset;
 		}//end .paginator_info
 	}//end .content_data
+
 
 	&.micro >.content_data {
 		font-size: 0.8rem;
@@ -144,16 +167,18 @@
 			padding: 0;
 
 			>.btn {
-				mask-size: contain;
-				-webkit-mask-size: contain;
+				// mask-size: contain;
+				// -webkit-mask-size: contain;
 				margin: 0;
 				width: 1.2rem;
+				min-height: unset;
 			}
 		}//end .nav_buttons
 
 		// text
 		>.paginator_info {
 			min-width: 2.6rem;
+			min-height: unset;
 		}//end .paginator_info
 	}//end .content_data
 }//end .wrapper_paginator
