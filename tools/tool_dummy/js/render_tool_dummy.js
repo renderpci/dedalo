@@ -85,13 +85,13 @@ const get_content_data = async function(self) {
 			class_name		: 'source_component_container',
 			parent			: components_container
 		})
-		self.main_component.render()
+		self.main_element.render()
 		.then(function(component_node){
 			source_component_container.appendChild(component_node)
 		})
 
 	// buttons container
-		const buttons_container = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons_container',
 			parent			: components_container

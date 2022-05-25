@@ -109,7 +109,7 @@ const get_content_data = async function(self) {
 		})
 
 	// component caller
-		self.main_component.render()
+		self.main_element.render()
 		.then(function(component_node){
 			components_list_container.appendChild(component_node)
 		})

@@ -27,7 +27,7 @@ export const tool_user_admin = function () {
 	this.ar_instances	= null
 	this.events_tokens	= null
 	this.status			= null
-	this.main_component	= null
+	this.main_element	= null
 	this.type			= null
 	this.source_lang	= null
 	this.target_lang	= null
@@ -90,7 +90,7 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 
-	// specific actions.. like fix main_component for convenience
+	// specific actions.. like fix main_element for convenience
 		const context = self.build_context()
 		// const generate_rqo = async function(){
 		// 	// rqo_config. get the rqo_config from context
@@ -311,10 +311,10 @@ tool_user_admin.prototype.load_component_sample = async function(lang) {
 	const self = this
 
 	// context (clone and edit)
-		const context = Object.assign(clone(self.main_component.context),{
+		const context = Object.assign(clone(self.main_element.context),{
 			lang		: lang,
 			mode		: 'edit',
-			section_id	: self.main_component.section_id
+			section_id	: self.main_element.section_id
 		})
 
 	// options

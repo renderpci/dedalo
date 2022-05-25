@@ -145,7 +145,7 @@ const get_content_data = async function(self) {
 		// 	class_name		: 'source_component_container',
 		// 	parent			: components_container
 		// })
-		// self.main_component.render()
+		// self.main_element.render()
 		// .then(function(component_node){
 		// 	source_component_container.appendChild(component_node)
 		// })

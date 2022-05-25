@@ -27,7 +27,7 @@ export const tool_posterframe = function () {
 	this.ar_instances	= null
 	this.events_tokens	= null
 	this.status			= null
-	this.main_component	= null
+	this.main_element	= null
 	this.type			= null
 	this.source_lang	= null
 	this.target_lang	= null
@@ -86,10 +86,10 @@ tool_posterframe.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// specific actions.. like fix main_component for convenience
-		// main_component
-			const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
-			self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+	// specific actions.. like fix main_element for convenience
+		// main_element
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			self.main_element			= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 
 	return common_build
@@ -116,7 +116,7 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 * CREATE_POSTERFRAME
 * 	Creates a new posterframe file from current_time overwriting old file if exists
 * @param float current_time
-* 	Fom main_component video current_time value
+* 	Fom main_element video current_time value
 * @return promise > bool
 */
 tool_posterframe.prototype.create_posterframe = function(current_time) {
@@ -128,9 +128,9 @@ tool_posterframe.prototype.create_posterframe = function(current_time) {
 		const source = create_source(self, 'create_posterframe')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id,
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id,
 			current_time	: current_time
 		}
 
@@ -177,9 +177,9 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 		const source = create_source(self, 'delete_posterframe')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id
 		}
 
 	// rqo
@@ -221,8 +221,8 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 		const source = create_source(self, 'get_ar_identifying_image')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id
 		}
 
 	// rqo
@@ -268,9 +268,9 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 		const source = create_source(self, 'create_identifying_image')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id,
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id,
 			item_value		: item_value,
 			current_time	: current_time
 		}

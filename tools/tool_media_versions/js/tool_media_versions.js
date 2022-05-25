@@ -27,14 +27,14 @@ export const tool_media_versions = function () {
 	this.ar_instances	= null
 	this.events_tokens	= null
 	this.status			= null
-	this.main_component	= null
+	this.main_element	= null
 	this.type			= null
 	this.source_lang	= null
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
 
-	this.main_component_quality = null
+	this.main_element_quality = null
 
 
 	return true
@@ -90,14 +90,14 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 
-	// specific actions.. like fix main_component for convenience
-		const main_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_component")
-		self.main_component			= self.ar_instances.find(el => el.tipo===main_component_ddo.tipo)
+	// specific actions.. like fix main_element for convenience
+		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+		self.main_element			= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
-		// self.main_component_quality.
-		// (!) It's used to force a specific main_component quality before render the component
-			if (self.main_component_quality) {
-				self.main_component.context.quality = self.main_component_quality
+		// self.main_element_quality.
+		// (!) It's used to force a specific main_element quality before render the component
+			if (self.main_element_quality) {
+				self.main_element.context.quality = self.main_element_quality
 			}
 
 	// fix important vars
@@ -124,9 +124,9 @@ tool_media_versions.prototype.get_files_info = async function() {
 		const source = create_source(self, 'get_files_info')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id
 		}
 
 	// rqo
@@ -171,9 +171,9 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 		const source = create_source(self, 'delete_file')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id,
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id,
 			quality			: quality
 		}
 
@@ -219,9 +219,9 @@ tool_media_versions.prototype.build_version = async function(quality) {
 		const source = create_source(self, 'build_version')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id,
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id,
 			quality			: quality
 		}
 
@@ -267,9 +267,9 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 		const source = create_source(self, 'conform_headers')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id,
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id,
 			quality			: quality
 		}
 
@@ -319,9 +319,9 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 		const source = create_source(self, 'rotate')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			tipo			: self.main_component.tipo,
-			section_tipo	: self.main_component.section_tipo,
-			section_id		: self.main_component.section_id,
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id,
 			quality			: quality,
 			degrees			: degrees
 		}
