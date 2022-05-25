@@ -49,11 +49,11 @@ class component_filter_master extends component_filter {
 	* PROPAGATE_FILTER
 	* Catch calls to parent method
 	*/
-	public function propagate_filter() {
+	public function propagate_filter() : bool {
 		# Nothing to do
 		debug_log(__METHOD__." Invalid call !! ".to_string(), logger::ERROR);
 
-		return null;
+		return false;
 	}//end propagate_filter
 
 
