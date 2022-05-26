@@ -188,7 +188,11 @@ const get_content_data = function(self) {
 			})
 			button_delete.addEventListener('click', (e) => {
 				e.stopPropagation()
-				event_manager.publish('delete_section_' + self.caller.id)
+				event_manager.publish('delete_section_' + self.caller.id, {
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					caller			: self.caller
+				})
 			})
 
 
