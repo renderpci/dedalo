@@ -1,19 +1,19 @@
 <?php
 ################################################################
-################### DEDALO VERSION V4 ##########################
+################### DEDALO VERSION V5 ##########################
 ################################################################
 /*
 	UNDER GNU PUBLIC LICENSE / BAJO LICENCIA PÚBLICA GNU
-	http://www.gnu.org/licenses/licenses.es.html
-	Version 4, 14 de marzo de 2012 / 5 May 2016
+	https://www.gnu.org/licenses/licenses.en.html
+	March 14, 2012
 
 	Juan Francisco Onielfa Veneros
 	Alejandro Peña Carbonell
-	http://www.fmomo.org/
-	http://dedalo4.antropolis.net/
+	https://dedalo.dev/
 
-	Reviewed: 12-05-2018
+	Reviewed: 19-05-2022
 */
+
 
 
 ################################################################
@@ -36,7 +36,6 @@
 	# TIME ZONE : Time zone for backups archive names
 	define('DEDALO_TIMEZONE',		'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
 	# SET LOCALE (Spanish for example)
-	// setlocale(LC_ALL,'en_EN');
 	// setlocale(LC_ALL,'es_ES');		// For Mac
 	setlocale(LC_ALL, 'es_ES.utf8');	// For Linux
 
@@ -47,7 +46,7 @@
 	# Entity ASCII lowercase code. Use 16 chars MAX like 'mupreva' without spaces.
 	# (!) Note that this entity code will be used to create session and folder names. Must be be system safe!
 	# (!) DO NOT USE NON ASCII CODES LIKE: "Museu de la plaça de l'espart/teixits". Use instead something like: "mupespart"
-	# We recommend not using the camelcase notation, but underscores between words and without spaces
+	# We recommend not using the camel-case notation, but underscores between words and without spaces
 	define('DEDALO_ENTITY',			'entity_codename');
 	# DEDALO_ENTITY_LABEL . (Showed title of html pages. Yes you are free here!)
 	define('DEDALO_ENTITY_LABEL',	'My entity label');
@@ -60,7 +59,7 @@
 
 ################################################################
 # CACHE MANAGER
-	define('DEDALO_CACHE_MANAGER',	false );	# redis / memcached / zebra_db / false
+	define('DEDALO_CACHE_MANAGER',	false);	// redis / memcached / zebra_db / false
 	if(DEDALO_CACHE_MANAGER) {
 		define('DEDALO_CACHE_MANAGER_DB', 'cache_'.substr(DEDALO_HOST, 0,-5) );
 		include(DEDALO_LIB_BASE_PATH.'/config/cache_manager.php');
@@ -71,16 +70,17 @@
 ################################################################
 # CORE REQUIRE
 	# BASIC FUNCTIONS
-	include_once(DEDALO_LIB_BASE_PATH.'/config/core_functions.php');
+	include DEDALO_LIB_BASE_PATH.'/config/core_functions.php';
 	# VERSION
-	include(DEDALO_LIB_BASE_PATH.'/config/version.inc');
+	include DEDALO_LIB_BASE_PATH.'/config/version.inc';
 	# Dedalo str tipos
-	include(DEDALO_LIB_BASE_PATH.'/config/dd_tipos.php');
+	include DEDALO_LIB_BASE_PATH.'/config/dd_tipos.php';
 
 
 
 ################################################################
-# DB : CONEXIÓN CON LA BASE DE DATOS MYSQL
+# DB
+	// POSTGRESQL AND MYSQL DATABASE CONNECTION
 	include(DEDALO_LIB_BASE_PATH.'/config/config4_db.php');
 	define('SLOW_QUERY_MS'	, 1200);
 
@@ -115,7 +115,8 @@
 
 
 ################################################################
-# BACKUP : Automatic backups control
+# BACKUP
+	// Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false
 	define('DEDALO_BACKUP_ON_LOGIN',	true);
 	# DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
@@ -124,7 +125,8 @@
 
 
 ################################################################
-# IS_DEVELOPER : Logged user is developer value
+# IS_DEVELOPER
+	// Logged user is developer value
 	$show_developer = (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true)
 		? true
 		: false;
@@ -133,7 +135,8 @@
 
 
 ################################################################
-# DEBUG : Application debug config
+# SHOW_DEBUG
+	// Application debug config
 	$show_debug = (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
 		? true
 		: false;
@@ -142,27 +145,24 @@
 
 
 ################################################################
-# LOG AND ERRORS : STORE APPLICATION DATA INFO AND ERRORS
-
+# LOG AND ERRORS
+	// Store application data info and errors
 	# Log data
 	include(DEDALO_LIB_BASE_PATH . '/logger/class.logger.php');
 	/*
-	DEBUG 	 = 100;
-	INFO 	 = 75;
-	NOTICE 	 = 50;
-	WARNING  = 25;
-	ERROR 	 = 10;
-	CRITICAL = 5;
+	DEBUG		= 100;
+	INFO		= 75;
+	NOTICE		= 50;
+	WARNING		= 25;
+	ERROR		= 10;
+	CRITICAL	= 5;
 
 	Debug default: DEBUG
 	Production default: ERROR
 	*/
-	if (SHOW_DEBUG===true) {
-		define('LOGGER_LEVEL', logger::DEBUG);
-	}else{
-		define('LOGGER_LEVEL', logger::WARNING);
-	}
-
+	define('LOGGER_LEVEL', (SHOW_DEBUG===true)
+		? logger::DEBUG
+		: logger::WARNING);
 
 	# Log messages in page
 	$log_messages = array();
@@ -221,10 +221,10 @@
 	]));
 	# DEDALO_DIFFUSION_LANGS
 	# Default value is the same as project langs. Change for custom diffusion langs
-	define('DEDALO_DIFFUSION_LANGS',			DEDALO_PROJECTS_DEFAULT_LANGS);
+	define('DEDALO_DIFFUSION_LANGS', DEDALO_PROJECTS_DEFAULT_LANGS);
 
 	# TRANSLATOR
-	define('DEDALO_TRANSLATOR_URL',				'https://babel.render.es/babel_engine/');	# Apertium, Google translator, etc..
+	define('DEDALO_TRANSLATOR_URL', 'https://babel.render.es/babel_engine/');	# Apertium, Google translator, etc..
 
 
 
@@ -257,36 +257,41 @@
 	# DEDALO_FILTER_SECTION_TIPO_DEFAULT. Target filter section (actually dd153)
 	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO); // dd153 Projects section (dd tipos)
 
-	# DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
+
+
+################################################################
+# DEDALO_SECTION_ID_TEMP
+	// Name / prefix of section_id temporal used to store special sections in memory or session
 	define('DEDALO_SECTION_ID_TEMP', 'tmp');
+
 
 
 ################################################################
 # LIBS PATH
 
 	# JQUERY JS LIB
-	define('JQUERY_LIB_URL_JS',			DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');
+	define('JQUERY_LIB_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');
 	# JQUERY UI
-	define('JQUERY_UI_URL_JS',			DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
-	define('JQUERY_UI_URL_CSS',			DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
+	define('JQUERY_UI_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
+	define('JQUERY_UI_URL_CSS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
 	# TABLESORTER
-	define('JQUERY_TABLESORTER_JS',		DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
+	define('JQUERY_TABLESORTER_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
 	# Text editor
-	define('TEXT_EDITOR_URL_JS',		DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
+	define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
 	# PAPER
-	define('PAPER_JS_URL',				DEDALO_ROOT_WEB .'/lib/paper/dist/paper-core.min.js');
+	define('PAPER_JS_URL' 				, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-full.min.js'); // core | full
 	# LEAFLET
-	define('LEAFLET_JS_URL',			DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
+	define('LEAFLET_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
 	# D3
-	define('D3_URL_JS',					DEDALO_ROOT_WEB .'/lib/nvd3/lib/d3.v3.min.js');
+	define('D3_URL_JS' 					, DEDALO_ROOT_WEB .'/lib/nvd3/lib/d3.v3.min.js');
 	# NVD3
-	define('NVD3_URL_JS',				DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
-	define('NVD3_URL_CSS',				DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
+	define('NVD3_URL_JS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
+	define('NVD3_URL_CSS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
 	# BOOTSTRAP
-	define('BOOTSTRAP_CSS_URL',			DEDALO_ROOT_WEB .'/lib/bootstrap/dist/css/bootstrap.min.css');
-	define('BOOTSTRAP_JS_URL',			DEDALO_ROOT_WEB .'/lib/bootstrap/dist/js/bootstrap.min.js');
+	define('BOOTSTRAP_CSS_URL' 			, DEDALO_ROOT_WEB .'/lib/bootstrap/dist/css/bootstrap.min.css');
+	define('BOOTSTRAP_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/bootstrap/dist/js/bootstrap.min.js');
 	# CDN USE BOOL
-	define('USE_CDN',					false);
+	define('USE_CDN'					, false);
 
 
 
@@ -356,7 +361,7 @@
 		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED',	serialize(['jpg','jpeg','png','tif','tiff','bmp','psd','raw']));
 		# QUALITY ORIGINAL normally 'original'
 		define('DEDALO_IMAGE_QUALITY_ORIGINAL',		'original');
-		# QUALITY MODIFY of original normally 'modify'
+		# QUALITY MODIFY of original normally 'modified'
 		define('DEDALO_IMAGE_QUALITY_RETOUCHED',	'modified');
 		# QUALITY DEFAULT normally '1.5MB'
 		define('DEDALO_IMAGE_QUALITY_DEFAULT',		'1.5MB');
@@ -373,14 +378,41 @@
 
 		# LIB ImageMagick MAGICK_PATH
 		define('MAGICK_PATH',						'/usr/bin/'); # Like '/usr/bin/';
+		# LIB exiftool
+		define('EXIFTOOL_PATH', 					'/usr/bin/');
 		# COLOR_PROFILES_PATH
 		define('COLOR_PROFILES_PATH',				DEDALO_LIB_BASE_PATH . '/media_engine/lib/color_profiles_icc/');
+		# DEDALO_IMAGE_WATERMARK_FILE
+		define('DEDALO_IMAGE_WATERMARK_FILE', 		DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_IMAGE_FOLDER . '/watermark/watermark.png');
 
 		define('DEDALO_IMAGE_THUMB_WIDTH',			102);	# Default 102
 		define('DEDALO_IMAGE_THUMB_HEIGHT',			57);	# Default 57
 
 		# DEDALO_IMAGE_WEB_FOLDER normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER',			'/web');
+		# OPTIONAL IMAGE METADA INFO (used by tool metadata)
+		define('DEDALO_IMAGE_METADATA_OPTIONS'		, [
+			[
+				'name'	=> 'creator',
+				'value'	=> 'John Doe'
+			],
+			[
+				'name'	=> 'title',
+				'value'	=> 'Archive of ...'
+			],
+			[
+				'name'	=> 'source',
+				'value'	=> 'Source ...'
+			],
+			[
+				'name'	=> 'copyright',
+				'value'	=> 'This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/'
+			],
+			[
+				'name'	=> 'rights',
+				'value'	=> 'This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/'
+			]
+		]);
 
 
 	#
@@ -442,18 +474,25 @@
 
 
 ################################################################
-	# LOADER (AUTO LOAD CALLED CLASSES)
+# LOADER
+	// Auto load called classes
 	include DEDALO_LIB_BASE_PATH.'/config/class.loader.php';
 
 
 
 ################################################################
-# MEDIA ENTITY
+# REST_CONFIG
+	// Deprecated. Noting to config here..
+
+
+
+################################################################
+# MEDIA ENTITY MENU CONFIG
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
-	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...
+	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of 'tipos' but walk the children, used for groupings that don't want see into the menu "Oral History" "list of values"...
 	define('DEDALO_ENTITY_MENU_SKIP_TIPOS', serialize( array()));
-
+	// define('DEDALO_INSPECTOR_EXTRAS', false); // Deprecated..
 
 
 
@@ -464,13 +503,22 @@
 	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,			DEDALO_MEDIA_BASE_URL  . '/export/files');
 	# TOOL IMPORT
 	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/import/files');
+	# TOOL_QR
+	define('DEDALO_TOOL_QR_BASE_URL',					DEDALO_LIB_BASE_URL);
+
+
+
+################################################################
+# DEDALO_BYPASS_FILTER
+	// Used to bypass user filter in some cases
+	// Deprecated. Noting to config here..
 
 
 
 ################################################################
 # LOCK_COMPONENTS
 	# Lock and unlock components to avoid replacement data when more than one user edit the same component
-	define('DEDALO_LOCK_COMPONENTS', false);	# Default (bool)false
+	define('DEDALO_LOCK_COMPONENTS', false); // Default (bool)false
 
 
 
@@ -484,19 +532,21 @@
 
 ################################################################
 # DEDALO_PROTECT_MEDIA
+	// Useful in some publication context. bool default false
 	define('DEDALO_PROTECT_MEDIA_FILES', false);
 
 
 
 ################################################################
 # DEDALO_FILTER_USER_RECORDS_BY_ID
-# Activate user records filter restriction
+	// Activate user records filter restriction
 	define('DEDALO_FILTER_USER_RECORDS_BY_ID', false);
 
 
 
 ################################################################
-# ENCRYPTION_MODE. If not is defined, will be calculated from current Dédalo data version
+# ENCRYPTION_MODE
+	// If not is defined, will be calculated from current Dédalo data version
 	define('ENCRYPTION_MODE', 'openssl');
 
 
@@ -520,7 +570,7 @@
 
 ################################################################
 # DIFFUSION_CUSTOM
-# Optional custom class to maniputate diffusion options
+	# Optional custom class to manipulate diffusion options
 	define('DIFFUSION_CUSTOM', false);
 
 
@@ -538,10 +588,12 @@
 	]);
 
 
+
 ################################################################
 # DEDALO_TEST_INSTALL
-# If true, check current admin user credentials on login page
+	# If true, check current admin user credentials on login page
 	define('DEDALO_TEST_INSTALL', true);
+
 
 
 ################################################################
@@ -551,7 +603,9 @@
 	define('STRUCTURE_SERVER_URL',			'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/'); 	 # string like https	://master.render.es/dedalo/lib/dedalo/extras/str_manager/
 	define('STRUCTURE_DOWNLOAD_DIR',		DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
 	define('STRUCTURE_DOWNLOAD_JSON_FILE',	STRUCTURE_DOWNLOAD_DIR);
-	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128'); // Optional IP and port like 'XXX.XXX.XXX.XXX:3128'
+	define('STRUCTURE_IS_MASTER', 			false);
+	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
+	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
 
 
 
@@ -571,7 +625,94 @@
 
 
 ################################################################
-# MAINTENACE : maintenance mode active / inactive
+# TOPONOMY_CENTRAL_SYNC
+	// Deprecated. Noting to config here..
+
+
+
+################################################################
+# DEDALO_AR_EXCLUDE_COMPONENTS
+	// Deprecated. Noting to config here..
+
+
+
+################################################################
+# DEDALO_THESAURUS
+	// Deprecated. Noting to config here.. (Only for development transition v3 - v4)
+
+
+
+################################################################
+# GEONAMES
+	// Only active for toponymy development
+	// define('GEONAMES_ACCOUNT_USERNAME'	, 'my account');
+
+
+
+################################################################
+# TR_TAGS_CDN
+	// Comment this line to use local server
+	// Deprecated. Noting to config here..
+
+
+
+################################################################
+# LOGIN INIT_COOKIE_AUTH
+	// Deprecated. Noting to config here..
+
+
+
+################################################################
+# EXPORT HIERARCHY
+	// master development install only
+	// define('EXPORT_HIERARCHY_PATH', '/local/path/install/import/hierarchy');
+
+
+
+################################################################
+# ZOTERO_IMPORT
+	// Deprecated. Noting to config here..
+
+
+
+################################################################
+# SOCRATA CONFIG
+	// custom socrata connection. Uncomment only if you have a Socrata custom connection
+	// define('SOCRATA_CONFIG', array(
+	// 	'app_token' 		=> 'XXXXXXXXXXXXXX',
+	// 	'socrata_user' 		=> 'xxx@xxx.xx',
+	// 	'socrata_password'	=> 'xxxxxxxxxxxxxx',
+	// 	'server' 			=> 'xxxxxxxxxxxxxx',
+	// 	'mode'				=> 'xxx'
+	// ));
+
+
+
+################################################################
+# SAML CONFIG
+	// SAML custom config. Only for systems with SALM users authorization
+
+
+
+################################################################
+# MAILER
+	// Deprecated. Noting to config here..
+
+
+
+################################################################
+# SECTION_SKIP_PROJECT_FILTER
+	// Sections where project filter is forced to be skipped always
+	// Uncomment only if you really need to
+	// define('SECTION_SKIP_PROJECT_FILTER', [
+	// 	'xxxx'
+	// ]);
+
+
+
+################################################################
+# MAINTENACE
+	// maintenance mode active / inactive
 	$maintenance_mode = false;
 	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
 	if (DEDALO_MAINTENANCE_MODE) {
@@ -581,10 +722,9 @@
 
 
 ################################################################
-# NOTICE_TO_ACTIVE_USERS  : Warning to print in all pages to logged users
+# NOTICE_TO_ACTIVE_USERS
+	 // Warning to print in all pages to logged users
 	$notice = "<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
 	Please, save the unsaved work and log out as soon as possible.
-	After a few minutes, you can re-login to Dédalo and work again";
+	After a few minutes, you can re-login to Dédalo and get back to work";
 	#notice_to_active_users(array('msg'=>$notice, 'mode'=>"warning"));
-
-

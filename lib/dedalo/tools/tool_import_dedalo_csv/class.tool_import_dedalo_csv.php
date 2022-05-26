@@ -566,57 +566,115 @@ class tool_import_dedalo_csv extends tool_common {
 	*	Folder path for find csv files
 	* @return object $response
 	*/
-	public static function get_csv_files( $dir ) {
-
-		$result = tool_common::read_files($dir, $valid_extensions=array('csv','json'));
-
-		$files_info = array();
-		foreach ($result as $current_file_name) {
-			$file = $dir .'/'. $current_file_name;
-			$ar_data 	= tool_common::read_csv_file_as_array( $file, $skip_header=false, ';');
-			$file_info 	= (array)$ar_data[0];
-			$n_records 	= count($ar_data)-1;
-			$n_columns 	= count($file_info);
-			$files_info[$current_file_name] = 'Records: '.$n_records.' - Columns: '.$n_columns.'<br>'.implode(', ', $file_info).'';
-
-			# Reference first row
-			$ar_reference			= array();
-			$ar_reference_errors	= array();
-			$preview_max = 10;
-			foreach ($ar_data as $dkey => $current_line) {
-
-				foreach ($current_line as $key => $value) {
-					$value = str_replace('U+003B', ';', $value);
-
-					# Test valid json
-					if (strpos($value,'[')===0 || strpos($value,'{')===0) {
-
-						$test = json_decode($value);
-						if ($test===null) {
-							debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
-
-							$current_line  = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>";
-							$current_line .= '<div>'.$value.'</div>';
-
-							$ar_reference_errors[] = $current_line;
-						}
-					}
-				}
-				$ar_reference[] = $current_line;
-				// Stop on reach limit
-				if ($dkey>=$preview_max) break;
-			}
-
-			$files_info[$current_file_name] .= (!empty($ar_reference_errors))
-				? "<pre class=\"error\" style=\"white-space:pre;\">Reference row 1: ".print_r($ar_reference_errors,true)."</pre>"
-				: "<pre style=\"white-space:pre;display:none\">Reference row 1: ".print_r($ar_reference,true)."</pre>";
-		}//end foreach ($result as $current_file_name) {
+	public static function get_csv_files( string $dir ) : object {
 
 		$response = new stdClass();
-			$response->result 		= !empty($result) && is_array($result) ? true : false;
-			$response->msg 	  		= !empty($result) && is_array($result) ? "Found ".count($result)." files" : "No files found at $dir";
-			$response->files  		= $result;
-			$response->files_info  = $files_info;
+			$response->result	= false;
+			$response->msg		= __METHOD__.' Error. Request failed';
+
+		// files_list. array of found files as:
+			// [
+			//	"exported_plantillas-web_-1-dd477.csv",
+			//	"numisdata3.csv"
+			// ]
+			$files_list = tool_common::read_files($dir, $valid_extensions=array('csv','json'));
+
+		// files_info
+			$files_info = array();
+			foreach ($files_list as $current_file_name) {
+
+				$file							= $dir .'/'. $current_file_name;
+				$safe_file_name					= $current_file_name; // base64_encode($current_file_name);
+				$files_info[$safe_file_name]	= '';
+
+				try {
+
+					// data . extract csv data from file
+					// $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"'
+					$ar_data = tool_common::read_csv_file_as_array(
+						$file, // file string
+						false, // skip_header bool
+						';', // csv_delimiter string
+						'"', // enclosure string
+						'"' // escape string
+					);
+
+					if (empty($ar_data) || empty($ar_data[0])) {
+						debug_log(__METHOD__." Error on read file 1 : ".to_string($file).' The file will be ignored', logger::ERROR);
+						continue;
+					}
+
+					$file_info	= (array)$ar_data[0];
+					$n_records	= count($ar_data)-1;
+					$n_columns	= count($file_info);
+
+					// files info add
+					$files_info[$safe_file_name] .= 'Records: '.$n_records.' - Columns: '.$n_columns.'<br>'.implode(', ', $file_info).'';
+
+				} catch (Exception $e) {
+
+					debug_log(__METHOD__." Error on read file 2: ".to_string($file).' The file will be ignored', logger::ERROR);
+					continue;
+				}
+
+				if (empty($ar_data)) {
+					debug_log(__METHOD__.' Error. Ignoring file data of file: '.to_string($file), logger::ERROR);
+					continue;
+				}
+
+
+				# Reference first row
+				$ar_reference			= array();
+				$ar_reference_errors	= array();
+				$preview_max			= 10;
+				foreach ($ar_data as $dkey => $current_line) {
+
+					if (empty($current_line)) {
+						continue;
+					}
+
+					foreach ($current_line as $key => $value) {
+						if (empty($value)) {
+							continue;
+						}
+
+						$value = str_replace('U+003B', ';', $value);
+
+						# Test valid json
+						if (strpos($value,'[')===0 || strpos($value,'{')===0) {
+
+							$test = json_decode($value);
+							if ($test===null) {
+								debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
+
+								$current_line  = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>";
+								$current_line .= '<div>'.$value.'</div>';
+
+								$ar_reference_errors[] = $current_line;
+							}
+						}
+
+						if(json_last_error()!==JSON_ERROR_NONE){
+							debug_log(__METHOD__." JSON decode error has occurred: ".json_last_error_msg(), logger::ERROR);
+						}
+					}
+					$ar_reference[] = $current_line;
+					// Stop on reach limit
+					if ($dkey>=$preview_max) break;
+				}
+
+				// files_info
+					$current_info = (!empty($ar_reference_errors))
+						? '<pre class="error" style="white-space:pre">Reference row 1: '.json_encode($ar_reference_errors, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."</pre>"
+						: '<pre style="white-space:pre;display:none">Reference row 1: ' .json_encode($ar_reference, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."</pre>";
+					$files_info[$safe_file_name] .= $current_info;
+			}//end foreach ($files_list as $current_file_name) {
+
+		// response ok
+			$response->result		= !empty($files_list) && is_array($files_list) ? true : false;
+			$response->msg			= !empty($files_list) && is_array($files_list) ? "Found ".count($files_list)." files" : "No files found at $dir";
+			$response->files		= $files_list;
+			$response->files_info	= $files_info;
 
 
 		return (object)$response;

@@ -205,7 +205,7 @@ if(!empty($data) && $data->mode==='edit_ts') {
 
 	// JSON Ontology Item save
 		$term_id	= $terminoID;
-		$json_item	= ontology::tipo_to_json_item($term_id);
+		$json_item	= (object)ontology::tipo_to_json_item($term_id);
 		$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
 
 	// css structure . For easy css edit, save
@@ -248,13 +248,12 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 	session_write_close();
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on save_descriptor. ';
-
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed on save_descriptor. ';
 
 	// mandatory vars
-		if(empty($data->terminoID)) {
-			$response->msg .= " terminoID is mandatory!";
+		if(empty($data->parent)) {
+			$response->msg .= " parent is mandatory!";
 			echo json_encode($response, JSON_UNESCAPED_UNICODE);
 			exit();
 		}
@@ -437,8 +436,6 @@ if($accion==='deleteTS') {
 				$RecordObj_dd_edit2->Save();
 			}
 
-	dump($ar_id," ar_id - terminoID:$terminoID");die();
-
 		# MODELO . Verificamos que nadie lo usa como modelo
 			/*
 			$prefijo 		= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
@@ -459,10 +456,10 @@ if($accion==='deleteTS') {
 			*/
 			$arguments=array();
 			#$arguments['terminoID']	= 'strPrimaryKeyName';
-			$arguments['modelo']		= $terminoID;
-			$prefijo = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
-			$RecordObj_dd_edit				= new RecordObj_dd_edit(NULL, $prefijo);
-			$ar_id						= $RecordObj_dd_edit->search($arguments);
+			$arguments['modelo']	= $terminoID;
+			$prefijo				= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+			$RecordObj_dd_edit		= new RecordObj_dd_edit(NULL, $prefijo);
+			$ar_id					= $RecordObj_dd_edit->search($arguments);
 
 			if(count($ar_id)>0) {
 

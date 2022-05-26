@@ -317,7 +317,10 @@
 		// nothing to do
 	}else{
 		$path = DB_BIN_PATH . 'psql';
-		$psql = trim(shell_exec('command -v '. $path));
+		$psql = shell_exec('command -v '. $path);
+		if (is_string($psql)) {
+			$psql = trim($psql);
+		}
 		if (empty($psql)) {
 			$init_response->msg .= trim('psql not found at: '.$path . PHP_EOL . ' Review your POSTGRES installation or your db config file');
 			return $init_response;

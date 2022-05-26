@@ -41,9 +41,9 @@ class ontology {
 	/**
 	* PARSE
 	* Get and convert ontology term and children to JSON format
-	* @return
+	* @return array $ar_data
 	*/
-	public static function parse(string $tipo) {
+	public static function parse(string $tipo) : array {
 
 		$ar_data = [];
 
@@ -68,7 +68,7 @@ class ontology {
 	* @param string $tipo
 	* @return object $item
 	*/
-	public static function tipo_to_json_item(string $tipo, $request_options=[
+	public static function tipo_to_json_item(string $tipo, array $request_options=[
 		'tipo' 			=> true,
 		'tld'			=> true,
 		'is_model'		=> true,
@@ -82,7 +82,7 @@ class ontology {
 		'relations'		=> true,
 		'descriptors'	=> true,
 		'label'			=> false
-		]) {
+		]) : object {
 
 		$options = new stdClass();
 			$options->tipo			= false;
@@ -101,6 +101,7 @@ class ontology {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
+		$RecordObj_dd->use_cache = false; // (!) prevents using previous db results
 		$RecordObj_dd->get_dato();
 
 		$item = new stdClass();
@@ -188,7 +189,7 @@ class ontology {
 	* update terms, only insert new terms (!)
 	* @return bool true
 	*/
-	public static function import(array $data) {
+	public static function import(array $data) : bool {
 
 		foreach ($data as $key => $item) {
 
@@ -246,7 +247,7 @@ class ontology {
 	* @param string $tld
 	* @return bool true
 	*/
-	public static function clean_structure_data(string $tld) {
+	public static function clean_structure_data(string $tld) : bool {
 
 		// jer_dd. delete terms (jer_dd)
 			$sql_query = '
@@ -274,9 +275,9 @@ class ontology {
 
 	/**
 	* RENUMERATE_TERM_ID
-	* @return
+	* @return array $ontology
 	*/
-	public static function renumerate_term_id($ontology, &$counter) {
+	public static function renumerate_term_id(array $ontology, int &$counter) : array {
 
 		foreach ($ontology as $item) {
 			$tipo = $item->tipo;
@@ -305,7 +306,7 @@ class ontology {
 	* @return array $ar_tesauro
 	*	array recursive of thesaurus structure children
 	*/
-	public static function get_children_recursive(string $tipo) {
+	public static function get_children_recursive(string $tipo) : array {
 
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
@@ -392,9 +393,9 @@ class ontology {
 	/**
 	* ADD_TERM
 	* @param object $options
-	* @return int $section_id
+	* @return int|false $section_id
 	*/
-	public static function add_term($options) {
+	public static function add_term(object $options) {
 
 		// options
 			$term_id = $options->term_id;
@@ -415,8 +416,13 @@ class ontology {
 		// id
 			$id = str_replace($tld, '', $term_id); // remove tld. from 'oh123' to '123'. id is a internal counter and it is not saved or set to the object
 
-		// to do: verify is term already exists in the section (!)
-
+		// verify if term already exists in the section
+			// section_id. search and locate the ontology record by term_id
+			$section_id = ontology::get_section_id_by_term_id($term_id);
+			if (!empty($section_id)) {
+				debug_log(__METHOD__." Ignored add term request. Section: '$section_id' already exists! . term: ".to_string($term_id), logger::ERROR);
+				return false;
+			}
 
 		// lang. At this time, is still 'lg-spa'
 			$lang = DEDALO_STRUCTURE_LANG;
@@ -425,7 +431,7 @@ class ontology {
 			$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 			$section		= section::get_instance(null, $section_tipo, 'edit', false);
 			$section->Save();
-			$section_id = $section->get_section_id();
+			$section_id = (int)$section->get_section_id();
 
 		// component term_id
 			(function($value) use($section_tipo, $section_id, $lang) {
@@ -474,7 +480,7 @@ class ontology {
 
 		// JSON Ontology Item
 			$json_item	= ontology::tipo_to_json_item($term_id);
-			$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+			$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// returns object response
 
 		// component parent
 			// (function($value) use($section_tipo, $section_id, $lang) {
@@ -584,13 +590,13 @@ class ontology {
 	* @param object $options
 	* @return bool
 	*/
-	public static function edit_term($options) {
+	public static function edit_term(object $options) : bool {
 
 		// options
-			$term_id	= $options->term_id;
-			$dato		= $options->dato;
-			$dato_tipo	= $options->dato_tipo; // termino | def | obs
-			$lang		= $options->lang;
+			$term_id	= $options->term_id; // string as 'dd1582'
+			$dato		= $options->dato; // string as 'Oral History'
+			$dato_tipo	= $options->dato_tipo; // string options: termino | def | obs
+			$lang		= $options->lang; // string as 'lg-spa'
 
 		// check term_id
 			if (empty($term_id)) {
@@ -598,27 +604,33 @@ class ontology {
 				return false;
 			}
 
-		$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
-
-		// section_id. locate the ontology record by term_id
+		// section_id. search and locate the ontology record by term_id
 			$section_id = ontology::get_section_id_by_term_id($term_id);
+			// empty case. Create a new one
 			if (empty($section_id)) {
 				$section_id = ontology::add_term((object)[
 					'term_id' => $term_id
 				]);
+				if (empty($section_id)) {
+					// prevent dead loops stopping here !
+					throw new Exception("Error. Unable to create term record in Ontology section (term_id:'$term_id')", 1);
+				}
+				debug_log(__METHOD__." [CREATED] get_section_id_by_term_id section_id +++ section_id: '$section_id' +++ term_id: $term_id", logger::WARNING);
 			}
 
 		// update value
 			if (!empty($section_id)) {
 
-				$component_tipo = (function($dato_tipo){
-					switch ($dato_tipo) {
-						case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
-						case 'def':		return ONTOLOGY_SECTION_TIPOS['definition'];	break;
-						case 'obs':		return ONTOLOGY_SECTION_TIPOS['observations'];	break;
-					}
-					return null;
-				})($dato_tipo);
+				// short vars
+					$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
+					$component_tipo	= (function($dato_tipo){
+						switch ($dato_tipo) {
+							case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
+							case 'def':		return ONTOLOGY_SECTION_TIPOS['definition'];	break;
+							case 'obs':		return ONTOLOGY_SECTION_TIPOS['observations'];	break;
+						}
+						return null;
+					})($dato_tipo);
 
 				// component save value
 				if (!empty($component_tipo)) {
@@ -663,6 +675,7 @@ class ontology {
 				trigger_error('edit_term : Invalid section_id '.$section_id);
 			}
 
+
 		return false;
 	}//end edit_term
 
@@ -670,11 +683,11 @@ class ontology {
 
 	/**
 	* GET_SECTION_ID_BY_TERM_ID
-	* Search in DDBB for records in section Ontology where term_id is requested term_id
-	* @return int | null
+	* Search in DDBB for records in section Ontology where term_id is th request term_id
 	* @param string $term_id
+	* @return int|null $section_id
 	*/
-	public static function get_section_id_by_term_id(string $term_id) {
+	public static function get_section_id_by_term_id(string $term_id) : ?int {
 
 		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 		$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
@@ -726,15 +739,39 @@ class ontology {
 			$search_result			= $search_development2->search();
 			$ar_records				= $search_result->ar_records;
 		}
-		$count = count($ar_records);
 
-		if ($count===0) {
-			return null;
-		}else if ($count===1) {
-			return reset($ar_records)->section_id;
-		}else{
-			trigger_error('ERROR. Term is duplicate. Fix ASAP: '.to_string($term_id));
-		}
+		// total records check
+			$count = count($ar_records);
+			if ($count===0) {
+
+				// Zero records found. Record do not exists
+				debug_log(__METHOD__." count zero. get_section_id_by_term_id " . to_string(), logger::DEBUG);
+				if(SHOW_DEBUG===true) {
+					// $bt = debug_backtrace();
+					// dump($bt, ' bt ++++++++++++++++++++++++++++++++ '.to_string());
+					// dump($term_id, ' term_id sqo +++++++ '.to_string($sqo));
+				}
+
+				return null;
+
+			}else if ($count===1) {
+
+				// OK case
+				return reset($ar_records)->section_id;
+
+			}else{
+
+				// Duplicates found
+				if(SHOW_DEBUG===true) {
+					dump($count, ' count ++ '.to_string($sqo));
+					// $bt = debug_backtrace();
+					// dump($bt, ' bt ++++++++++++++++++++++++++++++++ '.to_string());
+				}
+				$msg = 'ERROR. Term is duplicate. Fix ASAP: '.to_string($term_id);
+				// (!) added throw to prevent infinite loop! Do not change this line
+				throw new Exception("Error Processing Request.". $msg, 1);
+			}
+
 
 		return null;
 	}//end get_section_id_by_term_id
@@ -752,7 +789,7 @@ class ontology {
 	* 	object created using method: ontology::tipo_to_json_item($term_id)
 	* @return object $response
 	*/
-	public static function save_json_ontology_item(string $term_id, $json_item=null) {
+	public static function save_json_ontology_item(string $term_id, ?object $json_item=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -817,7 +854,7 @@ class ontology {
 	* Propagate (save/update) current Ontology data to the section 'Ontology' (dd1500) at 'JSON Ontology Item' field. Only changes will be saved
 	* @return object $response
 	*/
-	public static function update_json_ontology_items() {
+	public static function update_json_ontology_items() : object {
 
 		$response = new stdClass();
 			$response->result	= false;

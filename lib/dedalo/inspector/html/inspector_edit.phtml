@@ -2,13 +2,13 @@
 
 	$html = '';
 
-		
+
 	# INSPECTOR DIV
 	$html .= '<div id="inspector_div" class="inspector_div box_shadow_1 box_border_radius_1">';
-			
-		
+
+
 		#
-		# INFO 
+		# INFO
 			# Header
 			$html .= '<div class="css_section_group_titulo tab_title title_down_box text_unselectable">';
 			$html .= " <label class=\"css_label\">INFO</label>";
@@ -20,18 +20,18 @@
 
 				# paginator placeholder
 				$html .= "<div id=\"wrap_inspector_paginator\"> Loading paginator.. </div>";
-			
+
 				# inspector_info
 				$html .= " <div id=\"inspector_info\" class=\"inspector_info_body\"></div>";
-				
-				# Records navigator container ready		
+
+				# Records navigator container ready
 				$html .= " <div id=\"inspector_records_navigator\"></div>";
-			
+
 			$html .= '</div>';
-		
-		
+
+
 		#
-		# TOOLS	
+		# TOOLS
 			$html .= "<div id=\"tools_info_wrapper\">";
 			# Header
 			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_tools_tap\">";
@@ -41,8 +41,8 @@
 			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content \" >";
 
 				#
-				# FIXED SECTION TOOLS							
-					# TOOL_DIFFUSION BUTTONS (for export to database, etc.) 
+				# FIXED SECTION TOOLS
+					# TOOL_DIFFUSION BUTTONS (for export to database, etc.)
 					# dump( tool_diffusion::have_section_diffusion($section_tipo), ' var ++ '.to_string($section_tipo));
 					if ((bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
 						(bool)tool_diffusion::have_section_diffusion($section_tipo)) {
@@ -52,7 +52,7 @@
 						$html  .= $tool_diffusion->get_html();
 					}
 
-				#		
+				#
 				# SPECIFIC COMPONENT TOOLS
 					$html .= "<div id=\"inspector_tools\" class=\"inspector_info_body\">";
 					$html .= "<!-- Ajax load --> ";
@@ -61,31 +61,31 @@
 
 				#
 				# DEDALO_INSPECTOR_EXTRAS (Optional defined in config)
-					if (defined('DEDALO_INSPECTOR_EXTRAS')) {
+					if (defined('DEDALO_INSPECTOR_EXTRAS') && !empty(DEDALO_INSPECTOR_EXTRAS)) {
 						ob_start();
 						include(DEDALO_INSPECTOR_EXTRAS);
 						$html .= ob_get_clean();
-					}	
+					}
 			$html .= "</div>";//end body tools
 			$html .= "</div>";//end tools_info_wrapper
 
 
 		#
-		# ACTIVITY LOG 
+		# ACTIVITY LOG
 			$html .= "<div id=\"tools_info_wrapper\">";
 			# Header
 			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\">";
 			$html .= " <label class=\"css_label\">ACTIVITY LOG</label>";
 			$html .= "</div>";
-			# Body				
+			# Body
 			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
-			$html .= " <div id=\"inspector_log\" class=\"inspector_info_body\"></div>";			
+			$html .= " <div id=\"inspector_log\" class=\"inspector_info_body\"></div>";
 			$html .= "</div>";
 			$html .= "</div>";//end tools_info_wrapper
 
 
 		#
-		# INDEXATIONS 
+		# INDEXATIONS
 			$html .= "<div id=\"indexations_info_wrapper\">";
 			# Header
 			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_relations_tap\">";
@@ -97,21 +97,21 @@
 			$html .= "</div>";
 			$html .= "</div>";//end indexations_info_wrapper
 
-	
+
 		#
-		# RELATIONS	
+		# RELATIONS
 			$html .= "<div id=\"relations_info_wrapper\">";
 				$html .= "<div id=\"inspector_relation_list\" class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_relations_list_tap\"";
 				$html .= " >";
-				
+
 				//$html .= "<label class=\"css_label\">".$relation_list_name."</label>";
 				$html .= "<label class=\"css_label\">".label::get_label('relaciones')."</label>";
 				$html .= $relation_list_button_html;
 				$html .= "</div>";
 				$html .= "<div class=\"css_section_group_content tab_content inspector_div_content hide\" >";
-				
-				
-					
+
+
+
 					# Relations section (fixed)/*
 					$html .= " <div id=\"wrap_relation_list_sections\" class=\"inspector_info_body\">";
 					#$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
@@ -119,22 +119,22 @@
 				$html .= "</div>";
 			$html .= "</div>";
 			//$html .= $relation_list_html;
-			
+
 
 		#
-		# TIME MACHINE 
+		# TIME MACHINE
 			$html .= "<div id=\"time_machine_info_wrapper\">";
 				$html .= "<div id=\"inspector_time_machine_list\" class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_time_machine_tap\"";
 				$html .= " >";
-				
+
 				$html .= "<label class=\"css_label\">".$time_machine_name."</label>";
 				//label::get_label('last_changes')
 				$html .= $time_machine_button_html;
 				$html .= "</div>";
 				$html .= "<div class=\"css_section_group_content tab_content inspector_div_content hide\" >";
-				
-				
-					
+
+
+
 					# Relations section (fixed)/*
 					$html .= " <div id=\"wrap_time_machine_list_sections\" class=\"inspector_info_body\">";
 					#$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
@@ -146,7 +146,7 @@
 
 		// component history
 			$html .= '<div id="component_history">';
-				$html .= '<div id="" class="css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0" data-tab_id="">';				
+				$html .= '<div id="" class="css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0" data-tab_id="">';
 				$html .= '<label class="css_label">'.label::get_label('historial_del_componente').'</label>';
 				$html .= '<span class="icon_bs text_unselectable time_machine_list_button" onclick="inspector.component_tm_history_toggle(this)"></span>';
 				$html .= '</div>';
@@ -156,11 +156,11 @@
 				$html .= '</div>';
 			$html .= '</div>';
 
-		
+
 		#
-		# OTHERS 
+		# OTHERS
 			if(SHOW_DEBUG===true) {
-				
+
 				$html .= "<div id=\"others_info_wrapper\">";
 				# Header
 				$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_others_tap\">";
@@ -169,7 +169,7 @@
 				# Body
 				$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
 				$html .= "<div id=\"inspector_others\" class=\"inspector_info_body\">";
-				
+
 					$html .= "<div id=\"load_time_inspector\"></div>";
 
 				$html .= "</div>"; # <!-- /inspector_others -->
@@ -177,10 +177,10 @@
 				$html .= "</div>";//end tools_info_wrapper
 
 			}#if(SHOW_DEBUG===true)
-	
+
 
 		#
-		# DEBUG INFO 
+		# DEBUG INFO
 			if(SHOW_DEVELOPER===true) {
 
 				$html .= "<div id=\"debug_info_wrapper\">";
@@ -189,24 +189,24 @@
 				$html .= "<label class=\"css_label\">Info</label>";
 				$html .= "</div>";
 				# Body
-				$html .= "<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\">";			
+				$html .= "<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\">";
 				$html .= "</div>";
 
-				$html .= "<div id=\"inspector_debug_dtl\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\">";			
+				$html .= "<div id=\"inspector_debug_dtl\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\">";
 				$html .= "<a href=\"javascript:void(0)\" onclick=\"inspector.open_data_link(this)\">DATA LINK</a>";
 				$html .= "</div>";
-				
+
 				$html .= "</div>";//end debug_info_wrapper
 			}
-			
-		
+
+
 	$html .= '</div>';#/inspector_div
 
 
 	$html .= '<script>';
 	$html .= 'inspector.init()';
-	$html .= '</script>';	
-	
+	$html .= '</script>';
+
 
 	print $html;
 

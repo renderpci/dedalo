@@ -34,7 +34,7 @@ class dd extends dd_elements {
 
 
 	# Constructor
-	function __construct($modo='tesauro_list', $type='all', $ts_lang=false ) {
+	function __construct(string $modo='tesauro_list', string $type='all', $ts_lang=false) {
 
 		#self::$tabla_jerarquia			= 'jerarquia';
 		#self::$tabla_jerarquia_tipos	= 'jerarquia_tipos';
@@ -60,9 +60,11 @@ class dd extends dd_elements {
 		*/
 	}
 
-	protected function set_mode($modo) {
+	protected function set_mode(string $modo) {
 		$this->valid_modes = array('tesauro_list','tesauro_edit','modelo_edit','tesauro_rel');
-		if( !in_array($modo, $this->valid_modes) ) die(__METHOD__." DD Tesauro Error: mode not valid! [<b>$mode</b>] <br> Use a valid mode to access.");
+		if( !in_array($modo, $this->valid_modes) ) {
+			die(__METHOD__." DD Tesauro Error: mode not valid! [<b>$mode</b>] <br> Use a valid mode to access.");
+		}
 
 		# set value "esmodelo" for filter when build tree
 		if($modo==='modelo_edit') {
@@ -72,7 +74,7 @@ class dd extends dd_elements {
 		}
 		$this->modo = $modo ;
 	}
-	protected function set_type($type) {
+	protected function set_type(string $type) {
 		$this->type = $type;
 	}
 	protected function set_ts_lang($ts_lang) {
@@ -89,67 +91,21 @@ class dd extends dd_elements {
 	}
 
 
-	# TABLAS jerarquia ACTIVAS. Creamos el array de las jerarquias activas
-	# Devuelve prefijo:$arrayTablas['prefix'] y nombre tabla:$arrayTablas['tabla'];
-	#
-	public function get_arrayTablas() {
+	/**
+	* GET_ARRAYTABLAS
+	* tablas jerarquia ACTIVAS. Creamos el array de las jerarquias activas
+	* Devuelve prefijo:$arrayTablas['prefix'] y nombre tabla:$arrayTablas['tabla'];
+	*/
+	public function get_arrayTablas() : array {
 
-		return array(
-				#"prefijo" 	=> array('dd'),
-				"tabla" 	=> array('jer_dd'),
-				"nombre" 	=> array('Dedalo'),
-				"tipo" 		=> array(5),
-				"tipoText" 	=> array('Estructura')
-				);
-		/*
-		if(isset($this->arrayTablas)) return $this->arrayTablas;
-
-		$filtro 		= false ;
-		$arrayTablas 	= array();
-		$filtro 		= "";
-
-		$idString		= RecordObj_jer_tipos::order_by_tipo_sql_string(); # sql string for ordenate later
-
-		# buscamos los datos de cada una
-		$arguments['activa']	= 'si';
-		$arguments['sql_code']	= '';
-		$arguments['sql_code']	.= $filtro;
-		#$arguments['sql_code']	.= "ORDER BY field(tipo, $idString), nombre ASC";
-
-		$RecordObj_jer			= new RecordObj_jer(NULL);
-		$ar_id					= $RecordObj_jer->search($arguments);
-			#dump($ar_id,'$ar_id');
-
-		if(count($ar_id)>0) foreach($ar_id as $id) {
-
-			$RecordObj_jer				= new RecordObj_jer($id);
-				#dump($RecordObj_jer,'$RecordObj_jer');
-
-			$alpha2						= strtolower($RecordObj_jer->get_alpha2());
-			$nombre						= $RecordObj_jer->get_nombre();
-			$tabla						= "jer_{$alpha2}";
-			$tipo						= $RecordObj_jer->get_tipo();
-
-			# tipo text . nombre del jer tipo
-			$RecordObj_jer_tipos 		= new RecordObj_jer_tipos($tipo);
-			$tipoText 					= $RecordObj_jer_tipos->get_nombre();
-				#dump($tipoText,"tipo: $tipo");
-
-			$arrayTablas['prefijo'][]	= $alpha2 ;
-			$arrayTablas['tabla'][]		= $tabla ;
-			$arrayTablas['nombre'][]	= $nombre ;
-			$arrayTablas['tipo'][]		= $tipo ;
-			$arrayTablas['tipoText'][]	= $tipoText ;
-		}
-
-		#$this->arrayTablas = $arrayTablas ;
-			#dump($arrayTablas,'arrayTablas'); #die();
-
-		return $arrayTablas ;
-		*/
-	}
-
-
+		return [
+			// 'prefijo'	=> array('dd'),
+			'tabla'			=> array('jer_dd'),
+			'nombre'		=> array('Dedalo'),
+			'tipo'			=> array(5),
+			'tipoText'		=> array('Estructura')
+		];
+	}//end get_arrayTablas
 
 
 
@@ -164,7 +120,7 @@ class dd extends dd_elements {
 	* Número de indexaciones .
 	* Se usa para verificar que no se usa en indexaciones antes de permitir borrar el descriptor
 	*/
-	public static function get_ar_indexations($terminoID) {
+	public static function get_ar_indexations(string $terminoID) : array {
 
 		$ar_indexations = array();
 
@@ -175,7 +131,6 @@ class dd extends dd_elements {
 		$matrix_table					= RecordObj_descriptors_dd::$descriptors_matrix_table;
 		$RecordObj_descriptors_dd		= new RecordObj_descriptors_dd($matrix_table, NULL);
 		$ar_records						= $RecordObj_descriptors_dd->search($arguments);
-			#dump($ar_records,'terminoID '.$terminoID);
 
 		if(count($ar_records)===1) {
 
@@ -189,30 +144,27 @@ class dd extends dd_elements {
 
 			$ar_indexations = $dato;
 		}
+
 		return $ar_indexations;
-	}
+	}//end get_ar_indexations
+
 
 	/*
 	* Despeja parent a partir del terminoID actual
 	*/
-	public static function terminoID2parent($terminoID) {
+	public static function terminoID2parent(string $terminoID) {
 
 		if(strlen($terminoID)>2) {
 			$RecordObj_dd	= new RecordObj_dd($terminoID);
 			return $RecordObj_dd->get_parent();
 		}
 		return false ;
-	}
-
-
-
-
-
+	}//end terminoID2parent
 
 
 
 	# PREFIJO FIX 2 STATIC VERSION
-	public static function prefijoFix2($terminoID, $terminoID2) {
+	public static function prefijoFix2(string $terminoID, string $terminoID2) : string {
 
 		# prefijo válido
 		$prefijo	= RecordObj_dd::get_prefix_from_tipo($terminoID);
@@ -233,25 +185,33 @@ class dd extends dd_elements {
 			# si SI tiene prefijo y es distinto al actual, está mal y lo cambiamos
 			$terminoID2 = $prefijo . substr($terminoID2,2);
 		}
+
 		return $terminoID2 ;
 	}
 
 
 
 
-	/*
-	* esmodeloHeredado . Verificamos si este término es modelo
+	/**
+	* ESMODELOCURRENT
+	* esmodeloHeredado .
+	* Verificamos si este término es modelo
+	* @return string si|no
 	*/
-	protected static function esmodeloCurrent($terminoID) {
+	protected static function esmodeloCurrent(string $terminoID) : string {
 		$RecordObj_dd	= new RecordObj_dd($terminoID);
 		$esmodelo		= $RecordObj_dd->get_esmodelo();
 		return $esmodelo ;
 	}
 
-	/*
-	* esdescriptorCurrent . Verificamos si este término es descriptor
+
+
+	/**
+	* ESDESCRIPTORCURRENT
+	* Verificamos si este término es descriptor
+	* @return string si|no
 	*/
-	protected static function esdescriptorCurrent($terminoID) {
+	protected static function esdescriptorCurrent(string $terminoID) : string {
 		$RecordObj_dd	= new RecordObj_dd($terminoID);
 		$esdescriptor	= $RecordObj_dd->get_esdescriptor();
 		return $esdescriptor ;
@@ -276,7 +236,7 @@ class dd extends dd_elements {
 	* terminoIDresalte se usa para resaltar el término en las búsuqedas (es un listado -pueden ser varios- y se cotejan todos sus ids con el terminoDiactual)
 	* header (activa o no la inclusión de la barra superior)
 	***************************************************************************************************************************************/
-	public function buildTree($parentInicial, $terminoIDActual, $terminoIDresalte, $header='no') {
+	public function buildTree(string $parentInicial, string $terminoIDActual, ?string $terminoIDresalte, string $header='no') : string {
 
 		$html = '' ;			#print("parentInicial:$parentInicial, terminoIDActual:$terminoIDActual, terminoIDresalte:$terminoIDresalte, header:$header, esmodelo:$esmodelo ");die();
 
@@ -370,12 +330,8 @@ class dd extends dd_elements {
 		}#while ($row_RS = mysql_fetch_assoc($RS)); mysql_free_result($RS);
 
 
-		return $html ;
-
+		return $html;
 	}#fin function buildTree
-
-
-
 
 
 
@@ -384,7 +340,7 @@ class dd extends dd_elements {
 	* En modo normal (visualización y edición del tesauro) muestra el botón de añadir tesauro.
 	* En modo indexación, muestra un rótulo de selección de término
 	*/
-	public function headerListJer()	{
+	public function headerListJer()	: string {
 
 		global $terminos_title ;
 		global $seleccione_el_descriptor ;
@@ -393,7 +349,7 @@ class dd extends dd_elements {
 		global $termino_title ;
 		global $jerarquia_title ;
 
-		$html = false ;
+		$html = '' ;
 
 		if($this->modo==='modelo_edit') {
 			$add_class	= 'tsHeader_modelo' ;
@@ -435,15 +391,16 @@ class dd extends dd_elements {
 	/**
 	* EXISTEESTETERMINO : verifica si existe el término dado
 	*/
-	function existeEsteTermino($termino,$terminoID)	{
+	function existeEsteTermino(string $termino, string $terminoID) : ?string {
 
 		$exists		= RecordObj_decriptors::termino_exists($termino,$terminoID);
 		if($exists) {
 			global 	$el_termino_ya_existe_title ;
 			$html	= "<div class=\"error\"> $el_termino_ya_existe_title: <b>$termino</b> </div>";
 		}else{
-			$html 	= false;
+			$html 	= null;
 		}
+
 		return $html;
 	}
 
@@ -455,7 +412,7 @@ class dd extends dd_elements {
 	* SEARCH FORM . Busca en los descriptores
 	* Devuelve un string secuencia de números tipo ts536,ts635,ts895,es965
 	*****************************************************************************/
-	function searchTSform($terminoID, $termino, $def, $type, $modelo=NULL) {
+	function searchTSform(string $terminoID, string $termino, string $def, string $type, ?string $modelo=null) : array {
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
@@ -634,7 +591,7 @@ class dd extends dd_elements {
 
 
 
-	protected function terminoDeTipoCorrecto($terminoID) {
+	protected function terminoDeTipoCorrecto(string $terminoID) : bool {
 		return (bool)verify_dedalo_prefix_tipos($terminoID);
 
 		/*
@@ -656,9 +613,9 @@ class dd extends dd_elements {
 	# Secuencia de resultados para la cookie
 	# Crea un string con el path hasta el hijo que toca, tipo ts8,ts25,ts86..
 	#
-	function listaDeResultados2cookie($terminoIDlist) {
+	function listaDeResultados2cookie(string $terminoIDlist) : string {
 
-		$resultStringList = false ;
+		$resultStringList = '' ;
 
 		# Recogemos el string terminoIDlist devuelto por la búsqueda y lo convertimos en un array
 		$listArray = explode(",", $terminoIDlist);
@@ -704,21 +661,19 @@ class dd extends dd_elements {
 		}
 
 		return $resultStringList ;
-
 	}# fin listaDeResultados2cookie
 
 
 	#
 	# Optimiza la lista de paths eliminando los redundantes de 2º,3º... aparición
 	#
-	protected static function optimize_listaDeResultados2cookie($resultStringList) {
+	protected static function optimize_listaDeResultados2cookie(string $resultStringList) : string {
 
-		$result 	= false ;
-		$list		= false ;
+		$result	= '' ;
+		$list	= false ;
 
 		# convertimos en array el string
 		$listArray = explode(",", $resultStringList);
-
 		if(is_array($listArray)) {
 
 			# eliminamos los dupliicados del array
@@ -731,17 +686,19 @@ class dd extends dd_elements {
 
 			$result = substr($list,0,-1); #print("OPT: $list <hr>");die();
 
-		}else{ die(__METHOD__."Error: optimize_listaDeResultados2cookie "); };
+		}else{
+			die(__METHOD__."Error: optimize_listaDeResultados2cookie ");
+		};
 
 		return $result ;
-	}
+	}//end optimize_listaDeResultados2cookie
 
 
 
 	#
 	# nivelVirtual. Creamos un nivel virtual en función de cuantos padres tiene este termino
 	#
-	private function nivelVirtual($terminoID) {
+	private function nivelVirtual(string $terminoID) : int {
 
 		$nivel = 0 ;
 
@@ -758,11 +715,13 @@ class dd extends dd_elements {
 			$RecordObj_dd		= new RecordObj_dd($terminoID);
 			$ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();
 
-			if(is_array($ar_parents_of_this))	$nivel = count($ar_parents_of_this);
+			if(is_array($ar_parents_of_this)) {
+				$nivel = count($ar_parents_of_this);
+			}
 		}
-		return $nivel ;
 
-	}# fin nivelVirtual
+		return $nivel;
+	}//end fin nivelVirtual
 
 
 
@@ -844,5 +803,6 @@ class dd extends dd_elements {
 	}
 
 
-};// class
-?>
+
+};// class dd
+

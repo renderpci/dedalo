@@ -2349,7 +2349,7 @@
 		Added publication API sql_options->sql_filter sanitation filter
 		Added publication API char '+' to allowed chars in field name (necessary for complex queries)
 		01-05-2021
-		Fixed Ontoly lang change error
+		Fixed Ontology lang change error
 		Removed web_data sanitize $sql_options->sql_filter (incompatible with some configurations)
 		03-05-2021
 		Fixed component portal buttons issue within tool time machine
@@ -2473,7 +2473,7 @@
 		Added SAML sample config file
 		Added inheritance from father if exists to section->duplicate_current_section method
 		28-10-2021
-		Re-orde the sample.config definitions
+		Re-order the sample.config definitions
 		Fixed error on button_new.js create_new_blank_record() method which made it impossible to create new records from list mode
 		Fixed sample config loader include order error
 		02-11-2021
@@ -2601,7 +2601,7 @@
 		Fixed issue in web_data free search in literal mode. Remove possible quotes added and force add new ones
 		14-12-2021
 		Clean diffusion mysql code
-		Refactorized diffusion_mysql add_column method
+		Re-factorized diffusion_mysql add_column method
 		Added publication class.diffusion mysql check for column exists. If not exists, a new column will be created automatically
 		21-12-2021
 		Added method 'resolve_indexation_fragments' to class 'process_result'. Updated Publication API swagger updated file
@@ -2610,7 +2610,7 @@
 		23-12-2021
 		Clean Publication class DBi code
 		Clean code web_data::get_fragment_from_index_locator method. Unified response as object
-		Fixed diffusion_mysql error where automatic columns 'section_id', 'section_tipo,', 'lang' generating errors whe columns are added to a existing tables
+		Fixed diffusion_mysql error where automatic columns 'section_id', 'section_tipo,', 'lang' generating errors when columns are added to a existing tables
 		29-12-2021
 		Fixed publication web_data get_PDO_connection error where port was not send into the dsn string
 		Re-factorized web_data functions get_publication_schema, get_table_fields, get_all_tables to use DDO connection
@@ -2687,6 +2687,19 @@
 		Fixed component_common->split_query check error when try to check $query_object->q strpos
 		Added diffusion database_alias option to overwrite 'table' and 'table_alias' from original (numisdata catalog case for example)
 		Improved build_version_from_git_master response messages for easy debug
+		Clean code of build_version_from_git_master function
+		Updated core functions to_string to deal with associative array values
+		Fixed issue on dd_init_test PSQL check with empty response
+		Updated sample.config4.php file with more constants and comments
+		Ontology code clean and PHP8 compatibility issues fixed
+		Fixed ontology form submit duplicity issue when a new term is created. Now enter the fields, press the ENTER key, don't submit the form, just click the 'Modify' button
+		Fixed ontology possible infinite loop when empty tern_id is received twice
+		Fixed ontology cache bug where method tipo_to_json_item returns inconsistent cached value from previous DB call
+		Added .htaccess old Apache versions (<2.4) compatibility
+		Fixed tool_import_dedalo_csv issue with non-utf8 files blocking tool preview of files
+		Fixed auto_detect_line_endings error on method read_csv_file_as_array (class.tool_common.php)
+		Restored core_function 'to_string' null result values to '' instead 'null'
+
 
 
 	[/HISTORY]
@@ -2718,7 +2731,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-05-2022T13:01:12');
+	define('DEDALO_BUILD'	, '25-05-2022T13:20:33');
 
 
 	/*
