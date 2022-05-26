@@ -121,6 +121,8 @@ class component_section_id extends component_common {
 
 		$query_object->unaccent = false;
 
+		// column_name
+		$query_object->column_name = 'section_id';
 
 		switch (true) {
 			# BETWEEN
