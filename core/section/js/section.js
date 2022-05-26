@@ -16,6 +16,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {render_edit_section} from './render_edit_section.js'
 	import {render_list_section} from './render_list_section.js'
+	import {render_common_section} from './render_common_section.js'
 
 
 
@@ -81,6 +82,8 @@ export const section = function() {
 	section.prototype.list_portal		= render_list_section.prototype.list
 	section.prototype.tm				= render_list_section.prototype.list
 	section.prototype.list_header		= render_list_section.prototype.list_header
+
+	section.prototype.delete_record		= render_common_section.prototype.delete_record
 
 
 
@@ -170,6 +173,14 @@ section.prototype.init = async function(options) {
 					sqo		: sqo
 				})
 			}
+		}//end fn_create_new_section
+
+		// delete_section_
+		self.events_tokens.push(
+			event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
+		)
+		async function fn_delete_section(record_to_delete) {
+			self.delete_record(record_to_delete)
 		}//end fn_create_new_section
 
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
@@ -282,7 +293,7 @@ section.prototype.build = async function(autoload=false) {
 			})
 			// self.filter.build()
 		}
-		// console.log("section build filter unactive (remember) ");
+		// console.log("section build filter inactive (remember) ");
 
 	// load data if is not already received as option
 		if (autoload===true) {
