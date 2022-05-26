@@ -117,7 +117,7 @@ tool_common.prototype.init = async function(options) {
 									section_tipo	: self.caller.section_tipo,
 									section_id		: self.caller.section_id,
 									model			: self.caller.model,
-									mode			: 'edit',
+									mode			: self.caller.mode, //'edit',
 									role			: 'main_element'
 								}]
 							}
