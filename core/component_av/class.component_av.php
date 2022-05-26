@@ -74,8 +74,6 @@ class component_av extends component_media_common {
 			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - section_id:$this->section_id - lang:$this->lang)");
 
 		}//end if ($need_save)
-
-
 	}//end __construct
 
 
@@ -190,7 +188,7 @@ class component_av extends component_media_common {
 	* GET_ID
 	* Alias of get_video_id
 	*/
-	public function get_id() {
+	public function get_id() : string {
 
 		return $this->get_video_id();
 	}//end get_id
@@ -199,8 +197,9 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VIDEO_ID
+	* @return string $video_id
 	*/
-	public function get_video_id() {
+	public function get_video_id() : string {
 
 		if(isset($this->video_id)) return $this->video_id;
 
@@ -211,13 +210,13 @@ class component_av extends component_media_common {
 			}
 			return 0;
 		}
-		$locator  = new locator($dato);
-		$video_id = $locator->get_flat($dato);
-			#dump($video_id,'video_id');
+		$locator	= new locator($dato);
+		$video_id	= $locator->get_flat($dato);
+
 
 		return $this->video_id = $video_id;
 	}
-	public function get_av_id() {
+	public function get_av_id() : string {
 
 		return $this->get_video_id();
 	} // Alias of get_video_id()
@@ -240,7 +239,7 @@ class component_av extends component_media_common {
 	/**
 	* GET_DEFAULT_QUALITY
 	*/
-	public function get_default_quality() {
+	public function get_default_quality() : string {
 
 		return DEDALO_AV_QUALITY_DEFAULT;
 	}//end get_default_quality
@@ -250,10 +249,10 @@ class component_av extends component_media_common {
 	/**
 	* UPLOAD NEEDED
 	*/
-	public function get_target_filename() {
+	public function get_target_filename() : string {
 		return $this->video_id .'.'. $this->get_extension();
 	}
-	public function get_target_dir() {
+	public function get_target_dir() : string  {
 		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $this->get_quality() ;
 		#return $this->AVObj->get_media_path_abs();
 	}//end get_target_dir
@@ -262,17 +261,19 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_URL
+	* @param string|null $quality = null
+	* @return string $video_url
 	*/
-	public function get_url($quality=false) {
+	public function get_url( ?string $quality=null ) : string {
 
-		if($quality===false) {
+		if(empty($quality)) {
 			$quality = $this->get_quality();
 		}
 
 		$video_id = $this->get_video_id();
 
-		$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
-		$name = $video_id .'.'. $this->get_extension();
+		$path	= DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
+		$name	= $video_id .'.'. $this->get_extension();
 
 		$video_url = $path . $name;
 
@@ -283,12 +284,12 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VIDEO_PATH
-	* @param string $quality
+	* @param string|null $quality = null
 	* @return string $video_path
 	*/
-	public function get_video_path($quality=false) : string {
+	public function get_video_path( ?string $quality=null ) : string {
 
-		if($quality===false) {
+		if(empty($quality)) {
 			$quality = $this->get_quality();
 		}
 
@@ -536,7 +537,7 @@ class component_av extends component_media_common {
 	* GET_DURATION_SECONDS
 	* @return int|string $duration_seconds OR string $timecode
 	*/
-	public function get_duration_seconds($format=null) {
+	public function get_duration_seconds(?string $format=null) {
 
 		$duration_seconds = 0;
 
@@ -810,7 +811,7 @@ class component_av extends component_media_common {
 	* If not quality is received, default will be used (404 normally)
 	* @return bool
 	*/
-	public function file_exist($quality=false) : bool {
+	public function file_exist(?string $quality=null) : bool {
 
 		$video_path  = $this->get_video_path($quality);
 		$file_exists = file_exists($video_path);
@@ -1108,7 +1109,7 @@ class component_av extends component_media_common {
 	* Check the file to get the head streams of the video file
 	* @return
 	*/
-	public function get_media_streams($quality=false) {
+	public function get_media_streams(?string $quality=null) {
 
 		//get the video file path
 			$video_path = $this->get_video_path($quality);

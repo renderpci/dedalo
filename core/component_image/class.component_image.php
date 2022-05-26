@@ -7,10 +7,11 @@ require_once(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 class component_image extends component_media_common {
 
 
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-	# file name formated as 'tipo'-'order_id' like dd732-1
+	# file name formatted as 'tipo'-'order_id' like dd732-1
 	public $image_id;
 	public $image_url;
 	public $quality;
@@ -245,7 +246,7 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor_export
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -265,11 +266,12 @@ class component_image extends component_media_common {
 	}//end get_valor_export
 
 
+
 	/**
 	* GET_ID
 	* Alias of get_image_id
 	*/
-	public function get_id() {
+	public function get_id() : string {
 
 		return $this->get_image_id();
 	}//end get_id
@@ -328,7 +330,7 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_ADITIONAL_PATH
-	* Calculate image aditional path from 'properties' json config.
+	* Calculate image additional path from 'properties' json config.
 	*/
 	public function get_aditional_path() {
 
@@ -497,7 +499,7 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_URL
-	* Comon unified function used by component_media_common get_files_info
+	* Common unified function used by component_media_common get_files_info
 	* @see component_media_common->get_files_info()
 	*
 	* @param string quality
@@ -772,31 +774,30 @@ class component_image extends component_media_common {
 	/**
 	* GENERATE_THUMB
 	* Called on save
-	* @return array url,path of thumb file path OR bool false if default quality file not exts
+	* @return object|null $result
+	* 	url	path of thumb file path OR null if default quality file do not exists
 	*/
-	public function generate_thumb() {
+	public function generate_thumb() : ?object {
 
 		// common data
-			$image_id 			 = $this->get_image_id();
-			$aditional_path 	 = $this->get_aditional_path();
-			$initial_media_path  = $this->get_initial_media_path();
+			$image_id			= $this->get_image_id();
+			$aditional_path		= $this->get_aditional_path();
+			$initial_media_path	= $this->get_initial_media_path();
 
 		// source data (default quality is source)
-			$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
-			$default_image_path  = $source_ImageObj->get_local_full_path();
+			$source_ImageObj	= new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+			$default_image_path	= $source_ImageObj->get_local_full_path();
 
 		// check default quality image
 			if (!file_exists($default_image_path)) {
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Default image quality does not exists. Skip create thumb. ".to_string(), logger::ERROR);
-				}
-				return false;
+				debug_log(__METHOD__." Default image quality does not exists. Skip to create thumb. ".to_string($image_id), logger::ERROR);
+				return null;
 			}
 
 		// old thumb rename
-			$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
-			$image_thumb_path 	 = $ImageObj->get_local_full_path();
-			$image_thumb_url 	 = $ImageObj->get_url();	//$this->get_image_url($quality=DEDALO_IMAGE_THUMB_DEFAULT);
+			$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+			$image_thumb_path	= $ImageObj->get_local_full_path();
+			$image_thumb_url	= $ImageObj->get_url();	//$this->get_image_url($quality=DEDALO_IMAGE_THUMB_DEFAULT);
 			if(file_exists($image_thumb_path)) {
 				#unlink($image_thumb_path);
 				$image_thumb_path_des = $image_thumb_path.'_DES';
@@ -810,9 +811,9 @@ class component_image extends component_media_common {
 			debug_log(__METHOD__." dd_thumb function called and executed. ".to_string(), logger::DEBUG);
 
 		// result
-			$result = [
-				'path' => $image_thumb_path,
-				'url'  => $image_thumb_url
+			$result = (object)[
+				'path'	=> $image_thumb_path,
+				'url'	=> $image_thumb_url
 			];
 
 
@@ -1262,8 +1263,8 @@ class component_image extends component_media_common {
 
 	/**
 	* BUILD_STANDARD_IMAGE_FORMAT
-	* If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
-	* Used in tool_upload postprocessing file
+	* If uploaded file is not in Dedalo standard format (jpg), is converted, and original is conserved (like filename.tif)
+	* Used in tool_upload post-processing file
 	*/
 	public static function build_standard_image_format(string $uploaded_file_path) : string {
 
@@ -1426,9 +1427,9 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_PREVIEW_URL
-	* @return string $url
+	* @return string $preview_url
 	*/
-	public function get_preview_url($quality=DEDALO_IMAGE_QUALITY_DEFAULT) {
+	public function get_preview_url(string $quality=DEDALO_IMAGE_QUALITY_DEFAULT) : string {
 
 		// $preview_url = $this->get_thumb_url();
 		$preview_url = $this->get_image_url($quality, $test_file=false, $absolute=false, $default_add=false);
@@ -1442,7 +1443,7 @@ class component_image extends component_media_common {
 	* CREATE_DEFAULT_SVG_FILE
 	* @return string $svg_string_node
 	*/
-	public function create_default_svg_file($save_file=false) {
+	public function create_default_svg_file(bool $save_file=false) : string {
 
 		$image_id 		 		= $this->get_image_id();
 		$source_quality 		= DEDALO_IMAGE_QUALITY_DEFAULT;
@@ -1482,7 +1483,6 @@ class component_image extends component_media_common {
 
 
 
-
 	/**
 	* GET_BASE_SVG_URL
 	* Get image url for current quality
@@ -1490,10 +1490,9 @@ class component_image extends component_media_common {
 	*	optional default (bool)false
 	* @param bool $test_file
 	*	Check if file exists. If not use 0.jpg as output. Default true
-	* @param bool $absolute
-	*	Return relative o absolute url. Default false (relative)
+	* @param string $image_url
 	*/
-	public function get_base_svg_url($test_file=false, $absolute=false, $default_add=false) {
+	public function get_base_svg_url(bool $test_file=false, bool $absolute=false, bool $default_add=false) : string {
 
 		$image_id 		 	= $this->get_image_id();
 		$aditional_path  	= $this->get_aditional_path();
@@ -1528,9 +1527,9 @@ class component_image extends component_media_common {
 
 	/**
 	* CREATE_SVG_FILE
-	* @return
+	* @return bool
 	*/
-	public function create_svg_file($svg_string_node) {
+	public function create_svg_file(string $svg_string_node) : bool {
 
 		$image_id 		 		= $this->get_image_id();
 		$source_quality 		= DEDALO_IMAGE_QUALITY_DEFAULT;
@@ -1550,16 +1549,15 @@ class component_image extends component_media_common {
 
 
 
-
 	/**
 	* GET_FILE_CONTENT
 	* @return string $file_content
 	*/
-	public function get_file_content() {
+	public function get_file_content() : string {
 
-		$image_id 		 		= $this->get_image_id();
-		$aditional_path  		= $this->get_aditional_path();
-		$initial_media_path 	= $this->get_initial_media_path();
+		$image_id			= $this->get_image_id();
+		$aditional_path		= $this->get_aditional_path();
+		$initial_media_path	= $this->get_initial_media_path();
 
 		$aditional_path = $this->get_aditional_path();
 
@@ -1568,19 +1566,17 @@ class component_image extends component_media_common {
 
 		$svg_data = file_get_contents($svg_file_path);
 
-		$img_file_name 	= $image_id .'.'. $this->get_extension();
-		$img_file_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_IMAGE_QUALITY_DEFAULT . $aditional_path . '/' . $img_file_name;
+		$img_file_name	= $image_id .'.'. $this->get_extension();
+		$img_file_path	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_IMAGE_QUALITY_DEFAULT . $aditional_path . '/' . $img_file_name;
 
-		$type = pathinfo($img_file_path, PATHINFO_EXTENSION);
-		$data = file_get_contents($img_file_path);
-		$base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+		$type	= pathinfo($img_file_path, PATHINFO_EXTENSION);
+		$data	= file_get_contents($img_file_path);
+		$base64	= 'data:image/' . $type . ';base64,' . base64_encode($data);
 
 		$file_path = preg_replace('/xlink:href=".*?.jpg"/', 'xlink:href="'.$base64.'"', $svg_data);
 
 		return $file_path;
 	}//end get_file_content
-
-
 
 
 
@@ -1591,13 +1587,13 @@ class component_image extends component_media_common {
 	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
-			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
-			$options->reference_id 		= null;
-			$options->tipo 				= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version = $options->update_version;
@@ -1734,7 +1730,7 @@ class component_image extends component_media_common {
 	* @return string $result
 	*
 	*/
-	public function rotate($degrees, $quality=null) {
+	public function rotate($degrees, ?string $quality=null) : string {
 
 		$source = $this->get_path($quality);
 
@@ -1863,7 +1859,6 @@ class component_image extends component_media_common {
 
 		return DEDALO_IMAGE_EXTENSION;
 	}//end get_extension
-
 
 
 

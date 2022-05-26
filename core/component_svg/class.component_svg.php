@@ -47,7 +47,7 @@ class component_svg extends component_media_common {
 	* GET_ID
 	* Alias of get_svg_id
 	*/
-	public function get_id() {
+	public function get_id() : string {
 
 		return $this->get_svg_id();
 	}//end get_id

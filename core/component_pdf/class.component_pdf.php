@@ -197,7 +197,7 @@ class component_pdf extends component_media_common {
 	* GET_ID
 	* Alias of get_pdf_id
 	*/
-	public function get_id() {
+	public function get_id() : string {
 
 		return $this->get_pdf_id();
 	}//end get_id
