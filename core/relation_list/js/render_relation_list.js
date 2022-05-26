@@ -75,6 +75,8 @@ const get_content_data = function(self) {
 */
 const parse_html = function(datum, content_data_node){
 
+	if(!datum) return false
+
 	// get the context and the data information of the JSON recived
 		const context		= datum.context;
 		const data			= datum.data;
