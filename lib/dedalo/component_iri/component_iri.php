@@ -24,7 +24,6 @@
 	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return null ;
-	
 
 	switch($modo) {		
 		
@@ -95,7 +94,9 @@
 				break;
 				
 		case 'portal_list':
-				if(empty($valor)) return null;
+				$dato 	= $this->get_dato();
+				if(empty($dato)) return null;
+				break;
 
 		case 'list_tm' :
 				$file_name = 'list';

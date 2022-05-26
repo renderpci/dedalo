@@ -169,7 +169,8 @@ class component_iri extends component_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id=null, $current_locator=null, $caller_component_tipo=null) {
 
-		if (strpos($modo, 'edit')!==false) {
+		if (strpos($modo, 'edit')!==false || $modo === 'portal_list') {
+
 			$component 			= component_common::get_instance(__CLASS__,
 																 $tipo,
 															 	 $parent,
@@ -179,6 +180,7 @@ class component_iri extends component_common {
 			$value = $component->get_html();
 
 		}else{
+
 
 			# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
 			# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
@@ -213,7 +215,6 @@ class component_iri extends component_common {
 				}
 			}
 		}
-
 
 		return $value;
 	}//end render_list_value
