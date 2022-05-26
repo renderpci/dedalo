@@ -2700,7 +2700,8 @@
 		Fixed auto_detect_line_endings error on method read_csv_file_as_array (class.tool_common.php)
 		Restored core_function 'to_string' null result values to '' instead 'null'
 
-
+	Valencia 25-05-2022 5.8.6
+		Add link render for component_iri when is caller by portals in portal_list mode
 
 	[/HISTORY]
 
@@ -2725,13 +2726,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.5';
+	$DEDALO_VERSION = '5.8.6';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '25-05-2022T13:20:33');
+	define('DEDALO_BUILD'	, '26-05-2022T13:11:00');
 
 
 	/*
