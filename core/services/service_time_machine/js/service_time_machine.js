@@ -131,6 +131,8 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		}
 		await generate_rqo()
 
+			console.log("JSON.parse(JSON.stringify(self.rqo)):--------***********----------------",JSON.parse(JSON.stringify(self.rqo)));
+
 	// load data if is not already received as option
 		if (autoload===true) {
 
@@ -275,70 +277,11 @@ service_time_machine.prototype.build_context = function() {
 			}
 		]
 
-		// component. add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
-		let component = null
-		if (main_element && main_element.model==='section') {
-			// nothing to add to ddo_map
-		}else{
-			if(main_element){
-				// component defined
-				component = main_element
-				ddo_map.push({
-					tipo			: component.tipo,
-					type			: 'component',
-					typo			: 'ddo',
-					section_tipo	: section_tipo,
-					model			: component.model,
-					parent			: section_tipo,
-					label			: component.label,
-					mode			: 'list'
-				})
-
-				// component show . From rqo_config_show
-				const component_show = component.rqo_config && component.rqo_config.show && component.rqo_config.show.ddo_map
-					? clone(component.rqo_config.show.ddo_map)
-					: null
-				if (component_show) {
-					for (let i = 0; i < component_show.length; i++) {
-						const item = component_show[i]
-							  item.mode = 'list'
-						ddo_map.push(item)
-					}
-				}
-			}else{
-				// fallback (time machine list case)
-				ddo_map.push({
-					tipo			: 'dd1574', // generic tm info ontology item 'Value'
-					type			: 'component',
-					typo			: 'ddo',
-					model			: 'component_input_text',
-					section_tipo	: section_tipo,
-					parent			: section_tipo,
-					label			: 'Value',
-					mode			: 'list'
-				})
-			}
-		}
-
-	const filter_by_locators = (component)
-		? [{
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				tipo			: component.tipo, // (!) used only in time machine to filter by column tipo
-				lang			: lang // (!) used only in time machine to filter by column lang
-			}]
-		: [{
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				lang			: lang // (!) used only in time machine to filter by column lang
-			}]
-
-	// sqo
+		// sqo
 		const sqo = {
 			id					: 'tmp',
 			mode				: 'tm',
 			section_tipo		: [{tipo:section_tipo}],
-			filter_by_locators	: filter_by_locators,
 			limit				: self.limit,
 			offset				: 0,
 			order				: [{
@@ -346,6 +289,83 @@ service_time_machine.prototype.build_context = function() {
 				path		: [{component_tipo : 'id'}]
 			}]
 		}
+
+		// component. add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
+		if(main_element){
+
+			if (main_element.model==='section') {
+
+				sqo.parsed = true,
+				sqo.filter = {
+					and : [
+						{
+							q_parsed		: "\'deleted\'",
+							operator		: "=",
+							format			: "column",
+							column_name		: "state",
+							path			: [
+								{
+									section_tipo	: section_tipo
+								}
+							]
+						}
+					]
+				}
+
+			}else{
+
+				ddo_map.push({
+					tipo			: main_element.tipo,
+					type			: 'component',
+					typo			: 'ddo',
+					section_tipo	: section_tipo,
+					model			: main_element.model,
+					parent			: section_tipo,
+					label			: main_element.label,
+					mode			: 'list'
+				})
+
+				sqo.filter_by_locators = [{
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					tipo			: main_element.tipo, // (!) used only in time machine to filter by column tipo
+					lang			: lang // (!) used only in time machine to filter by column lang
+				}]
+			}
+
+			// main_element show . From rqo_config_show
+			const element_show = main_element.rqo_config && main_element.rqo_config.show && main_element.rqo_config.show.ddo_map
+				? clone(main_element.rqo_config.show.ddo_map)
+				: null
+			if (element_show) {
+				for (let i = 0; i < element_show.length; i++) {
+					const item = element_show[i]
+						  item.mode = 'list'
+					ddo_map.push(item)
+				}
+			}
+		}else{
+			// fallback (time machine list case)
+			ddo_map.push({
+				tipo			: 'dd1574', // generic tm info ontology item 'Value'
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_input_text',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				label			: 'Value',
+				mode			: 'list'
+			})
+
+			sqo.filter_by_locators = [{
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				lang			: lang // (!) used only in time machine to filter by column lang
+			}]
+
+		}
+
+
 
 	// request_config
 		const request_config = [{
@@ -356,7 +376,7 @@ service_time_machine.prototype.build_context = function() {
 				ddo_map : ddo_map
 			}
 		}]
-
+	console.log("request_config--------------------------:",request_config);
 	// // context
 		const context = {
 			type			: 'tm',
