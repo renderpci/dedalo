@@ -563,18 +563,21 @@ class search {
 			}else{
 
 				// Case object is a end search object
-				$path				= $search_object->path;
-				$search_component	= end($path);
-				// model (with fallback if not exists)
-				if (!isset($search_component->modelo)) {
-					$search_component->modelo = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
+				if (isset($search_object->format) && $search_object->format==='column') {
+
+					$ar_query_object	= [$search_object];
+				}else{
+
+					$path				= $search_object->path;
+					$search_component	= end($path);
+					// model (with fallback if not exists)
+					if (!isset($search_component->modelo)) {
+						$search_component->modelo = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
+					}
+					$model_name			= $search_component->modelo;
+					$ar_query_object	= $model_name::get_search_query2($search_object);
 				}
-				$model_name			= $search_component->modelo;
-				$ar_query_object	= $model_name::get_search_query2($search_object);
-				#debug_log(__METHOD__." ar_query_object $op - ".to_string($ar_query_object), logger::DEBUG);
-				#if (empty(reset($ar_query_object))) {
-				#	continue;
-				#}
+				
 				$new_ar_query_object->$op = array_merge($new_ar_query_object->$op, $ar_query_object);
 			}
 		}
@@ -1900,10 +1903,10 @@ class search {
 
 		#dump($search_object, ' search_object ++ '.to_string());
 
-		$path					= $search_object->path;
-		$table_alias 			= $this->get_table_alias_from_path($path);
+		$path			= $search_object->path ?? null;
+		$table_alias	= $this->get_table_alias_from_path($path);
 
-		if ($search_object->lang!=='all') {
+		if (isset($search_object->lang) && $search_object->lang!=='all') {
 
 			// Search already existing lang (maybe added in previous get_sql_where of current search_object like when count) 2018-12-18
 			$last_component_path = end($search_object->component_path);
@@ -1912,7 +1915,9 @@ class search {
 				$search_object->component_path[] = $search_object->lang;
 			}
 		}
-		$component_path 		= implode(',', $search_object->component_path);
+		$component_path = isset($search_object->component_path)
+			? implode(',', $search_object->component_path)
+			: null;
 
 		# search_object_type : string, array
 		$search_object_type 	= isset($search_object->type) ? $search_object->type : 'string';
@@ -2009,7 +2014,6 @@ class search {
 				$sql_where .= PHP_EOL.') -- end check_array_component'.PHP_EOL;
 				break;
 
-
 			case 'typeof':
 
 				if(SHOW_DEBUG===true) {
@@ -2024,15 +2028,13 @@ class search {
 				break;
 
 			case 'column':
+				$column_name = $search_object->column_name;
+
 				if(SHOW_DEBUG===true) {
-					$component_path_data 	= end($path);
-					$component_tipo 		= $component_path_data->component_tipo ?? $component_path_data->modelo;
-					$component_name 		= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-					$modelo_name 			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$sql_where .= "-- COLUMN FORMAT - $component_tipo - $component_name - $table_alias - $component_path - ".strtoupper($modelo_name)."\n";
+					$sql_where .= "-- COLUMN FORMAT - format: $search_object_format - $column_name - $table_alias \n";
 				}
 
-				$sql_where .= $table_alias . '.'.$component_path;
+				$sql_where .= $table_alias . '.'.$column_name;
 
 				# operator
 				$sql_where .= ' '.$search_object->operator.' ';
