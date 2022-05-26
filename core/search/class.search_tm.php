@@ -42,6 +42,7 @@ class search_tm extends search {
 
 	/**
 	* BUILD_SQL_QUERY_SELECT
+	* @param bool $full_count = false
 	* @return string $sql_query_select
 	*/
 	public function build_sql_query_select(bool $full_count=false) : string {
@@ -57,7 +58,7 @@ class search_tm extends search {
 
 		$ar_sql_select[] = '*';
 
-		# Add order columns to select when need
+		# Add order columns to select when needed
 			foreach ((array)$this->order_columns as $select_line) {
 				$ar_sql_select[] = $select_line;
 			}

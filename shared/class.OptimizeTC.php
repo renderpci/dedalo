@@ -469,32 +469,32 @@ abstract class OptimizeTC {
 
 	/**
 	* SEG2TC_MS
-	*//*
-	public static function seg2tc_ms($seg_float) {
-
-		$ar = explode('.', $seg_float);
-
-		$tc=0;
-		$tc2=0;
-
-			dump($ar, ' ar'.to_string());
-
-		if(isset($ar[0])) {
-			$tc = self::seg2tc($ar[0]);
-		}
-		if(isset($ar[1])) {
-			$tc2 = substr($ar[1],0,3);
-			$tc2 = str_pad($tc2, 3, '0', STR_PAD_RIGHT);
-		}
-
-		return $tc . '.' . $tc2 ;
-	}//end seg2tc_ms
 	*/
+		// public static function seg2tc_ms($seg_float) {
+
+		// 	$ar = explode('.', $seg_float);
+
+		// 	$tc=0;
+		// 	$tc2=0;
+
+		// 		dump($ar, ' ar'.to_string());
+
+		// 	if(isset($ar[0])) {
+		// 		$tc = self::seg2tc($ar[0]);
+		// 	}
+		// 	if(isset($ar[1])) {
+		// 		$tc2 = substr($ar[1],0,3);
+		// 		$tc2 = str_pad($tc2, 3, '0', STR_PAD_RIGHT);
+		// 	}
+
+		// 	return $tc . '.' . $tc2 ;
+		// }//end seg2tc_ms
 
 
 
 	/**
 	* MS_FORMAT
+	* @return string $tc
 	*/
 	public static function ms_format($time) : string {
 
@@ -509,11 +509,14 @@ abstract class OptimizeTC {
 
 	/**
 	* APLI_TC_OFFSET
-	* retorna un tc con el tc_offset (segundos) aplicado (sumado o restado, si es negativo
+	* Retorna un tc con el tc_offset (segundos) aplicado (sumado o restado, si es negativo
+	* @return string $tc_time_code
 	*/
-	public static function apli_tc_offset($tc, $tc_offset=false) {
+	public static function apli_tc_offset(string $tc, $tc_offset=false) : string {
 
-		if($tc_offset===false) return $tc;
+		if($tc_offset===false) {
+			return $tc;
+		}
 
 		$tc_sec = self::TC2seg($tc);
 		$tc_sec = intval($tc_sec + $tc_offset);
@@ -542,12 +545,12 @@ abstract class OptimizeTC {
 		if($formated) {
 
 			# Formated
-			$total_hotas = number_format($hours,0,',','.')." h : $minutes m";
+			$total_hotas = number_format($hours,0,',','.') . " h : $minutes m";
 
 		}else{
 
 			# Round
-			$total_hotas  = $hours;
+			$total_hotas = $hours;
 			if($minutes>30)
 				$total_hotas++;
 		}

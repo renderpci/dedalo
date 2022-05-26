@@ -120,7 +120,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	* GET_ID
 	* @return int|null $ID
 	*/
-	public function get_ID() {
+	public function get_id() : ?int {
 
 		$ID = ($this->ID===null)
 			? $this->calculate_ID()

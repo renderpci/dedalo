@@ -3,7 +3,7 @@
 <head>
 	<meta name="viewport" content="width=device-width">
 	<link rel="shortcut icon" href="../../favicon.ico" />
-	<title>Dédalo Management System V6</title>
+	<title>Dédalo V6</title>
 	<meta charset="utf-8">
 	<style type="text/css">
 		.loading {
@@ -101,6 +101,12 @@
 			// main. Add node and restore class
 				main.appendChild(wrapper_page)
 				main.classList.remove("loading","hide")
+
+			// page title update
+				const section_info = api_response.result.find(el => el.model==='section' || el.model.indexOf('area')===0)
+				if (section_info) {
+					document.title =  'V6 ' + section_info.tipo + ' ' + section_info.label
+				}
 
 			// debug
 				if(SHOW_DEBUG===true) {

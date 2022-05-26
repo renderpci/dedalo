@@ -27,35 +27,35 @@ export const component_portal = function() {
 	this.id = null
 
 	// element properties declare
-	this.model			= null
-	this.tipo			= null
-	this.section_tipo	= null
-	this.section_id		= null
-	this.mode			= null
-	this.lang			= null
-	this.section_lang	= null
-	this.column_id		= null
-	this.parent			= null
-	this.node			= null
-	this.modal			= null
-	this.caller			= null
+	this.model					= null
+	this.tipo					= null
+	this.section_tipo			= null
+	this.section_id				= null
+	this.mode					= null
+	this.lang					= null
+	this.section_lang			= null
+	this.column_id				= null
+	this.parent					= null
+	this.node					= null
+	this.modal					= null
+	this.caller					= null
 
 	// context - data
-	this.datum		= null
-	this.context	= null
-	this.data		= null
+	this.datum					= null
+	this.context				= null
+	this.data					= null
 
 	// pagination
-	this.total		= null
-	this.paginator	= null
+	this.total					= null
+	this.paginator				= null
 
 	// autocomplete service
 	this.autocomplete			= null
 	this.autocomplete_active	= null
 
 	// rqo
-	this.rqo_config	= null
-	this.rqo		= null
+	this.rqo_config				= null
+	this.rqo					= null
 
 	return true
 };//end  component_portal

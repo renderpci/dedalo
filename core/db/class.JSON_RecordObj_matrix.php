@@ -88,7 +88,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		));
 	}
 	# get_ID
-	public function get_ID() {
+	public function get_id() : ?int {
 		return parent::get_ID();
 	}
 
