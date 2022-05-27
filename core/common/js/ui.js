@@ -2223,10 +2223,11 @@ export const ui = {
 					parent			: body,
 					text_node		: msg
 				})
-
-			if(body_content){
-				body.appendChild(body_content)
-			}
+			// body_content
+				if(body_content){
+					body_content.classList.add('body_content')
+					body.appendChild(body_content)
+				}
 
 		// footer
 			const footer = ui.create_dom_element({

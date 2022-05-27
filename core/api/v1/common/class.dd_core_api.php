@@ -466,6 +466,7 @@ class dd_core_api {
 
 			$errors = [];
 			foreach ($ar_records as $record) {
+
 				$current_section_tipo	= $record->section_tipo;
 				$current_section_id		= $record->section_id;
 

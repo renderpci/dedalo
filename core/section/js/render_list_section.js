@@ -518,12 +518,10 @@ render_list_section.render_column_id = function(options){
 								parent			: fragment
 							})
 							delete_button.addEventListener("click", function(){
-								// delete_record(this, options)
-									console.log("self:",self);
 								event_manager.publish('delete_section_' + options.caller.id, {
 									section_tipo	: section_tipo,
 									section_id		: section_id,
-									caller			: options.caller
+									caller			: options.caller // section
 								})
 							})
 						// delete_icon
@@ -583,8 +581,6 @@ const get_buttons = function(self) {
 
 			const current_button = ar_buttons[i]
 
-			if(current_button.model==='button_delete') continue
-
 			// button node
 				const class_name	= 'warning ' + current_button.model
 				const button_node	= ui.create_dom_element({
@@ -599,6 +595,14 @@ const get_buttons = function(self) {
 					switch(current_button.model){
 						case 'button_new':
 							event_manager.publish('new_section_' + self.id)
+							break;
+						case 'button_delete':
+							event_manager.publish('delete_section_' + self.id,{
+								section_tipo	: self.section_tipo,
+								section_id		: null,
+								caller			: self,
+								sqo  			: self.rqo.sqo
+							})
 							break;
 						default:
 							event_manager.publish('click_' + current_button.model)
