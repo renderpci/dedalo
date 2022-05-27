@@ -1108,6 +1108,7 @@ abstract class diffusion  {
 			$response->msg 			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
 			$response->ar_deleted 	= [];
 
+
 		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
 		foreach ($ar_diffusion_element as $diffusion_element) {
 
