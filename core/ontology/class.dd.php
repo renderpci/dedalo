@@ -34,7 +34,7 @@ class dd extends dd_elements {
 
 
 	# Constructor
-	function __construct(string $modo='tesauro_list', string $type='all', $ts_lang=false) {
+	function __construct(string $modo='tesauro_list', string $type='all', string $ts_lang=null) {
 
 		#self::$tabla_jerarquia			= 'jerarquia';
 		#self::$tabla_jerarquia_tipos	= 'jerarquia_tipos';
@@ -60,7 +60,7 @@ class dd extends dd_elements {
 		*/
 	}
 
-	protected function set_mode(string $modo) {
+	protected function set_mode(string $modo) : void {
 		$this->valid_modes = array('tesauro_list','tesauro_edit','modelo_edit','tesauro_rel');
 		if( !in_array($modo, $this->valid_modes) ) {
 			die(__METHOD__." DD Tesauro Error: mode not valid! [<b>$mode</b>] <br> Use a valid mode to access.");
@@ -74,10 +74,10 @@ class dd extends dd_elements {
 		}
 		$this->modo = $modo ;
 	}
-	protected function set_type(string $type) {
+	protected function set_type(string $type) : void {
 		$this->type = $type;
 	}
-	protected function set_ts_lang($ts_lang) {
+	protected function set_ts_lang($ts_lang) : void {
 		$this->ts_lang = $ts_lang;
 	}
 	public function get_TablaActual() {
@@ -86,7 +86,7 @@ class dd extends dd_elements {
 	public function get_Prefijo() {
 		return $this->prefijo ;
 	}
-	protected function set_esmodelo($esmodelo) {
+	protected function set_esmodelo($esmodelo) : void {
 		$this->esmodelo = $esmodelo;
 	}
 
@@ -149,21 +149,26 @@ class dd extends dd_elements {
 	}//end get_ar_indexations
 
 
-	/*
+
+	/**
+	* TERMINOID2PARENT
 	* Despeja parent a partir del terminoID actual
 	*/
-	public static function terminoID2parent(string $terminoID) {
+	public static function terminoID2parent(string $terminoID) : ?string {
 
 		if(strlen($terminoID)>2) {
 			$RecordObj_dd	= new RecordObj_dd($terminoID);
 			return $RecordObj_dd->get_parent();
 		}
-		return false ;
+
+		return null ;
 	}//end terminoID2parent
 
 
-
-	# PREFIJO FIX 2 STATIC VERSION
+	/**
+	* PREFIJOFIX2
+	* Prefijo fix 2 static version
+	*/
 	public static function prefijoFix2(string $terminoID, string $terminoID2) : string {
 
 		# prefijo válido
@@ -187,8 +192,7 @@ class dd extends dd_elements {
 		}
 
 		return $terminoID2 ;
-	}
-
+	}//end prefijoFix2
 
 
 
@@ -199,10 +203,12 @@ class dd extends dd_elements {
 	* @return string si|no
 	*/
 	protected static function esmodeloCurrent(string $terminoID) : string {
+
 		$RecordObj_dd	= new RecordObj_dd($terminoID);
 		$esmodelo		= $RecordObj_dd->get_esmodelo();
+
 		return $esmodelo ;
-	}
+	}//end esmodeloCurrent
 
 
 
@@ -212,10 +218,12 @@ class dd extends dd_elements {
 	* @return string si|no
 	*/
 	protected static function esdescriptorCurrent(string $terminoID) : string {
+
 		$RecordObj_dd	= new RecordObj_dd($terminoID);
 		$esdescriptor	= $RecordObj_dd->get_esdescriptor();
+
 		return $esdescriptor ;
-	}
+	}//end esdescriptorCurrent
 
 
 
@@ -587,12 +595,11 @@ class dd extends dd_elements {
 		#if(SHOW_DEBUG===true) error_log( exec_time($start_time, __METHOD__, $result) );
 
 		return (array)$result ; #(este resultado será: terminoIDlist)
-	}# fin searchTSform
+	}//end searchTSform
 
 
 
 	protected function terminoDeTipoCorrecto(string $terminoID) : bool {
-		return (bool)verify_dedalo_prefix_tipos($terminoID);
 
 		/*
 		$DEDALO_PREFIX_TIPOS = unserialize(DEDALO_PREFIX_TIPOS);
@@ -606,7 +613,9 @@ class dd extends dd_elements {
 			}
 		}
 		return false;*/
-	}
+		return (bool)verify_dedalo_prefix_tipos($terminoID);
+	}//end terminoDeTipoCorrecto
+
 
 
 	#
@@ -661,7 +670,8 @@ class dd extends dd_elements {
 		}
 
 		return $resultStringList ;
-	}# fin listaDeResultados2cookie
+	}//end listaDeResultados2cookie
+
 
 
 	#
@@ -695,14 +705,15 @@ class dd extends dd_elements {
 
 
 
-	#
-	# nivelVirtual. Creamos un nivel virtual en función de cuantos padres tiene este termino
-	#
+	/**
+	* NIVELVIRTUAL
+	* Creamos un nivel virtual en función de cuantos padres tiene este termino
+	*/
 	private function nivelVirtual(string $terminoID) : int {
 
 		$nivel = 0 ;
 
-		$parent 		= dd::terminoID2parent($terminoID);
+		$parent			= dd::terminoID2parent($terminoID);
 		$parent_zero	= RecordObj_dd::get_prefix_from_tipo($terminoID).'0';
 		$prefijo		= RecordObj_dd::get_prefix_from_tipo($terminoID);
 
@@ -725,84 +736,83 @@ class dd extends dd_elements {
 
 
 
-
-
-
-
-
-
-
-	/*
+	/**
 	* Despeja tabla en función del prefijo del terminoID
 	* Despejamos la tabla actual y fijamos en la variable privada $tabla y el prefijo validado en la variable privada $prefijo
 	* Devuelve la tabla validada
 	*/
-	public function terminoID2tablaFix__DEPRECATED($terminoID=false) {
-		return 'jer_dd';
-	}
+		// public function terminoID2tablaFix__DEPRECATED($terminoID=false) : string {
 
-	/*
+		// 	return 'jer_dd';
+		// }
+
+
+
+	/**
 	* Verifica que el prefijo está bién formado y es correcto (Evita errores de ts25 por tp25...)
 	* Si no se pasa prefijo o no corresponde con el actual fijado, lo cambia por el actual fijado en $this-prefijo
 	*/
-	public function prefijoFix__DEPRECATED($terminoID) {
+		// public function prefijoFix__DEPRECATED($terminoID) {
 
-		$result = false ;
+		// 	$result = false ;
 
-		$prefijo = self::get_prefix_from_tipo($terminoID); #die("prefijo: $prefijo");
+		// 	$prefijo = self::get_prefix_from_tipo($terminoID); #die("prefijo: $prefijo");
 
-		if($prefijo===$this->prefijo) {
-			# ok
-			$result = $terminoID ;
+		// 	if($prefijo===$this->prefijo) {
+		// 		# ok
+		// 		$result = $terminoID ;
 
-		}else{
-			# repair
+		// 	}else{
+		// 		# repair
 
-			$havePrefix = true;
-			preg_match("/\D+/", $terminoID, $output_array);
-			if (empty($output_array[0])) {
-				$havePrefix = false;
-			}
+		// 		$havePrefix = true;
+		// 		preg_match("/\D+/", $terminoID, $output_array);
+		// 		if (empty($output_array[0])) {
+		// 			$havePrefix = false;
+		// 		}
 
 
-			if(!$havePrefix)
-			{
-				# si NO tiene prefijo, le añadimos el de la tabla actual
-				$terminoIDfix = $this->prefijo . $terminoID ;
+		// 		if(!$havePrefix)
+		// 		{
+		// 			# si NO tiene prefijo, le añadimos el de la tabla actual
+		// 			$terminoIDfix = $this->prefijo . $terminoID ;
 
-			}else{
+		// 		}else{
 
-				# si SI tiene prefijo distinto al actual, está mal y lo cambiamos
-				$leng_current_prefix = strlen($output_array[0]);
-				$terminoIDfix = $this->prefijo . substr($terminoID, $leng_current_prefix);
-			}
+		// 			# si SI tiene prefijo distinto al actual, está mal y lo cambiamos
+		// 			$leng_current_prefix = strlen($output_array[0]);
+		// 			$terminoIDfix = $this->prefijo . substr($terminoID, $leng_current_prefix);
+		// 		}
 
-			$result = $terminoIDfix ;
-		}
+		// 		$result = $terminoIDfix ;
+		// 	}
 
-		return $result;
-	}
+		// 	return $result;
+		// }
+
+
 
 	# TERMINOID 2 PREFIX
-	public static function terminoID2prefix__DEPRECATED($terminoID) {
-		if( is_array($terminoID) || !is_string($terminoID) ) throw new Exception("Error Processing Request.  Error: terminoID is not string: terminoID:$terminoID ", 1);
-		return 'dd';
-	}
+		// public static function terminoID2prefix__DEPRECATED($terminoID) {
+		// 	if( is_array($terminoID) || !is_string($terminoID) ) throw new Exception("Error Processing Request.  Error: terminoID is not string: terminoID:$terminoID ", 1);
+		// 	return 'dd';
+		// }
+
+
 
 	# PREFIJO COMPARE
-	public static function prefijo_compare__DEPRECATED($terminoID, $terminoID2) {
+		// public static function prefijo_compare__DEPRECATED($terminoID, $terminoID2) {
 
-		$prefijo	= RecordObj_dd::get_prefix_from_tipo($terminoID);
-		$prefijo2	= RecordObj_dd::get_prefix_from_tipo($terminoID2);
+		// 	$prefijo	= RecordObj_dd::get_prefix_from_tipo($terminoID);
+		// 	$prefijo2	= RecordObj_dd::get_prefix_from_tipo($terminoID2);
 
-		if (!empty($prefijo) && $prefijo===$prefijo2) {
-			return true;
-		}
+		// 	if (!empty($prefijo) && $prefijo===$prefijo2) {
+		// 		return true;
+		// 	}
 
-		return false;
-	}
+		// 	return false;
+		// }
 
 
 
-};// class dd
-
+}//end  class dd
