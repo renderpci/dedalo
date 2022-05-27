@@ -400,7 +400,14 @@ component_portal.prototype.add_value = async function(value) {
 		})
 
 	// total (after save)
-		const total = api_response.result.data.find(el => el.tipo===self.tipo).pagination.total
+		const current_data = api_response.result.data.find(el => el.tipo===self.tipo)
+		const total = current_data
+			? current_data.pagination.total
+			: 0
+		if (total===0) {
+			console.warn("// add_value api_response.result.data (unexpected total):",api_response.result.data);
+		}
+
 
 	// check if value already existed. (!) Note that here, the whole portal data has been compared in server
 		if (parseInt(total) <= parseInt(total_before)) {

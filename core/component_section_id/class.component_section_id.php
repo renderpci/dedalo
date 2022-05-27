@@ -105,7 +105,7 @@ class component_section_id extends component_common {
 		# Always set fixed values
 		$query_object->type = 'number';
 
-		# Always set format to column
+		# format. Always set format to column (but in sequence case)
 		$query_object->format = 'column';
 
 		$between_separator  = '...';
@@ -216,8 +216,6 @@ class component_section_id extends component_common {
 				$query_object->q_parsed	= $q_clean;
 				break;
 		}//end switch (true) {
-		// debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
-		// dump($query_object, ' query_object ++++++++++++++++++++++++++ '.to_string());
 
 
 		return $query_object;

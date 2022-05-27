@@ -536,10 +536,10 @@ abstract class OptimizeTC {
 	public static function minutos_to_horas(int $minutos, bool $formated=true) {
 
 		# calcate hours / minutes
-		$h = ($minutos/60);
-		$ar_h = explode(',',strval($h));
+		$h		= ($minutos/60);
+		$ar_h	= explode(',',strval($h));
 
-		$hours 		= intval($ar_h[0]);
+		$hours		= intval($ar_h[0]);
 		$minutes	= $minutos - $hours*60;
 		#echo " $hours : $minutes";
 		if($formated) {
