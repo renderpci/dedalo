@@ -170,15 +170,24 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* UPDATE_CHILDREN
+	* Locate current section component_relation_children and remove given children_section_id, children_section_tipo combination from data
+	* @param string $action
+	* 	remove|add
+	* @param string $children_section_tipo
+	* @param mixed $children_section_id
+	* @param string $component_relation_children_tipo = null
+	*
 	* @return bool $result
 	*/
-	private function update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
+	private function update_children(string $action, string $children_section_tipo, $children_section_id, string $component_relation_children_tipo=null) : bool {
 
 		$result = false;
 
-		$tipo 			= $this->tipo;
-		$section_tipo 	= $this->section_tipo;
-		$section_id 	= $this->section_id;
+		// short vars
+			$tipo			= $this->tipo;
+			$section_tipo	= $this->section_tipo;
+			$section_id		= $this->section_id;
+
 
 		// component_relation_children_tipo. Resolve if null
 			if (empty($component_relation_children_tipo)) {
@@ -192,12 +201,14 @@ class component_relation_parent extends component_relation_common {
 			}
 
 		// component instance
-			$component_relation_children   = component_common::get_instance($model,
-														  					$component_relation_children_tipo,
-														  					$children_section_id,
-														  					'edit',
-														  					DEDALO_DATA_NOLAN,
-														  					$children_section_tipo);
+			$component_relation_children = component_common::get_instance(
+				$model,
+				$component_relation_children_tipo,
+				$children_section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$children_section_tipo
+			);
 
 		// change link to me in relation_children
 			switch ($action) {
@@ -244,9 +255,10 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* REMOVE_PARENT
+	* 	Alias of update_children
 	* @return bool
 	*/
-	public function remove_parent($children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
+	public function remove_parent(string $children_section_tipo, $children_section_id, ?string $component_relation_children_tipo=null) : bool {
 
 		$action = 'remove';
 
@@ -794,6 +806,41 @@ class component_relation_parent extends component_relation_common {
 		# unaccent
 		$query_object->unaccent = false;
 
+		// old format
+			// {
+			//		"q": "{\"section_tipo\":\"es1\",\"section_id\":\"8842\",\"type\":\"dd151\",\"from_component_tipo\":\"hierarchy36\"}",
+			//		"q_operator": null,
+			//		"path": [{
+			//			"section_tipo": "es1",
+			//			"component_tipo": "hierarchy36",
+			//			"modelo": "component_relation_parent",
+			//			"name": "Dependent of"
+			//		}],
+			//		"component_path": [
+			//			"section_id"
+			//		],
+			//		"lang": "all",
+			//		"type": "number",
+			//		"format": "column",
+			//		"unaccent": false,
+			//		"operator": "=",
+			//		"q_parsed": 8125
+			// }
+
+		// new format
+			$base_sqo = (object)[
+				'format'		=> 'column',
+				'q_parsed'		=> null,
+				'operator'		=> '=',
+				'column_name'	=> 'section_id',
+				'path'			=> []
+			];
+			// {
+			//		"format": "column",
+			//		"q_parsed": 8125,
+			//		"operator": "=",
+			//		"column_name": "section_id"
+			// }
 
 		$ar_parts 	= $ar_childrens;
 		$ar_result  = [];
@@ -810,6 +857,34 @@ class component_relation_parent extends component_relation_common {
 		$new_object = new stdClass();
 			$new_object->{$cop} = $ar_result;
 		$query_object = $new_object;
+
+
+			/*
+			{
+			    "q": "3",
+			    "q_operator": null,
+			    "path": [
+			        {
+			            "section_tipo": "oh1",
+			            "component_tipo": "oh62",
+			            "modelo": "component_section_id",
+			            "name": "Id"
+			        }
+			    ],
+			    "type": "number",
+			    "component_path": [
+			        "section_id"
+			    ],
+			    "lang": "all",
+			    "format": "column",
+			    "unaccent": false,
+			    "column_name": "section_id",
+			    "operator": "=",
+			    "q_parsed": 3
+			}
+			*/
+			dump($query_object, ' query_object WORKING HERE ++///////////////////////////******************//////////////////////////////////////// '.to_string());
+
 
 		return $query_object;
 	}//end resolve_query_object_sql

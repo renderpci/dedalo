@@ -842,8 +842,8 @@ class component_relation_common extends component_common {
 			return false;
 		}
 
-		$removed 		= false;
-		$new_relations 	= array();
+		$removed		= false;
+		$new_relations	= array();
 		$dato = (array)$this->get_dato();
 		foreach($dato as $key => $current_locator_obj) {
 

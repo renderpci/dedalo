@@ -80,7 +80,7 @@ class component_relation_children extends component_relation_common {
 	* REMOVE_ME_AS_YOUR_CHILD
 	* @return bool
 	*/
-	public function remove_me_as_your_child( $section_tipo, $section_id ) {
+	public function remove_me_as_your_child( string $section_tipo, $section_id ) : bool {
 
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
@@ -104,7 +104,7 @@ class component_relation_children extends component_relation_common {
 	* NOTE: This method updates component 'dato' and save
 	* @return bool
 	*/
-	public function add_child( $locator ) {
+	public function add_child( locator $locator ) : bool {
 
 		if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->parent) {
 			return false; // Avoid autoreferences
@@ -131,10 +131,10 @@ class component_relation_children extends component_relation_common {
 	* NOTE: This method updates component 'dato'
 	* @return bool
 	*/
-	public function remove_child( $locator ) {
+	public function remove_child( locator $locator ) : bool {
 
 		# Add current locator to component dato
-		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
+		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator, ['section_id','section_tipo','type'])) {
 			return false;
 		}
 
