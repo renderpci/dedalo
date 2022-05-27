@@ -50,7 +50,7 @@
 </head>
 <body>
 <div id="wrapGeneral" class="hidden">
-	<form name="form1" id="form1" method="post" onSubmit="edit_ts(this, event);">
+	<form name="form1" id="form1" method="post" onSubmit="return false"><?php // onSubmit="edit_ts(this, event); ?>
 		<table class="table_edit">
 
 
@@ -330,7 +330,7 @@
 							<!-- Campos obligatorios -->
 							<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
 							<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
-							<input type="submit" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon">
+							<input type="button" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="edit_ts(document.getElementById('form1'), event);">
 							<input name="export" type="button" value=" Export " onClick="export_ontology('<?php echo $terminoID ?>');">
 						</div><!-- /form_buttons -->
 					</td>

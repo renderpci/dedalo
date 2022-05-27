@@ -1,4 +1,4 @@
-/*global page_globals, SHOW_DEBUG*/
+/*global page_globals, SHOW_DEBUG, data_manager, terminoID, id */
 /*eslint no-undef: "error"*/
 
 /******** DOM READY ****************/
