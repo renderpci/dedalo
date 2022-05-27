@@ -2699,6 +2699,9 @@
 		Fixed tool_import_dedalo_csv issue with non-utf8 files blocking tool preview of files
 		Fixed auto_detect_line_endings error on method read_csv_file_as_array (class.tool_common.php)
 		Restored core_function 'to_string' null result values to '' instead 'null'
+		Added ontology utils file for easy csv export
+		Add link to component_iri at portal_list
+
 
 	Valencia 25-05-2022 5.8.6
 		Add link render for component_iri when is caller by portals in portal_list mode
@@ -2732,7 +2735,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '26-05-2022T13:11:00');
+	define('DEDALO_BUILD'	, '27-05-2022T13:55:33');
 
 
 	/*
