@@ -9,6 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {quit} from '../../login/js/login.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {clone} from '../../common/js/utils/index.js'
 	// import {instances} from '../../common/js/instances.js'
 
 
@@ -280,6 +281,11 @@ render_menu.prototype.edit = async function() {
 							section_tipo	: current_instance.section_tipo,
 							mode			: 'list',
 							lang			: current_instance.lang
+						},
+						sqo			: { // new sqo to use in list mode
+							section_tipo	: current_instance.rqo.sqo.section_tipo,
+							filter			: current_instance.rqo.sqo.filter,
+							offset			: 0
 						}
 					}
 					event_manager.publish('user_navigation', user_navigation_rqo)
