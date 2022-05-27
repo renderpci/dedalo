@@ -42,7 +42,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* EXEC_MYSQL_QUERY
 	* @return
 	*/
-	public static function exec_mysql_query($sql, $table_name=null, $database_name=false, $multi_query=false) {
+	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) {
 
 		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
 
@@ -50,38 +50,39 @@ class diffusion_mysql extends diffusion_sql  {
 			throw new Exception("Error Processing Request. database_name is mandatory !", 1);
 		}
 
+
 		$mysql_conn = self::get_conn($database_name);
 		# Set as class static var
 		#self::$mysql_conn;
-
 		#error_log("++++++++++ sql 1 : ".$sql);
 
-		if ($multi_query===true) {
-			$result = $mysql_conn->multi_query( $sql );
-		}else{
-			$result = $mysql_conn->query( $sql );
-		}
+		// query exec
+			$result = ($multi_query===true)
+				? $mysql_conn->multi_query( $sql )
+				: $mysql_conn->query( $sql );
 
-		if (!$result) {
-			#debug_log(__METHOD__." Skipped (key:$key) db_data value for database: $database_name : ".to_string($mysql_conn->error), logger::WARNING);
-			if(SHOW_DEBUG===true) {
-				#dump( $mysql_conn->error, "error".to_string() );
-				error_log("++++++++++ SQL ERROR QUERY : ".$sql);
-				$query_clean = trim($sql);
-				error_log("error_log sql: ".$sql);
-				dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
-				#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
+			if (!$result) {
+				#debug_log(__METHOD__." Skipped (key:$key) db_data value for database: $database_name : ".to_string($mysql_conn->error), logger::WARNING);
+				if(SHOW_DEBUG===true) {
+					#dump( $mysql_conn->error, "error".to_string() );
+					error_log("++++++++++ SQL ERROR QUERY : ".$sql);
+					$query_clean = trim($sql);
+					error_log("error_log sql: ".$sql);
+					dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
+					#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
+				}
+				$msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
+				debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+				#die();
 			}
-			$msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
-			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-			#die();
-		}
-		#$mysql_conn->close();
+			#$mysql_conn->close();
 
 		if( strpos($sql, 'INSERT')!==false ) {
 			self::$insert_id = $mysql_conn->insert_id;
 			#dump(self::$insert_id, ' insert_id ++ '.to_string($sql));
 		}
+
+
 
 		return $result;
 	}//end exec_mysql_query
@@ -825,7 +826,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* TABLE_EXITS
 	* @return bool
 	*/
-	public static function table_exits($database_name, $table_name) {
+	public static function table_exits(string $database_name, string $table_name) : bool {
 
 		$table_exits = false;
 
@@ -890,6 +891,7 @@ class diffusion_mysql extends diffusion_sql  {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
+
 
 		if ($custom!==false) {
 			// Custom is a object
