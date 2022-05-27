@@ -105,27 +105,31 @@ abstract class DBi {
 			return($mysqli);
 		}
 
-				/*
-				$mysqli = new mysqli($host, $user, $password, $database, $port);
-				if ($mysqli->connect_errno) {
-				    echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-				    die();
-				}
-				#echo $mysqli->host_info . "\n";
+		/*
+			$mysqli = new mysqli($host, $user, $password, $database, $port);
+			if ($mysqli->connect_errno) {
+			    echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
+			    die();
+			}
+			#echo $mysqli->host_info . "\n";
 
-				return $mysqli;
-				*/
+			return $mysqli;
+			*/
 
 		# Oculta el mensaje 'MySQL extension is deprecated & will be removed in the future of PHP' cuando se usa con PHP >=5
 		# error_reporting(E_ERROR | E_PARSE);
 
-		# INIT
-		$mysqli = mysqli_init();
+		// You should enable error reporting for mysqli before attempting to make a connection
+			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-		if (!$mysqli) {
-			#die('Dedalo '.__METHOD__ . ' Failed mysqli_init');
-			throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
-		}
+		// INIT
+			// $mysqli = mysqli_init();
+			$mysqli = new mysqli($host, $user, $password, $database, $port);
+
+			if ($mysqli===false) {
+				#die('Dedalo '.__METHOD__ . ' Failed mysqli_init');
+				throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
+			}
 
 		#$mysqli->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
 
