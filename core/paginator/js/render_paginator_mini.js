@@ -198,7 +198,7 @@ const get_content_data = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'displayed_records',
-			inner_html		: `Showed ${page_row_begin}-${page_row_end} of ${total}. `,
+			inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total}. `,
 			parent			: paginator_info
 		})
 
