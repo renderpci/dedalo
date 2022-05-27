@@ -40,6 +40,7 @@ function getValue(name) {
 * ISARRAY
 */
 function isArray(obj) {
+
 	return obj.constructor == Array;
 }
 
@@ -104,7 +105,7 @@ function create_dom_element(element_options){
 	const type					= element_options.type
 	const name					= element_options.name
 	const href					= element_options.href
-	
+
 	const element = document.createElement(element_type);
 
 	// Add id property to element
@@ -121,7 +122,7 @@ function create_dom_element(element_options){
 	if(href){
 		element.href = href;
 	}
-	
+
 	// Class name. Add css classes property to element
 	if(class_name){
 		element.className = class_name
@@ -132,7 +133,7 @@ function create_dom_element(element_options){
 		for(let key in style) {
 			element.style[key] = style[key]
 			//element.setAttribute("style", key +":"+ style[key]+";");
-		}		
+		}
 	}
 
 	// Title . Add title attribute to element
@@ -140,7 +141,7 @@ function create_dom_element(element_options){
 		element.title = title_label
 	}
 
-	// Dataset Add dataset values to element		
+	// Dataset Add dataset values to element
 	if(data_set){
 		for (let key in data_set) {
 			element.dataset[key] = data_set[key]
@@ -158,7 +159,7 @@ function create_dom_element(element_options){
 		for (let i = 0; i < len; i++) {
 			let function_name 		= custom_function_events[i].name
 			let event_type			= custom_function_events[i].type
-			let function_arguments	= custom_function_events[i].function_arguments					
+			let function_arguments	= custom_function_events[i].function_arguments
 
 			// Create event caller
 			this.create_custom_events(element, event_type, function_name, function_arguments)
@@ -171,8 +172,8 @@ function create_dom_element(element_options){
 			}, false);
 			}*/
 	}//end if(custom_function_events){
-	
-	// Text content 
+
+	// Text content
 	if(text_node){
 		//element.appendChild(document.createTextNode(TextNode));
 		// Parse html text as object
@@ -182,7 +183,7 @@ function create_dom_element(element_options){
 			let el = document.createElement('span')
 				el.innerHTML = " "+text_node // Note that prepend a space to span for avoid Chrome bug on selection
 			element.appendChild(el)
-		}			
+		}
 	}else if(text_content) {
 		element.textContent = text_content
 	}else if(inner_html) {
@@ -216,7 +217,6 @@ function create_dom_element(element_options){
 
 	return element;
 }//end create_dom_element
-
 
 
 
@@ -259,7 +259,7 @@ function save_descriptor(input_node) {
 	// form lock
 		const form = document.getElementById("form1")
 		if (form) {
-			form.classList.add('loading')
+			form.classList.add("loading")
 		}
 
 	return new Promise(function(resolve){
@@ -282,7 +282,7 @@ function save_descriptor(input_node) {
 
 			// form unlock
 				if (form) {
-					form.classList.remove('loading')
+					form.classList.remove("loading")
 				}
 
 			if (response.result!==true) {

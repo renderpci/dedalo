@@ -13,14 +13,14 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 $is_logged	= login::is_logged();
 
 if($is_logged!==true) {
-	$url =  DEDALO_ROOT_WEB ;//."/main/";
+	$url =  DEDALO_ROOT_WEB;
 	header("Location: $url");
 	exit();
 }
 $is_global_admin = security::is_global_admin(CURRENT_LOGGED_USED_ID);
 
 if($is_global_admin!==true) {
-	$url =  DEDALO_ROOT_WEB ;//."/main/";
+	$url =  DEDALO_ROOT_WEB;
 	header("Location: $url");
 	exit();
 }
@@ -93,7 +93,6 @@ foreach($vars as $name)	$$name = common::setVar($name);
 
 
 	# LANGS SELECTOR
-	#$ar_all_langs 	= DEDALO_APPLICATION_LANGS;
 	$ar_all_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 
 	$selectedItem 	= $ts_lang;

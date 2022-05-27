@@ -29,4 +29,3 @@ if( strlen($termino)>2 ) {
 	$dd 	= new dd($modo='tesauro_list');
 	echo 	$dd->existeEsteTermino($termino,$terminoID);
 }
-die();
