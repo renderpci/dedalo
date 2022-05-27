@@ -577,7 +577,7 @@ class search {
 					$model_name			= $search_component->modelo;
 					$ar_query_object	= $model_name::get_search_query2($search_object);
 				}
-				
+
 				$new_ar_query_object->$op = array_merge($new_ar_query_object->$op, $ar_query_object);
 			}
 		}
@@ -1870,188 +1870,197 @@ class search {
 
 	/**
 	* GET_SQL_WHERE
+	* Builds a sql query string base on given filter search object
 	* @param object $search_object
 	* @return string $sql_where
 	*/
 	public function get_sql_where(object $search_object) : string {
-		#dump($search_object, ' search_object ++ '.to_string());
-		//oh1_oh24_rsc197_rsc86.datos#>'{relations}' @> '[{"section_id":"2","section_tipo":"dd861","from_component_tipo":"rsc93"}]'::jsonb
-		//unaccent(oh1_oh24_rsc197_rsc453.datos#>>'{components, rsc85, dato}') ~* unaccent('.*\[".*ana.*')
 
-		# {
-		#   "q": "'.*\[".*ana.*'",						// the regext, text, number, etc that the component created
-		#   "unaccent":true,								// true or false
-		#   "operator":"~*",								// the operator for query
-		#   "type": "string",								// string or jsonb
-		#   "lang": "lg-nolan",							// if not defined lang = all langs, if defined lang = the lang sended
-		#   "path": [										// path for locate the component into the joins
-		#     {
-		#       "section_tipo": "oh1",
-		#       "component_tipo": "oh24"
-		#     },
-		#     {
-		#       "section_tipo": "rsc197",
-		#       "component_tipo": "rsc453"
-		#     }
-		#   ],
-		#   "component_path": [							// the component path to find the dato or valor...
-		#     "components",
-		#     "rsc85",
-		#     "dato"
-		#   ]
-		# }
+		// sample object
+			// {
+			//   "q": "'.*\[".*ana.*'",						// the regext, text, number, etc that the component created
+			//   "unaccent":true,							// true or false
+			//   "operator":"~*",							// the operator for query
+			//   "type": "string",							// string or jsonb
+			//   "lang": "lg-nolan",						// if not defined lang = all langs, if defined lang = the lang sended
+			//   "path": [									// path for locate the component into the joins
+			//     {
+			//       "section_tipo": "oh1",
+			//       "component_tipo": "oh24"
+			//     },
+			//     {
+			//       "section_tipo": "rsc197",
+			//       "component_tipo": "rsc453"
+			//     }
+			//   ],
+			//   "component_path": [						// the component path to find the dato or valor...
+			//     "components",
+			//     "rsc85",
+			//     "dato"
+			//   ]
+			// }
 
-		#dump($search_object, ' search_object ++ '.to_string());
+		// path : array|null
+			$path = $search_object->path ?? null;
 
-		$path			= $search_object->path ?? null;
-		$table_alias	= $this->get_table_alias_from_path($path);
+		// table_alias : string
+			$table_alias = $this->get_table_alias_from_path($path);
 
-		if (isset($search_object->lang) && $search_object->lang!=='all') {
-
-			// Search already existing lang (maybe added in previous get_sql_where of current search_object like when count) 2018-12-18
-			$last_component_path = end($search_object->component_path);
-			if ( substr($last_component_path, 0, 3)!=='lg-' ) {
-				// Add lang to path once
-				$search_object->component_path[] = $search_object->lang;
+		// lang. If isset, add to component_path
+			if (isset($search_object->lang) && $search_object->lang!=='all') {
+				// Search already existing lang (maybe added in previous get_sql_where of current search_object like when count) 2018-12-18
+				$last_component_path = end($search_object->component_path);
+				if ( substr($last_component_path, 0, 3)!=='lg-' ) {
+					// Add lang to path once
+					$search_object->component_path[] = $search_object->lang;
+				}
 			}
-		}
-		$component_path = isset($search_object->component_path)
-			? implode(',', $search_object->component_path)
-			: null;
 
-		# search_object_type : string, array
-		$search_object_type 	= isset($search_object->type) ? $search_object->type : 'string';
+		// component_path: array|null
+			$component_path = isset($search_object->component_path)
+				? implode(',', $search_object->component_path)
+				: null;
 
-		# search_object_format : direct, array, array_elements
-		$search_object_format 	= isset($search_object->format) ? $search_object->format : 'direct';
+		// type. search_object_type : string (string|array)
+			$search_object_type = $search_object->type ?? 'string';
 
-		# search_object_unaccent: true, false
-		$search_object_unaccent = isset($search_object->unaccent) ? $search_object->unaccent : false;
+		// format. search_object_format : string (direct|array|array_elements|typeof|column|in_column)
+			$search_object_format = $search_object->format ?? 'direct';
 
+		// unaccent. search_object_unaccent: bool (true|false)
+			$search_object_unaccent = $search_object->unaccent ?? false;
 
-		$sql_where  = "\n";
+		// sql string 'where'
+			$sql_where  = "\n";
+			switch ($search_object_format) {
 
-		switch ($search_object_format) {
+				case 'direct':
+					// direct case. The default search case for components
 
-			case 'direct':
+					if(SHOW_DEBUG===true) {
+						$component_path_data	= end($path);
+						$component_tipo			= $component_path_data->component_tipo;
+						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
+						$modelo_name			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
+					}
 
-				if(SHOW_DEBUG===true) {
-					$component_path_data 	= end($path);
-					$component_tipo 		= $component_path_data->component_tipo;
-					$component_name 		= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-					$modelo_name 			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
-				}
+					if($search_object_unaccent===true) {
+						$sql_where .= 'f_unaccent(';
+					}
 
-				if($search_object_unaccent===true) {
-					$sql_where .= 'f_unaccent(';
-				}
+					$sql_where .= $table_alias . '.datos';
 
-				$sql_where .= $table_alias . '.datos';
+					$sql_where .= ($search_object_type==='string')
+						? '#>>'
+						: '#>';
 
-				$sql_where .= ($search_object_type==='string')
-					? '#>>'
-					: '#>';
+					# json path
+					$sql_where .= '\'{' . $component_path . '}\'';
 
-				# json path
-				$sql_where .= '\'{' . $component_path . '}\'';
+					if($search_object_unaccent===true) {
+						$sql_where .= ')';
+					}
 
-				if($search_object_unaccent===true) {
-					$sql_where .= ')';
-				}
+					# operator
+					$sql_where .= ' '.$search_object->operator.' ';
 
-				# operator
-				$sql_where .= ' '.$search_object->operator.' ';
+					if($search_object_unaccent===true) {
+						$sql_where .= 'f_unaccent(';
+					}
 
-				if($search_object_unaccent===true) {
-					$sql_where .= 'f_unaccent(';
-				}
+					// q. Escape parenthesis inside regex
+					$q_parsed_clean = ($search_object_type==='string')
+						? str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed)
+						: $search_object->q_parsed;
 
-				// q. Escape parenthesis inside regex
-				$q_parsed_clean = ($search_object_type==='string')
-					? str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed)
-					: $search_object->q_parsed;
+					$sql_where .= $q_parsed_clean;
+					#$sql_where .= pg_escape_string(DBi::_getConnection(), stripslashes($search_object->q_parsed));
 
-				$sql_where .= $q_parsed_clean;
-				#$sql_where .= pg_escape_string(DBi::_getConnection(), stripslashes($search_object->q_parsed));
+					if($search_object_unaccent===true) {
+						$sql_where .= ')';
+					}
+					break;
 
-				if($search_object_unaccent===true) {
-					$sql_where .= ')';
-				}
-				break;
+				case 'array_elements':
+					// array_elements case
 
-			case 'array_elements':
+					# a.id IN (SELECT a.id FROM
+					#  check_array_component((jsonb_typeof(a.datos#>'{components, numisdata35, dato, lg-nolan}') = 'array' AND a.datos#>'{components, numisdata35, dato, lg-nolan}' != '[]' ),(a.datos#>'{components, numisdata35, dato, lg-nolan}'))
+					#  as numisdata35_array_elements
+					#  WHERE
+					#  -- TIME
+					#   numisdata35_array_elements#>'{time}' = '32269363200'
+					#  -- RANGE
+					#   OR (
+					#   numisdata35_array_elements#>'{start, time}' <= '32269363200' AND
+					#   numisdata35_array_elements#>'{end, time}' >= '32269363200')
+					#   OR (
+					#   numisdata35_array_elements#>'{start, time}' = '32269363200')
+					#  -- PERIOD
+					#   OR (
+					#   numisdata35_array_elements#>'{period, time}' = '32269363200')
+					# )
 
-				# a.id IN (SELECT a.id FROM
-				#  check_array_component((jsonb_typeof(a.datos#>'{components, numisdata35, dato, lg-nolan}') = 'array' AND a.datos#>'{components, numisdata35, dato, lg-nolan}' != '[]' ),(a.datos#>'{components, numisdata35, dato, lg-nolan}'))
-				#  as numisdata35_array_elements
-				#  WHERE
-				#  -- TIME
-				#   numisdata35_array_elements#>'{time}' = '32269363200'
-				#  -- RANGE
-				#   OR (
-				#   numisdata35_array_elements#>'{start, time}' <= '32269363200' AND
-				#   numisdata35_array_elements#>'{end, time}' >= '32269363200')
-				#   OR (
-				#   numisdata35_array_elements#>'{start, time}' = '32269363200')
-				#  -- PERIOD
-				#   OR (
-				#   numisdata35_array_elements#>'{period, time}' = '32269363200')
-				# )
+					$component_tipo = end($path)->component_tipo;
+						#dump($search_object, ' search_object ++ '.to_string());
+					if(SHOW_DEBUG===true) {
+						$object_info = isset($search_object->q_info) ? $search_object->q_info : '';
+						$sql_where .= "-- ARRAY ELEMENTS FORMAT - $component_tipo - $table_alias - info:$object_info \n";
+					}
 
-				$component_tipo = end($path)->component_tipo;
-					#dump($search_object, ' search_object ++ '.to_string());
-				if(SHOW_DEBUG===true) {
-					$object_info = isset($search_object->q_info) ? $search_object->q_info : '';
-					$sql_where .= "-- ARRAY ELEMENTS FORMAT - $component_tipo - $table_alias - info:$object_info \n";
-				}
+					$sql_where .= $table_alias . '.id IN (SELECT '.$table_alias.'.id FROM '.PHP_EOL;
+					$sql_where .= "check_array_component((jsonb_typeof($table_alias.datos#>'{components,$component_tipo,dato,lg-nolan}')='array' AND $table_alias.datos#>'{components,$component_tipo,dato,lg-nolan}'!='[]'),($table_alias.datos#>'{components,$component_tipo,dato,lg-nolan}')) ".PHP_EOL;
+					$sql_where .= 'as '.$component_tipo.'_array_elements'.PHP_EOL;
+					$sql_where .= 'WHERE'.PHP_EOL;
+					$sql_where .= self::resolve_array_elements( $search_object->array_elements, $component_tipo );
+					$sql_where .= PHP_EOL.') -- end check_array_component'.PHP_EOL;
+					break;
 
-				$sql_where .= $table_alias . '.id IN (SELECT '.$table_alias.'.id FROM '.PHP_EOL;
-				$sql_where .= "check_array_component((jsonb_typeof($table_alias.datos#>'{components,$component_tipo,dato,lg-nolan}')='array' AND $table_alias.datos#>'{components,$component_tipo,dato,lg-nolan}'!='[]'),($table_alias.datos#>'{components,$component_tipo,dato,lg-nolan}')) ".PHP_EOL;
-				$sql_where .= 'as '.$component_tipo.'_array_elements'.PHP_EOL;
-				$sql_where .= 'WHERE'.PHP_EOL;
-				$sql_where .= self::resolve_array_elements( $search_object->array_elements, $component_tipo );
-				$sql_where .= PHP_EOL.') -- end check_array_component'.PHP_EOL;
-				break;
+				case 'typeof':
+					// typeof case.
+					if(SHOW_DEBUG===true) {
+						$component_path_data 	= end($path);
+						$component_tipo 		= $component_path_data->component_tipo;
+						$component_name 		= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
+						$modelo_name 			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
+					}
 
-			case 'typeof':
+					$sql_where .= 'jsonb_typeof('.$table_alias.'.datos#>\'{'.$component_path.'}\')'.$safe_operator.$search_object->q_parsed;
+					break;
 
-				if(SHOW_DEBUG===true) {
-					$component_path_data 	= end($path);
-					$component_tipo 		= $component_path_data->component_tipo;
-					$component_name 		= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-					$modelo_name 			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
-				}
+				case 'column':
+					// column case. Used in direct column access like 'section_id', 'state' (matrix_time_machine), etc.
+					$column_name = $search_object->column_name;
 
-				$sql_where .= 'jsonb_typeof('.$table_alias.'.datos#>\'{'.$component_path.'}\')'.$safe_operator.$search_object->q_parsed;
-				break;
+					if(SHOW_DEBUG===true) {
+						$sql_where .= "-- COLUMN FORMAT - format: $search_object_format - $column_name - $table_alias \n";
+					}
 
-			case 'column':
-				$column_name = $search_object->column_name;
+					$sql_where .= $table_alias . '.'.$column_name;
 
-				if(SHOW_DEBUG===true) {
-					$sql_where .= "-- COLUMN FORMAT - format: $search_object_format - $column_name - $table_alias \n";
-				}
+					# operator
+					$sql_where .= ' '.$search_object->operator.' ';
 
-				$sql_where .= $table_alias . '.'.$column_name;
+					# q
+					$sql_where .= $search_object->q_parsed;
+					break;
 
-				# operator
-				$sql_where .= ' '.$search_object->operator.' ';
+				case 'in_column':
+					// in_column case. Used by component_section_id to search faster number sequences like '1,2,4,8,9'
+					$pre = ($component_path==='section_id')
+						? $table_alias .'.'.$component_path
+						: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
 
-				# q
-				$sql_where .= $search_object->q_parsed;
-				break;
+					$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
+					break;
 
-			case 'in_column':
-				$pre = ($component_path==='section_id')
-					? $table_alias .'.'.$component_path
-					: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
-
-				$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
-				break;
-
-		}//end switch ($search_object->type)
+				default:
+					// undefined format case
+					debug_log(__METHOD__.' Ignored undefined search_object_format '.to_string($search_object_format), logger::ERROR);
+					break;
+			}//end switch ($search_object->type)
 
 
 		return $sql_where;
