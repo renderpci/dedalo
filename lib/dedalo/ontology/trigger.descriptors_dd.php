@@ -19,13 +19,6 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 	}
 
 
-// other files to include
-	// require_once(DEDALO_ROOT .'/inc/funciones.php');
-	// require_once(DEDALO_ROOT .'/lang_translate/class.LangTranslate.php');
-	// require_once(DEDALO_CORE_PATH . '/common/class.navigator.php');
-	// require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
-
-
 
 // set vars
 	$vars = [
