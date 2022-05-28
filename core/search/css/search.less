@@ -126,8 +126,10 @@
 				flex-grow: 1;
 				align-self: flex-start;
 				background-color: #f0f0f0;
-				position: relative;
 				padding-top: 0;
+				position: sticky;
+				top: 62px;
+
 
 				.search_group_container {
 					display: flex;
@@ -184,7 +186,9 @@
 							min-height: 55px;
 							border-radius: 2px;
 							flex: 1 1 300px;
-							width: 300px;
+							// width: 300px;
+							max-width: 50%;
+							min-width: 49%;
 							flex-wrap: wrap;
 
 							>.wrapper_component {
@@ -201,6 +205,7 @@
 							>.button.close {
 								position: absolute;
 								right: 0;
+								top: 3px;
 								z-index: 999999;
 
 								&:active {
@@ -369,7 +374,7 @@
 				// root search_group
 				>.search_group_container:first-of-type >.search_group {
 					>.button.add {
-						top: 0;
+						top: 3px;
 					}
 				}
 			}
