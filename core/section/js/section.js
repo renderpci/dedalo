@@ -49,6 +49,9 @@ export const section = function() {
 	this.ar_instances	= null
 
 	this.status			= null
+
+	this.filter			= null
+	this.inspector		= null
 	this.paginator		= null
 
 	this.id_variant		= null
@@ -89,6 +92,7 @@ export const section = function() {
 
 /**
 * INIT
+* @param object options
 * @return bool
 */
 section.prototype.init = async function(options) {
@@ -121,8 +125,14 @@ section.prototype.init = async function(options) {
 	self.type				= 'section'
 	self.label				= null
 
-	self.filter				= null // (? used)
-	self.inspector			= typeof options.inspector==='undefined' ? null : options.inspector // allow false as value
+	// filter. Allow false as value when no filter is required
+	self.filter				= options.filter!==undefined ? options.filter : null
+
+	// inspector. Allow false as value when no inspector is required (notes cases)
+	self.inspector			= options.inspector!==undefined ? options.inspector : null
+
+	// paginator. Allow false as value when no paginator is required
+	self.paginator			= options.paginator!==undefined ? options.paginator : null
 
 	self.permissions		= options.permissions || null
 
@@ -210,7 +220,7 @@ section.prototype.init = async function(options) {
 					const is_open = typeof ui_status==='undefined' || ui_status.value===false
 						? false
 						: true
-					if (is_open===true && self.search_container.children.length===0) {
+					if (is_open===true && self.search_container && self.search_container.children.length===0) {
 						const spinner = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'spinner',
@@ -285,7 +295,7 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// filter search
-		if (self.mode!=='tm' && !self.filter) {
+		if (self.filter===null && self.mode!=='tm') {
 			self.filter = new search()
 			self.filter.init({
 				caller	: self,
@@ -452,7 +462,7 @@ section.prototype.build = async function(autoload=false) {
 			self.initiator = initiator
 
 	// paginator
-		if (!self.paginator) {
+		if (self.paginator===null) {
 
 			self.paginator = new paginator()
 			self.paginator.init({
@@ -490,7 +500,7 @@ section.prototype.build = async function(autoload=false) {
 		}//end if (!self.paginator)
 
 	// inspector
-		if (self.inspector!==false && self.mode==='edit' && self.inspector===null && self.permissions) {
+		if (self.inspector===null && self.mode==='edit' && self.permissions) {
 			// if (initiator && initiator.model==='component_portal') {
 
 			// 	self.inspector = null

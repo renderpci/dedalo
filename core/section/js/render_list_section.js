@@ -78,17 +78,19 @@ render_list_section.prototype.list = async function(options) {
 		}
 
 	// paginator container node
-		const paginator_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'paginator_container',
-			parent			: fragment
-		})
-		self.paginator.build()
-		.then(function(){
-			self.paginator.render().then(paginator_wrapper =>{
-				paginator_container.appendChild(paginator_wrapper)
+		if (self.paginator) {
+			const paginator_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'paginator_container',
+				parent			: fragment
 			})
-		})
+			self.paginator.build()
+			.then(function(){
+				self.paginator.render().then(paginator_wrapper =>{
+					paginator_container.appendChild(paginator_wrapper)
+				})
+			})
+		}
 
 	// list body
 		const list_body = ui.create_dom_element({
