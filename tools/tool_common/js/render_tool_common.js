@@ -21,7 +21,7 @@ export const render_error = async function(self, options) {
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'tool_error content_data_error',
-			inner_html		: 'Error : ' + self.error
+			inner_html		: 'Error : ' + self.error + ' Try to close the tool and re-open it'
 		})
 
 	// icon_info
