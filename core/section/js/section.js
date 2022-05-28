@@ -122,7 +122,7 @@ section.prototype.init = async function(options) {
 	self.label				= null
 
 	self.filter				= null // (? used)
-	self.inspector			= null
+	self.inspector			= typeof options.inspector || null
 
 	self.permissions		= options.permissions || null
 
