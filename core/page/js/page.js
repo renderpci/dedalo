@@ -20,6 +20,7 @@
 	import {render_page} from './render_page.js'
 	// import {set_element_css} from './css.js'
 	import {ui} from '../../common/js/ui.js'
+	// import {activate_window_keydown} from '../../common/js/utils/keyboard.js'
 
 
 
@@ -243,19 +244,8 @@ page.prototype.init = async function(options) {
 		// 	alert("Mensaje recibido !");
 		// }
 
-	// key events
-		document.addEventListener("keydown", function(evt){
-
-			// ESC
-				if (evt.key==='Escape') {
-
-					// unactive user actived component
-						if (ui.component.component_active) {
-							ui.component.inactive(ui.component.component_active)
-							ui.component.component_active = null
-						}
-				}
-		})
+	// events
+		self.add_events()
 
 
 	// status update
@@ -322,6 +312,70 @@ page.prototype.build = async function() {
 
 	return true
 };//end build
+
+
+
+/**
+* BUILD
+*/
+page.prototype.add_events = function() {
+
+	const self = this
+
+	// keydown events
+		document.addEventListener("keydown", function(evt){
+			console.log("paget keydown evt:", evt.key, evt);
+
+			switch(true) {
+
+				case evt.key==='Escape':
+					// unactive user actived component
+						if (ui.component.component_active) {
+							ui.component.inactive(ui.component.component_active)
+							ui.component.component_active = null
+						}
+					break;
+
+				case evt.key==='Enter':
+					// search with current section filter
+						const section = self.ar_instances.find(el => el.model==='section')
+						if (section && section.filter) {
+							if (section.filter.search_panel_is_open===true) {
+								// always blur active component to force set dato (!)
+									document.activeElement.blur()
+								// exec search
+									section.filter.exec_search()
+							}
+							// toggle filter container
+								event_manager.publish('toggle_search_panel', section)
+						}
+					break;
+
+				case (evt.key==='ArrowLeft' && evt.shiftKey===true):
+					// paginator left arrow <
+						// paginator right arrow >
+						const section_prev = self.ar_instances.find(el => el.model==='section')
+						if (section_prev && section_prev.paginator) {
+							section_prev.paginator.navigate_to_previous_page()
+						}
+					break;
+
+				case (evt.key==='ArrowRight' && evt.shiftKey===true):
+					// paginator right arrow >
+						const section_next = self.ar_instances.find(el => el.model==='section')
+						if (section_next && section_next.paginator) {
+							section_next.paginator.navigate_to_next_page()
+						}
+					break;
+
+				default:
+
+					break;
+			}//end switch
+		})//end keydown event
+
+	return true
+};//end add_events
 
 
 

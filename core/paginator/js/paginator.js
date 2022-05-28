@@ -344,3 +344,37 @@ paginator.prototype.go_to_page_json = function(page) {
 };//end go_to_page_json
 
 
+
+/**
+* NAVIGATE_TO_NEXT_PAGE
+* Navigates current list
+* @return bool
+*/
+paginator.prototype.navigate_to_next_page = function() {
+
+	const self = this
+
+	// short vars
+		const current_page	= self.page_number
+		const page			= current_page + 1
+
+	return self.go_to_page_json(page)
+};//end navigate_to_next_page
+
+
+
+/**
+* navigate_to_previous_page
+* Navigates current list
+* @return bool
+*/
+paginator.prototype.navigate_to_previous_page = function() {
+
+	const self = this
+
+	// short vars
+		const current_page	= self.page_number
+		const page			= current_page - 1
+
+	return self.go_to_page_json(page)
+};//end navigate_to_previous_page
