@@ -105,6 +105,9 @@ render_edit_section.prototype.edit = async function(options) {
 			class_name		: `${'wrapper_'+self.type} ${self.model} ${self.section_tipo}_${self.tipo} ${self.tipo} ${self.mode}`,
 			id				: self.id
 		})
+		if (self.inspector===false) {
+			wrapper.classList.add('no_inspector')
+		}
 		// append fragment
 		wrapper.appendChild(fragment)
 
