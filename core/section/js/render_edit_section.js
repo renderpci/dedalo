@@ -54,25 +54,29 @@ render_edit_section.prototype.edit = async function(options) {
 		// const current_buttons = get_buttons(self);
 
 	// inspector
-		const inspector_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'inspector_container',
-			parent			: fragment
-		})
-		self.inspector.build().then(()=>{
-			self.inspector.render().then(inspector_wrapper =>{
-
-				// inspector_wrapper append
-					inspector_container.appendChild(inspector_wrapper)
-
-				// paginatior inside
-					self.paginator.build().then(()=>{
-						self.paginator.render().then(paginator_wrapper =>{
-							self.inspector.paginator_container.appendChild(paginator_wrapper)
-						})
-					})
+		if (self.inspector) {
+			const inspector_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'inspector_container',
+				parent			: fragment
 			})
-		})
+			self.inspector.build().then(()=>{
+				self.inspector.render().then(inspector_wrapper =>{
+
+					// inspector_wrapper append
+						inspector_container.appendChild(inspector_wrapper)
+
+					// paginatior inside
+						if (self.paginator) {
+							self.paginator.build().then(()=>{
+								self.paginator.render().then(paginator_wrapper =>{
+									self.inspector.paginator_container.appendChild(paginator_wrapper)
+								})
+							})
+						}
+				})
+			})
+		}
 
 	// search filter
 		if (self.filter) {
