@@ -316,7 +316,7 @@ page.prototype.build = async function() {
 
 
 /**
-* BUILD
+* ADD_EVENTS
 */
 page.prototype.add_events = function() {
 
@@ -324,7 +324,7 @@ page.prototype.add_events = function() {
 
 	// keydown events
 		document.addEventListener("keydown", function(evt){
-			console.log("paget keydown evt:", evt.key, evt);
+			// console.log("paget keydown evt:", evt.key, evt);
 
 			switch(true) {
 
