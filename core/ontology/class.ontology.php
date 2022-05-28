@@ -343,8 +343,16 @@ class ontology {
 		}
 
 
-		$ar_exclude_modelo		= array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
-		$ar_exclude_components	= defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
+		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+
+		// ar_exclude_components
+			$dedalo_version = explode(".", DEDALO_VERSION);
+			if ( (int)$dedalo_version[0]>5 ) {
+				$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? DEDALO_AR_EXCLUDE_COMPONENTS : [];
+			}else{
+				$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
+			}
+
 		foreach((array)$ar_ts_childrens as $element_tipo) {
 
 			// Remove_exclude_models
