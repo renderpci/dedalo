@@ -283,8 +283,8 @@ render_menu.prototype.edit = async function() {
 							lang			: current_instance.lang
 						},
 						sqo			: { // new sqo to use in list mode
-							section_tipo	: current_instance.rqo.sqo.section_tipo,
-							filter			: current_instance.rqo.sqo.filter,
+							section_tipo	: current_instance.rqo_config.sqo.section_tipo,
+							filter			: current_instance.rqo_config.sqo.filter,
 							offset			: 0
 						}
 					}
