@@ -526,7 +526,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 					self.create_note_tag({
 						text_editor	: text_editor
-					}).then((note_section_id)=>{
+					})
+					.then((note_section_id)=>{
 						if (note_section_id){
 							const locator = {
 								section_tipo	: self.context.notes_section_tipo,
@@ -550,7 +551,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 								text_editor	: text_editor,
 								i			: i,
 								tag			: inserted_tag
-							}).then((section_node)=>{
+							})
+							.then((section_node)=>{
 								// self.node[0].appendChild(section_node)
 							})
 						}
@@ -782,7 +784,7 @@ const get_custom_events = (self, i, text_editor) => {
 							const layer_person = ui.create_dom_element({
 								element_type	: 'span',
 								class_name		: 'layer_person',
-								text_node		: person.full_name,
+								text_node		: person.full_name
 							})
 							const modal = ui.attach_to_modal(
 								null,
@@ -790,7 +792,6 @@ const get_custom_events = (self, i, text_editor) => {
 								null
 							)
 						}
-
 						break;
 
 					case 'note':
@@ -798,15 +799,16 @@ const get_custom_events = (self, i, text_editor) => {
 						event_manager.publish('click_tag_note_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 
 						render_note({
-								self		: self,
-								text_editor	: text_editor,
-								i			: i,
-								tag			: tag_obj
-							}).then((section_node)=>{
-								// self.node[0].appendChild(section_node)
-								}
-							)
+							self		: self,
+							text_editor	: text_editor,
+							i			: i,
+							tag			: tag_obj
+						})
+						.then(()=>{
+							// self.node[0].appendChild(section_node)
+						})
 						break;
+
 					case 'lang':
 						// Show note info
 						event_manager.publish('click_tag_lang_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
@@ -820,15 +822,16 @@ const get_custom_events = (self, i, text_editor) => {
 						const lang_obj 			= ar_project_langs.find(el => el.value=== tag_data_lang)
 
 						const layer_lang = ui.create_dom_element({
-								element_type	: 'span',
-								class_name		: 'layer_lang',
-								text_node		: lang_obj.label,
-							})
-							const modal = ui.attach_to_modal(
-								null,
-								layer_lang,
-								null
-							)
+							element_type	: 'span',
+							class_name		: 'layer_lang',
+							text_node		: lang_obj.label,
+						})
+						// modal
+						const modal = ui.attach_to_modal(
+							null,
+							layer_lang,
+							null
+						)
 						break;
 
 					case 'reference':
@@ -1361,115 +1364,155 @@ const render_persons_list = function(self, text_editor, i){
 };//end render_persons_list
 
 
+
 /**
-* RENDER_note
+* RENDER_NOTE
+*
+* @param object options
 * @return DOM node fragment
 */
-const render_note = async function(options){
+const render_note = async function(options) {
+
+	// options
+		const self			= options.self
+		const text_editor	= options.text_editor
+		const i				= options.i
+		const tag_node		= options.tag
 
 	// short vars
-	const self				= options.self
-	const text_editor		= options.text_editor
-	const i					= options.i
-	const tag_node 			= options.tag
-	const data_string 		= tag_node.dataset.data
-	// convert the data_tag form string to json*-
-	const data				= data_string.replace(/\'/g, '"')
-	// replace the ' to " stored in the html data to JSON "
-	const locator	= JSON.parse(data)
+		const data_string		= tag_node.dataset.data
+		// convert the data_tag form string to json*-
+		const data				= data_string.replace(/\'/g, '"')
+		// replace the ' to " stored in the html data to JSON "
+		const locator			= JSON.parse(data)
+		const note_section_id	= locator.section_id
+		const note_section_tipo	= locator.section_tipo
 
-	const note_section_id	= locator.section_id
-	const note_section_tipo	= locator.section_tipo
-
-	const fragment = new DocumentFragment()
-
-	const instance_options = {
-		model			: 'section',
-		tipo			: note_section_tipo,
-		section_tipo	: note_section_tipo,
-		section_id		: note_section_id,
-		mode			: 'edit',
-		lang			: self.lang,
-		caller			: self,
-		inspector 		: false,
-		filter 			: false,
-	}
-
-	const note_section		= 	await instances.get_instance(instance_options)
-								await note_section.build(true)
-	const note_section_node	= 	await note_section.render()
-	fragment.appendChild(note_section_node)
-	const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
-
-	// self.events_tokens.push(
-		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
-	// )
-	function fn_change_publication_state(changed_value) {
-
-		const state = changed_value.section_id === '2' // no active value
-			? 'a'
-			: 'b'
-		const current_tag_state = tag_node.dataset.state || 'a'
-		if (current_tag_state !== state){
-			const note_tag		= {
-				type	: 'note',
-				label	: tag_node.dataset.label,
-				tag_id	: tag_node.dataset.tag_id,
-				state	: state,
-				data	: locator
-			}
-			const tag = build_node_tag(note_tag, note_tag.tag_id)
-			tag_node.id = tag.id
-			tag_node.src = tag.src
-			tag_node.dataset.state = tag.dataset.state
-			text_editor.set_dirty(true)
-			text_editor.save()
+	// section
+		const instance_options = {
+			model			: 'section',
+			tipo			: note_section_tipo,
+			section_tipo	: note_section_tipo,
+			section_id		: note_section_id,
+			mode			: 'edit',
+			lang			: self.lang,
+			caller			: self,
+			inspector 		: false,
+			filter 			: false,
 		}
-	}
+
+		const note_section		= 	await instances.get_instance(instance_options)
+									await note_section.build(true)
+		const note_section_node	= 	await note_section.render()
+
+	// subscribe event
+		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
+
+		// self.events_tokens.push(
+			event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
+		// )
+		function fn_change_publication_state(changed_value) {
+
+			const state = changed_value.section_id=='2' // no active value
+				? 'a'
+				: 'b'
+			const current_tag_state = tag_node.dataset.state || 'a'
+			if (current_tag_state !== state){
+				const note_tag		= {
+					type	: 'note',
+					label	: tag_node.dataset.label,
+					tag_id	: tag_node.dataset.tag_id,
+					state	: state,
+					data	: locator
+				}
+				const tag = build_node_tag(note_tag, note_tag.tag_id)
+				tag_node.id = tag.id
+				tag_node.src = tag.src
+				tag_node.dataset.state = tag.dataset.state
+				text_editor.set_dirty(true)
+				text_editor.save()
+			}
+		}
+
 	// created label with Title case (first letter to uppercase)
-	const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
-	const by_user_label 	= get_label.by_user || 'by user'
-	const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
-	const header_label		= created_label+' '+ by_user_label + ': '+created_by_user
+		const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
+		const by_user_label		= get_label.by_user || 'by user'
+		const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
+		const header_label		= created_label+' '+ by_user_label + ': '+created_by_user
+
 	// header
 		const header_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'header_container',
+			class_name 		: 'header'
 		})
-			const header_label_node = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'header_label',
-				inner_html		: header_label,
-				parent			: header_container
-			})
+		// header_label_node
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: header_label,
+			parent			: header_container
+		})
+
+	// body_container
+		const body_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body'
+		})
+		body_container.appendChild(note_section_node)
 
 	// footer options
 		const footer_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'footer_container',
+			class_name		: 'footer'
 		})
+
 		// button remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
-				class_name 		: 'warning',
-				text_content 	: get_label.delete ||'Delete',
+				class_name		: 'warning',
+				text_content	: get_label.delete ||'Delete',
 				parent			: footer_container
 			})
-				const button_remove_icon = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'button white remove',
-					parent			: button_remove
-				})
+			// button_remove_icon
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button white remove',
+				parent			: button_remove
+			})
+			button_remove.addEventListener("click", function(e){
+				e.stopPropagation()
+				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
 
-		const date_label = get_label.date.toLowerCase() || 'date'
-		const created_date			= note_section.data.value[0].created_date || ''
-		const created_date_label	= created_label + ' ' + date_label + ': '+created_date
+				if(window.confirm(delete_label)){
+					const sqo = {
+						section_tipo		: [note_section.section_tipo],
+						filter_by_locators	: [{
+							section_tipo	: note_section.section_tipo,
+							section_id		: note_section.section_id
+						}],
+						limit				: 1
+					}
 
+					note_section.delete_section({
+						sqo			: sqo,
+						delete_mode	: 'delete_record'
+					})
+
+					tag_node.remove()
+					text_editor.set_dirty(true)
+					text_editor.save()
+					note_section.destroy(true,true,true)
+					modal.remove()
+				}
+			})
 
 		// section info
-			const section_info = ui.create_dom_element({
+			const date_label			= get_label.date.toLowerCase() || 'date'
+			const created_date			= note_section.data.value[0].created_date || ''
+			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
+			ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'section_info',
+				class_name		: 'section_info',
 				inner_html		: created_date_label,
 				parent			: footer_container
 			})
@@ -1477,57 +1520,29 @@ const render_note = async function(options){
 		// button_ok
 			const button_ok = ui.create_dom_element({
 				element_type	: 'button',
-				class_name 		: 'success',
-				text_content 	: get_label.ok ||'Ok',
+				class_name		: 'success',
+				text_content	: get_label.ok ||'Ok',
 				parent			: footer_container
 			})
-
-	// dialog
-		const modal = ui.attach_to_modal(
-			header_container,
-			fragment,
-			footer_container,
-			// 'big'
-		)
-
-		button_remove.addEventListener("click", function(e){
-			e.stopPropagation()
-			const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
-
-			if(window.confirm(delete_label)){
-				const sqo = {
-					section_tipo		: [note_section.section_tipo],
-					filter_by_locators	: [{
-						section_tipo	: note_section.section_tipo,
-						section_id		: note_section.section_id
-					}],
-					limit				: 1
-				}
-
-				note_section.delete_section({
-					sqo			: sqo,
-					delete_mode	: 'delete_record'
-				})
-
-				tag_node.remove()
-				text_editor.set_dirty(true)
-				text_editor.save()
+			button_ok.addEventListener("click", function(e){
+				e.stopPropagation()
 				note_section.destroy(true,true,true)
 				modal.remove()
-			}
+			})
 
-		})
-		button_ok.addEventListener("click", function(e){
-			e.stopPropagation()
-			note_section.destroy(true,true,true)
-			modal.remove()
-		})
 
+	// modal
+		const modal = ui.attach_to_modal(
+			header_container,
+			body_container,
+			footer_container
+			// 'big' // size normal|big
+		)
 		modal.on_close = () => {
 			note_section.destroy(true,true,true)
 		}
 
-	return fragment
+	return true
 };//end render_note
 
 
