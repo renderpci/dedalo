@@ -368,24 +368,29 @@ const get_input_element = (i, current_value, self) => {
 
 			return current_text_editor
 		}//end init_current_text_editor
+		const text_editor = init_current_text_editor()
 
 	// observer. init the editor when container node is in DOM
-		const observer = new IntersectionObserver(function(entries) {
-			// if(entries[0].isIntersecting === true) {}
-			const entry = entries[1] || entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-				observer.disconnect();
+		// const observer = new IntersectionObserver(function(entries) {
+		// 	// if(entries[0].isIntersecting === true) {}
+		// 	const entry = entries[1] || entries[0]
+		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+		// 		observer.disconnect();
 
-				init_current_text_editor()
+		// 		init_current_text_editor()
 
-				// observer.unobserve(entry.target);
-			}
-		}, { threshold: [0] });
-		observer.observe(li);
+		// 		// observer.unobserve(entry.target);
+		// 	}
+		// }, { threshold: [0] });
+		// observer.observe(li);
 
 	// persons
-		const node_persons_list = render_persons_list(self, init_current_text_editor, i)
+		const node_persons_list = render_persons_list(self, text_editor, i)
 		li.appendChild(node_persons_list)
+
+	// langs
+		const node_langs_list = render_langs_list(self, text_editor, i)
+		li.appendChild(node_langs_list)
 
 	// add button create fragment (Only when caller is a tool_indexation instance)
 		if (self.caller && self.caller.constructor.name==="tool_indexation") {
@@ -541,7 +546,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 							const inserted_tag = text_editor.set_content(tag.outerHTML)
 
 							render_note({
-								self		:self,
+								self		: self,
 								text_editor	: text_editor,
 								i			: i,
 								tag			: inserted_tag
@@ -616,7 +621,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 				tooltip	: 'Add lang',
 				image	: '../themes/default/icons/lang.svg',
 				onclick	: function(evt) {
-					event_manager.publish('create_geo_tag_'+ self.id_base, {
+					event_manager.publish('toggle_langs_list_'+ self.id_base + '_' + i, {
 						caller		: self,
 						text_editor	: text_editor
 					})
@@ -778,7 +783,6 @@ const get_custom_events = (self, i, text_editor) => {
 								element_type	: 'span',
 								class_name		: 'layer_person',
 								text_node		: person.full_name,
-								parent			: self.node[0],
 							})
 							const modal = ui.attach_to_modal(
 								null,
@@ -801,6 +805,29 @@ const get_custom_events = (self, i, text_editor) => {
 							}).then((section_node)=>{
 								// self.node[0].appendChild(section_node)
 								}
+							)
+						break;
+					case 'lang':
+						// Show note info
+						event_manager.publish('click_tag_lang_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
+						const ar_project_langs	= page_globals.dedalo_projects_default_langs
+						const tag_data_lang_string	= tag_obj.dataset.data
+						// rebuild the correct data with the " instead '
+						const data_lang			= tag_data_lang_string.replace(/\'/g, '"')
+						// parse the string to object or create new one
+						const tag_data_lang		= JSON.parse(data_lang) || {}
+						// get the object of the lang clicked from all project_langs
+						const lang_obj 			= ar_project_langs.find(el => el.value=== tag_data_lang)
+
+						const layer_lang = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'layer_lang',
+								text_node		: lang_obj.label,
+							})
+							const modal = ui.attach_to_modal(
+								null,
+								layer_lang,
+								null
 							)
 						break;
 
@@ -884,13 +911,31 @@ const get_custom_events = (self, i, text_editor) => {
 						}
 					break;
 				// ctrl + 0
-				case evt.ctrlKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
+				case evt.ctrlKey && !evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
 
-					const number		= evt.code.match(/\d+/g);
-					const person_tag	= self.context.tags_persons[number[0]]
-					event_manager.publish('key_up_persons' +'_'+ self.id_base, number)
-					const tag = build_node_tag(person_tag, person_tag.tag_id)
-					text_editor.set_content(tag.outerHTML)
+					const key_person_number	= evt.code.match(/\d+/g);
+					const person_tag		= self.context.tags_persons[key_person_number[0]]
+					event_manager.publish('key_up_persons' +'_'+ self.id_base, key_person_number)
+					const node_tag_person	= build_node_tag(person_tag, person_tag.tag_id)
+					text_editor.set_content(node_tag_person.outerHTML)
+
+					break;
+				case evt.ctrlKey && evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
+					const ar_project_langs	= page_globals.dedalo_projects_default_langs
+					const key_lang_number	= evt.code.match(/\d+/g);
+					const current_lang		= ar_project_langs[key_lang_number]
+					const tag_type			='lang'
+					const last_tag_id		= self.get_last_tag_id(tag_type, text_editor)
+					const lang_number		= parseInt(last_tag_id) + 1
+					const lang_tag			= {
+						type	: tag_type,
+						label	: current_lang.value.split('-')[1],
+						tag_id	: lang_number,
+						state	: 'a',
+						data	: current_lang.value
+					}
+					const node_tag_lang = build_node_tag(lang_tag, lang_tag.tag_id)
+					text_editor.set_content(node_tag_lang.outerHTML)
 
 					break;
 			}
@@ -1294,7 +1339,9 @@ const render_persons_list = function(self, text_editor, i){
 					evt.preventDefault()
 					evt.stopPropagation()
 
-					self.insert_person_image(ed, current_person.tag_id, current_person.state, current_person.label, current_person.data, evt)
+					// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
+					const tag = build_node_tag(current_person, current_person.tag_id)
+					text_editor.set_content(tag.outerHTML)
 
 					// Close persons selector
 					persons_list_container.classList.toggle('hide')
@@ -1309,8 +1356,6 @@ const render_persons_list = function(self, text_editor, i){
 				persons_list_container.classList.toggle('hide')
 			})
 		)
-
-
 
 	return fragment
 };//end render_persons_list
@@ -1442,7 +1487,7 @@ const render_note = async function(options){
 			header_container,
 			fragment,
 			footer_container,
-			'big'
+			// 'big'
 		)
 
 		button_remove.addEventListener("click", function(e){
@@ -1486,6 +1531,105 @@ const render_note = async function(options){
 };//end render_note
 
 
+
+/**
+* RENDER_LANGS_LIST
+* @return DOM node fragment
+*/
+const render_langs_list = function(self, text_editor, i){
+
+	// short vars
+		const ar_project_langs = page_globals.dedalo_projects_default_langs
+			// console.log(`(!project_langs) ${self.tipo}:`, project_langs);
+	const fragment = new DocumentFragment()
+
+	// project_langs_container
+		const project_langs_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'project_langs_container hide',
+			parent			: fragment
+		})
+
+	// button_close
+		const button_close = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'button icon close',
+			parent			: project_langs_container
+		})
+		button_close.addEventListener("click", function(e){
+			e.stopPropagation()
+			project_langs_container.classList.toggle('hide')
+		})
+
+	// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'label',
+			text_node 		: get_label.language || 'Language',
+			parent			: project_langs_container
+		})
+
+
+	// sections loop
+		const value_length	= ar_project_langs.length
+		let k = 0;
+		for (let i = 0; i < value_length; i++) {
+
+			const current_lang = ar_project_langs[i]
+
+			const lang_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'lang_container',
+				parent			: project_langs_container
+			})
+
+				const lang_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'lang_label',
+					inner_html 		: current_lang.label,
+					parent			: lang_container
+				})
+				const label_keyboard = ui.create_dom_element({
+					element_type	: 'span',
+					text_node		: 'Control + Shift + '+ k++,
+					class_name 		: 'label label_keyboard',
+					parent			: lang_container
+				})
+
+				lang_container.addEventListener("mousedown", function (evt) {
+					evt.preventDefault()
+					evt.stopPropagation()
+					const tag_type		='lang'
+					const last_tag_id	= self.get_last_tag_id(tag_type, text_editor)
+					const lang_number	= parseInt(last_tag_id) + 1
+					const lang_tag		= {
+						type	: tag_type,
+						label	: current_lang.value.split('-')[1], //.substring(0, 3),
+						tag_id	: lang_number,
+						state	: 'a',
+						data	: current_lang.value
+					}
+
+					// self.insert_lang_image(ed, current_person.tag_id, current_person.state, current_person.label, current_person.data, evt)
+					// event_manager.publish('key_up_lang' +'_'+ self.id_base, k)
+					const tag = build_node_tag(lang_tag, lang_tag.tag_id)
+					text_editor.set_content(tag.outerHTML)
+
+					// Close persons selector
+					project_langs_container.classList.toggle('hide')
+				});
+		}//end for (let i = 0; i < value_length; i++)
+
+
+	// toggle_langs_list_ . User click over the button 'button_person'
+		self.events_tokens.push(
+			event_manager.subscribe('toggle_langs_list_' + self.id_base +'_'+i, ()=>{
+				project_langs_container.classList.toggle('hide')
+			})
+		)
+
+	return fragment
+};//end render_langs_list
 
 /**
 * GET_CONTENTEDITABLE_BUTTONS
