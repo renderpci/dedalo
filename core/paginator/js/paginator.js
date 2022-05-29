@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -347,7 +347,7 @@ paginator.prototype.go_to_page_json = function(page) {
 
 /**
 * NAVIGATE_TO_NEXT_PAGE
-* Navigates current list
+* Navigates current list forward
 * @return bool
 */
 paginator.prototype.navigate_to_next_page = function() {
@@ -364,8 +364,8 @@ paginator.prototype.navigate_to_next_page = function() {
 
 
 /**
-* navigate_to_previous_page
-* Navigates current list
+* NAVIGATE_TO_PREVIOUS_PAGE
+* Navigates current list backwards
 * @return bool
 */
 paginator.prototype.navigate_to_previous_page = function() {

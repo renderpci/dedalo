@@ -28,6 +28,7 @@ abstract class RecordDataBoundObject {
 	abstract protected function definePrimaryKeyName();
 
 
+
 	/**
 	* __CONSTRUCT
 	* @param string $id
@@ -90,7 +91,9 @@ abstract class RecordDataBoundObject {
 	# GET_DATO : GET DATO UNIFICADO (JSON)
 	public function get_dato() {
 
-		if($this->blIsLoaded!==true) $this->Load();
+		if($this->blIsLoaded!==true) {
+			$this->Load();
+		}
 
 		if (!isset($this->dato)) {
 			#error_log("Calling get dato from ".get_called_class().''.print_r(debug_backtrace(),true) );
@@ -103,7 +106,7 @@ abstract class RecordDataBoundObject {
 
 
 	# SET_DATO : SET DATO UNIFICADO (JSON)
-	public function set_dato($dato, bool $raw=false) {
+	public function set_dato(string $dato, bool $raw=false) {
 
 		# Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
@@ -126,7 +129,7 @@ abstract class RecordDataBoundObject {
 				return false;
 			}
 
-		# SQL QUERY
+		// sql query
 			// $strQuery = 'SELECT ';
 			// foreach($this->arRelationMap as $key => $value) {
 			// 	$strQuery .= '"'.$key.'",';
@@ -417,17 +420,17 @@ abstract class RecordDataBoundObject {
 
 
 	# DELETE
-	public function MarkForDeletion() {
+	public function MarkForDeletion() : void {
 		$this->blForDeletion = true;
 	}
 	# ALIAS OF MarkForDeletion
-	public function Delete() {
+	public function Delete() : void {
 		$this->MarkForDeletion();
 	}
 
 
 	# ARRAY EDITABLE FIELDS
-	public function get_ar_editable_fields() {
+	public function get_ar_editable_fields() : array {
 
 		static $ar_editable_fields;
 
@@ -443,7 +446,8 @@ abstract class RecordDataBoundObject {
 			}
 			return $ar_editable_fields ;
 		}
-		return false;
+
+		return [];
 	}//end get_ar_editable_fields
 
 

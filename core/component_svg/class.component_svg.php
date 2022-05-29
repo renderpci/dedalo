@@ -58,8 +58,9 @@ class component_svg extends component_media_common {
 	* GET SVG ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* Se puede sobreescribir en properties con json ej. {"svg_id":"dd851"} y se leerá del contenido del componente referenciado
+	* @return string $svg_id
 	*/
-	public function get_svg_id() {
+	public function get_svg_id() : string {
 
 		# Already calculed id
 		if(isset($this->svg_id)) return $this->svg_id;
@@ -72,14 +73,17 @@ class component_svg extends component_media_common {
 		$properties = $this->get_properties();
 		if (isset($properties->svg_id)) {
 
-			$component_tipo 	= $properties->svg_id;
-			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-			$component 			= component_common::get_instance($component_modelo,
-																 $component_tipo,
-																 $this->parent,
-																 'edit',
-																 DEDALO_DATA_NOLAN,
-																 $this->section_tipo);
+			$component_tipo		= $properties->svg_id;
+			$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+			$component			= component_common::get_instance(
+				$component_modelo,
+				$component_tipo,
+				$this->parent,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$this->section_tipo
+			);
+
 			$dato = trim($component->get_valor());
 			if(!empty($dato) && strlen($dato)>0) {
 				$svg_id = $dato;
@@ -98,7 +102,7 @@ class component_svg extends component_media_common {
 	/**
 	* GET_INITIAL_MEDIA_PATH
 	*/
-	public function get_initial_media_path() {
+	public function get_initial_media_path() : string {
 
 		$component_tipo		= $this->tipo;
 		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
@@ -270,7 +274,7 @@ class component_svg extends component_media_common {
 	* GET_TARGET_DIR
 	* @return
 	*/
-	public function get_target_dir() {
+	public function get_target_dir() : string {
 
 		if(!$this->quality) {
 			$this->quality = $this->get_quality();
