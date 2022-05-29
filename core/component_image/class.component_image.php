@@ -1730,7 +1730,7 @@ class component_image extends component_media_common {
 	* @return string $result
 	*
 	*/
-	public function rotate($degrees, ?string $quality=null) : string {
+	public function rotate($degrees, ?string $quality=null) : ?string {
 
 		$source = $this->get_path($quality);
 
