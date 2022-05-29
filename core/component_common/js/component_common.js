@@ -567,7 +567,14 @@ component_common.prototype.save = async function(changed_data) {
 					instance		: self,
 					api_response	: response
 				})
+
+			// remove acive
+				ui.component.inactive(self)
+
+			// blur selection
+				document.activeElement.blur()
 		})
+
 
 	return save_promise
 };//end save
