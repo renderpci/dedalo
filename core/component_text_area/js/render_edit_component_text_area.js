@@ -546,9 +546,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 								i			: i,
 								tag			: inserted_tag
 							}).then((section_node)=>{
-								self.node[0].appendChild(section_node)
-								}
-							)
+								// self.node[0].appendChild(section_node)
+							})
 						}
 					})
 				}
@@ -781,9 +780,11 @@ const get_custom_events = (self, i, text_editor) => {
 								text_node		: person.full_name,
 								parent			: self.node[0],
 							})
-							layer_person.addEventListener('click',function(event) {
-								layer_person.parentNode.removeChild(layer_person)
-							})
+							const modal = ui.attach_to_modal(
+								null,
+								layer_person,
+								null
+							)
 						}
 
 						break;
@@ -798,7 +799,7 @@ const get_custom_events = (self, i, text_editor) => {
 								i			: i,
 								tag			: tag_obj
 							}).then((section_node)=>{
-								self.node[0].appendChild(section_node)
+								// self.node[0].appendChild(section_node)
 								}
 							)
 						break;
@@ -1345,13 +1346,14 @@ const render_note = async function(options){
 		mode			: 'edit',
 		lang			: self.lang,
 		caller			: self,
+		inspector 		: false,
+		filter 			: false,
 	}
 
-	const note_section = 	await instances.get_instance(instance_options)
-							await note_section.build(true)
-	const section_node = 	await note_section.render()
-
-	fragment.appendChild(section_node)
+	const note_section		= 	await instances.get_instance(instance_options)
+								await note_section.build(true)
+	const note_section_node	= 	await note_section.render()
+	fragment.appendChild(note_section_node)
 	const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
 
 	// self.events_tokens.push(
@@ -1379,40 +1381,106 @@ const render_note = async function(options){
 			text_editor.save()
 		}
 	}
-
-	console.log("note_section:",note_section);
+	// created label with Title case (first letter to uppercase)
+	const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
+	const by_user_label 	= get_label.by_user || 'by user'
+	const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
+	const header_label		= created_label+' '+ by_user_label + ': '+created_by_user
+	// header
+		const header_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'header_container',
+		})
+			const header_label_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'header_label',
+				inner_html		: header_label,
+				parent			: header_container
+			})
 
 	// footer options
 		const footer_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'footer_container',
-			parent			: fragment
 		})
 		// button remove
 			const button_remove = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'button remove',
+				element_type	: 'button',
+				class_name 		: 'warning',
+				text_content 	: get_label.delete ||'Delete',
 				parent			: footer_container
 			})
-			button_remove.addEventListener("click", function(e){
-				e.stopPropagation()
-			})
+				const button_remove_icon = ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'button white remove',
+					parent			: button_remove
+				})
+
+		const date_label = get_label.date.toLowerCase() || 'date'
+		const created_date			= note_section.data.value[0].created_date || ''
+		const created_date_label	= created_label + ' ' + date_label + ': '+created_date
+
+
 		// section info
 			const section_info = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button remove',
+				class_name 		: 'section_info',
+				inner_html		: created_date_label,
 				parent			: footer_container
 			})
 
 		// button_ok
 			const button_ok = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button icon close',
+				element_type	: 'button',
+				class_name 		: 'success',
+				text_content 	: get_label.ok ||'Ok',
 				parent			: footer_container
 			})
-			button_ok.addEventListener("click", function(e){
-				e.stopPropagation()
-			})
+
+	// dialog
+		const modal = ui.attach_to_modal(
+			header_container,
+			fragment,
+			footer_container,
+			'big'
+		)
+
+		button_remove.addEventListener("click", function(e){
+			e.stopPropagation()
+			const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
+
+			if(window.confirm(delete_label)){
+				const sqo = {
+					section_tipo		: [note_section.section_tipo],
+					filter_by_locators	: [{
+						section_tipo	: note_section.section_tipo,
+						section_id		: note_section.section_id
+					}],
+					limit				: 1
+				}
+
+				note_section.delete_section({
+					sqo			: sqo,
+					delete_mode	: 'delete_record'
+				})
+
+				tag_node.remove()
+				text_editor.set_dirty(true)
+				text_editor.save()
+				note_section.destroy(true,true,true)
+				modal.remove()
+			}
+
+		})
+		button_ok.addEventListener("click", function(e){
+			e.stopPropagation()
+			note_section.destroy(true,true,true)
+			modal.remove()
+		})
+
+		modal.on_close = () => {
+			note_section.destroy(true,true,true)
+		}
 
 	return fragment
 };//end render_note
