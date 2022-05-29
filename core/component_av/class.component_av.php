@@ -403,21 +403,25 @@ class component_av extends component_media_common {
 	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
 	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
 	* @param string $quality
-	* @return bool | string (file path)
+	* @return string|null $result
 	*/
-	public function get_original_file_path(string $quality) {
+	public function get_original_file_path(string $quality) : ?string {
 
-		$result = false;
-		$initial_quality = $this->get_quality();
+		$result = null;
 
-		$this->set_quality($quality); // change current component quality temporally
-		$ar_originals 	= array();
-		$target_dir 	= $this->get_target_dir();
+		// store initial_quality
+			$initial_quality = $this->get_quality();
 
-		if(!file_exists($target_dir)) {
-			return false;
-		}
+		// quakity. Changes current component quality temporally
+			$this->set_quality($quality);
 
+		// file do not esits case
+			$target_dir = $this->get_target_dir();
+			if(!file_exists($target_dir)) {
+				return $result;
+			}
+
+		$ar_originals = array();
 		if ($handle = opendir($target_dir)) {
 
 		    while (false !== ($file = readdir($handle))) {
@@ -456,21 +460,23 @@ class component_av extends component_media_common {
 		}
 		$n = count($ar_originals);
 		if ($n===0) {
-			$result = false;
+			// nothing found case
 		}elseif($n===1) {
+			// OK. File found
 			#$path = $_FILES['image']['name'];
 			#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
 			$result = $target_dir.'/'.$ar_originals[0];
-				#dump($result, ' result');
 		}else{
+			// Error. More than one original found
 			if(SHOW_DEBUG===true) {
 				dump($ar_originals, "ar_originals ".to_string($ar_originals));
 				trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
 			}
 		}
 
-		// return current component quality
-		$this->quality 	= $initial_quality;
+		// restore initial_quality
+			$this->quality 	= $initial_quality;
+
 
 		return $result;
 	}//end get_original_file_path
@@ -479,15 +485,18 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VIDEO SIZE
+	* @return string
 	*/
-	public function get_video_size($quality=false, $filename=false) {
+	public function get_video_size(string $quality=null, string $filename=null) : ?string {
 
-		if (!$filename) {
-			if(!$quality)
-			$quality 	= $this->get_quality();
-			$video_id 	= $this->get_video_id();
+		if (empty($filename)) {
 
-			$filename 	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. $this->get_extension();
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
+
+			$video_id	= $this->get_video_id();
+			$filename	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. $this->get_extension();
 		}
 
 		if ( !file_exists( $filename )) {
@@ -519,7 +528,7 @@ class component_av extends component_media_common {
 			} catch (Exception $e) {
 				#echo '',  $e->getMessage(), "\n";
 				#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
-				return false;
+				return null;
 			}
 		}
 
@@ -587,8 +596,9 @@ class component_av extends component_media_common {
 	/**
 	* GET_SOURCE_QUALITY_TO_BUILD
 	* Iterate array DEDALO_AV_AR_QUALITY (Order by quality big to small)
+	* @return string|null $current_quality
 	*/
-	public function get_source_quality_to_build(string $target_quality) {
+	public function get_source_quality_to_build(string $target_quality) : ?string {
 
 		$ar_quality_source_valid = array();
 		$ar_quality 			 = DEDALO_AV_AR_QUALITY;
@@ -607,7 +617,7 @@ class component_av extends component_media_common {
 		}#end foreach($ar_quality as $quality)
 
 
-		return false;
+		return null;
 	}//end get_source_quality_to_build
 
 

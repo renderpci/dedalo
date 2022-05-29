@@ -152,20 +152,24 @@ class component_html_file extends component_common {
 		return $this->html_file_id = $html_file_id;
 	}
 
+
+
 	/**
 	* UPLOAD NEEDED
 	*/
-	public function get_target_filename() {
+	public function get_target_filename() : string {
 		return $this->html_file_id .'.'. DEDALO_HTML_FILES_EXTENSION ;
 	}
-	public function get_target_dir() {
+	public function get_target_dir() : string {
 		return DEDALO_MEDIA_PATH . DEDALO_HTML_FILES_FOLDER ;
 	}
+
+
 
 	/**
 	* GET_html_file_URL
 	*/
-	public function get_html_file_url() {
+	public function get_html_file_url() : string {
 
 		$html_file_id 	= $this->get_html_file_id();
 
@@ -174,10 +178,12 @@ class component_html_file extends component_common {
 		return $final_file;
 	}
 
+
+
 	/**
 	* GET_html_file_PATH complete absolute file path like '/Users/myuser/works/Dedalo/pdf/standar/dd152-1.pdf'
 	*/
-	public function get_html_file_path() {
+	public function get_html_file_path() : string {
 
 		$html_file_id 	= $this->get_html_file_id();
 

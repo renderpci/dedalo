@@ -141,7 +141,7 @@ class component_pdf extends component_media_common {
 	* GET_INITIAL_MEDIA_PATH
 	*
 	*/
-	public function get_initial_media_path() {
+	public function get_initial_media_path() : string {
 
 		$component_tipo		= $this->tipo;
 		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
@@ -275,7 +275,7 @@ class component_pdf extends component_media_common {
 	/**
 	* GET_TARGET_DIR
 	*/
-	public function get_target_dir() {
+	public function get_target_dir() : string {
 
 		#return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();

@@ -131,7 +131,7 @@ class component_image extends component_media_common {
 	/**
 	* GET_INITIAL_MEDIA_PATH
 	*/
-	public function get_initial_media_path() {
+	public function get_initial_media_path() : string {
 
 		$component_tipo		= $this->tipo;
 		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
@@ -589,7 +589,7 @@ class component_image extends component_media_common {
 	* GET_TARGET_FILENAME
 	* Upload needed
 	*/
-	public function get_target_filename() {
+	public function get_target_filename() : string {
 
 		return $this->ImageObj->get_target_filename();	# Like d758-1.jpg
 	}//end get_target_filename
@@ -599,7 +599,7 @@ class component_image extends component_media_common {
 	/**
 	* GET_TARGET_DIR
 	*/
-	public function get_target_dir() {
+	public function get_target_dir() : string {
 
 		return $this->ImageObj->get_media_path_abs();
 	}//end get_target_dir
