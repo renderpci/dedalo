@@ -408,9 +408,14 @@ export const init_events_subscription = function(self) {
 
 
 /**
-* COMPONENT_SAVE
-* Receive full component object and start the save process across the section_record
-* @param object component
+* SAVE
+*
+* @param object changed_data
+* 	{
+* 		action : "update",
+* 		key : 0,
+* 		value : "XXX"
+* 	}
 * @return promise save_promise
 */
 component_common.prototype.save = async function(changed_data) {
@@ -432,6 +437,7 @@ component_common.prototype.save = async function(changed_data) {
 					api_response	: null,
 					msg				: msg
 				})
+
 			return false
 		}
 
@@ -441,6 +447,7 @@ component_common.prototype.save = async function(changed_data) {
 			const new_value			= changed_data.value
 			// console.log("original_value:", original_value, new_value, new_value==original_value);
 			if (new_value==original_value) {
+
 				// dispatch event save
 					event_manager.publish('save', {
 						instance		: self,

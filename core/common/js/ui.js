@@ -686,6 +686,7 @@ export const ui = {
 
 						ui.component.component_active = component
 
+
 					return true
 				}
 

@@ -339,7 +339,7 @@ page.prototype.add_events = function() {
 				case evt.key==='Enter':
 					// search with current section filter
 						const section = self.ar_instances.find(el => el.model==='section')
-						if (section && section.filter) {
+						if (section && section.mode==='list' && section.filter) {
 							if (section.filter.search_panel_is_open===true) {
 								// always blur active component to force set dato (!)
 									document.activeElement.blur()
