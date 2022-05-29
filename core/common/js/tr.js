@@ -106,6 +106,11 @@ export const tr = {
 				reg_ex = /(\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
 				break;
 
+			// LANG (transcription languages) like [lang-n-number-data:"lg-spa":data]
+			case 'lang' :
+				reg_ex = /(\[(lang)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
+				break;
+
 			// OTHERS
 			case 'br' :
 				reg_ex = /\<br>/g;
@@ -192,6 +197,12 @@ export const tr = {
 		// NOTE
 			const pattern_note = tr.get_mark_pattern('note');
 			text = text.replace(pattern_note, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="note" data-type="note" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+
+		// LANG
+			const pattern_lang = tr.get_mark_pattern('lang');
+			text = text.replace(pattern_lang, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="lang" data-type="lang" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+
+
 
 		// STRUCT IN V5 Incompatible
 			// const pattern_structIn 	= tr.get_mark_pattern('structIn');
