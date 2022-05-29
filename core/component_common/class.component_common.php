@@ -89,9 +89,9 @@ abstract class component_common extends common {
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
-	* @return object
+	* @return object|null
 	*/
-	public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) : object {
+	public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) : ?object {
 		$start_time = start_time();
 
 		// tipo check. Is mandatory
@@ -327,7 +327,7 @@ abstract class component_common extends common {
 			}
 			$this->tipo = $tipo;
 
-		// $section_id
+		// section_id
 			$this->parent		= $section_id;
 			$this->section_id	= $section_id;
 
@@ -336,16 +336,15 @@ abstract class component_common extends common {
 				$modo = 'edit';
 			}
 			$this->modo = $modo;
-			if ($this->modo==='print') {
-				$this->print_options = new stdClass();
-			}
 			if ($this->modo==='edit') {
 				$this->update_diffusion_info_propagate_changes = true;
+			}elseif ($this->modo==='print') {
+				$this->print_options = new stdClass();
 			}
 
 		// lang
 			if(isset($this->lang)) {
-				# LANG : Overwrite var '$lang' with previous component declatarion of '$this->lang'
+				// lang : Overwrite var '$lang' with previous component declatarion of '$this->lang'
 				$lang = $this->lang;
 			}elseif ( empty($lang) ) {
 				$msg = __METHOD__.' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
@@ -387,52 +386,44 @@ abstract class component_common extends common {
 			$this->ar_tools_obj = false;
 
 		// debug set base info
-			$this->debugger = "tipo:$this->tipo - norden:$this->norden - modo:$this->modo - section_id:$this->section_id";
+			// $this->debugger = "tipo:$this->tipo - norden:$this->norden - modo:$this->modo - section_id:$this->section_id";
 
 		// set_dato_default (new way 28-10-2016)
 			if ( $this->modo==='edit' && !is_null($this->section_id) ) {
 				$this->set_dato_default();
 			}
+
 		// pagination
 			$this->pagination = new stdClass();
-				// $this->pagination->offset	= 0; // default
-				// $this->pagination->limit	= isset($properties->list_max_records) ? (int)$properties->list_max_records : 5;
 
-					// structure properties
-						$properties = $this->get_properties();
+				$request_config = ( isset($properties->source->request_config) )
+					? $properties->source->request_config
+					: [];
 
-						$request_config = ( isset($properties->source->request_config) )
-							? $properties->source->request_config
-							: [];
+				$found = array_find($request_config, function($el){
+					return isset($el->api_engine) && $el->api_engine==='dedalo';
+				});
+				$rqo = !empty($found)
+					? $found
+					: (isset($request_config[0])
+						? $request_config[0]
+						: new stdClass());
 
-						$found = array_find($request_config, function($el){
-							return isset($el->api_engine) && $el->api_engine==='dedalo';
-						});
-						$rqo = !empty($found)
-							? $found
-							: (isset($request_config[0])
-								? $request_config[0]
-								: new stdClass());
+			// limit
+				$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
+					? (int)$rqo->sqo->limit
+					: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+						// show limit
+						?  (int)$rqo->show->sqo_config->limit
+						: 5);
 
-						// limit
-						$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
-							? (int)$rqo->sqo->limit
-							: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
-								// show limit
-								?  (int)$rqo->show->sqo_config->limit
-								: 5);
+			// offset
+				$this->pagination->offset =  (isset($rqo->sqo) && isset($rqo->sqo->offset))
+					? (int)$rqo->sqo->offset
+					: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
+						? (int)$rqo->show->sqo_config->offset
+						: 0);
 
-						// offset
-						$this->pagination->offset =  (isset($rqo->sqo) && isset($rqo->sqo->offset))
-							? (int)$rqo->sqo->offset
-							: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
-								? (int)$rqo->show->sqo_config->offset
-								: 0);
-
-
-
-
-		return true;
 	}//end __construct
 
 
@@ -572,7 +563,12 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATO_FULL
-	* @return
+	* @return object|null $dato_full
+	* 	sample: {
+	*	    "lg-spa": [
+	*	        "L'Horta Sud"
+	*	    ]
+	*	}
 	*/
 	public function get_dato_full() {
 
@@ -580,7 +576,7 @@ abstract class component_common extends common {
 
 		$all_component_data = $section->get_all_component_data($this->tipo);
 
-		$dato_full = isset($all_component_data->dato) ? $all_component_data->dato : null;
+		$dato_full = $all_component_data->dato ?? null;
 
 		return $dato_full;
 	}//end get_dato_full

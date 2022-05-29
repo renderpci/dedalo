@@ -299,7 +299,7 @@ class dd_core_api {
 
 	/**
 	* READ
-	* @param request query object $rqo
+	* @param object $rqo
 	*	array $json_data->context
 	* @return object $result
 	*	array $result->context
@@ -348,6 +348,7 @@ class dd_core_api {
 
 	/**
 	* CREATE
+	* @param object $json_data
 	* @return array $result
 	*/
 	public static function create(object $json_data) : object {
@@ -521,6 +522,7 @@ class dd_core_api {
 
 	/**
 	* SAVE
+	* @param object $json_data
 	* @return object $response
 	*/
 	public static function save(object $json_data) : object {
