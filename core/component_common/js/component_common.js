@@ -90,6 +90,9 @@ component_common.prototype.init = async function(options) {
 	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
 		self.change_value_pool = []
 
+	// is_data_changed. bool set as true when component data changes.
+		self.is_data_changed = false
+
 
 	// events subscription
 		// active_component (when user focus it in DOM)
