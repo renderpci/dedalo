@@ -252,6 +252,8 @@ export const service_tinymce = function() {
 				if (custom_events.KeyUp) {
 					custom_events.KeyUp(evt, {})
 				}
+				// set data as changed
+				self.caller.is_data_changed = true
 			})
 
 
@@ -468,6 +470,11 @@ export const service_tinymce = function() {
 		const self = this
 
 		self.editor.setDirty(value);
+
+		if (value===true) {
+			// is_data_changed
+			self.caller.is_data_changed = true
+		}
 
 		return true
 	};//end set_dirty
