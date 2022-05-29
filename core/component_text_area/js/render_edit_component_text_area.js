@@ -523,16 +523,18 @@ const get_custom_buttons = (self, text_editor, i) => {
 						caller		: self,
 						text_editor	: text_editor
 					})
-
+					// create the new tag in the server and get the new note section_id from server response
 					self.create_note_tag({
 						text_editor	: text_editor
 					})
 					.then((note_section_id)=>{
 						if (note_section_id){
+							// create the new locator of the new note section
 							const locator = {
 								section_tipo	: self.context.notes_section_tipo,
 								section_id		: note_section_id
 							};
+							// create the new tag for the note
 							const tag_type		='note'
 							const last_tag_id	= self.get_last_tag_id(tag_type, text_editor)
 							const note_number	= parseInt(last_tag_id) + 1
@@ -544,16 +546,14 @@ const get_custom_buttons = (self, text_editor, i) => {
 								data	: locator
 							}
 							const tag = build_node_tag(note_tag, note_tag.tag_id)
+							// insert the new note tag in the caret position of the text_editor
 							const inserted_tag = text_editor.set_content(tag.outerHTML)
-
+							// render and open the note section inside a modal
 							render_note({
 								self		: self,
 								text_editor	: text_editor,
 								i			: i,
 								tag			: inserted_tag
-							})
-							.then((section_node)=>{
-								// self.node[0].appendChild(section_node)
 							})
 						}
 					})
@@ -623,6 +623,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 				tooltip	: 'Add lang',
 				image	: '../themes/default/icons/lang.svg',
 				onclick	: function(evt) {
+					// show the langs list to be selected the new lang for create the new tag
 					event_manager.publish('toggle_langs_list_'+ self.id_base + '_' + i, {
 						caller		: self,
 						text_editor	: text_editor
@@ -786,6 +787,7 @@ const get_custom_events = (self, i, text_editor) => {
 								class_name		: 'layer_person',
 								text_node		: person.full_name
 							})
+							// create new modal with the person full name
 							const modal = ui.attach_to_modal(
 								null,
 								layer_person,
@@ -915,18 +917,27 @@ const get_custom_events = (self, i, text_editor) => {
 					break;
 				// ctrl + 0
 				case evt.ctrlKey && !evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
-
+					// resolve the key number pressed by the user, it will be the key of the person array
 					const key_person_number	= evt.code.match(/\d+/g);
+					// get the person with the number pressed
 					const person_tag		= self.context.tags_persons[key_person_number[0]]
 					event_manager.publish('key_up_persons' +'_'+ self.id_base, key_person_number)
+					// get the node tag defined in the person (it's prepared in server)
 					const node_tag_person	= build_node_tag(person_tag, person_tag.tag_id)
+					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_person.outerHTML)
 
 					break;
+
+				// ctrl + Shift + 0
 				case evt.ctrlKey && evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
+					// get the project langs
 					const ar_project_langs	= page_globals.dedalo_projects_default_langs
+					// resolve the key number pressed by user, it will match with the key of the array of languages
 					const key_lang_number	= evt.code.match(/\d+/g);
+					// get the lang object
 					const current_lang		= ar_project_langs[key_lang_number]
+					// create the new lang tag
 					const tag_type			='lang'
 					const last_tag_id		= self.get_last_tag_id(tag_type, text_editor)
 					const lang_number		= parseInt(last_tag_id) + 1
@@ -938,6 +949,7 @@ const get_custom_events = (self, i, text_editor) => {
 						data	: current_lang.value
 					}
 					const node_tag_lang = build_node_tag(lang_tag, lang_tag.tag_id)
+					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_lang.outerHTML)
 
 					break;
@@ -1373,146 +1385,112 @@ const render_persons_list = function(self, text_editor, i){
 */
 const render_note = async function(options) {
 
-	// options
-		const self			= options.self
-		const text_editor	= options.text_editor
-		const i				= options.i
-		const tag_node		= options.tag
-
 	// short vars
-		const data_string		= tag_node.dataset.data
-		// convert the data_tag form string to json*-
-		const data				= data_string.replace(/\'/g, '"')
-		// replace the ' to " stored in the html data to JSON "
-		const locator			= JSON.parse(data)
-		const note_section_id	= locator.section_id
-		const note_section_tipo	= locator.section_tipo
+	const self				= options.self
+	const text_editor		= options.text_editor
+	const i					= options.i
+	const tag_node 			= options.tag
+	const data_string 		= tag_node.dataset.data
+	// convert the data_tag form string to json*-
+	const data				= data_string.replace(/\'/g, '"')
+	// replace the ' to " stored in the html data to JSON "
+	const locator	= JSON.parse(data)
 
-	// section
-		const instance_options = {
-			model			: 'section',
-			tipo			: note_section_tipo,
-			section_tipo	: note_section_tipo,
-			section_id		: note_section_id,
-			mode			: 'edit',
-			lang			: self.lang,
-			caller			: self,
-			inspector 		: false,
-			filter 			: false,
-		}
+	const note_section_id	= locator.section_id
+	const note_section_tipo	= locator.section_tipo
+	// prepare the html fragment for the note section
+	const fragment = new DocumentFragment()
+	// create the instance of the note section, it will render without inspector or filter and with edit mode
+	const instance_options = {
+		model			: 'section',
+		tipo			: note_section_tipo,
+		section_tipo	: note_section_tipo,
+		section_id		: note_section_id,
+		mode			: 'edit',
+		lang			: self.lang,
+		caller			: self,
+		inspector 		: false,
+		filter 			: false,
+	}
+	// get the instance, built and render
+	const note_section		= 	await instances.get_instance(instance_options)
+								await note_section.build(true)
+	const note_section_node	= 	await note_section.render()
+	// add the section node to the fragment
+	fragment.appendChild(note_section_node)
+	const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
+	// subscribe to the change publication of the component_publication of the section node
+	// when the component_publication change it will change the tag note state, showing if the note is private or public
+	event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
 
-		const note_section		= 	await instances.get_instance(instance_options)
-									await note_section.build(true)
-		const note_section_node	= 	await note_section.render()
-
-	// subscribe event
-		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
-
-		// self.events_tokens.push(
-			event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
-		// )
-		function fn_change_publication_state(changed_value) {
-
-			const state = changed_value.section_id=='2' // no active value
-				? 'a'
-				: 'b'
-			const current_tag_state = tag_node.dataset.state || 'a'
-			if (current_tag_state !== state){
-				const note_tag		= {
-					type	: 'note',
-					label	: tag_node.dataset.label,
-					tag_id	: tag_node.dataset.tag_id,
-					state	: state,
-					data	: locator
-				}
-				const tag = build_node_tag(note_tag, note_tag.tag_id)
-				tag_node.id = tag.id
-				tag_node.src = tag.src
-				tag_node.dataset.state = tag.dataset.state
-				text_editor.set_dirty(true)
-				text_editor.save()
+	function fn_change_publication_state(changed_value) {
+		// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)
+		const state = changed_value.section_id === '2' // no active value
+			? 'a' // no publishable
+			: 'b' // publishable
+		const current_tag_state = tag_node.dataset.state || 'a'
+		// create new tag with the new state of the tag
+		if (current_tag_state !== state){
+			const note_tag		= {
+				type	: 'note',
+				label	: tag_node.dataset.label,
+				tag_id	: tag_node.dataset.tag_id,
+				state	: state,
+				data	: locator
 			}
+			const tag				= build_node_tag(note_tag, note_tag.tag_id)
+			// change the values to the current tag node
+			tag_node.id				= tag.id
+			tag_node.src			= tag.src
+			tag_node.dataset.state	= tag.dataset.state
+			// Save the change, set the text_editor as dirty (has changes) and save it
+			text_editor.set_dirty(true)
+			text_editor.save()
 		}
-
+	}
 	// created label with Title case (first letter to uppercase)
-		const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
-		const by_user_label		= get_label.by_user || 'by user'
-		const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
-		const header_label		= created_label+' '+ by_user_label + ': '+created_by_user
-
+	const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
+	const by_user_label 	= get_label.by_user || 'by user'
+	const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
+	const header_label		= created_label+' '+ by_user_label + ': '+created_by_user
 	// header
 		const header_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'header'
+			class_name 		: 'header_container',
 		})
-		// header_label_node
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'label',
-			inner_html		: header_label,
-			parent			: header_container
-		})
-
-	// body_container
-		const body_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'body'
-		})
-		body_container.appendChild(note_section_node)
+			const header_label_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'header_label',
+				inner_html		: header_label,
+				parent			: header_container
+			})
 
 	// footer options
 		const footer_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'footer'
+			class_name 		: 'footer_container',
 		})
-
 		// button remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning',
-				text_content	: get_label.delete ||'Delete',
+				class_name 		: 'warning',
+				text_content 	: get_label.delete ||'Delete',
 				parent			: footer_container
 			})
-			// button_remove_icon
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button white remove',
-				parent			: button_remove
-			})
-			button_remove.addEventListener("click", function(e){
-				e.stopPropagation()
-				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
+				const button_remove_icon = ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'button white remove',
+					parent			: button_remove
+				})
 
-				if(window.confirm(delete_label)){
-					const sqo = {
-						section_tipo		: [note_section.section_tipo],
-						filter_by_locators	: [{
-							section_tipo	: note_section.section_tipo,
-							section_id		: note_section.section_id
-						}],
-						limit				: 1
-					}
-
-					note_section.delete_section({
-						sqo			: sqo,
-						delete_mode	: 'delete_record'
-					})
-
-					tag_node.remove()
-					text_editor.set_dirty(true)
-					text_editor.save()
-					note_section.destroy(true,true,true)
-					modal.remove()
-				}
-			})
+		const date_label = get_label.date.toLowerCase() || 'date'
+		const created_date			= note_section.data.value[0].created_date || ''
+		const created_date_label	= created_label + ' ' + date_label + ': '+created_date
 
 		// section info
-			const date_label			= get_label.date.toLowerCase() || 'date'
-			const created_date			= note_section.data.value[0].created_date || ''
-			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
-			ui.create_dom_element({
+			const section_info = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'section_info',
+				class_name 		: 'section_info',
 				inner_html		: created_date_label,
 				parent			: footer_container
 			})
@@ -1520,29 +1498,66 @@ const render_note = async function(options) {
 		// button_ok
 			const button_ok = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'success',
-				text_content	: get_label.ok ||'Ok',
+				class_name 		: 'success',
+				text_content 	: get_label.ok ||'Ok',
 				parent			: footer_container
 			})
-			button_ok.addEventListener("click", function(e){
-				e.stopPropagation()
-				note_section.destroy(true,true,true)
-				modal.remove()
-			})
 
-
-	// modal
+	// dialog, create a standard modal with the note information
 		const modal = ui.attach_to_modal(
 			header_container,
-			body_container,
-			footer_container
-			// 'big' // size normal|big
+			fragment,
+			footer_container,
+			// 'big'
 		)
+		// When the user click on remove button, two actions happens:
+		// first, delete the section in the server
+		// second, remove the tag from the text_area
+		button_remove.addEventListener("click", function(e){
+			e.stopPropagation()
+			// ask to user if really want delete the note
+			const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
+			// if yes, delete the note section in the server
+			if(window.confirm(delete_label)){
+				// create sqo the the filter_by_locators of the section to be deleted
+				const sqo = {
+					section_tipo		: [note_section.section_tipo],
+					filter_by_locators	: [{
+						section_tipo	: note_section.section_tipo,
+						section_id		: note_section.section_id
+					}],
+					limit				: 1
+				}
+				// create the request to delete the record
+				// telling the section to do the action
+				note_section.delete_section({
+					sqo			: sqo,
+					delete_mode	: 'delete_record'
+				})
+				// remove the tag of the note in the component_text_area
+				tag_node.remove()
+				// prepare the text_editor to save setting it in dirty mode and save the change
+				text_editor.set_dirty(true)
+				text_editor.save()
+				// destroy the instance of the note section
+				note_section.destroy(true,true,true)
+				// remove the modal
+				modal.remove()
+			}
+
+		})
+		// remove the modal
+		button_ok.addEventListener("click", function(e){
+			e.stopPropagation()
+			note_section.destroy(true,true,true)
+			modal.remove()
+		})
+		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = () => {
 			note_section.destroy(true,true,true)
 		}
 
-	return true
+	return fragment
 };//end render_note
 
 
@@ -1614,6 +1629,7 @@ const render_langs_list = function(self, text_editor, i){
 				lang_container.addEventListener("mousedown", function (evt) {
 					evt.preventDefault()
 					evt.stopPropagation()
+					// create the new lang tag
 					const tag_type		='lang'
 					const last_tag_id	= self.get_last_tag_id(tag_type, text_editor)
 					const lang_number	= parseInt(last_tag_id) + 1
@@ -1624,10 +1640,8 @@ const render_langs_list = function(self, text_editor, i){
 						state	: 'a',
 						data	: current_lang.value
 					}
-
-					// self.insert_lang_image(ed, current_person.tag_id, current_person.state, current_person.label, current_person.data, evt)
-					// event_manager.publish('key_up_lang' +'_'+ self.id_base, k)
 					const tag = build_node_tag(lang_tag, lang_tag.tag_id)
+					// set the new lang tag at caret position of the text_editor.
 					text_editor.set_content(tag.outerHTML)
 
 					// Close persons selector
@@ -1636,7 +1650,7 @@ const render_langs_list = function(self, text_editor, i){
 		}//end for (let i = 0; i < value_length; i++)
 
 
-	// toggle_langs_list_ . User click over the button 'button_person'
+	// toggle_langs_list_ . User click over the button 'button_lang'
 		self.events_tokens.push(
 			event_manager.subscribe('toggle_langs_list_' + self.id_base +'_'+i, ()=>{
 				project_langs_container.classList.toggle('hide')
