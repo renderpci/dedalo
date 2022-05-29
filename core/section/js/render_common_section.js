@@ -29,18 +29,10 @@ export const render_common_section = function() {
 render_common_section.prototype.delete_record = (options) => {
 
 	// Options
-	const section_id	= options.section_id
-	const section_tipo	= options.section_tipo
-	const section		= options.caller
-	const sqo			= options.sqo ||
-		{
-			section_tipo		: [section_tipo],
-			filter_by_locators	: [{
-				section_tipo	: section_tipo,
-				section_id		: section_id
-			}],
-			limit				: 1
-		}
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+		const section		= options.caller
+		const sqo			= options.sqo
 
 	const element_id = 'delete_'+ section_tipo
 

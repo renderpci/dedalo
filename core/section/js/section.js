@@ -190,7 +190,28 @@ section.prototype.init = async function(options) {
 			event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
 		)
 		async function fn_delete_section(options) {
-			self.delete_record(options)
+			// Options
+				const section_id	= options.section_id
+				const section_tipo	= options.section_tipo
+				const section		= options.caller
+				const sqo			= options.sqo ||
+					{
+						section_tipo		: [section_tipo],
+						filter_by_locators	: [{
+							section_tipo	: section_tipo,
+							section_id		: section_id
+						}],
+						limit				: 1
+					}
+
+			const options_parsed = {
+				section_id		: section_id,
+				section_tipo	: section_tipo,
+				section			: caller,
+				sqo				: sqo
+			}
+
+			self.delete_record(options_parsed)
 		}//end fn_create_new_section
 
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
