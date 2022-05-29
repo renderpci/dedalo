@@ -81,6 +81,9 @@ tool_media_versions.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload = false
+* @return promise
+* 	resolve: bool
 */
 tool_media_versions.prototype.build = async function(autoload=false) {
 
@@ -92,7 +95,7 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 	// specific actions.. like fix main_element for convenience
 		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
-		self.main_element			= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 		// self.main_element_quality.
 		// (!) It's used to force a specific main_element quality before render the component
@@ -114,6 +117,8 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 * GET_FILES_INFO
 * Check if every quality file exists
 * Note that files_info is called 'datalist' in caller component data
+* @return promise
+* 	resolve: array of objects
 */
 tool_media_versions.prototype.get_files_info = async function() {
 
@@ -156,6 +161,9 @@ tool_media_versions.prototype.get_files_info = async function() {
 /**
 * DELETE_FILE
 * Delete version of given quality
+* @param string quality
+* @return promise
+* 	resolve: array of objects
 */
 tool_media_versions.prototype.delete_file = async function(quality) {
 
@@ -204,6 +212,9 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 /**
 * BUILD_VERSION
 * Creates a new version from original in given quality
+* @param string quality
+* @return promise
+* 	resolve: array of objects
 */
 tool_media_versions.prototype.build_version = async function(quality) {
 
@@ -252,6 +263,9 @@ tool_media_versions.prototype.build_version = async function(quality) {
 /**
 * CONFORM_HEADERS
 * 	Creates a new version from original in given quality rebuilding headers
+* @param string quality
+* @return promise
+* 	resolve: array of objects
 */
 tool_media_versions.prototype.conform_headers = async function(quality) {
 
@@ -303,7 +317,8 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 * @param string quality
 * @param string degrees
 * 	-90 / 90
-* @return promise > array
+* @return promise
+* 	resolve: array of objects
 */
 tool_media_versions.prototype.rotate = async function(quality, degrees) {
 
@@ -347,5 +362,3 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 			})
 		})
 };//end rotate
-
-

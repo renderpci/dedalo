@@ -24,7 +24,6 @@ export const tool_common = function(){
 /**
 * INIT
 * Generic tool init function.
-*
 * @param object options
 * Sample:
 * {
@@ -155,11 +154,11 @@ tool_common.prototype.init = async function(options) {
 /**
 * BUILD
 * Generic tool build function. Load basic tool config info (stored in component_json dd1353) and css files
-*
-* @param bool autoload
-* @param object options
+* @param bool autoload = false
+* @param object options = {}
 * 	callback function 'load_ddo_map'
-* @return promise bool
+* @return promise
+* 	resolve: bool
 */
 tool_common.prototype.build = async function(autoload=false, options={}) {
 	// const t0 = performance.now()
