@@ -238,7 +238,9 @@ class component_media_common extends component_common {
 					: $this->get_path($quality);
 
 				// file_exist
-					$file_exist	= file_exists($path);
+					$file_exist	= !empty($path)
+						? file_exists($path)
+						: false;
 						// $this->file_exist($quality);
 
 				// file_size
