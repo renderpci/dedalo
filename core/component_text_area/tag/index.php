@@ -135,6 +135,16 @@ $text = strip_tags($text, '');
 			$text 		= urldecode($ar_parts[2]);
 			$imgBase 	= $tag_image_dir."/note-{$state}-x2.png";
 			break;
+		case (strpos($text,'[lang-')!==false):
+			$type = 'lang';
+			# mode [lang-n-1-English]
+			$pattern 		= "/\[(lang)-([a-z])-([0-9]{1,6})-(\D{0,22})\]/";
+			$text_original 	= $text;
+			preg_match_all($pattern, $text, $matches);
+			$text			= urldecode($matches[4][0]);
+			$state 			= $matches[2][0];
+			$imgBase 		= $tag_image_dir."/lang-{$state}-x2.png";
+			break;
 		// locator case, used by svg or image or video, etc...
 		case (strpos($text,'{')===0):
 
@@ -302,6 +312,11 @@ $text = strip_tags($text, '');
 			#$font_name	= '/san_francisco/System_San_Francisco_Display_Regular.ttf';
 			#$font_name	= '/san_francisco/SanFranciscoDisplay-Regular.otf';
 			break;
+		case 'lang':
+			$colorText	= $black ;
+			$colorBG	= $black ;
+			$font_size	= ($font_size *2)+2;
+			break;
 	}
 
 # We activate the alpha chanel (24bit png)
@@ -334,6 +349,10 @@ $text = strip_tags($text, '');
 		case 'person':
 			$offsetX = 8;
 			break;
+		case 'lang':
+			$offsetY = 2;
+			$offsetX = 10;
+			break;
 		case 'geo':
 			$offsetY = 2;
 			$offsetX = 7;
@@ -357,6 +376,9 @@ $text = strip_tags($text, '');
 			case 'page':
 			case 'person':
 				$offsetX = 8;
+				break;
+			case 'lang':
+				$offsetX = 10;
 				break;
 			case 'geo':
 				$offsetX = 7;

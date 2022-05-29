@@ -192,6 +192,17 @@ abstract class TR {
 					}
 				break;
 
+			# LANG (transcription annotations) like [lang-n-number-data:"lg-spa":data]
+			case 'lang' :
+				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+					$string = "(\[lang-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+				}else if($state!==false){
+					$string = "(\[(lang)-($state)-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}else{
+						$string = "(\[(lang)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}
+				break;
+
 			# OTHERS
 			case 'br' :
 				$string = '\<br>';
