@@ -93,7 +93,8 @@ const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = ui.create_dom_element({
-			element_type	: 'div'
+			element_type	: 'div',
+			class_name		: 'content_data'
 		})
 		content_data.appendChild(fragment)
 
@@ -652,6 +653,7 @@ const get_line_build_version = function(ar_quality, self) {
 									self.main_element_quality = quality
 									self.refresh()
 								}else{
+									// check again after 5 sec
 									check_file()
 								}
 							}, 5000)
