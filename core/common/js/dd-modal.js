@@ -97,11 +97,6 @@ class DDModal extends HTMLElement {
 
 			/* modal header */
 				.modal-header {
-					/*padding: 1em;
-					background-color: #FF9800;
-					color: white;
-					font-weight: normal;
-					font-size: 1.4em;*/
 					position: sticky;
 					top: 0;
 					z-index: 2;
@@ -141,6 +136,21 @@ class DDModal extends HTMLElement {
 					width: calc(100vw - 32px);
 					min-height: 100vh;
 					*/
+				}
+
+			/* modal_small version */
+				.modal_small {
+					padding: 0;
+					z-index: 9999;
+				}
+				.modal_small > .modal-content {
+					width: 35vw;
+					height: auto;
+					margin-top: 30vh;
+					overflow: auto;
+				}
+				.modal_small .modal-body {
+
 				}
 
 			/* modal mini version */
@@ -243,6 +253,15 @@ class DDModal extends HTMLElement {
 				const padding_top = header.offsetHeight - 22
 				iframe.style.paddingTop = padding_top + 'px';
 			}
+	}
+	_showModalSmall() {
+		this._modalVisible = true;
+		// this._modal.style.display = 'block';
+		this._modal.classList.add('modal_show')
+		this._modal.classList.add("modal_small")
+		if (this._modal.classList.contains("modal_big")) {
+			this._modal.classList.remove("modal_big")
+		}
 	}
 	_hideModal(e) {
 		e.stopPropagation();
