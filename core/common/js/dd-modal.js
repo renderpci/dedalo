@@ -146,7 +146,8 @@ class DDModal extends HTMLElement {
 					z-index: 9999;
 				}
 				.modal_small > .modal-content {
-					width: 35vw;
+					width: auto;
+					max-width: 32vw;
 					height: auto;
 					margin-top: 20vh;
 					overflow: auto;
