@@ -8,6 +8,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
+	import {open_tool} from '../../tool_common/js/tool_common.js'
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
@@ -465,6 +466,15 @@ const render_tanscription_options = async function(self, content_data) {
 					text_content	: tool_tr_print.label || 'Tool tm',
 					parent			: tool_tr_print_button
 				})
+				tool_tr_print_button.addEventListener('click', function(event) {
+					event.stopPropagation();
+
+					// open_tool (tool_common)
+						open_tool({
+							tool_context	: tool_tr_print,
+							caller			: self.transcription_component
+						})
+				})
 		}
 
 	// Button tool time machine
@@ -485,6 +495,15 @@ const render_tanscription_options = async function(self, content_data) {
 					class_name		: 'label',
 					text_content	: tool_tm.label || 'Tool tm',
 					parent			: tool_tm_button
+				})
+			tool_tm_button.addEventListener('click', function(event) {
+					event.stopPropagation();
+
+					// open_tool (tool_common)
+						open_tool({
+							tool_context	: tool_tm,
+							caller			: self.transcription_component
+						})
 				})
 		}
 
