@@ -572,10 +572,10 @@ component_common.prototype.save = async function(changed_data) {
 				})
 
 			// remove acive
-				ui.component.inactive(self)
+				// ui.component.inactive(self)
 
 			// blur selection
-				document.activeElement.blur()
+				// document.activeElement.blur()
 		})
 
 
