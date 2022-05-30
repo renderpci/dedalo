@@ -621,7 +621,11 @@ const view_modal = async function(options) {
 		.then(function(wrapper){
 
 			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-			const modal		= ui.attach_to_modal(header, wrapper, null)
+			const modal		= ui.attach_to_modal({
+				header	: header,
+				body	: wrapper,
+				footer	: null
+			})
 			modal.on_close	= () => {
 
 				if (typeof tool_instance.on_close_actions==='function') {

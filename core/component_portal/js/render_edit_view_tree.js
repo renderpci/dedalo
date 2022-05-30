@@ -338,8 +338,12 @@ const get_buttons = (self) => {
 						header_custom.appendChild(select_section)
 
 					// fix modal to allow close later, on set value
-					self.modal = ui.attach_to_modal(header_custom, iframe_container, null, 'big')
-
+						self.modal = ui.attach_to_modal({
+							header	: header_custom,
+							body	: iframe_container,
+							footer	: null,
+							size	: 'big'
+						})
 				})()
 				return
 		})
