@@ -1,0 +1,147 @@
+{
+    "label": "Desarrollo de herramientas",
+    "relations": [
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd200"
+        },
+        {
+            "type": "dd675",
+            "section_id": "1",
+            "section_tipo": "dd153",
+            "from_component_tipo": "dd1337"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1354"
+        },
+        {
+            "type": "dd151",
+            "section_id": "51",
+            "section_tipo": "dd1342",
+            "from_component_tipo": "dd1330"
+        },
+        {
+            "type": "dd151",
+            "section_id": "1",
+            "section_tipo": "dd64",
+            "from_component_tipo": "dd1332"
+        },
+        {
+            "type": "dd151",
+            "section_id": "-1",
+            "section_tipo": "dd128",
+            "from_component_tipo": "dd197"
+        }
+    ],
+    "components": {
+        "dd199": {
+            "inf": "Fecha de creación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 30,
+                            "hour": 17,
+                            "time": 65001980137,
+                            "year": 2022,
+                            "month": 5,
+                            "minute": 35,
+                            "second": 37
+                        }
+                    }
+                ]
+            }
+        },
+        "dd201": {
+            "inf": "Fecha de modificación [component_date]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "start": {
+                            "day": 30,
+                            "hour": 19,
+                            "time": 65001986392,
+                            "year": 2022,
+                            "month": 5,
+                            "minute": 19,
+                            "second": 52
+                        }
+                    }
+                ]
+            }
+        },
+        "dd612": {
+            "inf": "Descripción [component_text_area]",
+            "dato": {
+                "lg-cat": [
+                    "Genera una versió imprimible de la transcripció d'una entrevista. Utilitzat per personalitzar la sortida d'impressió, afegint o eliminant les etiquetes de codi de temps, indexació, persones, etc."
+                ],
+                "lg-eng": [
+                    "Generate a printable version of the interview transcript. Used to customize the print output by adding or removing tags for timecode, indexing, people, etc."
+                ],
+                "lg-fra": [
+                    "Générez une version imprimable de la transcription de l'entretien. Utilisé pour personnaliser la sortie d'impression en ajoutant ou en supprimant des balises pour le code temporel, l'indexation, les personnes, etc."
+                ],
+                "lg-spa": [
+                    "Genera una versión imprimible de la transcripción de una entrevistita. Utilizado para personalizar la salida de impresión, añadiendo o eliminando las etiquetas de código de tiempo, indexación, personas, etc."
+                ]
+            }
+        },
+        "dd799": {
+            "inf": "Etiqueta [component_input_text]",
+            "dato": {
+                "lg-cat": [
+                    "Impresió de transcripció"
+                ],
+                "lg-eng": [
+                    "Print transcription"
+                ],
+                "lg-spa": [
+                    "Impresión de transcripción"
+                ]
+            }
+        },
+        "dd1326": {
+            "inf": "Nombre de la herramienta [component_input_text]",
+            "dato": {
+                "lg-nolan": [
+                    "tool_tr_print"
+                ]
+            }
+        },
+        "dd1335": {
+            "inf": "Propiedades [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    {
+                        "open_as": "window",
+                        "windowFeatures": null
+                    }
+                ]
+            }
+        },
+        "dd1350": {
+            "inf": "Afecta a tipos: [component_json]",
+            "dato": {
+                "lg-nolan": [
+                    [
+                        "rsc36"
+                    ]
+                ]
+            }
+        }
+    },
+    "section_id": 8,
+    "created_date": "2022-05-30 17:35:37",
+    "section_tipo": "dd1340",
+    "modified_date": "2022-05-30 19:19:52",
+    "diffusion_info": null,
+    "created_by_userID": -1,
+    "section_real_tipo": "dd73",
+    "modified_by_userID": -1
+}
