@@ -317,16 +317,19 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 							alt_list_body.classList.remove('display_none')
 							section_record_node.classList.remove('display_none')
 
+						// header
+							const header = ui.create_dom_element({
+								element_type	: 'div',
+								inner_html		: "Editing inline"
+							})
+
 						// modal way
-							const modal = ui.attach_to_modal(
-								ui.create_dom_element({
-									element_type	: 'div',
-									inner_html		: "Editing inline"
-								}), // header
-								alt_list_body, // body
-								null, // footer
-								'normal' // size
-							)
+							const modal = ui.attach_to_modal({
+								header	: header,
+								body	: alt_list_body,
+								footer	: null,
+								size	: 'normal'
+							})
 							modal.on_close = () => {
 								// self.refresh()
 							}
