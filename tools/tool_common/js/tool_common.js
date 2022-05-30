@@ -500,14 +500,26 @@ tool_common.prototype.load_component = async function(options) {
 * Init, build and render the tool requested.
 * Called by page observe event (init)
 * To load tool, don't call directly, publish a event as
-*	event_manager.publish('open_tool', {
-*		tool_context : tool_context,
-* 		caller 		 : self
+*	event_manager.publish('open_tool', {*
+* 		caller 		 : self,
+* 		tool_context : {
+* 			css: "/v6/tools/tool_lang/css/tool_lang.css"
+*			icon: "/v6/tools/tool_lang/img/icon.svg"
+*			label: "Translation"
+*			mode: "edit"
+*			model: "tool_lang"
+*			name: "tool_lang"
+*			properties: {open_as: 'modal', windowFeatures: null}
+*			section_id: 8
+*			section_tipo: "dd1324"
+*			show_in_component: true
+* 		}
 *	})
 * The event is fired by the tool button created with method ui.build_tool_button.
 * When the user triggers the click event, a publish 'open_tool' is made
-* @param object options*
-* @return tool instance | bool false
+* @param object options
+* @return object|bool
+* 	object is a tool instance
 */
 export const open_tool = async (options) => {
 	console.warn("------ open_tool call options:",options);
