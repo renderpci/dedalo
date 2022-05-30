@@ -2025,7 +2025,8 @@ export const ui = {
 					  })
 					: options.footer // DOM node
 				: null
-			const size		= options.size || 'normal' // string size='normal'
+			const size			= options.size || 'normal' // string size='normal'
+			const modal_parent	= options.modal_parent || document.querySelector('.wrapper_page')
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
@@ -2039,8 +2040,8 @@ export const ui = {
 			// }
 			const modal_container	= document.createElement('dd-modal')
 			// document.body.appendChild(modal_container)
-			const wrapper_page		= document.querySelector('.wrapper_page')
-			wrapper_page.appendChild(modal_container)
+			// const wrapper_page		= document.querySelector('.wrapper_page')
+			modal_parent.appendChild(modal_container)
 
 
 		// publish close event

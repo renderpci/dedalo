@@ -385,12 +385,12 @@ const get_input_element = (i, current_value, self) => {
 		// observer.observe(li);
 
 	// persons
-		const node_persons_list = render_persons_list(self, text_editor, i)
-		li.appendChild(node_persons_list)
+		// const node_persons_list = render_persons_list(self, text_editor, i)
+		// li.appendChild(node_persons_list)
 
 	// langs
-		const node_langs_list = render_langs_list(self, text_editor, i)
-		li.appendChild(node_langs_list)
+		// const node_langs_list = render_langs_list(self, text_editor, i)
+		// li.appendChild(node_langs_list)
 
 	// add button create fragment (Only when caller is a tool_indexation instance)
 		if (self.caller && self.caller.constructor.name==="tool_indexation") {
@@ -489,10 +489,11 @@ const get_custom_buttons = (self, text_editor, i) => {
 				tooltip	: 'Show persons list',
 				image	: '../themes/default/icons/person.svg',
 				onclick	: function(evt) {
-					event_manager.publish('toggle_persons_list_'+ self.id_base + '_' + i, {
-						caller		: self,
-						text_editor	: text_editor
-					})
+					// event_manager.publish('toggle_persons_list_'+ self.id_base + '_' + i, {
+					// 	caller		: self,
+					// 	text_editor	: text_editor
+					// })
+					render_persons_list(self, text_editor, i)
 				}
 			}
 		})
@@ -622,12 +623,13 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'Add lang',
 				image	: '../themes/default/icons/lang.svg',
-				onclick	: function(evt) {
+				onclick	: function() {
 					// show the langs list to be selected the new lang for create the new tag
-					event_manager.publish('toggle_langs_list_'+ self.id_base + '_' + i, {
-						caller		: self,
-						text_editor	: text_editor
-					})
+					// event_manager.publish('toggle_langs_list_'+ self.id_base + '_' + i, {
+					// 	caller		: self,
+					// 	text_editor	: text_editor
+					// })
+					render_langs_list(self, text_editor, i)
 				}
 			}
 		})
@@ -784,10 +786,11 @@ const get_custom_events = (self, i, text_editor) => {
 						if(person) {
 							// modal. create new modal with the person full name
 								ui.attach_to_modal({
-									header	: 'Person info',
-									body	: person.full_name,
-									footer	: null,
-									size	: 'small'
+									header			: 'Person info',
+									body			: person.full_name,
+									footer			: null,
+									size			: 'small',
+									modal_parent	: self.node[0]
 								})
 						}
 						break;
@@ -822,10 +825,11 @@ const get_custom_events = (self, i, text_editor) => {
 
 						// modal
 							ui.attach_to_modal({
-								header	: 'Lang info',
-								body	: lang_obj.label,
-								footer	: null,
-								size	: 'small'
+								header			: 'Lang info',
+								body			: lang_obj.label,
+								footer			: null,
+								size			: 'small',
+								modal_parent	: self.node[0]
 							})
 						break;
 
@@ -1189,9 +1193,11 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 	})
 
 	const modal_page_selector = ui.attach_to_modal({
-		header	: header,
-		body	: body,
-		footer	: footer
+		header			: header,
+		body			: body,
+		footer			: footer,
+		size			: 'normal',
+		modal_parent	: self.node[0]
 	})
 
 	user_option_ok.addEventListener("click", (e) =>{
@@ -1219,158 +1225,6 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 
 	return
 };//end render_page_selector
-
-
-
-/**
-* RENDER_PERSONS_LIST
-* @return DOM node fragment
-*/
-const render_persons_list = function(self, text_editor, i){
-
-	// short vars
-		const ar_persons = self.context.tags_persons
-			// console.log(`(!ar_persons) ${self.tipo}:`, ar_persons);
-
-	const fragment = new DocumentFragment()
-
-	// persons_list_container
-		const persons_list_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'persons_list_container hide',
-			parent			: fragment
-		})
-
-	// button_close
-		const button_close = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button icon close',
-			parent			: persons_list_container
-		})
-		button_close.addEventListener("click", function(e){
-			e.stopPropagation()
-			persons_list_container.classList.toggle('hide')
-		})
-
-	// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'label',
-			text_node 		: get_label.persons || 'Persons',
-			parent			: persons_list_container
-		})
-
-	// if ar_persons is empty, stop and return the fragment
-		if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)==='undefined') {
-			return fragment
-		}
-
-	// person sections
-		const datum		= self.context.related_sections || {}
-		const context	= datum.context
-		const data		= datum.data
-		const sections	= data.find(el => el.typo==='sections')
-		if(!sections){
-			return fragment
-		}
-
-	// sections loop
-		const value			= sections.value
-		const value_length	= value.length
-		let k = 0;
-		for (let i = 0; i < value_length; i++) {
-
-			const section_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'section_container',
-				parent			: persons_list_container
-			})
-
-			const current_locator = {
-				section_top_tipo	: value[i].section_tipo,
-				section_top_id		: value[i].section_id
-			}
-
-			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
-			const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
-
-			// ar_component_value
-				const ar_component_value = []
-				for (let j = 0; j < ar_component_data.length; j++) {
-					const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
-					ar_component_value.push(current_value)
-				}
-
-			// label
-				const label = 	section_label + ' | ' +
-								current_locator.section_top_id +' | ' +
-								ar_component_value.join(' | ')
-
-			// label DOM element
-				const section_label_node = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'label',
-					inner_html		: label,
-					parent			: section_container
-				})
-
-			const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
-			for (let j = 0; j < ar_persons_for_this_section.length; j++) {
-
-				const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
-
-				const person_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'person_container',
-					parent			: section_container
-				})
-					const person_keyboard = ui.create_dom_element({
-						element_type	: 'span',
-						text_node		: 'control ctrl+'+ k++,
-						class_name 		: 'label person_keyboard',
-						parent			: person_container
-					})
-					const html_tag = self.tags_to_html(current_person.tag)
-					person_container.insertAdjacentHTML('afterbegin', html_tag)
-
-					const person_name = ui.create_dom_element({
-						element_type	: 'span',
-						text_node		: current_person.full_name || '',
-						class_name 		: 'label person_name',
-						parent			: person_container
-					})
-
-					const person_role = ui.create_dom_element({
-						element_type	: 'span',
-						text_node		: '('+current_person.role + ')',
-						class_name 		: 'label person_role',
-						parent			: person_container
-					})
-
-				person_container.addEventListener("mousedown", function (evt) {
-					evt.preventDefault()
-					evt.stopPropagation()
-
-					// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
-					const tag = build_node_tag(current_person, current_person.tag_id)
-					text_editor.set_content(tag.outerHTML)
-
-					// Close persons selector
-					persons_list_container.classList.toggle('hide')
-				});
-			}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
-		}//end for (let i = 0; i < value_length; i++)
-
-
-	// toggle_persons_list_ . User click over the button 'button_person'
-		self.events_tokens.push(
-			event_manager.subscribe('toggle_persons_list_' + self.id_base +'_'+i, ()=>{
-				persons_list_container.classList.toggle('hide')
-			})
-		)
-
-	return fragment
-};//end render_persons_list
 
 
 
@@ -1411,15 +1265,14 @@ const render_note = async function(options) {
 			filter			: false
 		}
 		// get the instance, built and render
-		const note_section		= 	await instances.get_instance(instance_options)
+		const note_section		=	await instances.get_instance(instance_options)
 									await note_section.build(true)
-		const note_section_node	= 	await note_section.render()
+		const note_section_node	=	await note_section.render()
 
-		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
 		// subscribe to the change publication of the component_publication of the section node
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
+		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
 		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
-
 		function fn_change_publication_state(changed_value) {
 			// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)
 			const state = changed_value.section_id=='2' // no active value
@@ -1452,10 +1305,11 @@ const render_note = async function(options) {
 			class_name		: 'header'
 		})
 		// header_label. created label with Title case (first letter to uppercase)
-			const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
+			// const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
+			const created_label		= get_label.created || 'created'
 			const by_user_label		= get_label.by_user || 'by user'
 			const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
-			const header_label		= created_label+' '+ by_user_label + ': '+created_by_user
+			const header_label		= (get_label.note || 'Note') + ' ' + created_label+' '+ by_user_label + ': '+created_by_user
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
@@ -1538,24 +1392,25 @@ const render_note = async function(options) {
 			})
 
 		// button_ok. On user click removes the modal
-			const button_ok = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'success',
-				text_content	: get_label.ok ||'Ok',
-				parent			: footer
-			})
-			button_ok.addEventListener("click", function(e){
-				e.stopPropagation()
-				note_section.destroy(true,true,true)
-				modal.remove()
-			})
+			// const button_ok = ui.create_dom_element({
+			// 	element_type	: 'button',
+			// 	class_name		: 'success',
+			// 	text_content	: get_label.ok ||'Ok',
+			// 	parent			: footer
+			// })
+			// button_ok.addEventListener("click", function(e){
+			// 	e.stopPropagation()
+			// 	note_section.destroy(true,true,true)
+			// 	modal.remove()
+			// })
 
 	// modal. Create a standard modal with the note information
 		const modal = ui.attach_to_modal({
-			header	: header,
-			body	: body,
-			footer	: footer,
-			size	: 'normal' // string size big|normal
+			header			: header,
+			body			: body,
+			footer			: footer,
+			size			: 'normal', // string size big|normal
+			modal_parent	: self.node[0]
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = () => {
@@ -1569,6 +1424,147 @@ const render_note = async function(options) {
 
 
 /**
+* RENDER_PERSONS_LIST
+* @return DOM node fragment
+*/
+const render_persons_list = function(self, text_editor, i){
+
+	// short vars
+		const ar_persons = self.context.tags_persons
+			// console.log(`(!ar_persons) ${self.tipo}:`, ar_persons);
+
+	// if ar_persons is empty, stop and return the fragment
+		if(!ar_persons || ar_persons.length === 0 || typeof(ar_persons)==='undefined') {
+			return null
+		}
+
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'header'
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			text_node		: get_label.persons || 'Persons',
+			parent			: header
+		})
+
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'persons_list_container'
+		})
+
+		// person sections
+			const datum		= self.context.related_sections || {}
+			const context	= datum.context
+			const data		= datum.data
+			const sections	= data.find(el => el.typo==='sections')
+			if(!sections){
+				return null
+			}
+
+		// sections loop
+			const value			= sections.value
+			const value_length	= value.length
+			let k = 0;
+			for (let i = 0; i < value_length; i++) {
+
+				const section_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'section_container',
+					parent			: body
+				})
+
+				const current_locator = {
+					section_top_tipo	: value[i].section_tipo,
+					section_top_id		: value[i].section_id
+				}
+
+				const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
+				const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+
+				// ar_component_value
+					const ar_component_value = []
+					for (let j = 0; j < ar_component_data.length; j++) {
+						const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
+						ar_component_value.push(current_value)
+					}
+
+				// label
+					const label = 	section_label + ' | ' +
+									current_locator.section_top_id +' | ' +
+									ar_component_value.join(' | ')
+
+				// label DOM element
+					const section_label_node = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'label',
+						inner_html		: label,
+						parent			: section_container
+					})
+
+				const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
+				for (let j = 0; j < ar_persons_for_this_section.length; j++) {
+
+					const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
+
+					const person_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'person_container',
+						parent			: section_container
+					})
+						const person_keyboard = ui.create_dom_element({
+							element_type	: 'span',
+							text_node		: 'control ctrl+'+ k++,
+							class_name 		: 'label person_keyboard',
+							parent			: person_container
+						})
+						const html_tag = self.tags_to_html(current_person.tag)
+						person_container.insertAdjacentHTML('afterbegin', html_tag)
+
+						const person_name = ui.create_dom_element({
+							element_type	: 'span',
+							text_node		: current_person.full_name || '',
+							class_name 		: 'label person_name',
+							parent			: person_container
+						})
+
+						const person_role = ui.create_dom_element({
+							element_type	: 'span',
+							text_node		: '('+current_person.role + ')',
+							class_name 		: 'label person_role',
+							parent			: person_container
+						})
+
+					person_container.addEventListener("mousedown", function (evt) {
+						evt.preventDefault()
+						evt.stopPropagation()
+
+						// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
+						const tag = build_node_tag(current_person, current_person.tag_id)
+						text_editor.set_content(tag.outerHTML)
+					});
+				}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
+			}//end for (let i = 0; i < value_length; i++)
+
+	// modal
+		ui.attach_to_modal({
+			header			: header,
+			body			: body,
+			footer			: null,
+			size			: 'small', // string size big|normal|small
+			modal_parent	: self.node[0]
+		})
+
+
+	return true
+};//end render_persons_list
+
+
+
+/**
 * RENDER_LANGS_LIST
 * @return DOM node fragment
 */
@@ -1576,66 +1572,43 @@ const render_langs_list = function(self, text_editor, i) {
 
 	// short vars
 		const ar_project_langs = page_globals.dedalo_projects_default_langs
+			// console.log(`(!ar_project_langs) ${self.tipo}:`, ar_project_langs);
 
-	const fragment = new DocumentFragment()
-
-	// project_langs_container
-		const project_langs_container = ui.create_dom_element({
+	// header
+		const header = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'project_langs_container hide',
-			parent			: fragment
+			class_name		: 'header'
 		})
-
-	// button_close
-		const button_close = ui.create_dom_element({
-			element_type	: 'span',
-			class_name 		: 'button icon close',
-			parent			: project_langs_container
-		})
-		button_close.addEventListener("click", function(e){
-			e.stopPropagation()
-			project_langs_container.classList.toggle('hide')
-		})
-
-	// label
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'label',
-			text_node 		: get_label.language || 'Language',
-			parent			: project_langs_container
+			class_name		: 'label',
+			text_node		: get_label.language || 'Language ',
+			parent			: header
 		})
 
-	// sections loop
-		const value_length	= ar_project_langs.length
-		let k = 0;
-		for (let i = 0; i < value_length; i++) {
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'content project_langs_container'
+		})
+		// sections loop
+			const value_length	= ar_project_langs.length
+			let k = 0;
+			for (let i = 0; i < value_length; i++) {
 
-			const current_lang = ar_project_langs[i]
+				const current_lang = ar_project_langs[i]
 
-			const lang_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'lang_container',
-				parent			: project_langs_container
-			})
-
-				const lang_label = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'lang_label',
-					inner_html 		: current_lang.label,
-					parent			: lang_container
+				const lang_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'lang_container',
+					parent			: body
 				})
-				const label_keyboard = ui.create_dom_element({
-					element_type	: 'span',
-					text_node		: 'Control + Shift + '+ k++,
-					class_name 		: 'label label_keyboard',
-					parent			: lang_container
-				})
-
-				lang_container.addEventListener("mousedown", function (evt) {
+				lang_container.addEventListener('click', function (evt) {
 					evt.preventDefault()
 					evt.stopPropagation()
+
 					// create the new lang tag
-					const tag_type		='lang'
+					const tag_type		= 'lang'
 					const last_tag_id	= self.get_last_tag_id(tag_type, text_editor)
 					const lang_number	= parseInt(last_tag_id) + 1
 					const lang_tag		= {
@@ -1648,20 +1621,36 @@ const render_langs_list = function(self, text_editor, i) {
 					const tag = build_node_tag(lang_tag, lang_tag.tag_id)
 					// set the new lang tag at caret position of the text_editor.
 					text_editor.set_content(tag.outerHTML)
-
-					// Close persons selector
-					project_langs_container.classList.toggle('hide')
 				});
-		}//end for (let i = 0; i < value_length; i++)
 
-	// toggle_langs_list_ . User click over the button 'button_lang'
-		self.events_tokens.push(
-			event_manager.subscribe('toggle_langs_list_' + self.id_base +'_'+i, ()=>{
-				project_langs_container.classList.toggle('hide')
-			})
-		)
+				// lang_label
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'lang_label',
+						inner_html		: current_lang.label,
+						parent			: lang_container
+					})
 
-	return fragment
+				// label_keyboard
+					ui.create_dom_element({
+						element_type	: 'span',
+						text_node		: 'Control + Shift + '+ k++,
+						class_name		: 'label label_keyboard',
+						parent			: lang_container
+					})
+			}//end for (let i = 0; i < value_length; i++)
+
+	// modal
+		ui.attach_to_modal({
+			header			: header,
+			body			: body,
+			footer			: null,
+			size			: 'small', // string size big|normal
+			modal_parent	: self.node[0]
+		})
+
+
+	return true
 };//end render_langs_list
 
 
