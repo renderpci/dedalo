@@ -105,63 +105,8 @@
 						}
 					}
 
-					// pserson
-					.persons_list_container {
-						position: absolute;
-						top: 30px;
-						left: 0;
-						background-color: rgb(240 240 240 / 87%);
-						z-index: 1;
-						padding: 1.2rem;
-						width: calc(100% + 2px);
-						height: calc(100% - 30px);
-						line-height: 1.4rem;
-						border: 1px solid #f78a1c;
-						-webkit-backdrop-filter: blur(30px);
-						backdrop-filter: blur(30px);
-						overflow: auto;
 
-						>.button.close {
-							top: 0;
-							background-color: #4f4f4f;
-							margin: 0;
-							position: sticky;
-							float: right;
-						}
 
-						>.label {
-							font-weight: bold;
-							margin-bottom: 0.5rem;
-							display: block;
-							font-size: 1.5rem;
-							border-bottom: 1px solid #c8c8c8ee;
-							padding-bottom: 0.5rem;
-						}
-
-						.section_container {
-							border-bottom: 1px solid #e4e4e4;
-							line-height: 2rem;
-
-							>.label {
-								font-weight: bold;
-								font-size: 1.15rem;
-							}
-
-							>.person_container {
-								padding-left: 1rem;
-								display: flex;
-								align-items: center;
-
-								>img.person  {
-									height: 1.2rem;
-									margin-right: 0.5rem;
-								}
-								>span.label  {
-									margin-right: 0.5rem;
-								}
-							}
-						}//end .section_container
-					}//end .persons_list_container
 				}//end >li
 			}//end >.inputs_container
 		}//end >.content_data
@@ -205,8 +150,9 @@
 		}
 
 		.mce-path {
-		padding: 5px;
-	}
+			padding: 5px;
+		}
+
 		// // Container, container body, iframe
 		// .mce-tinymce, .mce-container-body {
 		// 	min-height: 100% !important;
@@ -235,5 +181,65 @@
 		// }
 	}//end dd-tiny
 
+	// modal inside
+	dd-modal {
+
+		.header {
+			// background-color: #585e6c;
+		}
+
+		>.body.content {
+			color: initial;
+		}
+
+		// persons_list_container into modal
+		.persons_list_container {
+			color: initial;
+			padding: 1rem;
+			background-color: rgb(240 240 240 / 87%);
+			// z-index: 1;
+			// width: calc(100% + 2px);
+			// height: calc(100% - 30px);
+			line-height: 1.4rem;
+			border: 1px solid #f78a1c;
+			-webkit-backdrop-filter: blur(30px);
+			backdrop-filter: blur(30px);
+			overflow: auto;
+
+			.section_container {
+				border-bottom: 1px solid #e4e4e4;
+				line-height: 2rem;
+
+				>.label {
+					font-weight: bold;
+					font-size: 1.15rem;
+				}
+
+				>.person_container {
+					padding-left: 1rem;
+					display: flex;
+					align-items: center;
+
+					>img.person  {
+						height: 1.2rem;
+						margin-right: 0.5rem;
+					}
+					>span.label  {
+						margin-right: 0.5rem;
+					}
+				}
+			}//end .section_container
+		}//end .persons_list_container
+
+		// langs list into modal
+		.project_langs_container {
+			color: initial;
+			padding: 1rem;
+			line-height: 1.5rem;
+		}
+	}
 
 }//end &.component_text_area
+
+
+

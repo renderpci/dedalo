@@ -39,10 +39,12 @@ class DDModal extends HTMLElement {
 					/*top: 4.5vh;*/
 					margin-top: 3.5vh;
 					padding: 0;
-					border: 1px solid #888;
 					width: 80%;
 					box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
 					font-size: inherit;
+					/* border: 1px solid #888; */
+					border-radius: 7px;
+					overflow: hidden;
 					/*
 					-webkit-animation-name: animatetop;
 					-webkit-animation-duration: 0.4s;
@@ -146,7 +148,7 @@ class DDModal extends HTMLElement {
 				.modal_small > .modal-content {
 					width: 35vw;
 					height: auto;
-					margin-top: 30vh;
+					margin-top: 20vh;
 					overflow: auto;
 				}
 				.modal_small .modal-body {
