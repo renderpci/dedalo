@@ -1986,9 +1986,16 @@ export const ui = {
 	/**
 	* ATTACH_TO_MODAL
 	* Insert wrapper into a modal box
+	* @param object options
 	* @return DOM element modal_container
 	*/
-	attach_to_modal : (header, body, footer, size='normal') => {
+	attach_to_modal : (options) => {
+
+		// options
+			const header	= options.header || null // DOM node
+			const body		= options.body || null // DOM node
+			const footer	= options.footer || null // DOM node
+			const size		= options.size || 'normal' // string size='normal'
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
@@ -2015,19 +2022,34 @@ export const ui = {
 		// header . Add node header to modal header and insert it into slot
 			if (header) {
 				header.slot = 'header'
-				header.classList.add('header')
+				if (!header.classList.contains('header')) {
+					header.classList.add('header')
+				}
 				modal_container.appendChild(header)
+			}else{
+				const header_blank = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'hide'
+				})
+				header_blank.slot = 'header'
+				modal_container.appendChild(header_blank)
 			}
 
 		// body . Add  wrapper to modal body and insert it into slot
 			if (body) {
 				body.slot = 'body'
+				if (!body.classList.contains('body')) {
+					body.classList.add('body')
+				}
 				modal_container.appendChild(body)
 			}
 
 		// footer . Add node footer to modal footer and insert it into slot
 			if (footer) {
 				footer.slot = 'footer'
+				if (!footer.classList.contains('footer')) {
+					footer.classList.add('footer')
+				}
 				modal_container.appendChild(footer)
 			}
 
@@ -2057,6 +2079,11 @@ export const ui = {
 
 					modal_container._showModalBig();
 					break;
+
+				case 'small' :
+					modal_container._showModalSmall();
+					break;
+
 				default :
 					modal_container._showModal();
 					break;
@@ -2268,7 +2295,11 @@ export const ui = {
 			}
 
 		// modal open
-			const modal = ui.attach_to_modal(header, body, footer)
+			const modal = ui.attach_to_modal({
+				header	: header,
+				body	: body,
+				footer	: footer
+			})
 
 
 		return footer
