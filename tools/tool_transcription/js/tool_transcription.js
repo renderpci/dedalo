@@ -197,7 +197,7 @@ tool_transcription.prototype.load_relation_list = async function() {
 		const api_response			= await current_data_manager.request({body:rqo})
 
 	const datum = api_response.result
-	// console.log("datum:-------------------------------------",datum);
+
 	return datum
 };//end load_relation_list
 
