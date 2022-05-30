@@ -1987,14 +1987,44 @@ export const ui = {
 	* ATTACH_TO_MODAL
 	* Insert wrapper into a modal box
 	* @param object options
+	* {
+	* 	header	: node|string,
+	* 	body	: node|string,
+	* 	footer	: node|string,
+	* 	size	: string
+	* }
 	* @return DOM element modal_container
 	*/
 	attach_to_modal : (options) => {
 
 		// options
-			const header	= options.header || null // DOM node
-			const body		= options.body || null // DOM node
-			const footer	= options.footer || null // DOM node
+			const header	= options.header
+				? (typeof options.header==='string')
+					? ui.create_dom_element({ // string case. auto-create the header node
+						element_type	: 'div',
+						class_name		: 'header content',
+						inner_html		: options.header
+					  })
+					: options.header // DOM node
+				: null
+			const body	= options.body
+				? (typeof options.body==='string')
+					? ui.create_dom_element({ // string case. auto-create the body node
+						element_type	: 'div',
+						class_name		: 'body content',
+						inner_html		: options.body
+					  })
+					: options.body // DOM node
+				: null
+			const footer	= options.footer
+				? (typeof options.footer==='string')
+					? ui.create_dom_element({ // string case. auto-create the footer node
+						element_type	: 'div',
+						class_name		: 'footer content',
+						inner_html		: options.footer
+					  })
+					: options.footer // DOM node
+				: null
 			const size		= options.size || 'normal' // string size='normal'
 
 		// page_y_offset. Current window scroll position (used to restore later)
