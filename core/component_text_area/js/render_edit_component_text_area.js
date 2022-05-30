@@ -781,23 +781,14 @@ const get_custom_events = (self, i, text_editor) => {
 						// get the match of the locator with the tag_persons array inside the instance
 						const person = self.context.tags_persons.find(item => item.data.section_tipo === locator.section_tipo && item.data.section_id===locator.section_id && item.data.component_tipo===locator.component_tipo)
 						// if person is available create a node with the full name of the person
-						if(person){
-							const header = ui.create_dom_element({
-								element_type	: 'div',
-								inner_html		: 'Person info'
-							})
-							const body = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'content',
-								text_node		: person.full_name
-							})
-							// create new modal with the person full name
-							const modal = ui.attach_to_modal({
-								header	: header,
-								body	: body,
-								footer	: null,
-								size	: 'small'
-							})
+						if(person) {
+							// modal. create new modal with the person full name
+								ui.attach_to_modal({
+									header	: 'Person info',
+									body	: person.full_name,
+									footer	: null,
+									size	: 'small'
+								})
 						}
 						break;
 
@@ -819,26 +810,23 @@ const get_custom_events = (self, i, text_editor) => {
 					case 'lang':
 						// Show note info
 						event_manager.publish('click_tag_lang_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-						const ar_project_langs	= page_globals.dedalo_projects_default_langs
+
+						const ar_project_langs		= page_globals.dedalo_projects_default_langs
 						const tag_data_lang_string	= tag_obj.dataset.data
 						// rebuild the correct data with the " instead '
 						const data_lang			= tag_data_lang_string.replace(/\'/g, '"')
 						// parse the string to object or create new one
-						const tag_data_lang		= JSON.parse(data_lang) || {}
+						const tag_data_lang		= JSON.parse(data_lang) || ''
 						// get the object of the lang clicked from all project_langs
-						const lang_obj 			= ar_project_langs.find(el => el.value=== tag_data_lang)
+						const lang_obj 			= ar_project_langs.find(el => el.value===tag_data_lang) || {label: data_lang}
 
-						const layer_lang = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'layer_lang',
-							text_node		: lang_obj.label,
-						})
 						// modal
-						const modal = ui.attach_to_modal({
-							header	: null,
-							body	: layer_lang,
-							footer	: null
-						})
+							ui.attach_to_modal({
+								header	: 'Lang info',
+								body	: lang_obj.label,
+								footer	: null,
+								size	: 'small'
+							})
 						break;
 
 					case 'reference':
@@ -1584,11 +1572,11 @@ const render_note = async function(options) {
 * RENDER_LANGS_LIST
 * @return DOM node fragment
 */
-const render_langs_list = function(self, text_editor, i){
+const render_langs_list = function(self, text_editor, i) {
 
 	// short vars
 		const ar_project_langs = page_globals.dedalo_projects_default_langs
-			// console.log(`(!project_langs) ${self.tipo}:`, project_langs);
+
 	const fragment = new DocumentFragment()
 
 	// project_langs_container
@@ -1616,7 +1604,6 @@ const render_langs_list = function(self, text_editor, i){
 			text_node 		: get_label.language || 'Language',
 			parent			: project_langs_container
 		})
-
 
 	// sections loop
 		const value_length	= ar_project_langs.length
@@ -1667,7 +1654,6 @@ const render_langs_list = function(self, text_editor, i){
 				});
 		}//end for (let i = 0; i < value_length; i++)
 
-
 	// toggle_langs_list_ . User click over the button 'button_lang'
 		self.events_tokens.push(
 			event_manager.subscribe('toggle_langs_list_' + self.id_base +'_'+i, ()=>{
@@ -1677,6 +1663,8 @@ const render_langs_list = function(self, text_editor, i){
 
 	return fragment
 };//end render_langs_list
+
+
 
 /**
 * GET_CONTENTEDITABLE_BUTTONS

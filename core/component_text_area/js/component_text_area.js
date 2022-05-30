@@ -80,7 +80,7 @@ export const component_text_area = function(){
 * @return promise bool
 */
 component_text_area.prototype.init = async function(options) {
-	
+
 	const self = this
 
 	// events subscribe
@@ -134,7 +134,7 @@ component_text_area.prototype.init = async function(options) {
 				return true
 			}//end fn_create_fragment
 
-		// text_selection
+		// text_selection_
 			self.events_tokens.push(
 				event_manager.subscribe('text_selection_'+ self.id, fn_show_button_create_fragment)
 			)
@@ -198,6 +198,7 @@ component_text_area.prototype.init = async function(options) {
 
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
+
 
 	return common_init
 };//end  init
@@ -622,7 +623,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 *	Text editor instance (tinyMCE)
 * @param tag_type
 *	Class name of image searched like 'geo'
-* 
+*
 * @return int tag_id
 */
 component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) {
