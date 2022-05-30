@@ -788,11 +788,10 @@ const get_custom_events = (self, i, text_editor) => {
 						if(person) {
 							// modal. create new modal with the person full name
 								ui.attach_to_modal({
-									header			: 'Person info',
-									body			: person.full_name,
-									footer			: null,
-									size			: 'small',
-									modal_parent	: self.wrapper
+									header	: 'Person info',
+									body	: person.full_name,
+									footer	: null,
+									size	: 'small'
 								})
 						}
 						break;
@@ -827,11 +826,10 @@ const get_custom_events = (self, i, text_editor) => {
 
 						// modal
 							ui.attach_to_modal({
-								header			: 'Lang info',
-								body			: lang_obj.label,
-								footer			: null,
-								size			: 'small',
-								modal_parent	: self.wrapper
+								header	: 'Lang info',
+								body	: lang_obj.label,
+								footer	: null,
+								size	: 'small'
 							})
 						break;
 
@@ -1195,11 +1193,10 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 	})
 
 	const modal_page_selector = ui.attach_to_modal({
-		header			: header,
-		body			: body,
-		footer			: footer,
-		size			: 'normal',
-		modal_parent	: self.wrapper
+		header	: header,
+		body	: body,
+		footer	: footer,
+		size	: 'normal'
 	})
 
 	user_option_ok.addEventListener("click", (e) =>{
@@ -1408,11 +1405,10 @@ const render_note = async function(options) {
 
 	// modal. Create a standard modal with the note information
 		const modal = ui.attach_to_modal({
-			header			: header,
-			body			: body,
-			footer			: footer,
-			size			: 'normal', // string size big|normal
-			modal_parent	: self.wrapper
+			header	: header,
+			body	: body,
+			footer	: footer,
+			size	: 'normal' // string size big|normal
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = () => {
@@ -1427,7 +1423,7 @@ const render_note = async function(options) {
 
 /**
 * RENDER_PERSONS_LIST
-* @return DOM node fragment
+* @return DOM node fragment|null
 */
 const render_persons_list = function(self, text_editor, i) {
 
@@ -1455,7 +1451,7 @@ const render_persons_list = function(self, text_editor, i) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'persons_list_container'
+			class_name		: 'text_area_persons_list_container'
 		})
 
 		// person sections
@@ -1553,11 +1549,10 @@ const render_persons_list = function(self, text_editor, i) {
 
 	// modal
 		ui.attach_to_modal({
-			header			: header,
-			body			: body,
-			footer			: null,
-			size			: 'small', // string size big|normal|small
-			modal_parent	: self.wrapper
+			header	: header,
+			body	: body,
+			footer	: null,
+			size	: 'small' // string size big|normal|small
 		})
 
 
@@ -1591,7 +1586,7 @@ const render_langs_list = function(self, text_editor, i) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'content project_langs_container'
+			class_name 		: 'content text_area_project_langs_container'
 		})
 		// sections loop
 			const value_length	= ar_project_langs.length
@@ -1644,11 +1639,10 @@ const render_langs_list = function(self, text_editor, i) {
 
 	// modal
 		ui.attach_to_modal({
-			header			: header,
-			body			: body,
-			footer			: null,
-			size			: 'small', // string size big|normal
-			modal_parent	: self.wrapper
+			header	: header,
+			body	: body,
+			footer	: null,
+			size	: 'small' // string size big|normal
 		})
 
 
