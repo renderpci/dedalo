@@ -13,7 +13,7 @@
 
 
 /**
-* RENDER_edit_COMPONENT_TEXT_AREA
+* RENDER_EDIT_COMPONENT_TEXT_AREA
 * Manage the components logic and appearance in client side
 */
 export const render_edit_component_text_area = function() {
@@ -54,6 +54,8 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// fix element
+		self.wrapper = wrapper
 
 	// add events
 		add_events(self, wrapper)
@@ -790,7 +792,7 @@ const get_custom_events = (self, i, text_editor) => {
 									body			: person.full_name,
 									footer			: null,
 									size			: 'small',
-									modal_parent	: self.node[0]
+									modal_parent	: self.wrapper
 								})
 						}
 						break;
@@ -806,7 +808,7 @@ const get_custom_events = (self, i, text_editor) => {
 							tag			: tag_obj
 						})
 						.then(()=>{
-							// self.node[0].appendChild(section_node)
+							// self.wrapper.appendChild(section_node)
 						})
 						break;
 
@@ -829,7 +831,7 @@ const get_custom_events = (self, i, text_editor) => {
 								body			: lang_obj.label,
 								footer			: null,
 								size			: 'small',
-								modal_parent	: self.node[0]
+								modal_parent	: self.wrapper
 							})
 						break;
 
@@ -1121,7 +1123,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 	})
 	layer_selector.appendChild(fragment)
 
-	self.node[0].appendChild(layer_selector)
+	self.wrapper.appendChild(layer_selector)
 
 	return fragment
 };//end render_layer_selector
@@ -1197,7 +1199,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 		body			: body,
 		footer			: footer,
 		size			: 'normal',
-		modal_parent	: self.node[0]
+		modal_parent	: self.wrapper
 	})
 
 	user_option_ok.addEventListener("click", (e) =>{
@@ -1410,7 +1412,7 @@ const render_note = async function(options) {
 			body			: body,
 			footer			: footer,
 			size			: 'normal', // string size big|normal
-			modal_parent	: self.node[0]
+			modal_parent	: self.wrapper
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = () => {
@@ -1427,7 +1429,7 @@ const render_note = async function(options) {
 * RENDER_PERSONS_LIST
 * @return DOM node fragment
 */
-const render_persons_list = function(self, text_editor, i){
+const render_persons_list = function(self, text_editor, i) {
 
 	// short vars
 		const ar_persons = self.context.tags_persons
@@ -1555,7 +1557,7 @@ const render_persons_list = function(self, text_editor, i){
 			body			: body,
 			footer			: null,
 			size			: 'small', // string size big|normal|small
-			modal_parent	: self.node[0]
+			modal_parent	: self.wrapper
 		})
 
 
@@ -1646,7 +1648,7 @@ const render_langs_list = function(self, text_editor, i) {
 			body			: body,
 			footer			: null,
 			size			: 'small', // string size big|normal
-			modal_parent	: self.node[0]
+			modal_parent	: self.wrapper
 		})
 
 
