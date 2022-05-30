@@ -190,41 +190,41 @@
 // modal inside specifics
 	dd-modal {
 
-		// .header {
-		// 	// background-color: #585e6c;
-		// }
-
-		// >.body.content {
-		// 	color: initial;
-		// }
-
 		// persons_list_container into modal
-		.text_area_persons_list_container {
+		>.text_area_persons_list_container {
 			color: initial;
 			padding: 1rem;
-			background-color: rgb(240 240 240 / 87%);
+			line-height: 1.6rem;
+			// background-color: rgb(240 240 240 / 87%);
 			// z-index: 1;
 			// width: calc(100% + 2px);
 			// height: calc(100% - 30px);
-			line-height: 1.4rem;
-			border: 1px solid #f78a1c;
-			-webkit-backdrop-filter: blur(30px);
-			backdrop-filter: blur(30px);
-			overflow: auto;
+			// -webkit-backdrop-filter: blur(30px);
+			// backdrop-filter: blur(30px);
+			// overflow: auto;
 
 			.section_container {
 				border-bottom: 1px solid #e4e4e4;
 				line-height: 2rem;
 
 				>.label {
-					font-weight: bold;
-					font-size: 1.15rem;
+					font-weight: 500;
+					font-size: 1.12rem;
 				}
 
 				>.person_container {
 					padding-left: 1rem;
 					display: flex;
 					align-items: center;
+					cursor: pointer;
+
+					&:hover {
+						background-color: #e1e1e1;
+					}
+
+					&:active {
+						opacity: 0.5;
+					}
 
 					>img.person  {
 						height: 1.2rem;
@@ -238,9 +238,38 @@
 		}//end .persons_list_container
 
 		// langs list into modal
-		.text_area_project_langs_container {
+		>.text_area_project_langs_container {
 			color: initial;
 			padding: 1rem;
-			line-height: 1.5rem;
+			line-height: 1.6rem;
+
+			>.lang_container {
+				cursor: pointer;
+				display: grid;
+				grid-template-columns: 1rem 20% 1fr;
+				grid-gap: 1rem;
+				padding: 0.2rem;
+				padding-left: 0.5rem;
+
+				&:hover {
+					background-color: #e1e1e1;
+				}
+
+				&:active {
+					opacity: 0.5;
+				}
+
+				>.icon {
+					height: 1.5rem;
+				}
+
+				>.lang_label {
+					padding-right: 1rem;
+				}
+
+				>.label_keyboard {
+					color: #7f7f7f;
+				}
+			}
 		}
 	}//end dd-modal

@@ -1620,6 +1620,13 @@ const render_langs_list = function(self, text_editor, i) {
 					text_editor.set_content(tag.outerHTML)
 				});
 
+				// lang_icon
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button icon lang',
+						parent			: lang_container
+					})
+
 				// lang_label
 					ui.create_dom_element({
 						element_type	: 'span',
