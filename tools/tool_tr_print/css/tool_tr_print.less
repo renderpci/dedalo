@@ -2,41 +2,38 @@
 @left_column_width  : 170px;
 @right_column_width : auto;
 
-	.wrap_tool {
-		min-height: initial;
-	}
-	.wrap_tool_tr_print_page {
 
-		}
-		.wrap_tool_tr_print_page .content_data {
+	.tool_tr_print {
+
+		.content_data {
 			width: 100%;
 			height: 100%;
-			position: absolute;
-		}
+			display: grid;
 
-		#left_container, #right_container {
-			//padding: 15px;
-			float: left;
-			height: 100%;
-			overflow-y: auto;
-			//display: table;
-			min-height: 300px;
-		}
 
-		#left_container {
+		// #left_container, #right_container {
+		// 	//padding: 15px;
+		// 	float: left;
+		// 	height: 100%;
+		// 	overflow-y: auto;
+		// 	//display: table;
+		// 	min-height: 300px;
+		// }
+
+		.left_container {
 			width: @left_column_width;
 			background-color: #e2e2e2;
 			min-width: 130px;
+			grid-column: span 1 / auto;
+			grid-row: 1;
 		}
 
-		#right_container {
+		.right_container {
 
-
-			width: @right_column_width;
-			left: @left_column_width;
+			grid-column: span 10;
 			text-align: justify;
-			//background-color: #daf9cc;
-			position: absolute;
+			background-color: #daf9cc;
+			grid-row: 1;
 			}
 
 			/* content inside left and right containers
@@ -204,6 +201,7 @@
 				margin-top: 10px;
 			}
 
+		}
 
 		/* top label of content (static obn scroll)
 		--------------------------------------------- */
@@ -275,7 +273,7 @@
 			}
 
 
-
+	}
 
 		/* options
 		---------------------------------------------
