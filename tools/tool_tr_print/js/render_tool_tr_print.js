@@ -53,6 +53,10 @@ render_tool_tr_print.prototype.edit = async function(options={render_level:'full
 		const activity_info = render_activity_info(self)
 		wrapper.activity_info_container.appendChild(activity_info)
 
+	// render the text process options to interact with user
+		const process_options = render_text_process_options(self, content_data)
+		content_data.left_container.appendChild(process_options)
+
 
 	return wrapper
 };//end render_tool_tr_print
@@ -86,16 +90,12 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-	// component_text_area. render another node of component caller and append to container
-		// const component_text_area = self.transcription_component || await self.get_component(self.lang)
 		// value is a raw html without parse into nodes (txt format)
-
 		const node_len 	= self.ar_raw_data.length
 		for (var i = 0; i < node_len; i++) {
 			const raw_data = self.ar_raw_data[i]
 			const text_node = self.tags_to_html(raw_data)
 			right_container_text.insertAdjacentHTML("beforeend", text_node);
-				console.log("node:-----------",text_node);
 			// right_container.appendChild(node)
 		}
 
@@ -105,9 +105,9 @@ const get_content_data_edit = async function(self) {
 		})
 		content_data.appendChild(fragment)
 		// save the pointers of the content_data nodes, to used by the buttons to access to the components
-		content_data.left_container		= left_container
-		content_data.right_container	= right_container
-
+		content_data.left_container			= left_container
+		content_data.right_container		= right_container
+		content_data.right_container_text	= right_container_text
 
 	return content_data
 };//end get_content_data_edit
@@ -115,7 +115,7 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* RENDER_TANSCRIPTION_OPTIONS
+* RENDER_HEAD_OPTIONS
 * This is used to build a optional buttons inside the header
 * @return DOM node fragment
 */
@@ -123,51 +123,17 @@ const render_head_options = async function(self, content_data) {
 
 	const fragment = new DocumentFragment()
 
-	// lang selector
-		const lang_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'lang_selector',
-			parent			: fragment
-		})
-		const lang_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'lang_label',
-			inner_html 		: get_label.idioma || 'Language',
-			parent 			: lang_container
-		})
-		// the lang selector use the content_data pointer .right_container to remove the transcription text_area and rebuild the new node
-		const lang_selector = ui.build_select_lang({
-			id			: "index_lang_selector",
-			selected	: self.lang,
-			class_name	: 'dd_input',
-			action		: async function(e){
-				// create new one
-				const component = await self.get_component(e.target.value)
-				self.lang = e.target.value
-				component.render().then(function(node){
-					// remove previous nodes
-					while (content_data.right_container.lastChild) {//} && content_data.right_container.lastChild.id!==lang_selector.id) {
-						content_data.right_container.removeChild(content_data.right_container.lastChild)
-					}
-					// add the new one
-					content_data.right_container.appendChild(node)
-				})
-			}
-		})
-		lang_container.appendChild(lang_selector)
-
-
 	return fragment
 };//end render_head_options
 
 
 
 /**
-* RENDER_TANSCRIPTION_OPTIONS
+* RENDER_TEXT_PROCESS_OPTIONS
 * This is used to build a optional buttons inside the header
 * @return DOM node fragment
 */
-const render_node = async function(self, content_data) {
+const render_text_process_options = function(self, content_data) {
 
 	const fragment = new DocumentFragment()
 
@@ -190,23 +156,216 @@ const render_node = async function(self, content_data) {
 			class_name	: 'dd_input',
 			action		: async function(e){
 				// create new one
-				const component = await self.get_component(e.target.value)
-				self.lang = e.target.value
-				component.render().then(function(node){
+				self.transcription_component	= await self.get_component(e.target.value)
+				self.lang						= e.target.value
+				self.ar_raw_data				= self.transcription_component.data.value
+
+				const node_len 	= self.ar_raw_data.length
+				for (var i = 0; i < node_len; i++) {
+					const raw_data = self.ar_raw_data[i]
+					const text_node = self.tags_to_html(raw_data)
 					// remove previous nodes
-					while (content_data.right_container.lastChild) {//} && content_data.right_container.lastChild.id!==lang_selector.id) {
-						content_data.right_container.removeChild(content_data.right_container.lastChild)
+					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+						content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
 					}
 					// add the new one
-					content_data.right_container.appendChild(node)
-				})
+					content_data.right_container_text.insertAdjacentHTML("beforeend", text_node);
+				}
+
 			}
 		})
 		lang_container.appendChild(lang_selector)
 
 
+	// OPTIONS
+	// header_option_container
+	const header_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const header_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'header_option',
+			parent 			: header_option_container
+		})
+		const header_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'header_option_label',
+			inner_html 		: get_label.cabecera || 'Header',
+			parent 			: header_option_container
+		})
+	// timecodes_option_container
+	const timecodes_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const timecodes_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'timecodes_option',
+			parent 			: timecodes_option_container
+		})
+		const timecodes_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'timecodes_option_label',
+			inner_html 		: get_label.timecodes || 'Time Codes',
+			parent 			: timecodes_option_container
+		})
+	// persons_option_container
+	const persons_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const persons_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'persons_option',
+			parent 			: persons_option_container
+		})
+		const persons_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'persons_option_label',
+			inner_html 		: get_label.personas || 'Persons',
+			parent 			: persons_option_container
+		})
+	// indexations_option_container
+	const indexations_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const indexations_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'indexations_option',
+			parent 			: indexations_option_container
+		})
+		const indexations_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'indexations_option_label',
+			inner_html 		: get_label.indexations || 'Indexations',
+			parent 			: indexations_option_container
+		})
+	// indexations_info_option_container
+	const indexations_info_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const indexations_info_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'indexations_info_option',
+			parent 			: indexations_info_option_container
+		})
+		const indexations_info_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'indexations_info_option_label',
+			inner_html 		: get_label.indexations_info || 'Indexations info',
+			parent 			: indexations_info_option_container
+		})
+	// lines_option_container
+	const lines_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const lines_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'lines_option',
+			parent 			: lines_option_container
+		})
+		const lines_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'lines_option_label',
+			inner_html 		: get_label.lines || 'Lines',
+			parent 			: lines_option_container
+		})
+	// default_view_option_container
+	const default_view_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const default_view_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'default_view_option',
+			parent 			: default_view_option_container
+		})
+		const default_view_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'default_view_option_label',
+			inner_html 		: get_label.default || 'Default',
+			parent 			: default_view_option_container
+		})
+		default_view_option.addEventListener('change', function(event) {
+			self.source_format()
+		})
+	// original_view_option_container
+	const original_view_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const original_view_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'original_view_option',
+			parent 			: original_view_option_container
+		})
+		const original_view_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'original_view_option_label',
+			inner_html 		: get_label.original || 'Original',
+			parent 			: original_view_option_container
+		})
+	// text_only_view_option_container
+	const text_only_view_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const text_only_view_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'text_only_view_option',
+			parent 			: text_only_view_option_container
+		})
+		const text_only_view_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'text_only_view_option_label',
+			inner_html 		: get_label.text_only || 'Text only',
+			parent 			: text_only_view_option_container
+		})
+	// source_view_option_container
+	const source_view_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const source_view_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+			class_name 		: 'source_view_option',
+			parent 			: source_view_option_container
+		})
+		const source_view_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'source_view_option_label',
+			inner_html 		: get_label.source || 'Source',
+			parent 			: source_view_option_container
+		})
+
+
+
 	return fragment
-};//end render_node
+};//end render_text_process_options
 
 
 
