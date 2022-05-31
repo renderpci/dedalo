@@ -71,8 +71,8 @@ const add_events = function(self, wrapper) {
 			event_manager.subscribe('update_value_'+self.id, fn_update_value)
 		)
 		function fn_update_value(changed_data) {
-			//console.log("-------------- - event update_value changed_data:", changed_data);
-			// change the value of the current dom element
+			// change the value of the current dom element after save it
+			// (!) It's really necessary this?
 			const changed_node = wrapper.querySelector(element_type + '[data-key="'+changed_data.key+'"]')
 			changed_node.value = changed_data.value
 		}
@@ -105,7 +105,7 @@ const add_events = function(self, wrapper) {
 			// update
 				if (e.target.matches(element_type + '.input_value')) {
 					//console.log("++update e.target:", clone(e.target.dataset.key));
-					//console.log("++update e.target value:", clone(e.target.value));
+					// console.log("++update e.target value:", clone(e.target.value));
 
 					// is_unique check
 						// if (self.context.properties.unique) {
@@ -194,6 +194,18 @@ const add_events = function(self, wrapper) {
 					)
 				}
 			}
+
+			// page unload event
+				const key				= e.target.dataset.key
+				const original_value	= self.db_data.value[key]
+				const new_value			= e.target.value
+				if (new_value!==original_value) {
+					// set_before_unload (bool) add
+					event_manager.set_before_unload(true)
+				}else{
+					// set_before_unload (bool) remove
+					event_manager.set_before_unload(false)
+				}
 		})//end keyup
 
 	// dblclick event

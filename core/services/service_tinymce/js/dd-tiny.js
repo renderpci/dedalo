@@ -99,10 +99,16 @@ class DDTiny extends HTMLElement {
 				init_instance_callback 	: (editor) => {
 					// update dd-tiny element id with new editor id
 					self.id = editor.id
+					// dirty state update
+					editor.on('Dirty', function (e) {
+						// console.log('Editor is dirty!', e);
+
+						// set_dirty. set service_tinymce dirty as true
+						editor.caller.set_dirty(true)
+					});
 				}
 			})
 
 	}
 }
 customElements.define('dd-tiny', DDTiny)
-

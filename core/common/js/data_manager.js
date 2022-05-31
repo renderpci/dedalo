@@ -21,15 +21,16 @@ export const data_manager = function() {
 data_manager.prototype.request = async function(options) {
 	// console.log("// request options:",options);
 
-	this.url			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
-	this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-	this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
-	this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-	this.credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
-	this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-	this.redirect		= options.redirect || 'follow' // manual, *follow, error
-	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
-	this.body			= options.body // body data type must match "Content-Type" header
+	// options
+		this.url			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
+		this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
+		this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
+		this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
+		this.credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
+		this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
+		this.redirect		= options.redirect || 'follow' // manual, *follow, error
+		this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
+		this.body			= options.body // body data type must match "Content-Type" header
 
 	const handle_errors = function(response) {
 		if (!response.ok) {
@@ -87,7 +88,7 @@ data_manager.prototype.request = async function(options) {
 			return json_parsed
 		})// parses JSON response into native Javascript objects
 		.catch(error => {
-			console.warn("options:",options);
+			console.warn("options:", options);
 			console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
 			return {
 				result 	: false,

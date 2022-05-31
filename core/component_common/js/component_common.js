@@ -458,10 +458,13 @@ component_common.prototype.save = async function(changed_data) {
 						msg				: get_label.dato_no_modificado || 'The data was not modified. Canceled save'
 					})
 
+				// page unload event
+					// set_before_unload (bool)
+					event_manager.set_before_unload(false)
+
 				return false
 			}
 		}
-
 
 	// remove previous success/error css class if exists
 		self.node.map(item => {
@@ -563,6 +566,13 @@ component_common.prototype.save = async function(changed_data) {
 					if (self.mode==='edit') {
 						ui.component.exec_save_successfully_animation(self)
 					}
+
+				// page unload event
+					// set_before_unload (bool)
+					event_manager.set_before_unload(false)
+
+				// updates db_data
+					self.db_data.value[changed_data.key] = changed_data.value
 			}
 
 			// dispatch event save

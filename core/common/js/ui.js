@@ -664,14 +664,14 @@ export const ui = {
 							item_node.classList.add("active")
 
 							// event mouse out add to component wrapper
-								const wrapper = item_node
-								wrapper.addEventListener('mouseleave', fn_mouseleave, false)
-								function fn_mouseleave(){
-									// remove event to prevent duplicity
-									wrapper.removeEventListener('mouseleave', fn_mouseleave, false)
-									// blur the active element by forcing the component to save the modified values and to deactivate it
-									document.activeElement.blur()
-								}
+								// const wrapper = item_node
+								// wrapper.addEventListener('mouseleave', fn_mouseleave, false)
+								// function fn_mouseleave(){
+								// 	// remove event to prevent duplicity
+								// 	wrapper.removeEventListener('mouseleave', fn_mouseleave, false)
+								// 	// blur the active element by forcing the component to save the modified values and to deactivate it
+								// 	document.activeElement.blur()
+								// }
 						})
 
 					// fix nearby inspector overlapping
