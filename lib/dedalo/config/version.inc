@@ -2619,6 +2619,7 @@
 		Added posterframe to web_data::build_fragment method
 		Updated jquery-ui to 1.13.0
 
+
 	Valencia 21-11-2021 5.8.5
 		05-01-2022
 		Fixed unique_server_check issue when the value is equal in more than one lang
@@ -2663,7 +2664,7 @@
 		Released version 5.8.5
 
 
-	Queue build
+	Valencia 25-05-2022 5.8.6
 		Removed jquery unnecessary lib files
 		Removed nvd3 unnecessary lib files
 		Added box elements model detection in time_machine data to prevent errors in component construction
@@ -2701,10 +2702,12 @@
 		Restored core_function 'to_string' null result values to '' instead 'null'
 		Added ontology utils file for easy csv export
 		Add link to component_iri at portal_list
-
-
-	Valencia 25-05-2022 5.8.6
 		Add link render for component_iri when is caller by portals in portal_list mode
+
+
+	Queue build
+
+
 
 	[/HISTORY]
 
@@ -2735,7 +2738,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '27-05-2022T13:55:33');
+	define('DEDALO_BUILD'	, '31-05-2022T19:56:03');
 
 
 	/*
