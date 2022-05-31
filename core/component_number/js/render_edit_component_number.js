@@ -162,6 +162,25 @@ const add_events = function(self, wrapper) {
 
 		})
 
+	// keyup event
+		wrapper.addEventListener("keyup", async (e) => {
+
+			// page unload event
+				if (e.key!=='Enter') {
+					const key				= e.target.dataset.key
+					const original_value	= self.db_data.value[key]
+					const new_value			= e.target.value
+					if (new_value!=original_value) {
+						// set_before_unload (bool) add
+						event_manager.set_before_unload(true)
+					}else{
+						// set_before_unload (bool) remove
+						event_manager.set_before_unload(false)
+					}
+				}
+		})//end keyup
+
+
 	return true
 };//end add_events
 
