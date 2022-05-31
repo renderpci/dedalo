@@ -11,6 +11,7 @@
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_tr_print} from './render_tool_tr_print.js'
+	import {tr} from '../../../core/common/js/tr.js'
 
 /**
 * TOOL_transcription
@@ -88,6 +89,7 @@ tool_tr_print.prototype.build = async function(autoload=false) {
 		// transcription_component. fix transcription_component for convenience
 			const transcription_component_tipo	= self.caller.tipo
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_tipo)
+			self.ar_raw_data					= self.transcription_component.data.value
 
 	} catch (error) {
 		self.error = error
@@ -138,6 +140,25 @@ tool_tr_print.prototype.get_component = async function(lang) {
 
 	return component_instance
 };//end get_component
+
+
+
+/**
+* TAGS_TO_HTML
+* Parses Dédalo server side tags to html tags
+* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
+*/
+tool_tr_print.prototype.tags_to_html = function(value) {
+
+	const html = (value)
+		? tr.add_tag_img_on_the_fly(value)
+		: null
+
+	return html
+};//end tags_to_html
+
+
+
 
 
 /**

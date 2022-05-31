@@ -1,1 +1,1 @@
-{"version":3,"sources":["brands.less"],"names":[],"mappings":";;;AAMA,WACE,YAAA,wBACA,WAAA,OACA,YAAA,IACA,aAAA,KACA,IAAS,yDACT,IAAS,gEACH,4BAAA,2DACA,gBAAA,0DACA,eAAA,yDACA,mBAAA,qEAJN,cAOF,KACE,YAAA"}
+{"version":3,"sources":["brands.css","brands.less"],"names":[],"mappings":"AAAA;;;EAGE;ACGF,WACE,mCAAA,CACA,iBAAA,CACA,eAAA,CACA,iBAAA,CACA,4DAAA,CACA,6YDDF,CCQA,KACE,mCDNF","file":"brands.css"}
