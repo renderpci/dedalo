@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../../common/js/event_manager.js'
+	import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
 	// import {observe_changes} from '../../../common/js/utils.js'
 	// import {clone, observe_changes} from '../../../common/js/utils/index.js'
@@ -103,6 +103,10 @@ export const service_tinymce = function() {
 
 		await self.caller.save_value(key, value)
 
+		// set_set_dirty after save is finish
+		self.set_dirty(false)
+
+
 		return true
 	};//end save
 
@@ -166,7 +170,6 @@ export const service_tinymce = function() {
 		// additional buttons
 			this.add_editor_buttons()
 
-
 		// focus event
 			editor.on('focus', function(evt) {
 				// Force not dirty state
@@ -176,7 +179,6 @@ export const service_tinymce = function() {
 					custom_events.focus(evt, {})
 				}
 			})//end focus event
-
 
 		// blur event
 			editor.on('blur', function(evt) {
@@ -189,7 +191,6 @@ export const service_tinymce = function() {
 				}
 			})//end blur event
 
-
 		// click event
 			editor.on('click', function(evt) {
 				if (custom_events.click) {
@@ -198,7 +199,6 @@ export const service_tinymce = function() {
 					})
 				}
 			})//end click event
-
 
 		// MouseUp
 			editor.on('MouseUp', function(evt) {
@@ -209,7 +209,6 @@ export const service_tinymce = function() {
 				}
 			})//end click event
 
-
 		// NodeChange
 			// editor.on('NodeChange', function(evt) {
 			// 	if (custom_events.NodeChange) {
@@ -219,7 +218,6 @@ export const service_tinymce = function() {
 			// 		console.log("NodeChange evt", evt);
 			// 	}
 			// })//end click event
-
 
 		// KeyPress
 			// prevent that user insert special reserved chars
@@ -246,7 +244,6 @@ export const service_tinymce = function() {
 				}
 			})//end KeyPress
 
-
 		// KeyUp
 			editor.on('KeyUp', function(evt) {
 				if (custom_events.KeyUp) {
@@ -256,9 +253,11 @@ export const service_tinymce = function() {
 				self.caller.is_data_changed = true
 			})
 
-
 		// init
 			editor.on('init', function(evt) {
+
+				// set tinymce caller
+					evt.target.caller = self
 
 				const container_height  = self.dd_tinny.offsetHeight; // self.container
 
@@ -288,33 +287,32 @@ export const service_tinymce = function() {
 
 						// fallback_value
 							const fallback_value = self.caller.data.fallback_value
+							if (fallback_value) {
 
-						if (fallback_value) {
+								// const parsed_value = tr.add_tag_img_on_the_fly(fallback_value)
+								const parsed_value = self.caller.tags_to_html(fallback_value)
 
-							// const parsed_value = tr.add_tag_img_on_the_fly(fallback_value)
-							const parsed_value = self.caller.tags_to_html(fallback_value)
+								// placeholder_div. create a new div an insert before editor div
+									const placeholder_div = ui.create_dom_element({
+										element_type	: 'div',
+										class_name		: 'placeholder_div',
+										inner_html		: parsed_value
+									})
+									editor_div.parentNode.insertBefore(placeholder_div, editor_div);
 
-							// placeholder_div. create a new div an insert before editor div
-								const placeholder_div = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'placeholder_div',
-									inner_html		: parsed_value
-								})
-								editor_div.parentNode.insertBefore(placeholder_div, editor_div);
+								// focus event. Hide placeholder_div on focus editor
+									editor_div.addEventListener("focus", function(e){
+											console.log("focus:",e, placeholder_div);
+										placeholder_div.classList.add("hide")
+									})
 
-							// focus event. Hide placeholder_div on focus editor
-								editor_div.addEventListener("focus", function(e){
-										console.log("focus:",e, placeholder_div);
-									placeholder_div.classList.add("hide")
-								})
-
-							// blur event. If editor content is empty, show the placeholder_div again
-								editor_div.addEventListener("blur", function(e){
-									if (editor.getContent({ format: 'raw' })==='') {
-										placeholder_div.classList.remove("hide")
-									}
-								})
-						}
+								// blur event. If editor content is empty, show the placeholder_div again
+									editor_div.addEventListener("blur", function(e){
+										if (editor.getContent({ format: 'raw' })==='') {
+											placeholder_div.classList.remove("hide")
+										}
+									})
+							}
 					}//end if(tinyMceData.indexOf('<br data-mce-bogus="1">')>= 0 || tinyMceData==='')
 
 				// debug
@@ -322,6 +320,10 @@ export const service_tinymce = function() {
 					// console.log("toolbar_height:",toolbar_height);
 					// console.log("statusbar_height:",statusbar_height);
 					// console.log("resizeTo h:",h);
+
+					// console.log("================================================================ editor._beforeUnload:",editor._beforeUnload);
+					// console.log("================================================================ self.dd_tinny:",self.dd_tinny);
+
 			})
 
 		// render
@@ -462,19 +464,33 @@ export const service_tinymce = function() {
 
 	/**
 	* SET_DIRTY
-	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
-	* @return DOM node (one or more)
+	* @param bool value
+	* @return bool
 	*/
 	this.set_dirty = function(value) {
+		console.log("///////////////// set_dirty value:",value);
 
 		const self = this
 
-		self.editor.setDirty(value);
+		// check value type
+			if (typeof value !== 'boolean') {
+				console.error("Error. Invalid value type. expected boolean: ", typeof value);
+				return false
+			}
 
-		if (value===true) {
-			// is_data_changed
-			self.caller.is_data_changed = true
-		}
+		// fix editor (tiny) as dirty trye|false
+			self.editor.setDirty(value);
+
+		// true case
+			if (value===true) {
+				// is_data_changed
+				self.caller.is_data_changed = true
+			}
+
+		// page unload event
+			// set_before_unload (bool)
+			event_manager.set_before_unload(value)
+
 
 		return true
 	};//end set_dirty

@@ -80,13 +80,21 @@ page.prototype.init = async function(options) {
 		//import('../../common/js/components_list.js')
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
-		// user_navigation
+
+		// user_navigation. Menu navigation (not pagination)
 			self.events_tokens.push(
 				event_manager.subscribe('user_navigation', fn_user_navigation)
 			)
 		// fn_user_navigation
 			async function fn_user_navigation(user_navigation_options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
+
+				// unsaved_data check
+					if (window.unsaved_data===true) {
+						if (!confirm('Are you sure you want to exit with unsaved changes?')) {
+							return false
+						}
+					}
 
 				// options
 					const source			= user_navigation_options.source

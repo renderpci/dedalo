@@ -496,6 +496,14 @@ section.prototype.build = async function(autoload=false) {
 					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
 				)
 				async function fn_paginator_goto(offset) {
+
+					// unsaved_data check
+						if (window.unsaved_data===true) {
+							if (!confirm('Are you sure you want to exit with unsaved changes?')) {
+								return false
+							}
+						}
+
 					// loading
 						// const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
 						// const node		= self.node && self.node[0]

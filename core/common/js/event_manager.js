@@ -167,6 +167,48 @@ const event_manager_class = function(){
 
 
 
+	/**
+	* SET_BEFORE_UNLOAD
+	* On true, attach a event listener to the window to prevent that user loose changed data on reload
+	* On false, the listener is removed to allow reload the page normally
+	* Note that this function is triggered af true when component input or editor data changes and
+	* with false when the component saves the data
+	* @param bool value
+	* @return bool
+	*/
+	this.set_before_unload = function(value) {
+		if(SHOW_DEBUG===true) {
+			console.log("///////////////////// set_before_unload value:",value);
+		}
+
+		if (value===true) {
+			// window dialog will be shown when user leaves the page
+			addEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
+			window.unsaved_data = true
+		}else{
+			// restore the normal page exit status
+			removeEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
+			window.unsaved_data = false
+		}
+
+		return true
+	};//end set_before_unload
+
+
+
+	/**
+	* BEFOREUNLOADLISTENER
+	* Prevent to accidentally ser leaves the page with unsaved changes
+	* @param object event
+	*/
+	this.beforeUnloadListener = function(event) {
+		event.preventDefault();
+
+		return event.returnValue = 'Are you sure you want to exit with unsaved changes?';
+	};//end beforeUnloadListener
+
+
+
 };//end event_manager_class
 
 
@@ -188,3 +230,9 @@ if (typeof window!=='undefined') {
 }
 
 
+/**
+* unsaved_data set default
+*/
+if (typeof window.unsaved_data==='undefined') {
+	window.unsaved_data = false
+}

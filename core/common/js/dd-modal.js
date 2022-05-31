@@ -334,6 +334,13 @@ class DDModal extends HTMLElement {
 			return true
 		}
 
+		// unsaved_data check
+			if (window.unsaved_data===true) {
+				if (!confirm('Are you sure you want to exit with unsaved changes?')) {
+					return false
+				}
+			}
+
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
 
