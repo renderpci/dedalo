@@ -151,7 +151,7 @@ const get_content_data = function(self) {
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'buttons_container',
+			class_name		: 'buttons_container top',
 			parent			: content_data
 		})
 
