@@ -378,21 +378,11 @@ const get_input_element = (i, current_value, self) => {
 		// 	const entry = entries[1] || entries[0]
 		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
 		// 		observer.disconnect();
-
 		// 		init_current_text_editor()
-
 		// 		// observer.unobserve(entry.target);
 		// 	}
 		// }, { threshold: [0] });
 		// observer.observe(li);
-
-	// persons
-		// const node_persons_list = render_persons_list(self, text_editor, i)
-		// li.appendChild(node_persons_list)
-
-	// langs
-		// const node_langs_list = render_langs_list(self, text_editor, i)
-		// li.appendChild(node_langs_list)
 
 	// add button create fragment (Only when caller is a tool_indexation instance)
 		if (self.caller && self.caller.constructor.name==="tool_indexation") {
@@ -869,8 +859,7 @@ const get_custom_events = (self, i, text_editor) => {
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
 			// use the observe property into ontology of the components to suscribe to this events
-
-			switch( true ){
+			switch(true) {
 
 				// 'Escape'
 				case  evt.code === self.context.av_player.av_play_pause_code:
@@ -912,6 +901,7 @@ const get_custom_events = (self, i, text_editor) => {
 							}// end switch
 						}
 					break;
+
 				// ctrl + 0
 				case evt.ctrlKey && !evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
 					// resolve the key number pressed by the user, it will be the key of the person array
