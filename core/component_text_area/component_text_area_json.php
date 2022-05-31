@@ -7,7 +7,7 @@
 	$permissions	= $this->get_component_permissions();
 	$modo			= $this->get_modo();
 	$lang			= $this->get_lang();
-
+	$properties 	= $this->get_properties();
 
 // context
 	$context = [];
@@ -37,32 +37,13 @@
 				// toolbar_buttons base
 					$this->context->toolbar_buttons = [];
 
-				// person. tags for persons
-				// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
-					$properties = $this->get_properties();
+				// person.
 					if(isset($properties->tags_persons)) {
-
-						// related_sections add
-							$related_sections = $this->get_related_sections();
-							$this->context->related_sections = $related_sections;
-
 						// toolbar_buttons add
 							$this->context->toolbar_buttons[] = 'button_person button_note';
-
-						// tags_persons
-							$this->context->tags_persons = [];
-							// related_sections
-							$obj_data_sections = array_find($related_sections->data, function($el){
-								return $el->typo==='sections';
-							});
-							$ar_related_sections = $obj_data_sections->value ?? [];
-							// tags_persons_config
-							$tags_persons_config = $properties->tags_persons;
-							foreach ($tags_persons_config as $related_section_tipo => $current_value) {
-								$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
-								$this->context->tags_persons = array_merge($this->context->tags_persons, $ar_tags_persons);
-							}
 					}
+
+						dump($this->context->toolbar_buttons, ' this->context->toolbar_buttons +/////////////////////////////////////+ '.to_string());
 
 				// geo
 					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
@@ -91,8 +72,6 @@
 				break;
 		}
 
-
-
 		$context[]		= $this->context;
 	}//end if($options->get_context===true)
 
@@ -103,10 +82,11 @@
 
 	if($options->get_data===true && $permissions>0){
 
+		$dato	= $this->get_dato();
+
 		// Value
 		switch ($modo) {
 			case 'list':
-				$dato	= $this->get_dato();
 				$value	= component_common::extract_component_dato_fallback($this, DEDALO_DATA_LANG, DEDALO_DATA_LANG_DEFAULT);
 				$total	= count($value)>0 ? count($value) : 1;
 				foreach ($value as $key => $current_value) {
@@ -122,7 +102,35 @@
 				break;
 			case 'edit':
 			default:
-				$value			= $this->get_dato();
+
+				// person. tags for persons
+				// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
+					if(isset($properties->tags_persons)) {
+
+						// related_sections add
+							$related_sections = $this->get_related_sections();
+							$related_sections = $related_sections;
+
+						// tags_persons
+							$tags_persons = [];
+							// related_sections
+							$obj_data_sections = array_find($related_sections->data, function($el){
+								return $el->typo==='sections';
+							});
+							$ar_related_sections = $obj_data_sections->value ?? [];
+							// tags_persons_config
+							$tags_persons_config = $properties->tags_persons;
+							foreach ($tags_persons_config as $related_section_tipo => $current_value) {
+								$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
+								$tags_persons = array_merge($tags_persons, $ar_tags_persons);
+							}
+					}
+				// indexation
+					if(isset($properties->tags_index)) {
+						$tags_index = $this->get_component_indexations_terms() ?? false;
+					}
+
+				$value			= $dato;
 				$fallback_value	= (empty($value) || isset($value[0]) && empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">') || !isset($patata))
 					? (function(){
 						$dato_fallback	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
@@ -146,6 +154,13 @@
 			$item->parent_tipo			= $this->get_tipo();
 			$item->parent_section_id	= $this->get_section_id();
 			$item->fallback_value		= $fallback_value;
+			if(isset($properties->tags_persons) && $modo==='edit') {
+				$item->related_sections 	= $related_sections;
+				$item->tags_persons 		= $tags_persons;
+			}
+			if(isset($properties->tags_index) && $modo==='edit') {
+				$item->tags_index = $tags_index;
+			}
 
 		$data[] = $item;
 
