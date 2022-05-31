@@ -24,6 +24,7 @@ export const render_edit_component_security_access = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
+* @param object options
 * @return DOM node wrapper
 */
 render_edit_component_security_access.prototype.edit = async function(options) {
@@ -686,6 +687,10 @@ const get_buttons = (self) => {
 					parent			: label
 				})
 			}
+
+			// page unload event
+				// set_before_unload (bool) add
+				event_manager.set_before_unload(true)
 		}
 
 
