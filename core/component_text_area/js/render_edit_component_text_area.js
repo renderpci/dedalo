@@ -773,7 +773,7 @@ const get_custom_events = (self, i, text_editor) => {
 						// parse the string to object or create new one
 						const locator		= JSON.parse(data) || {}
 						// get the match of the locator with the tag_persons array inside the instance
-						const person = self.context.tags_persons.find(item => item.data.section_tipo === locator.section_tipo && item.data.section_id===locator.section_id && item.data.component_tipo===locator.component_tipo)
+						const person = self.data.tags_persons.find(item => item.data.section_tipo === locator.section_tipo && item.data.section_id===locator.section_id && item.data.component_tipo===locator.component_tipo)
 						// if person is available create a node with the full name of the person
 						if(person) {
 							// modal. create new modal with the person full name
@@ -907,7 +907,7 @@ const get_custom_events = (self, i, text_editor) => {
 					// resolve the key number pressed by the user, it will be the key of the person array
 					const key_person_number	= evt.code.match(/\d+/g);
 					// get the person with the number pressed
-					const person_tag		= self.context.tags_persons[key_person_number[0]]
+					const person_tag		= self.data.tags_persons[key_person_number[0]]
 					event_manager.publish('key_up_persons' +'_'+ self.id_base, key_person_number)
 					// get the node tag defined in the person (it's prepared in server)
 					const node_tag_person	= build_node_tag(person_tag, person_tag.tag_id)
@@ -1418,7 +1418,7 @@ const render_note = async function(options) {
 const render_persons_list = function(self, text_editor, i) {
 
 	// short vars
-		const ar_persons = self.context.tags_persons
+		const ar_persons = self.data.tags_persons
 			// console.log(`(!ar_persons) ${self.tipo}:`, ar_persons);
 
 	// if ar_persons is empty, stop and return the fragment
@@ -1445,7 +1445,7 @@ const render_persons_list = function(self, text_editor, i) {
 		})
 
 		// person sections
-			const datum		= self.context.related_sections || {}
+			const datum		= self.data.related_sections || {}
 			const context	= datum.context
 			const data		= datum.data
 			const sections	= data.find(el => el.typo==='sections')
