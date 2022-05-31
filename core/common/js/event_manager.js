@@ -183,11 +183,11 @@ const event_manager_class = function(){
 
 		if (value===true) {
 			// window dialog will be shown when user leaves the page
-			addEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
+			window.addEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
 			window.unsaved_data = true
 		}else{
 			// restore the normal page exit status
-			removeEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
+			window.removeEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
 			window.unsaved_data = false
 		}
 

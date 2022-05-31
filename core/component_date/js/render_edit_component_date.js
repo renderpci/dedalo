@@ -11,7 +11,7 @@
 
 
 /**
-* RENDER_edit_COMPONENT_DATE
+* RENDER_EDIT_COMPONENT_DATE
 * Manage the components logic and appearance in client side
 */
 export const render_edit_component_date = function() {
@@ -266,6 +266,18 @@ const add_events = function(self, wrapper) {
 					return true
 				}
 		})//end click
+
+	// keyup event
+		wrapper.addEventListener("keyup", async (e) => {
+
+			// set_before_unload (bool) add.
+			// (!) Because is so hard to compare dates here, on user keyup always set the beforeunload event as true.
+			// When more easily compare date its allowed, change it (see component_input_text)
+				if (e.key!=='Enter') {
+					event_manager.set_before_unload(true)
+				}
+		})//end keyup
+
 
 	return true
 };//end add_events

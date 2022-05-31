@@ -580,40 +580,41 @@ component_date.prototype.format_time = function(options) {
 
 	const self = this
 
-	let current_input_date = options.value // Raw string from input field
+	// options
+		const modo	= options.modo
+		const value	= options.value
+
+	// current_input_date
+		let current_input_date = value // Raw string from input field
 
 	// PATTERN_REPLACE. Separator fix replace no standar separator
-	/*let pattern_replace
-	if (options.modo==="edit") {
-		pattern_replace = /\D/g; // notice "g" here now!
-		current_input_date = current_input_date.replace( pattern_replace, component_date.separator_time)
-	}else{
-		// Allow operators like >=
-		pattern_replace = /([0-9]+)(\D)/g; // notice "g" here now!
-		current_input_date = current_input_date.replace( pattern_replace, "$1"+component_date.separator_time)
-	}*/
+		/*let pattern_replace
+		if (options.modo==="edit") {
+			pattern_replace = /\D/g; // notice "g" here now!
+			current_input_date = current_input_date.replace( pattern_replace, component_date.separator_time)
+		}else{
+			// Allow operators like >=
+			pattern_replace = /([0-9]+)(\D)/g; // notice "g" here now!
+			current_input_date = current_input_date.replace( pattern_replace, "$1"+component_date.separator_time)
+		}*/
 
 	// REGEX_FULL . Note: Added operators in regex for allow search
-	let regex_full
-	if (options.modo==="edit") {
-		regex_full = /^(0?[0-9]{1,2})\D?(0?[0-9]{1,2})?\D?(0?[0-9]{0,2})?$/
-	}else{
-		// Allow operators like >=
-		regex_full = /^(>=|<=|>|<)?(0?[0-9]{1,2})\D?(0?[0-9]{1,2})?\D?(0?[0-9]{0,2})?$/
-	}
+		const regex_full = (modo==="edit")
+			? /^(0?[0-9]{1,2})\D?(0?[0-9]{1,2})?\D?(0?[0-9]{0,2})?$/
+			: /^(>=|<=|>|<)?(0?[0-9]{1,2})\D?(0?[0-9]{1,2})?\D?(0?[0-9]{0,2})?$/ 	// Allow search operators like >=
 
 	// Matches keys
-	let key_op, key_hour, key_minute, key_second
-	if (options.modo==="edit") {
-		key_hour 	= 1
-		key_minute 	= 2
-		key_second 	= 3
-	}else{
-		key_op 		= 1
-		key_hour 	= 2
-		key_minute 	= 3
-		key_second 	= 4
-	}
+		let key_op, key_hour, key_minute, key_second
+		if (modo==="edit") {
+			key_hour 	= 1
+			key_minute 	= 2
+			key_second 	= 3
+		}else{
+			key_op 		= 1
+			key_hour 	= 2
+			key_minute 	= 3
+			key_second 	= 4
+		}
 
 	// dd_date object
 	let dd_date = {}
@@ -621,7 +622,7 @@ component_date.prototype.format_time = function(options) {
 	if(regex_full.test(current_input_date)) {
 		let res = regex_full.exec(current_input_date)
 
-		if (options.modo==="search") {
+		if (modo==="search") {
 			dd_date.op = res[key_op] || null
 		}
 
