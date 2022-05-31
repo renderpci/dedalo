@@ -196,15 +196,17 @@ const add_events = function(self, wrapper) {
 			}
 
 			// page unload event
-				const key				= e.target.dataset.key
-				const original_value	= self.db_data.value[key]
-				const new_value			= e.target.value
-				if (new_value!==original_value) {
-					// set_before_unload (bool) add
-					event_manager.set_before_unload(true)
-				}else{
-					// set_before_unload (bool) remove
-					event_manager.set_before_unload(false)
+				if (e.key!=='Enter') {
+					const key				= e.target.dataset.key
+					const original_value	= self.db_data.value[key]
+					const new_value			= e.target.value
+					if (new_value!==original_value) {
+						// set_before_unload (bool) add
+						event_manager.set_before_unload(true)
+					}else{
+						// set_before_unload (bool) remove
+						event_manager.set_before_unload(false)
+					}
 				}
 		})//end keyup
 
