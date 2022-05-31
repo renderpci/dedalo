@@ -135,16 +135,15 @@ render_edit_component_json.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	const value				= self.data.value
-	// const is_inside_tool	= self.is_inside_tool
+	const value = self.data.value
 
 	const fragment = new DocumentFragment()
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 	// values (inputs)
@@ -372,7 +371,6 @@ export const on_change = function(self, editor) {
 	button_save.classList.add("warning")
 	editor_wrapper.classList.add("isDirty")
 
-
 	try {
 		const edited_value 	= editor.get()
 
@@ -380,13 +378,21 @@ export const on_change = function(self, editor) {
 
 			const changed = JSON.stringify(db_value)!==JSON.stringify(edited_value)
 			if (changed) {
+
 				editor_wrapper.classList.add("isDirty")
 				button_save.classList.add("warning")
+
+				// set_before_unload (bool) add
+					event_manager.set_before_unload(true)
 			}else{
+
 				if (editor_wrapper.classList.contains("isDirty")) {
 					editor_wrapper.classList.remove("isDirty")
 					button_save.classList.remove("warning")
 				}
+
+				// set_before_unload (bool) remove
+					event_manager.set_before_unload(false)
 			}
 		}
 
