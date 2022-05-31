@@ -46,7 +46,7 @@ render_tool_tr_print.prototype.edit = async function(options={render_level:'full
 		})
 
 	// transcription_options are the buttons to get access to other tools (buttons in the header)
-		const tanscription_options = await render_tanscription_options(self, content_data)
+		const tanscription_options = await render_head_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
 
 	// render_activity_info are the information of the activity as "Save"
@@ -80,14 +80,24 @@ const get_content_data_edit = async function(self) {
 			class_name 		: 'right_container',
 			parent 			: fragment
 		})
+			const right_container_text = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'right_container_text',
+				parent 			: right_container
+			})
 
 	// component_text_area. render another node of component caller and append to container
-		const component_text_area = self.transcription_component || await self.get_component(self.lang)
-		component_text_area.render()
-		.then(function(node){
-			right_container.appendChild(node)
-		})
+		// const component_text_area = self.transcription_component || await self.get_component(self.lang)
+		// value is a raw html without parse into nodes (txt format)
 
+		const node_len 	= self.ar_raw_data.length
+		for (var i = 0; i < node_len; i++) {
+			const raw_data = self.ar_raw_data[i]
+			const text_node = self.tags_to_html(raw_data)
+			right_container_text.insertAdjacentHTML("beforeend", text_node);
+				console.log("node:-----------",text_node);
+			// right_container.appendChild(node)
+		}
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -109,7 +119,7 @@ const get_content_data_edit = async function(self) {
 * This is used to build a optional buttons inside the header
 * @return DOM node fragment
 */
-const render_tanscription_options = async function(self, content_data) {
+const render_head_options = async function(self, content_data) {
 
 	const fragment = new DocumentFragment()
 
@@ -148,7 +158,72 @@ const render_tanscription_options = async function(self, content_data) {
 
 
 	return fragment
-};//end render_tanscription_options
+};//end render_head_options
+
+
+
+/**
+* RENDER_TANSCRIPTION_OPTIONS
+* This is used to build a optional buttons inside the header
+* @return DOM node fragment
+*/
+const render_node = async function(self, content_data) {
+
+	const fragment = new DocumentFragment()
+
+	// lang selector
+		const lang_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'lang_selector',
+			parent			: fragment
+		})
+		const lang_label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'lang_label',
+			inner_html 		: get_label.idioma || 'Language',
+			parent 			: lang_container
+		})
+		// the lang selector use the content_data pointer .right_container to remove the transcription text_area and rebuild the new node
+		const lang_selector = ui.build_select_lang({
+			id			: "index_lang_selector",
+			selected	: self.lang,
+			class_name	: 'dd_input',
+			action		: async function(e){
+				// create new one
+				const component = await self.get_component(e.target.value)
+				self.lang = e.target.value
+				component.render().then(function(node){
+					// remove previous nodes
+					while (content_data.right_container.lastChild) {//} && content_data.right_container.lastChild.id!==lang_selector.id) {
+						content_data.right_container.removeChild(content_data.right_container.lastChild)
+					}
+					// add the new one
+					content_data.right_container.appendChild(node)
+				})
+			}
+		})
+		lang_container.appendChild(lang_selector)
+
+
+	return fragment
+};//end render_node
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
