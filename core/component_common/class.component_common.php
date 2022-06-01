@@ -91,7 +91,7 @@ abstract class component_common extends common {
 	* Singleton pattern
 	* @return object|null
 	*/
-	public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null, $cache=true) : ?object {
+	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true) : ?object {
 		$start_time = start_time();
 
 		// tipo check. Is mandatory
@@ -257,42 +257,43 @@ abstract class component_common extends common {
 					}
 			}//end if(SHOW_DEBUG===true)
 
-
 		// no cache. Direct construct without cache instance. Use this config in imports
 			if ($cache===false) {
 				return new $component_name($tipo, $section_id, $modo, $lang, $section_tipo);
 			}
 
-		static $ar_component_instances;
+		// cache. Get cache instance if it exists. Otherwise, create a new one
+			static $ar_component_instances;
 
-		// key for cache
-		$key = $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang;
+			// cache key
+				// $cache_key	= $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang .'_'. $modo;
+				$cache_key		= implode('_', [$tipo, $section_tipo, $section_id, $lang, $modo]);
+			// cache params
+				$max_cache_instances	= 160; // 500
+				$cache_slice_on			= 40;  // 200 // $max_cache_instances/2;
 
-		$max_cache_instances = 160; // 500
-		$cache_slice_on 	 = 40; // 200 //$max_cache_instances/2;
-
-
-		// overload : If ar_component_instances > 99 , not add current element to cache to avoid overload
-			if ( isset($ar_component_instances) && count($ar_component_instances)>$max_cache_instances ) {
-				$ar_component_instances = array_slice($ar_component_instances, $cache_slice_on, null, true);
-				if(SHOW_DEBUG===true) {
-					#debug_log(__METHOD__." Overload components prevent. Unset first cache item [$key]");
-				}
-			}
-
-		// cache instances. Find current instance in cache
-			if ( !isset($ar_component_instances) || !array_key_exists($key, $ar_component_instances) ) {
-
-				// __CONSTRUCT : Store new component in static array var
-					$ar_component_instances[$key] = new $component_name($tipo, $section_id, $modo, $lang, $section_tipo);
-
-			}else{
-
-				// Change modo if is needed
-					if ($ar_component_instances[$key]->get_modo()!==$modo) {
-						$ar_component_instances[$key]->set_modo($modo);
+			// overload : If ar_component_instances > $max_cache_instances , not add current element to cache to prevent overload
+				if ( isset($ar_component_instances) && count($ar_component_instances)>$max_cache_instances ) {
+					$ar_component_instances = array_slice($ar_component_instances, $cache_slice_on, null, true);
+					if(SHOW_DEBUG===true) {
+						#debug_log(__METHOD__." Overload components prevent. Unset first cache item [$cache_key]");
 					}
-			}
+				}
+
+			// new instance. If not already exists, create a new one and store in cache
+				if ( !isset($ar_component_instances) || !array_key_exists($cache_key, $ar_component_instances) ) {
+
+					// __CONSTRUCT : Store new component in static array var
+						$ar_component_instances[$cache_key] = new $component_name($tipo, $section_id, $modo, $lang, $section_tipo);
+
+				}
+				// else{
+
+					// Change modo if is needed
+						// if ($ar_component_instances[$cache_key]->get_modo()!==$modo) {
+						// 	$ar_component_instances[$cache_key]->set_modo($modo);
+						// }
+				// }
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -307,7 +308,7 @@ abstract class component_common extends common {
 			}
 
 
-		return $ar_component_instances[$key];
+		return $ar_component_instances[$cache_key];
 	}//end get_instance
 
 
@@ -814,19 +815,17 @@ abstract class component_common extends common {
 	* Save component data in matrix using parent section
 	* Verify all necessary vars to save and call section 'save_component_dato($this)'
 	* @see section->save_component_dato($this)
-	* @return bool|int $section_matrix_id
+	* @return int|null $section_matrix_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
 		// short vars
 			$section_tipo	= $this->get_section_tipo();
 			$section_id		= $this->get_section_id();
 			$tipo			= $this->get_tipo();
 			$modo			= $this->get_modo();
-			$lang			= $this->get_lang();
-			if (empty($lang)) {
-				$lang = DEDALO_DATA_LANG;
-			}
+			$lang			= $this->get_lang() ?? DEDALO_DATA_LANG;
+
 			// Innecesario ???
 				// Si sabemos que el elemento no es traducible, fijamos su 'lang' en 'lg-nolan' (DEDALO_DATA_NOLAN)
 				// if ($this->traducible=='no') {
@@ -863,10 +862,10 @@ abstract class component_common extends common {
 				return $new_component->Save();
 			}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
 
-		// Verify component minimum vars before save
+		// check component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
 				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
-				return false;
+				return null;
 			}
 
 		// section_id validate
@@ -895,24 +894,23 @@ abstract class component_common extends common {
 			}
 			*/
 
-
 		// section save. The section will be the responsible to save the component data
 			$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
 			$section			= $this->get_my_section();
 			$section_id			= $section->save_component_dato($this, 'direct', $save_to_database);
 
-		// ID : Check valid id returned
+		// section_id : Check valid section_id returned
 		// if (abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
 			if ( empty($section_id) || (abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
 				trigger_error("Error on component Save: received id ($section_id) is not valid!");
-				return false;
+				return null;
 			}
 
 		// save_to_database. Optional stop the save process to delay ddbb access
 			if ($save_to_database===false) {
 				# Stop here (remember make a real section save later!)
 				# No component time machine data will be saved when section saves later
-				return $section_id;
+				return (int)$section_id;
 			}
 
 		// activity
@@ -1069,6 +1067,7 @@ abstract class component_common extends common {
 			// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
 			$ar_section = [$locator];
 		}
+
 		// get the dato of the observable component to be used to create the observer component
 		// in case of any relation component will be used to find "the component that I call" or "use my relations"
 		if(isset($current_observer->mode) && $current_observer->mode=== 'use_observable_dato'){
@@ -1077,41 +1076,42 @@ abstract class component_common extends common {
 
 		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
 
-		$ar_data = [];
 
+		// ar_data. Collect all observer components data
 		// with all locators collected by the differents methods, it will create the observable components to be updated.
-		foreach ($ar_section as $current_section) {
-			// create the observer component that will be update
-			$component = component_common::get_instance($component_name,
-														$observer->component_tipo,
-														$current_section->section_id,
-														'list',
-														DEDALO_DATA_LANG,
-														$current_section->section_tipo);
-			// get the specific event function in preferences to be fired (instead the default get_dato)
-			if(isset($current_observer->server_event)){
-				$function	= $current_observer->server_event->function;
-				$params		= $current_observer->server_event->params;
+			$ar_data = [];
+			foreach ($ar_section as $current_section) {
+				// create the observer component that will be update
+				$component = component_common::get_instance($component_name,
+															$observer->component_tipo,
+															$current_section->section_id,
+															'list',
+															DEDALO_DATA_LANG,
+															$current_section->section_tipo);
+				// get the specific event function in preferences to be fired (instead the default get_dato)
+				if(isset($current_observer->server_event)){
+					$function	= $current_observer->server_event->function;
+					$params		= $current_observer->server_event->params;
 
-				call_user_func_array(array($component, $function), $params);
-			}else{
+					call_user_func_array(array($component, $function), $params);
+				}else{
 
-				// force to update the dato of the observer component
-				$dato = $component->get_dato();
+					// force to update the dato of the observer component
+					$dato = $component->get_dato();
 
-				// save the new dato into the database, this will be used for search into components calculations of info's
-				$component->Save();
-			}
+					// save the new dato into the database, this will be used for search into components calculations of info's
+					$component->Save();
+				}
 
-			// only will be send the result of the observer component to the current section_tipo and section_id,
-			// this section is the section that user is changed and need to be update width the new data
-			// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
-			if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
-				// get the json of the component to send witht the save of the observable component data
-				$component_json = $component->get_json();
-				$ar_data = array_merge($ar_data, $component_json->data);
-			}
-		}
+				// only will be send the result of the observer component to the current section_tipo and section_id,
+				// this section is the section that user is changed and need to be update width the new data
+				// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
+				if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
+					// get the json of the component to send witht the save of the observable component data
+					$component_json = $component->get_json();
+					$ar_data = array_merge($ar_data, $component_json->data);
+				}
+			}//end foreach ($ar_section as $current_section)
 
 
 		return $ar_data;

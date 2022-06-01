@@ -49,37 +49,38 @@ class component_date extends component_common {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method
+	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
-		# Dato
-		$dato = $this->dato;
+		// dato
+			$dato = $this->dato;
 
-		//dump(!is_array($dato), ' is array ++ '.to_string());
-		# DELETING DATE
-		if (empty($dato)) {
-			# Salvamos de forma estándar un valor vacío
-			return parent::Save();
-		}
-
-		# DATO FORMAT VERIFY
-		if ( !is_array($dato) ) {
-			if(SHOW_DEBUG===true) {
-				#dump($dato,'$dato');
-				#throw new Exception("Dato is not string!", 1);
-				error_log("Bad date format:".to_string($dato));
+		// deleting date case
+			if (empty($dato)) {
+				// saving empty value
+				return parent::Save();
 			}
-			return false;
-		}
 
-		# add_time to dato always
-		foreach ($dato as $key => $current_dato) {
-			$this->dato[$key] = self::add_time( $current_dato );
-		}
+		// dato format verify
+			if ( !is_array($dato) ) {
+				if(SHOW_DEBUG===true) {
+					dump($dato, ' component_date dato +++++++++++++++++++++++++++ '.to_string($this->tipo));
+					debug_log(__METHOD__." Bad date format. Expected array ".gettype($dato), logger::ERROR);
+				}
+				return null;
+			}
+
+		// add_time to dato (always)
+			foreach ($dato as $key => $current_dato) {
+				$this->dato[$key] = self::add_time( $current_dato );
+			}
+
+		// from here, save normally
+			$result = parent::Save();
 
 
-		# From here, save normally
-		return parent::Save();
+		return $result;
 	}//end Save
 
 
