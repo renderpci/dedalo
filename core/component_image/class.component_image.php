@@ -105,7 +105,7 @@ class component_image extends component_media_common {
 
 	/**
 	* SAVE
-	* @return int $parent (section_id)
+	* @return int|null $section_id
 	*/
 	public function Save() {
 

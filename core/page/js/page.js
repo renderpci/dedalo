@@ -517,5 +517,3 @@ export const instantiate_page_element = function(self, ddo) {
 
 	// 	return true
 	// };//end user_navigation
-
-

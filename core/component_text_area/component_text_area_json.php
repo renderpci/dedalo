@@ -7,13 +7,14 @@
 	$permissions	= $this->get_component_permissions();
 	$modo			= $this->get_modo();
 	$lang			= $this->get_lang();
-	$properties 	= $this->get_properties();
+	$properties		= $this->get_properties();
+
+
 
 // context
 	$context = [];
 
 	if($options->get_context===true) { //  && $permissions>0
-
 
 		switch ($options->context_type) {
 
@@ -33,17 +34,16 @@
 		}
 
 		switch ($modo) {
+
 			case 'edit':
 				// toolbar_buttons base
 					$this->context->toolbar_buttons = [];
 
-				// person.
+				// person
 					if(isset($properties->tags_persons)) {
 						// toolbar_buttons add
 							$this->context->toolbar_buttons[] = 'button_person button_note';
 					}
-
-						dump($this->context->toolbar_buttons, ' this->context->toolbar_buttons +/////////////////////////////////////+ '.to_string());
 
 				// geo
 					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
@@ -56,11 +56,11 @@
 						$this->context->toolbar_buttons[] = 'button_geo button_note';
 					}
 
-				// Notes
-				// Add the section_tipo for the annotations
+				// Notes. Add the section_tipo for the annotations
 					$this->context->notes_section_tipo		= DEDALO_NOTES_SECTION_TIPO;
 					$this->context->notes_publication_tipo	= DEDALO_NOTES_PUBLICATION_TIPO;
-				// Av Player
+
+				// av_player
 					$this->context->av_player = (object)[
 						'av_play_pause_code'	=> 'Escape', // ESC
 						'av_insert_tc_code'		=> 'F2', // F2
@@ -72,7 +72,7 @@
 				break;
 		}
 
-		$context[]		= $this->context;
+		$context[] = $this->context;
 	}//end if($options->get_context===true)
 
 
@@ -82,10 +82,11 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$dato	= $this->get_dato();
+		$dato = $this->get_dato();
 
-		// Value
+		// value
 		switch ($modo) {
+
 			case 'list':
 				$value	= component_common::extract_component_dato_fallback($this, DEDALO_DATA_LANG, DEDALO_DATA_LANG_DEFAULT);
 				$total	= count($value)>0 ? count($value) : 1;
@@ -100,9 +101,9 @@
 				}
 				$fallback_value = null; // not necessary here because value is already fallback
 				break;
+
 			case 'edit':
 			default:
-
 				// person. tags for persons
 				// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
 					if(isset($properties->tags_persons)) {
@@ -147,23 +148,24 @@
 		}
 
 
-				// dump($fallback_value, ' fallback_value ++ '.to_string($this->tipo));
-
 		// data item
-		$item = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
+
+			// another data to add
 			$item->parent_tipo			= $this->get_tipo();
 			$item->parent_section_id	= $this->get_section_id();
 			$item->fallback_value		= $fallback_value;
+			// optional data to add
 			if(isset($properties->tags_persons) && $modo==='edit') {
-				$item->related_sections 	= $related_sections;
-				$item->tags_persons 		= $tags_persons;
+				$item->related_sections	= $related_sections;
+				$item->tags_persons		= $tags_persons;
 			}
 			if(isset($properties->tags_index) && $modo==='edit') {
 				$item->tags_index = $tags_index;
 			}
 
-		$data[] = $item;
 
+		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
 
 

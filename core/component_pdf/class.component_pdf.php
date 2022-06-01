@@ -1,13 +1,14 @@
 <?php
-/*
-* CLASS COMPONENT PDF
-*/
 require_once(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
-
+/**
+* CLASS COMPONENT PDF
+*
+*/
 class component_pdf extends component_media_common {
 
 
-	# file name formated as 'tipo'-'order_id' like dd732-1
+
+	// file name formated as 'tipo'-'order_id' like dd732-1
 	public $pdf_id ;
 	public $pdf_url ;
 	public $quality ;
@@ -21,7 +22,9 @@ class component_pdf extends component_media_common {
 
 
 
-	# COMPONENT_PDF COSNTRUCT
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 
 		if(SHOW_DEBUG===true) {
@@ -66,19 +69,6 @@ class component_pdf extends component_media_common {
 
 		return true;
 	}//end __construct
-
-
-
-	/**
-	* SAVE
-	* Overwrite component common method
-	* This component don´t save any data for now
-	* @return int $section_id
-	*/
-	public function Save() {
-
-		return parent::Save();
-	}//end Save
 
 
 
@@ -139,7 +129,6 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_INITIAL_MEDIA_PATH
-	*
 	*/
 	public function get_initial_media_path() : string {
 
@@ -163,7 +152,9 @@ class component_pdf extends component_media_common {
 
 
 
-	# GET DATO : Format
+	/**
+	* GET_DATO
+	*/
 	public function get_dato() {
 
 		$dato = parent::get_dato();
@@ -173,7 +164,9 @@ class component_pdf extends component_media_common {
 
 
 
-	# SET_DATO
+	/**
+	* SET_DATO
+	*/
 	public function set_dato($dato) {
 
 		parent::set_dato( $dato );
@@ -996,4 +989,4 @@ class component_pdf extends component_media_common {
 
 
 
-}//end class
+}//end class component_pdf
