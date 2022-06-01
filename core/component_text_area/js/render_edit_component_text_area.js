@@ -349,10 +349,15 @@ const get_input_element = (i, current_value, self) => {
 			// service_tinymce
 				const current_text_editor = new service_tinymce()
 
+			// toolbar_buttons
+				const toolbar_buttons = self.context.toolbar_buttons
+					? ' ' + self.context.toolbar_buttons.join(' ')
+					: ''
+
 			// editor_config
 				const editor_config = {
 					plugins			: ['paste','image','print','searchreplace','code','noneditable','fullscreen'], // ,'fullscreen'
-					toolbar			: 'bold italic underline undo redo searchreplace pastetext code fullscreen | '+self.context.toolbar_buttons.join(' ')+' button_lang | button_save', // fullscreen
+					toolbar			: 'bold italic underline undo redo searchreplace pastetext code fullscreen |'+toolbar_buttons+' button_lang | button_save', // fullscreen
 					custom_buttons	: get_custom_buttons(self, current_text_editor, i),
 					custom_events	: get_custom_events(self, i, current_text_editor)
 				}
@@ -363,26 +368,28 @@ const get_input_element = (i, current_value, self) => {
 					key				: i,
 					editor_config	: editor_config
 				})
-				.then(function(initied){
+				.then(function(){
 					// fix current_text_editor
 					self.text_editor[i] = current_text_editor
 				})
 
 			return current_text_editor
 		}//end init_current_text_editor
-		const text_editor = init_current_text_editor()
 
-	// observer. init the editor when container node is in DOM
-		// const observer = new IntersectionObserver(function(entries) {
-		// 	// if(entries[0].isIntersecting === true) {}
-		// 	const entry = entries[1] || entries[0]
-		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-		// 		observer.disconnect();
-		// 		init_current_text_editor()
-		// 		// observer.unobserve(entry.target);
-		// 	}
-		// }, { threshold: [0] });
-		// observer.observe(li);
+	// direct. Init the editor now
+		// const text_editor = init_current_text_editor()
+
+	// observer. Init the editor when container node is in DOM
+		const observer = new IntersectionObserver(function(entries) {
+			// if(entries[0].isIntersecting === true) {}
+			const entry = entries[1] || entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+				observer.disconnect();
+				init_current_text_editor()
+				// observer.unobserve(entry.target);
+			}
+		}, { threshold: [0] });
+		observer.observe(li);
 
 	// add button create fragment (Only when caller is a tool_indexation instance)
 		if (self.caller && self.caller.constructor.name==="tool_indexation") {
