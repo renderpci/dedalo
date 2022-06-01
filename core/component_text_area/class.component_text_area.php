@@ -108,62 +108,12 @@ class component_text_area extends component_common {
 	/**
 	* GET DATO
 	*/
-		// public function get_dato() {
-
-		// 	$dato = parent::get_dato();
-
-		// 	# Compatibility old dedalo3 installations
-		// 	if ( strpos($dato, '[index_')!==false || strpos($dato, '[out_index_')!==false ) {
-		// 		$this->dato = $this->convert_tr_v3_v4( $dato );	// Update index tags format
-		// 		$this->Save();
-		// 		$dato = parent::get_dato();
-		// 	}
-
-		// 	return (string)$dato;
-		// }//end get_dato
-
-
-
-	/**
-	* GET DATO
-	*/
 	public function get_dato() {
 
 		$dato = parent::get_dato();
 
 		return (array)$dato;
 	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	*/
-		// public function set_dato($dato) {
-		// 	if($dato==='""') {
-		// 		$dato = ''; // empty dato json encoded
-		// 	}elseif ($dato==='<br data-mce-bogus="1">') {
-		// 		$dato = ''; // empty tinyMCE container !
-		// 	}
-
-		// 	# Change &nbsp; for space . Optimizes chars time calculations
-		// 	#$dato = str_replace('&nbsp;', " ", $dato);
-
-		// 	# Change < / > for safe [ / ]
-		// 	#$dato = str_replace(array('<','>'),array('[',']'),$dato);
-
-		// 	if(is_array($dato)) {
-		// 		debug_log(__METHOD__." Error dato is array instead expected string. First value will be used ".to_string($dato), logger::ERROR);
-		// 		$dato = reset($dato);
-		// 	}
-
-		// 	if(SHOW_DEBUG===true) {
-
-		// 	}
-
-		// 	parent::set_dato( (string)$dato );
-		// }//end set_dato
-
 
 
 
@@ -317,6 +267,7 @@ class component_text_area extends component_common {
 
 		return $valor;
 	}//end get_valor
+
 
 
 	/**
@@ -1322,80 +1273,80 @@ class component_text_area extends component_common {
 
 
 
-	// /**
-	// * FIX_BROKEN_PERSON_TAGS
-	// * Check if every person tags have a proper label. If not, calculate label and add
-	// * @return string $raw_text
-	// */
-	// public function fix_broken_person_tags( string $raw_text, bool $save_on_update=false ) : string {
+	/**
+	* FIX_BROKEN_PERSON_TAGS
+	* Check if every person tags have a proper label. If not, calculate label and add
+	* @return string $raw_text
+	*/
+		// public function fix_broken_person_tags( string $raw_text, bool $save_on_update=false ) : string {
 
-	// 	if (empty($raw_text)) {
-	// 		return $raw_text;
-	// 	}
+		// 	if (empty($raw_text)) {
+		// 		return $raw_text;
+		// 	}
 
-	// 	$pattern = TR::get_mark_pattern($mark='person',$standalone=false);
-	// 	preg_match_all($pattern,  $raw_text,  $matches, PREG_PATTERN_ORDER);
-	// 	//  <img id=\"[$2-$3-$4-$5]\" src=\"{$btn_url}/[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
-	// 	$type_key   = 1;
-	// 	$state_key 	= 2;
-	// 	$tag_id_key = 3;
-	// 	$label_key 	= 4;
-	// 	$data_key 	= 5;
-	// 	$changed = false;
-	// 	foreach ($matches[$label_key] as $key => $value) {
-	// 		if (!empty($value)) continue; // Skip already defined labels
+		// 	$pattern = TR::get_mark_pattern($mark='person',$standalone=false);
+		// 	preg_match_all($pattern,  $raw_text,  $matches, PREG_PATTERN_ORDER);
+		// 	//  <img id=\"[$2-$3-$4-$5]\" src=\"{$btn_url}/[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
+		// 	$type_key   = 1;
+		// 	$state_key 	= 2;
+		// 	$tag_id_key = 3;
+		// 	$label_key 	= 4;
+		// 	$data_key 	= 5;
+		// 	$changed = false;
+		// 	foreach ($matches[$label_key] as $key => $value) {
+		// 		if (!empty($value)) continue; // Skip already defined labels
 
-	// 		$full_tag 	 = $matches[0][$key];
-	// 		$state  	 = $matches[$state_key][$key];
-	// 		$tag_id 	 = $matches[$tag_id_key][$key];
-	// 		$label  	 = $value;
-	// 		$data 		 = $matches[$data_key][$key];
-	// 		$data 		 = str_replace('\'','"',$data);
-	// 		if($data_obj = json_decode($data)){
-	// 			if (isset($data_obj->from_component_tipo)) {
-	// 				$current_component_tipo = $data_obj->from_component_tipo;
-	// 			}elseif (isset($data_obj->component_tipo)) {
-	// 				$current_component_tipo = $data_obj->component_tipo;
-	// 				debug_log(__METHOD__." WARNING: Old locator format found in person tag data ".to_string($data_obj), logger::WARNING);
-	// 			}else{
-	// 				debug_log(__METHOD__." ERROR: Bad locator found in person tag data ".to_string($data_obj), logger::ERROR);
-	// 			}
+		// 		$full_tag 	 = $matches[0][$key];
+		// 		$state  	 = $matches[$state_key][$key];
+		// 		$tag_id 	 = $matches[$tag_id_key][$key];
+		// 		$label  	 = $value;
+		// 		$data 		 = $matches[$data_key][$key];
+		// 		$data 		 = str_replace('\'','"',$data);
+		// 		if($data_obj = json_decode($data)){
+		// 			if (isset($data_obj->from_component_tipo)) {
+		// 				$current_component_tipo = $data_obj->from_component_tipo;
+		// 			}elseif (isset($data_obj->component_tipo)) {
+		// 				$current_component_tipo = $data_obj->component_tipo;
+		// 				debug_log(__METHOD__." WARNING: Old locator format found in person tag data ".to_string($data_obj), logger::WARNING);
+		// 			}else{
+		// 				debug_log(__METHOD__." ERROR: Bad locator found in person tag data ".to_string($data_obj), logger::ERROR);
+		// 			}
 
-	// 			if (isset($current_component_tipo)) {
-	// 				$locator = new locator();
-	// 					$locator->set_section_tipo($data_obj->section_tipo);
-	// 					$locator->set_section_id($data_obj->section_id);
-	// 					$locator->set_component_tipo($current_component_tipo);
+		// 			if (isset($current_component_tipo)) {
+		// 				$locator = new locator();
+		// 					$locator->set_section_tipo($data_obj->section_tipo);
+		// 					$locator->set_section_id($data_obj->section_id);
+		// 					$locator->set_component_tipo($current_component_tipo);
 
-	// 				$tag_person_label = component_text_area::get_tag_person_label($locator);
+		// 				$tag_person_label = component_text_area::get_tag_person_label($locator);
 
-	// 				if (empty($tag_person_label->initials)) {
-	// 					# Empty resolved label
-	// 					debug_log(__METHOD__." Unable resolve tag without label. data: ".trim($data), logger::WARNING);
-	// 				}else{
-	// 					# Regenerate label here
-	// 					$person_tag = TR::build_tag('person', $state, $tag_id, $tag_person_label->initials, $data);
-	// 					$raw_text   = str_replace($full_tag ,$person_tag, $raw_text);
+		// 				if (empty($tag_person_label->initials)) {
+		// 					# Empty resolved label
+		// 					debug_log(__METHOD__." Unable resolve tag without label. data: ".trim($data), logger::WARNING);
+		// 				}else{
+		// 					# Regenerate label here
+		// 					$person_tag = TR::build_tag('person', $state, $tag_id, $tag_person_label->initials, $data);
+		// 					$raw_text   = str_replace($full_tag ,$person_tag, $raw_text);
 
-	// 					$changed = true;
+		// 					$changed = true;
 
-	// 					debug_log(__METHOD__." Updated tag without label: ".json_encode($person_tag), logger::DEBUG);
-	// 				}
-	// 			}
-	// 		}//end if($data_obj = json_decode($data))
-	// 	}//end foreach ($matches[$label_key] as $key => $value)
+		// 					debug_log(__METHOD__." Updated tag without label: ".json_encode($person_tag), logger::DEBUG);
+		// 				}
+		// 			}
+		// 		}//end if($data_obj = json_decode($data))
+		// 	}//end foreach ($matches[$label_key] as $key => $value)
 
-	// 	if ($changed===true) {
-	// 		if ($save_on_update===true) {
-	// 			# Save component with updated data
-	// 			$this->set_dato($raw_text);
-	// 			$this->Save($raw_text);
-	// 			debug_log(__METHOD__." Updated and saved raw_text ".to_string(), logger::DEBUG);
-	// 		}
-	// 	}
+		// 	if ($changed===true) {
+		// 		if ($save_on_update===true) {
+		// 			# Save component with updated data
+		// 			$this->set_dato($raw_text);
+		// 			$this->Save($raw_text);
+		// 			debug_log(__METHOD__." Updated and saved raw_text ".to_string(), logger::DEBUG);
+		// 		}
+		// 	}
 
-	// 	return $raw_text;
-	// }//end fix_broken_person_tags
+		// 	return $raw_text;
+		// }//end fix_broken_person_tags
 
 
 
@@ -1415,24 +1366,24 @@ class component_text_area extends component_common {
 
 
 
-	// /**
-	// * GET_COMPONENT_INDEXATIONS
-	// * @return array $ar_indexations
-	// */
-	// public function get_component_indexations_DES( string $type ) {
+	/**
+	* GET_COMPONENT_INDEXATIONS
+	* @return array $ar_indexations
+	*/
+		// public function get_component_indexations_DES( string $type ) {
 
-	// 	# Search relation index in hierarchy tables
-	// 	$options = new stdClass();
-	// 		$options->fields = new stdClass();
-	// 			$options->fields->section_tipo		= $this->section_tipo;
-	// 			$options->fields->section_id		= $this->parent;
-	// 			$options->fields->component_tipo	= $this->tipo;
-	// 			$options->fields->type				= $type;
+		// 	# Search relation index in hierarchy tables
+		// 	$options = new stdClass();
+		// 		$options->fields = new stdClass();
+		// 			$options->fields->section_tipo		= $this->section_tipo;
+		// 			$options->fields->section_id		= $this->parent;
+		// 			$options->fields->component_tipo	= $this->tipo;
+		// 			$options->fields->type				= $type;
 
-	// 	$ar_indexations = component_relation_index::get_indexations_search( $options );
+		// 	$ar_indexations = component_relation_index::get_indexations_search( $options );
 
-	// 	return (array)$ar_indexations;
-	// }//end get_component_indexations
+		// 	return (array)$ar_indexations;
+		// }//end get_component_indexations
 
 
 	/**
@@ -1686,8 +1637,6 @@ class component_text_area extends component_common {
 
 
 
-
-
 	/**
 	* GET_RELATED_COMPONENT_select_lang
 	* @return string|null $tipo
@@ -1917,32 +1866,32 @@ class component_text_area extends component_common {
 
 
 
-	// /**
-	// * GET_AR_TAG_REFERENCES
-	// * Resolves portal and other elements that are not in this section (inverse locator)
-	// * @return array $ar_tag_references
-	// */
-	// public function DEPRECATED_get_ar_tag_references(string $section_tipo, string $component_tipo) {
+	/**
+	* GET_AR_TAG_REFERENCES
+	* Resolves portal and other elements that are not in this section (inverse locator)
+	* @return array $ar_tag_references
+	*/
+		// public function DEPRECATED_get_ar_tag_references(string $section_tipo, string $component_tipo) {
 
-	// 	$ar_tag_references = array();
+		// 	$ar_tag_references = array();
 
-	// 	$section				= $this->get_my_section();
-	// 	$my_inverse_locators	= $section->get_inverse_locators();
+		// 	$section				= $this->get_my_section();
+		// 	$my_inverse_locators	= $section->get_inverse_locators();
 
-	// 	// Calculate all references to this resource of section tipo $section_tipo (like 'oh1')
-	// 	$ar_caller_section_id = array();
-	// 	foreach ((array)$my_inverse_locators as $key => $current_locator) {
+		// 	// Calculate all references to this resource of section tipo $section_tipo (like 'oh1')
+		// 	$ar_caller_section_id = array();
+		// 	foreach ((array)$my_inverse_locators as $key => $current_locator) {
 
-	// 		$current_section_tipo	= $current_locator->from_section_tipo;
-	// 		$current_section_id		= $current_locator->from_section_id;
+		// 		$current_section_tipo	= $current_locator->from_section_tipo;
+		// 		$current_section_id		= $current_locator->from_section_id;
 
-	// 		if ($current_section_tipo===$section_tipo) {
-	// 			$ar_caller_section_id[] = $current_section_id;
-	// 		}
-	// 	}
+		// 		if ($current_section_tipo===$section_tipo) {
+		// 			$ar_caller_section_id[] = $current_section_id;
+		// 		}
+		// 	}
 
-	// 	return $ar_caller_section_id;
-	// }//end get_ar_tag_references
+		// 	return $ar_caller_section_id;
+		// }//end get_ar_tag_references
 
 
 
@@ -2072,59 +2021,59 @@ class component_text_area extends component_common {
 
 
 
-	// /**
-	// * CREATE_NEW_NOTE
-	// * @return object $response
-	// */
-	// public static function DES_create_new_note() : object {
+	/**
+	* CREATE_NEW_NOTE
+	* @return object $response
+	*/
+		// public static function DES_create_new_note() : object {
 
-	// 	$response = new stdClass();
-	// 		$response->result	= false;
-	// 		$response->msg		= 'Error. Request failed';
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed';
 
-	// 	#$user_id = navigator::get_user_id();
-	// 	$section_tipo = DEDALO_NOTES_SECTION_TIPO;
+		// 	#$user_id = navigator::get_user_id();
+		// 	$section_tipo = DEDALO_NOTES_SECTION_TIPO;
 
-	// 	$section	= section::get_instance(null, $section_tipo, 'edit', false);
-	// 	$section_id	= $section->Save();
+		// 	$section	= section::get_instance(null, $section_tipo, 'edit', false);
+		// 	$section_id	= $section->Save();
 
-	// 	$locator = new locator();
-	// 		$locator->set_section_tipo($section_tipo);
-	// 		$locator->set_section_id($section_id);
+		// 	$locator = new locator();
+		// 		$locator->set_section_tipo($section_tipo);
+		// 		$locator->set_section_id($section_id);
 
-	// 	$response->result	= $locator;
-	// 	$response->msg		= 'Created notes record successfully with locator: '.json_encode($locator);
+		// 	$response->result	= $locator;
+		// 	$response->msg		= 'Created notes record successfully with locator: '.json_encode($locator);
 
-	// 	return (object)$response;
-	// }//end create_new_note
+		// 	return (object)$response;
+		// }//end create_new_note
 
 
 
-	// /**
-	// * CREATE_NEW_STRUCT
-	// * @return object $response
-	// */
-	// public static function create_new_struct() : object {
+	/**
+	* CREATE_NEW_STRUCT
+	* @return object $response
+	*/
+		// public static function create_new_struct() : object {
 
-	// 	$response = new stdClass();
-	// 		$response->result 	= false;
-	// 		$response->msg 		= 'Error. Request failed';
+		// 	$response = new stdClass();
+		// 		$response->result 	= false;
+		// 		$response->msg 		= 'Error. Request failed';
 
-	// 	#$user_id = navigator::get_user_id();
-	// 	$section_tipo = DEDALO_STRUCTURATION_SECTION_TIPO;
+		// 	#$user_id = navigator::get_user_id();
+		// 	$section_tipo = DEDALO_STRUCTURATION_SECTION_TIPO;
 
-	// 	$section 	= section::get_instance(null, $section_tipo);
-	// 	$section_id = $section->Save();
+		// 	$section 	= section::get_instance(null, $section_tipo);
+		// 	$section_id = $section->Save();
 
-	// 	$locator = new locator();
-	// 		$locator->set_section_tipo($section_tipo);
-	// 		$locator->set_section_id($section_id);
+		// 	$locator = new locator();
+		// 		$locator->set_section_tipo($section_tipo);
+		// 		$locator->set_section_id($section_id);
 
-	// 	$response->result = $locator;
-	// 	$response->msg 	  = 'Created new_struct record successfully with locator: '.json_encode($locator);
+		// 	$response->result = $locator;
+		// 	$response->msg 	  = 'Created new_struct record successfully with locator: '.json_encode($locator);
 
-	// 	return (object)$response;
-	// }//end create_new_struct
+		// 	return (object)$response;
+		// }//end create_new_struct
 
 
 
@@ -2155,79 +2104,79 @@ class component_text_area extends component_common {
 
 
 
-	// /**
-	// * RESOLVE_TITLES
-	// * @return string $text
-	// * @see tr_tool_print
-	// */
-	// public static function resolve_titles(string $raw_text, string $component_tipo_tipo, string $section_tipo, $section_id, $decore=null, string $lang=DEDALO_DATA_LANG, $lang_fallback=true) : string {
+	/**
+	* RESOLVE_TITLES
+	* @return string $text
+	* @see tr_tool_print
+	*/
+		// public static function resolve_titles(string $raw_text, string $component_tipo_tipo, string $section_tipo, $section_id, $decore=null, string $lang=DEDALO_DATA_LANG, $lang_fallback=true) : string {
 
-	// 	if (empty($decore)) {
-	// 		$decore = 'h2';
-	// 	}
+		// 	if (empty($decore)) {
+		// 		$decore = 'h2';
+		// 	}
 
-	// 	$pattern = TR::get_mark_pattern($mark='structIn', $standalone=true, false, $data=false);
+		// 	$pattern = TR::get_mark_pattern($mark='structIn', $standalone=true, false, $data=false);
 
-	// 	$matches = array();
-	// 	preg_match_all($pattern, $raw_text, $matches);
+		// 	$matches = array();
+		// 	preg_match_all($pattern, $raw_text, $matches);
 
-	// 	$data_key 	 = 7;
-	// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_STRUCTURATION_TITLE_TIPO,true);
-	// 	$ar_resolved = array();
-	// 	foreach ((array)$matches[$data_key] as $key => $current_locator) {
+		// 	$data_key 	 = 7;
+		// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_STRUCTURATION_TITLE_TIPO,true);
+		// 	$ar_resolved = array();
+		// 	foreach ((array)$matches[$data_key] as $key => $current_locator) {
 
-	// 		#$source_current_locator = md5($current_locator);
-	// 		#if (in_array($source_current_locator, $ar_resolved)) {
-	// 		#	continue;
-	// 		#}
+		// 		#$source_current_locator = md5($current_locator);
+		// 		#if (in_array($source_current_locator, $ar_resolved)) {
+		// 		#	continue;
+		// 		#}
 
-	// 		if (empty($current_locator)) continue;
+		// 		if (empty($current_locator)) continue;
 
-	// 		$current_locator = str_replace("'",'"',$current_locator);
-	// 		if (!$current_locator = json_decode($current_locator)) {
-	// 			continue;
-	// 		}
+		// 		$current_locator = str_replace("'",'"',$current_locator);
+		// 		if (!$current_locator = json_decode($current_locator)) {
+		// 			continue;
+		// 		}
 
-	// 		# Resolve locator to value
-	// 		$component 		= component_common::get_instance($modelo_name,
-	// 														 DEDALO_STRUCTURATION_TITLE_TIPO,
-	// 														 $current_locator->section_id,
-	// 														 'list',
-	// 														 $lang,
-	// 														 $current_locator->section_tipo);
-	// 		$value = $component->get_valor();
+		// 		# Resolve locator to value
+		// 		$component 		= component_common::get_instance($modelo_name,
+		// 														 DEDALO_STRUCTURATION_TITLE_TIPO,
+		// 														 $current_locator->section_id,
+		// 														 'list',
+		// 														 $lang,
+		// 														 $current_locator->section_tipo);
+		// 		$value = $component->get_valor();
 
-	// 		if ($lang_fallback===true && empty($value)) {
-	// 			# Fallback
-	// 			$main_lang = component_text_area::force_change_lang($component_tipo_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
-	// 			if ($main_lang!=DEDALO_DATA_LANG) {
-	// 				$old_lang = $component->get_lang();
-	// 				$component->set_lang($main_lang);
-	// 				$value = $component->get_valor();
-	// 				#$value = '<em>'.$value.'</em>';
+		// 		if ($lang_fallback===true && empty($value)) {
+		// 			# Fallback
+		// 			$main_lang = component_text_area::force_change_lang($component_tipo_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
+		// 			if ($main_lang!=DEDALO_DATA_LANG) {
+		// 				$old_lang = $component->get_lang();
+		// 				$component->set_lang($main_lang);
+		// 				$value = $component->get_valor();
+		// 				#$value = '<em>'.$value.'</em>';
 
-	// 				# Restore old lang to component
-	// 				$component->set_lang($old_lang);
-	// 			}
-	// 		}
+		// 				# Restore old lang to component
+		// 				$component->set_lang($old_lang);
+		// 			}
+		// 		}
 
-	// 		switch ($decore) {
-	// 			case 'h2':
-	// 				$value = "<h2 class=\"mceNonEditable\"><label class=\"title\">".$value."</label></h2>";
-	// 				break;
+		// 		switch ($decore) {
+		// 			case 'h2':
+		// 				$value = "<h2 class=\"mceNonEditable\"><label class=\"title\">".$value."</label></h2>";
+		// 				break;
 
-	// 			default:
-	// 				# code...
-	// 				break;
-	// 		}
+		// 			default:
+		// 				# code...
+		// 				break;
+		// 		}
 
-	// 		$full_tag = $matches[0][$key];
-	// 		$raw_text = str_replace($full_tag, $full_tag . $value, $raw_text);
-	// 	}
+		// 		$full_tag = $matches[0][$key];
+		// 		$raw_text = str_replace($full_tag, $full_tag . $value, $raw_text);
+		// 	}
 
 
-	// 	return $raw_text;
-	// }//end resolve_titles
+		// 	return $raw_text;
+		// }//end resolve_titles
 
 
 
@@ -2548,7 +2497,8 @@ class component_text_area extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	*
+	* @param object $request_options
+	* @return object
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -2739,6 +2689,7 @@ class component_text_area extends component_common {
 				break;
 		}
 	}//end update_dato_version
+
 
 
 }//end component_text_area

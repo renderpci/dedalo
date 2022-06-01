@@ -1,15 +1,21 @@
 <?php
-/*
+/**
 * CLASS COMPONENT PASSWORD
+*
+*
 */
-
-
 class component_password extends component_common {
 
-	# Overwrite __construct var lang passed in this component
+
+
+	// Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-	# GET DATO
+
+
+	/**
+	* GET_DATO
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 
@@ -18,12 +24,20 @@ class component_password extends component_common {
 		}
 
 		return (array)$dato;
-	}
+	}//end get_dato
 
-	# SET_DATO (NO ENCRYTP THIS VAR !)
+
+
+	/**
+	* SET_DATO
+	* (!) do not encrytp this var
+	*/
 	public function set_dato($dato) {
+
 		parent::set_dato( (array)$dato );
-	}
+	}//end set_dato
+
+
 
 	/**
 	* GET_VALOR
@@ -83,12 +97,15 @@ class component_password extends component_common {
 		return parent::Save();
 	}//end Save
 
-	// # GET EJEMPLO
-	// protected function get_ejemplo() {
-	//
-	// 	if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";
-	// 	return parent::get_ejemplo();
-	// }
+
+
+	// GET EJEMPLO
+		// protected function get_ejemplo() {
+		//
+		// 	if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";
+		// 	return parent::get_ejemplo();
+		// }
+
 
 
 	/**
@@ -112,12 +129,13 @@ class component_password extends component_common {
 		}
 
 		return false;
-	}
+	}//end encrypt_password
+
 
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @return
+	* @return object
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -190,7 +208,8 @@ class component_password extends component_common {
 					return $response;
 				}
 		}
-	}
+	}//end update_dato_version
 
-};
-?>
+
+
+}//end class component_password

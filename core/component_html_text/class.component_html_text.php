@@ -7,15 +7,22 @@
 class component_html_text extends component_common {
 
 
-	# GET DATO : Format "Hello world"
+
+	/**
+	* GET_DATO
+	*/
 	public function get_dato() {
+
 		$dato = parent::get_dato();
+
 		return (array)$dato;
-	}
+	}//end get_dato
 
 
 
-	# SET_DATO
+	/**
+	* SET_DATO
+	*/
 	public function set_dato($dato) {
 		// if ($dato==='""') {
 		// 	$dato = "";
@@ -90,7 +97,7 @@ class component_html_text extends component_common {
 
 		$dato = parent::get_dato_default_lang();
 		return $dato;
-	}
+	}//end get_dato_default_lang
 
 
 
@@ -123,9 +130,9 @@ class component_html_text extends component_common {
 
 	/**
 	* CLEAN_TEXT
-	* Anclaje para futuros preprocesados del texto. De momento sólo haremos un trim
+	* Anchor for future preprocessing of the text. At the moment we will only do a trim
 	*/
-	public function clean_text($string){//($dato){
+	public function clean_text(string $string) : string {
 
 		# Desactivo porque elimina el '<mar>'
 		#$string = filter_var($string, FILTER_UNSAFE_RAW );	# FILTER_SANITIZE_STRING
@@ -267,6 +274,8 @@ class component_html_text extends component_common {
         return $query_object;
 	}//end resolve_query_object_sql
 
+
+
 	/**
 	* SEARCH_OPERATORS_INFO
 	* Return valid operators for search in current component
@@ -292,4 +301,3 @@ class component_html_text extends component_common {
 
 
 }//end component_html_text
-?>

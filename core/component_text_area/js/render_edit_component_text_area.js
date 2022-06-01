@@ -773,9 +773,19 @@ const get_custom_events = (self, i, text_editor) => {
 						// parse the string to object or create new one
 						const locator		= JSON.parse(data) || {}
 						// get the match of the locator with the tag_persons array inside the instance
-						const person = self.data.tags_persons.find(item => item.data.section_tipo === locator.section_tipo && item.data.section_id===locator.section_id && item.data.component_tipo===locator.component_tipo)
+						console.log("self.data:",self.data);
+						const tags_persons = self.data.tags_persons || []
+						const person = tags_persons.find(el =>
+							el.data.section_tipo===locator.section_tipo &&
+							el.data.section_id==locator.section_id &&
+							el.data.component_tipo===locator.component_tipo
+						)
 						// if person is available create a node with the full name of the person
 						if(person) {
+
+							// save editor changes to prevent conflicts with modal components changes
+								text_editor.save()
+
 							// modal. create new modal with the person full name
 								ui.attach_to_modal({
 									header	: 'Person info',
@@ -788,17 +798,18 @@ const get_custom_events = (self, i, text_editor) => {
 
 					case 'note':
 						// Show note info
-						event_manager.publish('click_tag_note_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
+							event_manager.publish('click_tag_note_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 
-						render_note({
-							self		: self,
-							text_editor	: text_editor,
-							i			: i,
-							tag			: tag_obj
-						})
-						.then(()=>{
-							// self.wrapper.appendChild(section_node)
-						})
+						// save editor changes to prevent conflicts with modal components changes
+							text_editor.save()
+
+						// modal tag note info
+							render_note({
+								self		: self,
+								text_editor	: text_editor,
+								i			: i,
+								tag			: tag_obj
+							})
 						break;
 
 					case 'lang':
@@ -814,7 +825,10 @@ const get_custom_events = (self, i, text_editor) => {
 						// get the object of the lang clicked from all project_langs
 						const lang_obj 			= ar_project_langs.find(el => el.value===tag_data_lang) || {label: data_lang}
 
-						// modal
+						// save editor changes to prevent conflicts with modal components changes
+							text_editor.save()
+
+						// modal tag lang info
 							ui.attach_to_modal({
 								header	: 'Lang info',
 								body	: lang_obj.label,
@@ -1182,18 +1196,22 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 		parent			: footer
 	})
 
-	const modal_page_selector = ui.attach_to_modal({
-		header	: header,
-		body	: body,
-		footer	: footer,
-		size	: 'normal'
-	})
+	// save editor changes to prevent conflicts with modal components changes
+		text_editor.save()
+
+	// modal
+		const modal = ui.attach_to_modal({
+			header	: header,
+			body	: body,
+			footer	: footer,
+			size	: 'normal'
+		})
 
 	user_option_ok.addEventListener("click", (e) =>{
 		e.preventDefault()
 		const user_value = body_input.value
 		if(user_value === null) {
-			modal_page_selector.renove()
+			modal.renove()
 		}
 		if(user_value > page_out || user_value < page_in){
 			error_input.textContent = get_label.value_out_of_range || 'Value out of range'
@@ -1204,15 +1222,15 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 		data_tag.data	= "["+data+"]"
 		const tag		= build_node_tag(data_tag, tag_id)
 		text_editor.set_content(tag.outerHTML)
-		modal_page_selector.remove()
+		modal.remove()
 	})
 
 	user_option_cancelar.addEventListener("click", (e) =>{
-		modal_page_selector.remove()
+		modal.remove()
 	})
 
 
-	return
+	return true
 };//end render_page_selector
 
 
@@ -1380,18 +1398,8 @@ const render_note = async function(options) {
 				parent			: footer
 			})
 
-		// button_ok. On user click removes the modal
-			// const button_ok = ui.create_dom_element({
-			// 	element_type	: 'button',
-			// 	class_name		: 'success',
-			// 	text_content	: get_label.ok ||'Ok',
-			// 	parent			: footer
-			// })
-			// button_ok.addEventListener("click", function(e){
-			// 	e.stopPropagation()
-			// 	note_section.destroy(true,true,true)
-			// 	modal.remove()
-			// })
+	// save editor changes to prevent conflicts with modal components changes
+		text_editor.save()
 
 	// modal. Create a standard modal with the note information
 		const modal = ui.attach_to_modal({
@@ -1537,6 +1545,9 @@ const render_persons_list = function(self, text_editor, i) {
 				}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
 			}//end for (let i = 0; i < value_length; i++)
 
+	// save editor changes to prevent conflicts with modal components changes
+		text_editor.save()
+
 	// modal
 		ui.attach_to_modal({
 			header	: header,
@@ -1633,6 +1644,9 @@ const render_langs_list = function(self, text_editor, i) {
 						parent			: lang_container
 					})
 			}//end for (let i = 0; i < value_length; i++)
+
+	// save editor changes to prevent conflicts with modal components changes
+		text_editor.save()
 
 	// modal
 		ui.attach_to_modal({
