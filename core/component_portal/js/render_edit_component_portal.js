@@ -621,7 +621,7 @@ export const add_events = function(self, wrapper) {
 					})
 					.then(function(){
 						self.autocomplete_active = true
-						self.autocomplete.search_input.focus()
+						// self.autocomplete.search_input.focus()
 					})
 
 					return true

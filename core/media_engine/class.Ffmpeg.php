@@ -2,9 +2,9 @@
 require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
-
-/*
-* CLASS FFMPEG
+/**
+* Ffmpeg
+*
 */
 class Ffmpeg {
 
@@ -169,7 +169,7 @@ class Ffmpeg {
 	* @param object $AVObj
 	* @return string $quality
 	*/
-	public function get_master_media_file_quality(object $AVObj) : string {
+	public function get_master_media_file_quality(AVObj $AVObj) : string {
 
 		$master_media_file = $this->get_master_media_file($AVObj);
 

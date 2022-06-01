@@ -1,10 +1,13 @@
 <?php
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
 
 
-
+/**
+* AVObj
+*/
 class AVObj extends MediaObj {
+
+
 
 	protected $reelID ;				# reelID
 	protected $quality ;			# like 'low, mid, hi, audio'
@@ -18,6 +21,10 @@ class AVObj extends MediaObj {
 	protected $header_data ;		# from read movie header
 
 
+
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($reelID, $quality=false, $tcin=NULL, $tcout=NULL) {
 
 		# GET AND SET CONFIG VALUES FROM FILE config.php
@@ -37,7 +44,7 @@ class AVObj extends MediaObj {
 		$this->streamer			= $this->define_streamer();
 
 		parent::__construct($reelID);
-	}
+	}//end __construct
 
 
 
@@ -45,14 +52,14 @@ class AVObj extends MediaObj {
 	* GET_URL
 	* Custom get url in av case
 	*/
-	public function get_url() {
+	public function get_url() : string {
 
 		$name = $this->get_name() . '.' . $this->get_extension() . '?t='.time();
 		$url  = $this->get_media_path() .'/'. $name;
 		#$url 	.= '?t='.time();
 
 		return $url;
-	}
+	}//end get_url
 
 
 
@@ -79,38 +86,48 @@ class AVObj extends MediaObj {
 		return DEDALO_AV_MIME_TYPE;
 	}
 
-	public function get_media_path() {
+	public function get_media_path() : string {
+
 		return DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . '/' . $this->quality . $this->aditional_path;
 	}
-	public function get_media_path_abs() {
+	public function get_media_path_abs() : string {
+
 		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER. '/' . $this->quality . $this->aditional_path;
 	}
 
-	public function get_media_path_server() {
+	public function get_media_path_server() : string {
+
 		return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path;
 	}
 
 
+
 	# AV SPECIFIC
-	protected function define_streamer() {
+	protected function define_streamer() : ?string {
+
 		return DEDALO_AV_STREAMER;
 	}
 
 
+
 	# GET DEFAULT QUALITY
-	public static function get_quality_default() {
+	public static function get_quality_default() : string {
+
 		return DEDALO_AV_QUALITY_DEFAULT;
 	}
 
+
+
 	# GET ARRAY QUALITY OPTIONS
-	public static function get_ar_quality() {
+	public static function get_ar_quality() : array {
+
 		return DEDALO_AV_AR_QUALITY;
 	}
 
 
 
 	# SET VIDEO QUALITY (low,hi,mid)
-	protected function set_quality($quality) {
+	protected function set_quality(string $quality) {
 
 		$default	= $this->get_quality_default();
 		$ar_valid 	= $this->get_ar_quality();
@@ -132,11 +149,12 @@ class AVObj extends MediaObj {
 		$this->quality = $quality;
 
 		return $this->quality;
-	}
+	}//end set_quality
+
 
 
 	# QUALITY FOLDERS WITH EXISTING FILES . Return array whith quality foundeds
-	public function get_ar_quality_with_file() {
+	public function get_ar_quality_with_file() : array {
 
 		$ar_quality 			= self::get_ar_quality();
 		$ar_quality_with_file	= array();
@@ -150,33 +168,37 @@ class AVObj extends MediaObj {
 				 $ar_quality_with_file[] = $quality ;
 			}
 		}
+
 		return $ar_quality_with_file ;
-	}
+	}//end get_ar_quality_with_file
 
 
 
-	# GET ARRAY QUALITY OPTIONS AS SELECT
-	public static function get_ar_quality_as_select_DEPRECATED($selectedItem=false) {
+	/**
+	* GET_AR_QUALITY_AS_SELECT
+	*/
+		// public static function get_ar_quality_as_select_DEPRECATED($selectedItem=false) {
 
-		$ar_valid 	= self::get_ar_quality();
+		// 	$ar_valid 	= self::get_ar_quality();
 
-		$html  = "\n<select name=\"quality\" id=\"quality\" >";
+		// 	$html  = "\n<select name=\"quality\" id=\"quality\" >";
 
-		$html .= "\n <option value=\"\" ></option>";
+		// 	$html .= "\n <option value=\"\" ></option>";
 
-		if(is_array($ar_valid)) foreach($ar_valid as $quality) {
+		// 	if(is_array($ar_valid)) foreach($ar_valid as $quality) {
 
-			$html .= "\n <option value=\"$quality\" ";
-			if($selectedItem==$quality)
-			$html .= " selected=\"selected\" ";
-			$html .= ">$quality";
-			$html .= "</option>";
-		}
+		// 		$html .= "\n <option value=\"$quality\" ";
+		// 		if($selectedItem==$quality)
+		// 		$html .= " selected=\"selected\" ";
+		// 		$html .= ">$quality";
+		// 		$html .= "</option>";
+		// 	}
 
-		$html .= "\n</select>\n";
+		// 	$html .= "\n</select>\n";
 
-		return $html;
-	}
+		// 	return $html;
+		// }
+
 
 
 	/**
@@ -185,10 +207,10 @@ class AVObj extends MediaObj {
 	* @see Ffmpeg::get_setting_name_from_quality
 	* @return string $standar like 'ntsc' or 'pal'
 	*/
-	public function get_media_standar() {
+	public function get_media_standar() : string {
 
 		# RECUPERA INFO A PARTIR DE LA LECTURA DE LA CABECERA
-		$quality	= $this->get_quality();
+		$quality = $this->get_quality();
 
 		# Try read file header
 		try {
@@ -217,11 +239,12 @@ class AVObj extends MediaObj {
 		}
 
 		return (string)$standar;
-	}
+	}//end get_media_standar
+
 
 
 	# GET ASPECT RATIO (16x9 / 4x3)
-	public function get_aspect_ratio() {
+	public function get_aspect_ratio() : string {
 
 		# RECUPERA INFO A PARTIR DE LA LECTURA DE LA CABECERA
 		$quality		= $this->get_quality();
@@ -259,18 +282,19 @@ class AVObj extends MediaObj {
 		}
 
 		return $aspect; # default 16x9
-	}
+	}//end get_aspect_ratio
+
 
 
 	# MOVIE ATOM HEADER INFO READ BY ZEND LIB
 	public function get_ar_movie_header_info($debug_mode=false) {
 
-		if(isset($this->header_data)) return $this->header_data;
+		if(isset($this->header_data)) {
+			return $this->header_data;
+		}
 
-
-
-		$local_file		= $this->get_local_full_path();		#dump($local_file, ' local_file');
-		$quality 		= $this->get_quality();
+		$local_file	= $this->get_local_full_path();		#dump($local_file, ' local_file');
+		$quality	= $this->get_quality();
 
 		if(empty($quality)) {
 			throw new Exception("quality undefined!", 1);
@@ -403,11 +427,8 @@ class AVObj extends MediaObj {
 		$this->header_data = $ar_data ;	#var_dump($ar_data);
 
 		return $ar_data ;
-	}
+	}//end get_ar_movie_header_info
 
 
 
-
-
-}
-?>
+}//end class AVObj

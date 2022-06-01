@@ -1,8 +1,10 @@
 <?php
 /**
-* MediaObj Class
+* MediaObj
 */
 abstract class MediaObj {
+
+
 
 	# GENERAL VARS
 	protected $name ;				# reelID
@@ -28,16 +30,20 @@ abstract class MediaObj {
 	abstract protected function define_mime_type();
 
 
-	function __construct($name) {
+
+	/**
+	* __CONSTRUCT
+	*/
+	function __construct(string $name) {
 
 		# MEDIA OBJ SETUP
-		$this->name				= $this->define_name();
-		$this->type				= $this->define_type();
-		$this->extension		= $this->define_extension();
-		$this->media_path		= $this->define_media_path();
-		$this->media_path_abs	= $this->define_media_path_abs();
-		$this->media_path_server= $this->define_media_path_server();
-		$this->mime_type		= $this->define_mime_type();
+		$this->name					= $this->define_name();
+		$this->type					= $this->define_type();
+		$this->extension			= $this->define_extension();
+		$this->media_path			= $this->define_media_path();
+		$this->media_path_abs		= $this->define_media_path_abs();
+		$this->media_path_server	= $this->define_media_path_server();
+		$this->mime_type			= $this->define_mime_type();
 	}//end __construct
 
 
@@ -45,7 +51,7 @@ abstract class MediaObj {
 	/**
 	* GET_URL
 	*/
-	public function get_url() {
+	public function get_url() : string {
 
 		$url = $this->get_media_path() .'/'. $this->get_name() . '.' . $this->get_extension();
 		$url .= '?t='.time();
@@ -59,7 +65,7 @@ abstract class MediaObj {
 	* LOCAL PATH
 	* @return complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/
-	public function get_local_full_path() {
+	public function get_local_full_path() : string {
 
 		$path = $this->get_media_path_abs() .'/'. $this->get_name() . '.' . $this->get_extension();
 
@@ -71,7 +77,7 @@ abstract class MediaObj {
 	/**
 	* GET_FILE_EXISTS
 	*/
-	public function get_file_exists() {
+	public function get_file_exists() : bool {
 
 		$this->media_file_exists = file_exists($this->get_local_full_path()); #dump( file_exists(self::get_local_full_path()) , self::get_local_full_path() );
 
@@ -81,7 +87,7 @@ abstract class MediaObj {
 
 
 	# GET UPLOAD PATH FOR FILE
-	public function get_upload_path_for_file($file_from_form) {
+	public function get_upload_path_for_file($file_from_form) : ?string {
 
 		if(!isset($this->name)) return false;
 
@@ -91,7 +97,9 @@ abstract class MediaObj {
 
 		# extension verify
 		$file_from_form_ext	= pathinfo($file_from_form, PATHINFO_EXTENSION);
-		if($file_from_form != $extension) return false;
+		if($file_from_form != $extension) {
+			return null;
+		}
 
 		return $destination_path . $file_name . '.' . $extension ;
 	}//end get_upload_path_for_file
@@ -101,28 +109,34 @@ abstract class MediaObj {
 	/**
 	* FILE SIZE
 	* Get file physical size in bytes (or KB/MB)
-	* @return string $size (round to KB or MB with label like '256 KB')
+	* @return string|null $size
+	* 	(round to KB or MB with label like '256 KB')
 	*/
-	public function get_size() {
+	public function get_size() : ?string {
 
 		$filename = $this->get_media_path_abs() . $this->get_name() . '.' . $this->get_extension() ;
 
 		try {
-			if(!file_exists($filename)) return false;
+
+			if(!file_exists($filename)) {
+				return null;
+			}
 
 			$size		= @filesize($filename);
 			if(!$size)	throw new Exception('Unknow size!');
 		} catch (Exception $e) {
 			#echo '',  $e->getMessage(), "\n";
 			#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
-			return false;
+			return null;
 		}
 
-		$size_kb	= round($size / 1024);
+		$size_kb = round($size / 1024);
 
-		if($size_kb <= 1024) return $size_kb . ' KB' ;
+		if($size_kb <= 1024) {
+			return $size_kb . ' KB';
+		}
 
-		return round($size_kb / 1024) . ' MB' ;
+		return round($size_kb / 1024) . ' MB';
 	}//end get_size
 
 
@@ -130,8 +144,8 @@ abstract class MediaObj {
 	# ACCESSORS
 	final public function __call(string $strFunction, array $arArguments) {
 
-		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
-		$strMethodMember 	= substr($strFunction, 4);
+		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
 			case 'set_' :
 				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
@@ -166,4 +180,4 @@ abstract class MediaObj {
 
 
 
-}//end class
+}//end class MediaObj

@@ -5,6 +5,9 @@ require_once( DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
 require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 
 
+/**
+* ImageObj
+*/
 class ImageObj extends MediaObj {
 
 
@@ -14,7 +17,7 @@ class ImageObj extends MediaObj {
 
 
 
-	function __construct($image_id, $quality=false, $aditional_path=false, string $initial_media_path='', bool $external_source=false) {
+	function __construct(string $image_id, ?string $quality=null, ?string $aditional_path=null, string $initial_media_path='', ?string $external_source=null) {
 
 		# SPECIFIC VARS
 		$this->set_image_id($image_id);
@@ -82,16 +85,19 @@ class ImageObj extends MediaObj {
 	}
 
 	public function get_media_path_server() : string {
-			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path;
+
+		return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path;
 	}
 
 	# GET DEFAULT QUALITY
 	public static function get_quality_default() : string {
+
 		return DEDALO_IMAGE_QUALITY_DEFAULT;
 	}
 
 	# GET ARRAY QUALITY OPTIONS
 	public static function get_ar_quality() : array {
+
 		return DEDALO_IMAGE_AR_QUALITY;
 	}
 
@@ -165,7 +171,7 @@ class ImageObj extends MediaObj {
 	* GET_THUMB_URL
 	* Build onthefly image at request size
 	*/
-	public function get_thumb_url($maxWidht, $maxHeight, $fx=null, $p=null, $prop=null) {
+	public function get_thumb_url($maxWidht, $maxHeight, $fx=null, $p=null, $prop=null) : string {
 
 		$m 					= 'image';
 		$quality 			= $this->quality;
@@ -208,7 +214,9 @@ class ImageObj extends MediaObj {
 
 		try {
 			$ar_info = @getimagesize($filename);
-			if(!$ar_info)	throw new Exception('Unknow image width!') ;
+			if(!$ar_info) {
+				throw new Exception('Unknow image width!');
+			}
 
 			$width	= $ar_info[0];
 			$height = $ar_info[1];
@@ -229,7 +237,9 @@ class ImageObj extends MediaObj {
 	public function get_image_width() {
 
 		$ar_info = $this->get_image_dimensions();
-		if(isset($ar_info[0])) return $ar_info[0];
+		if(isset($ar_info[0])) {
+			return $ar_info[0];
+		}
 
 		return false;
 	}//end get_image_width
@@ -242,7 +252,9 @@ class ImageObj extends MediaObj {
 	public function get_image_height() {
 
 		$ar_info = $this->get_image_dimensions();
-		if(isset($ar_info[1])) return $ar_info[1];
+		if(isset($ar_info[1])) {
+			return $ar_info[1];
+		}
 
 		return false;
 	}//end get_image_height
@@ -258,10 +270,9 @@ class ImageObj extends MediaObj {
 	*	$dpi = 300;
 	*	$result = px2cm($image, $dpi);
 	*/
-	public function pixel_to_centimetres($quality, $dpi=DEDALO_IMAGE_PRINT_DPI) {
+	public function pixel_to_centimetres(string $quality, int $dpi=DEDALO_IMAGE_PRINT_DPI) : array {
 
 		$image_path = $this->get_local_full_path();
-			#dump($image,'image');
 
 	    $size = getimagesize($image_path);
 	    $x = $size[0];
@@ -274,6 +285,8 @@ class ImageObj extends MediaObj {
 	    #Format a number with grouped thousands
 	    $h = number_format($h, 2, ',', ' ');
 	    $l = number_format($l, 2, ',', ' ');
+
+	    $px2cm = [];
 
 	    #add size unit
 	    $px2cm[] = $h."cm";
