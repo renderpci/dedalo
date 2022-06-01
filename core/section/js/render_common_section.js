@@ -25,93 +25,106 @@ export const render_common_section = function() {
 /**
 * DELETE_RECORD
 * Delete selected record or Delete find records
+* @param object options
+* @return bool
 */
 render_common_section.prototype.delete_record = (options) => {
 
-	// Options
+	// options
+		const section		= options.section
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
-		const section		= options.caller
 		const sqo			= options.sqo
 
-	const element_id = 'delete_'+ section_tipo
-
-	// body_content
-		const body_content = ui.create_dom_element({
-			element_type : 'div'
-		})
-
-	// warning/relation_list
-		if (section_id && !options.sqo) {
-
-			// relation_list
-				const relation_list = render_relation_list(options)
-				body_content.appendChild(relation_list)
-		}else{
-			
-			// warning
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'warning',
-					parent			: body_content,
-					inner_html		:
-						(get_label.warning || 'Warning') + '. ' +
-						(get_label.delete_found_records || 'All records found will be deleted. ') +
-						(get_label.total || 'Total') + ': '  + section.total
-				})
-		}
-
-	// dialog
-		ui.create_dialog({
-			element_id 		: element_id,
-			title			: 'Delete...',
-			msg				: get_label.are_you_sure_to_delete_this_record || 'Are you sure to delete this record?',
-			header_class	: 'light',
-			body_class 		: 'light',
-			body_content 	: body_content,
-			footer_class 	: 'light',
-			user_options	: [{
-				id 			: 1,
-				label 		: get_label.delete_data_and_record || 'delete record',
-				class_name 	: 'danger'
-			},{
-				id 			: 2,
-				label 		: get_label.delete_data_only || 'delete data',
-				class_name 	: 'warning'
-			},{
-				id 			: 3,
-				label 		: get_label.cancel || 'Cancel',
-				class_name 	: 'light'
-			}]
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'header label',
+			text_content	: get_label.delete || 'Delete'
 		})
 
 
-	const token = event_manager.subscribe('user_option_'+element_id, fn_delete_option)
-	function fn_delete_option(delete_option) {
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content delete_record'
+		})
 
+		// warning/relation_list
+			if (section_id) {
 
-		switch (delete_option){
-			case 1:
+				// relation_list
+					const relation_list = render_relation_list(options)
+					body.appendChild(relation_list)
+			}else{
+
+				// warning
+					ui.create_dom_element({
+						element_type	: 'h3',
+						class_name		: 'warning',
+						parent			: body,
+						inner_html		:
+							(get_label.warning || 'Warning') + '. ' +
+							(get_label.delete_found_records || 'All records found will be deleted.') + ' ' +
+							(get_label.total || 'Total') + ': '  + section.total
+					})
+			}
+
+	// footer
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'footer'
+		})
+
+		// button_delete_record
+			const button_delete_record = ui.create_dom_element({
+				element_type	: 'button',
+				class_name 		: 'danger remove',
+				text_content 	: get_label.delete_data_and_record || 'Delete record',
+				parent			: footer
+			})
+			button_delete_record.addEventListener("click", function(){
+				if (!confirm(get_label.seguro)) {
+					return
+				}
 				section.delete_section({
 					sqo			: sqo,
 					delete_mode	: 'delete_record'
 				})
-			break;
+				.then(function(){
+					modal.on_close()
+				})
+			})
 
-			case 2:
+		// button_delete_data
+			const button_delete_data = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning remove',
+				text_content	: get_label.delete_data_only || 'delete data',
+				parent			: footer
+			})
+			button_delete_data.addEventListener("click", function(){
+				if (!confirm(get_label.seguro)) {
+					return
+				}
 				section.delete_section({
 					sqo			: sqo,
 					delete_mode	: 'delete_data'
 				})
-			break;
+				.then(function(){
+					modal.on_close()
+				})
+			})
 
-			default:
-		}
-		event_manager.unsubscribe(token)
-	}
+	// modal
+		const modal = ui.attach_to_modal({
+			header	: header,
+			body	: body,
+			footer	: footer,
+			size	: 'small' // string size big|normal
+		})
 
-
-	return false
+	return true
 };//end delete_record
 
 
@@ -121,7 +134,16 @@ render_common_section.prototype.delete_record = (options) => {
 * RENDER_RELATION_LIST
 * @return DOM node relation_list_container
 */
-const render_relation_list = function(self) {
+const render_relation_list = function(options) {
+
+	// options
+		const section		= options.section
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+
+	// short vars
+		const mode = 'edit'
+		const tipo = section.context['relation_list']
 
 	// wrapper
 		const relation_list_container = ui.create_dom_element({
@@ -172,10 +194,10 @@ const render_relation_list = function(self) {
 				? instance // pagination case do not need to init relation_list
 				: await instances.get_instance({
 					model			: 'relation_list',
-					tipo			: self.caller.context['relation_list'],
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					mode			: self.mode
+					tipo			: tipo,
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					mode			: mode
 				})
 
 			await relation_list.build()

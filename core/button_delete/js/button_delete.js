@@ -18,16 +18,16 @@ var button_delete = new function() {
 	window.addEventListener("load", function (event) {
 
 		// Create dialog div once
-		button_delete.create_dialog_div()
+		button_delete.create_delete_dialog_div()
 	});//end load
 
 
 
 	/**
-	* CREATE_DIALOG_DIV
+	* CREATE_DELETE_DIALOG_DIV
 	* Add delete confirmation dialog text
 	*/
-	this.create_dialog_div = function() {
+	this.create_delete_dialog_div = function() {
 
 		if (page_globals.modo!=='list') return false;
 
@@ -35,7 +35,7 @@ var button_delete = new function() {
 		document.body.appendChild(delete_dialog);
 
 		return true
-	};//end create_dialog_div
+	};//end create_delete_dialog_div
 
 
 
