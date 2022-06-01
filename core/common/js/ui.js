@@ -2229,6 +2229,7 @@ export const ui = {
 
 	/**
 	* CREATE_DIALOG
+	* (!) REMOVED -> Use ui.attach_to_modal instead
 	* format:
 	* dialog_options =
 	*	{
@@ -2252,89 +2253,89 @@ export const ui = {
 	*		}]
 	*	}
 	*/
-	create_dialog : (options) =>{
+		// create_dialog : (options) =>{
 
-		const element_id	= options.element_id
-		const title			= options.title 		|| ''
-		const msg			= options.msg 			|| ''
-		const header_class	= options.header_class 	|| 'light'
-		const body_class	= options.body_class 	|| 'light'
-		const body_content	= options.body_content
-		const footer_class	= options.footer_class 	|| 'light'
-		const user_options	= options.user_options 	|| [{
-									id			: 1,
-									label		: get_label.ok,
-									class_name	: 'light'
-								}]
+		// 	const element_id	= options.element_id
+		// 	const title			= options.title 		|| ''
+		// 	const msg			= options.msg 			|| ''
+		// 	const header_class	= options.header_class 	|| 'light'
+		// 	const body_class	= options.body_class 	|| 'light'
+		// 	const body_content	= options.body_content
+		// 	const footer_class	= options.footer_class 	|| 'light'
+		// 	const user_options	= options.user_options 	|| [{
+		// 								id			: 1,
+		// 								label		: get_label.ok,
+		// 								class_name	: 'light'
+		// 							}]
 
-		// header
-			const header = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'header ' + header_class,
-			})
-			// title
-				const title_dialog = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'title',
-					parent			: header,
-					text_node		: title
-				})
+		// 	// header
+		// 		const header = ui.create_dom_element({
+		// 			element_type	: 'div',
+		// 			class_name		: 'header ' + header_class,
+		// 		})
+		// 		// title
+		// 			const title_dialog = ui.create_dom_element({
+		// 				element_type	: 'div',
+		// 				class_name		: 'title',
+		// 				parent			: header,
+		// 				text_node		: title
+		// 			})
 
-		// body
-			const body = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'body ' + body_class,
-			})
-			// msg
-				const msg_dialog = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'msg',
-					parent			: body,
-					text_node		: msg
-				})
-			// body_content
-				if(body_content){
-					body_content.classList.add('body_content')
-					body.appendChild(body_content)
-				}
+		// 	// body
+		// 		const body = ui.create_dom_element({
+		// 			element_type	: 'div',
+		// 			class_name		: 'body ' + body_class,
+		// 		})
+		// 		// msg
+		// 			const msg_dialog = ui.create_dom_element({
+		// 				element_type	: 'div',
+		// 				class_name		: 'msg',
+		// 				parent			: body,
+		// 				text_node		: msg
+		// 			})
+		// 		// body_content
+		// 			if(body_content){
+		// 				body_content.classList.add('body_content')
+		// 				body.appendChild(body_content)
+		// 			}
 
-		// footer
-			const footer = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'footer ' + footer_class
-			})
-			const on_option_mouseup = function (e){
-				event_manager.publish('user_option_'+element_id, this.option_id)
-				// modal.remove()
-				modal._closeModal()
-			}
-			const user_options_len = user_options.length
-			for (let i = 0; i < user_options_len; i++) {
+		// 	// footer
+		// 		const footer = ui.create_dom_element({
+		// 			element_type	: 'div',
+		// 			class_name		: 'footer ' + footer_class
+		// 		})
+		// 		const on_option_mouseup = function (e){
+		// 			event_manager.publish('user_option_'+element_id, this.option_id)
+		// 			// modal.remove()
+		// 			modal._closeModal()
+		// 		}
+		// 		const user_options_len = user_options.length
+		// 		for (let i = 0; i < user_options_len; i++) {
 
-				const option = user_options[i]
+		// 			const option = user_options[i]
 
-				//user_option
-					const user_option = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'user_option ' + option.class_name,
-						inner_html		: option.label,
-						parent			: footer
-					})
-					// add option_id property
-					user_option.option_id = option.id
-					user_option.addEventListener("mouseup", on_option_mouseup);
-			}
+		// 			//user_option
+		// 				const user_option = ui.create_dom_element({
+		// 					element_type	: 'button',
+		// 					class_name		: 'user_option ' + option.class_name,
+		// 					inner_html		: option.label,
+		// 					parent			: footer
+		// 				})
+		// 				// add option_id property
+		// 				user_option.option_id = option.id
+		// 				user_option.addEventListener("mouseup", on_option_mouseup);
+		// 		}
 
-		// modal open
-			const modal = ui.attach_to_modal({
-				header	: header,
-				body	: body,
-				footer	: footer
-			})
+		// 	// modal open
+		// 		const modal = ui.attach_to_modal({
+		// 			header	: header,
+		// 			body	: body,
+		// 			footer	: footer
+		// 		})
 
 
-		return footer
-	},//end create_dialog
+		// 	return footer
+		// },//end create_dialog
 
 
 

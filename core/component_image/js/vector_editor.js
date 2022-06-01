@@ -1339,7 +1339,6 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				}
 			}) //end click event
 
-
 		// layer_id
 			const layer_id = ui.create_dom_element({
 				element_type	: 'div',
@@ -1385,78 +1384,94 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 			})
 			// show the alter with the option to select the action to do
 			layer_delete.addEventListener("click", function(e){
+				e.stopPropagation()
 
-				ui.create_dialog({
-					element_id 		: self.id,
-					title			: 'Borrar...',
-					msg				: '¿seguro que desea borrar?',
-					header_class	: 'light',
-					body_class 		: 'light',
-					footer_class 	: 'light',
-					user_options	:[{
-						id 			: 1,
-						label 		: 'si',
-						class_name 	: 'success'
-					},{
-						id 			: 2,
-						label 		: 'no',
-						class_name 	: 'warning'
-					},{
-						id 			:3,
-						label 		: 'cancelar',
-						class_name 	: 'light'
-					}]
-				})
-				// create the response event of the alert
-				const event = event_manager.subscribe('user_option_'+self.id, user_option)
-				self.events_tokens.push( event )
-				function user_option(user_option) {
-					// success, any other option will be ignored
-					if(user_option===1){
-						// get the layer in paper, we change the name if the layer is the raster layer
-						const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
-						const delete_layer = project.layers[name]
-						// remove the layer in paper project
-						delete_layer.remove()
+				// header
+					const header = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'header label',
+						text_content	: (get_label.delete || 'Delete')
+					})
 
-						//check if the user want remove transformations in raster or remove path layer
-						if(layer.layer_id === 0){
-							// create new empty raster layer
-							const new_raster_layer	= {
-								layer_id 	:0,
-								layer_data 	:[]
-							}
-							// load new raster layer into paper
-							self.vector_editor.load_layer(self, new_raster_layer)
-							// active the raster layer in the project
-							project.layers['raster'].activate()
-							// update the instance with the new layer information, prepared to save
-							// (but is not saved directly, the user need click in the save button)
-							self.update_draw_data()
+				// body
+					const body = ui.create_dom_element({
+						element_type	: 'h3',
+						class_name		: 'content delete_layer',
+						inner_html		: 'Layer: ' + layer.user_layer_name + '<br><br>' + (get_label.seguro || 'Sure?')
+					})
 
-						}else{
-							//the user want remove one path layer
-							// remove the data in the instance
-								self.delete_layer(layer)
-							// remove the this event in the instance
-								event_manager.unsubscribe(event)
-							//remove the layer node
-								layer_li.remove()
-							// active the raster layer in the project
-							// it will by used for the next action in the vector editor
-							// if don't active one layer, paper can't save the changes (it has one delete layer active)
-								project.layers['raster'].activate()
-						}
-					}
-				}
+				// footer
+					const footer = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'footer'
+					})
 
-			})
+					// button_delete
+						const button_delete = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'danger remove',
+							text_content	: get_label.delete || 'Delete',
+							parent			: footer
+						})
+						button_delete.addEventListener("click", function(){
+
+							// get the layer in paper, we change the name if the layer is the raster layer
+								const name = (layer.layer_id==0)
+									? 'raster'
+									: 'layer_' + layer.layer_id
+
+								const delete_layer = project.layers[name]
+
+								// remove the layer in paper project
+								delete_layer.remove()
+
+								//check if the user want remove transformations in raster or remove path layer
+								if(layer.layer_id==0){
+									// create new empty raster layer
+									const new_raster_layer	= {
+										layer_id	: 0,
+										layer_data	: []
+									}
+									// load new raster layer into paper
+									self.vector_editor.load_layer(self, new_raster_layer)
+									// active the raster layer in the project
+									project.layers['raster'].activate()
+									// update the instance with the new layer information, prepared to save
+									// (but is not saved directly, the user need click in the save button)
+									self.update_draw_data()
+
+								}else{
+									//the user want remove one path layer
+									// remove the data in the instance
+										self.delete_layer(layer)
+									//remove the layer node
+										layer_li.remove()
+									// active the raster layer in the project
+									// it will by used for the next action in the vector editor
+									// if don't active one layer, paper can't save the changes (it has one delete layer active)
+										project.layers['raster'].activate()
+								}
+
+							// close modal
+								modal.on_close()
+						})
+
+				// modal
+					const modal = ui.attach_to_modal({
+						header	: header,
+						body	: body,
+						footer	: footer,
+						size	: 'small' // string size big|normal
+					})
+
+				return	true
+			})//end layer_delete.addEventListener("click", function(e)
 
 		// layer_color
 			const layer_color = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'layer_color',
-				parent 			: layer_li,
+				class_name		: 'layer_color',
+				parent			: layer_li
 			})
 			layer_color.style.backgroundColor = typeof layer.layer_color!=='undefined'
 				? layer.layer_color
@@ -1470,5 +1485,3 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 
 	return layer_li
 };//end layer_selector
-
-

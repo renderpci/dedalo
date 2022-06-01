@@ -1334,21 +1334,15 @@ const render_note = async function(options) {
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'footer',
+			class_name		: 'footer'
 		})
 
 		// button remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
-				class_name 		: 'warning',
-				text_content 	: get_label.delete ||'Delete',
+				class_name		: 'danger remove',
+				text_content	: get_label.delete || 'Delete',
 				parent			: footer
-			})
-			// button_remove_icon
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button white remove',
-				parent			: button_remove
 			})
 			// When the user click on remove button, two actions happens:
 			// first, delete the section in the server
@@ -1358,7 +1352,7 @@ const render_note = async function(options) {
 				// ask to user if really want delete the note
 				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
 				// if yes, delete the note section in the server
-				if(window.confirm(delete_label)){
+				if(window.confirm(delete_label)) {
 					// create sqo the the filter_by_locators of the section to be deleted
 					const sqo = {
 						section_tipo		: [note_section.section_tipo],

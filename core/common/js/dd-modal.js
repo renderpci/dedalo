@@ -40,6 +40,7 @@ class DDModal extends HTMLElement {
 					margin-top: 3.5vh;
 					padding: 0;
 					width: 80%;
+					min-width: 390px;
 					box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
 					font-size: inherit;
 					/* border: 1px solid #888; */
