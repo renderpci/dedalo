@@ -4,7 +4,7 @@
 * Manage API RESP data with Dédalo
 *
 */
-class dd_tools_api {
+final class dd_tools_api {
 
 
 	/**

@@ -5,7 +5,7 @@
 require_once(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 
-class ImageMagick {
+final class ImageMagick {
 
 
 	/**

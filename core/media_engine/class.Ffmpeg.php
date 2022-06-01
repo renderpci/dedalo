@@ -6,7 +6,7 @@ require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 * Ffmpeg
 *
 */
-class Ffmpeg {
+final class Ffmpeg {
 
 
 

@@ -283,7 +283,7 @@ export const render_column_remove = function(options) {
 	// remove_icon
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button remove icon',
+			class_name		: 'button delete_light icon',
 			parent			: button_remove
 		})
 
@@ -301,15 +301,15 @@ export const render_column_remove = function(options) {
 */
 export const get_buttons = (self) => {
 
-	const is_inside_tool		= self.is_inside_tool
-	// const mode				= self.mode
-	// const show				= self.rqo.show
-	const target_section		= self.target_section
-	const target_section_lenght	= target_section.length
-		  // sort section by label ascendant
-		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+	// short vars
+		const is_inside_tool		= self.is_inside_tool
+		const target_section		= self.target_section
+		const target_section_lenght	= target_section.length
+			  // sort section by label ascendant
+			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// button_add
 		const button_add = ui.create_dom_element({
@@ -431,7 +431,7 @@ export const get_buttons = (self) => {
 			})
 		}
 
-
+	// button_update_data_external
 		if( self.rqo_config.show.interface &&
 			self.rqo_config.show.interface.button_external &&
 			self.rqo_config.show.interface.button_external === true){
