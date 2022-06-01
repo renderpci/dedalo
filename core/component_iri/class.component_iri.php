@@ -124,29 +124,30 @@ class component_iri extends component_common {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
+	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
-		# Dato candidate to save
-		$dato = $this->dato;
+		// dato candidate to save
+			$dato = $this->dato;
 
-		# DELETING IRI
-		if (empty($dato)) {
-			# Save in standar empty format
-			return parent::Save();
-		}
-
-		# DATO FORMAT VERIFY
-		if ( !is_array($dato) ) {
-			if(SHOW_DEBUG===true) {
-				#dump($dato,'$dato');
-				#throw new Exception("Dato is not string!", 1);
-				error_log("Bad iri format:".to_string($dato));
+		// deleting iri
+			if (empty($dato)) {
+				# Save in standar empty format
+				return parent::Save();
 			}
-			return false;
-		}
 
-		# Save in standar format
+		// dato format verify
+			if ( !is_array($dato) ) {
+				if(SHOW_DEBUG===true) {
+					#dump($dato,'$dato');
+					#throw new Exception("Dato is not string!", 1);
+					error_log("Bad iri format:".to_string($dato));
+				}
+				return false;
+			}
+
+		// Save in standar format
 		return parent::Save();
 	}//end Save
 

@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * COMPONENT_RELATION_PARENT
 * Class to manage parent relation between section.
 * Not store his own data, only manage component_relation_childrens data in 'reverse' mode
@@ -25,9 +25,9 @@ class component_relation_parent extends component_relation_common {
 	/**
 	* SAVE
 	* Overwrite relation common action
-	* @return bool true
+	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 		# Noting to do. This component don`t save
 
 		$section_id = $this->parent;

@@ -108,13 +108,13 @@ class component_semantic_node extends component_relation_common {
 
 	/**
 	* SAVE
-	* @return
+	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
 		$result = $this->update_portal_dato($this->row_locator);
 
-		return $result===true ? $this->section_id : false;
+		return $result===true ? (int)$this->section_id : null;
 	}//end save
 
 
@@ -270,5 +270,3 @@ class component_semantic_node extends component_relation_common {
 
 
 }//end semantic_node
-
-

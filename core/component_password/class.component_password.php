@@ -59,11 +59,14 @@ class component_password extends component_common {
 		return (string)$valor;
 	}//end get_valor
 
+
+
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
+	* @return int|null
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
  		if(isset($this->updating_dato) && $this->updating_dato===true) {
 			# Dato is saved plain (unencrypted) only for updates
@@ -76,9 +79,9 @@ class component_password extends component_common {
 			}
 		}
 
-		# A partir de aquí, salvamos de forma estándar
+		// From here, we save as standard
 		return parent::Save();
-	}
+	}//end Save
 
 	// # GET EJEMPLO
 	// protected function get_ejemplo() {

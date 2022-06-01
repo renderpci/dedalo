@@ -877,9 +877,9 @@ class component_relation_common extends component_common {
 	* Save component data in matrix using parent section
 	* Verify all necessary vars to save and call section 'save_component_dato($this)'
 	* @see section->save_component_dato($this)
-	* @return bool|int $section_matrix_id
+	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
 		// short vars
 			$section_tipo	= $this->get_section_tipo();
@@ -891,44 +891,46 @@ class component_relation_common extends component_common {
 		// dataframe mode. Save caller and stop
 			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
 
-				#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
+				// new_component
+					$new_tipo			= $this->caller_dataset->component_tipo;
+					$new_section_tipo	= $this->caller_dataset->section_tipo;
+					$new_parent			= $this->caller_dataset->section_id;
+					$new_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+					$new_component		= component_common::get_instance(
+						$new_modelo_name,
+						$new_tipo,
+						$new_parent,
+						'edit',
+						$lang,
+						$new_section_tipo
+					);
 
-				$new_tipo 			= $this->caller_dataset->component_tipo;
-				$new_section_tipo 	= $this->caller_dataset->section_tipo;
-				$new_parent 		= $this->caller_dataset->section_id;
-				$new_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
-				$new_component 		= component_common::get_instance( $new_modelo_name,
-																	  $new_tipo,
-																	  $new_parent,
-																	  'edit',
-																	  $lang,
-																	  $new_section_tipo);
+				// Force load current db dato to avoid loose it
+				// component that will be marked with dataframe (the original component)
+					$component_dato = $new_component->get_dato();
 
-				# Force load current db dato to avoid loose it
-				# component that will be marked with dataframe (the original component)
-				$component_dato = $new_component->get_dato();
+				// Set dataframe data
+					$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
 
-				# Set dataframe data
-				$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
-				#dump($new_component, ' $new_component ++ '.to_string()); #return false;
+				// debug
+					if (isset($this->save_to_database) && $this->save_to_database===false) {
+						debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
+						#$new_component->save_to_database = false;
+					}
 
-				if (isset($this->save_to_database) && $this->save_to_database===false) {
-					debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
-					#$new_component->save_to_database = false;
-				}
+				// set_dato
+					if(isset($component_dato[$this->caller_dataset->caller_key])){
+						$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
+						$new_component->set_dato($component_dato);
+					}
 
-				if(isset($component_dato[$this->caller_dataset->caller_key])){
-					$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
-					$new_component->set_dato($component_dato);
-				}
-
-				return $new_component->Save();
+				return $new_component->Save(); // type int|null
 			}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
 
 		// Verify component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
 				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
-				return false;
+				return null;
 			}
 
 		// save_to_database. Verify component main vars
@@ -939,7 +941,7 @@ class component_relation_common extends component_common {
 			// 				dump($this, "this section_tipo:$section_tipo - section_id:$section_id - tipo:$tipo - lang:$lang");
 			// 			}
 			// 			trigger_error('Error Processing component save. Inconsistency detected: component trying to save without section_id: '. $section_id);
-			// 			return false;
+			// 			return null;
 			// 		}
 			// }
 
@@ -966,7 +968,7 @@ class component_relation_common extends component_common {
 			if ($save_to_database===false) {
 				# Stop here (remember make a real section save later!)
 				# No component time machine data will be saved when section saves later
-				return $section_id;
+				return (int)$section_id;
 			}
 
 		// activity
@@ -974,7 +976,6 @@ class component_relation_common extends component_common {
 
 		// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
 			$this->propagate_to_observers();
-
 
 
 		return (int)$section_id;

@@ -680,7 +680,7 @@ class section extends common {
 			'portal_section_tipo'	=> $portal_section_tipo,
 			'portal_tipo'			=> $portal_tipo
 		);
-	}#end build_section_locator
+	}//end build_section_locator
 
 
 
@@ -688,9 +688,9 @@ class section extends common {
 	* SAVE
 	* Create or update a section record in matrix
 	* @param object $save_options
-	* @return mixed
+	* @return int|null $section_id
 	*/
-	public function Save( object $save_options=null ) {
+	public function Save( object $save_options=null ) : ?int {
 
 		// options
 			$options = new stdClass();
@@ -753,7 +753,7 @@ class section extends common {
 				# Always encode and decode data before store in session to avoid problems on unserialize not loaded classes
 				$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = json_decode( json_encode($section_temp_data) );
 
-				return $this->section_id;
+				return (int)$this->section_id;
 			}
 
 		// matrix table
@@ -803,8 +803,8 @@ class section extends common {
 
 			// prevent to save non authorized/valid section_id
 				if ($this->section_id=='-1') {
-					trigger_error('Trying to save invalid section_id: '.$this->section_id);
-					return false;
+					debug_log(__METHOD__." Trying to save invalid section_id: ".to_string($this->section_id), logger::ERROR);
+					return null;
 				}
 
 			##

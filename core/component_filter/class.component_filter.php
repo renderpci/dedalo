@@ -148,25 +148,25 @@ class component_filter extends component_relation_common {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method
+	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
-		# Salvamos normalmente pero guardamos el resultado
-		$parent_save_result = parent::Save();
+		// we save normally but we save the result
+			$parent_save_result = parent::Save();
 
-		#
-		# ACTIVITY CASE Logger only
-		if( $this->tipo === logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) return $parent_save_result;
+		// activity case logger only
+			if( $this->tipo===logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) {
+				return $parent_save_result;
+			}
 
-		#
-		# PORTAL CASE
-		# Si la sección a que pertenece este componente tiene portal, propagaremos los cambios a todos los recursos
-		# existentes en el portal de esta sección (si los hay)
-		if ($this->propagate_filter) {
-			$this->propagate_filter();
-		}//if ($propagate_filter) {
+		// portal case
+		// If the section to which this component belongs has a portal, we will propagate
+		// the changes to all existing resources in the portal of this section (if any)
+			if ($this->propagate_filter) {
+				$this->propagate_filter();
+			}
 
-		# Returns parent Save result at end
 		return $parent_save_result;
 	}//end Save
 
