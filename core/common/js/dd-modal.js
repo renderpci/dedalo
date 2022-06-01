@@ -46,6 +46,7 @@ class DDModal extends HTMLElement {
 					/* border: 1px solid #888; */
 					border-radius: 7px;
 					overflow: hidden;
+					resize: auto;
 					/*
 					-webkit-animation-name: animatetop;
 					-webkit-animation-duration: 0.4s;

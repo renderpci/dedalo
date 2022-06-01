@@ -529,7 +529,7 @@ render_list_section.render_column_id = function(options){
 						// delete_icon
 							ui.create_dom_element({
 								element_type	: 'span',
-								class_name		: 'button delete icon',
+								class_name		: 'button delete_light icon',
 								parent			: delete_button
 							})
 					}
@@ -548,9 +548,11 @@ render_list_section.render_column_id = function(options){
 */
 const get_buttons = function(self) {
 
-	const ar_buttons = self.context.buttons
-
-	if(!ar_buttons) return null;
+	// ar_buttons list from context
+		const ar_buttons = self.context.buttons
+		if(!ar_buttons) {
+			return null;
+		}
 
 	const fragment = new DocumentFragment()
 
@@ -582,9 +584,10 @@ const get_buttons = function(self) {
 		for (let i = 0; i < ar_buttons_length; i++) {
 
 			const current_button = ar_buttons[i]
+			console.log("current_button:",current_button);
 
 			// button node
-				const class_name	= 'warning ' + current_button.model
+				const class_name	= 'warning ' + current_button.model.replace('button_', '')
 				const button_node	= ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: class_name,
@@ -599,7 +602,7 @@ const get_buttons = function(self) {
 							event_manager.publish('new_section_' + self.id)
 							break;
 						case 'button_delete':
-							event_manager.publish('delete_section_' + self.id,{
+							event_manager.publish('delete_section_' + self.id, {
 								section_tipo	: self.section_tipo,
 								section_id		: null,
 								caller			: self,

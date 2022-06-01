@@ -2,34 +2,37 @@
 #require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
 
-class PosterFrameObj extends MediaObj {	
-	
+/**
+* PosterFrameObj
+*/
+class PosterFrameObj extends MediaObj {
+
 	protected $reelID ;			# reelID
-	
-	
+
+
 	function __construct($reelID, $fix_no_posterframe=true) {
-		
-		# GENERAL SETUP			
-		
+
+		# GENERAL SETUP
+
 		# SPECIFIC VARS
-		$this->set_reelID($reelID);		
-		
+		$this->set_reelID($reelID);
+
 		parent::__construct($reelID);
-		
+
 		# IF NOT EXISTS CURRENT POSTERFRAME, SET NAME TO captacionID TO USE THIS FOTO
 		if($fix_no_posterframe===true)
 		$this->fix_no_posterframe_to_captacion_image();
 	}
-	
-	
+
+
 	# MANDATORY DEFINITIONS
-	protected function define_name(){		
+	protected function define_name(){
 		return $this->reelID ;
 	}
 	protected function define_type() {
-		return 'JPG';	
+		return 'JPG';
 	}
-	protected function define_extension(){		
+	protected function define_extension(){
 		return 'jpg';
 	}
 	protected function define_media_path() {
@@ -44,45 +47,45 @@ class PosterFrameObj extends MediaObj {
 	protected function define_mime_type() {
 		return 'image/jpg';
 	}
-	
-	
-	
+
+
+
 	# FIX NO POSTERFRAME TO CAPTACION IMAGE
 	protected function fix_no_posterframe_to_captacion_image_DEPERECATED() {
 		/*
-		if(!$this->get_file_exists()){			
-			
+		if(!$this->get_file_exists()){
+
 			$RecordObj_reels 	= new RecordObj_reels($this->reelID);
 			$captacionID 		= $RecordObj_reels->get_captacionID();
-			
+
 			global $patImages ;
-			
+
 			if(!$patImages) die(__METHOD__ ." <br> patImages is not defined!");
-			
+
 			$this->name 			= $captacionID;
 			$this->media_path 		= $patImages;
 			$this->media_path_abs 	= __ROOT__ . '/' . substr($patImages,3);
 		}
-		*/	
+		*/
 	}
-	
-	
+
+
 	public function get_media_path_server() {
 			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
-	}	
-	
+	}
+
 	public function set_posterframe($tc) {
-		
-		try{			
-			
+
+		try{
+
 			return true;
-			
+
 		}catch(Exception $e){
-			
-			return ('Error: '. $e->getMessage(). "\n");	
+
+			return ('Error: '. $e->getMessage(). "\n");
 		}
 	}
-	
+
 
 	/**
 	* GET THUMB

@@ -4,7 +4,7 @@
 * Manage api web
 *
 */
-class dd_manager {
+final class dd_manager {
 
 
 
