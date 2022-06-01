@@ -47,18 +47,23 @@ class ImageMagick {
 	* GET_THUMB
 	* @param $mode (str 'edit,list,..')
 	* @param $f (str filename)
+	* @return string $thumb_file_url
 	*/
-	public static function get_thumb($mode, $f, $verify=true, $initial_media_path='') {
+	public static function get_thumb(string $mode, string $f, bool $verify=true, string $initial_media_path='') : string {
 
-		if(empty($f)) throw new Exception("Error Processing Request. Few arguments", 1);
+		if(empty($f)) {
+			throw new Exception("Error Processing Request. Few arguments", 1);
+		}
 
 		#if(file_exists(DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f)) unlink(DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f);
 
-		$thumb_file_path 	= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
-		$thumb_file_url 	= DEDALO_MEDIA_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
+		$thumb_file_path	= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
+		$thumb_file_url		= DEDALO_MEDIA_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
 
 		# FAST METHOD (NOT verify)
-		if(!$verify) return $thumb_file_url;
+			if($verify===false) {
+				return $thumb_file_url;
+			}
 
 
 		# THUMB FILE EXISTS TEST : Redirect to real existing image thumb
@@ -107,7 +112,8 @@ class ImageMagick {
 		#error_log($thumb_file_url);
 
 		return $thumb_file_url;
-	}
+	}//end get_thumb
+
 
 
 	/**
@@ -115,8 +121,9 @@ class ImageMagick {
 	* @param $mode ('edit,list,..')
 	* @param $source_file (full sourcefile path)
 	* @param $target_file (full target thumb file path)
+	* @return
 	*/
-	public static function dd_thumb($mode, $source_file, $target_file, $dimensions=false, $initial_media_path='') {
+	public static function dd_thumb(string $mode, string $source_file, string $target_file, $dimensions=false, string $initial_media_path='') : ?string {
 
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -216,7 +223,7 @@ class ImageMagick {
 	*	Terminal commnad response
 	*
 	*/
-	public static function convert($source_file, $target_file, $flags='') {
+	public static function convert(string $source_file, string $target_file, string $flags='') : ?string {
 
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -305,23 +312,23 @@ class ImageMagick {
 	/**
 	* GET_IMAGE_FILE_INFO
 	* @return
-	*//*
-	public static function get_image_file_info( $source_file ) {
-					# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
-		$commnad = MAGICK_PATH . "convert $source_file json: ";
-		$output  = json_decode( shell_exec($command) );
-			#dump($output, ' output ++ '.to_string( $command ));
-
-		return $output;
-	}//end get_image_file_info
 	*/
+		// public static function get_image_file_info( $source_file ) {
+		// 				# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
+		// 	$commnad = MAGICK_PATH . "convert $source_file json: ";
+		// 	$output  = json_decode( shell_exec($command) );
+		// 		#dump($output, ' output ++ '.to_string( $command ));
+
+		// 	return $output;
+		// }//end get_image_file_info
+
 
 
 	/**
 	* GET_LAYERS_FILE_INFO
 	* @return array $ar_layers
 	*/
-	public static function get_layers_file_info( $source_file ) {
+	public static function get_layers_file_info( string $source_file ) : array {
 
 		$ar_layers = array();
 
@@ -364,9 +371,9 @@ class ImageMagick {
 	* 	Rotate annd save source image to target (self or other)
 	* @param string $source
 	* @param string
-	* @return string $result
+	* @return string|null $result
 	*/
-	public static function rotate($source, $degrees, $target=false) {
+	public static function rotate(string $source, $degrees, $target=false) : ?string {
 
 		// fallback target to source (overwrite file)
 			$target = $target
@@ -386,5 +393,3 @@ class ImageMagick {
 
 
 }//end ImageMagick class
-
-

@@ -1,9 +1,9 @@
 <?php
-/*
-* CLASS COMPONENT IMAGE
-*/
 require_once(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
-
+/**
+* CLASS COMPONENT IMAGE
+*
+*/
 class component_image extends component_media_common {
 
 
@@ -34,7 +34,7 @@ class component_image extends component_media_common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($tipo, $parent, $modo='edit', $lang=null, $section_tipo=null) {
+	public function __construct(string $tipo, $parent, string $modo='edit', string $lang=null, string $section_tipo=null) {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
@@ -90,13 +90,14 @@ class component_image extends component_media_common {
 				$this->external_source = $this->get_external_source();
 
 				# IMAGEOBJ : Add a ImageObj obj
-				$this->ImageObj = new ImageObj( $this->get_image_id(), $this->get_quality(), $this->aditional_path, $this->initial_media_path, $this->external_source);
-					#dump($this->ImageObj,"ImageObj en construct");
+				$this->ImageObj = new ImageObj(
+					$this->get_image_id(),
+					$this->get_quality(),
+					$this->aditional_path,
+					$this->initial_media_path,
+					$this->external_source
+				);
 
-
-		if(SHOW_DEBUG===true) {
-			// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
-		}
 
 		return true;
 	}//end __construct
@@ -287,45 +288,50 @@ class component_image extends component_media_common {
 	*
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* Se puede sobreescribir en properties con json ej. {"image_id":"dd851"} y se leerá del contenido del componente referenciado
+	* @return string $this->image_id
 	*/
-	public function get_image_id() {
+	public function get_image_id() : string {
 
-		if(isset($this->image_id)) return $this->image_id;
-
-		#
-		# CASE 1 REFERENCED NAME : If isset properties "image_id" overwrite name with field ddx content
-		$properties = $this->get_properties();
-		if (isset($properties->image_id)) {
-
-			$component_tipo 	= $properties->image_id;
-			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-
-			$component 	= component_common::get_instance($component_modelo,
-														 $component_tipo,
-														 $this->parent,
-														 'edit',
-														 DEDALO_DATA_NOLAN,
-														 $this->section_tipo);
-			$dato 		= trim($component->get_valor());
-				#dump($dato,"dato - compoent tipo $this->tipo - section_tipo: ".$this->section_tipo);
-
-			if(!empty($dato) && strlen($dato)>0) {
-				return $dato;
+		// already set
+			if(isset($this->image_id)) {
+				return $this->image_id;
 			}
-		}
 
-		#
-		# CASE 2 EXTERNAL SOURCE:
-		$external_source = $this->get_external_source();
-		if($external_source){
-			$external_parts = pathinfo($external_source);
-			$image_id = $external_parts['filename'];
-			return $image_id;
-		}
+		// CASE 1 REFERENCED NAME : If isset properties "image_id" overwrite name with field ddx content
+			$properties = $this->get_properties();
+			if (isset($properties->image_id)) {
 
-		$image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
+				$component_tipo 	= $properties->image_id;
+				$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 
-		return $this->image_id = $image_id;
+				$component 	= component_common::get_instance($component_modelo,
+															 $component_tipo,
+															 $this->parent,
+															 'edit',
+															 DEDALO_DATA_NOLAN,
+															 $this->section_tipo);
+				$valor = trim($component->get_valor());
+					// dump($valor,"valor - compoent tipo $this->tipo - section_tipo: ".$this->section_tipo);
+				if(!empty($valor) && strlen($valor)>0) {
+					return $valor;
+				}
+			}
+
+		// CASE 2 EXTERNAL SOURCE:
+			$external_source = $this->get_external_source();
+			if($external_source) {
+
+				$external_parts	= pathinfo($external_source);
+				$image_id		= $external_parts['filename'];
+
+				return $image_id;
+			}
+
+		// fix
+			$this->image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
+
+
+		return $this->image_id;
 	}//end get_image_id
 
 
@@ -338,41 +344,45 @@ class component_image extends component_media_common {
 
 		static $ar_aditional_path;
 
-		#if(isset($ar_aditional_path[$this->image_id])) return $ar_aditional_path[$this->image_id];
-		if(isset($this->aditional_path)) return $this->aditional_path;
+		// already set case
+			if(isset($this->aditional_path)) {
+				return $this->aditional_path;
+			}
 
 		$properties = $this->get_properties();
-
-		if (isset($properties->aditional_path) && !empty($this->get_parent()) ) {
+		if ( isset($properties->aditional_path) && !empty($this->get_parent()) ) {
 
 			switch (true) {
 
 				case (is_string($properties->aditional_path)):
-					$component_tipo 	= $properties->aditional_path;
-					$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
-					$component 	= component_common::get_instance($component_modelo,
-																 $component_tipo,
-																 $this->get_parent(),
-																 'edit',
-																 DEDALO_DATA_NOLAN,
-																 $this->get_section_tipo());
-					$dato 		= trim($component->get_valor());
+					$component_tipo		= $properties->aditional_path;
+					$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$component			= component_common::get_instance(
+						$component_modelo,
+						$component_tipo,
+						$this->get_parent(),
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$this->get_section_tipo()
+					);
 
-					# Add / at begin if not exits
-					if ( substr($dato, 0, 1)!=='/' ) {
-						$dato = '/'.$dato;
-					}
+					// valor
+						$valor = trim($component->get_valor());
 
-					# Remove / at end if exists
-					if ( substr($dato, -1)==='/' ) {
-						$dato = substr($dato, 0, -1);
-					}
-					#dump($dato,'$dato');
+					// Add / at begin if not already exits
+						if ( substr($valor, 0, 1)!=='/' ) {
+							$valor = '/'.$valor;
+						}
 
-					$ar_aditional_path[$this->image_id] = $dato;
+					// Remove / at end if exists
+						if ( substr($valor, -1)==='/' ) {
+							$valor = substr($valor, 0, -1);
+						}
 
-					if(isset($properties->max_items_folder) && empty($dato)) {
+					$ar_aditional_path[$this->image_id] = $valor;
+
+					if(isset($properties->max_items_folder) && empty($valor)) {
 
 						$max_items_folder  = $properties->max_items_folder;
 						$parent_section_id = $this->parent;
@@ -384,8 +394,6 @@ class component_image extends component_media_common {
 						$component->set_dato( $final_dato );
 						$component->Save();
 					}
-
-					#dump(gettype($properties->aditional_path),'$properties->aditional_path');
 					break;
 
 				/*
@@ -400,7 +408,7 @@ class component_image extends component_media_common {
 
 					break;
 				*/
-			}
+			}//end switch (true)
 
 
 		}else{
@@ -419,9 +427,9 @@ class component_image extends component_media_common {
 	* @param string $quality optional default (bool)false
 	* @return string $image_path
 	*/
-	public function get_image_path($quality=false) {
+	public function get_image_path(string $quality=null) : string {
 
-		if(!$quality) {
+		if(empty($quality)) {
 			$quality = $this->get_quality();
 		}
 
@@ -437,7 +445,7 @@ class component_image extends component_media_common {
 	* GET_PATH
 	* Alias of get_image_path
 	*/
-	public function get_path($quality=false) {
+	public function get_path(string $quality=null) : string {
 
 		return $this->get_image_path($quality);
 	}//end get_path
@@ -452,12 +460,13 @@ class component_image extends component_media_common {
 	* @param bool $test_file
 	*	Check if file exists. If not use 0.jpg as output. Default true
 	* @param bool $absolute
+	* @return strin|null $image_url
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_image_url($quality=false, $test_file=true, $absolute=false, $default_add=true) {
+	public function get_image_url(?string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
 
 		// quality fallback to default
-			if($quality===false) {
+			if(empty($quality)) {
 				$quality = $this->get_quality();
 			}
 
@@ -483,7 +492,7 @@ class component_image extends component_media_common {
 				$file = $ImageObj->get_local_full_path();
 				if(!file_exists($file)) {
 					if ($default_add===false) {
-						return false;
+						return null;
 					}
 					$image_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 				}
@@ -505,9 +514,9 @@ class component_image extends component_media_common {
 	* @see component_media_common->get_files_info()
 	*
 	* @param string quality
-	* @return string | null
+	* @return string|null $url
 	*/
-	public function get_url($quality=false) {
+	public function get_url(string $quality=null) : ?string {
 
 		$url = $this->get_image_url($quality, $test_file=false, $absolute=false, $default_add=false);
 
@@ -516,12 +525,13 @@ class component_image extends component_media_common {
 
 
 
-
-	public function get_external_source(){
+	/**
+	* GET_EXTERNAL_SOURCE
+	* @return string|null $external_source
+	*/
+	public function get_external_source() : ?string {
 
 		$properties = $this->get_properties();
-
-		$external_source = false;
 		if (isset($properties->external_source) && !empty($this->get_parent()) ) {
 
 			$component_tipo 	= $properties->external_source;
@@ -535,20 +545,22 @@ class component_image extends component_media_common {
 														 $this->get_section_tipo());
 
 
-			$dato	= $component->get_dato();
-			if($dato){
+			$dato = $component->get_dato();
+			if(!empty($dato) && is_array($dato)){
 				$dato = reset($dato);
 			}
 
-			#dump(empty($dato->dataframe));
 			if(!empty($dato->dataframe)){
-				if(isset($dato->iri) && !empty($dato->iri)){
-				$external_source = $dato->iri;
+				if(isset($dato->iri) && !empty($dato->iri)) {
+
+					// external_source get from iri
+					$external_source = $dato->iri;
 				}
 			}
+		}//end if (isset($properties->external_source) && !empty($this->get_parent()) )
 
-		}
-		return $external_source;
+
+		return $external_source ?? null;
 	}//end get_external_source
 
 
@@ -564,10 +576,11 @@ class component_image extends component_media_common {
 		// }//end get_quality
 
 
+
 	/**
 	* GET_DEFAULT_QUALITY
 	*/
-	public function get_default_quality() {
+	public function get_default_quality() : string {
 
 		return DEDALO_IMAGE_QUALITY_DEFAULT;
 	}//end get_default_quality
@@ -578,7 +591,7 @@ class component_image extends component_media_common {
 	* SET_QUALITY
 	* Sync this / ImageObj quality value
 	*/
-	public function set_quality($quality) {
+	public function set_quality(string $quality) {
 		$this->quality = $quality;
 		$this->ImageObj->set_quality($quality);
 
@@ -613,14 +626,18 @@ class component_image extends component_media_common {
 	* Alias of $ImageObj->get_size()
 	* Get file size in KB, MB, etc..
 	*/
-	public function get_image_size($quality=false) {
+	public function get_image_size(string $quality=null) : ?string {
 
-		if($quality===false) $quality = $this->get_quality();
+		if(empty($quality)) {
+			$quality = $this->get_quality();
+		}
 
-		$ImageObj 		= $this->ImageObj;
+		$ImageObj = $this->ImageObj;
 		$ImageObj->set_quality($quality);
 
-		return $ImageObj->get_size();
+		$size = $ImageObj->get_size();
+
+		return $size;
 	}//end get_image_size
 
 
@@ -629,7 +646,7 @@ class component_image extends component_media_common {
 	* CONVERT_QUALITY
 	* @return bool
 	*/
-	public function convert_quality($source_quality, $target_quality) {
+	public function convert_quality(string $source_quality, string $target_quality) : bool {
 
 		// invalid targets check
 			// if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
@@ -692,7 +709,7 @@ class component_image extends component_media_common {
 	* GENERATE_DEFAULT
 	* @return bool
 	*/
-	public function generate_default($overwrite=true) {
+	public function generate_default(bool $overwrite=true) : bool {
 
 		// vars
 			$image_id 			 = $this->get_id();
@@ -737,7 +754,7 @@ class component_image extends component_media_common {
 	* GENERATE_DEFAULT_FROM_ORIGINAL_REAL
 	* @return bool true
 	*/
-	public function generate_default_from_original_real($overwrite=true) {
+	public function generate_default_from_original_real(bool $overwrite=true) : bool {
 
 		# common data
 		$image_id 			 = $this->get_image_id();
@@ -828,15 +845,15 @@ class component_image extends component_media_common {
 	* GET_THUMB_URL
 	* @return string $image_thumb_url
 	*/
-	public function get_thumb_url() {
+	public function get_thumb_url() : string {
 		# common data
-		$image_id 			 = $this->get_image_id();
-		$aditional_path 	 = $this->get_aditional_path();
-		$initial_media_path  = $this->get_initial_media_path();
+		$image_id			= $this->get_image_id();
+		$aditional_path		= $this->get_aditional_path();
+		$initial_media_path	= $this->get_initial_media_path();
 
 		# target data (target quality is thumb)
-		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
-		$image_thumb_url 	 = $ImageObj->get_url();
+		$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+		$image_thumb_url	= $ImageObj->get_url();
 
 		return $image_thumb_url;
 	}//end get_thumb_url
@@ -847,7 +864,7 @@ class component_image extends component_media_common {
 	* GET_THUMB_PATH
 	* @return string $image_thumb_path
 	*/
-	public function get_thumb_path() {
+	public function get_thumb_path() : string {
 		# common data
 		$image_id 			 = $this->get_image_id();
 		$aditional_path 	 = $this->get_aditional_path();
@@ -866,7 +883,7 @@ class component_image extends component_media_common {
 	* GET_IMAGE_PRINT_DIMENSIONS
 	* @return array $ar_info
 	*/
-	public function get_image_print_dimensions($quality) {
+	public function get_image_print_dimensions(string $quality) : array {
 
 		$ImageObj = $this->ImageObj;
 		$ImageObj->set_quality($quality);
@@ -881,7 +898,7 @@ class component_image extends component_media_common {
 	/**
 	* CONVERT_QUALITY_TO_MEGABYTES
 	*/
-	public static function convert_quality_to_megabytes($quality) {
+	public static function convert_quality_to_megabytes(string $quality) : float {
 
 		# patern : '1MB' | '1.5MB' | <1MB | >100MB
 
@@ -919,23 +936,24 @@ class component_image extends component_media_common {
 	* Returns extension of the orinal file
 	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
 	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
-	* @return bool | string (file extension)
+	* @return string|null (file extension)
 	*/
-	public function get_original( $quality=false, $exclude_converted=true ) {
+	public function get_original($quality=false, bool $exclude_converted=true) : ?string {
 
-		if (!$quality) {
-			$quality = $this->get_quality();
-		}
-		$result = false;
-		$initial_quality = $this->get_quality();
+		// qaulity
+			if (empty($quality)) {
+				$quality = $this->get_quality();
+			}
+			$initial_quality = $this->get_quality();
+			$this->set_quality($quality); // change current component quality temporally
 
-		$this->set_quality($quality); // change current component quality temporally
-		$ar_originals 	= array();
-		$target_dir 	= $this->get_target_dir();
+		// target_dir
+			$target_dir	= $this->get_target_dir();
+			if(!file_exists($target_dir)) {
+				return null;
+			}
 
-		if(!file_exists($target_dir)) {
-			return false;
-		}
+		$ar_originals = array();
 
 		if ($handle = opendir($target_dir)) {
 			while (false !== ($file = readdir($handle))) {
@@ -955,21 +973,26 @@ class component_image extends component_media_common {
 				}
 			}
 			closedir($handle);
-		}
-		#dump($ar_originals, ' target_dir ++ '.to_string($target_dir));
+		}//end if ($handle = opendir($target_dir))
+
 
 		$n = count($ar_originals);
 		if ($n===0) {
-			$result = false;
+
+			// no original file found
+
 		}elseif($n===1) {
-			#$path = $_FILES['image']['name'];
+
 			$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
 			$result = $ext;
+
 		}else{
+
 			foreach ($ar_originals as $current_original) {
 				$ext = pathinfo($current_original, PATHINFO_EXTENSION);
 				if(strtolower($ext)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
 					$result = $ext;
+					break;
 				}
 			}
 			if(!isset($ext)) {
@@ -978,10 +1001,11 @@ class component_image extends component_media_common {
 			}
 		}
 
-		// return current component quality
-		$this->quality 	= $initial_quality;
+		// restore current component quality
+			$this->quality = $initial_quality;
 
-		return $result;
+
+		return $result ?? null;
 	}//end get_original
 
 
@@ -994,7 +1018,7 @@ class component_image extends component_media_common {
 	* @param string $quality
 	* @return bool | string (file name)
 	*/
-	public function get_original_file_path($quality) {
+	public function get_original_file_path(string $quality) {
 
 		$result = false;
 
@@ -1222,7 +1246,7 @@ class component_image extends component_media_common {
 	* GET_DELETED_IMAGE
 	* @return string $last_file_path
 	*/
-	public function get_deleted_image( $quality ) {
+	public function get_deleted_image( string $quality ) {
 
 		# media_path
 		$media_path			= $this->get_image_path($quality);
@@ -1807,7 +1831,7 @@ class component_image extends component_media_common {
 	* @param string $quality
 	* @return object $response
 	*/
-	public function build_version($quality) {
+	public function build_version(string $quality) {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1857,7 +1881,7 @@ class component_image extends component_media_common {
 	* GET_EXTENSION
 	* @return string DEDALO_IMAGE_EXTENSION from config
 	*/
-	public function get_extension() {
+	public function get_extension() : string {
 
 		return DEDALO_IMAGE_EXTENSION;
 	}//end get_extension

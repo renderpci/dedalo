@@ -210,10 +210,12 @@ export const service_autocomplete = function() {
 		// search_input
 			const search_input = self.render_search_input()
 			searh_container.appendChild(search_input)
-			search_input.addEventListener("focus", function(e){
-				e.preventDefault()
-				search_input.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"})
-			})
+
+			// scroll to search input
+				// search_input.addEventListener("focus", function(e){
+				// 	e.preventDefault()
+				// 	search_input.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"})
+				// })
 
 		// button options
 			const button_options = ui.create_dom_element({
