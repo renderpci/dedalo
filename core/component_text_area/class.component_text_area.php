@@ -384,17 +384,20 @@ class component_text_area extends component_common {
 	* Overwrite component_common method
 	* @param bool $update_all_langs_tags_state
 	* @param bool $clean_text
+	*
+	* @return int|null $section_id
 	*/
-	public function Save( bool $update_all_langs_tags_state=false, bool $clean_text=true ) {
+	public function Save(bool $update_all_langs_tags_state=false, bool $clean_text=true) : ?int {
 
-		# revisamos las etiquetas para actualizar el estado de las mismas en los demás idiomas
-		# para evitar un bucle infinito, en la orden 'Save' de las actualizaciones, pasaremos '$update_all_langs_tags_state=false'
-		if ($update_all_langs_tags_state===true) {
-			$this->update_all_langs_tags_state();
-		}
+		// update_all_langs_tags_state
+		// revisamos las etiquetas para actualizar el estado de las mismas en los demás idiomas
+		// para evitar un bucle infinito, en la orden 'Save' de las actualizaciones, pasaremos '$update_all_langs_tags_state=false'
+			if ($update_all_langs_tags_state===true) {
+				$this->update_all_langs_tags_state();
+			}
 
-		# Dato current assigned
-		$dato_current = $this->dato;
+		// Dato current assigned
+			$dato_current = $this->dato;
 
 		// alt_save. Alternative save with relation components for store in relations and matrix relations the locators used inside the text
 			$properties = $this->get_properties();
@@ -410,14 +413,17 @@ class component_text_area extends component_common {
 					}
 				}
 			}
-			#$dato_clean 	= mb_convert_encoding($dato_clean, "UTF-8", "auto");
 
 		// Set dato again (cleaned)
 			$this->dato = $dato_current;
 
 
-		# From here, we save in the standard way
-		return parent::Save();
+		// From here, we save in the standard way
+		// Expected int $section_id
+			$result = parent::Save();
+
+
+		return $result;
 	}//end Save
 
 

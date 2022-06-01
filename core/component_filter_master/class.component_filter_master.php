@@ -35,9 +35,11 @@ class component_filter_master extends component_filter {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method
+	* @return int|null $section_id
 	*/
-	public function Save() {
-		# Reset cache session IMPORTANT !
+	public function Save() : ?int {
+
+		// Reset cache session IMPORTANT !
 		unset($_SESSION['dedalo']['config']['get_user_projects']);
 
 		return parent::Save();
@@ -58,4 +60,4 @@ class component_filter_master extends component_filter {
 
 
 
-}//end class
+}//end class component_filter_master

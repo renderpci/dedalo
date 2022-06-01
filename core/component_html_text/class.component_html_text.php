@@ -56,30 +56,30 @@ class component_html_text extends component_common {
 		$dato = $safe_dato;
 
 		parent::set_dato( (array)$dato );
-	}
+	}//end set_dato
 
 
 
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
+	* @return int|null $section_id
 	*/
-	public function Save( $update_all_langs_tags_state=true ) {
+	public function Save() : ?int {
 
 		# Dato current assigned
-		$dato_current 	= $this->dato;
+			$dato_current = $this->dato;
 
 		# Clean dato
-		$dato_clean 	= $this->clean_text($dato_current);
+			$dato_clean	= $this->clean_text($dato_current);
 
 		# Set dato again (cleaned)
-		$this->dato 	= $dato_clean;
+			$this->dato	= $dato_clean;
 
-			#dump($this->dato,'$this->dato');
-
-		# A partir de aquí, salvamos de forma estándar
+		// From here, we save as standard
 		return parent::Save();
-	}
+	}//end Save
+
 
 
 	/**

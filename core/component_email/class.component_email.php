@@ -46,20 +46,23 @@ class component_email extends component_common {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
+	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
-		# Opcionalmente se podría validar mediante aquí el dato.. aunque ya se ha hecho en javascript
-		$email = $this->get_dato();
-		foreach ((array)$email as $key => $value) {
-			if (!empty($value) && false===component_email::is_valid_email($value)) {
-				debug_log(__METHOD__." No data is saved. Invalid email ".to_string($value), logger::ERROR);
-				return false;
+		// Optionally, the data could be validated here... although it has already been done in javascript
+			$email = $this->get_dato();
+			foreach ((array)$email as $key => $value) {
+				if (!empty($value) && false===component_email::is_valid_email($value)) {
+					debug_log(__METHOD__." No data is saved. Invalid email ".to_string($value), logger::ERROR);
+					return null;
+				}
 			}
-		}
 
-		# A partir de aquí, salvamos de forma estándar
-		return parent::Save();
+		// from here, we save as standard
+			$result = parent::Save();
+
+		return $result;
 	}//end Save
 
 
