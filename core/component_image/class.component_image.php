@@ -107,7 +107,7 @@ class component_image extends component_media_common {
 	* SAVE
 	* @return int|null $section_id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
 		$dato = $this->dato;
 
@@ -123,7 +123,9 @@ class component_image extends component_media_common {
 
 		$this->dato = $dato;
 
-		return parent::Save();
+		$result = parent::Save();
+
+		return $result;
 	}//end Save
 
 
