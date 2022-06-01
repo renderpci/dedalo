@@ -141,127 +141,128 @@ section.prototype.init = async function(options) {
 
 	self.config 			= options.config || null
 
-	// events subscription
-		// new_section_
-		self.events_tokens.push(
-			event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
-		)
-		async function fn_create_new_section() {
+	// event subscriptions
+		// new_section_ event
+			self.events_tokens.push(
+				event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
+			)
+			async function fn_create_new_section() {
 
-			if (!confirm(get_label.seguro || 'Sure?')) {
-				return false
-			}
-
-			// data_manager. create
-			const rqo = {
-				action			: 'create',
-				section_tipo	: self.section_tipo
-			}
-			const current_data_manager	= new data_manager()
-			const api_response			= await current_data_manager.request({body:rqo})
-			if (api_response.result && api_response.result>0) {
-
-				const section_id = api_response.result
-
-				const source = create_source(self, 'search')
-					  source.section_id	= section_id
-					  source.mode		= 'edit'
-
-				const sqo = {
-					mode				: self.mode,
-					section_tipo		: [{tipo:self.section_tipo}],
-					filter_by_locators	: [{
-						section_tipo	: self.section_tipo,
-						section_id		: section_id
-					}],
-					limit				: 1,
-					offset				: 0
+				if (!confirm(get_label.seguro || 'Sure?')) {
+					return false
 				}
-				// launch event 'user_navigation' that page is watching
-				event_manager.publish('user_navigation', {
-					source	: source,
-					sqo		: sqo
-				})
-			}
-		}//end fn_create_new_section
 
-		// delete_section_
-		self.events_tokens.push(
-			event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
-		)
-		async function fn_delete_section(options) {
-			// Options
-				const section_id	= options.section_id
-				const section_tipo	= options.section_tipo
-				const section		= options.caller
-				const sqo			= options.sqo ||
-					{
-						section_tipo		: [section_tipo],
+				// data_manager. create
+				const rqo = {
+					action			: 'create',
+					section_tipo	: self.section_tipo
+				}
+				const current_data_manager	= new data_manager()
+				const api_response			= await current_data_manager.request({body:rqo})
+				if (api_response.result && api_response.result>0) {
+
+					const section_id = api_response.result
+
+					const source = create_source(self, 'search')
+						  source.section_id	= section_id
+						  source.mode		= 'edit'
+
+					const sqo = {
+						mode				: self.mode,
+						section_tipo		: [{tipo:self.section_tipo}],
 						filter_by_locators	: [{
-							section_tipo	: section_tipo,
+							section_tipo	: self.section_tipo,
 							section_id		: section_id
 						}],
-						limit				: 1
+						limit				: 1,
+						offset				: 0
 					}
+					// launch event 'user_navigation' that page is watching
+					event_manager.publish('user_navigation', {
+						source	: source,
+						sqo		: sqo
+					})
+				}
+			}//end fn_create_new_section
 
-			const options_parsed = {
-				section_id		: section_id,
-				section_tipo	: section_tipo,
-				section			: caller,
-				sqo				: sqo
-			}
+		// delete_section_
+			self.events_tokens.push(
+				event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
+			)
+			async function fn_delete_section(options) {
 
-			self.delete_record(options_parsed)
-		}//end fn_create_new_section
+				// options
+					const section_id	= options.section_id
+					const section_tipo	= options.section_tipo
+					const section		= options.caller
+					const sqo			= options.sqo ||
+						{
+							section_tipo		: [section_tipo],
+							filter_by_locators	: [{
+								section_tipo	: section_tipo,
+								section_id		: section_id
+							}],
+							limit				: 1
+						}
 
-		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
-		self.events_tokens.push(
-			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
-		)
-		async function fn_toggle_search_panel() {
-			if (self.search_container.children.length===0) {
-				await self.filter.build()
-				const filter_wrapper = await self.filter.render()
-				await self.search_container.appendChild(filter_wrapper)
-			}
-			toggle_search_panel(self.filter)
-		}
+					console.log("++++++++++++++++++++++++++++++++++ fn_delete_section options:",options);
+					console.log("++++++++++++++++++++++++++++++++++ fn_delete_section sqo:",sqo);
+
+				// delete_record
+					self.delete_record({
+						section			: section,
+						section_id		: section_id,
+						section_tipo	: section_tipo,
+						sqo				: sqo
+					})
+			}//end fn_create_new_section
+
+		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
+			self.events_tokens.push(
+				event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+			)
+			async function fn_toggle_search_panel() {
+				if (self.search_container.children.length===0) {
+					await self.filter.build()
+					const filter_wrapper = await self.filter.render()
+					await self.search_container.appendChild(filter_wrapper)
+				}
+				toggle_search_panel(self.filter)
+			}//end fn_toggle_search_panel
 
 		// render event
-		self.events_tokens.push(
-			event_manager.subscribe('render_'+self.id, fn_render)
-		)
-		function fn_render() {
-			// open_search_panel. local DDBB table status
-				const status_id			= 'open_search_panel'
-				const collapsed_table	= 'status'
-				data_manager.prototype.get_local_db_data(status_id, collapsed_table, true)
-				.then(async function(ui_status){
-					// (!) Note that ui_status only exists when element is open
-					const is_open = typeof ui_status==='undefined' || ui_status.value===false
-						? false
-						: true
-					if (is_open===true && self.search_container && self.search_container.children.length===0) {
-						const spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner',
-							parent			: self.search_container
-						})
-						await self.filter.build()
-						const filter_wrapper = await self.filter.render()
-						await self.search_container.appendChild(filter_wrapper)
-						toggle_search_panel(self.filter)
-						spinner.remove()
-					}
-				})
-		}
-
+			self.events_tokens.push(
+				event_manager.subscribe('render_'+self.id, fn_render)
+			)
+			function fn_render() {
+				// open_search_panel. local DDBB table status
+					const status_id			= 'open_search_panel'
+					const collapsed_table	= 'status'
+					data_manager.prototype.get_local_db_data(status_id, collapsed_table, true)
+					.then(async function(ui_status){
+						// (!) Note that ui_status only exists when element is open
+						const is_open = typeof ui_status==='undefined' || ui_status.value===false
+							? false
+							: true
+						if (is_open===true && self.search_container && self.search_container.children.length===0) {
+							const spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner',
+								parent			: self.search_container
+							})
+							await self.filter.build()
+							const filter_wrapper = await self.filter.render()
+							await self.search_container.appendChild(filter_wrapper)
+							toggle_search_panel(self.filter)
+							spinner.remove()
+						}
+					})
+			}//end fn_render
 
 	// load additional files as css used by section_tool in self.config
 		if(self.config && self.config.source_model==='section_tool'){
 			self.load_section_tool_files()
 		}
-
 
 	// status update
 		self.status = 'initiated'
