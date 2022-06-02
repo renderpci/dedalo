@@ -391,10 +391,7 @@ abstract class RecordDataBoundObject {
 			$strQuery	.= ') RETURNING "'.$this->strPrimaryKeyName.'" ';
 
 
-			#dump($strQuery,"strQuery");#die();
 			$result = pg_query($this->get_connection(), $strQuery);
-
-
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
@@ -413,6 +410,7 @@ abstract class RecordDataBoundObject {
 			# Fix new received id
 			$this->ID = $id;
 		}
+
 
 		return $this->ID;
 	}//end Save
