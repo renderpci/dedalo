@@ -1610,7 +1610,9 @@ abstract class common {
 	* ex: if the caller is a portal that call to toponomy section it will need the context and data of the pointer section and the components that will be showed or searched.
 	* This method use the data of the caller (ar_locators) to get only the data to be used, ex: only the first records of the section to show in list mode.
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
-	* @return object
+	* @param string $from_parent = null
+	* @param array $ar_locators = []
+	* @return object $subdatum
 	* 	Object with two properties: context, data
 	*/
 	public function get_subdatum(string $from_parent=null, array $ar_locators=[]) : object {
@@ -1630,7 +1632,7 @@ abstract class common {
 		$ar_subdata		= [];
 
 		// already_calculated
-			static $ar_subcontext_calculated = [];
+			// static $ar_subcontext_calculated = [];
 
 		// request_config. On empty return empty context and data object
 			$request_config = $this->context->request_config ?? null;
@@ -1643,9 +1645,9 @@ abstract class common {
 			}
 
 		// select api_engine dedalo only configs
-			$request_config_dedalo = array_filter($request_config, function($el){
-				return $el->api_engine==='dedalo';
-			});
+			// $request_config_dedalo = array_filter($request_config, function($el){
+			// 	return $el->api_engine==='dedalo';
+			// });
 
 		// children_resursive function, used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
 			if (!function_exists('get_children_recursive')) {
@@ -1717,7 +1719,9 @@ abstract class common {
 
 					// skip security_areas
 						if($dd_object->tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
-							continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+							// 'component_security_areas' removed in v6 but the component will stay in ontology,
+							// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+							continue;
 						}
 
 					// short vars
@@ -1740,9 +1744,11 @@ abstract class common {
 					// common temporal excluded/mapped models *******
 						$match_key = array_search($model, common::$ar_temp_map_models);
 						if (false!==$match_key) {
-							debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+							// mapped model
 							$model = $match_key;
+							debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
 						}else if (in_array($model, common::$ar_temp_exclude_models)) {
+							// excluded model
 							debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
 							continue;
 						}

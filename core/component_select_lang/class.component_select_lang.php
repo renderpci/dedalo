@@ -84,7 +84,7 @@ class component_select_lang extends component_relation_common {
 		}
 
 
-		return $valor;
+		return $valor ?? null;
 	}//end get_valor
 
 

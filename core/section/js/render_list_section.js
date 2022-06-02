@@ -6,12 +6,12 @@
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {get_ar_instances} from './section.js'
-	import * as instances from '../../common/js/instances.js'
+	// import * as instances from '../../common/js/instances.js'
 
 
 
@@ -584,7 +584,6 @@ const get_buttons = function(self) {
 		for (let i = 0; i < ar_buttons_length; i++) {
 
 			const current_button = ar_buttons[i]
-			console.log("current_button:",current_button);
 
 			// button node
 				const class_name	= 'warning ' + current_button.model.replace('button_', '')
@@ -606,7 +605,7 @@ const get_buttons = function(self) {
 								section_tipo	: self.section_tipo,
 								section_id		: null,
 								caller			: self,
-								sqo  			: self.rqo.sqo
+								sqo				: self.rqo.sqo
 							})
 							break;
 						default:
