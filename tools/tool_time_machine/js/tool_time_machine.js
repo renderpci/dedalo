@@ -73,7 +73,9 @@ tool_time_machine.prototype.init = async function(options) {
 		self.langs = page_globals.dedalo_projects_default_langs
 
 	// fix lang from caller
-		self.lang = self.caller.lang
+		self.lang = self.caller && self.caller.lang
+			? self.caller.lang
+			: null
 
 	// events subscribe. User click over list record eye icon (preview)
 		self.events_tokens.push(
@@ -109,34 +111,41 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
-	// fix main_element for convenience
-		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
-		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+	try {
 
-	// time_machine
-	// Create, build and assign the time machine service to the instance
-		self.time_machine = await get_instance({
-			// model		: 'time_machine',
-			model			: 'service_time_machine',
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			tipo			: self.main_element.tipo,
-			mode			: 'tm',
-			lang			: page_globals.dedalo_data_nolan,
-			main_element	: self.main_element,
-			caller			: self,
-			id_variant		: self.model,
-			direct_path		: '../../services/service_time_machine/js/service_time_machine.js'
-		})
+		// fix main_element for convenience
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
-	// assign the render view function
-		self.time_machine.view = render_time_machine_view
+		// time_machine
+		// Create, build and assign the time machine service to the instance
+			self.time_machine = await get_instance({
+				// model		: 'time_machine',
+				model			: 'service_time_machine',
+				section_tipo	: self.caller.section_tipo,
+				section_id		: self.caller.section_id,
+				tipo			: self.main_element.tipo,
+				mode			: 'tm',
+				lang			: page_globals.dedalo_data_nolan,
+				main_element	: self.main_element,
+				caller			: self,
+				id_variant		: self.model,
+				direct_path		: '../../services/service_time_machine/js/service_time_machine.js'
+			})
 
-	// build
-		await self.time_machine.build(true)
+		// assign the render view function
+			self.time_machine.view = render_time_machine_view
 
-	// add to self instances list
-		self.ar_instances.push(self.time_machine)
+		// build
+			await self.time_machine.build(true)
+
+		// add to self instances list
+			self.ar_instances.push(self.time_machine)
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build
