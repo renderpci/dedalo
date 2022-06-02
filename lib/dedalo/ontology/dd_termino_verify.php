@@ -17,8 +17,6 @@ if($is_logged!==true) {
 
 
 require_once(dirname(__FILE__) . '/class.dd.php');
-
-// require_once(DEDALO_ROOT . '/Connections/config.php');
 require_once(dirname(__FILE__) . '/inc/funciones.php');
 
 
@@ -31,4 +29,3 @@ if( strlen($termino)>2 ) {
 	$dd 	= new dd($modo='tesauro_list');
 	echo 	$dd->existeEsteTermino($termino,$terminoID);
 }
-die();

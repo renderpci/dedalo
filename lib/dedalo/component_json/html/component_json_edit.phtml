@@ -1,8 +1,8 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
-	
+
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
@@ -14,23 +14,23 @@
 	print "data-modo=\"{$modo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' >";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	switch(true) {	
-			
-		case $permissions===0:	$html_content .= "";	
+	switch(true) {
+
+		case $permissions===0:	$html_content .= "";
 					break;
-						
-		case $permissions===1: 	
+
+		case $permissions===1:
 					foreach ($dato as $key => $value) {
 						$html_content .= " <span class=\"css_span_dato \">".htmlentities($value)."</span>";
 					}
-					break;						
-		
+					break;
+
 		case ($permissions>=2):
 
 				if(SHOW_DEBUG) {
@@ -62,8 +62,8 @@
 				$html_content .= "data-key_name=\"{$key}\" ";
 				$html_content .= "data-context_name=\"$context_name\" ";
 				$html_content .= ">$value</textarea>";
-				
-				
+
+
 				#
 				# JSON EDITOR
 				// button save
@@ -79,9 +79,9 @@
 				    mode: 'code',
 				    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 				    error: function (err) {
-				      alert(err.toString());
+				      alert('Error json: ' + err.toString());
 				    }
-				  };  
+				  };
 				  // create the editor
 				  var container = document.getElementById('editor_json');
 				  var editor = new JSONEditor(container,options, $value);
@@ -108,22 +108,22 @@
 					$init_options->read_only 		= $read_only;
 				$html_content .= 'component_common.init('.json_encode($init_options).');';
 				$html_content .= '</script>';
-				break;						
+				break;
 	}
 
-	# INIT : Init text editor	
+	# INIT : Init text editor
 	#$html_content .= "<script>component_html_text.init('$identificador_unico','$modo','$propiedades_json');</script>";
-	
-	
+
+
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
 
-	
+
 	# PRINT HTML
 	print $html_label;
 	print $html_content;
-	
-	
+
+
 	print "</div>"; //wrap
 
 	# html_delimiter

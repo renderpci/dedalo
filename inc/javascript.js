@@ -2,19 +2,19 @@
 
 // control de documento modificado
 var modificado =  0 ;
-function fijarMod(valor){	
+function fijarMod(valor){
 	//modificado = 1 ;
 	modificado =  valor ; //fijamos el valor global de la página
-	
+
 	var div = 'log_res2';
 	document.getElementById(div).style.display = 'block';
-	document.getElementById(div).style.color = 'red';  
-	document.getElementById(div).innerHTML = 'Ficha modificada!';    
-	alert(valor)
+	document.getElementById(div).style.color = 'red';
+	document.getElementById(div).innerHTML = 'Ficha modificada!';
+	alert('fijarMod ' + valor)
 }
 // cambiar el BG en los listados al pasar el cursor
 function bg( obj, color) {
-	
+
 	if(color!=-1) {
 		obj.style.backgroundColor = color;
 		return true;
@@ -23,41 +23,41 @@ function bg( obj, color) {
 }
 
 function resize(w,h) {
-	
-	window.moveTo(0, 0); 
-	
-	//window.resizeTo(w, h);	//window.resizeBy(w,h) 
-	
+
+	window.moveTo(0, 0);
+
+	//window.resizeTo(w, h);	//window.resizeBy(w,h)
+
 	window.innerWidth = w
     window.innerHeight = h
-	
+
 	//alert("HOME :: anchura --> " + screen.width + " w:"+w +" h:"+ h);
 }
 
 /**
-* 	ordenar listados sin variar la búsqueda. 
+* 	ordenar listados sin variar la búsqueda.
 *	Atention: js var query_string Needs to be assigned in top list page !!!
 */
 function ordenar(orden,ot)
-{	
+{
 	var pagina 			= '?';
 	var url 			= pagina + query_string +'&orden=' + orden + '&ot=' + ot ;
-		
+
 	document.location.href = url
 }
 
 
 function go2_last_list() {
-	
+
 	if(last_list == -1 || last_list == null) return alert("last_list url not defined!");
-	
+
 	try{
 		//alert("go2: " + last_list)
-		window.location = last_list ;		
-		
-	}catch(err){ 
+		window.location = last_list ;
+
+	}catch(err){
 		if(SHOW_DEBUG===true) alert(err)
-	}	
+	}
 }
 
 
@@ -92,11 +92,11 @@ function lookupAjax(){
 function busquedaSetValueMix(sValue,targetDiv)
 {
 	//alert(sValue)
-	var myurl	= '../ts/ts_show_municipio.php' ;	
-	var div = $('#'+targetDiv) ;	
+	var myurl	= '../ts/ts_show_municipio.php' ;
+	var div = $('#'+targetDiv) ;
 	var accion	= '' ;
 	var mydata	= { 'accion':accion , 'terminoID':sValue };
-	
+
 	if(div==null)
 	{
 		alert("target div null !!")
@@ -106,12 +106,12 @@ function busquedaSetValueMix(sValue,targetDiv)
 			data		: mydata,
 			type		: "POST",
 			beforeSend	: function(data){
-							div.html('<div><img src="../images/spinner.gif" alt="Wait" align="absmiddle" /></div>');		
+							div.html('<div><img src="../images/spinner.gif" alt="Wait" align="absmiddle" /></div>');
 						},
-			success		: function(data) {			
-							div.html(data);		
+			success		: function(data) {
+							div.html(data);
 						}//success
-		});//fin $.ajax	
+		});//fin $.ajax
 	}
 }
 /********************************************
@@ -120,7 +120,7 @@ function busquedaSetValueMix(sValue,targetDiv)
 
 
 
- 
+
 function verificarEnlace(url, target){ //alert(url + ' - ' + target)
 	try{
 		// si se ha modificado el texto en tinyMCE, la variable modificado se fija a 1
@@ -130,12 +130,12 @@ function verificarEnlace(url, target){ //alert(url + ' - ' + target)
 		if(modificado != 1){
 			if(url=='javascript:salir()'){
 				salir()
-			}else{			
-				top.location= url ;			
+			}else{
+				top.location= url ;
 			}
-		}else{			
+		}else{
 			if(url=='javascript:salir()') url = '../backup/actualizaSalir.php';
-			MOOdalBox.open( 
+			MOOdalBox.open(
 			"../inc/verificar.php?url="+url, // the link URL
 			" ", // the caption (link's title) - can be blank
 			"400 150" // width and height of the box - can be left blank
@@ -147,36 +147,36 @@ function verificarEnlace(url, target){ //alert(url + ' - ' + target)
 
 
 
-// Abrir/cerrar div 
+// Abrir/cerrar div
 function ToggleOLD(div, label_button) {
   div = document.getElementById(div);
   var label = document.getElementById(label_button);
-  
+
   if (div.style.display == "none") {
    div.style.display = "block";
-   label.innerText = "[ - ]"; 
+   label.innerText = "[ - ]";
   } else {
    div.style.display = "none";
    label.innerText = "[ + ]";
   }
 }
- 
- function ToggleT(label_button, div_termino) {	
-  var label = document.getElementById(label_button); 
-  var div_termino2 = document.getElementById(div_termino);  
+
+ function ToggleT(label_button, div_termino) {
+  var label = document.getElementById(label_button);
+  var div_termino2 = document.getElementById(div_termino);
   if (document.label.innerText  === "[ + ]") {
    document.label.innerText = "[ - ]";
    //alert('1 '+label_button);
-  } else {   
+  } else {
   document.label.innerText = "[ + ]";
   // alert('2 '+label_button);
-  }  
+  }
 }
 
- // Abrir/cerrar div 
+ // Abrir/cerrar div
 function Toggle2(div, label_button) {
   div = document.getElementById(div);
-  var label = document.getElementById(label_button);  
+  var label = document.getElementById(label_button);
   if (div.style.display == "none") {
    div.style.display = "block";
    label.innerText = "[ - ]";
@@ -187,9 +187,9 @@ function Toggle2(div, label_button) {
  }
 
 
-  // Simple toogle 
+  // Simple toogle
 function simpleToogle(div) {
-  div = document.getElementById(div);  
+  div = document.getElementById(div);
   if (div.style.display == "none") {
    /*div.style.display = "inline-block";*/
    div.style.display = "inline";
@@ -199,15 +199,15 @@ function simpleToogle(div) {
 }
 
 /*
-* simpleToogleStyle 
+* simpleToogleStyle
 */
-function simpleToogleStyle(div, estilo) 
+function simpleToogleStyle(div, estilo)
 {
   //alert(div + ":" +estilo)
   try{
-  	div = document.getElementById(div); 
+  	div = document.getElementById(div);
   }catch(e){};
-  
+
   if(div!=null)
   {
 	if (div.style.display == "none")
@@ -217,15 +217,15 @@ function simpleToogleStyle(div, estilo)
 		div.style.display = "none";
 	}
   }//if(div!=null)
-  
+
 }
 
-  // table-row-group toogle 
+  // table-row-group toogle
 function simpleToogleTBODY(divName, obj, callback) {
-		
+
 	$(obj).children().toggleClass('flecha_close_tboby');
 	$(obj).children().toggleClass('flecha_open_tboby');
-	
+
 	$('#'+divName).toggle(150);
 	/*
 	if (typeof callback == 'function') {
@@ -234,7 +234,7 @@ function simpleToogleTBODY(divName, obj, callback) {
 	*/
 	return true;
 }
- 
+
 function MM_openBrWindow(theURL,winName,features) { //v2.0
   window.open(theURL,winName,features);
 }
@@ -242,16 +242,16 @@ function MM_openBrWindow(theURL,winName,features) { //v2.0
 // pasar un valor a otro campo
 function pasarValor(input, valor) {
   var valor2 = valor ;
-  var input2 = document.getElementById(input); 
-  input2.value = valor2 ; 
+  var input2 = document.getElementById(input);
+  input2.value = valor2 ;
  }
- 
+
 // abrir ventana flotante
 function AbrirVF(theURL,winName,features) { //v2.0
-  var theURL2 = theURL + '&head=no' ; 
+  var theURL2 = theURL + '&head=no' ;
   window.open(theURL2,winName,features);
 }
- 
+
 
 
 // validar fecha
@@ -310,19 +310,19 @@ function valAno(oTxt){
 }
 
 
-/* This function prefixes strings with the correct # of 0's */ 
-function ZeroFill(iNum, iDigits) { 
-  var sNum = CvtNtoS(iNum); 
-  while (sNum.length < iDigits) 
-	sNum = "0" + sNum; 
+/* This function prefixes strings with the correct # of 0's */
+function ZeroFill(iNum, iDigits) {
+  var sNum = CvtNtoS(iNum);
+  while (sNum.length < iDigits)
+	sNum = "0" + sNum;
   return sNum;
-}	  
-/* This function concerts numbers to strings */ 
+}
+/* This function concerts numbers to strings */
 function CvtNtoS(iNum) {
   return ("" + iNum);
 }
 
-// toogle tinyMCE editor 
+// toogle tinyMCE editor
 function toggleEditor(id) {
 	try{
 		if (!tinyMCE.get(id)) {
@@ -332,9 +332,12 @@ function toggleEditor(id) {
 			$('#texto').css({'visibility':'visible'});
 			return
 		}
-	}catch(e){alert(e)}
+	}catch(e){
+		console.error("e:",e);
+		alert('Error on toggleEditor')
+	}
 }
-	 
+
 
 
 
@@ -352,7 +355,7 @@ var getFormattedTimeString = function(sec)
 	var hour = Math.floor(min / 60);
 	sec = Math.floor(sec - (min * 60));
 	min = Math.floor(min - (hour * 60));
-	
+
     if(min<10){min = "0" + min;}
     if(sec<10){sec = "0" + sec;}
 	if(hour > 0) timeString = hour+":";
@@ -402,35 +405,35 @@ function CargaFoto(targetDiv, SID, nocache, ancho, subcarpeta, tipo)
 		if(nocache == undefined) nocache = 0;
 		var div	= $('#'+ targetDiv);
 	}catch(e){};
-	
+
 	if(div!=null)
-	{		
+	{
 		if(tipo=='pdf')
 		{
 			var myurl 	= "../pdfsDB/pdfsAjax.php?ajaxLoad=1";
 		}else{
-			var myurl 	= "../fotosDB/fotosAjax.php?ajaxLoad=1" ; 
+			var myurl 	= "../fotosDB/fotosAjax.php?ajaxLoad=1" ;
 		}
-		
+
 		var accion	= '' ;
 		var mydata	= { 'accion':accion , 'SID':SID , 'div':targetDiv , 'nocache':nocache , 'ancho':ancho , 'subcarpeta':subcarpeta };
-		
+
 		$.ajax({
 			url			: myurl,
 			data		: mydata,
 			type		: "POST",
 			beforeSend	: function(data){
-							div.html('<div><img src="../images/spinner.gif" alt="Wait" align="absmiddle" /></div>');		
+							div.html('<div><img src="../images/spinner.gif" alt="Wait" align="absmiddle" /></div>');
 						},
-			success		: function(data) {			
-							div.html(data);				
+			success		: function(data) {
+							div.html(data);
 						}//success
 		});//fin $.ajax
 	}
 }
 
 function Toggle(divName) {
-	var div = document.getElementById(divName); //alert(divName) 
+	var div = document.getElementById(divName); //alert(divName)
 	if (div.style.display != "block") {
 		div.style.display = "block";
 	} else {
@@ -440,7 +443,7 @@ function Toggle(divName) {
 
 function AmpliarFoto(theURL)
 {
-	var features = "resizable=yes, scrollbars=auto" 
+	var features = "resizable=yes, scrollbars=auto"
 	window.open(theURL,'foto',features);
 }
 
@@ -450,7 +453,7 @@ function descargarFoto(foto,tipo)
 	{
 		var pagina = '../media_pdf/descargar.php?f='+foto ;
 	}else{
-		var pagina = '../media_foto/descargar.php?f='+foto ;	
+		var pagina = '../media_foto/descargar.php?f='+foto ;
 	}
 	/* window.open('../fotosDB/descargar.php?f='+foto); */
 	location.href=pagina
@@ -458,7 +461,7 @@ function descargarFoto(foto,tipo)
 /*
 function cambiarNorden(nordenV, terminoID, padre, termino)
 {
-	var url = "ts_norden.php?nordenV="+nordenV+"&padre="+padre+"&terminoID="+terminoID+"&termino="+escape(termino) ;	
+	var url = "ts_norden.php?nordenV="+nordenV+"&padre="+padre+"&terminoID="+terminoID+"&termino="+escape(termino) ;
 	window.open(url,'','status=yes,scrollbars=yes,resizable=yes,width=450,height=200');
 }
 */
@@ -467,28 +470,28 @@ function cambiarNorden(nordenV, terminoID, padre, termino)
 * retun
 */
 function get_check_value(checkboxField)
-{	
-	var checkbox = checkboxField ; 
+{
+	var checkbox = checkboxField ;
 	var checkActual = checkbox.checked ;//alert('valor checked:'+checkbox.checked)
-	
+
 	// if only we have 1 proyect (not is array)
 	if(checkActual==true)
 	{
-		check_value = 1;	
-		
-	}else{ 
+		check_value = 1;
+
+	}else{
 	// if we have more that 1 proyect (is array)
 		var check_value = '';
-		var largo = checkbox.length ; //alert("largo:"+largo)		
+		var largo = checkbox.length ; //alert("largo:"+largo)
 		for (var i=0; i < largo; i++)
 		{
 		  if (checkbox[i].checked){
 			//check_value = check_value + checkbox[i].value + "\n";
 			check_value +=  checkbox[i].value ;
-		  }	  
+		  }
 		}
 	}
-	// alert("check_value:"+check_value)	
+	// alert("check_value:"+check_value)
 	return check_value ;
 };
 
@@ -499,32 +502,32 @@ function get_check_value(checkboxField)
 function cargarContentPage(div)
 {
 	//div.html('<div id="spinnerDiv"><img src="../img/spinner.gif" alt="Wait" align="absmiddle" /></div>');
-	$("#"+div).hide().css( 'visibility', 'visible').fadeIn("slow");	
+	$("#"+div).hide().css( 'visibility', 'visible').fadeIn("slow");
 }
 
 function get_radio_value(radioGroup){
-	
+
 	var radioGroupChecked = radioGroup.checked; //alert(radioGroup)
-	
+
 	if (radioGroupChecked===true) {
-		
+
 		var rad_val = radioGroup.value;
-		
+
 	} else {
-		
+
 		for (var i=0; i < radioGroup.length; i++) {
 			if (radioGroup[i].checked) {
 				var rad_val = radioGroup[i].value;
 			}
 		}
-	}	
-  
-	return rad_val ;  
+	}
+
+	return rad_val ;
 }
 
 function my_urldecode(str) {
-	// Decodes URL-encoded string  
-	// 
+	// Decodes URL-encoded string
+	//
 	// version: 1008.1718
 	// discuss at: http://phpjs.org/functions/urldecode    // +   original by: Philip Peterson
 	// +   improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
@@ -544,30 +547,30 @@ function my_urldecode(str) {
 	// *     example 2: my_urldecode('http%3A%2F%2Fkevin.vanzonneveld.net%2F');
 	// *     returns 2: 'http://kevin.vanzonneveld.net/'    // *     example 3: my_urldecode('http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a');
 	// *     returns 3: 'http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a'
-	
+
 	//alert('my_urldecode called!')
 	return decodeURIComponent(str.replace(/\+/g, '%20'));
 }
 
 // format tag to value ( like [index_001_in] to 001 ,etc.. )
 function convertTag2value(tag) {
-	
-	if(tag.indexOf('[index_') != -1) {		
+
+	if(tag.indexOf('[index_') != -1) {
 		// indexIn [index_016_in]
-		var tagType = 'indexIn';		
-	}else if(tag.indexOf('[out_index_') != -1) {		
-		// indexOut [out_index_018] 
-		var tagType = 'indexOut';				
+		var tagType = 'indexIn';
+	}else if(tag.indexOf('[out_index_') != -1) {
+		// indexOut [out_index_018]
+		var tagType = 'indexOut';
 	}else if(tag.indexOf('[TC_') != -1) {
-		// tc [TC_00:00:02_TC]		
-		var tagType = 'tc';		
+		// tc [TC_00:00:02_TC]
+		var tagType = 'tc';
 	}else{
 		// false
-		return false;	
+		return false;
 	}
-	
+
 	switch(tagType) {
-		case 'indexIn'	: var value = tag.substr(7,3);		break;	// ( like [index_001_in]   to 001 ) 
+		case 'indexIn'	: var value = tag.substr(7,3);		break;	// ( like [index_001_in]   to 001 )
 		case 'indexOut'	: var value = tag.substr(11,3);		break;	// ( like [out_index_001]  to 001 )
 		case 'tc'		: var value = tag.substr(4,8);		break;	// ( like [TC_00:00:01_TC] to 00:00:01 )
 	}
@@ -584,7 +587,7 @@ function return2br(dataStr) {
 */
 var relwindow ;
 function abrirTSlist(modo,type) {
-	
+
 	var theUrl = DEDALO_LIB_BASE_URL + '/ts/ts_list.php?modo=' + modo +'&type=' + type ;
 	relwindow = window.open(theUrl ,'listwindow','status=yes,scrollbars=yes,resizable=yes,width=900,height=650');//resizable
 	if (relwindow) relwindow.moveTo(-10,1);
@@ -594,7 +597,7 @@ function abrirTSlist(modo,type) {
 
 
 function print_r(theObj) {
-	
+
    if(theObj.constructor == Array || theObj.constructor == Object){
 	  document.write("<ul>")
 	  for(var p in theObj){
