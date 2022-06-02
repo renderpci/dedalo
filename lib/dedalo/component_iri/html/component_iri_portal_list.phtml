@@ -14,7 +14,7 @@
 					
 		case ($permissions>=1) :
 			foreach ($dato as $uri) {
-				$html_contenido .= "\n <a class=\"uri_link\" href=\"".$uri->iri."\" target=\"_blank\"> </a>";
+				$html_contenido .= '<a class="uri_link" href="'.$uri->iri.'" target="_blank" title="'.$uri->iri.'"> </a>';
 			}
 
 			break;
