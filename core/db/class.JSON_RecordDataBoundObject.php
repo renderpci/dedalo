@@ -212,14 +212,15 @@ abstract class JSON_RecordDataBoundObject {
 	* SAVE
 	* Updates current record
 	* @param object $save_options
-	* @return int|bool
+	* @return int|null
 	*/
-	public function Save( object $save_options=null ) {
+	public function Save( object $save_options=null ) : ?int {
 
 		# SECTION_TIPO. Check valid section_tipo for safety
 		if (!$section_tipo = safe_tipo($this->section_tipo)) {
 			trigger_error("Stop Save Bad tipo ".htmlentities($this->section_tipo));
-			return false;
+			// return false;
+			return null;
 		}
 
 		// datos : JSON ENCODE ALWAYS !!!
@@ -245,12 +246,13 @@ abstract class JSON_RecordDataBoundObject {
 			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $section_id, $section_tipo));
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
-					dump($datos,"strQuery $strQuery , section_id:$section_id, section_tipo:$section_tipo");
+					dump($datos,"strQuery:$strQuery, section_id:$section_id, section_tipo:$section_tipo");
 					throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);
 				}else{
 					trigger_error("Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved");
 				}
-				return false; // "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
+				// return false; // "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
+				return null;
 			}
 
 			// test 3-5-2022
@@ -262,7 +264,8 @@ abstract class JSON_RecordDataBoundObject {
 					}else{
 						trigger_error("Error Processing Request. ".pg_last_error());
 					}
-					return false;
+					// return false;
+					return null;
 				}
 				# Fix new received id (id matrix)
 				if (!isset($this->ID)) {
@@ -295,7 +298,8 @@ abstract class JSON_RecordDataBoundObject {
 						}else{
 							trigger_error('Error Processing Request strQuery:' . PHP_EOL . $strQuery);
 						}
-						return false;
+						// return false;
+						return null;
 					}
 					return (int)$section_id;
 					break;
@@ -319,7 +323,8 @@ abstract class JSON_RecordDataBoundObject {
 						}else{
 							trigger_error("Error: sorry an error ocurred on INSERT record. Data is not saved. ".pg_last_error());
 						}
-						return false;
+						// return false;
+						return null;
 					}
 
 					$id = pg_fetch_result($result,0,'id');
@@ -330,7 +335,8 @@ abstract class JSON_RecordDataBoundObject {
 						}else{
 							trigger_error("Error Processing Request. ".pg_last_error());
 						}
-						return false;
+						// return false;
+						return null;
 					}
 					# Fix new received id (id matrix)
 					$this->ID = $id;
@@ -342,7 +348,8 @@ abstract class JSON_RecordDataBoundObject {
 
 		}//end if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true )
 
-		return false;
+		// return false;
+		return null;
 	}//end Save
 
 
