@@ -117,7 +117,8 @@ abstract class component_common extends common {
 					$component_name = $model_name;
 			}
 			if (strpos($component_name, 'component_')!==0) {
-				trigger_error(__METHOD__." Error Processing Request. Illegal component: '$component_name' ");
+				// trigger_error(__METHOD__." Error Processing Request. Illegal component: '$component_name' ");
+				debug_log(__METHOD__."  Error Processing Request. Illegal component: ".to_string($component_name), logger::ERROR);
 				if(SHOW_DEBUG===true) {
 					$bt = debug_backtrace();
 					dump($bt, ' bt ++ '.to_string($tipo));

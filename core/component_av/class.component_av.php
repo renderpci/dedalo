@@ -43,7 +43,7 @@ class component_av extends component_media_common {
 			#dump($dato," dato 1 $modo");
 
 		$need_save=false;
-		if((int)$this->section_id>0 && !isset($dato->section_id)) {
+		if($modo==='edit' && (int)$this->section_id>0 && !isset($dato->section_id)) {
 
 			#####################################################################################################
 			# DEFAULT DATO
