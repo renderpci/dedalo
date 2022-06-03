@@ -133,6 +133,11 @@ const add_events = (wrapper, self) => {
 */
 const get_content_data = function(self) {
 
+	// short vars
+		const section			= self.caller
+		const section_buttons	= section.context.buttons || []
+		console.log("section_buttons:",section_buttons);
+
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
@@ -168,33 +173,38 @@ const get_content_data = function(self) {
 			})
 
 		// button_new . Call API to create new section and navigate to the new record
-			const button_new = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light add',
-				title			: get_label.nuevo || "New",
-				parent			: buttons_container
-			})
-			button_new.addEventListener('click', (e) => {
-				e.stopPropagation()
-				event_manager.publish('new_section_' + self.caller.id)
-			})
+			const section_button_new = section_buttons.find(el => el.model==='button_new')
+			if (section_button_new) {
+				const button_new = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light add',
+					title			: section_button_new.label || "New",
+					parent			: buttons_container
+				})
+				button_new.addEventListener('click', (e) => {
+					e.stopPropagation()
+					event_manager.publish('new_section_' + self.caller.id)
+				})
+			}
 
 		// button_delete . Call API to delete current record
-			const button_delete = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light remove',
-				title			: get_label.borrar || "Delete",
-				parent			: buttons_container
-			})
-			button_delete.addEventListener('click', (e) => {
-				e.stopPropagation()
-				event_manager.publish('delete_section_' + self.caller.id, {
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					caller			: self.caller // section
+			const section_button_delete = section_buttons.find(el => el.model==='button_delete')
+			if (section_button_delete) {
+				const button_delete = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light remove',
+					title			: section_button_delete.label || "Delete",
+					parent			: buttons_container
 				})
-			})
-
+				button_delete.addEventListener('click', (e) => {
+					e.stopPropagation()
+					event_manager.publish('delete_section_' + self.caller.id, {
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						caller			: self.caller // section
+					})
+				})
+			}
 
 	// project container
 		// (!) Note that the filter node is collected from a subscribed
