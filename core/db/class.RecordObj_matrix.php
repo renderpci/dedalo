@@ -1,11 +1,9 @@
 <?php
-#if(!defined('DEDALO_CORE_PATH'))
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
-
-#require_once(DEDALO_CORE_PATH . '/common/class.common.php');
-#require_once(DEDALO_CORE_PATH . '/common/class.navigator.php');
-require(DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php');
-
+/**
+* RecordObj_matrix
+*
+*
+*/
 class RecordObj_matrix extends RecordDataBoundObject {
 
 	# MATRIX VARS
@@ -276,17 +274,19 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	/**
 	* SAVE MATRIX
 	* Call RecordDataBounceObject->Save() and RecordObj_time_machine->Save()
-	* @return int $id
+	* @return int|null $id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 		$start_time=start_time();
 
 		// test_can_save
 			$test_can_save = $this->test_can_save();
 			if($test_can_save!==true) {
 				$msg = " Error (test_can_save). No matrix data is saved! ";
-				trigger_error($msg, E_USER_ERROR);
-				exit($msg);
+				// trigger_error($msg, E_USER_ERROR);
+				// exit($msg);
+				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+				return null;
 			}
 
 		# Si el objeto a salvar no tiene id pero si tiene parent, tipo y lang, calculamos su id para evitar crear un registro nuevo de un componente que ya tiene dato
@@ -313,7 +313,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# Prevent time machine saving activity (if current tipo is a component logger, stop save)
 		if (in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
 			$this->save_time_machine_version = false;
-			return $id;
+			return (int)$id;
 		}
 
 
@@ -329,7 +329,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			}
 		}
 
-		return $id;
+		return (int)$id;
 	}//end Save
 
 

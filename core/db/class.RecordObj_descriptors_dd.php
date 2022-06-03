@@ -1,18 +1,17 @@
 <?php
-#require_once(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
-#require_once(DEDALO_ROOT_PATH . '/jer/class.Jerarquia.php');
-
-
 # RecordObj_descriptors_dd
 # Extiende RecordObj_matrix, cambiándole la tabla y algunos métodos específicos
 # La tabla matrix_descriptors es similar a matrix pero el parent es VARCHAR(8) para soportar tipos like 'dd1'
 
 class RecordObj_descriptors_dd extends RecordObj_matrix {
 
+
+
 	# FIELDS EXTERNAL
 	protected $matrix_table;
 	protected $mainLang;
 	protected $unTranslated;
+
 
 
 	# TABLE  matrix_table
@@ -21,8 +20,10 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 
-	# CONSTRUCT
-	# Normalmente llega: id=NULL, $terminoID, $lang
+	/**
+	* CONSTRUCT
+	* Normalmente llega: id=NULL, $terminoID, $lang
+	*/
 	function __construct(string $matrix_table='matrix_descriptors_dd', $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false) {
 
 		if ($lang==='lg-vlca') {
@@ -117,6 +118,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	}//end __construct
 
 
+
 	/**
 	* GET DATO OVERWRITE PARENT JSON GET DATO
 	* In mtrix_descriptors, dato is not json
@@ -163,7 +165,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 
-	# TRANSLATIONS OF CURRENT
+	/**
+	* TRANSLATIONS OF CURRENT
+	*/
 	public function get_ar_translations_of_current() : array {
 
 		$tipo				= $this->get_tipo();
@@ -193,7 +197,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 
-	# TERMINO EXISTS VERIFY
+	/**
+	* TERMINO EXISTS VERIFY
+	*/
 	public static function termino_exists($dato, string $tipo) : bool {
 
 		$arguments=array();
@@ -209,7 +215,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 
-	# DELETE ALL DESCRIPTORS BY TIPO (PARENT)
+	/**
+	* DELETE ALL DESCRIPTORS BY TIPO (PARENT)
+	*/
 	public static function delete_all_descriptors_by_tipo(string $tipo) : bool {
 
 		$ar_id = self::get_all_descriptors_by_tipo( $tipo );
@@ -226,7 +234,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 
-	# GET_ALL_DESCRIPTORS_BY_TIPO
+	/**
+	* GET_ALL_DESCRIPTORS_BY_TIPO
+	*/
 	public static function get_all_descriptors_by_tipo(string $tipo) : array {
 
 		# Buscamos TODOS los descriptres cuyo parent es este tipo
@@ -240,7 +250,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 
 
-	# GET_ALL_DESCRIPTORS_LANGS_BY_TIPO
+	/**
+	* GET_ALL_DESCRIPTORS_LANGS_BY_TIPO
+	*/
 	public static function get_all_descriptors_langs_by_tipo(string $tipo) : array {
 
 		# Buscamos TODOS los descriptres cuyo parent es este tipo
@@ -260,8 +272,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	* Sobreescribe RecordObj_matrix->Save
 	* Verifica que los parámetros mínimos están fijados (id,parent,tipo,lang) y si todo es correcto
 	* llama a la función principal en su clase padre (RecordObj_matrix)
+	* @return int|null $id
 	*/
-	public function Save() {
+	public function Save() : ?int {
 
 		if (!$this->ID) {
 
@@ -287,31 +300,29 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	}//end Save
 
 
+
 	/**
 	* REMOVE INDEX (By rel_locator)
 	* Elimina uno de los 'rel_locator' del array de datos de este descriptor (NO LO GUARDA, solo lo quita del array de 'dato')
 	* @param $rel_locator
-	*//*
-	public function remove_index__DEPRECATED($rel_locator) {
-
-		# get current dato in db
-		$dato 					= $this->get_dato();
-			#dump($dato,"dato 1");
-
-		# Decode json string dato to array
-		$dato  					= (array)json_handler::decode($dato);
-			#dump($dato,"dato 2");
-
-		# mix array current dato - rel_locator relation string like (1253.0.0)
-		$new_ar_dato 			= component_relation::remove_relation_to_dato($rel_locator,$dato);
-
-		# set new array dato and save record in matrix
-		$this->set_dato($new_ar_dato);												#dump($RecordObj_descriptors_dd->get_dato(),'after');
-	}
 	*/
+		// public function remove_index__DEPRECATED($rel_locator) {
+
+		// 	# get current dato in db
+		// 	$dato 					= $this->get_dato();
+		// 		#dump($dato,"dato 1");
+
+		// 	# Decode json string dato to array
+		// 	$dato  					= (array)json_handler::decode($dato);
+		// 		#dump($dato,"dato 2");
+
+		// 	# mix array current dato - rel_locator relation string like (1253.0.0)
+		// 	$new_ar_dato 			= component_relation::remove_relation_to_dato($rel_locator,$dato);
+
+		// 	# set new array dato and save record in matrix
+		// 	$this->set_dato($new_ar_dato);
+		// }//end remove_index
 
 
 
 }//end class RecordObj_descriptors_dd
-
-

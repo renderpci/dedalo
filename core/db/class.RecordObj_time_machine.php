@@ -1,11 +1,11 @@
 <?php
-include_once(DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php');
 /**
-* RECORDOBJ_TIME_MACHINE
+* RecordObj_time_machine
+*
 *
 */
 class RecordObj_time_machine extends RecordDataBoundObject {
-	
+
 	# MATRIX VARS
 	#protected $id_matrix;
 	protected $section_id;
@@ -15,9 +15,9 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected $timestamp;
 	protected $userID;
 	protected $state;
-	protected $dato;	
+	protected $dato;
 
-	# ESPECIFIC VARS	
+	# ESPECIFIC VARS
 	protected $ar_time_machine_of_this;
 
 	# TABLE  matrix_table
@@ -25,33 +25,36 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 	static $save_time_machine_version = true;
 
-	
-	public function __construct($id=NULL) {		
-		parent::__construct($id);		
+	public $use_cache = false; // overwrite default that is true (for structure only)
+	public $use_cache_manager = false;
+
+
+	public function __construct($id=NULL) {
+		parent::__construct($id);
 	}
-		
+
 	# define current table (tr for this obj)
 	protected function defineTableName() {
-		return ( self::$time_machine_matrix_table );	
-	}	
+		return ( self::$time_machine_matrix_table );
+	}
 	# define PrimaryKeyName (id)
 	protected function definePrimaryKeyName() {
-		return ('id');	
-	}	
+		return ('id');
+	}
 	# array of pairs db field name, obj property name like fieldName => propertyName
-	protected function defineRelationMap() {		
+	protected function defineRelationMap() {
 		return (array(
 			# db fieldn ame			# property name
-			"id"			=> "ID",		# integer
-			#"id_matrix"	=> "id_matrix",	# integer
-			"section_id"	=> "section_id",# integer
-			"section_tipo"	=> "section_tipo",# string charvar 32
-			"tipo"			=> "tipo",		# string charvar 32
-			"lang"			=> "lang", 		# string 16
-			"timestamp"		=> "timestamp", # timestamp standar db format
-			"userID"		=> "userID", 	# integer
-			"state"			=> "state",		# string char 32
-			"dato"			=> "dato",		# jsonb format			
+			'id'			=> 'ID',			// integer
+			#'id_matrix'	=> 'id_matrix',		// integer
+			'section_id'	=> 'section_id',	// integer
+			'section_tipo'	=> 'section_tipo',	// string charvar 32
+			'tipo'			=> 'tipo',			// string charvar 32
+			'lang'			=> 'lang',			// string 16
+			'timestamp'		=> 'timestamp',		// timestamp standar db format
+			'userID'		=> 'userID',		// integer
+			'state'			=> 'state',			// string char 32
+			'dato'			=> 'dato'			// jsonb format
 		));
 	}//end defineRelationMap
 
@@ -75,18 +78,18 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 
 	/**
-	* GET_AR_TIME_MACHINE_OF_THIS		
+	* GET_AR_TIME_MACHINE_OF_THIS
 	* AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
 	*/
 	public static function get_ar_time_machine_of_this($tipo=null, $parent=null, $lang=null, $section_tipo=null, $limit=10, $offset=0) {
 
 		/// Temporal !!!
 		#$limit = 1000000;
-				
+
 		$ar_id 	= array();
-		
+
 		$arguments=array();
-		if(!empty($tipo))	
+		if(!empty($tipo))
 		$arguments['tipo']			= $tipo;
 		$arguments['section_id']	= $parent;
 		$arguments['section_tipo']	= $section_tipo;
@@ -96,18 +99,18 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		$arguments['sql_limit']		= $limit;
 		$arguments['offset']		= $offset;
 		$arguments['order_by_desc']	= 'timestamp';
-		
+
 		$RecordObj_time_machine	= new RecordObj_time_machine(NULL);
 		$ar_id					= $RecordObj_time_machine->search($arguments);
-		
+
 		#$ar_time_machine_of_this = array_values($ar_id);
 		#foreach($ar_id as $id) {
 		#	$ar_time_machine_of_this[] = $id;
 		#}
-		
+
 		return $ar_id;
 	}//end get_ar_time_machine_of_this
 
 
-	
+
 }//end classRecordObj_time_machine

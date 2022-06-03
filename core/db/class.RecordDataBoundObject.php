@@ -281,7 +281,7 @@ abstract class RecordDataBoundObject {
 	/**
 	* SAVE
 	* Update current record
-	* @return int $this->ID
+	* @return int|null $this->ID
 	*/
 	public function Save() {
 
@@ -328,7 +328,7 @@ abstract class RecordDataBoundObject {
 				#throw new Exception($msg, 1); #die($msg);
 
 				// Because is not an error, only a impossible save query, notify and return normally
-				return $this->ID;
+				return (int)$this->ID;
 			}
 
 			// prevent null encoded errors
@@ -397,7 +397,9 @@ abstract class RecordDataBoundObject {
 					dump($strQuery,"strQuery");
 					throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(), 1);
 				}
-				return "Error: sorry an error ocurred on INSERT record. Data is not saved";
+				// return "Error: sorry an error ocurred on INSERT record. Data is not saved";
+				debug_log(__METHOD__." Error: sorry an error ocurred on INSERT record. Data is not saved ", logger::ERROR);
+				return null;
 			}
 
 			$id = pg_fetch_result($result, 0, '"'.$this->strPrimaryKeyName.'"');
@@ -412,7 +414,7 @@ abstract class RecordDataBoundObject {
 		}
 
 
-		return $this->ID;
+		return (int)$this->ID;
 	}//end Save
 
 
