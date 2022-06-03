@@ -128,8 +128,13 @@
 					}
 				// indexation
 					if(isset($properties->tags_index)) {
-						$tags_index = $this->get_component_indexations_terms() ?? false;
+						$tags_index = $this->get_component_indexations_terms();
 					}
+				// notes
+					if(isset($properties->tags_notes)) {
+						$tags_notes = $this->get_annotations();
+					}
+
 
 				$value			= $dato;
 				$fallback_value	= (empty($value) || isset($value[0]) && empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">') || !isset($patata))
@@ -163,6 +168,10 @@
 			if(isset($properties->tags_index) && $modo==='edit') {
 				$item->tags_index = $tags_index;
 			}
+			if(isset($properties->tags_notes) && $modo==='edit') {
+				$item->tags_notes = $tags_notes;
+			}
+
 
 
 		$data[] = $item;
