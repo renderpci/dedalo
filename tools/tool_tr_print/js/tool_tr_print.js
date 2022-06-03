@@ -85,13 +85,10 @@ tool_tr_print.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	try {
-
 		// transcription_component. fix transcription_component for convenience
 			const transcription_component_tipo	= self.caller.tipo
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_tipo)
 			self.ar_raw_data					= self.transcription_component.data.value
-
-				console.log("self.transcription_component:",self.transcription_component);
 	} catch (error) {
 		self.error = error
 		console.error(error)
@@ -159,44 +156,6 @@ tool_tr_print.prototype.tags_to_html = function(value) {
 };//end tags_to_html
 
 
-
-/**
-* source_format
-* Parses Dédalo server side tags to html tags
-* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
-*/
-tool_tr_print.prototype.source_format = function() {
-
-	const self = this
-
-	const tr_regex = tr.get_mark_pattern('tc_full')
-
-
-	const node_len 	= self.ar_raw_data.length
-	for (var i = 0; i < node_len; i++) {
-		const raw_data = self.ar_raw_data[i]
-		// const text_node = [...raw_data.matchAll(tr_regex)]
-		const ar_text_source = raw_data.split(tr_regex)
-		// First element. Test if is time code
-		// If not, add 00 time code
-		const text_first = ar_text_source[0].match(tr_regex)
-		const ar_tc_init = ['[TC_00:00:00.000_TC]']
-
-		const ar_text = (!text_first)
-			? ar_tc_init.concat(ar_text_source)
-			: ar_text_source
-
-			console.log("ar_text:",ar_text);
-
-	}
-
-
-
-
-
-
-	return true
-};//end source_format
 
 
 
