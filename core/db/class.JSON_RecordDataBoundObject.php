@@ -242,8 +242,9 @@ abstract class JSON_RecordDataBoundObject {
 			// 	return false;
 			// }
 
-			$strQuery 	= "UPDATE $this->strTableName SET datos = $1 WHERE section_id = $2 AND section_tipo = $3 RETURNING id";
-			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $section_id, $section_tipo));
+			$strQuery	= 'UPDATE '.$this->strTableName.' SET datos = $1 WHERE section_id = $2 AND section_tipo = $3 RETURNING id';
+			$params		= [$datos, $section_id, $section_tipo];
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, $params);
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump($datos,"strQuery:$strQuery, section_id:$section_id, section_tipo:$section_tipo");
@@ -255,8 +256,20 @@ abstract class JSON_RecordDataBoundObject {
 				return null;
 			}
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					$debug_strQuery = preg_replace_callback(
+						'/\$(\d+)\b/',
+						function($match) use ($params) {
+							$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), $params[$key]) );
+						},
+						$strQuery
+					);
+					dump($result, ' Save result ++ '.to_string($debug_strQuery));
+				}
+
 			// test 3-5-2022
-				$id = pg_fetch_result($result,0,'id');
+				$id = pg_fetch_result($result, 0, 'id');
 				if ($id===false) {
 					if(SHOW_DEBUG===true) {
 						dump($strQuery,"strQuery");

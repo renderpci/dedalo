@@ -392,7 +392,10 @@ class component_image extends component_media_common {
 						# Final dato must be an array to saved into component_input_text
 						$final_dato = array( $ar_aditional_path[$this->image_id] );
 						$component->set_dato( $final_dato );
-						$component->Save();
+
+						if ($this->modo==='edit') {
+							$component->Save();
+						}
 					}
 					break;
 
@@ -1122,7 +1125,7 @@ class component_image extends component_media_common {
 						return false;
 					}
 
-				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." >>> Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
 
 				// Move original files too (PNG,TIF,Etc.)
 				// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION

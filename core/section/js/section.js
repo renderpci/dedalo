@@ -205,9 +205,6 @@ section.prototype.init = async function(options) {
 							limit				: 1
 						}
 
-					console.log("++++++++++++++++++++++++++++++++++ fn_delete_section options:",options);
-					console.log("++++++++++++++++++++++++++++++++++ fn_delete_section sqo:",sqo);
-
 				// delete_record
 					self.delete_record({
 						section			: section,
