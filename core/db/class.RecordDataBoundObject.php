@@ -166,6 +166,7 @@ abstract class RecordDataBoundObject {
 		if ($use_cache===true && isset($ar_RecordDataObject_load_query_cache[$strQuery])) {
 
 			$arRow = $ar_RecordDataObject_load_query_cache[$strQuery];
+			// error_log('CACHE-load- '.$strQuery);
 
 		}else{
 
@@ -668,6 +669,7 @@ abstract class RecordDataBoundObject {
 			# DATA IS IN CACHE . Return value form memory
 
 			$ar_records	= $ar_RecordDataObject_query_search_cache[$strQuery];
+			// error_log('CACHE-search-'.$strQuery);
 
 		}else{
 

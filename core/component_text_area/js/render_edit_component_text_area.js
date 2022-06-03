@@ -1620,6 +1620,12 @@ const render_langs_list = function(self, text_editor, i) {
 					const tag = build_node_tag(lang_tag, lang_tag.tag_id)
 					// set the new lang tag at caret position of the text_editor.
 					text_editor.set_content(tag.outerHTML)
+					// save value
+					text_editor.save()
+					.then(function(){
+						// close current modal
+						modal.close()
+					})
 				});
 
 				// lang_icon
@@ -1650,7 +1656,7 @@ const render_langs_list = function(self, text_editor, i) {
 		text_editor.save()
 
 	// modal
-		ui.attach_to_modal({
+		const modal = ui.attach_to_modal({
 			header	: header,
 			body	: body,
 			footer	: null,
