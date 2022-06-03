@@ -146,10 +146,11 @@ const add_events = function(self, wrapper) {
 		wrapper.addEventListener("click", e => {
 			// e.stopPropagation()
 
-				const all_buttons_remove =wrapper.querySelectorAll('.remove')
-					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-						all_buttons_remove[i].classList.add("display_none")
-					}
+			// remove_buttons
+				const all_remove_buttons = wrapper.querySelectorAll('.remove')
+				for (let i = all_remove_buttons.length - 1; i >= 0; i--) {
+					all_remove_buttons[i].classList.add("display_none")
+				}
 
 				// if (e.target.matches('.contenteditable')) {
 				// 	// set the button_remove associated to the input selected to visible
