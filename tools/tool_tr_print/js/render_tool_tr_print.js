@@ -8,6 +8,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
+	import {tr} from '../../../core/common/js/tr.js'
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
@@ -305,7 +306,18 @@ const render_text_process_options = function(self, content_data) {
 			parent 			: default_view_option_container
 		})
 		default_view_option.addEventListener('change', function(event) {
-			self.source_format()
+			const ar_default_render = render_default(self)
+			// remove previous nodes
+				// while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+				// 	content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
+				// }
+			const ar_render_len = ar_default_render.length
+			for (let i = 0; i < ar_render_len; i++) {
+					// console.log("ar_default_render[i]:--------------",ar_default_render[i]);
+				content_data.right_container_text.insertAdjacentHTML("beforeend", ar_default_render[i]);
+			}
+				// add the new one
+
 		})
 	// original_view_option_container
 	const original_view_option_container = ui.create_dom_element({
@@ -373,7 +385,180 @@ const render_text_process_options = function(self, content_data) {
 
 
 
+const render_default = function(self) {
 
+	const fragment = new DocumentFragment()
+	const ar_default_render = []
+	const node_len 	= self.ar_raw_data.length
+
+	for (let i = 0; i < node_len; i++) {
+		let raw_data = self.ar_raw_data[i]
+
+		// BR
+		// const pattern_br = tr.get_mark_pattern('br');
+		// raw_data = raw_data.replace(pattern_br, `<p>`);
+
+		// TC. [TC_00:00:25.091_TC]
+			function get_tc(match, p1,p2, offset){
+
+				// the tc is inside the p2 of the match
+				const tc = p2
+
+				const data_block = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'data_block',
+					parent 			: fragment
+				})
+					const left_block = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'left_block',
+						parent 			: data_block
+					})
+					const rigth_block = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'rigth_block',
+						parent 			: data_block
+					})
+
+				const tag_node	= '<span class="index in">'+tag_id+'{</span>'
+
+				return tag_node
+			}
+			const pattern_tc = tr.get_mark_pattern('tc');
+			raw_data = raw_data.replace(pattern_tc, get_tc);
+
+			// const pattern_tc = tr.get_mark_pattern('tc');
+			// raw_data = raw_data.replace(pattern_tc, `<span class="tc">$2</span>`);
+
+		// INDEX IN
+
+			function get_index_in(match, p1,p2,p3,p4,p5,p6,p7, offset){
+
+				// the tag_id is inside the p4 of the match
+				const tag_id = p4
+				// get all indexation terms of the current tag with match tag_id inside the locator
+				const tags_index = self.transcription_component.data.tags_index || []
+				const ar_indexation = tags_index.filter(el =>
+					el.data.tag_id	=== tag_id
+				)
+				const ar_indexation_len = ar_indexation.length
+
+				for (let i = 0; i < ar_indexation_len; i++) {
+					const current_index_node = ar_indexation[i].label
+
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'rigth_block',
+						parent 			: left_block
+					})
+				}
+
+				const tag_node	= '<span class="index in">'+tag_id+'{</span>'
+
+				return tag_node
+			}
+			const pattern_index_in = tr.get_mark_pattern('indexIn');
+			raw_data = raw_data.replace(pattern_index_in, get_index_in);
+			// raw_data = raw_data.replace(pattern_lang, `<span class="lang">$6</span>`);
+		// 	const pattern_indexIn = tr.get_mark_pattern('indexIn'); // id,state,label,data
+		// 	raw_data = raw_data.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+
+		// INDEX OUT
+			const pattern_indexOut = tr.get_mark_pattern('indexOut');
+			raw_data = raw_data.replace(pattern_indexOut, `<span class="index out">}$4</span>`);
+
+		// // REFERENCE IN
+		// 	const pattern_referenceIn = tr.get_mark_pattern('referenceIn');
+		// 	raw_data = raw_data.replace(pattern_referenceIn, `<reference id="reference_$4" class="reference" data-type="reference" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+
+		// // REFERENCE OUT
+		// 	const pattern_referenceOut = tr.get_mark_pattern('referenceOut');
+		// 	raw_data = raw_data.replace(pattern_referenceOut, "</reference>");
+
+
+		// // SVG
+		// 	const pattern_svg = tr.get_mark_pattern('svg');
+		// 	raw_data = raw_data.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}$7" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+
+		// // DRAW
+		// 	const pattern_draw = tr.get_mark_pattern('draw');
+		// 	raw_data = raw_data.replace(pattern_draw, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="draw" data-type="draw" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+
+		// // GEO
+		// 	const pattern_geo = tr.get_mark_pattern('geo');
+		// 	raw_data = raw_data.replace(pattern_geo, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="geo" data-type="geo" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+
+		// // PAGE
+		// 	const pattern_page = tr.get_mark_pattern('page');
+		// 	raw_data = raw_data.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
+
+		// PERSON
+			function get_person(match, p1,p2,p3,p4,p5,p6, offset){
+				// the locator is inside the p6 of the match
+				const data_string	= p6
+				// rebuild the correct locator witht the " instead '
+				const data			= data_string.replace(/\'/g, '"')
+				// parse the string to object or create new one
+				const locator		= JSON.parse(data) || {}
+				// get the match of the locator with the tag_persons array inside the instance
+				// console.log("self.data:",self.data);
+				const tags_persons = self.transcription_component.data.tags_persons || []
+				const person = tags_persons.find(el =>
+					el.data.section_tipo	===locator.section_tipo &&
+					el.data.section_id		== locator.section_id &&
+					el.data.component_tipo	===locator.component_tipo
+				)
+				const tag_node	= person
+					? '<span class="person">'+ person.full_name +': </span>'
+					: ''
+				return tag_node
+			}
+			const pattern_person = tr.get_mark_pattern('person');
+			raw_data = raw_data.replace(pattern_person, get_person);
+
+		// NOTE
+			function get_note(match, p1,p2,p3,p4,p5,p6,p7, offset){
+				// the locator is inside the p7 of the match
+				const data_string	= p7
+				// rebuild the correct locator witht the " instead '
+				const data			= data_string.replace(/\'/g, '"')
+				// parse the string to object or create new one
+				const locator		= JSON.parse(data) || {}
+				// get the match of the locator with the tag_persons array inside the instance
+				// console.log("self.data:",self.data);
+				const tags_notes = self.transcription_component.data.tags_notes || []
+				const note = tags_notes.find(el =>
+					el.data.section_tipo	===locator.section_tipo &&
+					el.data.section_id		== locator.section_id &&
+					el.data.component_tipo	===locator.component_tipo
+				)
+
+				const note_title = (note.title)
+					? note.title.join(' | ')
+					: null
+
+				const note_text = (note.body && note_title)
+					? note_title +'. '+ note.body
+					: note.body
+
+				const tag_node	= note
+					? '<span class="footnote"> ['+note_text+'] </span>'
+					: ''
+
+				return tag_node
+			}
+			const pattern_note = tr.get_mark_pattern('note');
+			raw_data = raw_data.replace(pattern_note, get_note);
+
+		// LANG
+			const pattern_lang = tr.get_mark_pattern('lang');
+			raw_data = raw_data.replace(pattern_lang, `<span class="lang">$6:</span>`);
+
+		ar_default_render.push(raw_data)
+	}// end for
+
+	return ar_default_render
+}
 
 
 
