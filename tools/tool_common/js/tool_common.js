@@ -777,6 +777,9 @@ const view_window = async function(options) {
 	// focus event trigger on current window
 		window.addEventListener('focus', fn_onfocus, true);
 		function fn_onfocus() {
+			// (!) remove listener after focus
+			window.removeEventListener('focus', fn_onfocus, true);
+
 			// remove window.callers pointer
 			// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
 			// refresh caller
@@ -785,8 +788,6 @@ const view_window = async function(options) {
 			if (tool_window) {
 				// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
 			}
-			// (!) remove listener after focus
-			window.removeEventListener('focus', fn_onfocus, true);
 		}
 
 
