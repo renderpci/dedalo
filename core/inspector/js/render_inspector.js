@@ -236,6 +236,7 @@ const get_content_data = function(self) {
 			class_name		: 'buttons_container bottom',
 			parent			: content_data
 		})
+
 		// data_link . Open window to full seciton JSON data
 			const data_link = ui.create_dom_element({
 				element_type	: 'button',
@@ -245,24 +246,41 @@ const get_content_data = function(self) {
 			})
 			data_link.addEventListener("click", (e)=>{
 				e.preventDefault()
-				// read from Dédloa API
+
+				// read from Dédlo API
+				const rqo = {
+					action	: 'read_raw',
+					source	: create_source(self.caller)
+				}
 				data_manager.prototype.request({
-					body : {
-						action	: 'read',
-						source	: create_source(self.caller, 'get_data')
-						// {
-						// 	tipo			: self.caller.tipo,
-						// 	section_tipo	: self.section_tipo,
-						// 	section_id		: self.caller.section_id,
-						// 	lang			: self.caller.lang
-						// }
-					}
+					body : rqo
 				})
 				.then(function(api_response){
-					console.log("api_response:",api_response);
+
+					// error case
+						if (api_response.result===false || api_response.error) {
+							// alert("An error occurred. " + api_response.error);
+							return
+						}
+
+					// open window
+						const target_window	= window.open('', 'raw_data', '');
+
+					// raw_data_node
+						const data_string = JSON.stringify(api_response.result, null, 2)
+						const raw_data_node = ui.create_dom_element({
+							element_type	: 'pre',
+							inner_html		: data_string
+						})
+
+					// add data content to new window body
+						const body = target_window.document.body
+						if (body) {
+							body.appendChild(raw_data_node)
+						}
 				})
-				// window.open( DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.caller.section_id )
-			})
+			})//end data_link.addEventListener("click"
+
 		// tool register files.	dd1340
 			if (self.section_tipo==='dd1340') {
 				const register_download = ui.create_dom_element({
