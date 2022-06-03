@@ -7,6 +7,7 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	// import {get_ar_instances} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {create_source} from '../../../core/common/js/common.js'
 
 
 
@@ -120,62 +121,72 @@ const content_data_edit = async function(self) {
 		self.preview_component_container = preview_component_container
 
 	// tool_bar
-		const tool_bar = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'tool_bar',
-			parent			: fragment
-		})
-		// lang selector
-		if (self.main_element.lang!=='lg-nolan') {
-
-			// label
-			ui.create_dom_element({
-				element_type	: 'label',
-				inner_html		: get_label.idioma,
-				parent			: tool_bar
-			})
-			// selector
-			const select_lang = ui.build_select_lang({
-				langs		: self.langs,
-				selected	: self.lang,
-				class_name	: '',
-				action		: on_change_select
-			})
-			function on_change_select(e) {
-				const lang = e.target.value
-				if (lang!==self.lang) {
-					self.lang					= lang
-					self.main_element.lang	= lang
-					self.refresh()
-				}
-			}
-			tool_bar.appendChild(select_lang)
-		}
-
-		// button apply
-			self.button_apply = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning button_apply lock',
-				inner_html		: get_label.aplicar_y_salvar || 'Apply and save',
-				parent			: tool_bar
-			})
-			self.button_apply.addEventListener("click", function(){
-				// const response = self.apply_value.bind(self)
-				self.apply_value(self)
-				.then(function(response){
-					if (response.result===true) {
-						// success case
-						if (window.opener) {
-							// close this window when was opened from another
-							window.close()
-						}
-					}else{
-						// error case
-						console.warn("response:",response);
-						alert(response.msg || 'Error. Unknow error on apply tm value');
-					}
+		if (self.caller.model!=='section') {
+			// tool_bar
+				const tool_bar = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tool_bar',
+					parent			: fragment
 				})
-			})
+
+			// lang selector
+				if (self.main_element.lang!=='lg-nolan') {
+
+					// label
+					ui.create_dom_element({
+						element_type	: 'label',
+						inner_html		: get_label.idioma,
+						parent			: tool_bar
+					})
+					// selector
+					const select_lang = ui.build_select_lang({
+						langs		: self.langs,
+						selected	: self.lang,
+						class_name	: '',
+						action		: on_change_select
+					})
+					function on_change_select(e) {
+						const lang = e.target.value
+						if (lang!==self.lang) {
+							self.lang					= lang
+							self.main_element.lang	= lang
+							self.refresh()
+						}
+					}
+					tool_bar.appendChild(select_lang)
+				}
+
+			// button apply
+				self.button_apply = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'warning button_apply lock history',
+					inner_html		: self.get_tool_label('apply_and_save') || 'Apply and save',
+					parent			: tool_bar
+				})
+				self.button_apply.addEventListener("click", function(){
+
+					self.apply_value({
+						section_id		: self.main_element.section_id,
+						section_tipo	: self.main_element.section_tipo,
+						tipo			: self.main_element.tipo,
+						lang			: self.main_element.lang,
+						matrix_id		: self.selected_matrix_id
+					})
+					.then(function(response){
+						if (response.result===true) {
+							// success case
+							if (window.opener) {
+								// close this window when was opened from another
+								window.close()
+							}
+						}else{
+							// error case
+							console.warn("response:",response);
+							alert(response.msg || 'Error. Unknow error on apply tm value');
+						}
+					})
+				})
+		}//end if (self.caller!=='section')
 
 	// section container
 		// const section_container = ui.create_dom_element({
