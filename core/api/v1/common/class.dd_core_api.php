@@ -299,16 +299,20 @@ final class dd_core_api {
 
 	/**
 	* READ
+	* Get context and data from given source
+	* Different modes are available
+	* @see self::build_json_rows
+	*
 	* @param object $rqo
 	*	array $json_data->context
-	* @return object $result
-	*	array $result->context
-	*	array $result->data
+	* @return object $response
+	* 	$response->result = {
+	* 		array context
+	* 		array data
+	* 	}
 	*/
 	public static function read(object $rqo) : object {
 		$start_time = start_time();
-
-		// session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -343,6 +347,57 @@ final class dd_core_api {
 
 		return $response;
 	}//end read
+
+
+
+	/**
+	* READ_RAW
+	* Get full record data
+	* @param object $rqo
+	*	array $json_data->context
+	* @return object $response
+	*/
+	public static function read_raw(object $rqo) : object {
+		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
+
+		// validate input data
+			if (empty($rqo->source->section_tipo)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				return $response;
+			}
+
+		// short vars
+			$section_tipo	= $rqo->source->section_tipo;
+			$section_id		= $rqo->source->section_id;
+
+		// section data raw
+			$section	= section::get_instance($section_id, $section_tipo);
+			$dato		= $section->get_dato();
+
+		// response success
+			$response->result	= $dato;
+			$response->msg		= 'OK. Request done';
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
+
+				$response->debug = $debug;
+
+				if (!empty(dd_core_api::$sql_query_searchs)) {
+					$response->debug->sql_query_searchs = dd_core_api::$sql_query_searchs;
+				}
+			}
+
+
+		return $response;
+	}//end read_raw
 
 
 
@@ -1552,6 +1607,12 @@ final class dd_core_api {
 										$obj->hierarchy_terms = $ddo_source->hierarchy_terms;
 									}
 								$element->set_search_action($obj);
+
+						}else if ($model==='section') {
+
+							// $element = section::get_instance($section_id, $section_tipo);
+							// (!) Not used anymore
+							debug_log(__METHOD__." WARNING data:get_data model section skip. Use action 'search' instead.", logger::WARNING);
 
 						}else if (class_exists($model)) {
 
