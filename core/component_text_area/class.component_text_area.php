@@ -1395,7 +1395,7 @@ class component_text_area extends component_common {
 		$tags_index = $properties->tags_index ?? null;
 
 		if(!$tags_index){
-			return false;
+			return null;
 		}
 
 		// relation index
@@ -1490,7 +1490,7 @@ class component_text_area extends component_common {
 			$ar_indexation_terms[] = $term;
 
 			$indextaion_obj = new stdClass();
-				$indextaion_obj->data	= $locator;
+				$indextaion_obj->data	= $row;
 				$indextaion_obj->label	= $term;
 			$ar_indextaion_obj[] = $indextaion_obj;
 		}//end foreach ($result as $key => $row)
@@ -1505,6 +1505,82 @@ class component_text_area extends component_common {
 
 		return $ar_terms;
 	}//end get_component_indexations_terms
+
+
+
+	/**
+	* GET_ANNOTATIONS
+	* Used for diffusion global search annotations
+	* @see diffusion global search needs
+	* @return array $ar_terms
+	*/
+	public function get_annotations() : ?array {
+		$lang		= $this->get_lang();
+		$properties	= $this->get_properties();
+		$tags_notes	= $properties->tags_notes ?? null;
+
+		if(!$tags_notes){
+			return null;
+		}
+
+		$dato = $this->get_dato();
+
+		if(empty($dato)){
+			return null;
+		}
+		$ar_annotations = [];
+		foreach ($dato as $key => $current_dato) {
+			$pattern = TR::get_mark_pattern('note', $standalone=true);
+			preg_match_all($pattern,  $current_dato,  $matches, PREG_PATTERN_ORDER);
+			if (empty($matches[0])) {
+				$ar_annotations[] = null;
+				continue;
+			}
+			// the $mach[7] get the data of the tag, it has the locator of the note
+			foreach ($matches[7] as $current_note) {
+				// replace the ' for the standard " to be JSON compatible
+				$locator_string = str_replace('\'','"',$current_note);
+				// decode de string to object
+				$locator		= json_decode($locator_string);
+				$section_tipo	= $locator->section_tipo;
+				$ar_notes_section_ddo_map = $tags_notes->$section_tipo;
+
+				$note_obj = new stdClass();
+					$note_obj->data		= $locator;
+				foreach ($ar_notes_section_ddo_map as $current_ddo) {
+
+					$note_component_tipo	= $current_ddo->component_tipo;
+					$note_component_model	= RecordObj_dd::get_modelo_name_by_tipo($note_component_tipo,true);
+
+					$note_section_tipo		= $locator->section_tipo;
+					$note_section_id		= $locator->section_id;
+
+					$translatable			= RecordObj_dd::get_translatable($note_component_tipo);
+					$current_component		= component_common::get_instance($note_component_model,
+																	 $note_component_tipo,
+																	 $note_section_id,
+																	 'list',
+																	 ($translatable) ? $lang : DEDALO_DATA_NOLAN,
+																	 $note_section_tipo);
+					$dato		= $current_component->get_dato();
+					$note_type	= $current_ddo->id;
+
+					if ($current_ddo->type === 'bool') {
+						$dato = !empty($dato) && ($dato[0]->section_id === '1')
+							? true
+							: false;
+					}
+
+					$note_obj->$note_type	= $dato;
+				}
+
+				$ar_annotations[] = $note_obj;
+			}
+		}
+
+		return $ar_annotations;
+	}//end get_component_indexations_terms
+
 
 
 

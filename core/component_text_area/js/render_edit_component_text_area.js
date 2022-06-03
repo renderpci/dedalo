@@ -780,7 +780,7 @@ const get_custom_events = (self, i, text_editor) => {
 						// parse the string to object or create new one
 						const locator		= JSON.parse(data) || {}
 						// get the match of the locator with the tag_persons array inside the instance
-						console.log("self.data:",self.data);
+						// console.log("self.data:",self.data);
 						const tags_persons = self.data.tags_persons || []
 						const person = tags_persons.find(el =>
 							el.data.section_tipo===locator.section_tipo &&
