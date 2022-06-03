@@ -109,7 +109,7 @@ const content_data_edit = async function(self) {
 		if(self.main_element.model !=='section'){
 			await add_component(self, current_component_container, self.main_element.lang, get_label.ahora, 'edit', null)
 		}
-	
+
 	// preview_component_container
 		const preview_component_container = ui.create_dom_element({
 			element_type	: 'div',

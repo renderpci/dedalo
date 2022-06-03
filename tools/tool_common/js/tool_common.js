@@ -141,7 +141,6 @@ tool_common.prototype.init = async function(options) {
 		self.events_tokens	= []
 		self.get_tool_label	= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
-
 	// set status
 		self.status = 'initied'
 
@@ -852,7 +851,7 @@ const view_window = async function(options) {
 *
 * @param string label_name like 'indexation_tool'
 * @param mixed ...rest (accept an indefinite number of arguments as an array)
-* @return string | null
+* @return string|null
 * 	like 'Indexation Tool'
 */
 const get_tool_label = function(label_name, ...rest) {

@@ -4,23 +4,13 @@
 *
 *
 */
-class tool_time_machine { // extends tool_common
-
-
-
-	/**
-	* __CONSTRUCT
-	*/
-	public function __construct() {
-
-
-	}//end __construct
+class tool_time_machine {
 
 
 
 	/**
 	* APPLY_VALUE
-	* Set user selected value from time machine to acual component data
+	* Set user selected value from time machine to current component data
 	* @param $section_id
 	* @param $section_tipo
 	* @param $tipo
@@ -30,11 +20,9 @@ class tool_time_machine { // extends tool_common
 	public static function apply_value(object $request_options) : object {
 		global $start_time;
 
-		#debug_log(__METHOD__." TOP_TIPO: ".TOP_TIPO." - TOP_ID: ".TOP_ID.to_string(), logger::DEBUG);
-
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
 		// options get and set
@@ -88,10 +76,10 @@ class tool_time_machine { // extends tool_common
 				$response->debug = $debug;
 			}
 
+
 		return (object)$response;
 	}//end apply_value
 
 
 
-
-}//end class
+}//end class tool_time_machine

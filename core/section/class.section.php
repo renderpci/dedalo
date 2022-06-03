@@ -267,7 +267,7 @@ class section extends common {
 
 	/**
 	* SET_DATO
-	* Set wholesection data as raw object
+	* Set whole section data as raw object
 	* Fix section relations and components to prevent save issues
 	* @return bool true
 	*/
