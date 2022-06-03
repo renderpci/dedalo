@@ -8,7 +8,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {get_ar_instances} from '../../../core/section/js/section.js'
 	import {set_element_css} from '../../../core/page/js/css.js'
-
+	// import {tool_label} from '../../../tools/tool_common/js/tool_common.js'
 
 
 /**
@@ -189,7 +189,7 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DOM DocumentFragment
 */
-const render_column_id = function(options){
+const render_column_id = function(options) {
 
 	// options
 		const self				= options.caller

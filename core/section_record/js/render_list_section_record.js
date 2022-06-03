@@ -34,13 +34,13 @@ render_list_section_record.prototype.list = async function(options={}) {
 
 	const self = this
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
 		const columns_map = await self.columns_map
-
 
 	const fragment = new DocumentFragment()
 
@@ -51,6 +51,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 			const current_column = columns_map[i]
 
 			// callback column case
+			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
 				if(current_column.callback && typeof current_column.callback==='function'){
 
 					// column_node (standard section_record empty column to be filled with content_node)
@@ -128,7 +129,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 							console.error("Undefined current_instance:", current_instance, j, ar_instances);
 							continue;
 						}
-						// check if the current_instance has column_id if not a error was done by the common creating the columns.
+						// check if the current_instance has column_id. If not, an error was occur on common creating the columns.
 						if (current_instance.column_id) {
 
 							const ar_sub_columns_map = current_instance.columns_map || ar_instances
