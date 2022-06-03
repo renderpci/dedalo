@@ -189,7 +189,7 @@ const get_buttons = (self) => {
 
 	// prevent show buttons inside a tool
 		if (self.caller && self.caller.type==='tool') {
-			// return fragment
+			return fragment
 		}
 
 	// button full_screen
