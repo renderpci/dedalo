@@ -192,17 +192,18 @@ const rebuild_columns_map = async function(self) {
 const render_column_id = function(options) {
 
 	// options
-		const self				= options.caller
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		// const offset			= options.offset
-		const matrix_id			= options.matrix_id
-		const modification_date	= options.modification_date
+		const service_time_machine	= options.caller
+		const section_id			= options.section_id
+		const section_tipo			= options.section_tipo
+		// const offset				= options.offset
+		const matrix_id				= options.matrix_id
+		const modification_date		= options.modification_date
 
-	// permissions
-		const permissions = self.permissions
-
-	const fragment = new DocumentFragment()
+	// short vars
+		// const permissions	= service_time_machine.permissions
+		const tool				= service_time_machine.caller
+		const main_caller		= tool.caller
+		const fragment			= new DocumentFragment()
 
 	// button_view
 		const button_view = ui.create_dom_element({
@@ -211,14 +212,54 @@ const render_column_id = function(options) {
 			parent			: fragment
 		})
 		button_view.addEventListener("click", function(){
-			// publish event
-			event_manager.publish('tm_edit_record', {
-				tipo		: section_tipo,
-				section_id	: section_id,
-				matrix_id	: matrix_id,
-				date		: modification_date || null,
-				mode		: 'tm'
-			})
+
+			if (main_caller.model==='section') {
+
+				// section case
+
+				// user confirmation
+					const msg = tool.get_tool_label('recover_section_alert') || '*Are you sure you want to restore this section?'
+					if (!confirm(msg)) {
+						return
+					}
+
+				// apply recover record
+					tool.apply_value({
+						section_id		: section_id,
+						section_tipo	: section_tipo,
+						tipo			: section_tipo,
+						lang			: page_globals.dedalo_data_nolan,
+						matrix_id		: matrix_id
+					})
+					.then(function(response){
+						if (response.result===true) {
+							main_caller.refresh()
+							.then(function(){
+								service_time_machine.refresh()
+								// success case
+								// if (window.opener) {
+								// 	// close this window when was opened from another
+								// 	window.close()
+								// }
+							})
+						}else{
+							// error case
+							console.warn("response:",response);
+							alert(response.msg || 'Error. Unknow error on apply tm value');
+						}
+					})
+			}else{
+				// component case
+
+				// publish event
+					event_manager.publish('tm_edit_record', {
+						tipo		: section_tipo,
+						section_id	: section_id,
+						matrix_id	: matrix_id,
+						date		: modification_date || null,
+						mode		: 'tm'
+					})
+			}
 		})
 
 	// section_id
@@ -232,12 +273,10 @@ const render_column_id = function(options) {
 	// icon eye ime machine preview (eye)
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button eye icon',
+			class_name		: 'button icon ' + (main_caller.model==='section' ? 'history' : 'eye'),
 			parent			: button_view
 		})
 
 
 	return fragment
 };// end render_column_id()
-
-

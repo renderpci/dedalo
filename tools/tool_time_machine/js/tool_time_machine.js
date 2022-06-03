@@ -191,24 +191,30 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 /**
 * APPLY_VALUE
 * Set selected version value to active component and close the tool
+* @param object options
 * @return promise
 */
-tool_time_machine.prototype.apply_value = function() {
+tool_time_machine.prototype.apply_value = function(options) {
 
 	const self = this
 
-	// vars 'section_id','section_tipo','tipo','lang','matrix_id'
+	// options
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+		const tipo			= options.tipo
+		const lang			= options.lang
+		const matrix_id		= options.matrix_id
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(arguments)
 		const source = create_source(self, 'apply_value')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			section_id		: self.main_element.section_id,
-			section_tipo	: self.main_element.section_tipo,
-			tipo			: self.main_element.tipo,
-			lang			: self.main_element.lang,
-			matrix_id		: self.selected_matrix_id
+			section_id		: section_id,
+			section_tipo	: section_tipo,
+			tipo			: tipo,
+			lang			: lang,
+			matrix_id		: matrix_id
 		}
 
 	// rqo
@@ -238,5 +244,3 @@ tool_time_machine.prototype.apply_value = function() {
 			})
 		})
 };//end apply_value
-
-

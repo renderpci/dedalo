@@ -446,8 +446,8 @@
 		position: relative;
 		display: flex;
 		flex-wrap: wrap;
-		align-items: flex-start; // horizontal alignment
-		justify-content: flex-start; // vertical alignment
+		align-items: flex-start; // vertical alignment
+		justify-content: flex-start; // vertical distribution
 		// background-color: @color_grey_untralight; // @color_grey_untralight
 		outline: 1px solid @color_grey_light;
 		height: inherit;
@@ -459,6 +459,10 @@
 		@media screen and (max-width: @width_break_point_0) {
 			// width: 72%;
 			// padding-left: 0.3rem;
+		}
+
+		&.column_service_time_machine {
+			align-items: center; // vertical alignment
 		}
 
 		.mini & {

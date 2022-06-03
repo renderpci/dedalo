@@ -79,13 +79,13 @@
                 "lg-nolan": [
                     {
                         "start": {
-                            "day": 7,
-                            "hour": 11,
-                            "time": 64999971822,
+                            "day": 3,
+                            "hour": 10,
+                            "time": 65002301460,
                             "year": 2022,
-                            "month": 5,
-                            "minute": 43,
-                            "second": 42
+                            "month": 6,
+                            "minute": 51,
+                            "second": 0
                         }
                     }
                 ]
@@ -146,18 +146,33 @@
                     [
                         {
                             "lang": "lg-spa",
-                            "name": "abc",
-                            "value": "A"
+                            "name": "recover_section_alert",
+                            "value": "¿Está seguro de que desea restaurar esta sección?"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "recover_section_alert",
+                            "value": "Are you sure you want to restore this section?"
+                        },
+                        {
+                            "lang": "lg-eng",
+                            "name": "apply_and_save",
+                            "value": "Apply and save"
+                        },
+                        {
+                            "lang": "lg-spa",
+                            "name": "apply_and_save",
+                            "value": "Aplicar y salvar"
                         },
                         {
                             "lang": "lg-cat",
-                            "name": "abc",
-                            "value": "B"
+                            "name": "apply_and_save",
+                            "value": "Aplicar i salvar"
                         },
                         {
-                            "lang": "lg-vlca",
-                            "name": "abc",
-                            "value": "C"
+                            "lang": "lg-ell",
+                            "name": "apply_and_save",
+                            "value": "εφαρμόστε και αποθηκεύστε"
                         }
                     ]
                 ]
@@ -167,7 +182,7 @@
     "section_id": 2,
     "created_date": "2019-12-02 12:44:58",
     "section_tipo": "dd1340",
-    "modified_date": "2022-05-07 11:43:42",
+    "modified_date": "2022-06-03 10:51:00",
     "diffusion_info": null,
     "created_by_userID": -1,
     "section_real_tipo": "dd1324",
