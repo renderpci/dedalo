@@ -147,8 +147,9 @@ component_portal.prototype.init = async function(options) {
 			}//end fn_initiator_link
 
 
+
 	return common_init
-};//end  init
+};//end init
 
 
 

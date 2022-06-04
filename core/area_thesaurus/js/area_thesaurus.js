@@ -84,13 +84,6 @@ area_thesaurus.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = area_common.prototype.init.call(this, options);
 
-	// ts_object adds on
-		// const css_url = DEDALO_CORE_URL + "/ts_object/css/ts_object.css"
-		// common.prototype.load_style(css_url)
-
-		// const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
-		// common.prototype.load_style(css_url2)
-
 	// events subscription
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
 		self.events_tokens.push(

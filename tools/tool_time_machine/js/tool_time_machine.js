@@ -62,7 +62,6 @@ export const tool_time_machine = function () {
 * INIT
 */
 tool_time_machine.prototype.init = async function(options) {
-	console.log("tool_time_machine INIT options:",options);
 
 	const self = this
 
