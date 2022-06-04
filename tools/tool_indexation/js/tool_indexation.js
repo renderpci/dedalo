@@ -196,31 +196,41 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload)
 
-		console.log("self.tool_config.ddo_map:",self.tool_config.ddo_map);
-		console.log("self.ar_instances:",self.ar_instances);
 
-	// transcription_component. fix transcription_component for convenience
-		const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
-		self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
+	try {
 
-	// indexing_component. fix indexing_component for convenience
-		const indexing_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="indexing_component")
-		self.indexing_component			= self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo)
+		// console.log("self.tool_config.ddo_map:",self.tool_config.ddo_map);
+		// console.log("self.ar_instances:",self.ar_instances);
 
-	// media_component. fix media_component for convenience
-		const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="media_component")
-		self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+		// transcription_component. fix transcription_component for convenience
+			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='transcription_component')
+			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
 
-	// area_thesaurus. fix area_thesaurus for convenience
-		const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==="area_thesaurus")
-		self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
-		// set instance in thesaurus mode 'relation'
-		self.area_thesaurus.context.thesaurus_mode = "relation"
+		// indexing_component. fix indexing_component for convenience
+			const indexing_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='indexing_component')
+			self.indexing_component			= self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo)
 
-	// related_sections_list. load_related_sections_list. Get the relation list.
-	// This is used to build a select element to allow
-	// user select the top_section_tipo and top_section_id of current indexation
-		self.related_sections_list = await self.load_related_sections_list()
+		// media_component. fix media_component for convenience
+			const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='media_component')
+			self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+
+		// area_thesaurus. fix area_thesaurus for convenience
+			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
+			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
+			// set instance in thesaurus mode 'relation'
+			self.area_thesaurus.context.thesaurus_mode	= 'relation'
+			self.area_thesaurus.caller					= self
+			self.area_thesaurus.linker					= self.indexing_component
+
+		// related_sections_list. load_related_sections_list. Get the relation list.
+		// This is used to build a select element to allow
+		// user select the top_section_tipo and top_section_id of current indexation
+			self.related_sections_list = await self.load_related_sections_list()
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build

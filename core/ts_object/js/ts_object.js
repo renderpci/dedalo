@@ -394,44 +394,50 @@ export const ts_object = new function() {
 							// hierarchy_node cannot be used as related  and not indexable too
 							if (node_type==='hierarchy_node' || is_indexable===false) break;
 
-							const link_related = ui.create_dom_element({
-								element_type	: 'a',
-								parent			: id_colum_content,
-								class_name		: 'id_column_link ts_object_related',
-								title_label		: 'add',
-							})
-							const current_label_term = ar_children_data[i].ar_elements.find(el => el.type==='term')
-							link_related.data = {
-								section_tipo	: ar_children_data[i].section_tipo,
-								section_id		: ar_children_data[i].section_id,
-								label			: current_label_term ? current_label_term.value : ''
-							}
-							link_related.addEventListener("click",(e)=>{
+							// link_related
+								const link_related = ui.create_dom_element({
+									element_type	: 'a',
+									parent			: id_colum_content,
+									class_name		: 'id_column_link ts_object_related',
+									title_label		: 'add',
+								})
+								const current_label_term = ar_children_data[i].ar_elements.find(el => el.type==='term')
+								link_related.data = {
+									section_tipo	: ar_children_data[i].section_tipo,
+									section_id		: ar_children_data[i].section_id,
+									label			: current_label_term ? current_label_term.value : ''
+								}
+								link_related.addEventListener('click', (e)=>{
+									e.stopPropagation()
 
+									// source window. Could be different than current (like iframe)
+										// const source_window = window.opener || window.parent
+										// if (source_window===null) {
+										// 	console.warn("[link_term] Error on find window.opener / parent")
+										// 	return false
+										// }
 
-								// self.link_term(link_related)
-									// e.preventDefault()
-									// e.stopPropagation()
-								// source window. Could be different than current (like iframe)
-									const source_window = window.opener || window.parent
-									if (source_window===null) {
-										console.log("[link_term] Error on find window.opener / parent")
-										return false
-									}
-
-								// publish event link_term
-									source_window.event_manager.publish('link_term_'+ self.initiator, {
-										section_tipo	: ar_children_data[i].section_tipo,
-										section_id		: ar_children_data[i].section_id,
-										label			: current_label_term ? current_label_term.value : ''
-									})
-							})
+									// publish event link_term
+										if (!self.linker) {
+											console.warn(`Error. self.linker is not defined.
+												Please set ts_object linker property with desired target component portal:`, self);
+											return false
+										}
+										// linker id. A component_portal instance is expected as linker
+										const linker_id = self.linker.id
+										// source_window.event_manager.publish('link_term_' + linker_id, {
+										event_manager.publish('link_term_' + linker_id, {
+											section_tipo	: ar_children_data[i].section_tipo,
+											section_id		: ar_children_data[i].section_id,
+											label			: current_label_term ? current_label_term.value : ''
+										})
+								})
 							// related icon
-							const related_icon 	= ui.create_dom_element({
-								element_type	: 'span',
-								class_name		: 'button arrow_link', //ts_object_add_icon
-								parent			: link_related
-							})
+								ui.create_dom_element({
+									element_type	: 'span',
+									class_name		: 'button arrow_link', //ts_object_add_icon
+									parent			: link_related
+								})
 							break;
 
 						default:

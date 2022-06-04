@@ -243,14 +243,14 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	// initiator . URL defined var or Caller of parent section
 	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
-		const searchParams = new URLSearchParams(window.location.href);
-		const initiator = searchParams.has("initiator")
-			? searchParams.get("initiator")
-			: self.caller
-				? self.caller.id
-				: false
-		// fix initiator
-			self.initiator = JSON.parse(initiator)
+		// const searchParams = new URLSearchParams(window.location.href);
+		// const initiator = searchParams.has("initiator")
+		// 	? searchParams.get("initiator")
+		// 	: self.caller
+		// 		? self.caller.id
+		// 		: false
+		// // fix initiator
+		// 	self.initiator = JSON.parse(initiator)
 
 	// filter
 		if (!self.filter) {
@@ -261,6 +261,9 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			})
 			// self.filter.build()
 		}
+
+	// ts_object. Set from global var
+		self.ts_object = ts_object
 
 
 	// debug
