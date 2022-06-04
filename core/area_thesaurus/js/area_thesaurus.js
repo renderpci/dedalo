@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, ts_object */
 /*eslint no-undef: "error"*/
 
 
@@ -12,6 +12,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_thesaurus} from './render_area_thesaurus.js'
+	import {ts_object} from '../../ts_object/js/ts_object.js'
 
 
 
@@ -84,8 +85,8 @@ area_thesaurus.prototype.init = async function(options) {
 		const common_init = area_common.prototype.init.call(this, options);
 
 	// ts_object adds on
-		const css_url = DEDALO_CORE_URL + "/ts_object/css/ts_object.css"
-		common.prototype.load_style(css_url)
+		// const css_url = DEDALO_CORE_URL + "/ts_object/css/ts_object.css"
+		// common.prototype.load_style(css_url)
 
 		// const css_url2 = DEDALO_CORE_URL + "/area_thesaurus/css/area_thesaurus.css"
 		// common.prototype.load_style(css_url2)
