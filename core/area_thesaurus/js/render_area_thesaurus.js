@@ -8,7 +8,6 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
-	import {ts_object} from '../../ts_object/js/ts_object.js'
 
 
 
@@ -36,11 +35,10 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	// ts_object. Is a global page var
 		// set mode. Note that ts_object is NOT an instance
-		ts_object.thesaurus_mode = self.context.thesaurus_mode
-		// set the initiator
-		if(self.initiator){
-			ts_object.initiator = self.initiator
-		}
+		self.ts_object.thesaurus_mode = self.context.thesaurus_mode
+		// caller set
+		self.ts_object.caller = self
+		self.ts_object.linker = self.linker // usually a portal component instance
 
 		// parse data
 		const data = self.data.find(item => item.tipo==='dd100')
@@ -68,7 +66,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 				// 	ts_object.parse_search_result(data.ts_search.result, null, false)
 				// }
 
-				ts_object.parse_search_result(data.ts_search.result, null, false)
+				self.ts_object.parse_search_result(data.ts_search.result, null, false)
 				// prevent to recreate content_data again
 				const content_data = self.node[0].querySelector('.content_data.area')
 				return content_data
@@ -134,7 +132,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 		if (data.ts_search) {
 			event_manager.subscribe('render_'+self.filter.id, exec_search)
 			function exec_search() {
-				ts_object.parse_search_result(data.ts_search.result, null, false)
+				self.ts_object.parse_search_result(data.ts_search.result, null, false)
 			}
 		}
 
@@ -282,7 +280,7 @@ const render_content_data = function(self) {
 							})
 
 					// ts_object render
-						ts_object.get_children(link_children)
+						self.ts_object.get_children(link_children)
 				}
 		}//end for (let i = 0; i < typology_length; i++)
 
