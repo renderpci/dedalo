@@ -85,7 +85,7 @@ tool_indexation.prototype.init = async function(options) {
 		}
 
 	// set the self specific vars not defined by the generic init (in tool_common)
-		self.langs	= page_globals.dedalo_projects_default_langs
+		self.langs = page_globals.dedalo_projects_default_langs
 
 	// id_base from transcription_component. Needed to set event subscriptions on init
 		const transcription_component_ddo = self.tool_config.ddo_map.find(el => el.role==='transcription_component')

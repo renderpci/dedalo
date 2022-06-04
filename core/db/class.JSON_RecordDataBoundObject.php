@@ -258,14 +258,14 @@ abstract class JSON_RecordDataBoundObject {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					$debug_strQuery = preg_replace_callback(
-						'/\$(\d+)\b/',
-						function($match) use ($params) {
-							$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), $params[$key]) );
-						},
-						$strQuery
-					);
-					dump($result, ' Save result ++ '.to_string($debug_strQuery));
+					// $debug_strQuery = preg_replace_callback(
+					// 	'/\$(\d+)\b/',
+					// 	function($match) use ($params) {
+					// 		$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), $params[$key]) );
+					// 	},
+					// 	$strQuery
+					// );
+					// dump($result, ' Save result ++ '.to_string($debug_strQuery));
 				}
 
 			// test 3-5-2022
