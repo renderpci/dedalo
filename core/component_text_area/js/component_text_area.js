@@ -123,10 +123,12 @@ component_text_area.prototype.init = async function(options) {
 				event_manager.subscribe('click_tag_index_' + self.id_base, fn_click_tag_index)
 			)
 			function fn_click_tag_index(options) {
+				// console.log("///// fn_click_tag_index options:",options);
 
 				// options
-					const tag			= options.tag // DOM tag element
-					const text_editor	= options.text_editor
+					// const caller			= options.caller // not used
+					// const text_editor	= options.text_editor // not used
+					const tag				= options.tag // DOM tag element
 
 				// fix selected tag element
 					self.tag = tag

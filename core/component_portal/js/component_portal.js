@@ -137,13 +137,35 @@ component_portal.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('link_term_' + self.id, fn_link_term)
 			)
-			async function fn_link_term(locator) {
+			function fn_link_term(locator) {
+
+				// check active tag is already set
+					if (!self.active_tag) {
+						alert("Error. No active_tag exists");
+						return
+					}
+
+				// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
+					const tag_id	= self.active_tag.tag.dataset.tag_id
+					locator.tag_id	= tag_id
+
+				// top_locator add
+					const top_locator = self.caller.top_locator // property from tool_indexation
+					Object.assign(locator, top_locator)
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log("-->> fn_link_term. Set locator to add:", locator);
+					}
+
 				// add locator selected
-				const result = await self.add_value(locator)
-				if (result===false) {
-					alert("Value already exists! "+ JSON.stringify(locator));
-					return
-				}
+					self.add_value(locator)
+					.then(function(result){
+						if (result===false) {
+							alert("Value already exists! "+ JSON.stringify(locator));
+							return
+						}
+					})
 			}//end fn_initiator_link
 
 
@@ -554,6 +576,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 * FILTER_DATA_BY_TAG_ID
 * Filtered data with the tag clicked by the user
 * The portal will show only the locators for the tag selected
+* @param DOM node tag
 * @return promise self.render
 */
 component_portal.prototype.filter_data_by_tag_id = function(options) {
@@ -561,13 +584,15 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 	const self = this
 
 	// options
-		const tag_element = options.tag // DOM node selected
+		// const caller			= options.caller // not used
+		// const text_editor	= options.text_editor // not used
+		const tag				= options.tag // DOM node selected
 
 	// Fix received options from event as 'active_tag'
 		self.active_tag = options
 
 	// tag_id from node dataset
-		const tag_id = tag_element.dataset.tag_id
+		const tag_id = tag.dataset.tag_id
 
 	// get all data from datum because if the user select one tag the portal data is filtered by the tag_id,
 	// in the next tag selection by user the data doesn't have all locators and is necessary get the original data
@@ -579,10 +604,10 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 
 	// the portal will use the filtered data value to render it with the tag_id locators.
 		self.data.value = self.data.value
-			? self.data.value.filter(el => el.tag_id === tag_id )
+			? self.data.value.filter(el => el.tag_id==tag_id)
 			: []
 
-	// reset status to able re-render
+	// reset status to enable re-render
 		self.status = 'builded'
 
 	// re-render always the content
