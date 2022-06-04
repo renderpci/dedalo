@@ -97,10 +97,14 @@ tool_indexation.prototype.init = async function(options) {
 		const id_base = transcription_component_ddo.section_tipo +'_'+ transcription_component_ddo.section_id +'_'+ transcription_component_ddo.tipo
 
 	// events
-		// link_term. Observe thesaurus tree link index button click
-			self.events_tokens.push(
-				event_manager.subscribe('link_term', self.create_indexation.bind(self))
-			)
+		// link_term. Observe thesaurus tree link index button click (REMOVED 04-05-2022 NOT USED ANYMORE)
+			// self.events_tokens.push(
+			// 	event_manager.subscribe('link_term', fn_create_indexation)
+			// )
+			// function fn_create_indexation(options) {
+			// 	self.create_indexation(options)
+			// }
+
 		// change_tag_state_. change tag state selector
 			self.events_tokens.push(
 				event_manager.subscribe('change_tag_state_' + self.id, fn_change_tag_state)
@@ -122,6 +126,7 @@ tool_indexation.prototype.init = async function(options) {
 						save	: true
 					})
 			}
+
 		// delete_tag_
 			self.events_tokens.push(
 				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
@@ -143,6 +148,7 @@ tool_indexation.prototype.init = async function(options) {
 					}
 				})
 			}
+
 		// click_no_tag_
 			self.events_tokens.push(
 				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
@@ -152,17 +158,19 @@ tool_indexation.prototype.init = async function(options) {
 					self.info_container.classList.add('hide')
 				}
 			}
+
 		// click_tag_index_. Observe user tag selection in text area.
-		// (!) Note subscribe uses 'id_base' instead 'self.id' to allow switch main component lang
+			// (!) Note subscribe uses 'id_base' instead 'self.id' to allow switch main component lang
 			self.events_tokens.push(
 				event_manager.subscribe('click_tag_index_'+ id_base, fn_click_tag_index)
 			)
 			function fn_click_tag_index(options) {
-				dd_console(`click_tag_index '${options}'`, 'DEBUG', options)
+				dd_console(`+++++++ click_tag_index '${options}'`, 'DEBUG', options)
 
 				// options
-					const tag_element	= options.tag // DOM node selected
-					const caller		= options.caller // instance of component text area
+					const caller			= options.caller // instance of component text area
+					const tag_element		= options.tag // DOM node selected
+					// const text_editor	= options.text_editor // not used
 
 				// fix selected tag
 					self.active_tag_id = tag_element.dataset.tag_id
@@ -523,47 +531,48 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 
 
 /**
-* CREATE_INDEXATION
+* CREATE_INDEXATION (REMOVED 04-05-2022 NOT USED ANYMORE)
 * Add a new locator value to the target indexing_component (component_relation_index usually)
 * @param object data
 * 	{ section_tipo, section_id, label } from thesaurus selected term
 * @return boolean from portal.add_value method
 */
-tool_indexation.prototype.create_indexation = async function ( data ) {
+	// tool_indexation.prototype.create_indexation = async function ( data ) {
 
-	const self = this
+	// 	const self = this
 
-	// tag_id. Previously selected by user. Check if is already selected before continue
-		const tag_id = self.active_tag_id || false
-		if(!tag_id){
-			console.warn("Needs to be selected a index tag in text to continue");
-			alert("Please select a tag");
-			// should activate the component (focus)
-			event_manager.publish('active_component', self.transcription_component)
-			return false
-		}
+	// 	// tag_id. Previously selected by user. Check if is already selected before continue
+	// 		const tag_id = self.active_tag_id || false
+	// 		if(!tag_id){
+	// 			console.warn("Must to be selected a index tag in text to continue");
+	// 			alert("Please select a tag");
+	// 			// should activate the component (focus)
+	// 			event_manager.publish('active_component', self.transcription_component)
+	// 			return false
+	// 		}
 
-	// locator value. Build from selected term section_tipo, section_id, and selected tag_id
-		const new_index_locator = {
-			section_id			: data.section_id, // thesaurus term section_id
-			section_tipo		: data.section_tipo, // thesaurus term section_tipo
-			tag_id				: tag_id, // user selected tag id
-			tag_component_tipo	: self.transcription_component.tipo, // (component_text_area tag source)
-			section_top_tipo	: self.top_locator.section_top_tipo, // the transcription_component section_tipo to the resource like oh1
-			section_top_id		: self.top_locator.section_top_id // the transcription_component section_id to the resource like 4
-		}
+	// 	// locator value. Build from selected term section_tipo, section_id, and selected tag_id
+	// 		const new_index_locator = {
+	// 			section_id			: data.section_id, // thesaurus term section_id
+	// 			section_tipo		: data.section_tipo, // thesaurus term section_tipo
+	// 			tag_id				: tag_id, // user selected tag id
+	// 			tag_component_tipo	: self.transcription_component.tipo, // (component_text_area tag source)
+	// 			section_top_tipo	: self.top_locator.section_top_tipo, // the transcription_component section_tipo to the resource like oh1
+	// 			section_top_id		: self.top_locator.section_top_id // the transcription_component section_id to the resource like 4
+	// 		}
 
-	// add value to the indexing component
-		const result = await self.indexing_component.add_value(new_index_locator)
+	// 	// add value to the indexing component
+	// 		const result = await self.indexing_component.add_value(new_index_locator)
 
-	// re-filter indexing_component data according current selected tag_id
-		self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id===tag_id )
+	// 	// re-filter indexing_component data according current selected tag_id
+	// 		self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id===tag_id )
 
-	// force render indexing_component content again (as refresh)
-		self.indexing_component.render({render_level : 'content'})
+	// 	// force render indexing_component content again (as refresh)
+	// 		self.indexing_component.render({render_level : 'content'})
 
-	return result
-}// end create_indexation
+
+	// 	return result
+	// }// end create_indexation
 
 
 

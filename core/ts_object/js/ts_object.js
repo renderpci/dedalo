@@ -2000,24 +2000,24 @@ export const ts_object = new function() {
 
 
 	/**
-	* LINK_TERM
+	* LINK_TERM (REMOVED 04-05-2022 NOT USED ANYMORE)
 	* Add link to opener window for autocomplete_hi relations
 	*/
-	this.link_term = function(button_obj) {
+		// this.link_term = function(button_obj) {
 
-		// source window. Could be different than current (like iframe)
-			const source_window = window.opener || window.parent
-			if (source_window===null) {
-				console.log("[link_term] Error on find window.opener / parent")
-				return false
-			}
+		// 	// source window. Could be different than current (like iframe)
+		// 		const source_window = window.opener || window.parent
+		// 		if (source_window===null) {
+		// 			console.log("[link_term] Error on find window.opener / parent")
+		// 			return false
+		// 		}
 
-		// publish event link_term
-			source_window.event_manager.publish('link_term_'+ self.initiator, button_obj.data)
+		// 	// publish event link_term
+		// 		source_window.event_manager.publish('link_term_'+ self.initiator, button_obj.data)
 
 
-		return true
-	};//end link_term
+		// 	return true
+		// };//end link_term
 
 
 
