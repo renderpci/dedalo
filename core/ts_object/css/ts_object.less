@@ -1,20 +1,19 @@
 // Import general vars
-@import '../../page/css/layout/vars.less';
+// @import '../../page/css/layout/vars.less';
 
 
-@line_height: 20px;
+@ts_object_line_height: 20px;
 
 // mixin
 	.inline_common {
 		display: inline-table;
 		float: left;
 		font-size: 1em;
-		height: @line_height;
+		height: @ts_object_line_height;
 	}
 
 
-/* WRAP_TS_OBJECT
-------------------------------------------------------- */
+// wrap_ts_object
 	.wrap_ts_object {
 		//background-color: rgba(198, 179, 227, 0.39);
 		//width: 100%;
@@ -45,378 +44,292 @@
 			>.children_container {
 				padding-left: 0px;
 			}
+		}//end hierarchy_root_node
+
+
+		// mixin ts_icons_all. icons common
+		.ts_icons_all {
+			background-position: center;
+			background-repeat: no-repeat;
+			background-size: 76%;
+			cursor: pointer;
+			height: @ts_object_line_height;
+			width: @ts_object_line_height;
 		}
-	}
 
-
-	/* icons COMMON (ts_icons_all)
-	------------------------------------------------------- */
-	.ts_icons_all {
-		background-position: center;
-		background-repeat: no-repeat;
-		background-size: 76%;
-		cursor: pointer;
-		height: @line_height;
-		width: @line_height;
-	}
-
-
-	/* ID_COLUMN_CONTENT
-	------------------------------------------------------- */
-	.wrap_ts_object .id_column_content {
-		.inline_common;
-		//margin-left: 5px;
-		opacity: 0.5;
+		.id_column_content {
+			.inline_common;
+			//margin-left: 5px;
+			opacity: 0.5;
 		}
-		.wrap_ts_object .id_column_content > * {
-			//display: none !important;
-		}
-		/* all links
-		------------------------------------------------------- */
-		.wrap_ts_object .id_column_link {
+
+		.id_column_link {
 			display: inline-table;
 			float: left;
     		height: 1.4em;
+
+    		&:active {
+    			opacity: 0.5;
+    		}
+		}
+
+		a.id_column_link div {
+			height: @ts_object_line_height;
+			//vertical-align: middle;
+			//margin-top: 5px;
+			margin-right: 6px;
+		}
+
+		.ts_object_add_icon {
+			.ts_icons_all;
+			background-image: url('../../themes/default/icons/add.svg');
+			&:hover {
+				background-color: #b5a83a;
+				border-radius: 3px;
+				filter: invert(100%);
 			}
-			/* all buttons inside a link
-			------------------------------------------------------- */
-			.wrap_ts_object a.id_column_link div {
-				height: @line_height;
-				//vertical-align: middle;
-				//margin-top: 5px;
-				margin-right: 6px;
+		}
+
+		 // drag_button
+		.ts_object_drag {
+			margin-right: 4px;
+		}
+		.ts_object_drag_icon {
+			.ts_icons_all;
+			background-image: url('../../themes/default/icons/move.svg');
+			&:hover {
+				background-color: #b5a83a;
+				border-radius: 3px;
+				filter: invert(100%);
+				//cursor: move;
 			}
+		}
 
+		 // delete_button
+		.ts_object_delete {
+			//width: 25%;
+			//margin-right: 3px;
+			.ts_object_delete_icon {
+				.ts_icons_all;
+				//background-image: url(../../themes/default/icon_delete.svg);
+				//background-size: 52%;
+				background-image: url('../../themes/default/icons/trash.svg');
+				background-size: 76%;
+				margin-right: 2px;
 
-			/* ADD_BUTTON
-			------------------------------------------------------- */
-			.wrap_ts_object .ts_object_add {
-				//width: 25%;
-				//margin-right: 3px;
-				}
-				.ts_object_add_icon {
-					/*
-					background-color: #000000;
-					-webkit-mask:  url(../../../themes/default/add.svg) no-repeat 50% 50%;
-					mask: url(../../../themes/default/add.svg) no-repeat 50% 50%;
-					*/
-					.ts_icons_all;
-					background-image: url('../../themes/default/icons/add.svg');
-					// padding: 6px;
-
-					&:hover {
-						background-color: #B5A83A;
-						border-radius: 3px;
-						filter: invert(100%);
-					}
-				}
-
-
-
-
-			/* DRAG_BUTTON
-			------------------------------------------------------- */
-			.wrap_ts_object .ts_object_drag {
-				margin-right: 4px;
-				}
-				.ts_object_drag_icon {
-					/*
-					background-color: #000000;
-					-webkit-mask:  url(../../../themes/default/add.svg) no-repeat 50% 50%;
-					mask: url(../../../themes/default/add.svg) no-repeat 50% 50%;
-					*/
-					.ts_icons_all;
-						background-image: url('../../themes/default/icons/move.svg');
-					}
-					.ts_object_drag_icon:hover {
-						background-color: #b5a83a;
-						border-radius: 3px;
-						filter: invert(100%);
-						//cursor: move;
-					}
-
-
-
-			/* DELETE_BUTTON
-			------------------------------------------------------- */
-			.wrap_ts_object .ts_object_delete {
-				//width: 25%;
-				//margin-right: 3px;
-				}
-				.wrap_ts_object .ts_object_delete .ts_object_delete_icon {
-					/*
-					background-color: #000000;
-					-webkit-mask:  url(../../../themes/default/icon_delete.svg) no-repeat 50% 50%;
-					mask: url(../../../themes/default/icon_delete.svg) no-repeat 50% 50%;
-					*/
-					.ts_icons_all;
-					//background-image: url(../../themes/default/icon_delete.svg);
-					//background-size: 52%;
-					background-image: url('../../themes/default/icons/trash.svg');
-					background-size: 76%;
-					margin-right: 2px;
-					}
-					.wrap_ts_object .ts_object_delete .ts_object_delete_icon:hover {
-						background-color: #3dfff5;
-						border-radius: 3px;
-						filter: invert(100%);
-					}
-
-
-
-			/* ORDER_NUMBER
-			------------------------------------------------------- */
-			.wrap_ts_object .ts_object_order_number {
-				min-width: 14px;
-				text-align: right;
-				padding-top: 3px;
-				margin-right: 3px;
-				font-size: 9px;
-				font-family: monospace;
-				//background-color: aqua;
-			}
-			.input_order {
-				text-align: center;
-				width: 22px;
-				margin-right: 5px;
-				margin-left: 3px;
-				//background-color: black;
-				border: 1px solid #FD7F26;
-				border-radius: 2px;
-				//color: #ffffff;
-				opacity: 1 !important;
-				position: relative;
-				top: 1px;
-			}
-
-
-
-			/* EDIT_BUTTON
-			------------------------------------------------------- */
-			.wrap_ts_object .ts_object_edit {
-				//width: 50%;
-				}
-				.wrap_ts_object .ts_object_edit:hover {
-					background-color: #ff7ef3;
+				&:hover {
+					background-color: #3dfff5;
 					border-radius: 3px;
 					filter: invert(100%);
 				}
-				/* ID NUMBER
-				------------------------------------------------------- */
-				.wrap_ts_object .ts_object_edit .ts_object_section_id_number {
-					height: @line_height;
-					//min-width: 42px;
-					min-width: 36px;
-					float: left;
-					padding: 2px;
-					font-size: 1.05em;
-					padding-right: 4px;
-					text-align: right;
-					display: none;
-				}
-				/* EDIT_ICON
-				------------------------------------------------------- */
-				.wrap_ts_object .ts_object_edit .ts_object_edit_icon {
-					float: left;
-					background-image: url('../../themes/default/icons/icon_edit.svg');
-					background-repeat: no-repeat;
-					background-size: 70%;
-    				background-position: center;
-					width: 24px;
-					height: @line_height;
-					cursor: pointer;
-					}
-					.wrap_ts_object .ts_object_edit .ts_object_edit_icon:hover {
-
-					}
-				/* RELATED_ICON
-				------------------------------------------------------- */
-				.wrap_ts_object .ts_object_related {
-
-					}
-					.wrap_ts_object .ts_object_related .ts_object_related_icon {
-						background-position: -336px -94px;
-						opacity: 1;
-						overflow: hidden;
-						zoom: 1.25;
-						//top: 1px;
-						//background-color: #FDEAC9;
-						}
-						.wrap_ts_object .ts_object_related .ts_object_related_icon:active {
-							opacity: 0.4;
-						}
-
-
-
-
-	/* ELEMENTS_CONTAINER
-	------------------------------------------------------- */
-	.wrap_ts_object .elements_container {
-		.inline_common;
-		min-width: 150px;
-		margin-left: 0px;
-		min-height: 22px;
+			}
 		}
-		/* LIST_THESAURUS COMMONS
-		------------------------------------------------------- */
-		.wrap_ts_object .elements_container .list_thesaurus_element {
-			display: table-cell;
-			min-width: 24px;
-			padding: 0px;
-			padding: 2px;
-			//padding-left: 5px;
-			padding-right: 5px;
-			font-size: 1.1em;
+
+		 // order_number
+		.ts_object_order_number {
+			min-width: 14px;
+			text-align: right;
+			padding-top: 3px;
+			margin-right: 3px;
+			font-size: 9px;
+			font-family: monospace;
+			//background-color: aqua;
+		}
+		.input_order {
 			text-align: center;
-			vertical-align: middle;
-			cursor: pointer;
-			border-left: 1px solid #c3c3c3;
-
-			// En pruebas
-			width: 29px;
-			vertical-align: top;
-
-			//padding-top: 4px;
-			//font-family: 'Menlo',monospace;
-			opacity: 0.3;
-			}
-			.wrap_ts_object .elements_container .list_thesaurus_element:hover {
-				//font-weight: bolder;
-				color: #ef7d00 !important;
-				opacity: 1;
-			}
-		/* LIST_THESAURUS SPECIFICS
-		------------------------------------------------------- */
-
-		/* TERM
-		------------------------------------------------------- */
-		.wrap_ts_object .elements_container .list_thesaurus_element[data-type='term'] {
-			//background-color: #FEFF33;
-			border: 0px;
-			//min-width: 200px;
-			opacity: 1;
-			text-align: left;
-			white-space: nowrap;
-		}
-		/* TERM HILITE
-		------------------------------------------------------- */
-		.element_hilite > span {
-			background-color: #FFEF3D;
-			color: #000000;
-			padding-left: 7px;
-			padding-right: 7px;
-			margin-left: -7px;
-		}
-		.wrap_ts_object .elements_container .id_info {
-			color: #a6a6a6;
-			font-size: 80%;
-			/* font-family: 'Menlo',monospace; */
-			/* word-wrap: break-word; */
-			vertical-align: sub;
-			position: relative;
-			top: -1px;
-			padding-left: 5px;
-			padding-right: 10px;
-			user-select: auto;
-		}
-
-		/* ORDER NUMBER
-		------------------------------------------------------- *//*
-		.wrap_ts_object .elements_container .list_thesaurus_element[data-type='link'] {
-			//background-color: #FEFF33;
-			border: none;
-			margin: 0;
-			padding-left: 2px;
-			padding-right: 3px;
-			width: 24px;
-			opacity: 1;
-		}*/
-
-		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy40'],
-		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy91'] {
-			background-color: @color_grey_medium;
-			opacity: 0.8;
-			border: 0px;
-			padding-left: 4px;
-			padding-right: 3px;
-			color: #717171;
-			border-radius: 3px;
-			/* line-height: 1em; */
-			display: inline-block;
-			/* padding: 0; */
-			margin: 0px;
-			height: 19px;
-			width: initial;
-			font-size: 12px;
+			width: 22px;
 			margin-right: 5px;
-			}
-			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy40']:hover,
-			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo='hierarchy91']:hover {
-				background-color: #ffb666;
-				color: #ffffff !important;
-			}
-
-
-		/* TS_OBJECT_CHILDREN_ARROW_ICON
-		---------------------------------------- */
-		.term_img {
-			padding: 0px !important;
-		}
-		.term_img > img {
-			height: 22px;
-		}
-
-
-
-		/* TS_OBJECT_CHILDREN_ARROW_ICON
-		---------------------------------------- */
-		@triangle_color:#ff8600;
-		.triangle_down {
-			width: 0px;
-			height: 0px;
-			border-style: solid;
-			border-width: 10.4px 6px 0px 6px;
-			border-color: @triangle_color transparent transparent transparent;
-		}
-		.triangle_right {
-			height: 0px;
-			width: 0px;
-			border-style: solid;
-			border-width: 6px 0px 6px 10.4px;
-			border-color: transparent transparent transparent @triangle_color;
-		}
-		.wrap_ts_object .elements_container .ts_object_children_arrow_icon {
-			//background-color: #C5C5C5;
-			//padding: 1px;
-			//border-radius: 3px;
-			//top: -1px;
-			//color: #FF6900;
-			//line-height: 1.4em;
-			height: 1.4em;
+			margin-left: 3px;
+			//background-color: black;
+			border: 1px solid #FD7F26;
+			border-radius: 2px;
+			//color: #ffffff;
+			opacity: 1 !important;
 			position: relative;
-			width: 1.4em;
-			margin: 3px;
-			.triangle_right;
-			opacity: 0.6;
+			top: 1px;
+		}
+
+		 // edit_button
+		.ts_object_edit {
+			//width: 50%;
+			&:hover {
+				background-color: #ff7ef3;
+				border-radius: 3px;
+				filter: invert(100%);
 			}
-			/*.ts_object_children_arrow_icon:before{
-				content: ' > ';//▶︎▼
-				display: block;
-				font-size: 1.4em;
-			}*/
-			.wrap_ts_object .elements_container .ts_object_children_arrow_icon:hover {
-				//background-color: #C9C9C9
+			 // id number
+			.ts_object_section_id_number {
+				height: @ts_object_line_height;
+				//min-width: 42px;
+				min-width: 36px;
+				float: left;
+				padding: 2px;
+				font-size: 1.05em;
+				padding-right: 4px;
+				text-align: right;
+				display: none;
+			}
+
+			// edit_icon
+			.ts_object_edit_icon {
+				background-image: url('../../themes/default/icons/icon_edit.svg');
+				background-repeat: no-repeat;
+				background-size: 70%;
+				background-position: center;
+				float: left;
+				width: 24px;
+				height: @ts_object_line_height;
+				cursor: pointer;
+			}
+		}//end ts_object_edit
+
+		// related_icon
+		.ts_object_related {
+
+			.ts_object_related_icon {
+				background-position: -336px -94px;
 				opacity: 1;
+				overflow: hidden;
+				zoom: 1.25;
+				//top: 1px;
+				//background-color: #FDEAC9;
+
+				&:active {
+					opacity: 0.4;
+				}
 			}
-			.wrap_ts_object .elements_container .ts_object_children_arrow_icon_open {
-				//  -webkit-transform: rotate(90deg);
-				//   transform: rotate(90deg);
+		}//end .ts_object_related
+
+
+		 // elements_container
+		.elements_container {
+			.inline_common;
+			min-width: 150px;
+			margin-left: 0px;
+			min-height: 22px;
+
+			// list_thesaurus commons
+			.list_thesaurus_element {
+				display: table-cell;
+				min-width: 24px;
+				padding: 0px;
+				padding: 2px;
+				//padding-left: 5px;
+				padding-right: 5px;
+				font-size: 1.1em;
+				text-align: center;
+				vertical-align: middle;
+				cursor: pointer;
+				border-left: 1px solid #c3c3c3;
+
+				// En pruebas
+				width: 29px;
+				vertical-align: top;
+
+				//padding-top: 4px;
+				//font-family: 'Menlo',monospace;
+				opacity: 0.3;
+
+				&:hover {
+					color: #ef7d00 !important;
+					opacity: 1;
+				}
+
+				mark {
+					color: #333333 !important;
+					font-style: italic;
+				}
+			}
+
+			// term
+			.list_thesaurus_element[data-type='term'] {
+				//background-color: #FEFF33;
+				border: 0px;
+				//min-width: 200px;
+				opacity: 1;
+				text-align: left;
+				white-space: nowrap;
+			}
+
+			.element_hilite > span {
+				background-color: #FFEF3D;
+				color: #000000;
+				padding-left: 7px;
+				padding-right: 7px;
+				margin-left: -7px;
+			}
+
+			.id_info {
+				color: #a6a6a6;
+				font-size: 80%;
+				/* font-family: 'Menlo',monospace; */
+				/* word-wrap: break-word; */
+				vertical-align: sub;
+				position: relative;
+				top: -1px;
+				padding-left: 5px;
+				padding-right: 10px;
+				user-select: auto;
+			}
+
+			.list_thesaurus_element[data-tipo='hierarchy40'],
+			.list_thesaurus_element[data-tipo='hierarchy91'] {
+				background-color: @color_grey_medium;
+				opacity: 0.8;
+				border: 0px;
+				padding-left: 4px;
+				padding-right: 3px;
+				color: #717171;
+				border-radius: 3px;
+				display: inline-block;
+				margin: 0px;
+				height: 19px;
+				width: initial;
+				font-size: 12px;
+				margin-right: 5px;
+
+				&:hover {
+					background-color: #ffb666;
+					color: #ffffff !important;
+				}
+			}
+
+			// ts_object_children_arrow_icon mixins
+			@triangle_color:#ff8600;
+			.triangle_down {
+				width: 0px;
+				height: 0px;
+				border-style: solid;
+				border-width: 10.4px 6px 0px 6px;
+				border-color: @triangle_color transparent transparent transparent;
+			}
+			.triangle_right {
+				height: 0px;
+				width: 0px;
+				border-style: solid;
+				border-width: 6px 0px 6px 10.4px;
+				border-color: transparent transparent transparent @triangle_color;
+			}
+
+			.ts_object_children_arrow_icon {
+				height: 1.4em;
+				position: relative;
+				width: 1.4em;
+				margin: 3px;
+				.triangle_right;
+				opacity: 0.6;
+				&:hover {
+					opacity: 1;
+				}
+			}
+
+			.ts_object_children_arrow_icon_open {
 				.triangle_down;
 				left: -2px;
 				top: 1px;
 			}
-			.wrap_ts_object .elements_container .arrow_spinner {
-				//background-color: aqua;
+
+			.arrow_spinner {
 				background: url('../../themes/default/icons/spinner.svg');
 				background-repeat: no-repeat;
 				border: 0px;
@@ -424,140 +337,134 @@
 				width: 20px;
 				top: 0px;
 				left: 0px;
-				/* background-color: aqua; */
 				padding: 0px;
 				margin: 0px;
 			}
-			.wrap_ts_object .elements_container .arrow_unactive {
+
+			.arrow_unactive {
 				display: none;
 			}
-			.wrap_ts_object .elements_container [data-type='link_children'] {
+
+			[data-type='link_children'] {
 				border: 0px;
 				opacity: 1;
 			}
 
+			// nd_button
+			.list_thesaurus_element[data-type='link_children_nd'] {
+				//background-color: #E1F01B
+			}
+
+		}//end .elements_container
 
 
-	/* DATA_CONTAINER
-	------------------------------------------------------- */
-	.wrap_ts_object .data_container {
-		background-color: rgba(156, 156, 156, 0.15);
-		.inline_common ;
-		width: 100%;
-		height: 0px;
+		 // ts_object_children_arrow_icon
+		.term_img {
+			padding: 0px !important;
+
+			>img {
+				height: 22px;
+			}
 		}
-		/* only first level of inside divs
-		------------------------------------------------------- */
-		.wrap_ts_object .data_container > div {
-			padding: 10px;
-			border-bottom: 1px solid #c2c2c2;
-			float: left;
+
+
+		// data_container
+		.data_container {
+			background-color: rgba(156, 156, 156, 0.15);
+			.inline_common ;
+			width: 100%;
+			height: 0px;
+
+			 // only first level of inside divs
+			> div {
+				padding: 10px;
+				border-bottom: 1px solid #c2c2c2;
+				float: left;
+				width: 100%;
+			}
+			 // all components showed inside
+			.wrap_component {
+				min-height: initial;
+				padding: 0px;
+			}
+		}//end .data_container
+
+
+		// children_container
+		.children_container {
+			//background-color: rgba(248, 182, 175, 0.49);
+			.inline_common ;
+			height: 0px;
+			padding-left: 27px;
+			width: 100%;
+			//margin-left: 30px-3;
+		}
+
+		// children_toogle_view
+		.removed_from_view {
+			display: none;
+		}
+
+		// nd_container
+		.nd_container {
+			display: none;
+			.inline_common ;
+			height: 0px;
+			margin-left: 50px;
 			width: 100%;
 		}
-		/* All components showed inside
-		------------------------------------------------------- */
-		.wrap_ts_object .data_container .wrap_component {
-			min-height: initial;
-			padding: 0px;
+
+		// indexations_container
+		.indexations_container {
+			.inline_common ;
+			height: 0px;
+			width: 100%;
+
+			.css_spinner {
+				float: left;
+				width: 21px;
+				margin-left: 80px;
+				min-height: 24px;
+			}
+			.blink {
+				position: relative;
+				top: 2px;
+				color: #727272;
+				font-size: 13px;
+			}
+		}//end .indexations_container
+
+		// drag and drop
+		.drag_over > .elements_container {
+			// background-color: rgb(236, 236, 236);
+			background-color: #4a57c5;
+			border-radius: 3px;
+			color: #ffffff;
 		}
 
-
-
-	/* CHILDREN_CONTAINER
-	------------------------------------------------------- */
-	.wrap_ts_object .children_container {
-		//background-color: rgba(248, 182, 175, 0.49);
-		.inline_common ;
-		height: 0px;
-		padding-left: 27px;
-		width: 100%;
-		//margin-left: 30px-3;
-	}
-
-	/* CHILDREN_TOOGLE_VIEW
-	------------------------------------------------------- */
-	.wrap_ts_object .removed_from_view {
-		display: none;
-	}
-
-
-
-	/* ND_BUTTON
-	------------------------------------------------------- */
-	.wrap_ts_object .elements_container .list_thesaurus_element[data-type='link_children_nd'] {
-		//background-color: #E1F01B
+		// no_descriptor term span
+		.no_descriptor {
+			color: #a5a5a5;
+			&:before {
+				content: '[ND] ';
+			}
 		}
 
-	/* ND_CONTAINER
-	------------------------------------------------------- */
-	.wrap_ts_object .nd_container {
-		.inline_common ;
-		height: 0px;
-		margin-left: 50px;
-		width: 100%;
-		//background-color: #81F4F0;
-		//min-height: 20px;
-		display: none;
+		.wrap_ts_object_nd {
+			background-color: #f5f5f5;
+			color: #797979;
+			padding: 2px;
+			padding-left: 0px;
+			padding-right: 0px;
+	    	width: auto;
+			//opacity: 0.7;
+
+			> .id_column_content > .ts_object_edit {
+				margin-left: 17px;
+			}
 		}
 
-	/* NO_DESCRIPTOR TERM SPAN
-	------------------------------------------------------- */
-	//.wrap_ts_object .elements_container .list_thesaurus_element:has(span)  {
-	.no_descriptor {
-		// opacity: 0.5;
-		// text-transform: inherit;
-		// font-style: italic;
-		color: #a5a5a5;
-		}
-		.no_descriptor:before {
-			content: '[ND] ';
-		}
-
-	.wrap_ts_object_nd > .id_column_content > .ts_object_edit {
-		margin-left: 17px;
-	}
-
-
-
-
-	/* INDEXATIONS_CONTAINER
-	------------------------------------------------------- */
-	.wrap_ts_object .indexations_container {
-		//background-color: rgba(195, 248, 213, 0.57);
-		.inline_common ;
-		height: 0px;
-		width: 100%;
-
-		.css_spinner {
-			float: left;
-			width: 21px;
-			margin-left: 80px;
-			min-height: 24px;
-		}
-		.blink {
-			position: relative;
-			top: 2px;
-			color: #727272;
-			font-size: 13px;
-		}
-	}
-
-
-
-
-	.wrap_ts_object_nd {
-		background-color: #f5f5f5;
-		color: #797979;
-		padding: 2px;
-		padding-left: 0px;
-		padding-right: 0px;
-    	width: auto;
-		//opacity: 0.7;
-	}
-
-
-
-	// loading
+		// loading
 		.loading_list_thesaurus_data {
 			min-height: 42px;
 			//background-color: transparent !important;
@@ -575,29 +482,9 @@
 			}
 		}
 
-
-
 		.visible_element {
 			background-color: #81c943;
 			visibility: visible !important;
 		}
 
-
-	/* DRAG AND DROP
-	------------------------------------------------------- */
-	.drag_over > .elements_container {
-		// background-color: rgb(236, 236, 236);
-		background-color: #4a57c5;
-  		border-radius: 3px;
-  		color: #ffffff;
-	}
-
-
-
-
-	.list_thesaurus_element mark {
-		color: #333333 !important;
-		font-style: italic;
-	}
-
-
+	}//end .wrap_ts_object
