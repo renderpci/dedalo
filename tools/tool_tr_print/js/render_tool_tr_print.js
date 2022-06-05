@@ -50,10 +50,6 @@ render_tool_tr_print.prototype.edit = async function(options={render_level:'full
 		const tanscription_options = await render_head_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
 
-	// render_activity_info are the information of the activity as "Save"
-		const activity_info = render_activity_info(self)
-		wrapper.activity_info_container.appendChild(activity_info)
-
 	// render the text process options to interact with user
 		const process_options = render_text_process_options(self, content_data)
 		content_data.left_container.appendChild(process_options)
@@ -80,11 +76,21 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// right_container
+
 		const right_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'right_container',
 			parent 			: fragment
 		})
+			const right_container_head = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'right_container_head',
+				parent 			: right_container
+			})
+			const header_node = render_header(self)
+			if(header_node){
+				right_container_head.appendChild(header_node)
+			}
 			const right_container_text = ui.create_dom_element({
 				element_type	: 'div',
 				class_name 		: 'right_container_text',
@@ -105,10 +111,12 @@ const get_content_data_edit = async function(self) {
 			element_type	: 'div'
 		})
 		content_data.appendChild(fragment)
+
 		// save the pointers of the content_data nodes, to used by the buttons to access to the components
 		content_data.left_container			= left_container
 		content_data.right_container		= right_container
 		content_data.right_container_text	= right_container_text
+
 
 	return content_data
 };//end get_content_data_edit
@@ -144,247 +152,498 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'lang_selector',
 			parent			: fragment
 		})
-		const lang_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'lang_label',
-			inner_html 		: get_label.idioma || 'Language',
-			parent 			: lang_container
-		})
+			const lang_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'lang_label',
+				inner_html 		: get_label.idioma || 'Language',
+				parent 			: lang_container
+			})
 		// the lang selector use the content_data pointer .right_container to remove the transcription text_area and rebuild the new node
-		const lang_selector = ui.build_select_lang({
-			id			: "index_lang_selector",
-			selected	: self.lang,
-			class_name	: 'dd_input',
-			action		: async function(e){
-				// create new one
-				self.transcription_component	= await self.get_component(e.target.value)
-				self.lang						= e.target.value
-				self.ar_raw_data				= self.transcription_component.data.value
+			const lang_selector = ui.build_select_lang({
+				id			: "index_lang_selector",
+				selected	: self.lang,
+				class_name	: 'dd_input',
+				action		: async function(e){
+					// create new one
+					self.transcription_component	= await self.get_component(e.target.value)
+					self.lang						= e.target.value
+					self.ar_raw_data				= self.transcription_component.data.value
 
-				const node_len 	= self.ar_raw_data.length
-				for (var i = 0; i < node_len; i++) {
-					const raw_data = self.ar_raw_data[i]
-					const text_node = self.tags_to_html(raw_data)
 					// remove previous nodes
-					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
-						content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
+						while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+							content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
+						}
+
+					const node_len 	= self.ar_raw_data.length
+					for (let i = 0; i < node_len; i++) {
+						const raw_data = self.ar_raw_data[i]
+						const text_node = self.tags_to_html(raw_data)
+						// add the new one
+						content_data.right_container_text.insertAdjacentHTML("beforeend", text_node);
 					}
-					// add the new one
-					content_data.right_container_text.insertAdjacentHTML("beforeend", text_node);
+
 				}
-
-			}
-		})
+			})
 		lang_container.appendChild(lang_selector)
-
 
 	// OPTIONS
 	// header_option_container
-	const header_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
+		const header_option_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'option_container',
+				parent			: fragment
 		})
-		const header_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'header_option',
-			parent 			: header_option_container
-		})
-		const header_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'header_option_label',
-			inner_html 		: get_label.cabecera || 'Header',
-			parent 			: header_option_container
-		})
-	// timecodes_option_container
-	const timecodes_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const timecodes_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'timecodes_option',
-			parent 			: timecodes_option_container
-		})
-		const timecodes_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'timecodes_option_label',
-			inner_html 		: get_label.timecodes || 'Time Codes',
-			parent 			: timecodes_option_container
-		})
-	// persons_option_container
-	const persons_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const persons_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'persons_option',
-			parent 			: persons_option_container
-		})
-		const persons_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'persons_option_label',
-			inner_html 		: get_label.personas || 'Persons',
-			parent 			: persons_option_container
-		})
-	// indexations_option_container
-	const indexations_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const indexations_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'indexations_option',
-			parent 			: indexations_option_container
-		})
-		const indexations_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'indexations_option_label',
-			inner_html 		: get_label.indexations || 'Indexations',
-			parent 			: indexations_option_container
-		})
-	// indexations_info_option_container
-	const indexations_info_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const indexations_info_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'indexations_info_option',
-			parent 			: indexations_info_option_container
-		})
-		const indexations_info_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'indexations_info_option_label',
-			inner_html 		: get_label.indexations_info || 'Indexations info',
-			parent 			: indexations_info_option_container
-		})
-	// lines_option_container
-	const lines_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const lines_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'lines_option',
-			parent 			: lines_option_container
-		})
-		const lines_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'lines_option_label',
-			inner_html 		: get_label.lines || 'Lines',
-			parent 			: lines_option_container
-		})
-	// default_view_option_container
-	const default_view_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const default_view_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'default_view_option',
-			parent 			: default_view_option_container
-		})
-		const default_view_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'default_view_option_label',
-			inner_html 		: get_label.default || 'Default',
-			parent 			: default_view_option_container
-		})
-		default_view_option.addEventListener('change', function(event) {
-			const ar_default_render = render_default(self)
-			// remove previous nodes
-				// while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
-				// 	content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
-				// }
-			const ar_render_len = ar_default_render.length
-			for (let i = 0; i < ar_render_len; i++) {
-					// console.log("ar_default_render[i]:--------------",ar_default_render[i]);
-				content_data.right_container_text.insertAdjacentHTML("beforeend", ar_default_render[i]);
+			const header_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'header_option',
+				parent 			: header_option_container
+			})
+			header_option.checked = true
+			const header_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'header_option_label',
+				inner_html 		: get_label.cabecera || 'Header',
+				parent 			: header_option_container
+			})
+		header_option_container.addEventListener('change',async function(){
+			const header_elements = content_data.querySelector('.right_container_head')
+
+			if(!header_elements){
+				return
 			}
-				// add the new one
 
-		})
-	// original_view_option_container
-	const original_view_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const original_view_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'original_view_option',
-			parent 			: original_view_option_container
-		})
-		const original_view_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'original_view_option_label',
-			inner_html 		: get_label.original || 'Original',
-			parent 			: original_view_option_container
-		})
-	// text_only_view_option_container
-	const text_only_view_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const text_only_view_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'text_only_view_option',
-			parent 			: text_only_view_option_container
-		})
-		const text_only_view_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'text_only_view_option_label',
-			inner_html 		: get_label.text_only || 'Text only',
-			parent 			: text_only_view_option_container
-		})
-	// source_view_option_container
-	const source_view_option_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'option_container',
-			parent			: fragment
-		})
-		const source_view_option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			class_name 		: 'source_view_option',
-			parent 			: source_view_option_container
-		})
-		const source_view_option_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name 		: 'source_view_option_label',
-			inner_html 		: get_label.source || 'Source',
-			parent 			: source_view_option_container
+			if (header_option.checked===true) {
+				header_elements.style.display = ''
+			}else{
+				header_elements.style.display = 'none'
+			}
 		})
 
+	// timecodes_option_container
+		const timecodes_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+			const timecodes_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'timecodes_option',
+				parent 			: timecodes_option_container
+			})
+			// default checked
+			timecodes_option.checked = true
+			const timecodes_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'timecodes_option_label',
+				inner_html 		: get_label.timecodes || 'Time Codes',
+				parent 			: timecodes_option_container
+			})
+
+		timecodes_option_container.addEventListener('change',function(){
+			const tc_elements = content_data.querySelectorAll('.tc')
+			const len = tc_elements.length
+			//console.log(tc_elements);
+
+			if (timecodes_option.checked===true) {
+				for (let i = len - 1; i >= 0; i--) {
+					tc_elements[i].style.display = ''
+				}
+			}else{
+				for (let i = len - 1; i >= 0; i--) {
+					tc_elements[i].style.display = 'none'
+				}
+			}
+		})
+
+	// persons_option_container
+		const persons_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+			const persons_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'persons_option',
+				parent 			: persons_option_container
+			})
+			// default checked
+			persons_option.checked = true
+			const persons_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'persons_option_label',
+				inner_html 		: get_label.personas || 'Persons',
+				parent 			: persons_option_container
+			})
+
+		persons_option_container.addEventListener('change',function(){
+			const person_elements = content_data.querySelectorAll('.person')
+			const len = person_elements.length
+			//console.log(tc_elements);
+
+			if (persons_option.checked===true) {
+				for (let i = len - 1; i >= 0; i--) {
+					person_elements[i].style.display = ''
+				}
+			}else{
+				for (let i = len - 1; i >= 0; i--) {
+					person_elements[i].style.display = 'none'
+				}
+			}
+		})
+
+	// indexations_option_container
+		const indexations_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+			const indexations_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'indexations_option',
+				parent 			: indexations_option_container
+			})
+			// default checked
+			indexations_option.checked = true
+			const indexations_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'indexations_option_label',
+				inner_html 		: get_label.indexations || 'Indexations',
+				parent 			: indexations_option_container
+			})
+
+		indexations_option_container.addEventListener('change',function(){
+			const index_elements = content_data.querySelectorAll('.index')
+			const len = index_elements.length
+			//console.log(tc_elements);
+
+			if (indexations_option.checked===true) {
+				for (let i = len - 1; i >= 0; i--) {
+					index_elements[i].style.display = ''
+				}
+			}else{
+				for (let i = len - 1; i >= 0; i--) {
+					index_elements[i].style.display = 'none'
+				}
+			}
+		})
+
+	// indexations_info_option_container
+		const indexations_info_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+			const indexations_info_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'indexations_info_option',
+				parent 			: indexations_info_option_container
+			})
+			// default checked
+			indexations_info_option.checked = true
+			const indexations_info_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'indexations_info_option_label',
+				inner_html 		: get_label.indexations_info || 'Indexations info',
+				parent 			: indexations_info_option_container
+			})
+
+		indexations_info_option_container.addEventListener('change',function(){
+
+			const data_block = content_data.querySelector('.data_block')
+			if (!data_block){
+				return
+			}
+			if (indexations_info_option.checked===true) {
+				data_block.classList.remove('hidden_column_index')
+			}else{
+				data_block.classList.add('hidden_column_index')
+			}
+
+			const indexations_block = content_data.querySelectorAll('.left_block')
+			const len = indexations_block.length
+
+			if (!indexations_block){
+				return
+			}
+			if (indexations_info_option.checked===true) {
+				for (let i = len - 1; i >= 0; i--) {
+					indexations_block[i].style.display = ''
+				}
+			}else{
+				for (let i = len - 1; i >= 0; i--) {
+					indexations_block[i].style.display = 'none'
+				}
+			}
+		})
+
+	// Annotations_option_container
+		const annotations_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+			const annotations_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'annotations_option',
+				parent 			: annotations_option_container
+			})
+			// default checked
+			annotations_option.checked = true
+			const annotations_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'annotations_option_label',
+				inner_html 		: get_label.annotations || 'Annotations',
+				parent 			: annotations_option_container
+			})
+
+		annotations_option_container.addEventListener('change',function(){
+
+			const note_elements = content_data.querySelectorAll('.note')
+			const len = note_elements.length
+			//console.log(tc_elements);
+
+			if (annotations_option.checked===true) {
+				for (let i = len - 1; i >= 0; i--) {
+					note_elements[i].style.display = ''
+				}
+			}else{
+				for (let i = len - 1; i >= 0; i--) {
+					note_elements[i].style.display = 'none'
+				}
+			}
+		})
+
+	// Lang_option_container
+		const lang_option_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+			const lang_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'lang_option',
+				parent 			: lang_option_container
+			})
+			// default checked
+			lang_option.checked = true
+			const lang_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'lang_option_label',
+				inner_html 		: get_label.languages || 'Languages',
+				parent 			: lang_option_container
+			})
+
+		lang_option_container.addEventListener('change',function(){
+
+			const lang_elements = content_data.querySelectorAll('.lang')
+			const len = lang_elements.length
+			//console.log(tc_elements);
+
+			if (lang_option.checked===true) {
+				for (let i = len - 1; i >= 0; i--) {
+					lang_elements[i].style.display = ''
+				}
+			}else{
+				for (let i = len - 1; i >= 0; i--) {
+					lang_elements[i].style.display = 'none'
+				}
+			}
+		})
+
+	// lines_option_container
+		const lines_option_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'option_container',
+				parent			: fragment
+			})
+			const lines_option = ui.create_dom_element({
+				element_type	: 'input',
+				type 			: 'checkbox',
+				class_name 		: 'lines_option',
+				parent 			: lines_option_container
+			})
+			// default checked
+			lines_option.checked = false
+			const lines_option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'lines_option_label',
+				inner_html 		: get_label.lines || 'Lines',
+				parent 			: lines_option_container
+			})
+			lines_option_container.addEventListener('change',function(){
+
+				function get_parent_block(current_node) {
+					if(current_node.classList.contains('right_container_text')){
+						return null
+					}
+					if(current_node.classList.contains('right_block')){
+						return current_node
+					}
+					return get_parent_block(current_node.parentNode)
+				}
+
+				const fragment_elements = content_data.querySelectorAll('.tc')
+				const len = fragment_elements.length
+
+				if(!fragment_elements){
+					return
+				}
+
+				if (lines_option.checked===true) {
+					for (let i = len - 1; i >= 0; i--) {
+						const right_block = get_parent_block(fragment_elements[i].parentNode)
+						if(right_block && i > 0){
+							right_block.classList.add('border_top')}
+						}
+				}else{
+					for (let i = len - 1; i >= 0; i--) {
+						const right_block = get_parent_block(fragment_elements[i].parentNode)
+						if(right_block){
+							right_block.classList.remove('border_top')
+						}
+					}
+				}
+			})
+
+	// text options container
+		const text_option_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'option_container',
+				parent			: fragment
+			})
+
+			// default_view_option_container
+			const default_view_option_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'option_container',
+					parent			: text_option_container
+				})
+				const default_view_option = ui.create_dom_element({
+					element_type	: 'input',
+					type 			: 'radio',
+					class_name 		: 'default_view_option',
+					name 			: 'text_option',
+					parent 			: default_view_option_container
+				})
+				const default_view_option_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name 		: 'default_view_option_label',
+					inner_html 		: get_label.default || 'Default',
+					parent 			: default_view_option_container
+				})
+			// original_view_option_container
+			const original_view_option_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'option_container',
+					parent			: text_option_container
+				})
+				const original_view_option = ui.create_dom_element({
+					element_type	: 'input',
+					type 			: 'radio',
+					class_name 		: 'original_view_option',
+					name 			: 'text_option',
+					parent 			: original_view_option_container
+				})
+				// default checked
+				original_view_option.checked = true
+				const original_view_option_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name 		: 'original_view_option_label',
+					inner_html 		: get_label.original || 'Original',
+					parent 			: original_view_option_container
+				})
+			// source_view_option_container
+			const source_view_option_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'option_container',
+					parent			: text_option_container
+				})
+				const source_view_option = ui.create_dom_element({
+					element_type	: 'input',
+					type 			: 'radio',
+					class_name 		: 'source_view_option',
+					name 			: 'text_option',
+					parent 			: source_view_option_container
+				})
+				const source_view_option_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name 		: 'source_view_option_label',
+					inner_html 		: get_label.source || 'Source',
+					parent 			: source_view_option_container
+				})
+
+		text_option_container.addEventListener('change', function(event) {
+			// reset all options to default
+				header_option.checked			= true
+				timecodes_option.checked		= true
+				persons_option.checked			= true
+				indexations_option.checked		= true
+				indexations_info_option.checked	= true
+				annotations_option.checked		= true
+				lang_option.checked				= true
+				lines_option.checked			= false
+
+			if (default_view_option.checked===true) {
+				const ar_default_render = render_default(self)
+				// remove previous nodes
+					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+						content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
+					}
+				const ar_render_len = ar_default_render.length
+				for (let i = 0; i < ar_render_len; i++) {
+					content_data.right_container_text.appendChild(ar_default_render[i]);
+				}
+			}
+
+			if (original_view_option.checked===true) {
+
+				// remove previous nodes
+					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+						content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
+					}
+
+				const node_len 	= self.ar_raw_data.length
+				for (let i = 0; i < node_len; i++) {
+					const raw_data = self.ar_raw_data[i]
+					const text_node = self.tags_to_html(raw_data)
+					// add the new one
+					content_data.right_container_text.insertAdjacentHTML("beforeend", text_node);
+				}
+			}
+
+			if (source_view_option.checked===true) {
+
+				// remove previous nodes
+					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
+						content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
+					}
+
+				const node_len 	= self.ar_raw_data.length
+				for (let i = 0; i < node_len; i++) {
+					const raw_data = self.ar_raw_data[i]
+					// const text_node = self.tags_to_html(raw_data)
+					// add the new one
+					content_data.right_container_text.innerText =raw_data;
+				}
+			}
+		})
 
 
 	return fragment
 };//end render_text_process_options
 
 
-
-
-
-
-
+/*
+* RENDER_DEFAULT
+* Process the raw_data as simple html to be printed
+*/
 const render_default = function(self) {
 
 	const fragment = new DocumentFragment()
@@ -392,206 +651,295 @@ const render_default = function(self) {
 	const node_len 	= self.ar_raw_data.length
 
 	for (let i = 0; i < node_len; i++) {
-		let raw_data = self.ar_raw_data[i]
+		const raw_data = self.ar_raw_data[i]
 
 		// BR
-		// const pattern_br = tr.get_mark_pattern('br');
-		// raw_data = raw_data.replace(pattern_br, `<p>`);
+		// break into fragments with br tag
+		const pattern_br = tr.get_mark_pattern('br');
+		const ar_fragment_data = raw_data.split(pattern_br);
+		const ar_fragment_data_len = ar_fragment_data.length
 
-		// TC. [TC_00:00:25.091_TC]
-			function get_tc(match, p1,p2, offset){
+		// create the data block for as global container
+		const data_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'data_block',
+			parent 			: fragment
+		})
 
-				// the tc is inside the p2 of the match
-				const tc = p2
-
-				const data_block = ui.create_dom_element({
+		for (let j = 0; j < ar_fragment_data_len; j++) {
+			let current_fragment = ar_fragment_data[j]
+			// for every block create a fragment and left block for indexation ans right block for the text
+			const fragment_block = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'fragment_block',
+				parent 			: data_block
+			})
+				const left_block = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'data_block',
-					parent 			: fragment
+					class_name 		: 'left_block',
+					parent 			: fragment_block
 				})
-					const left_block = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'left_block',
-						parent 			: data_block
-					})
-					const rigth_block = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'rigth_block',
-						parent 			: data_block
-					})
+				const right_block = ui.create_dom_element({
+					element_type	: 'p',
+					class_name 		: 'right_block',
+					parent 			: fragment_block
+				})
 
-				const tag_node	= '<span class="index in">'+tag_id+'{</span>'
 
-				return tag_node
-			}
-			const pattern_tc = tr.get_mark_pattern('tc');
-			raw_data = raw_data.replace(pattern_tc, get_tc);
+			// TC
+				function get_tc(match, p1,p2, offset){
 
-			// const pattern_tc = tr.get_mark_pattern('tc');
-			// raw_data = raw_data.replace(pattern_tc, `<span class="tc">$2</span>`);
+					// the tc is inside the p2 of the match
+					const tc = p2
 
-		// INDEX IN
+					const tag_node	= '<span class="tc">'+p2+'</span>'
 
-			function get_index_in(match, p1,p2,p3,p4,p5,p6,p7, offset){
-
-				// the tag_id is inside the p4 of the match
-				const tag_id = p4
-				// get all indexation terms of the current tag with match tag_id inside the locator
-				const tags_index = self.transcription_component.data.tags_index || []
-				const ar_indexation = tags_index.filter(el =>
-					el.data.tag_id	=== tag_id
-				)
-				const ar_indexation_len = ar_indexation.length
-
-				for (let i = 0; i < ar_indexation_len; i++) {
-					const current_index_node = ar_indexation[i].label
-
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'rigth_block',
-						parent 			: left_block
-					})
+					return tag_node
 				}
+				const pattern_tc = tr.get_mark_pattern('tc');
+				current_fragment = current_fragment.replace(pattern_tc, get_tc);
 
-				const tag_node	= '<span class="index in">'+tag_id+'{</span>'
+			// INDEX IN
+				function get_index_in(match, p1,p2,p3,p4,p5,p6,p7, offset){
 
-				return tag_node
-			}
-			const pattern_index_in = tr.get_mark_pattern('indexIn');
-			raw_data = raw_data.replace(pattern_index_in, get_index_in);
-			// raw_data = raw_data.replace(pattern_lang, `<span class="lang">$6</span>`);
-		// 	const pattern_indexIn = tr.get_mark_pattern('indexIn'); // id,state,label,data
-		// 	raw_data = raw_data.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+					// the tag_id is inside the p4 of the match
+					const tag_id = p4
+					// get all indexation terms of the current tag with match tag_id inside the locator
+					const tags_index = self.transcription_component.data.tags_index || []
+					const ar_indexation = tags_index.filter(el =>
+						el.data.tag_id	=== tag_id
+					)
+					const ar_indexation_len = ar_indexation.length
 
-		// INDEX OUT
-			const pattern_indexOut = tr.get_mark_pattern('indexOut');
-			raw_data = raw_data.replace(pattern_indexOut, `<span class="index out">}$4</span>`);
+					const indexations_ul = ui.create_dom_element({
+							element_type	: 'ul',
+							class_name 		: 'indexations ul',
+							parent 			: left_block
+						})
+						const indexations_tag = ui.create_dom_element({
+							element_type	: 'span',
+							class_name 		: 'indexations tag',
+							text_content	: tag_id,
+							parent 			: indexations_ul
+						})
 
-		// // REFERENCE IN
-		// 	const pattern_referenceIn = tr.get_mark_pattern('referenceIn');
-		// 	raw_data = raw_data.replace(pattern_referenceIn, `<reference id="reference_$4" class="reference" data-type="reference" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+					const ar_labels = []
+					for (let i = 0; i < ar_indexation_len; i++) {
+						ar_labels.push(ar_indexation[i].label)
+					}
+					ui.create_dom_element({
+							element_type	: 'span',
+							class_name 		: 'indexations',
+							text_content	: ar_labels.join(', '),
+							parent 			: indexations_ul
+						})
 
-		// // REFERENCE OUT
-		// 	const pattern_referenceOut = tr.get_mark_pattern('referenceOut');
-		// 	raw_data = raw_data.replace(pattern_referenceOut, "</reference>");
+					const tag_node	= '<span class="index in">'+tag_id+'{</span>'
 
+					return tag_node
+				}
+				const pattern_index_in = tr.get_mark_pattern('indexIn');
+				current_fragment = current_fragment.replace(pattern_index_in, get_index_in);
 
-		// // SVG
-		// 	const pattern_svg = tr.get_mark_pattern('svg');
-		// 	raw_data = raw_data.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}$7" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			// INDEX OUT
+				const pattern_indexOut = tr.get_mark_pattern('indexOut');
+				current_fragment = current_fragment.replace(pattern_indexOut, `<span class="index out">}$4</span>`);
 
-		// // DRAW
-		// 	const pattern_draw = tr.get_mark_pattern('draw');
-		// 	raw_data = raw_data.replace(pattern_draw, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="draw" data-type="draw" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			// PERSON
+				function get_person(match, p1,p2,p3,p4,p5,p6, offset){
+					// the locator is inside the p6 of the match
+					const data_string	= p6
+					// rebuild the correct locator witht the " instead '
+					const data			= data_string.replace(/\'/g, '"')
+					// parse the string to object or create new one
+					const locator		= JSON.parse(data) || {}
+					// get the match of the locator with the tag_persons array inside the instance
+					// console.log("self.data:",self.data);
+					const tags_persons = self.transcription_component.data.tags_persons || []
+					const person = tags_persons.find(el =>
+						el.data.section_tipo	===locator.section_tipo &&
+						el.data.section_id		== locator.section_id &&
+						el.data.component_tipo	===locator.component_tipo
+					)
+					const tag_node	= person
+						? '<span class="person">'+ person.full_name +': </span>'
+						: ''
+					return tag_node
+				}
+				const pattern_person = tr.get_mark_pattern('person');
+				current_fragment = current_fragment.replace(pattern_person, get_person);
 
-		// // GEO
-		// 	const pattern_geo = tr.get_mark_pattern('geo');
-		// 	raw_data = raw_data.replace(pattern_geo, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="geo" data-type="geo" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			// NOTE
+				function get_note(match, p1,p2,p3,p4,p5,p6,p7, offset){
+					// the locator is inside the p7 of the match
+					const data_string	= p7
+					// rebuild the correct locator witht the " instead '
+					const data			= data_string.replace(/\'/g, '"')
+					// parse the string to object or create new one
+					const locator		= JSON.parse(data) || {}
+					// get the match of the locator with the tag_persons array inside the instance
+					// console.log("self.data:",self.data);
+					const tags_notes = self.transcription_component.data.tags_notes || []
+					const note = tags_notes.find(el =>
+						el.data.section_tipo	===locator.section_tipo &&
+						el.data.section_id		== locator.section_id &&
+						el.data.component_tipo	===locator.component_tipo
+					)
 
-		// // PAGE
-		// 	const pattern_page = tr.get_mark_pattern('page');
-		// 	raw_data = raw_data.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
+					const note_title = (note.title)
+						? note.title.join(' | ')
+						: null
 
-		// PERSON
-			function get_person(match, p1,p2,p3,p4,p5,p6, offset){
-				// the locator is inside the p6 of the match
-				const data_string	= p6
-				// rebuild the correct locator witht the " instead '
-				const data			= data_string.replace(/\'/g, '"')
-				// parse the string to object or create new one
-				const locator		= JSON.parse(data) || {}
-				// get the match of the locator with the tag_persons array inside the instance
-				// console.log("self.data:",self.data);
-				const tags_persons = self.transcription_component.data.tags_persons || []
-				const person = tags_persons.find(el =>
-					el.data.section_tipo	===locator.section_tipo &&
-					el.data.section_id		== locator.section_id &&
-					el.data.component_tipo	===locator.component_tipo
-				)
-				const tag_node	= person
-					? '<span class="person">'+ person.full_name +': </span>'
-					: ''
-				return tag_node
-			}
-			const pattern_person = tr.get_mark_pattern('person');
-			raw_data = raw_data.replace(pattern_person, get_person);
+					const note_text = (note.body && note_title)
+						? note_title +'. '+ note.body
+						: note.body
 
-		// NOTE
-			function get_note(match, p1,p2,p3,p4,p5,p6,p7, offset){
-				// the locator is inside the p7 of the match
-				const data_string	= p7
-				// rebuild the correct locator witht the " instead '
-				const data			= data_string.replace(/\'/g, '"')
-				// parse the string to object or create new one
-				const locator		= JSON.parse(data) || {}
-				// get the match of the locator with the tag_persons array inside the instance
-				// console.log("self.data:",self.data);
-				const tags_notes = self.transcription_component.data.tags_notes || []
-				const note = tags_notes.find(el =>
-					el.data.section_tipo	===locator.section_tipo &&
-					el.data.section_id		== locator.section_id &&
-					el.data.component_tipo	===locator.component_tipo
-				)
+					const tag_node	= note
+						? '<span class="note"> ['+note_text+'] </span>'
+						: ''
 
-				const note_title = (note.title)
-					? note.title.join(' | ')
-					: null
+					return tag_node
+				}
+				const pattern_note = tr.get_mark_pattern('note');
+				current_fragment = current_fragment.replace(pattern_note, get_note);
 
-				const note_text = (note.body && note_title)
-					? note_title +'. '+ note.body
-					: note.body
+			// LANG
+				const pattern_lang = tr.get_mark_pattern('lang');
+				current_fragment = current_fragment.replace(pattern_lang, `<span class="lang">$6: </span>`);
 
-				const tag_node	= note
-					? '<span class="footnote"> ['+note_text+'] </span>'
-					: ''
-
-				return tag_node
-			}
-			const pattern_note = tr.get_mark_pattern('note');
-			raw_data = raw_data.replace(pattern_note, get_note);
-
-		// LANG
-			const pattern_lang = tr.get_mark_pattern('lang');
-			raw_data = raw_data.replace(pattern_lang, `<span class="lang">$6:</span>`);
-
-		ar_default_render.push(raw_data)
+				right_block.insertAdjacentHTML("beforeend", current_fragment)
+		}
+		ar_default_render.push(data_block)
 	}// end for
 
 	return ar_default_render
 }
 
 
-
-
-
-
-
-
-
-
-
-/**
-* RENDER_ACTIVITY_INFO
-* This is used to build a optional buttons inside the header
-* @return DOM node fragment
+/*
+* RENDER_HEADER
+* Process the raw_data as simple html to be printed
 */
-const render_activity_info = function(self) {
+const render_header = function(self) {
+
+	const transcription_component	= self.transcription_component
+	const related_sections			= transcription_component.data.related_sections || null
+	const ar_persons				= transcription_component.data.tags_persons || null
 
 	const fragment = new DocumentFragment()
 
-	// activity alert
-		const activity_info_body = ui.create_dom_element({
+	const datum		= related_sections || {}
+	const context	= datum.context
+	const data		= datum.data
+	const sections	= data.find(el => el.typo==='sections')
+	if(!sections){
+		return null
+	}
+
+	const value			= sections.value
+	const value_length	= value.length
+
+	for (let i = 0; i < value_length; i++) {
+
+		const head = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'activity_info_body',
+			class_name 		: 'head',
 			parent			: fragment
 		})
-		self.events_tokens.push(
-			event_manager.subscribe('save', fn_saved)
-		)
-		function fn_saved(options){
-			const node_info = render_node_info(options)
-			activity_info_body.prepend(node_info)
-		}
 
+		const current_locator = {
+			section_top_tipo	: value[i].section_tipo,
+			section_top_id		: value[i].section_id
+		}
+		const section_label			= context.find(el => el.model === 'section' && el.section_tipo===current_locator.section_top_tipo).label
+		const ar_component_context	= context.filter(el => el.model !== 'section' && el.section_tipo===current_locator.section_top_tipo)
+
+		// section label DOM element
+			const section_label_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'section_label',
+				inner_html		: section_label,
+				parent			: head
+			})
+
+			const components = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'components',
+				parent			: head
+			})
+
+			// section_id
+				const section_id_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'component_container',
+					parent			: components
+				})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'component_label',
+						inner_html		: 'Id: ',
+						parent			: section_id_container
+					})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'component_value',
+						inner_html		: value[i].section_id || '',
+						parent			: section_id_container
+					})
+
+			for (let j = 0; j < ar_component_context.length; j++) {
+				const current_component	= ar_component_context[j] // toString(ar_component_data[j].value)
+				const label				= current_component.label
+
+				const current_component_data = data.find(el => el.model !== 'section' && el.tipo===current_component.tipo && el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+
+				const component_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'component_container',
+					parent			: components
+				})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'component_label',
+						inner_html		: label + ': ',
+						parent			: component_container
+					})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'component_value',
+						inner_html		: current_component_data.value.join(' | ') || '',
+						parent			: component_container
+					})
+			}
+
+
+		const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
+			console.log("ar_persons_for_this_section:",ar_persons_for_this_section);
+		for (let j = 0; j < ar_persons_for_this_section.length; j++) {
+
+			const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
+
+			const person_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'person_container',
+				parent			: components
+			})
+				const person_role = ui.create_dom_element({
+					element_type	: 'span',
+					text_node		: current_person.role + ': ',
+					class_name 		: 'label person_role',
+					parent			: person_container
+				})
+				const person_name = ui.create_dom_element({
+					element_type	: 'span',
+					text_node		: current_person.full_name || '',
+					class_name 		: 'label person_name',
+					parent			: person_container
+				})
+		}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
+
+	}
 	return fragment
-}
+}// end render_header
+
+
