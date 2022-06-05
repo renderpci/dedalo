@@ -513,73 +513,32 @@ const render_text_process_options = function(self, content_data) {
 			})
 
 	// text options container
-		const text_option_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'option_container',
+		const text_selector = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'text_selector',
 				parent			: fragment
 			})
+			const default_view_option = ui.create_dom_element({
+				element_type	: 'option',
+				inner_html 		: get_label.default || 'Default',
+				parent 			: text_selector
+			})
 
-			// default_view_option_container
-			const default_view_option_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'option_container',
-					parent			: text_option_container
-				})
-				const default_view_option = ui.create_dom_element({
-					element_type	: 'input',
-					type 			: 'radio',
-					class_name 		: 'default_view_option',
-					name 			: 'text_option',
-					parent 			: default_view_option_container
-				})
-				const default_view_option_label = ui.create_dom_element({
-					element_type	: 'label',
-					class_name 		: 'default_view_option_label',
-					inner_html 		: get_label.default || 'Default',
-					parent 			: default_view_option_container
-				})
-			// original_view_option_container
-			const original_view_option_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'option_container',
-					parent			: text_option_container
-				})
-				const original_view_option = ui.create_dom_element({
-					element_type	: 'input',
-					type 			: 'radio',
-					class_name 		: 'original_view_option',
-					name 			: 'text_option',
-					parent 			: original_view_option_container
-				})
-				// default checked
-				original_view_option.checked = true
-				const original_view_option_label = ui.create_dom_element({
-					element_type	: 'label',
-					class_name 		: 'original_view_option_label',
-					inner_html 		: get_label.original || 'Original',
-					parent 			: original_view_option_container
-				})
-			// source_view_option_container
-			const source_view_option_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'option_container',
-					parent			: text_option_container
-				})
-				const source_view_option = ui.create_dom_element({
-					element_type	: 'input',
-					type 			: 'radio',
-					class_name 		: 'source_view_option',
-					name 			: 'text_option',
-					parent 			: source_view_option_container
-				})
-				const source_view_option_label = ui.create_dom_element({
-					element_type	: 'label',
-					class_name 		: 'source_view_option_label',
-					inner_html 		: get_label.source || 'Source',
-					parent 			: source_view_option_container
-				})
+			const original_view_option = ui.create_dom_element({
+				element_type	: 'option',
+				inner_html 		: get_label.original || 'Original',
+				parent 			: text_selector
+			})
+			// default checked
+			original_view_option.selected = true
 
-		text_option_container.addEventListener('change', function(event) {
+			const source_view_option = ui.create_dom_element({
+				element_type	: 'option',
+				inner_html 		: get_label.source || 'Source',
+				parent 			: text_selector
+			})
+
+		text_selector.addEventListener('change', function(event) {
 			// reset all options to default
 				header_option.checked			= true
 				timecodes_option.checked		= true
@@ -590,7 +549,7 @@ const render_text_process_options = function(self, content_data) {
 				lang_option.checked				= true
 				lines_option.checked			= false
 
-			if (default_view_option.checked===true) {
+			if (default_view_option.selected===true) {
 				const ar_default_render = render_default(self)
 				// remove previous nodes
 					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
@@ -602,7 +561,7 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 
-			if (original_view_option.checked===true) {
+			if (original_view_option.selected===true) {
 
 				// remove previous nodes
 					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
@@ -618,7 +577,7 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 
-			if (source_view_option.checked===true) {
+			if (source_view_option.selected===true) {
 
 				// remove previous nodes
 					while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
@@ -661,7 +620,7 @@ const render_default = function(self) {
 
 		// create the data block for as global container
 		const data_block = ui.create_dom_element({
-			element_type	: 'div',
+			element_type	: 'table',
 			class_name 		: 'data_block',
 			parent 			: fragment
 		})
@@ -670,17 +629,17 @@ const render_default = function(self) {
 			let current_fragment = ar_fragment_data[j]
 			// for every block create a fragment and left block for indexation ans right block for the text
 			const fragment_block = ui.create_dom_element({
-				element_type	: 'div',
+				element_type	: 'tr',
 				class_name 		: 'fragment_block',
 				parent 			: data_block
 			})
 				const left_block = ui.create_dom_element({
-					element_type	: 'div',
+					element_type	: 'td',
 					class_name 		: 'left_block',
 					parent 			: fragment_block
 				})
 				const right_block = ui.create_dom_element({
-					element_type	: 'p',
+					element_type	: 'td',
 					class_name 		: 'right_block',
 					parent 			: fragment_block
 				})
@@ -711,16 +670,17 @@ const render_default = function(self) {
 					)
 					const ar_indexation_len = ar_indexation.length
 
-					const indexations_ul = ui.create_dom_element({
-							element_type	: 'ul',
-							class_name 		: 'indexations ul',
+					const indexations = ui.create_dom_element({
+							id 				: 'index_'+tag_id,
+							element_type	: 'div',
+							class_name 		: 'indexations',
 							parent 			: left_block
 						})
 						const indexations_tag = ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'indexations tag',
+							class_name 		: 'index tag',
 							text_content	: tag_id,
-							parent 			: indexations_ul
+							parent 			: indexations
 						})
 
 					const ar_labels = []
@@ -728,13 +688,14 @@ const render_default = function(self) {
 						ar_labels.push(ar_indexation[i].label)
 					}
 					ui.create_dom_element({
-							element_type	: 'span',
-							class_name 		: 'indexations',
-							text_content	: ar_labels.join(', '),
-							parent 			: indexations_ul
+							element_type	: 'a',
+							class_name 		: 'index terms',
+							href 			: '#tagindex_'+tag_id,
+							text_content	: ar_labels.join(', ') +'a',
+							parent 			: indexations
 						})
 
-					const tag_node	= '<span class="index in">'+tag_id+'{</span>'
+					const tag_node	= '<a id="tagindex_'+tag_id+'" href="#index_'+tag_id+'" class="index in">'+tag_id+'{</a>'
 
 					return tag_node
 				}
@@ -742,8 +703,15 @@ const render_default = function(self) {
 				current_fragment = current_fragment.replace(pattern_index_in, get_index_in);
 
 			// INDEX OUT
+				function get_index_out(match, p1,p2,p3,p4,p5,p6,p7, offset){
+					// the tag_id is inside the p4 of the match
+					const tag_id	= p4
+					const tag_node	= '<a id="out_tagindex_'+tag_id+'" href="#index_'+tag_id+'" class="index out">}'+tag_id+'</a>'
+					return tag_node
+				}
 				const pattern_indexOut = tr.get_mark_pattern('indexOut');
-				current_fragment = current_fragment.replace(pattern_indexOut, `<span class="index out">}$4</span>`);
+				current_fragment = current_fragment.replace(pattern_indexOut, get_index_out);
+				// current_fragment = current_fragment.replace(pattern_indexOut, `<a href=#index_'+tag_id+' class="index out">}$4</a>`);
 
 			// PERSON
 				function get_person(match, p1,p2,p3,p4,p5,p6, offset){
@@ -914,7 +882,6 @@ const render_header = function(self) {
 
 
 		const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
-			console.log("ar_persons_for_this_section:",ar_persons_for_this_section);
 		for (let j = 0; j < ar_persons_for_this_section.length; j++) {
 
 			const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
