@@ -111,10 +111,8 @@ tool_tr_print.prototype.get_component = async function(lang) {
 
 	const self = this
 
-
 	// to_delete_instances. Select current self.transcription_component
 		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
-
 
 	// context (clone and edit)
 		const context = Object.assign(clone(self.transcription_component.context),{
@@ -139,6 +137,56 @@ tool_tr_print.prototype.get_component = async function(lang) {
 	return component_instance
 };//end get_component
 
+
+
+
+/**
+* LOAD_RELATION_LIST
+* Get the list of related sections with the actual resource
+* @return object datum
+*/
+tool_tr_print.prototype.load_relation_list = async function() {
+
+	const self = this
+
+	const transcription_component = self.transcription_component
+
+	const source = {
+		action			: 'related_search',
+		model			: transcription_component.model,
+		tipo			: transcription_component.tipo,
+		section_tipo	: transcription_component.section_tipo,
+		section_id		: transcription_component.section_id,
+		lang			: transcription_component.lang,
+		mode			: 'related_list'
+	}
+
+	const sqo = {
+		section_tipo		: ['all'],
+		mode				: 'related',
+		// limit				: 1,
+		offset				: 0,
+		full_count			: false,
+		filter_by_locators	: [{
+			section_tipo	: transcription_component.section_tipo,
+			section_id		: transcription_component.section_id
+		}]
+	}
+
+	const rqo = {
+		action	: 'read',
+		source	: source,
+		sqo		: sqo
+	}
+
+	// get context and data
+		const current_data_manager	= new data_manager()
+		const api_response			= await current_data_manager.request({body:rqo})
+
+	const datum = api_response.result
+
+	return datum
+};//end load_relation_list
 
 
 /**
