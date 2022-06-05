@@ -448,67 +448,57 @@ const render_tanscription_options = async function(self, content_data) {
 		const tool_tm			= ar_register_tools.find(el => el.name === 'tool_time_machine')
 
 	// Button tool transcription print
-		if(tool_tr_print){
+		if(tool_tr_print) {
 			const tool_tr_print_button = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'tool_button tool_tr_print',
+				element_type	: 'button',
+				class_name		: 'tool_button tool_tr_print light',
+				inner_html		: tool_tr_print.label || 'Tool Transcription',
 				parent			: fragment
 			})
-				const tool_tr_print_icon = ui.create_dom_element({
-					element_type	: 'img',
-					class_name		: 'icon',
-					src				: tool_tr_print.icon,
-					parent			: tool_tr_print_button
-				})
-				const tool_tr_print_label = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					text_content	: tool_tr_print.label || 'Tool tm',
-					parent			: tool_tr_print_button
-				})
-				tool_tr_print_button.addEventListener('click', function(event) {
-					event.stopPropagation();
-
-					// open_tool (tool_common)
-						open_tool({
-							tool_context	: tool_tr_print,
-							caller			: self.transcription_component
-						})
-				})
+			const tool_tr_print_icon = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'icon',
+				src				: tool_tr_print.icon
+			})
+			tool_tr_print_button.prepend(tool_tr_print_icon)
+			tool_tr_print_button.addEventListener('click', function(event) {
+				event.stopPropagation();
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_tr_print,
+						caller			: self.transcription_component
+					})
+			})
 		}
 
 	// Button tool time machine
-		if(tool_tm){
+		if(tool_tm) {
 			const tool_tm_button = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'tool_button tool_tm_button',
+				element_type	: 'button',
+				class_name		: 'tool_button tool_tm_button light',
+				inner_html		: tool_tm.label || 'Tool Time machine',
 				parent			: fragment
 			})
-				const tool_tm_icon = ui.create_dom_element({
-					element_type	: 'img',
-					class_name		: 'icon',
-					src				: tool_tm.icon,
-					parent			: tool_tm_button
-				})
-				const tool_tm_label = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					text_content	: tool_tm.label || 'Tool tm',
-					parent			: tool_tm_button
-				})
+			const tool_tm_icon = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'icon',
+				src				: tool_tm.icon,
+				parent			: tool_tm_button
+			})
+			tool_tm_button.prepend(tool_tm_icon)
 			tool_tm_button.addEventListener('click', function(event) {
-					event.stopPropagation();
-
-					// open_tool (tool_common)
-						open_tool({
-							tool_context	: tool_tm,
-							caller			: self.transcription_component
-						})
-				})
+				event.stopPropagation();
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_tm,
+						caller			: self.transcription_component
+					})
+			})
 		}
 
 	return fragment
 };//end render_tanscription_options
+
 
 
 /**
