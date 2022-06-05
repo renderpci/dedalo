@@ -3,26 +3,29 @@
 
 
 
+// imports
+	import {ui} from '../../common/js/ui.js'
+	import * as instances from '../../common/js/instances.js'
+	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+
+
+
 /**
-*	TS_OBJECT
-*	Manage a single thesaurus row element
+* TS_OBJECT
+* Manages a single thesaurus row element
 */
-import {ui} from '../../common/js/ui.js'
-import * as instances from '../../common/js/instances.js'
-import {event_manager} from '../../common/js/event_manager.js'
-
-
-
 export const ts_object = new function() {
 
 	// class vars
-		this.trigger_url 		= DEDALO_CORE_URL + '/ts_object/trigger.ts_object.php'
+		// this.trigger_url		= DEDALO_CORE_URL + '/ts_object/trigger.ts_object.php'
 		// Set on update element in DOM (refresh)
-		this.element_to_hilite 	= null;
+		this.element_to_hilite	= null;
 		// thesaurus_mode . Defines appearance of thesaurus
-		this.thesaurus_mode 	= null;
+		this.thesaurus_mode		= null;
+		// events_tokens
+		this.events_tokens		= [];
 
-		this.events_tokens 		= [];
 
 
 	/**
@@ -38,8 +41,8 @@ export const ts_object = new function() {
 		// component_name Caller component name for relations
 		this.component_name = url_vars.component_name || null
 
+		return true
 	};//end init
-	//this.init(); // Auto init !
 
 
 
@@ -47,113 +50,104 @@ export const ts_object = new function() {
 	* GET_CHILDREN
 	* Get the JSON data from the server using promise. When data is loaded build DOM element
 	* Data is built from parent info (current object section_tipo and section_id)
+	* @param DOM node children_element
 	* @return promise
 	*/
-	//var start = null
-	this.get_children = async function(children_element) {
+	this.get_children = function(children_element) {
 
-		if (SHOW_DEBUG===true) {
-			//let start_time = new Date().getTime()
-		}
+		// short vars
+			const tipo 					= children_element.dataset.tipo
+			const wrap 					= children_element.parentNode.parentNode
+			const parent_section_id 	= wrap.dataset.section_id
+			const parent_section_tipo 	= wrap.dataset.section_tipo
+			const node_type 			= wrap.dataset.node_type || null
+			const target_section_tipo 	= wrap.dataset.target_section_tipo
 
-		const tipo 					= children_element.dataset.tipo
-		const wrap 					= children_element.parentNode.parentNode
-		const parent_section_id 	= wrap.dataset.section_id
-		const parent_section_tipo 	= wrap.dataset.section_tipo
-		const node_type 			= wrap.dataset.node_type || null
-		const target_section_tipo 	= wrap.dataset.target_section_tipo
-
-		// Test vars
-		if (!parent_section_tipo || typeof parent_section_tipo==="undefined") {
-			console.log("[get_children] Error. parent_section_tipo is not defined");
-			return false
-		}
-		if (!parent_section_id || typeof parent_section_id==="undefined") {
-			console.log("[get_children] Error. parent_section_id is not defined");
-			return false
-		}
-		if (!tipo || typeof tipo==="undefined") {
-			if (SHOW_DEBUG===true) {
-				console.log(new Error().stack);
+		// check vars
+			if (!parent_section_tipo || typeof parent_section_tipo==="undefined") {
+				console.log("[get_children] Error. parent_section_tipo is not defined");
+				return Promise.resolve(false);
 			}
-			console.error("[get_children] Error. tipo is not defined");
-			return false
-		}
-
-		// CHILDREN_CONTAINER . children_container is the div container inside current ts_object
-		/* old way
-		var children_container	= wrap.querySelector('div[data-role="children_container"]')
-			if (!children_container) {
-				console.log(children_element);
-				return alert("Error on find children_container!")
-			}*/
-		let children_container 		= null
-		const wrap_children 		= wrap.childNodes
-		const wrap_children_len 	= wrap_children.length
-		for (let i = wrap_children_len - 1; i >= 0; i--) {
-			if(wrap_children[i].dataset.role && wrap_children[i].dataset.role==="children_container") {
-				children_container = wrap_children[i]
-				break;
+			if (!parent_section_id || typeof parent_section_id==="undefined") {
+				console.log("[get_children] Error. parent_section_id is not defined");
+				return Promise.resolve(false);
 			}
-		}
-		if (children_container===null) {
-			alert("[ts_object.get_children] Error on select children_container");
-			return false;
-		}
-
-		// JSON GET CALL
-			const trigger_vars = {
-				mode 			: 'get_children_data',
-				section_id 		: parent_section_id,
-				section_tipo 	: parent_section_tipo,
-				node_type 		: node_type,
-				tipo 			: tipo,
+			if (!tipo || typeof tipo==="undefined") {
+				if (SHOW_DEBUG===true) {
+					console.log(new Error().stack);
+				}
+				console.error("[get_children] Error. tipo is not defined");
+				return Promise.resolve(false);
 			}
-			//return console.log("[ts_object.get_children] trigger_vars", trigger_vars); //console.log(new Error().stack);
 
-		// AJAX REQUEST
-			const js_promise = ts_object.get_json(trigger_vars)
+		// children_container. children_container is the div container inside current ts_object
+			const children_container = (()=>{
 
-			js_promise.then(function(response) {
+				const wrap_children		= wrap.childNodes
+				const wrap_children_len	= wrap_children.length
+				for (let i = wrap_children_len - 1; i >= 0; i--) {
+					if(wrap_children[i].dataset.role && wrap_children[i].dataset.role==="children_container") {
+						return wrap_children[i]
+					}
+				}
 
-			// const js_promise = new Promise( (resolve, reject) => {
+				return null
+			})()
+			if (children_container===null) {
+				alert("[ts_object.get_children] Error on select children_container");
+				return Promise.resolve(false);
+			}
+
+		return new Promise(function(resolve){
+
+			// API call
+				const rqo = {
+					dd_api			: 'dd_ts_api',
+					prevent_lock	: true,
+					action			: 'get_children_data',
+					source			: {
+						section_id		: parent_section_id,
+						section_tipo	: parent_section_tipo,
+						node_type		: node_type,
+						tipo			: tipo
+					}
+				}
+				data_manager.prototype.request({
+					body : rqo
+				})
+				.then(async function(response) {
 
 					if (response && response.result) {
-						// DOM_PARSE_children
-						const ar_children_data = response.result
-						const options = {
-							target_section_tipo 	  : target_section_tipo,
-							node_type 				  : node_type,
-							clean_children_container : true
-						}
-						//var result = ts_object.dom_parse_children(ar_children_data, children_container, true, target_section_tipo, node_type) //ar_children_data, children_container, target_section_tipo, type
-						const result = ts_object.dom_parse_children(ar_children_data, children_container, options)
-						// UPDATES ARROW
-						if (children_element && children_element.firstChild && children_element.dataset.type) {
-							children_element.firstChild.classList.remove('arrow_spinner');
 
-							// Update arrow state
-							//ts_object.update_arrow_state(children_element, true) // disabled temporally
-						}
-						return result
+						// success case
+
+						// dom_parse_children
+							const ar_children_data = response.result
+							const options = {
+								target_section_tipo			: target_section_tipo,
+								node_type					: node_type,
+								clean_children_container	: true
+							}
+							const result = await ts_object.dom_parse_children(ar_children_data, children_container, options)
+
+						// updates arrow
+							if (children_element && children_element.firstChild && children_element.dataset.type) {
+								children_element.firstChild.classList.remove('arrow_spinner');
+								// Update arrow state
+								//ts_object.update_arrow_state(children_element, true) // disabled temporally
+							}
+
+						resolve(result)
+
 					}else{
+
+						// error case
 						console.warn("[ts_object.get_children] Error, response is null");
-						return false
+
+						resolve(false)
 					}
-
-					if(SHOW_DEBUG===true) {
-						//var end = new Date().getTime();
-						//console.log("[ts_object.get_children] js execution time: " + (end - start_time) +' ms' +')')
-						//start = new Date().getTime()
-					}
-			// });
-
-
-			}, function(error) {
-				console.error("Error. Failed get_json!", error);
-			});
-
-		return js_promise
+				})
+		})
 	};//end get_children
 
 
@@ -197,30 +191,35 @@ export const ts_object = new function() {
 	*	Array of children of current term from json source trigger
 	* @param DOM object children_container
 	*	children_container is 'children_container'
+	* @param object options
+	*
+	* @return promise
 	*/
 	// this.dom_parse_children = function(ar_children_data, children_container, clean_children_container, target_section_tipo, type) {
 	this.dom_parse_children = function(ar_children_data, children_container, options) {
-			// console.log("children_container:",children_container);
+
 		const self = this
 
-		if (!ar_children_data) {
-			console.warn("[dom_parse_children] Error. No ar_children_data received. Nothing is parsed")
-			return false;
-		}
-		if (!children_container) {
-			console.warn("[dom_parse_children] Error. No children_container received. Nothing is parsed");
-			return false;
-		}
-		// Element wrap div is parentNode of 'children_container' (children_container)
-		//var wrap_div = children_container.parentNode
+		// check vars
+			if (!ar_children_data) {
+				console.warn("[dom_parse_children] Error. No ar_children_data received. Nothing is parsed")
+				return Promise.resolve(false);
+			}
+			if (!children_container) {
+				console.warn("[dom_parse_children] Error. No children_container received. Nothing is parsed");
+				return Promise.resolve(false);
+			}
 
-		// Options set values
-		const clean_children_container 		= typeof options.clean_children_container!=='undefined' ? options.clean_children_container : true
-		const target_section_tipo 			= typeof options.target_section_tipo!=='undefined' ? options.target_section_tipo : null
-		const node_type 					= typeof options.node_type!=='undefined' ? options.node_type : 'thesaurus_node'
-		let next_node_type 					= node_type
-		const children_container_is_loaded 	= typeof options.children_container_is_loaded!=='undefined' ? options.children_container_is_loaded : false
-		const show_arrow_opened 			= typeof options.show_arrow_opened!=='undefined' ? options.show_arrow_opened : false
+		// Element wrap div is parentNode of 'children_container' (children_container)
+			//var wrap_div = children_container.parentNode
+
+		// options set values
+			const clean_children_container 		= typeof options.clean_children_container!=='undefined' ? options.clean_children_container : true
+			const target_section_tipo 			= typeof options.target_section_tipo!=='undefined' ? options.target_section_tipo : null
+			const node_type 					= typeof options.node_type!=='undefined' ? options.node_type : 'thesaurus_node'
+			let next_node_type 					= node_type
+			const children_container_is_loaded 	= typeof options.children_container_is_loaded!=='undefined' ? options.children_container_is_loaded : false
+			const show_arrow_opened 			= typeof options.show_arrow_opened!=='undefined' ? options.show_arrow_opened : false
 
 		// Clean children container before build contents
 			if (clean_children_container===true) {
@@ -246,7 +245,7 @@ export const ts_object = new function() {
 			}
 
 		// Build DOM elements iterating ar_children_data
-		const promise = new Promise(function(resolve) {
+		return new Promise(function(resolve) {
 
 			const ar_children_c = []
 			const ar_children_data_len = ar_children_data.length
@@ -262,7 +261,9 @@ export const ts_object = new function() {
 					const is_indexable = ar_children_data[i].is_indexable
 
 				// wrap_ts_object . ts_object wrapper
-					if (node_type==='hierarchy_node') next_node_type = 'thesaurus_node'
+					if (node_type==='hierarchy_node') {
+						next_node_type = 'thesaurus_node'
+					}
 					let dataset = {'section_tipo':ar_children_data[i].section_tipo,'section_id':ar_children_data[i].section_id,'node_type':next_node_type}
 					if (target_section_tipo) {
 						dataset.target_section_tipo = target_section_tipo
@@ -458,7 +459,8 @@ export const ts_object = new function() {
 													this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
 
 												// add_child
-													ts_object.add_child(this).then(function(response){
+													ts_object.add_child(this)
+													.then(function(response){
 
 														// vars from response
 															// new_section_id . Generated as response by the trigger add_child
@@ -516,37 +518,35 @@ export const ts_object = new function() {
 								if (ar_children_data[i].permissions_button_delete>=2) {
 									// var event_function 	= [{'type':'click','name':'ts_object.delete'}];
 									const link_delete 	= ui.create_dom_element({
-															element_type	: 'a',
-															parent			: id_colum_content,
-															class_name		: 'id_column_link ts_object_delete',
-															title_label		: 'delete',
-														})
-														link_delete.addEventListener("click",(e)=>{
-															self.delete(link_delete, e)
-														})
-														// delete icon
-														const delete_icon = ui.create_dom_element({
-																			element_type			: 'div',
-																			parent 					: link_delete,
-																			class_name 				: 'ts_object_delete_icon',
-																		 })
+										element_type	: 'a',
+										parent			: id_colum_content,
+										class_name		: 'id_column_link ts_object_delete',
+										title_label		: 'delete'
+									})
+									link_delete.addEventListener("click",(e)=>{
+										self.delete(link_delete)
+									})
+									// delete icon
+									ui.create_dom_element({
+										element_type	: 'div',
+										parent			: link_delete,
+										class_name		: 'ts_object_delete_icon'
+									 })
 								}//end if (ar_children_data[i].permissions_button_delete>=2)
 
 							// ORDER number element
 								if (ar_children_data[i].permissions_button_new>=2) {
 									if(is_descriptor===true && node_type!=='hierarchy_node') {
-
-										// var event_function 		= [{'type':'click','name':'ts_object.build_order_form'}];
-										const order_number 		= ui.create_dom_element({
-																				element_type			: 'a',
-																				parent 					: id_colum_content,
-																				class_name 				: 'id_column_link ts_object_order_number',
-																				text_node 				: i+1,
-																			 })
-																order_number.addEventListener("click",(e)=>{
-																	self.build_order_form(order_number, e)
-																})
-
+										// var event_function = [{'type':'click','name':'ts_object.build_order_form'}];
+										const order_number = ui.create_dom_element({
+											element_type	: 'a',
+											parent			: id_colum_content,
+											class_name		: 'id_column_link ts_object_order_number',
+											text_node		: i+1
+										})
+										order_number.addEventListener("click",(e)=>{
+											self.build_order_form(order_number, e)
+										})
 									}//if(is_descriptor===true && node_type!=='hierarchy_node')
 								}
 
@@ -643,6 +643,7 @@ export const ts_object = new function() {
 																			inner_html 				: term_add,
 																		 })
 								break;
+
 							// ND
 							case (ar_children_data[i].ar_elements[j].type==='link_children_nd'):
 
@@ -687,7 +688,7 @@ export const ts_object = new function() {
 																		 })
 								break;
 
-							// INDEXATIONS ADN STRUCTURATIONS
+							// INDEXATIONS AND STRUCTURATIONS
 							case (ar_children_data[i].ar_elements[j].tipo==='hierarchy40'):
 							case (ar_children_data[i].ar_elements[j].tipo==='hierarchy91'):
 
@@ -699,33 +700,33 @@ export const ts_object = new function() {
 									// 						'name':'ts_object.show_indexations',
 									// 						'function_arguments':[ar_children_data[i].section_tipo,ar_children_data[i].section_id,ar_children_data[i].ar_elements[j].tipo,indexations_container_id]}]
 									const element_show_indexations	= ui.create_dom_element({
-											element_type			: 'div',
-											parent 					: elements_container,
-											class_name 				: class_for_all,
-											data_set 				: children_dataset,
-											text_node 				: ar_children_data[i].ar_elements[j].value
-									 })
-										element_show_indexations.addEventListener("click",(e)=>{
-
-											self.show_indexations({
-												button_obj		: element_show_indexations,
-												event			: e,
-												section_tipo	: ar_children_data[i].section_tipo,
-												section_id		: ar_children_data[i].section_id,
-												component_tipo	: ar_children_data[i].ar_elements[j].tipo,
-												container_id	: indexations_container_id,
-												value			: null
-											})
+										element_type	: 'div',
+										parent			: elements_container,
+										class_name		: class_for_all,
+										data_set		: children_dataset,
+										text_node		: ar_children_data[i].ar_elements[j].value
+									})
+									element_show_indexations.addEventListener("click",(e)=>{
+										self.show_indexations({
+											button_obj		: element_show_indexations,
+											event			: e,
+											section_tipo	: ar_children_data[i].section_tipo,
+											section_id		: ar_children_data[i].section_id,
+											component_tipo	: ar_children_data[i].ar_elements[j].tipo,
+											container_id	: indexations_container_id,
+											value			: null
 										})
+									})
 									// Build indexations container
-										/*var indexations_container 	= ui.create_dom_element({
-																				element_type			: 'div',
-																				parent 					: wrap_ts_object,
-																				class_name 				: 'indexations_container',
-																				id 						: indexations_container_id,
-																			 })*/
+										// var indexations_container = ui.create_dom_element({
+										// 	element_type	: 'div',
+										// 	parent			: wrap_ts_object,
+										// 	class_name		: 'indexations_container',
+										// 	id				: indexations_container_id,
+										// })
 								}
 								break;
+
 							case (ar_children_data[i].ar_elements[j].type==='img'):
 
 								if(ar_children_data[i].ar_elements[j].value){
@@ -750,23 +751,23 @@ export const ts_object = new function() {
 								}
 
 								break;
+
 							// OTHERS
 							default:
 
 								// Case common buttons and links
 								// var event_function 	= [{'type':'click','name':'ts_object.show_component_in_ts_object'}];
-								const element_show_component	= ui.create_dom_element({
-																			element_type			: 'div',
-																			parent 					: elements_container,
-																			class_name 				: class_for_all,
-																			data_set 				: children_dataset,
-																			text_node 				: ar_children_data[i].ar_elements[j].value,
-																		 })
-																element_show_component.addEventListener("click",(e)=>{
-																	self.show_component_in_ts_object(element_show_component, e)
-																})
+								const element_show_component = ui.create_dom_element({
+									element_type	: 'div',
+									parent			: elements_container,
+									class_name		: class_for_all,
+									data_set		: children_dataset,
+									text_node		: ar_children_data[i].ar_elements[j].value,
+								})
+								element_show_component.addEventListener("click",(e)=>{
+									self.show_component_in_ts_object(element_show_component, e)
+								})
 								break;
-
 						}//end switch(true)
 					}//end for (var j = 0; j < ch_len; j++)
 
@@ -774,9 +775,7 @@ export const ts_object = new function() {
 			}//for (var i = 0; i < len; i++) {
 
 			resolve(ar_children_c);
-		});
-
-		return promise
+		})
 	};//end dom_parse_children
 
 
@@ -996,8 +995,8 @@ export const ts_object = new function() {
 			obj.classList.remove('drag_over')
 
 		// wraps
-			const wrap_source = source 	// element thats move
-			const wrap_target = obj 	// element on user leaves source wrap
+			const wrap_source	= source 	// element thats move
+			const wrap_target	= obj 	// element on user leaves source wrap
 			if (wrap_source === wrap_target) {
 				console.log("[ts_object.on_drop] Unable self drop (2) wrap_source is equal wrap_target");
 				return false;
@@ -1024,33 +1023,33 @@ export const ts_object = new function() {
 				// parse from event.dataTransfer
 					const data_obj = JSON.parse(data_transfer_json)
 
-				if(SHOW_DEBUG===true) {
-					// console.log("wrap_target:",wrap_target);
-					// console.log("obj:",obj);
-					// console.log("-- event:",event);
-					// console.log("ts_object.on_drop event called !!!!! with data_obj:", data_obj);
-				}
+				// debug
+					if(SHOW_DEBUG===true) {
+						// console.log("wrap_target:",wrap_target);
+						// console.log("obj:",obj);
+						// console.log("-- event:",event);
+						// console.log("ts_object.on_drop event called !!!!! with data_obj:", data_obj);
+					}
 
 				// add children
 					const button_obj = event.target
 					// set mode to button for add_child
-						button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1') ? 'add_child_from_hierarchy' : 'add_child';
-					ts_object.add_child(button_obj).then(function(response){
-						if(SHOW_DEBUG===true) {
-							//console.log("response:",response);
-						}
+					button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1') ? 'add_child_from_hierarchy' : 'add_child';
+					// request
+					ts_object.add_child(button_obj)
+					.then(function(response){
 
 						// fallback
 							if (typeof data_obj.manager!=="undefined" && typeof data_obj.fallback!=="undefined") {
 
-							 	// set_new_thesaurus_value on finish add_child
-							 		if (typeof window[data_obj.manager][data_obj.fallback]==="function") {
-										// call fallback
-							 				window[data_obj.manager][data_obj.fallback](response, data_obj, wrap_target)
-							 		}else{
-							 			// error notification
-							 				console.error("Error on exec callback. Method not available: ", data_obj.manager, data_obj.fallback);
-							 		}
+								// set_new_thesaurus_value on finish add_child
+								if (typeof window[data_obj.manager][data_obj.fallback]==="function") {
+									// call fallback
+									window[data_obj.manager][data_obj.fallback](response, data_obj, wrap_target)
+								}else{
+									// error notification
+									console.error("Error on exec callback. Method not available: ", data_obj.manager, data_obj.fallback);
+								}
 							}
 					 })
 
@@ -1070,22 +1069,33 @@ export const ts_object = new function() {
 			}else{
 				reject(Error("Error on append child"));
 			}
-		}).then(function(result) {
+		})
+		.then(function() {
 
 			// Update parent data (returns a promise after http request finish)
-			ts_object.update_parent_data(wrap_source).then(function(response){
+			ts_object.update_parent_data(wrap_source)
+			.then(function(response){
 
 				// Updates element_children_target
-				ts_object.update_arrow_state(element_children_target, true)
+					ts_object.update_arrow_state(element_children_target, true)
 
 				// Updates element_children_source
-				ts_object.update_arrow_state(element_children_source, false)
+					ts_object.update_arrow_state(element_children_source, false)
 
-				if(SHOW_DEBUG===true) {
-					console.log("[ts_object.on_drop] Finish on_drop 3");
-				}
+				// hilite moved term. wait 300 ms to allow arrow state update
+					const element = wrap_source.querySelector('.list_thesaurus_element[data-type="term"]')
+					if (element) {
+						setTimeout(function(){
+							ts_object.hilite_element(element)
+						}, 300)
+					}
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log("[on_drop ts_object.update_parent_data] response",response)
+						console.log("[ts_object.on_drop] Finish on_drop 3");
+					}
 			})
-
 		});//end js_promise
 
 		return true;
@@ -1105,67 +1115,57 @@ export const ts_object = new function() {
 		*/
 
 		// Old parent wrap (previous parent)
-		const old_parent_wrap = ts_object.old_parent_wrap
+			const old_parent_wrap = ts_object.old_parent_wrap
 			if (!old_parent_wrap) {
 				console.log("[ts_object.update_parent_data] Error on find old_parent_wrap");
 				return Promise.resolve(function(){return false});
 			}
 
 		// parent wrap (current drooped new parent)
-		const parent_wrap = wrap_ts_object.parentNode.parentNode;
+			const parent_wrap = wrap_ts_object.parentNode.parentNode;
 			if(!parent_wrap) {
 				console.log("[ts_object.update_parent_data] Error on find parent_wrap");
 				return Promise.resolve(function(){return false});
 			}
 
 		// element_children
-		//var element_children = parent_wrap.querySelector('.list_thesaurus_element[data-type="link_children"]')
-		const element_children = ts_object.get_link_children_from_wrap(parent_wrap)
+			//var element_children = parent_wrap.querySelector('.list_thesaurus_element[data-type="link_children"]')
+			const element_children = ts_object.get_link_children_from_wrap(parent_wrap)
 
 		// If old and new wrappers are the same, no is necessary update data
-		if (old_parent_wrap===parent_wrap) {
-			console.log("[ts_object.update_parent_data] New target and old target elements are the same. No is necessary update data");
-			return Promise.resolve(function(){return false});
-		}
+			if (old_parent_wrap===parent_wrap) {
+				console.log("[ts_object.update_parent_data] New target and old target elements are the same. No is necessary update data");
+				return Promise.resolve(function(){return false});
+			}
 
-		//var parent_node_type_element = parent_wrap.querySelector('.list_thesaurus_element[data-node_type]')
-		//var parent_node_type 		 = parent_node_type_element.dataset.node_type
+		// short vars
+			const section_id				= wrap_ts_object.dataset.section_id
+			const section_tipo				= wrap_ts_object.dataset.section_tipo
+			const old_parent_section_id		= old_parent_wrap.dataset.section_id
+			const old_parent_section_tipo	= old_parent_wrap.dataset.section_tipo
+			const parent_section_id			= parent_wrap.dataset.section_id
+			const parent_section_tipo		= parent_wrap.dataset.section_tipo
+			const parent_node_type			= parent_wrap.dataset.node_type
+			const tipo						= element_children.dataset.tipo
 
-		const parent_node_type = parent_wrap.dataset.node_type
-		/*
-		var parent_node_arrow_element = parent_wrap.querySelector('.list_thesaurus_element[data-type="link_children"]')
-		var class_list 				  = parent_node_arrow_element.firstChild.classList
-			class_list.remove('arrow_unactive','arrow_spinner')
-			class_list.add("ts_object_children_arrow_icon_open")
-		*/
-		const trigger_vars = {
-			mode					: 'update_parent_data',
-			section_id				: wrap_ts_object.dataset.section_id,
-			section_tipo			: wrap_ts_object.dataset.section_tipo,
-			old_parent_section_id	: old_parent_wrap.dataset.section_id,
-			old_parent_section_tipo	: old_parent_wrap.dataset.section_tipo,
-			parent_section_id		: parent_wrap.dataset.section_id,
-			parent_section_tipo		: parent_wrap.dataset.section_tipo,
-			parent_node_type		: parent_node_type,
-			tipo					: element_children.dataset.tipo
-		}
-
-		// json get call
-			const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
-				if(SHOW_DEBUG===true) {
-					console.log("[ts_object.update_parent_data] response",response)
+		// API call
+			const rqo = {
+				dd_api			: 'dd_ts_api',
+				prevent_lock	: true,
+				action			: 'update_parent_data',
+				source			: {
+					section_id				: section_id,
+					section_tipo			: section_tipo,
+					old_parent_section_id	: old_parent_section_id,
+					old_parent_section_tipo	: old_parent_section_tipo,
+					parent_section_id		: parent_section_id,
+					parent_section_tipo		: parent_section_tipo,
+					parent_node_type		: parent_node_type,
+					tipo					: tipo
 				}
-
-				// hilite moved term
-					const element = wrap_ts_object.querySelector('.list_thesaurus_element[data-type="term"]')
-					if (element!==null)
-						ts_object.hilite_element(element)
-
-				// toggle_view_children()
-
-				// Update source wrap in DOM
-				//var element_children_source = old_parent_wrap.querySelector('.list_thesaurus_element[data-type="link_children"]')
-					//ts_object.get_children(element_children_source)
+			}
+			const js_promise = data_manager.prototype.request({
+				body : rqo
 			})
 
 		return js_promise
@@ -1175,7 +1175,7 @@ export const ts_object = new function() {
 
 	/**
 	* TOGGLE_VIEW_CHILDREN
-	* @param DOM objec
+	* @param DOM object
 	*/
 	this.toggle_view_children = function(link_children_element, event) {
 		//var jsPromise = Promise.resolve(function(){
@@ -1497,100 +1497,103 @@ export const ts_object = new function() {
 
 	/**
 	* ADD_CHILD
-	* @param object button_obj
+	* Call to API to create a new record and add it to the current element as child
+	* @param DOM node button_obj
+	* @return promise
 	*/
 	this.add_child = function(button_obj) {
 
 		// wrap
 			const wrap = button_obj.parentNode.parentNode;
 			//const wrap = find_ancestor(button_obj, "wrap_ts_object")
-				if(!wrap || !wrap.classList.contains('wrap_ts_object')) {
-					console.log("[add_child] Error on find wrap");
-					return false
-				}
+			if(!wrap || !wrap.classList.contains('wrap_ts_object')) {
+				console.log("[add_child] Error on find wrap");
+				return Promise.resolve(false);
+			}
 
 		// children_element
 			const children_element = ts_object.get_link_children_from_wrap(wrap)
-				if(!children_element) {
-					console.log("[ts_object.add_child] Error on find children_element 'link_children'");
-					return false
-				}
+			if(!children_element) {
+				console.log("[ts_object.add_child] Error on find children_element 'link_children'");
+				return Promise.resolve(false);
+			}
 
-		// tipo
-			const tipo = children_element.dataset.tipo
-				if (!tipo) {
-					console.log("[ts_object.add_child] Error on find tipo on children_element 'link_children'");
-					return false
-				}
-
-		// mode
-			const mode = button_obj.dataset.mode || "add_child"
+		// short vars
+			const mode					= button_obj.dataset.mode || 'add_child'
+			const section_id			= wrap.dataset.section_id
+			const section_tipo			= wrap.dataset.section_tipo
+			const node_type				= wrap.dataset.node_type || null
+			const tipo					= children_element.dataset.tipo
+			const target_section_tipo	= wrap.dataset.target_section_tipo || null
 
 		// target_section_tipo check on add_child_from_hierarchy mode
 			if (mode==="add_child_from_hierarchy") {
 				if (typeof wrap.dataset.target_section_tipo==='undefined') {
 					alert("Please, define a target_section_tipo in current hierarchy before add terms")
 					console.log("[ts_object.add_child] Error on find target_section_tipo dataset on wrap");
-					return false
+					return Promise.resolve(false);
 				}
 			}
 
-		// trigger_vars
-			const trigger_vars = {
-				mode				: mode, // default is 'add_child',
-				section_id			: wrap.dataset.section_id,
-				section_tipo		: wrap.dataset.section_tipo,
-				node_type			: wrap.dataset.node_type || null,
-				tipo				: tipo,
-				target_section_tipo	: wrap.dataset.target_section_tipo || null
-			}
-			//if(SHOW_DEBUG===true) console.log("trigger_vars", trigger_vars); return ;
 
-		// JSON GET CALL
-		// Response is int new created section id
-		const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
-				if(SHOW_DEBUG===true) {
-					console.log("[ts_object.add_child] response",response)
-				}
+		return new Promise(function(resolve){
 
-				if (response===null) {
-
-					// Server script error
-						alert("Error on add_child. See server log for details");
-
-				}else{
-
-					if (response.result===false) {
-
-						// Problems on add
-							alert(response.msg);
-
-					}else{
-						// All is OK
-							// Refresh children container
-							// ts_object.get_children(children_element).then(function(){
-							// 	// On children refresh is done, trigger edit button
-							// 	console.log("[ts_object.add_child] update_children_promise done");
-							// 	//console.log(response);
-							// 	// Open edit window
-							// 	let new_section_id = response.result
-							// 	ts_object.edit(button_obj, null, new_section_id, wrap.dataset.section_tipo)
-							// })
-
-						// Add section tipo to response
-							response.wrap 		= wrap
-							response.button_obj = button_obj
-
-
-						return response
+			// API call
+				const rqo = {
+					dd_api			: 'dd_ts_api',
+					prevent_lock	: true,
+					action			: mode,
+					source			: {
+						section_id			: section_id,
+						section_tipo		: section_tipo,
+						node_type			: node_type,
+						tipo				: tipo,
+						target_section_tipo	: target_section_tipo
 					}
 				}
+				data_manager.prototype.request({
+					body : rqo
+				})
+				.then(function(response) {
+					if(SHOW_DEBUG===true) {
+						console.log("[ts_object.add_child] response",response)
+					}
 
-			}, function(error) {
-				console.error("Failed get_json!", error);
-			});
+					if (response===null) {
 
-		return js_promise
+						// Server script error
+							alert("Error on add_child. See server log for details");
+
+					}else{
+
+						if (response.result===false) {
+
+							// Problems found on add
+								alert(response.msg);
+
+						}else{
+
+							// All is OK
+
+							// Refresh children container
+									// ts_object.get_children(children_element).then(function(){
+									// 	// On children refresh is done, trigger edit button
+									// 	console.log("[ts_object.add_child] update_children_promise done");
+									// 	//console.log(response);
+									// 	// Open edit window
+									// 	let new_section_id = response.result
+									// 	ts_object.edit(button_obj, null, new_section_id, wrap.dataset.section_tipo)
+									// })
+
+							// Add some vars tipo to the response
+								response.wrap 		= wrap
+								response.button_obj = button_obj
+						}
+					}
+
+					resolve(response)
+				})
+		})
 	};//end add_child
 
 
@@ -1663,59 +1666,86 @@ export const ts_object = new function() {
 
 	/**
 	* DELETE
+	* Removed selected record from database
+	* @param DOM node button_obj
+	* @return promise
 	*/
 	this.delete = function(button_obj) {
 
-		if (!confirm("You are sure to delete current element?")) return false;
+		// confirm dialog
+			if (!confirm("You are sure to delete current element?")) {
+				return Promise.resolve(false);
+			}
 
-		const wrap = button_obj.parentNode.parentNode;
+		// wrap
+			const wrap = button_obj.parentNode.parentNode;
 			if(!wrap) {
 				console.log("[delete] Error on find wrap");
-				return false
+				return Promise.resolve(false);
 			}
 
 		// Get all wrap_ts_object wraps whit this section_tipo, section_id
 		// Find wrap of wrap and inside, button list_thesaurus_element
 		// const ar_wrap_ts_object = document.querySelectorAll('.wrap_ts_object[data-section_id="'+wrap.dataset.section_id+'"][data-section_tipo="'+wrap.dataset.section_tipo+'"]')	//
 
-		const trigger_vars = {
-			mode			: 'delete',
-			section_id		: wrap.dataset.section_id,
-			section_tipo	: wrap.dataset.section_tipo,
-			node_type		: wrap.dataset.node_type || null,
-		}
-		//return console.log("[ts_object.delete] trigger_vars",trigger_vars);
+		// short vars
+			const section_id	= wrap.dataset.section_id
+			const section_tipo	= wrap.dataset.section_tipo
+			const node_type		= wrap.dataset.node_type || null
 
-		// JSON GET CALL
-		const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
-				if(SHOW_DEBUG===true) {
-					console.log("[ts_object.delete] response",response);
-				}
+		return new Promise(function(resolve){
 
-				if (response.result===false) {
-					alert("Sorry. You can't delete a element with children. Please, remove all children before delete.")
-				}else{
-					// Remove all DOM appearances of current wrap_ts_object
-					/*
-					var len = ar_wrap_ts_object.length
-					for (var i = 0; i < ar_wrap_ts_object.length; i++) {
-						ar_wrap_ts_object[i].parentNode.removeChild(ar_wrap_ts_object[i])
+			// API call
+				const rqo = {
+					dd_api			: 'dd_ts_api',
+					prevent_lock	: true,
+					action			: 'delete',
+					source			: {
+						section_id		: section_id,
+						section_tipo	: section_tipo,
+						node_type		: node_type
 					}
-					*/
-					ts_object.refresh_element(wrap.dataset.section_tipo, wrap.dataset.section_id)
 				}
-				/*
-				// Refresh children container
-				var update_children_promise = ts_object.get_children(button_obj).then(function() {
-						// On children refresh is done, trigger edit button
-						console.log("update_children_promise done");
-					})
-				*/
-			}, function(error) {
-				console.error("Failed get_json!", error);
-			});
+				data_manager.prototype.request({
+					body : rqo
+				})
+				.then(function(response) {
 
-		return js_promise
+					// debug
+						if(SHOW_DEBUG===true) {
+							console.log("[ts_object.delete] response",response);
+						}
+
+					if (response.result===false) {
+
+						// error response
+						alert("Sorry. You can't delete a element with children. Please, remove all children before delete.")
+
+					}else{
+
+						// all is OK
+
+						// Remove all DOM appearances of current wrap_ts_object
+							/*
+							var len = ar_wrap_ts_object.length
+							for (var i = 0; i < ar_wrap_ts_object.length; i++) {
+								ar_wrap_ts_object[i].parentNode.removeChild(ar_wrap_ts_object[i])
+							}
+							*/
+
+						// refresh wrap
+							ts_object.refresh_element(wrap.dataset.section_tipo, wrap.dataset.section_id)
+					}
+
+					// Refresh children container
+						// var update_children_promise = ts_object.get_children(button_obj).then(function() {
+						// 	// On children refresh is done, trigger edit button
+						// 	console.log("update_children_promise done");
+						// })
+
+					resolve(response)
+				});
+		})
 	};//end delete
 
 
@@ -1900,20 +1930,30 @@ export const ts_object = new function() {
 
 	/**
 	* SHOW_INDEXATIONS : load the fragment list and render the grid
+	* @param object options
+	* @return promise
+	* 	resolve object dd_grid
 	*/
 	this.show_indexations = async function(options) {
 
-		const button_obj		= options.button_obj
-		const event				= options.event
-		const section_tipo		= options.section_tipo
-		const section_id		= options.section_id
-		const component_tipo	= options.component_tipo
-		const container_id		= options.container_id
-		const value				= options.value || null
+		// options
+			const section_tipo		= options.section_tipo
+			const section_id		= options.section_id
+			const component_tipo	= options.component_tipo
+			const container_id		= options.container_id
+			const value				= options.value || null
+			// const button_obj		= options.button_obj // not used
+			// const event			= options.event // not used
 
-		const target_div = document.getElementById(container_id);
+		// target_div
+			const target_div = document.getElementById(container_id);
 			if (!target_div) {
 				alert('show_indexations. Target div not exist for section_id: '+section_id+' !')
+				return false
+			}
+			// already loaded. toggle visible
+			if (target_div.firstChild) {
+				target_div.classList.toggle('hide')
 				return false
 			}
 
@@ -1928,7 +1968,8 @@ export const ts_object = new function() {
 				}
 			}
 
-			const dd_grid	= await instances.get_instance({
+		// dd_grid
+			const dd_grid = await instances.get_instance({
 				model			: 'dd_grid',
 				section_tipo	: section_tipo,
 				section_id		: section_id,
@@ -1937,64 +1978,12 @@ export const ts_object = new function() {
 				lang			: page_globals.dedalo_data_lang,
 				rqo				: rqo
 			})
-
 			await dd_grid.build()
-
 			const node = await dd_grid.render()
 			target_div.appendChild(node)
 
-		return
 
-		// DES
-			// let js_promise
-
-			// if(target_div.offsetHeight>0) {
-
-			// 	// si está visible, la ocultamos
-			// 	target_div.style.display = 'none'
-
-			// 	js_promise = new Promise((resolve, reject) => {
-			// 	   resolve("Hidden target_div")
-			// 	});
-
-			// }else{
-
-			// 	target_div.innerHTML = "<div><span class=\"blink\">Loading indexations. Please wait..</span> <span class=\"css_spinner\"></span></div>"
-			// 	target_div.style.display = 'inline-table'
-
-			// 	// si no está visible, hacemos la búsqueda y cargamos los datos
-			// 	const trigger_vars = {
-			// 			mode	 		: 'show_indexations',
-			// 			section_tipo 	: section_tipo,
-			// 			section_id 		: section_id,
-			// 			component_tipo 	: component_tipo
-			// 		}
-
-			// 	// JSON GET CALL
-			// 	js_promise = ts_object.get_json(trigger_vars).then(function(response) {
-			// 			if(SHOW_DEBUG===true) {
-			// 				console.log("[ts_object.show_indexations] response",response);
-			// 			}
-
-			// 			if (response && response.result) {
-			// 				target_div.innerHTML 	 = response.result
-			// 				target_div.style.display = 'inline-table'
-			// 			}else{
-			// 				target_div.innerHTML = "<div>Sorry. A broken link was found</div>"
-			// 				setTimeout(function(){
-			// 					target_div.innerHTML     = ""
-			// 					target_div.style.display = "none"
-			// 				},4000)
-			// 				console.log("An error was happened. null value is received. See server log for details.");
-			// 			}
-
-			// 		}, function(error) {
-			// 			console.error("Failed get_json!", error);
-			// 		});
-			// }//end if(target_div.offsetHeight>0)
-
-
-			// return js_promise
+		return dd_grid
 	};//end show_indexations
 
 
@@ -2022,79 +2011,66 @@ export const ts_object = new function() {
 
 
 	/**
-	* GET_JSON
+	* GET_JSON (REMOVED. NOW, 'data_manager' FETCH IS USED INSTEAD)
 	* XMLHttpRequest to trigger
 	* @return Promise
 	*/
-	this.get_json = function(trigger_vars) {
+		// this.get_json_data = function(trigger_url, trigger_vars, async, content_type) {
 
-		const url = this.trigger_url;	//?mode=get_children_data';
+		// 	const url = trigger_url;	//?mode=get_children_data';
+		// 	console.log("url:",url);
 
-		// Return a promise of XMLHttpRequest
-		return this.get_json_data(url, trigger_vars)
-	};//end get_json
+		// 	// ASYNC
+		// 	if (typeof async==="undefined" || async!==false) {
+		// 		async = true
+		// 	}
 
+		// 	const data_send = JSON.stringify(trigger_vars)
+		// 	//console.log("[get_json_data] data_send:",data_send);
 
+		// 	// Create new promise with the Promise() constructor;
+		// 	// This has as its argument a function
+		// 	// with two parameters, resolve and reject
+		// 	return new Promise(function(resolve, reject) {
+		// 		// Standard XHR to load an image
+		// 		const request = new XMLHttpRequest();
 
-	/**
-	* GET_JSON
-	* XMLHttpRequest to trigger
-	* @return Promise
-	*/
-	this.get_json_data = function(trigger_url, trigger_vars, async, content_type) {
+		// 			// Open connection as post
+		// 				request.open("POST", url, async);
 
-		const url = trigger_url;	//?mode=get_children_data';
+		// 			//request.timeout = 30 * 1000 * 60 ; // time in milliseconds
+		// 			//request.ontimeout = function () {
+		// 			//    console.error("The request for " + url + " timed out.");
+		// 			//};
 
-		// ASYNC
-		if (typeof async==="undefined" || async!==false) {
-			async = true
-		}
+		// 			// codification of the header for POST method, in GET no is necessary
+		// 				if (typeof content_type==="undefined") {
+		// 					content_type = "application/json"
+		// 				}
+		// 				request.setRequestHeader("Content-type", content_type); // application/json OR application/x-www-form-urlencoded
 
-		const data_send = JSON.stringify(trigger_vars)
-		//console.log("[get_json_data] data_send:",data_send);
+		// 			request.responseType = 'json';
+		// 			// When the request loads, check whether it was successful
+		// 			request.onload = function(e) {
+		// 			  if (request.status === 200) {
+		// 				// If successful, resolve the promise by passing back the request response
+		// 				// console.log("+++++++++++++++++++++++++++++ request.response:",request.response);
+		// 				resolve(request.response);
+		// 			  }else{
+		// 				// If it fails, reject the promise with a error message
+		// 				reject(Error('Reject error don\'t load successfully; error code: ' + request.statusText));
+		// 			  }
+		// 			};
+		// 			request.onerror = function(e) {
+		// 			  // Also deal with the case when the entire request fails to begin with
+		// 			  // This is probably a network error, so reject the promise with an appropriate message
+		// 			  reject(Error('There was a network error. data_send: '+url+"?"+ data_send + "statusText:" + request.statusText));
+		// 			};
 
-		// Create new promise with the Promise() constructor;
-		// This has as its argument a function
-		// with two parameters, resolve and reject
-		return new Promise(function(resolve, reject) {
-			// Standard XHR to load an image
-			const request = new XMLHttpRequest();
-
-				// Open connection as post
-					request.open("POST", url, async);
-
-				//request.timeout = 30 * 1000 * 60 ; // time in milliseconds
-				//request.ontimeout = function () {
-				//    console.error("The request for " + url + " timed out.");
-				//};
-
-				// codification of the header for POST method, in GET no is necessary
-					if (typeof content_type==="undefined") {
-						content_type = "application/json"
-					}
-					request.setRequestHeader("Content-type", content_type); // application/json OR application/x-www-form-urlencoded
-
-				request.responseType = 'json';
-				// When the request loads, check whether it was successful
-				request.onload = function(e) {
-				  if (request.status === 200) {
-					// If successful, resolve the promise by passing back the request response
-					resolve(request.response);
-				  }else{
-					// If it fails, reject the promise with a error message
-					reject(Error('Reject error don\'t load successfully; error code: ' + request.statusText));
-				  }
-				};
-				request.onerror = function(e) {
-				  // Also deal with the case when the entire request fails to begin with
-				  // This is probably a network error, so reject the promise with an appropriate message
-				  reject(Error('There was a network error. data_send: '+url+"?"+ data_send + "statusText:" + request.statusText));
-				};
-
-				// Send the request
-				request.send(data_send);
-		});
-	};//end get_json
+		// 			// Send the request
+		// 			request.send(data_send);
+		// 	});
+		// };//end get_json
 
 
 
@@ -2378,111 +2354,124 @@ export const ts_object = new function() {
 
 		const old_value = parseInt(button_obj.textContent)
 
-		if (new_value===old_value) {
-			if(SHOW_DEBUG===true) {
-				console.log("[ts_object.save_order] Value is not changed. ignored save_order action")
+		// check is new_value
+			if (new_value===old_value) {
+				if(SHOW_DEBUG===true) {
+					console.log("[ts_object.save_order] Value is not changed. ignored save_order action")
+				}
+				return Promise.resolve(false);
 			}
-			return false
-		}
 
-		const element_wrap			= button_obj.parentNode.parentNode
-		const element_section_tipo	= element_wrap.dataset.section_tipo
-		const element_section_id	= element_wrap.dataset.section_id
-		//const children			= button_obj.parentNode.parentNode.parentNode.querySelectorAll('.wrap_ts_object')
-		const children				= element_wrap.parentNode.childNodes
-		const children_len			= children.length
-		const wrap					= element_wrap.parentNode.parentNode
+		// short vars
+			const element_wrap			= button_obj.parentNode.parentNode
+			const element_section_tipo	= element_wrap.dataset.section_tipo
+			const element_section_id	= element_wrap.dataset.section_id
+			const children				= element_wrap.parentNode.childNodes
+			const children_len			= children.length
+			const wrap					= element_wrap.parentNode.parentNode
 
 		// link_children . Search component_relation_children tipo from wrap
 			const link_children = this.get_link_children_from_wrap(wrap)
 			if (link_children===null) {
 				alert("[ts_object.save_order] Error on get list_thesaurus_element. save_order is skipped");
-				return false;
+				return Promise.resolve(false);
 			}
 
-		// Avoid set invalid values
-		if (new_value>children_len){
-			new_value = children_len // max value is array length
-		}else if (new_value<1) {
-			new_value = 1;    // min value is 1
-		}
+		// new_value. Prevent set invalid values
+			if (new_value>children_len){
+				new_value = children_len // max value is array length
+			}else if (new_value<1) {
+				new_value = 1;    // min value is 1
+			}
 
-		// Iterate children elements
-		let ar_locators = []
-		for (let i = 0; i < children_len; i++) {
+		// ar_locators. Iterate children elements
+			const ar_locators = []
+			for (let i = 0; i < children_len; i++) {
+				ar_locators.push({
+					section_tipo	: children[i].dataset.section_tipo,
+					section_id		: children[i].dataset.section_id
+				})
+			}
 
-			ar_locators.push({
-				section_tipo : children[i].dataset.section_tipo,
-				section_id 	 : children[i].dataset.section_id
-			})
-		}
+		// sort array with new keys
+			// function move_locator(ar_locators, from, to) {
+			// 	return ar_locators.splice(to, 0, ar_locators.splice(from, 1)[0]);
+			// };
 
-		// Sort array with new keys
-		// function move_locator(ar_locators, from, to) {
-		// 	return ar_locators.splice(to, 0, ar_locators.splice(from, 1)[0]);
-		// };
-
-		function move_locator(array, pos1, pos2) {
-			// local variables
-			var i, tmp;
-			// cast input parameters to integers
-			pos1 = parseInt(pos1, 10);
-			pos2 = parseInt(pos2, 10);
-			// if positions are different and inside array
-			if (pos1 !== pos2 && 0 <= pos1 && pos1 <= array.length && 0 <= pos2 && pos2 <= array.length) {
-			  // save element from position 1
-			  tmp = array[pos1];
-			  // move element down and shift other elements up
-			  if (pos1 < pos2) {
-				for (i = pos1; i < pos2; i++) {
-				  array[i] = array[i + 1];
+		// move_locator
+			function move_locator(array, pos1, pos2) {
+				// local variables
+				var i, tmp;
+				// cast input parameters to integers
+				pos1 = parseInt(pos1, 10);
+				pos2 = parseInt(pos2, 10);
+				// if positions are different and inside array
+				if (pos1 !== pos2 && 0 <= pos1 && pos1 <= array.length && 0 <= pos2 && pos2 <= array.length) {
+				  // save element from position 1
+				  tmp = array[pos1];
+				  // move element down and shift other elements up
+				  if (pos1 < pos2) {
+					for (i = pos1; i < pos2; i++) {
+					  array[i] = array[i + 1];
+					}
+				  }
+				  // move element up and shift other elements down
+				  else {
+					for (i = pos1; i > pos2; i--) {
+					  array[i] = array[i - 1];
+					}
+				  }
+				  // put element from position 1 to destination
+				  array[pos2] = tmp;
 				}
-			  }
-			  // move element up and shift other elements down
-			  else {
-				for (i = pos1; i > pos2; i--) {
-				  array[i] = array[i - 1];
+				return array
+			}
+
+		// order_ar_locators
+			const from	= parseInt(old_value)-1
+			const to	= parseInt(new_value)-1
+			move_locator(ar_locators, from, to)
+
+		// short vars
+			const section_id		= wrap.dataset.section_id
+			const section_tipo		= wrap.dataset.section_tipo
+			const component_tipo	= link_children.dataset.tipo
+
+
+		return new Promise(function(resolve){
+
+			// API call
+				const rqo = {
+					dd_api			: 'dd_ts_api',
+					prevent_lock	: true,
+					action			: 'save_order',
+					source			: {
+						section_id		: section_id,
+						section_tipo	: section_tipo,
+						component_tipo	: component_tipo,
+						ar_locators		: ar_locators
+					}
 				}
-			  }
-			  // put element from position 1 to destination
-			  array[pos2] = tmp;
-			}
-			return array
-		 }
+				data_manager.prototype.request({
+					body : rqo
+				})
+				.then(function(response){
 
-		const from 	= parseInt(old_value)-1
-		const to 	= parseInt(new_value)-1
+					// debug
+						if(SHOW_DEBUG===true) {
+							console.log("[ts_object.save_order] response", response)
+						}
 
-		const order_ar_locators = move_locator(ar_locators, from, to)
+					if (response.result && response.result!==false) {
+						// Refresh element
+						ts_object.refresh_element( element_section_tipo, element_section_id )
+					}else{
+						alert("[ts_object.save_order] Error on save order. "+ ts_object.msg )
+					}
 
-		const trigger_vars = {
-				mode 		 	: 'save_order',
-				section_id 		: wrap.dataset.section_id,
-				section_tipo 	: wrap.dataset.section_tipo,
-				component_tipo 	: link_children.dataset.tipo,
-				ar_locators		: ar_locators // JSON.stringify(
-			}
-			if(SHOW_DEBUG===true) console.log("[ts_object.save_order] trigger_vars",trigger_vars);
-
-		// JSON GET CALL
-		// Response is int new created section id
-		const js_promise = ts_object.get_json(trigger_vars).then(function(response) {
-			if(SHOW_DEBUG===true) {
-				console.log("[ts_object.save_order] response", response)
-			}
-
-			if (response.result && response.result!==false) {
-				// Refresh element
-				ts_object.refresh_element( element_section_tipo, element_section_id )
-			}else{
-				alert("[ts_object.save_order] Error on save order. "+ ts_object.msg )
-			}
-
-		}, function(error) {
-			console.error("[ts_object.save_order] Failed get_json!", error);
-		});
-
-		return js_promise
+					resolve(response)
+				})
+		})
 	};//end save_order
 
 
