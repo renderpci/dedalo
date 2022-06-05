@@ -1936,7 +1936,6 @@ class component_text_area extends component_common {
 				$resolved[] = $lkey;
 			}
 		}
-
 		return $tags_persons; // array
 	}//end get_tags_persons
 
