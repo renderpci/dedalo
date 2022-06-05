@@ -146,14 +146,16 @@ final class dd_ts_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// short vars
-			$source			= $rqo->source;
-			$section_tipo	= $source->section_tipo;
-			$section_id		= $source->section_id;
-			$node_type		= $source->node_type;
-			$tipo			= $source->tipo;
+			$source					= $rqo->source;
+			$section_tipo			= $source->section_tipo;
+			$section_id				= $source->section_id;
+			// target_section_tipo. (!) Note that when hild_from_hierarchy is added, this value is different
+			// else is the same value as section_tipo
+			$target_section_tipo	= $source->target_section_tipo;
+			$tipo					= $source->tipo;
 
 		// new section. Create a new empty section
-			$new_section	= section::get_instance(null,$section_tipo);
+			$new_section	= section::get_instance(null, $target_section_tipo);
 			$new_section_id	= $new_section->Save();
 			if (empty($new_section_id)) {
 				#debug_log(__METHOD__." Error on create new section from parent. Stoped add_child process !".to_string(), logger::ERROR);
@@ -163,11 +165,11 @@ final class dd_ts_api {
 			}
 
 		// section map
-			$section_map = section::get_section_map( $section_tipo );
+			$section_map = section::get_section_map( $target_section_tipo );
 
 		// set new section component 'is_descriptor' value
 			if (!isset($section_map->thesaurus->is_descriptor)) {
-				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
 			}else{
 				if ($section_map->thesaurus->is_descriptor!==false) {
 					$component_tipo	= $section_map->thesaurus->is_descriptor;
@@ -178,7 +180,7 @@ final class dd_ts_api {
 						$new_section_id,
 						'edit', // note mode edit autosave default value
 						DEDALO_DATA_NOLAN,
-						$section_tipo
+						$target_section_tipo
 					);
 					$component->get_dato();
 					debug_log(__METHOD__." Saved default dato to 'is_descriptor' component ($component_tipo : $modelo_name) on section_id: ".to_string($new_section_id), logger::DEBUG);
@@ -187,7 +189,7 @@ final class dd_ts_api {
 
 		// is_indexable default value set
 			if (!isset($section_map->thesaurus->is_indexable)) {
-				debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+				debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
 			}else{
 				if ($section_map->thesaurus->is_indexable!==false) {
 					$component_tipo	= $section_map->thesaurus->is_indexable;
@@ -198,7 +200,7 @@ final class dd_ts_api {
 						$new_section_id,
 						'edit', // note mode edit autosave default value
 						DEDALO_DATA_NOLAN,
-						$section_tipo
+						$target_section_tipo
 					);
 					$component->get_dato();
 					debug_log(__METHOD__." Saved default dato to 'is_indexable' component ($component_tipo : $modelo_name) on section_id: ".to_string($new_section_id), logger::DEBUG);
@@ -224,7 +226,7 @@ final class dd_ts_api {
 			);
 
 		// add
-			$added = (bool)$component_relation_children->make_me_your_child( $section_tipo, $new_section_id );
+			$added = (bool)$component_relation_children->make_me_your_child( $target_section_tipo, $new_section_id );
 			if ($added===true) {
 
 				# Save relation children data
@@ -237,7 +239,7 @@ final class dd_ts_api {
 				// debug
 					if(SHOW_DEBUG===true) {
 						$debug = new stdClass();
-							$debug->exec_time 	= exec_time_unit($start_time,'ms').' ms';
+							$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
 						$response->debug = $debug;
 					}
 			}//end if ($added===true)
@@ -252,104 +254,104 @@ final class dd_ts_api {
 	* ADD_CHILD_FROM_HIERARCHY
 	* @return object $response
 	*/
-	public static function add_child_from_hierarchy(object $json_data) : object {
-		$start_time = start_time();
+		// public static function add_child_from_hierarchy(object $json_data) : object {
+		// 	$start_time = start_time();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// vars
-			$vars = array('section_tipo','section_id','target_section_tipo','tipo');
-				foreach($vars as $name) {
-					$$name = common::setVarData($name, $json_data);
-					# DATA VERIFY
-					#if ($name==='dato') continue; # Skip non mandatory
-					if (empty($$name)) {
-						$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-						return $response;
-					}
-				}
+		// 	// vars
+		// 		$vars = array('section_tipo','section_id','target_section_tipo','tipo');
+		// 			foreach($vars as $name) {
+		// 				$$name = common::setVarData($name, $json_data);
+		// 				# DATA VERIFY
+		// 				#if ($name==='dato') continue; # Skip non mandatory
+		// 				if (empty($$name)) {
+		// 					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+		// 					return $response;
+		// 				}
+		// 			}
 
-		// new section
-			$new_section	= section::get_instance(null,$target_section_tipo);
-			$new_section_id	= $new_section->Save();
-							if (empty($new_section_id)) {
-								debug_log(__METHOD__." Error on create new section from parent. Stoped add_child process !".to_string(), logger::ERROR);
-								$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on create new section from parent. Stoped add_child process !';
-								return $response;
-							}
-		// section map
-			$section_map = section::get_section_map( $target_section_tipo );
+		// 	// new section
+		// 		$new_section	= section::get_instance(null,$target_section_tipo);
+		// 		$new_section_id	= $new_section->Save();
+		// 						if (empty($new_section_id)) {
+		// 							debug_log(__METHOD__." Error on create new section from parent. Stoped add_child process !".to_string(), logger::ERROR);
+		// 							$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on create new section from parent. Stoped add_child process !';
+		// 							return $response;
+		// 						}
+		// 	// section map
+		// 		$section_map = section::get_section_map( $target_section_tipo );
 
-		// set new section component 'is_descriptor' value
-			if (!isset($section_map->thesaurus->is_descriptor)) {
-				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
-			}else{
-				if ($section_map->thesaurus->is_descriptor!==false) {
-					$component_tipo	= $section_map->thesaurus->is_descriptor;
-					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance($modelo_name,
-																	 $component_tipo,
-																	 $new_section_id,
-																	 'edit', // note mode edit autosave default value
-																	 DEDALO_DATA_NOLAN,
-																	 $target_section_tipo);
-					$component->get_dato();
-				}
-			}
+		// 	// set new section component 'is_descriptor' value
+		// 		if (!isset($section_map->thesaurus->is_descriptor)) {
+		// 			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
+		// 		}else{
+		// 			if ($section_map->thesaurus->is_descriptor!==false) {
+		// 				$component_tipo	= $section_map->thesaurus->is_descriptor;
+		// 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		// 				$component		= component_common::get_instance($modelo_name,
+		// 																 $component_tipo,
+		// 																 $new_section_id,
+		// 																 'edit', // note mode edit autosave default value
+		// 																 DEDALO_DATA_NOLAN,
+		// 																 $target_section_tipo);
+		// 				$component->get_dato();
+		// 			}
+		// 		}
 
-		// set new section component 'is_indexable' value
-			if (!isset($section_map->thesaurus->is_indexable)) {
-				debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
-			}else{
-				if ($section_map->thesaurus->is_indexable!==false) {
-					$component_tipo	= $section_map->thesaurus->is_indexable;
-					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance($modelo_name,
-																	 $component_tipo,
-																	 $new_section_id,
-																	 'edit', // note mode edit autosave default value
-																	 DEDALO_DATA_NOLAN,
-																	 $target_section_tipo);
-					$component->get_dato();
-				}
-			}
+		// 	// set new section component 'is_indexable' value
+		// 		if (!isset($section_map->thesaurus->is_indexable)) {
+		// 			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
+		// 		}else{
+		// 			if ($section_map->thesaurus->is_indexable!==false) {
+		// 				$component_tipo	= $section_map->thesaurus->is_indexable;
+		// 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		// 				$component		= component_common::get_instance($modelo_name,
+		// 																 $component_tipo,
+		// 																 $new_section_id,
+		// 																 'edit', // note mode edit autosave default value
+		// 																 DEDALO_DATA_NOLAN,
+		// 																 $target_section_tipo);
+		// 				$component->get_dato();
+		// 			}
+		// 		}
 
-		// component_relation_children
-			$modelo_name	= 'component_relation_children';
-			$modo			= 'edit';
-			$lang			= DEDALO_DATA_NOLAN;
-			$component_relation_children = component_common::get_instance($modelo_name,
-																		  $tipo,
-																		  $section_id,
-																		  $modo,
-																		  $lang,
-																		  $section_tipo);
+		// 	// component_relation_children
+		// 		$modelo_name	= 'component_relation_children';
+		// 		$modo			= 'edit';
+		// 		$lang			= DEDALO_DATA_NOLAN;
+		// 		$component_relation_children = component_common::get_instance($modelo_name,
+		// 																	  $tipo,
+		// 																	  $section_id,
+		// 																	  $modo,
+		// 																	  $lang,
+		// 																	  $section_tipo);
 
-		// add
-			$added = (bool)$component_relation_children->make_me_your_child( $target_section_tipo, $new_section_id );
-			if ($added===true) {
-				$component_relation_children->Save();
+		// 	// add
+		// 		$added = (bool)$component_relation_children->make_me_your_child( $target_section_tipo, $new_section_id );
+		// 		if ($added===true) {
+		// 			$component_relation_children->Save();
 
-				# All is ok. Result is new created section section_id
-				$response->result  	= (int)$new_section_id;
-				$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-			}
+		// 			# All is ok. Result is new created section section_id
+		// 			$response->result  	= (int)$new_section_id;
+		// 			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+		// 		}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-					foreach($vars as $name) {
-						$debug->{$name} = $$name;
-					}
+		// 	// debug
+		// 		if(SHOW_DEBUG===true) {
+		// 			$debug = new stdClass();
+		// 				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+		// 				foreach($vars as $name) {
+		// 					$debug->{$name} = $$name;
+		// 				}
 
-				$response->debug = $debug;
-			}
+		// 			$response->debug = $debug;
+		// 		}
 
-		return (object)$response;
-	}//end add_child_from_hierarchy
+		// 	return (object)$response;
+		// }//end add_child_from_hierarchy
 
 
 

@@ -207,13 +207,14 @@ class indexation_grid {
 				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
 				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-
-				$current_component 	= component_common::get_instance($component_model,
-																	 $ddo->tipo,
-																	 $current_section_id,
-																	 'indexation_list',
-																	 $current_lang,
-																	 $current_section_tipo);
+				$current_component	= component_common::get_instance(
+					$component_model,
+					$ddo->tipo,
+					$current_section_id,
+					'indexation_list',
+					$current_lang,
+					$current_section_tipo
+				);
 				$current_component->set_locator($locator);
 				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
 				$column_obj = new stdClass();
@@ -373,13 +374,14 @@ class indexation_grid {
 
 				foreach ($ar_keys as $current_id_section) {
 					// get the user projects
-					$component_filter 	= component_common::get_instance('component_filter',
-																		$component_filter_tipo,
-																		$current_id_section,
-																		'edit',
-																		DEDALO_DATA_NOLAN,
-																		$section_top_tipo
-																		);
+					$component_filter = component_common::get_instance(
+						'component_filter',
+						$component_filter_tipo,
+						$current_id_section,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$section_top_tipo
+					);
 					$component_filter_dato = (array)$component_filter->get_dato();
 
 					$in_user_projects = false;
@@ -399,12 +401,13 @@ class indexation_grid {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total=round(start_time()-$start_time,3);
-				$slow = 0.125;
+				$total	= start_time()-$start_time; // nanoseconds
+				$slow	= 150000000; // 150 ms (150 * 1000000)
 				if ($total>$slow) {
-					dump($total,"SLOW METHOD (>$slow): total secs $total");
+					dump($total,"SLOW METHOD (>$slow): total secs $total");
 				}
 			}
+
 
 		return $ar_section_top_tipo;
 	}//end get_ar_section_top_tipo
@@ -421,12 +424,14 @@ class indexation_grid {
 		$model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
 
 		// indexations
-		$component 	= component_common::get_instance($model, //'component_relation_index',
-													 $this->tipo,
-													 $this->section_id,
-													 'list',
-													 DEDALO_DATA_NOLAN,
-													 $this->section_tipo);
+		$component = component_common::get_instance(
+			$model, //'component_relation_index',
+			$this->tipo,
+			$this->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$this->section_tipo
+		);
 
 		$ar_locators = $component->get_dato();
 
@@ -436,6 +441,3 @@ class indexation_grid {
 
 
 }//end class indexation_grid
-
-
-
