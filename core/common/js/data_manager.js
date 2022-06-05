@@ -305,7 +305,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 */
 const db_table = {}
 data_manager.prototype.get_local_db_data = async function(id, table, cache=false) {
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -501,5 +501,3 @@ data_manager.prototype.component_load_context = async function(component) {
 	return context
 };//end component_load_context
 */
-
-
