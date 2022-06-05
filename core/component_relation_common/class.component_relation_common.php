@@ -1090,7 +1090,7 @@ class component_relation_common extends component_common {
 	* 	Is array of locators. Default is bool false
 	* @return object $response
 	*/
-	public static function remove_parent_references(string $section_tipo, $section_id, bool $filter=false) : object {
+	public static function remove_parent_references(string $section_tipo, $section_id, array $filter=null) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1104,11 +1104,11 @@ class component_relation_common extends component_common {
 		$ar_removed=array();
 		foreach ((array)$parents as $current_parent) {
 
-			$current_component_tipo = $current_parent->from_component_tipo;
-			$current_section_tipo 	= $current_parent->section_tipo;
-			$current_section_id 	= $current_parent->section_id;
+			$current_component_tipo	= $current_parent->from_component_tipo;
+			$current_section_tipo	= $current_parent->section_tipo;
+			$current_section_id		= $current_parent->section_id;
 
-			if ($filter!==false) {
+			if (!empty($filter)) {
 				# compare current with filter
 				$process=false;
 				foreach ($filter as $current_locator) {
