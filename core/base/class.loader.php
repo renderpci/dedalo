@@ -42,6 +42,7 @@ include(DEDALO_CORE_PATH . '/search/class.search_related.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_tools_api.php');
+include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_ts_api.php');
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
 # include the shared classes
 include(DEDALO_SHARED_PATH . '/class.TR.php');
