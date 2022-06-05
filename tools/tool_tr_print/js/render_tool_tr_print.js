@@ -691,7 +691,7 @@ const render_default = function(self) {
 							element_type	: 'a',
 							class_name 		: 'index terms',
 							href 			: '#tagindex_'+tag_id,
-							text_content	: ar_labels.join(', ') +'a',
+							text_content	: ar_labels.join(', '),
 							parent 			: indexations
 						})
 
