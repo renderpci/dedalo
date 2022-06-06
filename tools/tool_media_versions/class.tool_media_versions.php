@@ -4,7 +4,7 @@
 
 
 
-/*
+/**
 * CLASS TOOL_MEDIA_VERSIONS
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
 *
@@ -229,6 +229,5 @@ class tool_media_versions extends tool_common {
 	}//end rotate
 
 
-}//end class
 
-
+}//end class tool_media_versions

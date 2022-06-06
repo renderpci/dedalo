@@ -1,15 +1,15 @@
 <?php
-/*
+/**
 * CLASS tool_export
 *
 *
 */
-class tool_export { // extends tool_common
+class tool_export extends tool_common {
 
-	public $section_tipo;
-	public $section_obj;	# received section
-	public $ar_records;		# Array of records to export (section_id) or null
-	public $data_format;  	# string 'standard', 'dedalo'
+	// public $section_tipo;
+	// public $section_obj;	# received section
+	// public $ar_records;		# Array of records to export (section_id) or null
+	// public $data_format;  	# string 'standard', 'dedalo'
 
 	// public static $quotes 	 		  = '"';
 	// public static $delimiter 		  = ';';
@@ -22,31 +22,31 @@ class tool_export { // extends tool_common
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $section_tipo, string $model, string $data_format='standard', array $ar_ddo_map=[], object $sqo=null) {
+		// public function __construct(string $section_tipo, string $model, string $data_format='standard', array $ar_ddo_map=[], object $sqo=null) {
 
-		// Fix mode
-		$this->mode = 'tool_export';
+		// 	// Fix mode
+		// 	$this->mode = 'tool_export';
 
-		// fix section_tipo
-		$this->section_tipo = $section_tipo;
+		// 	// fix section_tipo
+		// 	$this->section_tipo = $section_tipo;
 
-		// fix model
-		$this->model = $model;
+		// 	// fix model
+		// 	$this->model = $model;
 
-		// Fix data_format
-		$this->data_format = $data_format;
+		// 	// Fix data_format
+		// 	$this->data_format = $data_format;
 
-		// fix ar_ddo_map
-		$this->ar_ddo_map = $ar_ddo_map;
+		// 	// fix ar_ddo_map
+		// 	$this->ar_ddo_map = $ar_ddo_map;
 
-		// Fix sqo
-		$this->sqo = $sqo;
+		// 	// Fix sqo
+		// 	$this->sqo = $sqo;
 
-		// Fix records
-		$this->ar_records = null;
+		// 	// Fix records
+		// 	$this->ar_records = null;
 
-		return true;
-	}//end __construct
+		// 	return true;
+		// }//end __construct
 
 
 

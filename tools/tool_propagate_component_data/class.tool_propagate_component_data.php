@@ -1,10 +1,5 @@
 <?php
-// includes. Include another files if need
-	// include( dirname(__FILE__) . '/additional/class.additional.php');
-
-
-
-/*
+/**
 * CLASS TOOL_PROPAGATE_COMPONENT_DATA
 * Manages Dédalo cache clean actions
 *
@@ -14,7 +9,7 @@ class tool_propagate_component_data extends tool_common {
 
 
 	/**
-	* propagate_component_data
+	* PROPAGATE_COMPONENT_DATA
 	* Exec a custom action called from client
 	* Note that tool config is stored in the tool section data (tools_register)
 	* @param object $request_options
@@ -150,6 +145,4 @@ class tool_propagate_component_data extends tool_common {
 
 
 
-}//end class
-
-
+}//end class tool_propagate_component_data

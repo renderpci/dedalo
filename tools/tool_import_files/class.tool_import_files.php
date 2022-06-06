@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS TOOL_IMPORT_FILES
 *
 *
@@ -15,16 +15,16 @@ class tool_import_files extends tool_common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(object $component_obj=null, string $modo='button') {
+		// public function __construct(object $component_obj=null, string $modo='button') {
 
-		# Fix modo
-		$this->modo = $modo;
+		// 	# Fix modo
+		// 	$this->modo = $modo;
 
-		# Fix current component/section
-		// $this->component_obj = $component_obj;
+		// 	# Fix current component/section
+		// 	// $this->component_obj = $component_obj;
 
-		// $this->set_up();
-	}//end __construct
+		// 	// $this->set_up();
+		// }//end __construct
 
 
 

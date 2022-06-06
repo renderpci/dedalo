@@ -1,9 +1,8 @@
 <?php
-
 require_once( dirname(dirname(dirname(__FILE__))) .'/lib/vendor/autoload.php');
 
-/*
-* CLASS tool_import_rdf
+/**
+* CLASS TOOL_IMPORT_RDF
 *
 *
 */
@@ -14,28 +13,30 @@ class tool_import_rdf extends tool_common {
 	# component
 	protected $section_tipo;
 
+
+
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $section_tipo, string $modo='button') {
+		// public function __construct(string $section_tipo, string $modo='button') {
 
-		# Fix modo
-		$this->modo = $modo;
+		// 	# Fix modo
+		// 	$this->modo = $modo;
 
-		// fix section tipo. (!) To unify tools vars, param section_tipo could be a full section object in some cases
-		$this->section_tipo = (is_object($section_tipo))
-			? $section_tipo->get_tipo()
-			: $section_tipo;
+		// 	// fix section tipo. (!) To unify tools vars, param section_tipo could be a full section object in some cases
+		// 	$this->section_tipo = (is_object($section_tipo))
+		// 		? $section_tipo->get_tipo()
+		// 		: $section_tipo;
 
-		# Fix search options
-		// $search_options_id		= $this->section_tipo; // section tipo like oh1
-		// $saved_search_options	= section_records::get_search_options( $search_options_id );
+		// 	# Fix search options
+		// 	// $search_options_id		= $this->section_tipo; // section tipo like oh1
+		// 	// $saved_search_options	= section_records::get_search_options( $search_options_id );
 
-		// save cloned version of saved_search_options
-		// $this->search_options = unserialize(serialize($saved_search_options));
+		// 	// save cloned version of saved_search_options
+		// 	// $this->search_options = unserialize(serialize($saved_search_options));
 
-		return true;
-	}//end __construct
+		// 	return true;
+		// }//end __construct
 
 
 
@@ -722,7 +723,8 @@ class tool_import_rdf extends tool_common {
 			}
 
 			return;
-
 	}//end set_data_into_component
+
+
 
 }//end tool_import_rdf

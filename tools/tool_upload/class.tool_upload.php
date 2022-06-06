@@ -1,32 +1,10 @@
 <?php
-/*
+/**
 * CLASS TOOL_UPLOAD
 *
 *
 */
-class tool_upload { // extends tool_common
-
-
-
-	/**
-	* __CONSTRUCT
-	*/
-	public function __construct($component_obj, $modo='button') {
-
-		// # Fix modo
-		// $this->modo = $modo;
-
-		// # Para unificar el acceso, se copia el componente a $this->component_obj
-		// $this->component_obj 	= $component_obj;
-
-		// # Fix component
-		// $this->source_component = $component_obj;
-		// $this->source_component->set_modo('tool_upload');
-		// #$this->source_component->set_variant( tool_upload::$source_variant );
-		// 	#dump($component_obj,'component_obj');
-
-		// $this->section_tipo = $component_obj->get_section_tipo();
-	}//end __construct
+class tool_upload extends tool_common {
 
 
 

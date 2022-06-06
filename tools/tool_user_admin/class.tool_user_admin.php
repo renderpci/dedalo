@@ -1,10 +1,5 @@
 <?php
-// includes. Include another files if need
-	// include( dirname(__FILE__) . '/additional/class.additional.php');
-
-
-
-/*
+/**
 * CLASS tool_user_admin
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
 *
@@ -55,6 +50,4 @@ class tool_user_admin extends tool_common {
 
 
 
-}//end class
-
-
+}//end class tool_user-admin

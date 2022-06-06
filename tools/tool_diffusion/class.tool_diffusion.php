@@ -4,7 +4,7 @@
 
 
 
-/*
+/**
 * CLASS TOOL_DIFFUSION
 * Manages Dédalo diffusion features
 *
@@ -240,6 +240,4 @@ class tool_diffusion extends tool_common {
 
 
 
-}//end class
-
-
+}//end class diffusion

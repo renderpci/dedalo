@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS TOOL_PDF_EXTRACTOR
 *
 *

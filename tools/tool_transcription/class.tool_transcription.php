@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS TOOL_TRANSCRIPTION
 *
 *
@@ -7,31 +7,31 @@
 class tool_transcription extends tool_common {
 
 
+
 	# media component (actually component_image, component_av, component_pdf)
-	protected $component_obj;
+	// protected $component_obj;
 
 	# text component (actually component_text_area)
-	protected $component_related_obj;
+	// protected $component_related_obj;
 
 
 
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($component_obj, $modo='button') {
+		// public function __construct($component_obj, $modo='button') {
 
-		# Fix modo
-		$this->modo = $modo;
+		// 	# Fix modo
+		// 	$this->modo = $modo;
 
-		# Fix current media component
-		$this->component_obj = $component_obj;
+		// 	# Fix current media component
+		// 	$this->component_obj = $component_obj;
 
-		# Fix lang
-		$this->lang = $this->component_obj->get_lang();
+		// 	# Fix lang
+		// 	$this->lang = $this->component_obj->get_lang();
 
-		return true;
-	}//end __construct
-
+		// 	return true;
+		// }//end __construct
 
 
 
@@ -149,9 +149,6 @@ class tool_transcription extends tool_common {
 
 
 }//end class tool_transcription
-
-
-
 
 
 
