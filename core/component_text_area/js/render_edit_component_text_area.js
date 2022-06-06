@@ -1460,16 +1460,26 @@ const render_persons_list = function(self, text_editor, i) {
 		})
 
 		// person sections
-			const datum		= self.data.related_sections || {}
-			const context	= datum.context
-			const data		= datum.data
+			const ref_datum	= self.data.related_sections || {}
+			const context	= ref_datum.context
+			const data		= ref_datum.data
 			const sections	= data.find(el => el.typo==='sections')
+
 			if(!sections){
 				return null
 			}
 
 		// sections loop
-			const value			= sections.value
+			// get the value of related sections (the locator of his data)
+			const value_ref_sections = sections.value
+			// add the self section, the section of the compnent_text_area, to be processed as common section (for interviewed, camera, etc.)
+			const self_component_section = [{
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id
+			}]
+			// create unique array with all locators
+			const value = [...value_ref_sections, ...self_component_section]
+
 			const value_length	= value.length
 			let k = 0;
 			for (let i = 0; i < value_length; i++) {
@@ -1479,36 +1489,39 @@ const render_persons_list = function(self, text_editor, i) {
 					class_name 		: 'section_container',
 					parent			: body
 				})
-
+				// get current_locator to be used in common and simple way
 				const current_locator = {
-					section_top_tipo	: value[i].section_tipo,
-					section_top_id		: value[i].section_id
+					section_tipo	: value[i].section_tipo,
+					section_id		: value[i].section_id
 				}
+				// check if the section to be processed is the self section, the section of the component_text_area, (only related sections need to be processed)
+				if(current_locator.section_tipo!==self.section_tipo){
+					const section_label		= context.find(el => el.section_tipo===current_locator.section_tipo).label
+					const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_tipo && el.section_id===current_locator.section_id)
 
-				const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
-				const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+					// get the ar_component_value of the components related to this section
+						const ar_component_value = []
+						for (let j = 0; j < ar_component_data.length; j++) {
+							const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
+							ar_component_value.push(current_value)
+						}
 
-				// ar_component_value
-					const ar_component_value = []
-					for (let j = 0; j < ar_component_data.length; j++) {
-						const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
-						ar_component_value.push(current_value)
-					}
+					// label
+						const label = 	section_label + ' | ' +
+										current_locator.section_id +' | ' +
+										ar_component_value.join(' | ')
 
-				// label
-					const label = 	section_label + ' | ' +
-									current_locator.section_top_id +' | ' +
-									ar_component_value.join(' | ')
+					// label DOM element
+						const section_label_node = ui.create_dom_element({
+							element_type	: 'span',
+							class_name 		: 'label',
+							inner_html		: label,
+							parent			: section_container
+						})
+				}// end if check the section
 
-				// label DOM element
-					const section_label_node = ui.create_dom_element({
-						element_type	: 'span',
-						class_name 		: 'label',
-						inner_html		: label,
-						parent			: section_container
-					})
-
-				const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
+				// get the people for every section, self section and related sections
+				const ar_persons_for_this_section = ar_persons.filter(el => el.section_tipo === current_locator.section_tipo && el.section_id === current_locator.section_id)
 				for (let j = 0; j < ar_persons_for_this_section.length; j++) {
 
 					const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)

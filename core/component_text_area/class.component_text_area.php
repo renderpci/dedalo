@@ -1840,6 +1840,12 @@ class component_text_area extends component_common {
 			return $tags_persons;
 		}
 
+		# Recalculate indirectly
+		# ar_references is an array of section_id
+		$ar_references = array_filter($ar_related_sections, function($element) use($related_section_tipo){
+			return $element->section_tipo === $related_section_tipo;
+		}); //$this->get_ar_tag_references($obj_value->section_tipo, $obj_value->component_tipo);
+
 		# Resolve obj value
 		$ar_objects = [];
 		foreach ((array)$properties->tags_persons->$related_section_tipo as $key => $obj_value) {
@@ -1848,17 +1854,12 @@ class component_text_area extends component_common {
 
 			if ($obj_value->section_tipo===$this->section_tipo) {
 
-				$obj_value->section_id = $section_id; // inject current record section id (parent)
+				$obj_value->section_id			= $section_id; // inject current record section id (parent)
 
 				# Add directly
 				$ar_objects[] = $obj_value;
 
 			}else{
-				# Recalculate indirectly
-				# ar_references is an array of section_id
-				$ar_references = array_filter($ar_related_sections, function($element) use($related_section_tipo){
-					return $element->section_tipo === $related_section_tipo;
-				}); //$this->get_ar_tag_references($obj_value->section_tipo, $obj_value->component_tipo);
 				if (empty($ar_references)) {
 					debug_log(__METHOD__." Error on calculate section_id from inverse locators $this->section_tipo - $this->parent ".to_string(), logger::ERROR);
 					continue;
@@ -1866,7 +1867,7 @@ class component_text_area extends component_common {
 				foreach ($ar_references as $reference_locator) {
 
 					$new_obj_value = clone $obj_value;
-						$new_obj_value->section_id = $reference_locator->section_id;
+						$new_obj_value->section_id			= $reference_locator->section_id;
 
 					# Add from reference
 					$ar_objects[] = $new_obj_value;
@@ -1912,16 +1913,16 @@ class component_text_area extends component_common {
 
 				# Tag
 				$tag_person = self::build_tag_person(array(
-													'state'=>$current_state,
-													'tag_id'=>$current_tag_id,
-													'label'=>$label->initials,
-													'data'=>$data_locator
-												));
+					'state'		=>$current_state,
+					'tag_id'	=>$current_tag_id,
+					'label'		=>$label->initials,
+					'data'		=>$data_locator
+				));
 				$element = new stdClass();
-					$element->type		= 'person';
-					$element->parent			= $obj_value->parent;
-					$element->parent_section_id	= $obj_value->section_id;
-					$element->tag 		= $tag_person;
+					$element->type			= 'person';
+					$element->section_tipo	= $obj_value->section_tipo;
+					$element->section_id	= $obj_value->section_id;
+					$element->tag			= $tag_person;
 					#$element->tag_image = TR::addTagImgOnTheFly($element->tag);
 					$element->role 		= $label->role;  // RecordObj_dd::get_termino_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
 					$element->full_name = $label->full_name;
