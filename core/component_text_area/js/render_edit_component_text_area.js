@@ -1478,7 +1478,7 @@ const render_persons_list = function(self, text_editor, i) {
 				section_id		: self.section_id
 			}]
 			// create unique array with all locators
-			const value = [...self_component_section, ...value_ref_sections]
+			const value = [...value_ref_sections, ...self_component_section]
 
 			const value_length	= value.length
 			let k = 0;
