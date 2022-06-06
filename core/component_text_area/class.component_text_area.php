@@ -1913,16 +1913,16 @@ class component_text_area extends component_common {
 
 				# Tag
 				$tag_person = self::build_tag_person(array(
-													'state'=>$current_state,
-													'tag_id'=>$current_tag_id,
-													'label'=>$label->initials,
-													'data'=>$data_locator
-												));
+					'state'		=>$current_state,
+					'tag_id'	=>$current_tag_id,
+					'label'		=>$label->initials,
+					'data'		=>$data_locator
+				));
 				$element = new stdClass();
-					$element->type		= 'person';
-					$element->section_tipo		= $obj_value->section_tipo;
-					$element->section_id		= $obj_value->section_id;
-					$element->tag 		= $tag_person;
+					$element->type			= 'person';
+					$element->section_tipo	= $obj_value->section_tipo;
+					$element->section_id	= $obj_value->section_id;
+					$element->tag			= $tag_person;
 					#$element->tag_image = TR::addTagImgOnTheFly($element->tag);
 					$element->role 		= $label->role;  // RecordObj_dd::get_termino_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
 					$element->full_name = $label->full_name;
