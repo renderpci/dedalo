@@ -804,9 +804,16 @@ const render_header = function(self) {
 		return null
 	}
 
-	const value			= sections.value
-	const value_length	= value.length
-
+	// get the value of related sections (the locator of his data)
+	const value_ref_sections = sections.value
+	// add the self section, the section of the compnent_text_area, to be processed as common section (for interviewed, camera, etc.)
+	const self_transcription_component_section = [{
+		section_tipo	: transcription_component.section_tipo,
+		section_id		: transcription_component.section_id
+	}]
+	// create unique array with all locators
+	const value = [...value_ref_sections, ...self_transcription_component_section]
+	const value_length = value.length
 	for (let i = 0; i < value_length; i++) {
 
 		const head = ui.create_dom_element({
@@ -816,13 +823,14 @@ const render_header = function(self) {
 		})
 
 		const current_locator = {
-			section_top_tipo	: value[i].section_tipo,
-			section_top_id		: value[i].section_id
+			section_tipo	: value[i].section_tipo,
+			section_id		: value[i].section_id
 		}
-		const section_label			= context.find(el => el.model === 'section' && el.section_tipo===current_locator.section_top_tipo).label
-		const ar_component_context	= context.filter(el => el.model !== 'section' && el.section_tipo===current_locator.section_top_tipo)
+		if(current_locator.section_tipo !== transcription_component.section_tipo){
+			const section_label			= context.find(el => el.model === 'section' && el.section_tipo===current_locator.section_tipo).label
+			const ar_component_context	= context.filter(el => el.model !== 'section' && el.section_tipo===current_locator.section_tipo)
 
-		// section label DOM element
+			// section label DOM element
 			const section_label_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name 		: 'section_label',
@@ -859,7 +867,7 @@ const render_header = function(self) {
 				const current_component	= ar_component_context[j] // toString(ar_component_data[j].value)
 				const label				= current_component.label
 
-				const current_component_data = data.find(el => el.model !== 'section' && el.tipo===current_component.tipo && el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+				const current_component_data = data.find(el => el.model !== 'section' && el.tipo===current_component.tipo && el.section_tipo===current_locator.section_tipo && el.section_id===current_locator.section_id)
 
 				const component_container = ui.create_dom_element({
 					element_type	: 'div',
@@ -879,17 +887,16 @@ const render_header = function(self) {
 						parent			: component_container
 					})
 			}
-
-
-		const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
+		}
+		const ar_persons_for_this_section = ar_persons.filter(el => el.section_tipo === current_locator.section_tipo && el.section_id === current_locator.section_id)
 		for (let j = 0; j < ar_persons_for_this_section.length; j++) {
 
 			const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
 
 			const person_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'person_container',
-				parent			: components
+				class_name 		: 'components person_container',
+				parent			: head
 			})
 				const person_role = ui.create_dom_element({
 					element_type	: 'span',
