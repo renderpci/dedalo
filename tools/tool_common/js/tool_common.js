@@ -244,7 +244,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 		self.status = 'building'
 
 	// load self style
-		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + "/css/" + self.model + ".css"
+		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + '/css/' + self.model + '.css'
 		common.prototype.load_style(tool_css_url)
 
 	// load_ddo_map. Exec load ddo_map elements
