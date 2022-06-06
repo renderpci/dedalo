@@ -239,29 +239,28 @@ final class dd_core_api {
 
 						case (strpos($model, 'tool_')===0):
 
-							// resolve tool from name
-							// $registered_tools = tool_common::get_client_registered_tools();
-							$user_id			= (int)navigator::get_user_id();
-							$registered_tools	= tool_common::get_user_tools($user_id);
-							$tool_found = array_find($registered_tools, function($el) use($model){
-								return $el->name===$model;
-							});
-							if (empty($tool_found)) {
-								debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
-							}else{
-								$section_tipo	= $tool_found->section_tipo;
-								$section_id		= $tool_found->section_id;
+							// resolve tool from name and user
+								$user_id			= (int)navigator::get_user_id();
+								$registered_tools	= tool_common::get_user_tools($user_id);
+								$tool_found = array_find($registered_tools, function($el) use($model){
+									return $el->name===$model;
+								});
+								if (empty($tool_found)) {
+									debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+								}else{
+									$section_tipo	= $tool_found->section_tipo;
+									$section_id		= $tool_found->section_id;
 
-								$element = new tool_common($section_id, $section_tipo);
-								// element JSON
-								$get_json_options = new stdClass();
-									$get_json_options->get_context	= true;
-									$get_json_options->get_data		= false;
-								$element_json = $element->get_json($get_json_options);
+									$element = new $model($section_id, $section_tipo);
+									// element JSON
+									$get_json_options = new stdClass();
+										$get_json_options->get_context	= true;
+										$get_json_options->get_data		= false;
+									$element_json = $element->get_json($get_json_options);
 
-								// context add
-								$context[] = $element_json->context;
-							}
+									// context add
+									$context[] = $element_json->context;
+								}
 							break;
 
 						case (strpos($model, 'area')===0):
@@ -833,7 +832,7 @@ final class dd_core_api {
 	* @param object $json_data
 	* @return object $response
 	*/
-	public static function get_element_context(object $json_data) : object {
+	public static function get_element_context(object $rqo) : object {
 		$start_time = start_time();
 
 		session_write_close();
@@ -843,8 +842,8 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		// vars from json_data
-			$source			= $json_data->source;
+		// vars from rqo
+			$source			= $rqo->source;
 
 			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
@@ -886,21 +885,34 @@ final class dd_core_api {
 				case strpos($model, 'tool_')===0:
 
 					// tool section_tipo and section_id can be resolved from model if is necessary
-						if (empty($section_id) || empty($section_id)) {
-							// resolve
-							$registered_tools = tool_common::get_client_registered_tools();
-							$tool_found = array_find($registered_tools, function($el) use($model){
-								return $el->name===$model;
-							});
-							if (!empty($tool_found)) {
-								$section_tipo	= $tool_found->section_tipo;
-								$section_id		= $tool_found->section_id;
-							}else{
-								debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
-							}
+						// if (empty($section_id) || empty($section_id)) {
+						// 	// resolve
+						// 	$registered_tools = tool_common::get_client_registered_tools();
+						// 	$tool_found = array_find($registered_tools, function($el) use($model){
+						// 		return $el->name===$model;
+						// 	});
+						// 	if (!empty($tool_found)) {
+						// 		$section_tipo	= $tool_found->section_tipo;
+						// 		$section_id		= $tool_found->section_id;
+						// 	}else{
+						// 		debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+						// 	}
+						// }
+
+					// resolve tool from name and user
+						$user_id			= (int)navigator::get_user_id();
+						$registered_tools	= tool_common::get_user_tools($user_id);
+						$tool_found = array_find($registered_tools, function($el) use($model){
+							return $el->name===$model;
+						});
+						if (empty($tool_found)) {
+							debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+						}else{
+							$section_tipo	= $tool_found->section_tipo;
+							$section_id		= $tool_found->section_id;
 						}
 
-					$element = new tool_common($section_id, $section_tipo);
+					$element = new $model($section_id, $section_tipo);
 					break;
 
 				default:

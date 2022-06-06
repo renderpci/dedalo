@@ -1,4 +1,4 @@
-/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER */
+/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -22,7 +22,6 @@
 
 /**
 * SECTION
-*
 */
 export const section = function() {
 
@@ -724,24 +723,25 @@ section.prototype.load_section_tool_files = function() {
 	const self = this
 
 	// load dependences js/css
-		const load_promises = []
+		// const load_promises = []
 
 		// css file load
-			const lib_css_file = self.config.tool_context && self.config.tool_context.css
-				? self.config.tool_context.css
-				: ''
-			load_promises.push( common.prototype.load_style(lib_css_file) )
+			// const lib_css_file = self.config.tool_context && self.config.tool_context.css
+			// 	? self.config.tool_context.css.url
+			// 	: null
+			// if (lib_css_file) {
+			// 	load_promises.push( common.prototype.load_style(lib_css_file) )
+			// }
+			const model = self.config.tool_context.model
+			const url = DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
+			const js_promise = common.prototype.load_style(url)
 
-		// // js module import
-		// 	const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
-		// 	load_promises.push( load_promise )
-		// 	//self.JSONEditor = JSONEditor
-
-	const js_promise = Promise.all(load_promises)
+	// const js_promise = Promise.all(load_promises)
 
 
 	return js_promise
 };//end load_section_tool_files
+
 
 
 /**
@@ -759,7 +759,7 @@ section.prototype.delete_section = async function (options) {
 	// source
 		const source		= create_source(self, 'delete')
 		source.section_id	= self.section_id
-		source.delete_mode 	= delete_mode
+		source.delete_mode	= delete_mode
 
 	// data_manager. delete
 	const rqo = {
@@ -775,4 +775,3 @@ section.prototype.delete_section = async function (options) {
 		self.refresh()
 	}
 };// delete_section
-

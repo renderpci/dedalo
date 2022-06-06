@@ -3371,11 +3371,10 @@ abstract class common {
 		// component tools
 			foreach ($user_tools as $tool) {
 
-				$affected_tipos  = isset($tool->affected_tipos)  ? (array)$tool->affected_tipos : [];
-				$affected_models = isset($tool->affected_models) ? (array)$tool->affected_models : [];
-				$requirement_translatable = isset($tool->requirement_translatable) ? (bool)$tool->requirement_translatable : false;
-
-				$in_properties = $properties->tool_config->{$tool->name} ?? null;
+				$affected_tipos				= isset($tool->affected_tipos)  ? (array)$tool->affected_tipos : [];
+				$affected_models			= isset($tool->affected_models) ? (array)$tool->affected_models : [];
+				$requirement_translatable	= isset($tool->requirement_translatable) ? (bool)$tool->requirement_translatable : false;
+				$in_properties				= $properties->tool_config->{$tool->name} ?? null;
 
 				if(		in_array($model, $affected_models)
 					||	in_array($tipo,  $affected_tipos)
