@@ -4,6 +4,26 @@
 * Loaded on tool init
 */
 
+// imports
+	@import '../../../core/page/css/layout/vars.less';
+
+// local vars
+	@color_bg_tool : #7f75e0;
+
+
+
+// column_id (section_tool list)
+	.column_section_id > .button_edit.list_tool_lang {
+
+		&:hover{
+			background-color: @color_bg_tool;
+		}
+		>.icon{
+			-webkit-mask-image: url(../img/icon.svg);
+			mask-image: url(../img/icon.svg);
+		}
+	}
+
 
 
 // tool wrapper
@@ -14,63 +34,84 @@
 			width: fit-content;
 			height: 2em;
 			font-size: .94rem;
+			margin-bottom: 0.5rem;
 		}
 
 		>.content_data {
 
 			// components_container
-			.components_container {
+			>.components_container {
 				display: grid;
 			    grid-template-columns: 1fr 1fr;
 			    grid-gap: 1em;
 			    //background-color: #D6F737;
 			    z-index: 0;
 
-				>select {
+			    @media screen and (max-width: @width_break_point_0) {
+					grid-template-columns: 1fr;
+				}
+
+				select {
 					.custom_select_style;
 
 					&.source_lang {}
 					&.target_lang {}
 				}
 
+				.top {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
 
-				>.source_component_container {
-
-				}
-				>.target_component_container {
-
-				}
-
-				>.buttons_container {
-					padding-top: 1em;
-					padding-bottom: 1em;
-
-					// automatic_translation_container
-					>.automatic_translation_container {
-						position: relative;
-						display: flex;
-
-						>button {
-							// .select_style;
-							// font-size: .9em;
-							// background-color: #a6a6a6;
-							// border-radius: 0.30em;
-							// cursor: pointer;
-							// color: #ffff;
-							// border: none;
-							// padding-left: 0.75em;
-							// padding-right: 0.75em;
-						}
-
-						>select {
-							margin-left: 0.75em;
-							width: fit-content;
-							height: 2.75em;
-							font-size: 0.80em;
-						}
+					>.lang_label {
+						padding-right: 0.5rem;
+						text-transform: uppercase;
+						font-weight: 300;
 					}
 				}
-			}
+
+				.content_data.component {
+					height: calc(100vh - 14rem);
+				}
+
+				.source_component_container {
+
+				}
+				.target_component_container {
+
+				}
+			}//end .components_container
+
+			// buttons_container
+			>.buttons_container {
+				padding-top: 1em;
+				padding-bottom: 1em;
+
+				// automatic_translation_container
+				>.automatic_translation_container {
+					position: relative;
+					display: flex;
+
+					>button {
+						// .select_style;
+						// font-size: .9em;
+						// background-color: #a6a6a6;
+						// border-radius: 0.30em;
+						// cursor: pointer;
+						// color: #ffff;
+						// border: none;
+						// padding-left: 0.75em;
+						// padding-right: 0.75em;
+					}
+
+					>select {
+						margin-left: 0.75em;
+						width: fit-content;
+						height: 2.75em;
+						font-size: 0.80em;
+					}
+				}
+			}//end >.buttons_container
 		}//end content_data
 	}//end wrapper_tool
 
@@ -78,5 +119,5 @@
 
 // modal header tool modification
 	.tool_header.tool_lang {
-		background-color: #769f50;
+		background-color: @color_bg_tool;
 	}

@@ -83,15 +83,28 @@ tool_lang.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// main_element. fix main_element for convenience
-		const main_element_ddo = self.tool_config.ddo_map.find(el => el.role==="main_element")
-		if (main_element_ddo) {
-			self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
-		}
+	try {
+
+		// main_element. fix main_element for convenience
+			const main_element_ddo = self.tool_config.ddo_map.find(el => el.role==="main_element")
+			if (main_element_ddo) {
+				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+			}
+
+		// target lang. When user changes it, a local DB var is stored as 'tool_lang_target_lang' in table 'status'
+			const tool_lang_target_lang_object = await data_manager.prototype.get_local_db_data('tool_lang_target_lang', 'status')
+			if (tool_lang_target_lang_object) {
+				self.target_lang = tool_lang_target_lang_object.value
+			}
+
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build
