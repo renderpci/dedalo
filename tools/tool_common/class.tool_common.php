@@ -35,8 +35,7 @@ class tool_common {
 	* GET_JSON
 	* @param object $request_options
 	* 	Optional. Default is false
-	* @return array $json
-	*	Array of objects with data and context (configurable)
+	* @return object $json
 	*/
 	public function get_json(object $request_options=null) : object {
 
@@ -62,26 +61,34 @@ class tool_common {
 
 	/**
 	* GET_CONTEXT
-	* Parse a tool context from a simple_tool_object
-	* @param object $tool_object (simple_tool_object from tool record JSON component dd1353)
-	* @param object $tool_config (from properties)
-	* @return object $tool_simple_context
+	* Parse a tool context
+	* @return dd_object $dd_object
 	*/
-	public function get_context() : object {
+	public function get_context() : dd_object {
 
-		$component_tipo				= tools_register::$simple_tool_obj_component_tipo;
+		// check valid name
+			if ($this->name==='tool_common') {
+				throw new Exception("Error. Tool name is wrong. Check your tool call using toll model", 1);
+			}
 
-		$model						= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$simple_tool_component		= component_common::get_instance(
-			$model,
-			$component_tipo,
-			$this->section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			$this->section_tipo
-		);
-		$simple_tool_obj_dato	= $simple_tool_component->get_dato();
-		$tool_object			= reset($simple_tool_obj_dato);
+		// tool name. Fixed on construct
+			$name = $this->name;
+
+		// component dato simple_tool_obj (dd1353)
+			$component_tipo			= tools_register::$simple_tool_obj_component_tipo;
+			$model					= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$simple_tool_component	= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$this->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$this->section_tipo
+			);
+			$simple_tool_obj_dato	= $simple_tool_component->get_dato();
+			$tool_object			= reset($simple_tool_obj_dato);
+
+		// $name = $tool_object->name;
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){
@@ -94,55 +101,76 @@ class tool_common {
 			})->value[0] ?? reset($tool_object->description)->value[0];
 
 		// labels. take care of empty objects like '{}'
-			$labels = empty($tool_object->labels) || empty((array)$tool_object->labels)
-				? null
-				: $tool_object->labels; // array
+			$labels = [];
+			if(!empty($tool_object->labels) && !empty((array)$tool_object->labels)) {
+
+				// add label with lang fallback
+				foreach ($tool_object->labels as $key => $current_label_value) {
+
+					$label_name = $current_label_value->name;
+					if(!isset($labels[$label_name])) {
+
+						$all_langs_label = array_filter((array)$tool_object->labels, function($el) use($label_name) {
+							return $el->name===$label_name;
+						});
+						foreach ($all_langs_label as $item) {
+							if ($item->lang===DEDALO_DATA_LANG) {
+								$labels[$label_name] = $item;
+								continue 2;
+							}
+						}
+
+						// fallback lang. Get the first one as fallback value setting as lang current lang
+						$fallback_label = reset($all_langs_label);
+						$fallback_label->lang = DEDALO_DATA_LANG; // inject current lang to prevent find errors
+						$labels[$label_name] = $fallback_label;
+					}
+				}
+
+				// remove keys
+				$labels = array_values($labels);
+			}
 
 		// properties
 			$properties = empty($tool_object->properties)
 				? null
 				: $tool_object->properties; // object|array
 
-		// context
-			// $context = new stdClass();
-			// 	$context->section_id			= $tool_object->section_id;
-			// 	$context->section_tipo			= $tool_object->section_tipo;
-			// 	$context->model					= $tool_object->name;
-			// 	$context->name					= $tool_object->name;
-			// 	$context->mode					= 'edit';
-			// 	$context->label					= $tool_label;
-			// 	$context->description			= $description;
-			// 	$context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
-			// 	$context->show_in_inspector		= $tool_object->show_in_inspector ?? null;
-			// 	$context->show_in_component		= $tool_object->show_in_component ?? null;
-			// 	$context->config				= $tool_object->config ?? null;
-			// 	$context->properties 			= $tool_object->properties ?? null;
+		// config. Add if exists config data for current tool
+			$ar_config		= tools_register::get_all_config_tool_client();
+			$config_data	= array_find($ar_config, function($el) use($name) {
+				return $el->name===$name;
+			});
 
+		// lang
+			$lang = DEDALO_DATA_LANG;
+
+		// css
+			$css = (object)[
+				'url' => DEDALO_TOOLS_URL . '/' . $name . '/css/' .$name. '.css'
+			];
+
+		// icon
+			$icon = DEDALO_TOOLS_URL . '/' . $name . '/img/icon.svg';
+
+		// context
 			$dd_object = new dd_object((object)[
-				'label'				=> $tool_label, // *
+				'name'				=> $name,
+				'label'				=> $tool_label,
 				'tipo'				=> $component_tipo,
-				'section_tipo'		=> $tool_object->section_tipo, // *
-				'model'				=> $tool_object->name, // *
-				// 'parent'			=> $parent, // *
-				// 'parent_grouper'	=> $parent_grouper,
-				// 'lang'			=> $lang,
-				'mode'				=> 'edit',
-				// 'translatable'	=> $translatable,
-				'properties'		=> $properties,
-				// 'css'			=> $css,
-				// 'permissions'	=> $permissions,
-				// 'tools'			=> $tools,
-				// 'buttons'		=> $buttons,
-				// 'request_config'	=> $request_config,
-				// 'columns_map'	=> $columns_map
-				'labels'			=> $labels,
+				'section_tipo'		=> $tool_object->section_tipo,
 				'section_id'		=> $tool_object->section_id,
-				'name'				=> $tool_object->name,
+				'model'				=> $name,
+				'lang'				=> $lang,
+				'mode'				=> 'edit',
+				'properties'		=> $properties,
+				'css'				=> $css,
+				'icon'				=> $icon,
+				'labels'			=> $labels,
 				'description'		=> $description,
-				'icon'				=> DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg',
 				'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
 				'show_in_component'	=> $tool_object->show_in_component ?? null,
-				'config'			=> $tool_object->config ?? null
+				'config'			=> !empty($config_data) ? $config_data->config : null
 			]);
 
 
@@ -156,40 +184,72 @@ class tool_common {
 	* Parse a tool context from a simple_tool_object
 	* @param object $tool_object (simple_tool_object from tool record JSON component dd1353)
 	* @param object $tool_config (from properties)
-	* @return object $tool_simple_context
+	* @return dd_object $tool_simple_context
 	*/
-	public static function create_tool_simple_context(object $tool_object, object $tool_config=null, string $tipo=null, string $section_tipo=null) : object {
+	public static function create_tool_simple_context(object $tool_object, object $tool_config=null, string $tipo=null, string $section_tipo=null) : dd_object {
 
-		// label. (JSON list) Try match current lang else use the first lang value
-			$tool_label = array_find($tool_object->label, function($el){
-				return $el->lang===DEDALO_DATA_LANG;
-			})->value ?? reset($tool_object->label)->value;
+		// old way. (!) Unification with context in progress..
+			// label. (JSON list) Try match current lang else use the first lang value
+				$tool_label = array_find($tool_object->label, function($el){
+					return $el->lang===DEDALO_DATA_LANG;
+				})->value ?? reset($tool_object->label)->value;
 
-		// description. (text_area) Try match current lang else use the first lang value
-			$description = array_find((array)$tool_object->description, function($el){
-				return $el->lang===DEDALO_DATA_LANG;
-			})->value[0] ?? reset($tool_object->description)->value[0];
+			// description. (text_area) Try match current lang else use the first lang value
+				$description = array_find((array)$tool_object->description, function($el){
+					return $el->lang===DEDALO_DATA_LANG;
+				})->value[0] ?? reset($tool_object->description)->value[0];
 
-		// context
-			$tool_simple_context = new stdClass();
-				$tool_simple_context->section_id			= $tool_object->section_id;
-				$tool_simple_context->section_tipo			= $tool_object->section_tipo;
-				$tool_simple_context->model					= $tool_object->name;
-				$tool_simple_context->name					= $tool_object->name;
-				$tool_simple_context->mode					= 'edit';
-				$tool_simple_context->label					= $tool_label;
-				// $tool_simple_context->tool_labels		= $tool_object->labels;
-				// $tool_simple_context->description		= $description;
-				$tool_simple_context->icon					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
-				$tool_simple_context->css					= DEDALO_TOOLS_URL . '/' . $tool_object->name . '/css/' .$tool_object->name. '.css';
-				// $tool_simple_context->show_in_inspector	= $tool_object->show_in_inspector;
-				$tool_simple_context->show_in_component		= $tool_object->show_in_component;
-				$tool_simple_context->properties			= $tool_object->properties;
-				// $tool_simple_context->config				= $tool_object->config;
+			// css
+				$css = (object)[
+					'url' => DEDALO_TOOLS_URL . '/' . $tool_object->name . '/css/' .$tool_object->name. '.css'
+				];
+
+			// icon
+				$icon = DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
+
+			// context
+				$tool_simple_context = new dd_object((object)[
+					'name'					=> $tool_object->name,
+					'label'					=> $tool_label,
+					// 'tipo'				=> $component_tipo,
+					'section_tipo'			=> $tool_object->section_tipo,
+					'section_id'			=> $tool_object->section_id,
+					'model'					=> $tool_object->name,
+					// 'lang'				=> $lang,
+					'mode'					=> 'edit',
+					'properties'			=> $tool_object->properties,
+					'css'					=> $css,
+					'icon'					=> $icon,
+					// 'labels'				=> $labels,
+					// 'description'		=> $description,
+					// 'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
+					'show_in_component'		=> $tool_object->show_in_component ?? null,
+					// 'config'				=> !empty($config_data) ? $config_data->config : null
+				]);
+
+		// new way. (!) Unification with context in progress..
+			// // short vars
+			// 	$section_id		= $tool_object->section_id;
+			// 	$section_tipo	= $tool_object->section_tipo;
+			// 	$model			= $tool_object->name;
+
+			// // tool construct and get JSON context
+			// 	$element = new $model($section_id, $section_tipo);
+			// 	// element JSON
+			// 	$get_json_options = new stdClass();
+			// 		$get_json_options->get_context	= true;
+			// 		$get_json_options->get_data		= false;
+			// 	$element_json = $element->get_json($get_json_options);
+			// 	$context = $element_json->context;
+
+			// // tool_simple_context
+			// 	$tool_simple_context = $context;
+			// 		// dump($tool_simple_context, ' ++ ============================== tool_simple_context ++ '.to_string($section_tipo.'-'.$section_id));
+			// 		// dump($context, ' ++ ============================== context ++ '.to_string($section_tipo.'-'.$section_id));
+
 
 		// tool_config add
 			if (!empty($tool_config)) {
-
 				// parse and resolve ddo_map self
 					if (isset($tool_config->ddo_map)) {
 						$tool_config->ddo_map = array_map(function($el) use($tipo, $section_tipo){
@@ -212,7 +272,8 @@ class tool_common {
 				// set parsed tool_config
 					$tool_simple_context->tool_config = $tool_config;
 			}//end if (!empty($tool_config))
-			// dump($tool_simple_context, ' tool_simple_context ++ '.to_string());
+
+
 
 		return $tool_simple_context;
 	}//end create_tool_simple_context
@@ -273,19 +334,21 @@ class tool_common {
 		// get the simple_tool_object
 			foreach ($client_registered_tools_records as $record) {
 
-				$section 		= section::get_instance($record->section_id, $record->section_tipo);
-				$section_dato 	= $record->datos;
+				$section		= section::get_instance($record->section_id, $record->section_tipo);
+				$section_dato	= $record->datos;
 				$section->set_dato($section_dato);
 				$section->set_bl_loaded_matrix_data(true);
 
 				$component_tipo	= 'dd1353';
 				$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$component		= component_common::get_instance($model,
-																 $component_tipo,
-																 $record->section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $record->section_tipo);
+				$component		= component_common::get_instance(
+					$model,
+					$component_tipo,
+					$record->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$record->section_tipo
+				);
 				$dato = $component->get_dato();
 				if (empty($dato)) {
 					debug_log(__METHOD__." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id ".to_string($model), logger::WARNING);
@@ -552,7 +615,7 @@ class tool_common {
 
 		$user_tools = [];
 
-		// user zero case
+		// empty or zero user case
 			if (empty($user_id)) {
 				return $user_tools;
 			}
@@ -560,45 +623,45 @@ class tool_common {
 		// all unfiltered tools
 			$registered_tools = tool_common::get_client_registered_tools();
 
-		if ($user_id==DEDALO_SUPERUSER) {
+		// user_tools
+			if ($user_id==DEDALO_SUPERUSER) {
 
-			$user_tools = $registered_tools;
+				$user_tools = $registered_tools;
+			}else{
 
-		}else{
+				// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
+					$security_tools_dato = (function() use($user_id) {
 
-			// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
-				$security_tools_dato = (function() use($user_id) {
+						$user_profile = security::get_user_profile($user_id);
+						if (empty($user_profile)) {
+							return $user_tools; // empty array
+						}
+						$user_profile_id		= (int)$user_profile->section_id;
+						$security_tools_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
+						$component	= component_common::get_instance(
+							$security_tools_model,
+							DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
+							$user_profile_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							DEDALO_SECTION_PROFILES_TIPO
+						);
+						// dato
+						return $component->get_dato();
+					})();
 
-					$user_profile = security::get_user_profile($user_id);
-					if (empty($user_profile)) {
-						return $user_tools; // empty array
+				// allowed tools
+					$ar_allowed_id = array_map(function($el){
+						return $el->section_id;
+					}, $security_tools_dato);
+
+				// filter user authorized tools
+					foreach ($registered_tools as $tool) {
+						if(in_array($tool->section_id, $ar_allowed_id)) {
+							$user_tools[] = $tool;
+						}
 					}
-					$user_profile_id		= (int)$user_profile->section_id;
-					$security_tools_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
-					$component	= component_common::get_instance(
-						$security_tools_model,
-						DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
-						$user_profile_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						DEDALO_SECTION_PROFILES_TIPO
-					);
-					// dato
-					return $component->get_dato();
-				})();
-
-			// allowed tools
-				$ar_allowed_id = array_map(function($el){
-					return $el->section_id;
-				}, $security_tools_dato);
-
-			// filter user authorized tools
-				foreach ($registered_tools as $tool) {
-					if(in_array($tool->section_id, $ar_allowed_id)) {
-						$user_tools[] = $tool;
-					}
-				}
-		}
+			}
 
 
 		return $user_tools;
