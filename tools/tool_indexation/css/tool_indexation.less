@@ -4,12 +4,19 @@
 * Loaded on tool init
 */
 
+// imports
+	@import '../../../core/page/css/layout/vars.less';
+
+// local vars
+	@color_bg_tool : #23bcc7;
+
+
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_indexation {
 
 		&:hover{
-			background-color: #1dd4c1;
+			background-color: @color_bg_tool;
 		}
 		>.icon{
 			-webkit-mask-image: url(../img/icon.svg);
@@ -75,7 +82,7 @@
 
 // header
 	.tool_header.tool_indexation {
-		background-color: #1f7551;
+		background-color: @color_bg_tool;
 	}
 
 
