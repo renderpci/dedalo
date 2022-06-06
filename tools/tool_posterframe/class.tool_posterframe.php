@@ -1,8 +1,5 @@
 <?php
-
-
-
-/*
+/**
 * CLASS TOOL_POSTERFRAME
 * Manages component_av posterframe works.
 * Requires FFMPEG library
@@ -334,5 +331,3 @@ class tool_posterframe extends tool_common {
 
 
 }//end class tool_posterframe
-
-

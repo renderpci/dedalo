@@ -4,7 +4,7 @@
 
 
 
-/*
+/**
 * CLASS TOOL_DUMMY
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
 *
@@ -55,6 +55,4 @@ class tool_dummy extends tool_common {
 
 
 
-}//end class
-
-
+}//end class tool_dummy

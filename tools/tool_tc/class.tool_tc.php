@@ -3,25 +3,25 @@
 * CLASS TOOL_TC
 *
 */
-class tool_tc {
+class tool_tc extends tool_common {
 
 
 
-	protected $component_obj;
+	// protected $component_obj;
 
 
 
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($component_obj, $modo='button') {
+		// public function __construct($component_obj, $modo='button') {
 
-		# Fix modo
-		$this->modo = $modo;
+		// 	# Fix modo
+		// 	$this->modo = $modo;
 
-		# Fix current media component
-		$this->component_obj = $component_obj;
-	}
+		// 	# Fix current media component
+		// 	$this->component_obj = $component_obj;
+		// }
 
 
 

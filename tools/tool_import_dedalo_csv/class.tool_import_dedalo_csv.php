@@ -4,7 +4,7 @@
 
 
 
-/*
+/**
 * CLASS TOOL_IMPORT_DEDALO_CSV
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
 *

@@ -1,7 +1,7 @@
 <?php
-include( dirname(__FILE__) . '/translators/class.babel.php');
+// include( dirname(__FILE__) . '/translators/class.babel.php');
 /*
-* CLASS TOOL LANG
+* CLASS TOOL_LANG
 *
 *
 */
@@ -118,4 +118,4 @@ class tool_lang extends tool_common {
 
 
 
-}//end class
+}//end class tool_lang

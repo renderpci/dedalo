@@ -1,10 +1,5 @@
 <?php
-// includes. Include another files if need
-	// include( dirname(__FILE__) . '/additional/class.additional.php');
-
-
-
-/*
+/**
 * CLASS TOOL_UPDATE_CACHE
 * Manages Dédalo cache clean actions
 *
@@ -178,6 +173,4 @@ class tool_update_cache extends tool_common {
 
 
 
-}//end class
-
-
+}//end class tool_update_cache

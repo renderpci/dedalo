@@ -1,10 +1,10 @@
 <?php
-/*
+/**
 * CLASS TOOL_TIME_MACHINE
 *
 *
 */
-class tool_time_machine {
+class tool_time_machine extends tool_common {
 
 
 

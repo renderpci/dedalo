@@ -1,27 +1,29 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/media_engine/class.OptimizeTC.php');
-require_once( dirname(dirname(dirname(__FILE__))) .'/tools/tool_subtitles/class.subtitles.php');
+// require_once( dirname(dirname(dirname(__FILE__))) .'/media_engine/class.OptimizeTC.php');
+// require_once( dirname(dirname(dirname(__FILE__))) .'/tools/tool_subtitles/class.subtitles.php');
 
 /*
 * CLASS tool_tr_print
 */
 class tool_tr_print extends tool_common {
-	
+
+
+
 	protected $component_obj;
 
-	
-	
+
+
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct($component_obj, $modo='button') {
+		// public function __construct($component_obj, $modo='button') {
 
-		# Fix modo
-		$this->modo = $modo;
+		// 	# Fix modo
+		// 	$this->modo = $modo;
 
-		# Fix current media component
-		$this->component_obj = $component_obj;
-	}
+		// 	# Fix current media component
+		// 	$this->component_obj = $component_obj;
+		// }
 
 
 
@@ -31,7 +33,7 @@ class tool_tr_print extends tool_common {
 	* @return object $response
 	*/
 	public function get_ar_tc_text( $request_options ) {
-		
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
@@ -42,7 +44,7 @@ class tool_tr_print extends tool_common {
 		# Source text
 		$raw_text = $this->component_obj->get_dato();
 			#dump($raw_text, ' raw_text ++ '.to_string());
-		
+
 		# Get all timecodes
 		#$pattern = TR::get_mark_pattern($mark='tc',$standalone=false);
 		# Search math patern tags
@@ -53,7 +55,7 @@ class tool_tr_print extends tool_common {
 		# explode by tc pattern
 		$pattern_tc   = TR::get_mark_pattern('tc_full',$standalone=true);
 		#$pattern_tc  = "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]{1,3}_TC\])/";
-		$ar_fragments = preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);			
+		$ar_fragments = preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
 			if (!isset($ar_fragments[0])) {
 				$response->msg = 'No fragements are found';
@@ -71,20 +73,20 @@ class tool_tr_print extends tool_common {
 			#dump($ar_fragments, ' ar_fragments 2 ++ '.to_string());
 
 			# Fix consecutive tc case
-			foreach ($ar_fragments as $key => $value) {			
+			foreach ($ar_fragments as $key => $value) {
 				if ( $key>0 && strpos($value, '[TC_')!==false && isset($ar_fragments[$key-1]) && strpos($ar_fragments[$key-1], '[TC_')!==false ) {
 					// Remove second tc apperance
 					unset($ar_fragments[$key]);
 				}
 			}
 			$ar_fragments = array_values($ar_fragments);
-			
+
 
 		$ar_final = array();
 		$pattern  = TR::get_mark_pattern($mark='tc',$standalone=false);
 		foreach ($ar_fragments as $key => $value) {
 			if ($key % 2 == 0) {
-				# It's even				
+				# It's even
 				if (isset($ar_fragments[$key+1])) {
 					$tc_tag 	= $value;
 					$fragment 	= $ar_fragments[$key+1];
@@ -108,12 +110,12 @@ class tool_tr_print extends tool_common {
 					$ar_final[$tc_tag] = $value_obj;
 				}
 			}
-		}//foreach ($ar_fragments as $key => $value) 
+		}//foreach ($ar_fragments as $key => $value)
 
 		if(SHOW_DEBUG===true) {
 			#dump($ar_final, ' $ar_final ++ '.to_string()); die();
-		}		
-		
+		}
+
 		#$response->result = self::format_text_for_tool( $raw_text );
 		$response->result = true;
 		$response->result = $ar_final;
@@ -139,17 +141,17 @@ class tool_tr_print extends tool_common {
 		// Remove array keys
 		$ar_tc_base = array_values($ar_tc_text);
 
-		foreach ($ar_tc_base as $key => $obj_value) {		
+		foreach ($ar_tc_base as $key => $obj_value) {
 
 			$current_tc = $obj_value->tc;
 			$next_tc 	= isset($ar_tc_base[$key+1]) ? $ar_tc_base[$key+1]->tc : $duration;
-			$text 		= tool_tr_print::clean_vtt_text($obj_value->fragment);		
-			
+			$text 		= tool_tr_print::clean_vtt_text($obj_value->fragment);
+
 			$ar_lines[] =  $key+1 .PHP_EOL . $current_tc . htmlentities(' --> ') . $next_tc . PHP_EOL . $text . PHP_EOL;
 		}
 
 		$vtt_text = 'WEBVTT' . PHP_EOL . PHP_EOL . implode(PHP_EOL, $ar_lines);
-	
+
 
 		return $vtt_text;
 	}//end build_pseudo_vtt
@@ -162,10 +164,10 @@ class tool_tr_print extends tool_common {
 	*	Timecode like '00:01:55.680'
 	*/
 	public function get_av_duration() {
-		
+
 		# Actually rsc35
 		$related_component_av_tipo = $this->component_obj->get_related_component_av_tipo();
-		
+
 		$modelo_name  	= RecordObj_dd::get_modelo_name_by_tipo($related_component_av_tipo,true);
 		$parent 		= $this->component_obj->get_parent();
 		$section_tipo 	= $this->component_obj->get_section_tipo();
@@ -223,10 +225,10 @@ class tool_tr_print extends tool_common {
 
 	/**
 	* GET_DESCRIPTORS
-	* @return 
+	* @return
 	*/
 	public function get_descriptors( $fragment, $type ) {
-		
+
 		$section_tipo 	= $this->component_obj->get_section_tipo();
 		$section_id 	= $this->component_obj->get_parent();
 		$component_tipo = $this->component_obj->get_tipo();
@@ -253,11 +255,11 @@ class tool_tr_print extends tool_common {
 
 	/**
 	* GET_ORIGINAL_TEXT
-	* @return 
+	* @return
 	*/
 	public function get_original_text() {
-		
-		$raw_text = $this->component_obj->get_dato();	
+
+		$raw_text = $this->component_obj->get_dato();
 		$raw_text = self::format_text_for_tool( $raw_text );
 
 		return $raw_text;
@@ -267,14 +269,14 @@ class tool_tr_print extends tool_common {
 
 	/**
 	* GET_SOURCE_TEXT
-	* @return 
+	* @return
 	*/
 	public function get_source_text() {
-		
+
 		$raw_text = $this->component_obj->get_dato();
 
 		$raw_text = htmlentities($raw_text);
-		
+
 		return $raw_text;
 	}//end get_source_text
 
@@ -282,11 +284,11 @@ class tool_tr_print extends tool_common {
 
 	/**
 	* FORMAT_TEXT_FOR_TOOL
-	* @return 
+	* @return
 	*/
 	public static function format_text_for_tool( $raw_text ) {
 		$raw_text = TR::addTagImgOnTheFly($raw_text);
-	
+
 		return $raw_text;
 	}//end format_text_for_tool
 
@@ -294,10 +296,10 @@ class tool_tr_print extends tool_common {
 
 	/**
 	* GET_TR_DATA
-	* @return 
+	* @return
 	*/
 	public function get_tr_data() {
-		
+
 		$tr_data = new stdClass();
 
 		$tipo 		  = $this->component_obj->get_tipo();
@@ -326,8 +328,8 @@ class tool_tr_print extends tool_common {
 			}else{
 				$tr_data->source_lang = DEDALO_DATA_LANG;
 			}
-			
-				
+
+
 
 		# date
 			$current_tipo= 'rsc44';
@@ -403,18 +405,18 @@ class tool_tr_print extends tool_common {
 		$parent 	  = $this->component_obj->get_parent();
 		$section_tipo = $this->component_obj->get_section_tipo();
 		$lang 		  = $this->component_obj->get_lang();
-		
+
 		$section = section::get_instance($parent, $section_tipo);
 		$inverse_locators = $section->get_inverse_locators();
 			#dump($inverse_locators, ' $inverse_locators ++ '.to_string());
-		
+
 		$ar_interviews = array();
 		foreach ($inverse_locators as $current_locator) {
 
 			$current_section_tipo = $current_locator->from_section_tipo;
 			$current_section_id   = $current_locator->from_section_id;
 
-			if ($current_section_tipo==='oh1') {				
+			if ($current_section_tipo==='oh1') {
 
 				# Informants
 					$current_tipo= 'oh24';
@@ -447,11 +449,11 @@ class tool_tr_print extends tool_common {
 	* @return array $informants_data
 	*/
 	public function get_informants_data( $ar_locators ) {
-		
+
 		$informants_data = array();
 
 		foreach ($ar_locators as $current_locator) {
-		
+
 			# name
 				$current_tipo= 'rsc85';
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_input_text
@@ -480,7 +482,6 @@ class tool_tr_print extends tool_common {
 
 		return (array)$informants_data;
 	}//end get_informants_data
-
 
 
 
