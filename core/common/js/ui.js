@@ -1833,6 +1833,10 @@ export const ui = {
 
 	/**
 	* BUILD_SELECT_LANG
+	* Render a lang selector with a given array of langs or the default
+	* page_globals.dedalo_projects_default_langs list
+	* @param object options
+	* @return DOM node select_lang
 	*/
 	build_select_lang : (options) => {
 
@@ -1840,7 +1844,7 @@ export const ui = {
 			const id			= options.id || null
 			const langs			= options.langs || page_globals.dedalo_projects_default_langs
 			const selected		= options.selected || page_globals.dedalo_application_lang
-			const action		= options.action
+			const action		= options.action || null
 			const class_name	= options.class_name || 'select_lang'
 
 		const fragment = new DocumentFragment()
@@ -1891,13 +1895,16 @@ export const ui = {
 			// 	}
 			// }
 
-		const select_lang = ui.create_dom_element({
-			id				: id,
-			element_type	: 'select',
-			class_name		: class_name
-		})
-		select_lang.addEventListener("change", action)
-		select_lang.appendChild(fragment)
+		// select
+			const select_lang = ui.create_dom_element({
+				id				: id,
+				element_type	: 'select',
+				class_name		: class_name
+			})
+			if (action) {
+				select_lang.addEventListener('change', action)
+			}
+			select_lang.appendChild(fragment)
 
 
 		return select_lang

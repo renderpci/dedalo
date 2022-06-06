@@ -250,6 +250,12 @@ data_manager.prototype.get_local_db = async function() {
 * Save data into the browser local database (IndexdDB)
 * @param object data
 * @param string table
+* 	Tables:
+* 		status : element stored status like collapsed, etc.
+* 		rqo : rqo cache data
+* 		ontology ;: ontology cache data
+* 		data : generic data like menu resolution
+* 		context : context cache data
 * Calling sample:
 * 	current_data_manager.set_local_db_data(rqo, 'rqo')
 * @return promise

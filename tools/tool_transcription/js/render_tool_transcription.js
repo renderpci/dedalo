@@ -12,6 +12,7 @@
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
+
 /**
 * RENDER_TOOL_TRANSCRIPTION
 * Manages the component's logic and apperance in client side
@@ -504,6 +505,8 @@ const render_tanscription_options = async function(self, content_data) {
 /**
 * RENDER_ACTIVITY_INFO
 * This is used to build a optional buttons inside the header
+* @param object self
+* 	instance of current tool
 * @return DOM node fragment
 */
 const render_activity_info = function(self) {
@@ -524,5 +527,6 @@ const render_activity_info = function(self) {
 			activity_info_body.prepend(node_info)
 		}
 
+
 	return fragment
-}
+};//end render_activity_info
