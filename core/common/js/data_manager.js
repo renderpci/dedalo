@@ -279,7 +279,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 			const objectStore	= transaction.objectStore(table);
 			// const request	= objectStore.add(data);
 			// Put this updated object back into the database.
-  			const request = objectStore.put(data);
+			const request = objectStore.put(data);
 
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
@@ -412,6 +412,31 @@ export function download_url(url, filename) {
 		);
 	});
 };//end download_url
+
+
+
+/**
+* DOWNLOAD_DATA
+* @param mixed data
+* @param string filename
+* Download data blob data and create a temporal autofired link
+*/
+export function download_data(data, filename) {
+
+	const json	= JSON.stringify(data, null, 2)
+	const blob	= new Blob([json], {type: "octet/stream"})
+	const url	= window.URL.createObjectURL(blob)
+
+	const a = document.createElement("a")
+	a.style = "display: none"
+	document.body.appendChild(a)
+	a.href = url
+	a.download = filename
+	a.click()
+	window.URL.revokeObjectURL(url)
+
+	return true
+};//end download_data
 
 
 

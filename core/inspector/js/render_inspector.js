@@ -6,7 +6,7 @@
 // import
 	import {ui} from '../../common/js/ui.js'
 	import {create_source} from '../../common/js/common.js'
-	import {download_url} from '../../common/js/data_manager.js'
+	import {download_data} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
@@ -301,12 +301,34 @@ const get_content_data = function(self) {
 				})
 				register_download.addEventListener("click", (e)=>{
 					e.preventDefault()
-					const url		= DEDALO_CORE_URL + '/json/json_display.php?url_locator=' + self.section_tipo + '/' + self.caller.section_id
-					const file_name	= 'register.json'
-					// download_url (import from data_manager) temporal link create and click
-					if (confirm(`Donwload file: ${file_name} ${self.caller.section_id} ?`)) {
-						download_url(url, file_name)
-					}
+
+					const file_name = 'register.json'
+
+					// confirm action by user
+						if (!confirm(`Donwload file: ${file_name} ${self.caller.section_id} ?`)) {
+							return false
+						}
+
+					// read from Dédlo API
+						const rqo = {
+							action	: 'read_raw',
+							source	: create_source(self.caller)
+						}
+						data_manager.prototype.request({
+							body : rqo
+						})
+						.then(function(api_response){
+
+							// error case
+								if (api_response.result===false || api_response.error) {
+									// alert("An error occurred. " + api_response.error);
+									return
+								}
+
+							// donwload blob as JSON file
+								const data = api_response.result;
+								download_data(data, file_name)
+						})
 				})
 			}
 
