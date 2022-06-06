@@ -1,10 +1,11 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
 
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
@@ -23,7 +24,8 @@ export const render_tool_lang = function() {
 
 /**
 * EDIT
-* Render node for use like button
+* Render node for use in edit mode
+* @param object options
 * @return DOM node
 */
 render_tool_lang.prototype.edit = async function(options) {
@@ -100,14 +102,6 @@ render_tool_lang.prototype.edit = async function(options) {
 		//	new_tool_container.appendChild(wrapper)
 		//}
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
 
 
 	return wrapper

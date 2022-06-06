@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -193,5 +193,3 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 			})
 		})
 };//end automatic_translation
-
-

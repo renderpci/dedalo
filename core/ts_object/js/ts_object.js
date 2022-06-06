@@ -2261,8 +2261,8 @@ export const ts_object = new function() {
 			}else{
 
 				// Last elements are the final found elements and must be hilite
-				element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
-				ts_object.hilite_element(element, false);
+				const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
+				ts_object.hilite_element(last_element, false);
 			}
 
 			// Open arrows and fix children container state
