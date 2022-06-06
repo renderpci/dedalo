@@ -1,285 +1,436 @@
 {
-    "label": "Desarrollo de herramientas",
-    "relations": [
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd200"
-        },
-        {
-            "type": "dd675",
-            "section_id": "1",
-            "section_tipo": "dd153",
-            "from_component_tipo": "dd1337"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1331"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1332"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1333"
-        },
-        {
-            "type": "dd151",
-            "section_id": "3",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1354"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "hierarchy13",
-            "from_component_tipo": "dd1580"
-        },
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd197"
-        }
-    ],
-    "components": {
-        "dd199": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 5,
-                            "hour": 16,
-                            "time": 64919462816,
-                            "year": 2019,
-                            "month": 11,
-                            "minute": 6,
-                            "second": 56
-                        }
-                    }
-                ]
-            }
-        },
-        "dd201": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 7,
-                            "hour": 11,
-                            "time": 64999971788,
-                            "year": 2022,
-                            "month": 5,
-                            "minute": 43,
-                            "second": 8
-                        }
-                    }
-                ]
-            }
-        },
-        "dd612": {
-            "dato": {
-                "lg-eng": [
-                    "Tool for translate the content to another langs"
-                ],
-                "lg-spa": [
-                    "Herramienta de traducción de contenido a otras lenguas"
-                ]
-            }
-        },
-        "dd799": {
-            "dato": {
-                "lg-cat": [
-                    "Traducció"
-                ],
-                "lg-eng": [
-                    "Translation"
-                ],
-                "lg-spa": [
-                    "Traducción"
-                ]
-            }
-        },
-        "dd999": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "translator_config": {
-                            "type": "array",
-                            "value": [
-                                {
-                                    "key": "XXX",
-                                    "uri": "https:\/\/babel.render.es\/babel_engine\/",
-                                    "name": "babel"
-                                },
-                                {
-                                    "key": "XXX",
-                                    "uri": "https:\/\/google.com\/translator",
-                                    "name": "google_translation"
-                                }
-                            ],
-                            "client": false
-                        },
-                        "translator_engine": {
-                            "type": "array",
-                            "value": [
-                                {
-                                    "name": "babel",
-                                    "label": "Babel"
-                                },
-                                {
-                                    "name": "google_translation",
-                                    "label": "Google translator"
-                                }
-                            ],
-                            "client": true,
-                            "default": []
-                        }
-                    }
-                ]
-            }
-        },
-        "dd1326": {
-            "dato": {
-                "lg-nolan": [
-                    "tool_lang"
-                ]
-            }
-        },
-        "dd1327": {
-            "dato": {
-                "lg-nolan": [
-                    "2.0.1"
-                ]
-            }
-        },
-        "dd1328": {
-            "dato": {
-                "lg-nolan": [
-                    "6.0.0"
-                ]
-            }
-        },
-        "dd1334": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "tld": "tool_dev",
-                        "tipo": "tool_dev2",
-                        "model": "section_list",
-                        "order": 1,
-                        "parent": "tool_dev1",
-                        "is_model": "no",
-                        "relations": [
-                            {
-                                "tipo": "rsc21"
-                            },
-                            {
-                                "tipo": "rsc19"
-                            },
-                            {
-                                "tipo": "rsc23"
-                            },
-                            {
-                                "tipo": "rsc263"
-                            },
-                            {
-                                "tipo": "rsc36"
-                            },
-                            {
-                                "tipo": "rsc244"
-                            },
-                            {
-                                "tipo": "rsc35"
-                            }
-                        ],
-                        "model_tipo": "dd91",
-                        "properties": null,
-                        "descriptors": [
-                            {
-                                "lang": "lg-ita",
-                                "type": "term",
-                                "value": "Elenco"
-                            },
-                            {
-                                "lang": "lg-spa",
-                                "type": "term",
-                                "value": "Listado"
-                            },
-                            {
-                                "lang": "lg-cat",
-                                "type": "term",
-                                "value": "Llistat"
-                            },
-                            {
-                                "lang": "lg-eng",
-                                "type": "term",
-                                "value": "List"
-                            }
-                        ],
-                        "translatable": false
-                    }
-                ]
-            }
-        },
-        "dd1335": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "open_as": "modal",
-                        "windowFeatures": null
-                    }
-                ]
-            }
-        },
-        "dd1350": {
-            "dato": {
-                "lg-nolan": [
-                    null
-                ]
-            }
-        },
-        "dd1353": {
-            "dato": {
-                "lg-nolan": []
-            }
-        },
-        "dd1362": {
-            "dato": {
-                "lg-nolan": [
-                    "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators, <br>must be defined in Dédalo tools config file:<br><br> \/config\/tools\/config_tool_lang.json<br><br> as:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https:\/\/babel.render.es\/babel_engine\/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');<br><br>\/\/ example of ontology (dd1334)<br>{<br> \"tld\": \"tool_dev\",<br> \"tipo\": \"tool_dev1\",<br> \"model\": \"section_tool\",<br> \"order\": 1,<br> \"parent\": \"oh80\",<br> \"is_model\": \"no\",<br> \"relations\": null,<br> \"model_tipo\": \"dd125\",<br> \"properties\": {<br> \"context\": {<br> \"top_tipo\": \"oh1\",<br> \"target_tool\": \"tool_transcription\",<br> \"context_name\": \"section_tool\",<br> \"tool_section_tipo\": \"tool_dev1\",<br> \"target_section_tipo\": \"rsc167\",<br> \"target_component_tipo\": \"rsc35\"<br> }<br> },<br> \"descriptors\": [<br> {<br> \"lang\": \"lg-ita\",<br> \"type\": \"term\",<br> \"value\": \"Trascrizioni interviste\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"term\",<br> \"value\": \"Transcription\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"term\",<br> \"value\": \"Transcripción entrevistas\"<br> },<br> {<br> \"lang\": \"lg-cat\",<br> \"type\": \"term\",<br> \"value\": \"Transcripció d'entrevistes\"<br> },<br> {<br> \"lang\": \"lg-ell\",<br> \"type\": \"term\",<br> \"value\": \"Μεταγραφή συνεντεύξεις\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"des\",<br> \"value\": \"Tool for translate the content to other langs\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"des\",<br> \"value\": \"Herramienta de traducción de contenido a otras lenguas\"<br> }<br> ],<br> \"translatable\": false<br>}<br>"
-                ]
-            }
-        },
-        "dd1372": {
-            "inf": "Etiquetas [component_json]",
-            "dato": {
-                "lg-nolan": [
-                    null
-                ]
-            }
-        }
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
     },
-    "section_id": 1,
-    "created_date": "2019-11-05 16:06:56",
-    "section_tipo": "dd1340",
-    "modified_date": "2022-05-07 11:43:08",
-    "diffusion_info": null,
-    "created_by_userID": -1,
-    "section_real_tipo": "dd1324",
-    "modified_by_userID": -1
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "3",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "hierarchy13",
+      "from_component_tipo": "dd1580"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 5,
+              "hour": 16,
+              "time": 64919462816,
+              "year": 2019,
+              "month": 11,
+              "minute": 6,
+              "second": 56
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 6,
+              "hour": 11,
+              "time": 65002561622,
+              "year": 2022,
+              "month": 6,
+              "minute": 7,
+              "second": 2
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "dato": {
+        "lg-eng": [
+          "Tool for translate the content to another langs"
+        ],
+        "lg-spa": [
+          "Herramienta de traducción de contenido a otras lenguas"
+        ]
+      }
+    },
+    "dd799": {
+      "dato": {
+        "lg-cat": [
+          "Traducció"
+        ],
+        "lg-eng": [
+          "Translation"
+        ],
+        "lg-spa": [
+          "Traducción"
+        ]
+      }
+    },
+    "dd999": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "translator_config": {
+              "type": "array",
+              "value": [
+                {
+                  "key": "XXX",
+                  "uri": "https://babel.render.es/babel_engine/",
+                  "name": "babel"
+                },
+                {
+                  "key": "XXX",
+                  "uri": "https://google.com/translator",
+                  "name": "google_translation"
+                }
+              ],
+              "client": false
+            },
+            "translator_engine": {
+              "type": "array",
+              "value": [
+                {
+                  "name": "babel",
+                  "label": "Babel"
+                },
+                {
+                  "name": "google_translation",
+                  "label": "Google translator"
+                }
+              ],
+              "client": true,
+              "default": []
+            }
+          }
+        ]
+      }
+    },
+    "dd1326": {
+      "dato": {
+        "lg-nolan": [
+          "tool_lang"
+        ]
+      }
+    },
+    "dd1327": {
+      "dato": {
+        "lg-nolan": [
+          "2.0.1"
+        ]
+      }
+    },
+    "dd1328": {
+      "dato": {
+        "lg-nolan": [
+          "6.0.0"
+        ]
+      }
+    },
+    "dd1334": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "tld": "tool_dev",
+            "tipo": "tool_dev2",
+            "model": "section_list",
+            "order": 1,
+            "parent": "tool_dev1",
+            "is_model": "no",
+            "relations": [
+              {
+                "tipo": "rsc21"
+              },
+              {
+                "tipo": "rsc19"
+              },
+              {
+                "tipo": "rsc23"
+              },
+              {
+                "tipo": "rsc263"
+              },
+              {
+                "tipo": "rsc36"
+              },
+              {
+                "tipo": "rsc244"
+              },
+              {
+                "tipo": "rsc35"
+              }
+            ],
+            "model_tipo": "dd91",
+            "properties": null,
+            "descriptors": [
+              {
+                "lang": "lg-ita",
+                "type": "term",
+                "value": "Elenco"
+              },
+              {
+                "lang": "lg-spa",
+                "type": "term",
+                "value": "Listado"
+              },
+              {
+                "lang": "lg-cat",
+                "type": "term",
+                "value": "Llistat"
+              },
+              {
+                "lang": "lg-eng",
+                "type": "term",
+                "value": "List"
+              }
+            ],
+            "translatable": false
+          }
+        ]
+      }
+    },
+    "dd1335": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1350": {
+      "dato": {
+        "lg-nolan": [
+          null
+        ]
+      }
+    },
+    "dd1353": {
+      "dato": {
+        "lg-nolan": []
+      }
+    },
+    "dd1362": {
+      "dato": {
+        "lg-nolan": [
+          "For automatic translation, the config constant 'DEDALO_TRANSLATOR_ENGINE' with all translators, <br>must be defined in Dédalo tools config file:<br><br> /config/tools/config_tool_lang.json<br><br> as:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; \"name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https://babel.render.es/babel_engine/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');<br><br>// example of ontology (dd1334)<br>{<br> \"tld\": \"tool_dev\",<br> \"tipo\": \"tool_dev1\",<br> \"model\": \"section_tool\",<br> \"order\": 1,<br> \"parent\": \"oh80\",<br> \"is_model\": \"no\",<br> \"relations\": null,<br> \"model_tipo\": \"dd125\",<br> \"properties\": {<br> \"context\": {<br> \"top_tipo\": \"oh1\",<br> \"target_tool\": \"tool_transcription\",<br> \"context_name\": \"section_tool\",<br> \"tool_section_tipo\": \"tool_dev1\",<br> \"target_section_tipo\": \"rsc167\",<br> \"target_component_tipo\": \"rsc35\"<br> }<br> },<br> \"descriptors\": [<br> {<br> \"lang\": \"lg-ita\",<br> \"type\": \"term\",<br> \"value\": \"Trascrizioni interviste\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"term\",<br> \"value\": \"Transcription\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"term\",<br> \"value\": \"Transcripción entrevistas\"<br> },<br> {<br> \"lang\": \"lg-cat\",<br> \"type\": \"term\",<br> \"value\": \"Transcripció d'entrevistes\"<br> },<br> {<br> \"lang\": \"lg-ell\",<br> \"type\": \"term\",<br> \"value\": \"Μεταγραφή συνεντεύξεις\"<br> },<br> {<br> \"lang\": \"lg-eng\",<br> \"type\": \"des\",<br> \"value\": \"Tool for translate the content to other langs\"<br> },<br> {<br> \"lang\": \"lg-spa\",<br> \"type\": \"des\",<br> \"value\": \"Herramienta de traducción de contenido a otras lenguas\"<br> }<br> ],<br> \"translatable\": false<br>}<br>"
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-spa",
+              "name": "automatic_translation",
+              "value": "Traducción automática"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "source_lang",
+              "value": "Idioma de origen"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "automatic_translation",
+              "value": "Automatic translation"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "automatic_translation",
+              "value": "Αυτόματη μετάφραση"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "automatic_translation",
+              "value": "Traducció automàtica"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "automatic_translation",
+              "value": "Automatische Übersetzung"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "source_lang",
+              "value": "Source language"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "source_lang",
+              "value": "Idioma d'origen"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "source_lang",
+              "value": "Γλώσσα πηγής"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "source_lang",
+              "value": "Ausgangssprache"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "target_lang",
+              "value": "Zielsprache"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "target_lang",
+              "value": "Idioma de destinació"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "target_lang",
+              "value": "Idioma de destino"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "target_lang",
+              "value": "γλώσσα-στόχος"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "target_lang",
+              "value": "Target language"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "copy_to_target",
+              "value": "Copiar a destino"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "copy_to_target",
+              "value": "Copiar a destí"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "copy_to_target",
+              "value": "Copy to target"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "copy_to_target",
+              "value": "αντιγραφή στον προορισμό"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "copy_to_target",
+              "value": "zum Ziel kopieren"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "automatic_translation",
+              "value": "Automatic translation"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "automatic_translation",
+              "value": "Traducción automática"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "automatic_translation",
+              "value": "Αυτόματη μετάφραση"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "automatic_translation",
+              "value": "Automatische Übersetzung"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "automatic_translation",
+              "value": "Traducció automàtica"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "propagate_marks",
+              "value": "Propagate marks"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "propagate_marks",
+              "value": "Marken verbreiten"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "propagate_marks",
+              "value": "Διαδώστε σημάδια"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "propagate_marks",
+              "value": "Propagació de marques"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "propagate_marks",
+              "value": "Propagar marcas"
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "section_id": 1,
+  "created_date": "2019-11-05 16:06:56",
+  "section_tipo": "dd1340",
+  "modified_date": "2022-06-06 11:07:02",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd1324",
+  "modified_by_userID": -1
 }
