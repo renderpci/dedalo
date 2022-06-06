@@ -1473,12 +1473,12 @@ const render_persons_list = function(self, text_editor, i) {
 			// get the value of related sections (the locator of his data)
 			const value_ref_sections = sections.value
 			// add the self section, the section of the compnent_text_area, to be processed as common section (for interviewed, camera, etc.)
-			const current_section = [{
+			const self_component_section = [{
 				section_tipo	: self.section_tipo,
 				section_id		: self.section_id
 			}]
 			// create unique array with all locators
-			const value = [...current_section, ...value_ref_sections]
+			const value = [...self_component_section, ...value_ref_sections]
 
 			const value_length	= value.length
 			let k = 0;
