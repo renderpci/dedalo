@@ -1467,9 +1467,16 @@ const render_persons_list = function(self, text_editor, i) {
 			if(!sections){
 				return null
 			}
-
+	console.log("datum-------------:",datum);
 		// sections loop
-			const value			= sections.value
+			const value_ref_sections = sections.value
+
+			const current_section = [{
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id
+			}]
+			const value = [...current_section, ...value_ref_sections]
+
 			const value_length	= value.length
 			let k = 0;
 			for (let i = 0; i < value_length; i++) {
@@ -1481,12 +1488,12 @@ const render_persons_list = function(self, text_editor, i) {
 				})
 
 				const current_locator = {
-					section_top_tipo	: value[i].section_tipo,
-					section_top_id		: value[i].section_id
+					section_tipo	: value[i].section_tipo,
+					section_id		: value[i].section_id
 				}
 
-				const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
-				const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+				const section_label		= context.find(el => el.section_tipo===current_locator.section_tipo).label
+				const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_tipo && el.section_id===current_locator.section_id)
 
 				// ar_component_value
 					const ar_component_value = []
@@ -1497,7 +1504,7 @@ const render_persons_list = function(self, text_editor, i) {
 
 				// label
 					const label = 	section_label + ' | ' +
-									current_locator.section_top_id +' | ' +
+									current_locator.section_id +' | ' +
 									ar_component_value.join(' | ')
 
 				// label DOM element
@@ -1508,7 +1515,7 @@ const render_persons_list = function(self, text_editor, i) {
 						parent			: section_container
 					})
 
-				const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_top_tipo && el.parent_section_id === current_locator.section_top_id)
+				const ar_persons_for_this_section = ar_persons.filter(el => el.parent === current_locator.section_tipo && el.parent_section_id === current_locator.section_id)
 				for (let j = 0; j < ar_persons_for_this_section.length; j++) {
 
 					const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
