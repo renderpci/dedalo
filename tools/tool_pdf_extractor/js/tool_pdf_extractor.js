@@ -79,8 +79,6 @@ tool_pdf_extractor.prototype.init = async function(options) {
 */
 tool_pdf_extractor.prototype.build = async function(autoload=false) {
 
-	const self = this
-
 	// call generic commom tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 

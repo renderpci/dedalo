@@ -119,13 +119,20 @@ tool_export.prototype.build = async function(autoload=false) {
 	// call generic commom tool build
 		const common_build = await tool_common.prototype.build.call(this, true);
 
-	// // get_section_elements_context
-	// 	const section_elements = await self.get_section_elements_context({
-	// 		section_tipo : self.caller.section_tipo
-	// 	})
+	try {
+
+		// // get_section_elements_context
+		// 	const section_elements = await self.get_section_elements_context({
+		// 		section_tipo : self.caller.section_tipo
+		// 	})
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
-	return true
+	return common_build
 };//end build_custom
 
 

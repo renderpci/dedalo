@@ -89,34 +89,41 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
+	try {
 
-	// specific actions.. like fix main_element for convenience
-		const context = self.build_context()
-		// const generate_rqo = async function(){
-		// 	// rqo_config. get the rqo_config from context
-		// 	const rqo_config	= context.request_config
-		// 		? context.request_config.find(el => el.api_engine==='dedalo')
-		// 		: {}
+		// specific actions.. like fix main_element for convenience
+			// const context = self.build_context()
+			// const generate_rqo = async function(){
+			// 	// rqo_config. get the rqo_config from context
+			// 	const rqo_config	= context.request_config
+			// 		? context.request_config.find(el => el.api_engine==='dedalo')
+			// 		: {}
 
-		// 	// rqo build
-		// 	const action	= 'search'
-		// 	const add_show	= true
-		// 	const rqo = await self.build_rqo_show(rqo_config, action, add_show)
+			// 	// rqo build
+			// 	const action	= 'search'
+			// 	const add_show	= true
+			// 	const rqo = await self.build_rqo_show(rqo_config, action, add_show)
 
-		// 	// source (overwrite default created from tool instead section)
-		// 		rqo.source.model		= context.model
-		// 		rqo.source.tipo			= context.tipo
-		// 		rqo.source.section_tipo	= context.section_tipo
-		// 		rqo.source.section_id	= context.section_id
+			// 	// source (overwrite default created from tool instead section)
+			// 		rqo.source.model		= context.model
+			// 		rqo.source.tipo			= context.tipo
+			// 		rqo.source.section_tipo	= context.section_tipo
+			// 		rqo.source.section_id	= context.section_id
 
-		// 	return rqo
-		// }
-		// const rqo = await generate_rqo()
-		// console.log("rqo:",rqo);
-		// const api_response = await data_manager.prototype.request({body:rqo})
-		// console.log("api_response:",api_response);
-		// self.section_data		= api_response.result.data
-		// self.section_context	= api_response.result.context
+			// 	return rqo
+			// }
+			// const rqo = await generate_rqo()
+			// console.log("rqo:",rqo);
+			// const api_response = await data_manager.prototype.request({body:rqo})
+			// console.log("api_response:",api_response);
+			// self.section_data		= api_response.result.data
+			// self.section_context	= api_response.result.context
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
 
 	return common_build
 };//end build_custom

@@ -63,9 +63,16 @@ tool_tc.prototype.init = async function(options) {
 	// call the generic commom tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	// set the self specific vars not defined by the generic init (in tool_common)
+	try {
+
+		// set the self specific vars not defined by the generic init (in tool_common)
 		self.langs			= page_globals.dedalo_projects_default_langs
 		self.source_lang	= self.caller.lang
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_init
