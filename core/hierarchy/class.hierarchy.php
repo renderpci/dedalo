@@ -385,6 +385,15 @@ class hierarchy {
 
 		security::set_section_permissions( $permissions_options );
 
+
+		# Remove structure cache to reconize new structure sections
+		# Delete all session data config except search_options
+		foreach ($_SESSION['dedalo']['config'] as $key => $value) {
+			if ($key==='search_options') continue;
+			unset($_SESSION['dedalo'][$key]);
+		}
+
+
 		return (object)$response;
 	}//end generate_virtual_section
 
