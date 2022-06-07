@@ -5,9 +5,10 @@
 
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	// import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {ui} from '../../../core/common/js/ui.js'
 	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_lang_multi} from './render_tool_lang_multi.js'
 
@@ -91,9 +92,23 @@ tool_lang_multi.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// main_element. fix main_element for convenience
-		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
-		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+	try {
+
+		// main_element. fix main_element for convenience
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+
+
+		// target translator. When user changes it, a local DB var is stored as 'translator_engine_select' in table 'status'
+			const translator_engine_select_object = await data_manager.prototype.get_local_db_data('translator_engine_select', 'status')
+			if (translator_engine_select_object) {
+				self.target_translator = translator_engine_select_object.value
+			}
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build
@@ -130,6 +145,70 @@ tool_lang_multi.prototype.load_component = async function(lang) {
 
 	return component_instance
 };//end load_component
+
+
+
+/**
+* AUTOMATIC_TRANSLATION
+* Call the API to translate the source lang component data to the target lang component data
+* using a online service like babel or Google translator and save the resulting value
+* (!) Tool lang config translator must to be exists in register_tools section
+*
+* @para string translator (name like 'babel' must to be defined in tool config)
+* @param string source_lang (like 'lg-eng')
+* @param string target_lang (like 'lg-spa')
+* @param DOM element buttons_container (where will be place the message response)
+*
+* @return promise response
+*/
+tool_lang_multi.prototype.automatic_translation = async function(translator, source_lang, target_lang, buttons_container) {
+
+	const self = this
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'automatic_translation')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			source_lang		: source_lang,
+			target_lang		: target_lang,
+			component_tipo	: self.main_element.tipo,
+			section_id		: self.main_element.section_id,
+			section_tipo	: self.main_element.section_tipo,
+			translator		: translator,
+			config			: self.context.config
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			const current_data_manager = new data_manager()
+			current_data_manager.request({body : rqo})
+			.then(function(response){
+				dd_console("-> automatic_translation API response:",'DEBUG',response);
+
+				// user messages
+					const msg_type = (response.result===false) ? 'error' : 'ok'
+					//if (trigger_response.result===false) {
+						ui.show_message(buttons_container, response.msg, msg_type)
+					//}
+
+				// reload target lang
+					const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
+					target_component.refresh()
+					dd_console('target_component', 'DEBUG', target_component)
+
+				resolve(response)
+			})
+		})
+};//end automatic_translation
 
 
 
@@ -202,5 +281,3 @@ tool_lang_multi.prototype.load_component = async function(lang) {
 
 	// 	return trigger_response
 	// };//end automatic_translation
-
-

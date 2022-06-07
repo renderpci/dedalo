@@ -239,8 +239,8 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// automatic_translation
-			const translator_engine = (self.config)
-				? self.config.translator_engine.value
+			const translator_engine = (self.context.config)
+				? self.context.config.translator_engine.value
 				: false
 				console.log("translator_engine:",translator_engine, self);
 			if (translator_engine) {
@@ -288,7 +288,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 
 			components_container.classList.add('loading')
 
-			const translator	= translator_engine_select.value
+			const translator	= self.translator_engine_select.value
 			const source_lang	= source_select_lang.value
 			const target_lang	= target_select_lang.value
 
@@ -299,19 +299,31 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		})
 
 	// select
-		const translator_engine_select = ui.create_dom_element({
+		self.translator_engine_select = ui.create_dom_element({
 			element_type	: 'select',
 			parent 			: automatic_translation_container
 		})
 		for (let i = 0; i < translator_engine.length; i++) {
+
 			const engine = translator_engine[i]
-			ui.create_dom_element({
+
+			const option = ui.create_dom_element({
 				element_type	: 'option',
-				value			: JSON.stringify(engine),
+				value			: engine.name,
 				inner_html		: engine.label,
-				parent			: translator_engine_select
+				parent			: self.translator_engine_select
 			})
+
+			if (self.target_translator===engine.name) {
+				option.selected = true
+			}
 		}
+		self.translator_engine_select.addEventListener('change', function(){
+			data_manager.prototype.set_local_db_data({
+				id		: 'translator_engine_select',
+				value	: self.translator_engine_select.value
+			}, 'status')
+		})
 
 
 	return automatic_translation_container
