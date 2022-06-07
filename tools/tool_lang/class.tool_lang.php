@@ -45,24 +45,26 @@ class tool_lang extends tool_common {
 
 		// config JSON . Must be compatible with tool properties translator_engine data
 			$ar_translator_configs	= $config->config->translator_config->value;
-			$translator_name		= $options->translator->name;
+			$translator_name		= $options->translator;
 			// search current translator config in tool config (stored in database, section 'dd996' Tools configuration)
 			$translator_config = array_find($ar_translator_configs, function($item) use($translator_name) {
 				return $item->name===$translator_name;
 			});
 
 		// data from options->translator
-			$uri = $translator_config->uri;
-			$key = $translator_config->key;
+			$uri	= $translator_config->uri;
+			$key	= $translator_config->key;
 
 		// Source text . Get source text from component (source_lang)
-			$model 		= RecordObj_dd::get_modelo_name_by_tipo($options->component_tipo,true);
-			$component	= component_common::get_instance($model,
-														 $options->component_tipo,
-														 $options->section_id,
-														 'list',
-														 $options->source_lang,
-														 $options->section_tipo);
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($options->component_tipo,true);
+			$component	= component_common::get_instance(
+				$model,
+				$options->component_tipo,
+				$options->section_id,
+				'list',
+				$options->source_lang,
+				$options->section_tipo
+			);
 			$dato = (array)$component->get_dato();
 
 		// iterate component array data
@@ -72,12 +74,12 @@ class tool_lang extends tool_common {
 				switch ($translator_name) {
 					case 'google_translation':
 						// Not implemented yet
-						$response->msg = "Sorry. '{$options->translator->label}' is not implemented yet"; // error msg
+						$response->msg = "Sorry. '{$translator_name}' is not implemented yet"; // error msg
 						return $response;
 						break;
 					case 'babel':
 					default:
-						$translate = babel::translate([
+						$translate = babel::translate((object)[
 							'uri'			=> $uri,
 							'key'			=> $key,
 							'source_lang'	=> $options->source_lang,
@@ -98,19 +100,32 @@ class tool_lang extends tool_common {
 
 
 		// Save result on target component (target_lang)
-			$component	= component_common::get_instance($model,
-														 $options->component_tipo,
-														 $options->section_id,
-														 'list',
-														 $options->target_lang,
-														 $options->section_tipo);
-			$component->set_dato($translated_data);
-			$component->Save(false); // (!) Important: send argument 'false' to save to prevent alter other langs tags (propagate)
+			if (empty($translated_data)) {
+				// skip save empty values
+				debug_log(__METHOD__." Skipt empty received value ".to_string(), logger::ERROR);
+				$response->msg		= 'Ignored empty result. Nothing is saved!';
+			}else{
+				$component = component_common::get_instance($model,
+					$options->component_tipo,
+					$options->section_id,
+					'list',
+					$options->target_lang,
+					$options->section_tipo
+				);
+				$component->set_dato($translated_data);
+				$component->Save(false); // (!) Important: send argument 'false' to save to prevent alter other langs tags (propagate)
 
+				// response OK
+					$response->result	= true;
+					$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			}
 
-		// response
-			$response->result	= true;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		//  debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = new stdClass();
+				$response->debug->translated_data	= $translated_data;
+				$response->debug->raw_result		= $translate->raw_result;
+			}
 
 
 		return (object)$response;

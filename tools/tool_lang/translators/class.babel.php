@@ -7,28 +7,30 @@
 class babel {
 
 
+
 	/**
 	* TRANSLATE
+	* Connect with BABEL API across CURL to get translated result as text
+	* @param object $request_options
 	* @return object $response
 	*/
-	public static function translate($request_options) {
+	public static function translate(object $request_options): object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		$options = new stdClass();
-			$options->uri 			= null;
-			$options->key 			= null;
-			$options->source_lang 	= null;
-			$options->target_lang 	= null;
-			$options->text 			= null;
+			$options->uri			= null;
+			$options->key			= null;
+			$options->source_lang	= null;
+			$options->target_lang	= null;
+			$options->text			= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// babel config
-			$direction 	= self::get_babel_direction($options->source_lang, $options->target_lang);
-			$url 		= $options->uri; // DEDALO_TRANSLATOR_URL['babel'];
-
+			$direction	= self::get_babel_direction($options->source_lang, $options->target_lang);
+			$url		= $options->uri; // DEDALO_TRANSLATOR_URL['babel'];
 
 		// add custom image tags to avoid Apertium change original tags
 			$source_text = trim(TR::addBabelTagsOnTheFly($options->text));
@@ -40,18 +42,17 @@ class babel {
 				'direction' => $direction
 			];
 
-		// curl
-			$ch = curl_init();
+		// curl request (core functions)
+			$request = curl_request((object)[
+				'url'			=> $url,
+				'postfields'	=> $fields,
+				'header'		=> false
+			]);
+			$result = $request->result;
 
-			curl_setopt($ch, CURLOPT_URL, $url);
-			#curl_setopt($ch, CURLOPT_POST, count($fields));
-			curl_setopt($ch, CURLOPT_POST, true);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($fields));
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-			$result = curl_exec($ch);
-			curl_close($ch);
-
-
+		// raw result
+			$raw_result = $result;
+			debug_log(__METHOD__." babel:translate ----> raw_result ".PHP_EOL.to_string($raw_result), logger::DEBUG);
 
 		// check invalild response or error
 			$ar_invalid_respone = array('Error: Mode','Error. You need authorization');
@@ -65,7 +66,7 @@ class babel {
 		// decode html entities. Babel returns the special characters encoded as html entities.
 		// To reverse the format we use html_entity_decode converting double quotes to
 		// simple (flag ENT_COMPAT) and forcing the final format to UTF-8
-			$result = html_entity_decode($result,ENT_COMPAT,'UTF-8');
+			$result = html_entity_decode($result, ENT_COMPAT, 'UTF-8');
 
 		// Sanitize babel result
 		// Apertium changes the format of the labels upon return. They are replaced here
@@ -73,8 +74,9 @@ class babel {
 
 		// response object
 			$response = new stdClass();
-				$response->result 	= $result;
-				$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+				$response->result		= $result;
+				$response->msg			= 'Ok. Request done ['.__FUNCTION__.']';
+				$response->raw_result	= $raw_result;
 
 
 		return (object)$response;

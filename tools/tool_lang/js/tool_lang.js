@@ -62,12 +62,25 @@ tool_lang.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = tool_common.prototype.init.call(this, options);
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.langs			= page_globals.dedalo_projects_default_langs
-		self.source_lang	= self.caller && self.caller.lang
-			? self.caller.lang
-			: null
-		self.target_lang	= null
+	try {
+
+		// set the self specific vars not defined by the generic init (in tool_common)
+			self.langs			= page_globals.dedalo_projects_default_langs
+			self.source_lang	= self.caller && self.caller.lang
+				? self.caller.lang
+				: null
+			self.target_lang	= null
+
+		// target translator. When user changes it, a local DB var is stored as 'translator_engine_select' in table 'status'
+			const translator_engine_select_object = await data_manager.prototype.get_local_db_data('translator_engine_select', 'status')
+			if (translator_engine_select_object) {
+				self.target_translator = translator_engine_select_object.value
+			}
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_init
@@ -172,8 +185,8 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 			component_tipo	: self.main_element.tipo,
 			section_id		: self.main_element.section_id,
 			section_tipo	: self.main_element.section_tipo,
-			translator		: JSON.parse(translator),
-			config			: self.config
+			translator		: translator,
+			config			: self.context.config
 		}
 
 	// rqo
