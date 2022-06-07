@@ -120,19 +120,20 @@ class tool_import_dedalo_csv extends tool_common {
 						if ($dkey>=$preview_max) break;
 					}//end foreach ($ar_data as $dkey => $current_line)
 
-				$item = (object)[
-					'dir'					=> $dir,
-					'name'					=> $current_file_name,
-					'data'					=> $ar_data,
-					'n_records'				=> $n_records,
-					'n_columns'				=> $n_columns,
-					'file_info'				=> $file_info,
-					'ar_columns_map'		=> $ar_columns_map,
-					'sample_data'			=> '$sample_data',
-					'sample_data_errors'	=> '$sample_data_errors'
-				];
+				// files_info
+					$item = (object)[
+						'dir'					=> $dir,
+						'name'					=> $current_file_name,
+						'data'					=> $ar_data, // $ar_data,
+						'n_records'				=> $n_records,
+						'n_columns'				=> $n_columns,
+						'file_info'				=> $file_info,
+						'ar_columns_map'		=> $ar_columns_map,
+						'sample_data'			=> '$sample_data',
+						'sample_data_errors'	=> '$sample_data_errors'
+					];
 
-				$files_info[] = $item;
+					$files_info[] = $item;
 			}//end foreach ($files_list as $current_file_name)
 
 			// dump($response, ' response 2 ++ '.to_string());
@@ -149,7 +150,6 @@ class tool_import_dedalo_csv extends tool_common {
 				: "No files found at $dir";
 			$response->error	= $error ?? null;
 
-		dump($response, ' response 3  ++ '.json_encode($response));
 
 		return (object)$response;
 	}//end get_csv_files
