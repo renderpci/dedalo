@@ -85,10 +85,12 @@ tool_tr_print.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	try {
+
 		// transcription_component. fix transcription_component for convenience
 			const transcription_component_tipo	= self.caller.tipo
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_tipo)
 			self.ar_raw_data					= self.transcription_component.data.value
+
 	} catch (error) {
 		self.error = error
 		console.error(error)

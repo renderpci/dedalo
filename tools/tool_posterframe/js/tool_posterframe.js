@@ -86,10 +86,17 @@ tool_posterframe.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// specific actions.. like fix main_element for convenience
+	try {
+
+		// specific actions.. like fix main_element for convenience
 		// main_element
-			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
-			self.main_element			= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
+			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build

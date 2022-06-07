@@ -89,26 +89,33 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// fetch system info
-		// const system_info = await get_system_info(self)
-		// // set as tool properties
-		// 	self.max_size_bytes			= system_info.max_size_bytes
-		// 	self.sys_get_temp_dir		= system_info.sys_get_temp_dir
-		// 	self.upload_tmp_dir			= system_info.upload_tmp_dir
-		// 	self.upload_tmp_perms		= system_info.upload_tmp_perms
-		// 	self.session_cache_expire	= system_info.session_cache_expire
+	try {
+
+		// fetch system info
+			// const system_info = await get_system_info(self)
+			// // set as tool properties
+			// 	self.max_size_bytes			= system_info.max_size_bytes
+			// 	self.sys_get_temp_dir		= system_info.sys_get_temp_dir
+			// 	self.upload_tmp_dir			= system_info.upload_tmp_dir
+			// 	self.upload_tmp_perms		= system_info.upload_tmp_perms
+			// 	self.session_cache_expire	= system_info.session_cache_expire
 
 
-	// service_upload
-		// get instance and init
-		self.service_upload = await get_instance({
-			model				: 'service_upload',
-			mode				: 'edit',
-			allowed_extensions	: self.caller.context.allowed_extensions, // like ['csv','jpg']
-			caller				: self
-		})
-		// console.log("self.service_upload:",self.service_upload);
-		self.ar_instances.push(self.service_upload)
+		// service_upload
+			// get instance and init
+			self.service_upload = await get_instance({
+				model				: 'service_upload',
+				mode				: 'edit',
+				allowed_extensions	: self.caller.context.allowed_extensions, // like ['csv','jpg']
+				caller				: self
+			})
+			// console.log("self.service_upload:",self.service_upload);
+			self.ar_instances.push(self.service_upload)
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build

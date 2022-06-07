@@ -36,7 +36,7 @@ export const tool_import_dedalo_csv = function () {
 	this.langs			= null
 	this.caller			= null
 
-	this.csv_files_list = null
+	this.csv_files_list	= null
 
 
 	return true
@@ -75,7 +75,7 @@ tool_import_dedalo_csv.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 		// self.lang	= options.lang // page_globals.dedalo_data_lang
 		// self.langs	= page_globals.dedalo_projects_default_langs
-		// self.etc	= options.etc
+		// self.etc		= options.etc
 
 	// events
 		self.events_tokens.push(
@@ -102,27 +102,34 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-	// set allowed_extensions
-		// self.context.allowed_extensions	= ['csv']
-		// self.context.target_dir			= {
-		// 	type	: 'dedalo_config',
-		// 	value	: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config
-		// }
+	try {
 
-	// load files list from dir (defined in Dédalo config file constants DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
-		self.csv_files_list = await self.load_csv_files_list()
+		// set allowed_extensions
+			// self.context.allowed_extensions	= ['csv']
+			// self.context.target_dir			= {
+			// 	type	: 'dedalo_config',
+			// 	value	: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config
+			// }
 
-	// service_upload
-		// get instance and init
-		self.service_upload = await get_instance({
-			model				: 'service_upload',
-			mode				: 'edit',
-			allowed_extensions	: ['csv'],
-			caller				: self
-		})
-		// console.log("self.service_upload:",self.service_upload);
-		// store to destroy on close modal
-		self.ar_instances.push(self.service_upload)
+		// load files list from dir (defined in Dédalo config file constants DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
+			self.csv_files_list = await self.load_csv_files_list()
+
+		// service_upload
+			// get instance and init
+			self.service_upload = await get_instance({
+				model				: 'service_upload',
+				mode				: 'edit',
+				allowed_extensions	: ['csv'],
+				caller				: self
+			})
+			// console.log("self.service_upload:",self.service_upload);
+			// store to destroy on close modal
+			self.ar_instances.push(self.service_upload)
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build

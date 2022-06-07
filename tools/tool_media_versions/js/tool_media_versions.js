@@ -92,20 +92,26 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
+	try {
 
-	// specific actions.. like fix main_element for convenience
-		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
-		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+		// specific actions.. like fix main_element for convenience
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
-		// self.main_element_quality.
-		// (!) It's used to force a specific main_element quality before render the component
-			if (self.main_element_quality) {
-				self.main_element.context.quality = self.main_element_quality
-			}
+			// self.main_element_quality.
+			// (!) It's used to force a specific main_element quality before render the component
+				if (self.main_element_quality) {
+					self.main_element.context.quality = self.main_element_quality
+				}
 
-	// fix important vars
-		self.ar_quality	= self.caller.context.ar_quality
-		self.files_info	= self.caller.data.datalist
+		// fix important vars
+			self.ar_quality	= self.caller.context.ar_quality
+			self.files_info	= self.caller.data.datalist
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build

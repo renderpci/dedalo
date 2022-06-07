@@ -87,9 +87,15 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
+	try {
 
-	// specific actions.. like fix main_element for convenience
-		self.diffusion_info = await self.get_diffusion_info()
+		// specific actions.. like fix main_element for convenience
+			self.diffusion_info = await self.get_diffusion_info()
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build
@@ -141,7 +147,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 
 
 /**
-* update_cache
+* UPDATE_CACHE
 * 	Get the llist of section components selectables to update cache
 * @return promise > bool
 */

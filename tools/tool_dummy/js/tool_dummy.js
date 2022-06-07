@@ -89,10 +89,16 @@ tool_dummy.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
+	try {
 
-	// specific actions.. like fix main_element for convenience
-		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
-		self.main_element			= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+		// specific actions.. like fix main_element for convenience
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_build
@@ -125,5 +131,3 @@ tool_dummy.prototype.load_component_sample = async function(lang) {
 
 	return component_instance
 };//end load_component_sample
-
-
