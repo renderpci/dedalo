@@ -121,8 +121,12 @@ class tools_register {
 					ontology::clean_structure_data('tool');
 
 				// import ontology (structure) in jer_dd
-					foreach ($ar_ontologies as $current_ontology) {
-						ontology::import($current_ontology);
+					if (defined('ONTOLOGY_DB')) {
+						debug_log(__METHOD__." !!!!! ignored ontology import (ONTOLOGY_DB is defined) ".to_string(), logger::WARNING);
+					}else{
+						foreach ($ar_ontologies as $current_ontology) {
+							ontology::import($current_ontology);
+						}
 					}
 
 				// update counter at end to consolidate
