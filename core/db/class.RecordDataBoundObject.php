@@ -57,7 +57,13 @@ abstract class RecordDataBoundObject {
 	*/
 	private function get_connection() {
 
-		if (defined('ONTOLOGY_DB')) {
+		$ontology_tables = [
+			'jer_dd',
+			'matrix_descriptors_dd',
+			'main_dd'
+		];
+
+		if (defined('ONTOLOGY_DB') && true===in_array($this->strTableName, $ontology_tables)) {
 
 			static $ontology_pg_conn;
 
