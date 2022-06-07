@@ -1915,9 +1915,12 @@
 
 				right: 0px;
 				width: auto;
-				padding: 0.5rem;
-				padding-bottom: 0px;
+				// padding: 0.5rem;
+				padding: 0px;
+				// padding-bottom: 0px;
+				// top: -2rem;
 				top: -2rem;
+				height: 2rem;
 				border-top-left-radius: 0.25em;
 				border-top-right-radius: 0.25em;
 				font-size: 1.1rem;
@@ -1944,6 +1947,14 @@
 				span {
 					margin-left: 0.5em;
 					margin-bottom: 0.45em;
+					margin-top: 0.45rem;
+
+					&:first-child {
+						margin-left: 0.75rem;
+					}
+					&:last-child {
+						margin-right: 0.75rem;
+					}
 				}
 
 				// >.tools_buttons_container {

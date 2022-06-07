@@ -270,12 +270,14 @@ const get_buttons = (self) => {
 	// const is_inside_tool	= self.is_inside_tool
 	// const mode				= self.mode
 
-	const fragment = new DocumentFragment()
+	// short vars
+		const is_inside_tool	= (self.caller && self.caller.type==='tool')
+		const fragment			= new DocumentFragment()
 
 	// prevent show buttons inside a tool
-		if (self.caller && self.caller.type==='tool') {
-			return fragment
-		}
+		// if (self.caller && self.caller.type==='tool') {
+		// 	return fragment
+		// }
 
 	// button add input
 		// if((self.mode==='edit' || self.mode==='edit_in_list') && !is_inside_tool){
@@ -287,10 +289,10 @@ const get_buttons = (self) => {
 		// }
 
 	// buttons tools
-		// if (!is_inside_tool) {
+		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
 			// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
-		// }
+		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
