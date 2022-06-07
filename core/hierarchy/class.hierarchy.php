@@ -363,7 +363,6 @@ class hierarchy {
 					$response->msg 		.= $create_term->msg;
 				}
 
-
 		#
 		# ROOT TERMS
 		# Create first sample record in every new area (term and model)
@@ -374,7 +373,6 @@ class hierarchy {
 			$create_records_options->ar_sections 	= array($default_section_tipo_term, $default_section_tipo_model);
 		hierarchy::create_root_terms( $create_records_options );
 		*/
-
 
 
 		#

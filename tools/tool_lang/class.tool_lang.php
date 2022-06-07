@@ -1,5 +1,5 @@
 <?php
-// include( dirname(__FILE__) . '/translators/class.babel.php');
+include( dirname(__FILE__) . '/translators/class.babel.php');
 /*
 * CLASS TOOL_LANG
 *
