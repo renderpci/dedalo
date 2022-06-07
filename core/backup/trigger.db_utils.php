@@ -8,6 +8,10 @@ common::trigger_manager();
 
 
 
+// (!) Note: This file is only kept for compatibility with Ontology export v5
+
+
+
 /**
 * EXPORT_STR
 * Export db (export_structure)

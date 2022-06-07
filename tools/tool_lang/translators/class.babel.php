@@ -123,6 +123,4 @@ class babel {
 
 
 
-}//end class
-
-
+}//end class babel
