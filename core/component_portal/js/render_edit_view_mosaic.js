@@ -141,38 +141,40 @@ render_edit_view_mosaic.render = async function(self, options) {
 				element_type	: 'div',
 				class_name		: 'list_body'
 			})
-			// const items				= ui.flat_column_items(columns_map);
-			// const template_columns	= items.join(' ')
-			// Object.assign(
-			// 	list_body.style,
-			// 	{
-			// 		"grid-template-columns" : template_columns
-			// 	}
-			// )
-			// const element_css = {
-			// 	".wrapper_component .list_body" : {
-			// 		"grid-template-columns" : template_columns,
-			// 		"color" : "red"
-			// 	}
-			// }
-			// console.log("element_css:",element_css);
-			// set_element_css(self.section_tipo+'_'+self.tipo, element_css)
+			// css des
+				// const items				= ui.flat_column_items(columns_map);
+				// const template_columns	= items.join(' ')
+				// Object.assign(
+				// 	list_body.style,
+				// 	{
+				// 		"grid-template-columns" : template_columns
+				// 	}
+				// )
+				// const element_css = {
+				// 	".wrapper_component .list_body" : {
+				// 		"grid-template-columns" : template_columns,
+				// 		"color" : "red"
+				// 	}
+				// }
+				// console.log("element_css:",element_css);
+				// set_element_css(self.section_tipo+'_'+self.tipo, element_css)
 
 			list_body.appendChild(content_data)
-			// set_element_css()
-			// css
-			// const element_css		= self.context.css || {}
-			// const legacy_selector	= '.list_body'
-			// if (element_css[legacy_selector]) {
-			// 	// style
-			// 	if (element_css[legacy_selector].style) {
-			// 		Object.assign(
-			// 			list_body.style,
-			// 			element_css[legacy_selector].style
-			// 		)
-			// 	}
-			// 	console.log("element_css[legacy_selector].style:",element_css[legacy_selector].style);
-			// }
+			// css des
+				// set_element_css()
+				// css
+				// const element_css		= self.context.css || {}
+				// const legacy_selector	= '.list_body'
+				// if (element_css[legacy_selector]) {
+				// 	// style
+				// 	if (element_css[legacy_selector].style) {
+				// 		Object.assign(
+				// 			list_body.style,
+				// 			element_css[legacy_selector].style
+				// 		)
+				// 	}
+				// 	console.log("element_css[legacy_selector].style:",element_css[legacy_selector].style);
+				// }
 
 	// buttons
 		const buttons = get_buttons(self)
@@ -188,8 +190,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 			// top			: top
 		})
 		wrapper.classList.add('portal', 'view_'+self.context.view)
-		// alt_list_body add
-		// wrapper.appendChild( await alt_list_body )
 
 	// events
 		add_events(self, wrapper)
@@ -330,9 +330,10 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 								footer	: null,
 								size	: 'normal'
 							})
-							modal.on_close = () => {
-								// self.refresh()
-							}
+							self.modal = modal
+							// modal.on_close = () => {
+							// 	self.refresh()
+							// }
 
 						// user click edit button action close the modal box
 							const token = event_manager.subscribe('edit_button_click', fn_edit_button_click)
