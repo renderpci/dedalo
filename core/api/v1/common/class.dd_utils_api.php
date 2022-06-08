@@ -994,6 +994,50 @@ final class dd_utils_api {
 
 
 
+	/**
+	* UPDATE_LOCK_COMPONENTS_STATE
+	* Connects to database and updates user lock components state
+	* on focus or blur user actions
+	* @return object $response
+	*/
+	public static function update_lock_components_state(object $request_options) : object {
+
+		// Ignore user abort load page
+		ignore_user_abort(true);
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// short vars
+			$section_id		= $request_options->section_id;
+			$section_tipo	= $request_options->section_tipo;
+			$component_tipo	= $request_options->component_tipo;
+			$action			= $request_options->action;
+			$user_id		= (int)navigator::get_user_id();
+			$full_username	= ($user_id<0)
+				? 'Debug user'
+				: $_SESSION['dedalo']['auth']['full_username'];
+
+		// event_element
+			$event_element = new stdClass();
+				$event_element->section_id		= $section_id;
+				$event_element->section_tipo	= $section_tipo;
+				$event_element->component_tipo	= $component_tipo;
+				$event_element->action			= $action;
+				$event_element->user_id			= $user_id;
+				$event_element->full_username	= $full_username;
+				$event_element->date			= date("Y-m-d H:i:s");
+
+		// response ok
+			$response = (object)lock_components::update_lock_components_state( $event_element );
+
+
+		return $response;
+	}//end update_lock_components_state
+
+
+
 
 	// private methods ///////////////////////////////////
 
