@@ -426,7 +426,7 @@
 	}
 	.pause {
 		@icon_name : 'pause.svg';
-		button&  { .fn_append_icon(@icon_name); }
+		button&  { .fn_append_icon(@icon_name);}
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.play {
@@ -454,12 +454,12 @@
 
 // .contenteditable_buttons (used by content editable)
 	.contenteditable_buttons {
-		position: absolute;
-		height: 1.5em;
-		top: -1.54em;
-		z-index: 9;
+		// position: absolute;
+		// height: 1.5em;
+		// top: -1.54em;
+		// z-index: 9;
 		display: flex;
-		background-color: @color_grey_dark;
+		// background-color: @color_grey_dark;
 		padding: 0;
 		border-top-left-radius: 0.25em;
 		border-top-right-radius: 0.25em;
