@@ -44,6 +44,7 @@ include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_tools_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_ts_api.php');
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
+include(DEDALO_CORE_PATH . '/lock_components/class.lock_components.php');
 # include the shared classes
 include(DEDALO_SHARED_PATH . '/class.TR.php');
 include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
