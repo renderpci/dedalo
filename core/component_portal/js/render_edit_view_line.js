@@ -550,5 +550,3 @@ render_edit_view_line.render_column_id = function(options){
 
 	// 	return fragment
 	// }//end render_references
-
-

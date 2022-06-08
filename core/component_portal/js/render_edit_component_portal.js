@@ -185,24 +185,13 @@ export const render_column_remove = function(options) {
 
 	const fragment = new DocumentFragment()
 
-	// // remove icon
-	// 	ui.create_dom_element({
-	// 		element_type	: 'span',
-	// 		class_name		: 'button remove',
-	// 		dataset			: {
-	// 			key				: row_key,
-	// 			paginated_key	: paginated_key
-	// 		},
-	// 		parent			: fragment
-	// 	})
-
 	// button_remove
 		const button_remove = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_remove',
 			parent			: fragment
 		})
-		button_remove.addEventListener("click", function(e){
+		button_remove.addEventListener('click', function(e){
 			e.stopPropagation()
 
 			// label
@@ -248,13 +237,13 @@ export const render_column_remove = function(options) {
 				}
 
 			// change_value (implies saves too)
-				const changed = self.change_value({
+				self.change_value({
 					changed_data	: changed_data,
 					label			: label,
 					refresh			: false,
 					remove_dialog	: remove_dialog
 				})
-				changed.then(async (response)=>{
+				.then(async (response)=>{
 
 					// the user has selected cancel from delete dialog
 						if (response===false) {
@@ -266,7 +255,7 @@ export const render_column_remove = function(options) {
 
 					// refresh
 						await self.refresh({
-							build_autoload : false
+							build_autoload : true // when true, force reset offset
 						})
 
 					// check if the caller has active a tag_id
@@ -277,6 +266,12 @@ export const render_column_remove = function(options) {
 
 					// event to update the DOM elements of the instance
 						event_manager.publish('remove_element_'+self.id, row_key)
+
+					// modal. Close modal if isset
+						if (self.modal) {
+							self.modal.close()
+							self.modal = null
+						}
 				})
 		})
 
@@ -716,5 +711,3 @@ export const render_references = function(ar_references) {
 
 	return fragment
 }//end render_references
-
-
