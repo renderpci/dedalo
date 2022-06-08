@@ -6,7 +6,7 @@
 */
 .component_portal, .portal {
 
-	&.edit {
+	&.edit, &.search {
 		// background-color: #8ef9e5;
 
 		>.paginator_container {
@@ -50,6 +50,11 @@
 
 				.search& {
 					flex: 1 1 auto;
+				}
+
+				>li {
+					display: flex;
+					align-items: center;
 				}
 			}
 			ul.references {
