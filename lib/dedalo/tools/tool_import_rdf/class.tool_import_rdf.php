@@ -338,9 +338,8 @@ class tool_import_rdf extends tool_common {
 				}
 
 				//get the Dédalo component names
-
-				$ar_dd_component_label 	= RecordObj_dd::get_termino_by_tipo($current_tipo);
-				$object_model_name 		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+				$ar_dd_component_label		= RecordObj_dd::get_termino_by_tipo($current_tipo);
+				$object_model_name			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
 
 				$ar_current_resource = $rdf_graph->allResources($base_uri, $object_property_name);
 				//literal, if the resource is the end of the path
@@ -355,15 +354,17 @@ class tool_import_rdf extends tool_common {
 					if($check_lang === null){
 						$ar_project_lang = [DEDALO_DATA_LANG];
 					}
+					// $literal_check = $rdf_graph->getLiteral($base_uri, $object_property_name, $check_lang);
 
 					foreach ($ar_project_lang as $lang) {
 
 						$lang_alpha2 = lang::get_alpha2_from_code($lang);
-
 						$literal = ($check_lang === null)
 							? $rdf_graph->getLiteral($base_uri, $object_property_name)
 							: $rdf_graph->getLiteral($base_uri, $object_property_name, $lang_alpha2);
-						if(!isset($literal)) continue;
+						if(!isset($literal)){
+							continue;
+						};
 
 						$procesed_data = isset($propiedades->process)
 							? $procesed_data
@@ -385,6 +386,7 @@ class tool_import_rdf extends tool_common {
 										$procesed_data = tool_import_rdf::get_resource_macth($literal_section_tipo_to_check, $class_propiedades->match, $procesed_data);
 									}
 							}
+
 
 						tool_import_rdf::set_data_into_component($locator, $current_tipo, $procesed_data, $lang);
 					}

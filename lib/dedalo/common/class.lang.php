@@ -503,6 +503,7 @@ class lang {
 			case 'lg-ell' 	: $code = 'el';	break;
 			case 'lg-deu' 	: $code = 'de';	break;
 			case 'lg-ita' 	: $code = 'it';	break;
+			case "lg-lat" 	: $code = "la"; break;
 
 			/*
 				case "aa" 	: $code = "lg-aar"; break;
