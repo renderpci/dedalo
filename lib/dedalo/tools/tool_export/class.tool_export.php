@@ -135,6 +135,21 @@ class tool_export extends tool_common {
 		$search_develoment2  = new search_development2($search_query_object);
 		$rows_data 		 	 = $search_develoment2->search();
 
+		// clean order property "_order" injected by search, it will not used.
+			$clean_records = [];
+			foreach ($rows_data->ar_records as $record) {
+				$record_clean = new stdClass();
+				foreach ($record as $key => $value) {
+
+					if(strpos($key, '_order')!==false ){
+						continue;
+					}
+					$record_clean->$key = $value;
+				}
+				$clean_records[] = $record_clean;
+			}
+			$rows_data->ar_records = $clean_records;
+
 
 		$this->ar_records = ($relation_list_tipo!==false)
 			? array_map(function($item) use($relation_list_tipo){
@@ -164,7 +179,6 @@ class tool_export extends tool_common {
 			// Calculate records when not are already received
 			$ar_records = $this->get_records();
 		}
-		#dump($ar_records, ' ar_records ++ '.to_string());
 
 		$ar_records_deep_resolved=array();
 		foreach ((array)$ar_records as $key => $row) {
@@ -549,7 +563,6 @@ class tool_export extends tool_common {
 	* @return array $row_deep_resolved
 	*/
 	public function deep_resolve_dedalo_row($record, $lang=DEDALO_DATA_LANG) {
-		#dump($record, ' record ++ '.to_string());
 
 		$quotes = tool_export::$quotes;
 
