@@ -2706,6 +2706,7 @@
 		Fix lang import for nomisma rdf model
 		Fixed issue with document encoding detection in tool_common -> read_csv_file_as_array
 		Fixed export structure (Ontology) issues when master user privileges generates a import error
+		Fix export when a humanoide order after search
 
 
 	Queue build
@@ -2741,7 +2742,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-06-2022T13:15:10');
+	define('DEDALO_BUILD'	, '09-06-2022T20:31:51');
 
 
 	/*
