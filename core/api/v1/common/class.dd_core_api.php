@@ -611,12 +611,14 @@ final class dd_core_api {
 					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
 				// build the component
-					$component = component_common::get_instance($model,
-																$tipo,
-																$section_id,
-																$mode,
-																$component_lang,
-																$section_tipo);
+					$component = component_common::get_instance(
+						$model,
+						$tipo,
+						$section_id,
+						$mode,
+						$component_lang,
+						$section_tipo
+					);
 					// component_semantic_node case
 						if(isset($data->row_locator) && $model==='component_semantic_node'){
 							$component->set_row_locator($data->row_locator);
@@ -658,8 +660,8 @@ final class dd_core_api {
 
 				// element JSON
 					$get_json_options = new stdClass();
-						$get_json_options->get_context 	= true;
-						$get_json_options->get_data 	= true;
+						$get_json_options->get_context	= true;
+						$get_json_options->get_data		= true;
 					$element_json = $component->get_json($get_json_options);
 
 				// observers_data
@@ -685,7 +687,7 @@ final class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-					$debug->json_data 	= $json_data;
+					$debug->json_data	= $json_data;
 
 				$response->debug = $debug;
 					// dump($debug->exec_time, ' debug->exec_time ++ '.to_string());
