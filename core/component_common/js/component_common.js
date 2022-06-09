@@ -213,7 +213,7 @@ component_common.prototype.build = async function(autoload=false){
 			// get context and data
 				const api_response = await current_data_manager.request({body : rqo})
 					// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
-					dd_console(`[component_common.build] COMPONENT ${self.model} api_response:`, 'DEBUG', api_response)
+					dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
 
 			// set context and data to current instance
 				await self.update_datum(api_response.result.data)

@@ -116,17 +116,16 @@ render_area_thesaurus.prototype.list = async function(options) {
 	// the action can be executed mainly in page, but it can be used for any instance.
 
 	// swicht_term_model
-		const swicht_term_model = ui.create_dom_element({
-			element_type 	: 'div',
-			class_name		:'swicht_term_model',
-			inner_html		: 'term',
-			parent 		 	: wrapper,
-		})
-
-		swicht_term_model.addEventListener("click", e => {
-			self.build_options.terms_are_model = self.build_options.terms_are_model ? false : true
-			self.refresh()
-		})
+		// const swicht_term_model = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		:'swicht_term_model',
+		// 	inner_html		: 'term',
+		// 	parent			: wrapper
+		// })
+		// swicht_term_model.addEventListener("click", e => {
+		// 	self.build_options.terms_are_model = self.build_options.terms_are_model ? false : true
+		// 	self.refresh()
+		// })
 
 	// ts_search case
 		if (data.ts_search) {

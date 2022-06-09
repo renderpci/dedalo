@@ -233,10 +233,10 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 
 			const current_data_manager = new data_manager()
 			current_data_manager.request({body : rqo})
-			.then(function(response){
-				dd_console("-> get_diffusion_info API response:",'DEBUG',response);
+			.then(function(api_response){
+				dd_console("[tool_transcription.get_user_tools] api_response:",'DEBUG',api_response);
 
-				const result = response.result // array of objects
+				const result = api_response.result // array of objects
 
 				resolve(result)
 			})
