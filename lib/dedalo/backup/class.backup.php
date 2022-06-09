@@ -405,6 +405,7 @@ abstract class backup {
 		# -T "jer_dd*" -T "matrix_descriptors_dd*"  exclude tables
 		$command  = '';
 		$command .= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" ';
+		$command .= '--no-owner --no-privileges ';
 		if ($exclude_tables===true) {
 		$command .= '-T "jer_dd*" -T "matrix_descriptors_dd*" ';	// Exclude tables (AND respective sequences) ( T UPERCASE )
 		}
@@ -414,7 +415,7 @@ abstract class backup {
 
 		# LOW PRIORITY ( nice , at 22:56 , etc)
 		#$command = "nice ".$command ;
-		#debug_log(__METHOD__." command  ".to_string($command), logger::DEBUG);
+		debug_log(__METHOD__." command  ".to_string($command), logger::DEBUG);
 
 		// exec command in terminal
 			// exec($command.' 2>&1', $output, $worked_result);
@@ -723,7 +724,7 @@ abstract class backup {
 
 		// Import the database and output the status to the page
 		$command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
-		$command .= '--no-password --clean --no-owner "'.$mysqlImportFilename.'"' ;
+		$command .= '--no-password --clean --no-owner --no-privileges -v "'.$mysqlImportFilename.'"' ;
 
 		# LOW PRIORITY ( nice , at 22:56 , etc)
 		#$command = "nice ".$command ;
