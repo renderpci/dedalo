@@ -112,7 +112,8 @@ abstract class tool_common extends common {
 					}
 
 				// encoding check . Only UFT-8 is valid. Another encodings will be conteverted to UTF-8
-					$sample = reset($line);
+					// $sample = reset($line);
+					$sample = is_array($line) ? implode(', ', $line) : (string)$line;
 					if ($convert_to_utf8===true || !mb_check_encoding($sample, 'UTF-8')) {
 						foreach ($line as $key => $current_value) {
 							$line[$key] = utf8_encode($current_value);

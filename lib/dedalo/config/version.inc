@@ -2703,6 +2703,9 @@
 		Added ontology utils file for easy csv export
 		Add link to component_iri at portal_list
 		Add link render for component_iri when is caller by portals in portal_list mode
+		Fix lang import for nomisma rdf model
+		Fixed issue with document encoding detection in tool_common -> read_csv_file_as_array
+		Fixed export structure (Ontology) issues when master user privileges generates a import error
 
 
 	Queue build
@@ -2738,7 +2741,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '31-05-2022T19:56:03');
+	define('DEDALO_BUILD'	, '09-06-2022T13:15:10');
 
 
 	/*
