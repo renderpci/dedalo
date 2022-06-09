@@ -75,8 +75,6 @@ const content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 
-	//TODO - Add offset input text, preview button and apply button
-
 	// source
 		const source_component_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -85,14 +83,14 @@ const content_data_edit = async function(self) {
 		})
 
 	// target
-		const target_component_container = ui.create_dom_element({
-			id				: 'tc_target_content',
-			element_type	: 'div',
-			class_name 		: 'target_component_container',
-			parent 			: components_container
-		})
+		// const target_component_container = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name 		: 'target_component_container',
+		// 	parent 			: components_container
+		// })
 
-	// Language selection and time codes management container
+
+	// offset_management_container. Language selection and time codes management container
 		const tc_management_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'offset_management_container',
@@ -101,75 +99,90 @@ const content_data_edit = async function(self) {
 
 	// source_select_lang
 		const source_select_lang = ui.build_select_lang({
-			langs  		: self.langs,
-			selected 	: self.source_lang,
-			class_name	: 'source_lang',
-			action 		: on_change_source_select_lang
+			langs		: self.langs,
+			selected	: self.source_lang,
+			class_name	: 'source_lang'
 		})
-		function on_change_source_select_lang(e) {
-			add_component(self, source_component_container, e.target.value)
-			add_component(self, target_component_container, e.target.value)
-		}
+		source_select_lang.addEventListener('change', function(){
+			const lang = source_select_lang.value
+			add_component(self, source_component_container, lang)
+			// self.target_component = add_component(self, target_component_container, lang)
+		})
 		// source default value check
-			if (source_select_lang.value) {
-				// left side component (use already loaded on build, self.main_element)
-				self.main_element.render()
-				.then(function(node){
-					node.classList.add('disabled_component')
-					source_component_container.appendChild(node)
-				})
-				// right side component
-				add_component(self, target_component_container, source_select_lang.value)
-			}
+		if (source_select_lang.value) {
+			// left side component (use already loaded on build, self.main_element)
+			self.main_element.render()
+			.then(function(node){
+				node.classList.add('disabled_component')
+				source_component_container.appendChild(node)
+			})
+			// right side component
+			// self.target_component = add_component(self, target_component_container, source_select_lang.value)
+		}
 		tc_management_container.appendChild(source_select_lang)
 
 	// offset_input in seconds
 		const offset_input = ui.create_dom_element({
-			id				: 'tc_offset',
 			element_type	: 'input',
 			type			: 'text',
-			class_name		: 'input_value',
-			placeholder		: '0',
+			class_name		: 'input_offset',
+			placeholder		: self.get_tool_label('offset_in_seconds') || '*Offset in seconds',
 			parent			: tc_management_container
 		})
+		// fix input
+		self.offset_input = offset_input
 
 	// preview button
-		const button_preview = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'secondary button_preview',
-			inner_html		: get_label.preview || "Preview",
-			parent			: tc_management_container
-		})
-		button_preview.addEventListener("click", () => {
+		// const button_preview = ui.create_dom_element({
+		// 	element_type	: 'button',
+		// 	class_name		: 'secondary button_preview',
+		// 	inner_html		: get_label.preview || "Preview",
+		// 	parent			: tc_management_container
+		// })
+		// button_preview.addEventListener("click", () => {
+		// 	// loading add
+		// 	components_container.classList.add('loading')
 
-			components_container.classList.add('loading')
-
-			//TODO - add code to preview offset in the right part of the screen
-			//alert("Add some code to show offset calculation in the right part of the screen")
-				self.change_all_time_codes(false)
-
-			components_container.classList.remove('loading')
-		})
+		// 	self.change_all_time_codes(false)
+		// 	.then(function(){
+		// 		// loading remove
+		// 		components_container.classList.remove('loading')
+		// 	})
+		// })
 
 	// apply button
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning button_apply',
-			inner_html		: get_label['apply'] || "Apply",
+			inner_html		: self.get_tool_label('apply') || 'Apply',
 			parent			: tc_management_container
 		})
+		button_apply.addEventListener('click', (e) => {
+			e.stopPropagation()
 
-		button_apply.addEventListener("click", (e) => {
+			// add loading
+				components_container.classList.add('loading')
 
-			components_container.classList.add('loading')
+			// offset_seconds
+				const offset_seconds = offset_input.value
+				if (!offset_seconds || offset_seconds=='' || offset_seconds==0) {
+					alert( self.get_tool_label('empty_offset_value') || 'Error. Empty offset value');
+					// remove loading
+					components_container.classList.remove('loading')
+					return
+				}
 
-			//TODO - add code to save offset to DB
-				//alert("Add some code to save offset to DB")
-				self.change_all_time_codes(true)
-				//class.tool_tc.php --> call the function with true value to save
-				//public function change_all_timecodes( $offset_seconds, $save=false )
+			// change_all_time_codes
+				self.change_all_time_codes(offset_seconds, true)
+				.then(function(){
 
-			components_container.classList.remove('loading')
+					// refresh target
+					self.main_element.refresh()
+					.then(function(){
+						// remove loading
+						components_container.classList.remove('loading')
+					})
+				})
 		})
 
 	// response div
@@ -194,11 +207,18 @@ const content_data_edit = async function(self) {
 
 /**
 * ADD_COMPONENT
+* Create a component instance, clean container and
+* render the component inside
+* @param object self
+* @param DOM node component_container
+* @param string lang
+* @return object component
+* 	Instance of component in given lang
 */
-export const add_component = (self, component_container, value) => {
+export const add_component = async (self, component_container, lang) => {
 
-	// user select blank value case
-		if (!value) {
+	// user select blank lang case
+		if (!lang) {
 			while (component_container.firstChild) {
 				// remove node from dom (not component instance)
 				component_container.removeChild(component_container.firstChild)
@@ -206,19 +226,18 @@ export const add_component = (self, component_container, value) => {
 			return false
 		}
 
-	self.load_component(value)
-	.then(async function(component){
-		component.render()
-		.then(function(node){
-			while (component_container.firstChild) {
-				component_container.removeChild(component_container.firstChild)
-			}
-			node.classList.add('disabled_component')
-			component_container.appendChild(node)
-		})
-	})
+	// instance
+		const component = await self.load_component(lang)
 
-	return true
+	// render
+		const node = await component.render()
+		node.classList.add('disabled_component')
+
+		while (component_container.firstChild) {
+			component_container.removeChild(component_container.firstChild)
+		}
+		component_container.appendChild(node)
+
+
+	return component
 };//end add_component
-
-
