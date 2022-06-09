@@ -13,7 +13,7 @@ class component_security_access extends component_common {
 
 	/**
 	* GET DATO
-	* @return object $dato
+	* @return array $dato
 	* Format [{"tipo":"dd21","parent":"dd20","value":3}]
 	*/
 	public function get_dato() {
@@ -29,7 +29,7 @@ class component_security_access extends component_common {
 
 	/**
 	* SET_DATO
-	* @param object $dato
+	* @param array $dato
 	*/
 	public function set_dato($dato) {
 

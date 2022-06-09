@@ -1,9 +1,8 @@
 <?php
-/*
+/**
 * CLASS component_filter_records
+*
 */
-
-
 class component_filter_records extends component_common {
 
 
@@ -11,7 +10,17 @@ class component_filter_records extends component_common {
 	/**
 	* GET DATO
 	* @return array $dato
-	*	$dato is stored in db as object (json encoded asoc array), but is converted to php array
+	* Sample data:
+	* [
+	*	 {
+	*	  "tipo": "oh1",
+	*	  "value": null
+	*	 },
+	*	 {
+	*	  "tipo": "rsc167",
+	*	  "value": [1,3,6]
+	*	 }
+	* ]
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();

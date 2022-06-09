@@ -80,10 +80,16 @@ class component_av extends component_media_common {
 
 	/**
 	* GET DATO
+	* @return array|null $dato
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-		return (object)$dato;
+
+		if (!empty($dato) && !is_array($dato)) {
+			$dato = [$dato];
+		}
+
+		return $dato;
 	}//end get_dato
 
 
@@ -92,7 +98,7 @@ class component_av extends component_media_common {
 	* SET_DATO
 	*/
 	public function set_dato($dato) {
-		parent::set_dato( (object)$dato );
+		parent::set_dato( $dato );
 	}//end set_dato
 
 
