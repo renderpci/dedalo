@@ -30,36 +30,78 @@
 	.wrapper_tool.tool_transcription {
 
 		>.tool_header {
+			position: relative;
+
+			@media screen and (max-width: @width_break_point_0) {
+				flex-wrap: wrap;
+			}
 
 			>.tool_buttons_container {
 				display: flex;
 				align-items: flex-end;
 
+				@media screen and (max-width: @width_break_point_0) {
+					flex-wrap: wrap;
+					margin-top: 1rem;
+				}
+
 				>* {
+					height: 2.1rem;
+					margin: 0rem;
 					margin-left: 0.5rem;
 					margin-right: 0rem;
-					height: 2rem;
+						@media screen and (max-width: @width_break_point_0) {
+					    flex: 1 0 100%;
+						margin: 0.25rem;
+					}
 				}
 
-				select {
-					opacity: 1;
-					padding: 0.33rem;
-					background-color: #f8f9fa;
-					border-radius: 3px;
-					margin-right: 0;
+				// select top tipo / id
+				>.related_list_container {
+
+					>select {
+						opacity: 1;
+						padding: 0.33rem;
+						background-color: #f8f9fa;
+						border-radius: 3px;
+						margin-right: 0;
+						max-width: 22rem;
+
+						@media screen and (max-width: @width_break_point_0) {
+							max-width: unset;
+							width: 100%;
+						}
+					}
 				}
 
+				// component lang selector
 				>.lang_selector {
 					display: flex;
 					align-items: center;
+					margin-left: 0.75rem;
+					margin-right: 0.12rem;
+					@media screen and (max-width: @width_break_point_0) {
+						padding-right: 0.5rem;
+					}
+
 					>.lang_label {
 						padding-right: 0.33rem;
 					}
 					>select {
+						opacity: 1;
+						padding: 0.33rem;
+						background-color: #f8f9fa;
+						border-radius: 3px;
+						margin-right: 0;
+						max-width: 22rem;
 
+						@media screen and (max-width: @width_break_point_0) {
+							max-width: unset;
+						}
 					}
 				}
 
+				// bottons of tools (tool print, tool time machine..)
 				>.tool_button {
 					// background-color: #fde2c6;
 					// border-color: #e9ecef;
@@ -71,8 +113,6 @@
 					// // display: inline-flex;
 					// // align-items: center;
 					// // justify-content: space-evenly;
-
-
 
 					>.icon {
 						height: 1rem;
@@ -88,7 +128,10 @@
 			column-gap: 1rem;
 			width: calc(100% - 1rem);
 			@media screen and (max-width: @width_break_point_0) {
-				display: block;
+				display: flex;
+				width: 100%;
+				flex-wrap: wrap;
+				// flex-direction: column-reverse;
 			}
 
 			.left_container{
