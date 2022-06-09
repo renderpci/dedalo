@@ -32,19 +32,33 @@
 		// width: 100%;
 		// height: calc(100vh - 20%);
 
+		>.tool_header {
+			position: relative;
+			background-color: @color_bg_tool;
+		}
+
 		>.content_data {
 			background-color: #f9eae0;
 			width: 100%;
 			height: 90vh;
 			display: grid;
 			grid-template-columns: 1fr 1fr;
-				grid-template-rows: 80% 20%;
+			grid-template-rows: 80% 20%;
+
+			@media screen and (max-width: @width_break_point_0) {
+				display: flex;
+				flex-wrap: wrap;
+			}
+
+			>* {
+				width: 100%;
+			}
 
 			>.thesaurus_container {
 				background-color: #91dda4;
 				min-height: 700px;
 				grid-row-start: 1;
-					grid-row-end: 3;
+				grid-row-end: 3;
 			}
 
 			>.right_container {
@@ -81,9 +95,9 @@
 
 
 // header
-	.tool_header.tool_indexation {
-		background-color: @color_bg_tool;
-	}
+	// .tool_header.tool_indexation {
+	// 	background-color: @color_bg_tool;
+	// }
 
 
 
