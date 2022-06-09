@@ -37,7 +37,7 @@ final class dd_manager {
 				$text			= 'API REQUEST ' . $rqo->action;
 				$text_lenght	= strlen($text) +1;
 				$nchars			= 200;
-				$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
+				$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
 
@@ -91,7 +91,7 @@ final class dd_manager {
 					$api_debug->api_exec_time	= $total_time_api_exec;
 					$api_debug->memory_usage	= dd_memory_usage();
 					$api_debug->rqo				= is_object($rqo)
-						? json_encode($rqo, JSON_PRETTY_PRINT)
+						? json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
 						: $rqo;
 
 				if (isset($response->debug)) {
