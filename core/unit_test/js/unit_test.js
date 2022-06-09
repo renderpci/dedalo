@@ -1,4 +1,4 @@
-/*global it, describe, mocha assert */
+/*global it, page_globals, describe, mocha assert */
 /*eslint no-undef: "error"*/
 
 
@@ -42,28 +42,32 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		return value
 	}
 	function fn_random_locator() {
-		const section_tipo 			= arguments[0][0]
-		const from_component_tipo 	= arguments[0][1]
-		const paginated_key 		= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
+		const section_tipo			= arguments[0][0]
+		const from_component_tipo	= arguments[0][1]
+		// const paginated_key		= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
+		const section_id			= (fn_random_number(50) || 1).toString()
 
-		const value = {}
-
-			value.type 					= "dd151"
-			value.section_id 			= (fn_random_number(50) || 1).toString()
-			// value.section_id 		= (fn_random_number(3) || 1).toString()
-			value.section_tipo 			= section_tipo // "dd501"
-			// if (paginated_key!==false) {
-				// value.paginated_key 	= paginated_key
-			// }
-			value.from_component_tipo 	= from_component_tipo // "test144"
+		const value = {
+			type				: "dd151",
+			section_id			: section_id,
+			section_tipo		: section_tipo,
+			from_component_tipo	: from_component_tipo
+		}
+		// if (paginated_key!==false) {
+			// value.paginated_key 	= paginated_key
+		// }
 
 		return value
 	}
+	function fn_ar_random_locator() {
+		const result = fn_random_locator(...arguments)
+		return [result]
+	}
 	function fn_custom_locator() {
 		const section_tipo			= arguments[0][0]
-		const from_component_tipo	= arguments[0][1]
-		const paginated_key			= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
-		const section_id			= typeof arguments[0][3]!=="undefined" ? arguments[0][3] : false
+		const section_id			= arguments[0][1]
+		const from_component_tipo	= arguments[0][2]
+		// const paginated_key		= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
 
 		const value = {
 			type				: "dd151",
@@ -77,7 +81,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 	function fn_random_date() {
 		let day		= fn_random_number(30) || 1
 		let month	= fn_random_number(12) || 1
-		let year	= fn_random_number(2020) || 1
+		let year	= fn_random_number(2022) || 1
 		const time	= component_date.prototype.convert_date_to_seconds({
 			day		: day,
 			month	: month,
@@ -104,6 +108,92 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		}
 		result += '@mydomain.net'
 		return result;
+	}
+	function fn_random_filter_records() {
+
+		// randomly generated N = 40 length array 0 <= A[N] <= 39
+		const value = Array.from({length: 40}, () => Math.floor(Math.random() * 40));
+
+		const item = {
+			tipo : 'rsc167',
+			value : value
+		}
+
+		const result = [item]
+
+		return result;
+	}
+	function fn_random_geolocation() {
+		const alt = fn_random_number(100) // expected int from 1 to 100
+		const lat = Math.random() // expected output: a float number from 0 to <1
+		const lon = Math.random()
+		const zoom = fn_random_number(15) // expected int from 1 to 15
+
+		const result = [{
+			alt		: alt,
+			lat		: lat,
+			lon		: lon,
+			zoom	: zoom
+		}]
+
+		return result;
+	}
+	function fn_random_image_data() {
+		const result = [
+		 {
+		  "original_file_name": "rsc29_rsc170_179_deleted_2022-02-11_1347.jpg",
+		  "original_upload_date": {
+		   "day": fn_random_number(30) || 1,
+		   "hour": fn_random_number(23) || 12,
+		   "time": fn_random_number(64997809699),
+		   "year": fn_random_number(2022) || 1,
+		   "month": fn_random_number(12) || 1,
+		   "minute": fn_random_number(59) || 1,
+		   "second": fn_random_number(59) || 1
+		  }
+		 }
+		]
+
+		return result
+	}
+	function fn_random_iri_data() {
+		const result = {
+			iri		: "https://www." + fn_random_string(64) + '-' + fn_random_string(50) +  '.' + fn_random_string(3),
+			title	: fn_random_string(128)
+		}
+		return result;
+	}
+	function fn_random_pdf_data() {
+		const result = {
+			section_id : (fn_random_number(50) || 1).toString(),
+			section_tipo : "rsc170",
+			component_tipo : "rsc74",
+			original_file_name : "rsc209_rsc205_" + (fn_random_number(500) || 36).toString() + "_lg-spa.pdf",
+			original_upload_date : {
+				day : fn_random_number(30) || 1,
+				hour : fn_random_number(23) || 1,
+				time : fn_random_number(64983057555) || 1,
+				year : fn_random_number(2022) || 1,
+				month : fn_random_number(12) || 1,
+				minute : 19,
+				second : 15
+			}
+		}
+
+		return result
+	}
+	function fn_random_security_access() {
+		const result = [{
+			tipo			: "mupi23",
+			value			: fn_random_number(10000) || 1,
+			section_tipo	: "mupi2"
+		},
+		{
+			tipo			: "oh15",
+			value			: fn_random_number(10000) || 1,
+			section_tipo	: "oh1"
+		}]
+		return result
 	}
 
 
@@ -137,33 +227,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 		const permissions	= 2
 
 
-	// component_input_text
-		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
-			return {
-				model			: model,
-				tipo			: tipo,
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				mode			: mode,
-				lang			: lang,
-				new_value		: new_value
-			}
-		})('component_input_text', 'test52', section_tipo, section_id, mode, lang, fn_random_string) )
-
-	// component_text_area
-		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
-			return {
-				model			: model,
-				tipo			: tipo,
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				mode			: mode,
-				lang			: lang,
-				new_value		: new_value
-			}
-		})('component_text_area', 'test17', section_tipo, section_id, mode, lang, fn_random_string) )
-
-	// component_portal basic v5 config
+	// component_av
 		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
 			return {
 				model				: model,
@@ -173,22 +237,25 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				mode				: mode,
 				lang				: lang,
 				new_value			: new_value,
-				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+				new_value_params	: new_value_params
 			}
-		})('component_portal', 'test80', section_tipo, section_id, mode, lang, fn_random_locator, ['test38', 'test80', 0]) )
+		})('component_av', 'test94', section_tipo, section_id, mode, page_globals.dedalo_data_nolan, fn_custom_locator, [section_tipo, section_id, 'test94']) )
 
-	// component_number
+	// component_calculation (WORKING HERE)
+
+	// component_check_box
 		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
 			return {
-				model			: model,
-				tipo			: tipo,
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				mode			: mode,
-				lang			: lang,
-				new_value		: new_value
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
 			}
-		})('component_number', 'test139', section_tipo, section_id, mode, lang, fn_random_number, []) )
+		})('component_check_box', 'test146', section_tipo, section_id, mode, lang, fn_random_locator, ['dd501','test146']) )
 
 	// component_date
 		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
@@ -214,7 +281,115 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				lang			: lang,
 				new_value		: new_value
 			}
-		})('component_email', 'test140', section_tipo, section_id, mode, lang, fn_random_email, []) )
+		})('component_email', 'test208', section_tipo, section_id, mode, lang, fn_random_email, []) )
+
+	// component_external (WORKING HERE)
+
+	// component_filter
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+			}
+		})('component_filter', 'test101', section_tipo, section_id, mode, lang, fn_random_locator, [section_tipo,'test101']) )
+
+	// component_filter_master
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+			}
+		})('component_filter_master', 'test70', section_tipo, section_id, mode, lang, fn_random_locator, [section_tipo,'test70']) )
+
+	// component_filter_records
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+			}
+		})('component_filter_records', 'test69', section_tipo, section_id, mode, lang, fn_random_filter_records, []) )
+
+	// component_geolocation
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+			}
+		})('component_geolocation', 'test100', section_tipo, section_id, mode, lang, fn_random_geolocation, []) )
+
+	// component_html_file (WORKING HERE)
+
+	// component_html_text (WORKING HERE)
+
+	// component_image
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_image', 'test99', section_tipo, section_id, mode, page_globals.dedalo_data_nolan, fn_random_image_data, []) )
+
+	// component_info (WORKING HERE)
+
+	// component_input_text
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_input_text', 'test52', section_tipo, section_id, mode, lang, fn_random_string) )
+
+	// component_inverse (WORKING HERE)
+
+	// component_ip (WORKING HERE)
+
+	// component_iri
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_iri', 'test140', section_tipo, section_id, mode, lang, fn_random_iri_data) )
 
 	// component_json
 		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
@@ -228,6 +403,76 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				new_value		: new_value
 			}
 		})('component_json', 'test150', section_tipo, section_id, mode, lang, fn_random_json, []) )
+
+	// component_layout (WORKING HERE)
+
+	// component_number
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_number', 'test139', section_tipo, section_id, mode, lang, fn_random_number, []) )
+
+	// component_password
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_password', 'test152', section_tipo, section_id, mode, lang, fn_random_string) )
+
+	// component_pdf
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_pdf', 'test85', section_tipo, section_id, mode, page_globals.dedalo_data_nolan, fn_random_pdf_data, []) )
+
+	// component_portal (basic v5 config)
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params // [section_tipo, from_component_tipo, paginated_key]
+			}
+		})('component_portal', 'test80', section_tipo, section_id, mode, lang, fn_random_locator, ['test38', 'test80', 0]) )
+
+	// component_publication
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_publication', 'test92', section_tipo, section_id, mode, lang, fn_random_locator, ['dd64','test92']) )
 
 	// component_radio_button
 		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
@@ -243,7 +488,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 			}
 		})('component_radio_button', 'test144', section_tipo, section_id, mode, lang, fn_random_locator, ['dd501','test144']) )
 
-	// component_check_box
+	// component_relation_children
 		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
 			return {
 				model				: model,
@@ -255,7 +500,152 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 				new_value			: new_value,
 				new_value_params	: new_value_params
 			}
-		})('component_check_box', 'test146', section_tipo, section_id, mode, lang, fn_random_locator, ['dd501','test146']) )
+		})('component_relation_children', 'test201', section_tipo, section_id, mode, lang, fn_random_locator, [section_tipo,'test201']) )
+
+	// component_relation_index
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_relation_index', 'test25', section_tipo, section_id, mode, lang, fn_random_locator, ['es1','test25']) )
+
+	// component_relation_model
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_relation_model', 'test169', section_tipo, section_id, mode, lang, fn_random_locator, ['es2','test169']) )
+
+	// component_relation_parent
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_relation_parent', 'test71', section_tipo, section_id, mode, lang, fn_random_locator, ['es1','test71']) )
+
+	// component_relation_related
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_relation_related', 'test56', section_tipo, section_id, mode, lang, fn_random_locator, [section_tipo,'test56']) )
+
+	// component_struct (WORKING HERE)
+
+	// component_score (WORKING HERE)
+
+	// component_section_id
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_section_id', 'test102', section_tipo, section_id, mode, lang, fn_random_string) )
+
+	// component_security_access
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_security_access', 'test157', section_tipo, section_id, mode, lang, fn_random_security_access, []) )
+
+	// component_select
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_select', 'test91', section_tipo, section_id, mode, lang, fn_random_locator, ['es1','test91']) )
+
+	// component_select_lang
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_select_lang', 'test89', section_tipo, section_id, mode, lang, fn_random_locator, ['lg1','test89']) )
+
+	// component_semantic_node (WORKING HERE)
+
+	// component_svg
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model				: model,
+				tipo				: tipo,
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				mode				: mode,
+				lang				: lang,
+				new_value			: new_value,
+				new_value_params	: new_value_params
+			}
+		})('component_svg', 'test177', section_tipo, section_id, mode, page_globals.dedalo_data_nolan, fn_random_image_data, []) )
+
+	// component_text_area
+		options.push( (function(model, tipo, section_tipo, section_id, mode, lang, new_value, new_value_params){
+			return {
+				model			: model,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: mode,
+				lang			: lang,
+				new_value		: new_value
+			}
+		})('component_text_area', 'test17', section_tipo, section_id, mode, lang, fn_random_string) )
+
 
 
 	// des
@@ -735,6 +1125,8 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 							const expected	= data_value
 								? JSON.stringify(data_value)
 								: null
+
+							console.log("data_value:",new_instance.data.value);
 							const equal_to	= JSON.stringify(reference_value)
 							assert.equal( expected, equal_to, "Compares equal saved value and sended value" )
 						}
@@ -756,7 +1148,13 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 			for (let i = 0; i < options.length; i++) {
 
-				describe(options[i].model, function() {
+				const model = options[i].model
+				if (model==='component_password' ||
+					model==='component_section_id') {
+					continue
+				}
+
+				describe(model, function() {
 					make_test_change_data(options[i], true)
 				})
 			}
@@ -766,7 +1164,13 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 			for (let i = 0; i < options.length; i++) {
 
-				describe(options[i].model, function() {
+				const model = options[i].model
+				if (model==='component_password' ||
+					model==='component_section_id') {
+					continue
+				}
+
+				describe(model, function() {
 					make_test_change_data(options[i], false)
 				})
 			}
@@ -775,10 +1179,20 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 
-
 // exec mocha
-	// mocha.checkLeaks(true)
-	mocha.setup({globals: [
-		'flatpickr' // library used by component_date
-	]});
-	mocha.run();
+	if (page_globals.is_logged!==true) {
+
+		// user is not logged
+		const container = document.getElementById('mocha')
+		if (container) {
+			container.innerHTML = `Please, login`
+		}
+	}else{
+
+		mocha.checkLeaks(false)
+		mocha.setup({globals: [
+			'flatpickr' // library used by component_date
+		]});
+
+		mocha.run();
+	}
