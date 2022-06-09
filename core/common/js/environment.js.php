@@ -65,6 +65,8 @@ session_write_close();
 		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();
+			// logged informative only
+			$obj->is_logged			= login::is_logged();
 			# version
 			$obj->dedalo_entity		= DEDALO_ENTITY;
 			# version
@@ -170,8 +172,8 @@ session_write_close();
 "use strict";
 const page_globals=<?php
 	echo (SHOW_DEBUG===true)
-		? json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
-		: json_encode($page_globals, JSON_UNESCAPED_UNICODE)
+		? json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
 ?>;
 const <?php // plain_vars
 echo implode(',', array_map(function ($v, $k) {
