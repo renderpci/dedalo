@@ -2705,6 +2705,7 @@
 		Add link render for component_iri when is caller by portals in portal_list mode
 		Fix lang import for nomisma rdf model
 		Fixed issue with document encoding detection in tool_common -> read_csv_file_as_array
+		Fixed export structure (Ontology) issues when master user privileges generates a import error
 
 
 	Queue build
@@ -2740,7 +2741,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-06-2022T21:49:12');
+	define('DEDALO_BUILD'	, '09-06-2022T13:15:10');
 
 
 	/*
