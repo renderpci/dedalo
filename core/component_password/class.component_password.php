@@ -15,10 +15,11 @@ class component_password extends component_common {
 
 	/**
 	* GET_DATO
+	* @return array|null $dato
 	*/
 	public function get_dato() {
-		$dato = parent::get_dato();
 
+		$dato = parent::get_dato();
 		if (!is_array($dato)) {
 			$dato = [$dato];
 		}
@@ -30,6 +31,7 @@ class component_password extends component_common {
 
 	/**
 	* SET_DATO
+	* @param array|null $dato
 	* (!) do not encrytp this var
 	*/
 	public function set_dato($dato) {
