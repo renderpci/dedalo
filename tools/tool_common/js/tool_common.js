@@ -66,7 +66,9 @@ tool_common.prototype.init = async function(options) {
 				if (caller_id) {
 					if (window.opener && window.opener.callers && window.opener.callers[caller_id]) {
 						self.caller = window.opener.callers[caller_id]
-						console.warn("//////////// assigned self.caller from opener by caller_id:", self.caller);
+						if(SHOW_DEBUG===true) {
+							console.warn("//////////// assigned self.caller from opener by caller_id:", self.caller);
+						}
 					}
 				}
 			}
@@ -75,7 +77,7 @@ tool_common.prototype.init = async function(options) {
 				console.warn(self.error, self)
 				// return false
 			}
-			console.log("self.caller:",self.caller);
+			// console.log("self.caller:",self.caller);
 
 		// tool_config. Contains the needed ddo_map
 			self.tool_config = options.tool_config
@@ -88,10 +90,9 @@ tool_common.prototype.init = async function(options) {
 
 					// from caller config (transcription case for example)
 						self.tool_config = clone(self.caller.config.tool_context.tool_config)
-						console.log("section_tool case self.caller.config -> self.tool_config:",self.tool_config);
-
-						// console.log("self.caller:",self.caller);
-						// console.log("self.tool_config.ddo_map:",self.tool_config.ddo_map);
+						if(SHOW_DEBUG===true) {
+							// console.log("section_tool case self.caller.config -> self.tool_config:",self.tool_config);
+						}
 
 				}else if (self.caller.tools) {
 
@@ -99,9 +100,11 @@ tool_common.prototype.init = async function(options) {
 
 					const tool_found = self.caller.tools.find(el => el.model===self.model)
 
-					console.log("component case tool_found:",tool_found);
-					console.log("component case self.caller.tools:",self.caller.tools);
-					console.log("component case tool_found:",tool_found);
+					if(SHOW_DEBUG===true) {
+						// console.log("component case tool_found:",tool_found);
+						// console.log("component case self.caller.tools:",self.caller.tools);
+						// console.log("component case tool_found:",tool_found);
+					}
 
 					self.tool_config = tool_found.tool_config
 				}
@@ -131,8 +134,6 @@ tool_common.prototype.init = async function(options) {
 						}
 					})
 				}
-
-			console.log("self.tool_config parsed:",self.tool_config);
 
 	// set some common vars
 		self.node			= []
@@ -288,7 +289,8 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					console.log("/// [tool_common.build] api_response:", api_response);
+					// console.log("/// [tool_common.build] api_response:", api_response);
+					dd_console(`[tool_common.build] TOOL: ${self.model} api_response:`, 'DEBUG', api_response)
 				}
 		}
 
