@@ -172,8 +172,8 @@ class class_loader {
 		$current_php_version	= phpversion();
 		$minimun_php_version	= '8.0.0';
 
-		$ar_current_php_version = explode('.',$current_php_version);
-		$ar_minimun_php_version = explode('.',$minimun_php_version);
+		$ar_current_php_version	= explode('.',$current_php_version);
+		$ar_minimun_php_version	= explode('.',$minimun_php_version);
 
 		if ($ar_current_php_version[1]<4) {
 			trigger_error("PHP version $current_php_version is not full compatible with this application. Please update ASAP to PHP 7.2");

@@ -62,9 +62,9 @@ abstract class common {
 	// temporal excluded/mapped models
 		public static $ar_temp_map_models = [
 			// map to => old model
-			'component_portal' 	=> 'component_autocomplete_hi',
-			'component_portal' 	=> 'component_autocomplete',
-			'section_group' 	=> 'section_group_div'
+			'component_portal'	=> 'component_autocomplete_hi',
+			'component_portal'	=> 'component_autocomplete',
+			'section_group'		=> 'section_group_div'
 		];
 		public static $ar_temp_exclude_models = [
 			// v5
@@ -129,8 +129,8 @@ abstract class common {
 	# ACCESSORS
 	final public function __call(string $strFunction, array $arArguments) {
 
-		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
-		$strMethodMember 	= substr($strFunction, 4);
+		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
+		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
 			case 'set_' :
 				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
@@ -510,12 +510,14 @@ abstract class common {
 			if (!is_null($section_id)) {
 				$section		= section::get_instance($section_id, $section_tipo);
 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
-				$component		= component_common::get_instance($modelo_name,
-																 DEDALO_HIERARCHY_LANG_TIPO,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$component		= component_common::get_instance(
+					$modelo_name,
+					DEDALO_HIERARCHY_LANG_TIPO,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				 $dato = $component->get_dato();
 				 if (isset($dato[0])) {
 					$lang_code = lang::get_code_from_locator($dato[0], $add_prefix=true);
@@ -740,7 +742,8 @@ abstract class common {
 
 
 	/**
-	* GET_properties : Alias of $this->RecordObj_dd->get_properties() but json decoded
+	* GET_PROPERTIES
+	* Alias of $this->RecordObj_dd->get_properties() but json decoded
 	* @return object|array|null $properties
 	*/
 	public function get_properties() {
@@ -761,7 +764,7 @@ abstract class common {
 
 
 	/**
-	* SET_properties
+	* SET_PROPERTIES
 	* @return bool
 	*/
 	public function set_properties($value) : bool {
@@ -846,7 +849,6 @@ abstract class common {
 					$ar_related_by_model[] = $current_tipo;
 				}
 			}
-
 		}
 		#debug_log(__METHOD__." ar_related_by_model - modelo_name:$modelo_name - tipo:$tipo - ar_related_by_model:".json_encode($ar_related_by_model), logger::DEBUG);
 
@@ -1014,7 +1016,7 @@ abstract class common {
 	* Alias of core function get_request_var
 	* @return mixed string | bool $var_value
 	*/
-	public static function get_request_var($var_name) {
+	public static function get_request_var(string $var_name) {
 
 		return get_request_var($var_name);
 	}//end get_request_var
@@ -1204,8 +1206,8 @@ abstract class common {
 	public static function build_element_json_output(array $context, array $data=[]) : object {
 
 		$element = new stdClass();
-			$element->context = $context;
-			$element->data 	  = $data;
+			$element->context	= $context;
+			$element->data		= $data;
 
 		#if(SHOW_DEBUG===true) {
 		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -1914,20 +1916,22 @@ abstract class common {
 	public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_dato='no_value') : object {
 
 		// components
-			$current_component  = component_common::get_instance($model,
-																 $tipo,
-																 $section_id,
-																 $mode,
-																 $lang,
-																 $section_tipo);
+			$current_component = component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				$mode,
+				$lang,
+				$section_tipo
+			);
 		// null component, when the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
 			if($current_component === null){
 				$value = false;
 
 				// data item
 				$item  = $this->get_data_item($value);
-					$item->parent_tipo				= $this->get_tipo();
-					$item->parent_section_id		= $this->get_section_id();
+					$item->parent_tipo			= $this->get_tipo();
+					$item->parent_section_id	= $this->get_section_id();
 					$data = [$item];
 
 				$element_json = new stdClass();
@@ -1954,8 +1958,8 @@ abstract class common {
 
 		// get component json
 			$get_json_options = new stdClass();
-				$get_json_options->get_context 	= false;
-				$get_json_options->get_data 	= true;
+				$get_json_options->get_context	= false;
+				$get_json_options->get_data		= true;
 			$element_json = $current_component->get_json($get_json_options);
 
 		// dd_info, additional information to the component, like parents
@@ -1964,7 +1968,6 @@ abstract class common {
 			// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
 			// 	$ar_subdata[] = $dd_info;
 			// }
-
 
 		// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
 

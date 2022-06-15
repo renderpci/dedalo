@@ -14,17 +14,18 @@ class dd_error {
 	public static function captureError( $number, $message, $file, $line ) {
 
 		// Insert all in one table
-		$error = array( 'type' 	  => $number,
-						'message' => $message,
-						'file' 	  => $file,
-						'line' 	  => $line
-					  );
+		$error = array(
+			'type'		=> $number,
+			'message'	=> $message,
+			'file'		=> $file,
+			'line'		=> $line
+		);
 
 		$message = safe_xss($message);
 
-		$error_to_show['user']   = "<span class='error'>Ops.. [Error]        " . $message ."</span>";
-		$error_to_show['debug']  = "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
-		$error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
+		$error_to_show['user']	= "<span class='error'>Ops.. [Error]        " . $message ."</span>";
+		$error_to_show['debug']	= "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
+		$error_to_show['dump']	= '<pre>' . print_r($error,true) . '</pre>';
 
 		# DEDALO FILE LOGGER
 		if ( class_exists('logger') && isset(logger::$obj['error']) ) {
@@ -92,9 +93,9 @@ class dd_error {
 			# ob_end_clean( );
 
 			// Display content $exception variable
-			$error_to_show['user']   = "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
-			$error_to_show['debug']  = "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
-			$error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
+			$error_to_show['user']	= "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
+			$error_to_show['debug']	= "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
+			$error_to_show['dump']	= '<pre>' . print_r($error,true) . '</pre>';
 
 			error_log( json_encode($error_to_show) );
 

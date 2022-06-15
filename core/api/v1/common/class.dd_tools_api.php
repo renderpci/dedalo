@@ -7,6 +7,7 @@
 final class dd_tools_api {
 
 
+
 	/**
 	* USER_TOOLS
 	* Get user authorized tools filtered by custom list (optional)
@@ -14,11 +15,11 @@ final class dd_tools_api {
 	* @return object $response
 	*/
 	public static function user_tools(object $request_options) : object {
-		global $start_time;
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+			$response->error	= null;
 
 		// list of requested tools
 			$ar_requested_tools	= $request_options->ar_requested_tools ?? null;
@@ -43,13 +44,6 @@ final class dd_tools_api {
 			$response->result	= $result;
 			$response->msg		= 'Ok. Request done: '.__METHOD__;
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end user_tools
@@ -81,11 +75,11 @@ final class dd_tools_api {
 	* @return object response { result: mixed, msg: string }
 	*/
 	public static function tool_request(object $request_options) : object {
-		global $start_time;
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+			$response->error	= null;
 
 		// short vars
 			$source			= $request_options->source;
