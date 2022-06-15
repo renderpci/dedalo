@@ -27,11 +27,11 @@ final class dd_ts_api {
 	* @return object $response
 	*/
 	public static function get_children_data(object $rqo) : object {
-		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// short vars
 			$source			= $rqo->source;
@@ -101,18 +101,18 @@ final class dd_ts_api {
 
 
 		// debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-				$response->debug = $debug;
+			// if(SHOW_DEBUG===true) {
+			// 	$debug = new stdClass();
+			// 		$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
+			// 	$response->debug = $debug;
 
-				// end line info
-					$text			= 'TRIGGER TS_OBJECT REQUEST '.$section_tipo.'_'.$section_id.' END';
-					$text_lenght	= strlen($text) +1;
-					$nchars			= 200;
-					$line			= $text .' '. str_repeat("<", $nchars - $text_lenght);
-					debug_log(__METHOD__ . ' '.$debug->exec_time.PHP_EOL . $line, logger::DEBUG);
-			}
+			// 	// end line info
+			// 		$text			= 'TRIGGER TS_OBJECT REQUEST '.$section_tipo.'_'.$section_id.' END';
+			// 		$text_lenght	= strlen($text) +1;
+			// 		$nchars			= 200;
+			// 		$line			= $text .' '. str_repeat("<", $nchars - $text_lenght);
+			// 		debug_log(__METHOD__ . ' '.$debug->exec_time.PHP_EOL . $line, logger::DEBUG);
+			// }
 
 
 		return $response;

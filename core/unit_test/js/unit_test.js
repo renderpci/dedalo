@@ -3,13 +3,18 @@
 
 
 
-// test.js
+/**
+* UNIT_TEST
+* 	To check basic functionalities of Dédalo elements
+*/
+
+
+
 import {get_instance, key_instances_builder, delete_instance, get_all_instances} from '../../common/js/instances.js'
 // import {data_manager} from '../../common/js/data_manager.js'
 // import {create_source} from '../../common/js/common.js'
 import {page} from '../../page/js/page.js'
 import {component_input_text} from '../../component_input_text/js/component_input_text.js'
-// import {component_date} from '../../component_date/js/component_date.js'
 import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 import * as fn from './data.js'
 

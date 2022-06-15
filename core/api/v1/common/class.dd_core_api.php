@@ -61,8 +61,7 @@ final class dd_core_api {
 	* }
 	* @return object $reponse
 	*/
-	public static function start(object $json_data) : object {
-		$start_time = start_time();
+	public static function start(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -70,7 +69,8 @@ final class dd_core_api {
 			$response->error	= null;
 
 		// options
-			$search_obj = $json_data->search_obj ?? new StdClass(); // url vars
+			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
+			$menu		= $options->menu ?? false;
 
 		// page mode and tipo
 			$default_section_tipo = MAIN_FALLBACK_SECTION; // 'test38';
@@ -119,7 +119,6 @@ final class dd_core_api {
 				// already logged case
 
 				// menu. Add the menu element context when is required
-					$menu = $json_data->menu ?? false;
 					if ($menu===true) {
 
 						$menu = new menu();
@@ -284,12 +283,6 @@ final class dd_core_api {
 		$response->result	= $context;
 		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end start
@@ -311,7 +304,6 @@ final class dd_core_api {
 	* 	}
 	*/
 	public static function read(object $rqo) : object {
-		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -331,13 +323,9 @@ final class dd_core_api {
 			$response->result	= $json_rows;
 			$response->msg		= 'OK. Request done';
 
-		// Debug
+		// debug
 			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
-
-				$response->debug = $debug;
-
+				$response->debug = new stdClass();
 				if (!empty(dd_core_api::$sql_query_searchs)) {
 					$response->debug->sql_query_searchs = dd_core_api::$sql_query_searchs;
 				}
@@ -357,7 +345,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function read_raw(object $rqo) : object {
-		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -382,18 +369,6 @@ final class dd_core_api {
 			$response->result	= $dato;
 			$response->msg		= 'OK. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
-
-				$response->debug = $debug;
-
-				if (!empty(dd_core_api::$sql_query_searchs)) {
-					$response->debug->sql_query_searchs = dd_core_api::$sql_query_searchs;
-				}
-			}
-
 
 		return $response;
 	}//end read_raw
@@ -406,7 +381,6 @@ final class dd_core_api {
 	* @return array $result
 	*/
 	public static function create(object $json_data) : object {
-		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -438,14 +412,6 @@ final class dd_core_api {
 		$response->result	= $section_id;
 		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-					$debug->json_data	= $json_data;
-				$response->debug = $debug;
-			}
-
 
 		return $response;
 	}//end create
@@ -462,7 +428,6 @@ final class dd_core_api {
 	* @return array $result
 	*/
 	public static function delete(object $rqo) : object {
-		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -580,7 +545,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function save(object $json_data) : object {
-		$start_time = start_time();
 
 		// create the default save response
 		$response = new stdClass();
@@ -680,19 +644,8 @@ final class dd_core_api {
 		}//end switch ($context_type)
 
 		// result. if the process is correct, we return the $result to the client
-			$response->result 	= $result;
-			$response->msg 	  	= 'OK. Request done';
-
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-					$debug->json_data	= $json_data;
-
-				$response->debug = $debug;
-					// dump($debug->exec_time, ' debug->exec_time ++ '.to_string());
-					// dump($response->result->data, ' response->result->data +++++++++++++++++++++++++++++++++++ '.to_string());
-			}
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done';
 
 
 		return $response;
@@ -705,8 +658,7 @@ final class dd_core_api {
 	* Used by component_portal to add created target section to current component with project values inheritance
 	* @return object $response
 	*/
-	public static function add_new_element(object $json_data) : object {
-		$start_time = start_time();
+	public static function add_new_element(object $rqo) : object {
 
 		// create the default response
 		$response = new stdClass();
@@ -714,9 +666,9 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		// json_data. get the context and data sent
-			$source					= $json_data->source;
-			$target_section_tipo	= $json_data->target_section_tipo;
+		// rqo. get the context and data sent
+			$source					= $rqo->source;
+			$target_section_tipo	= $rqo->target_section_tipo;
 
 		// get the component information
 			$model			= $source->model;
@@ -730,12 +682,14 @@ final class dd_core_api {
 			$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
 
 		// build the component
-			$component = component_common::get_instance($model,
-														$tipo,
-														$section_id,
-														$mode,
-														$component_lang,
-														$section_tipo);
+			$component = component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				$mode,
+				$component_lang,
+				$section_tipo
+			);
 		// get the component permissions
 			$permissions = $component->get_component_permissions();
 		// check if the user can update the component
@@ -747,32 +701,22 @@ final class dd_core_api {
 			]);
 
 		// // element json
-		// 	$get_json_options = new stdClass();
-		// 		$get_json_options->get_context 	= true;
-		// 		$get_json_options->get_data 	= true;
-		// 	$element_json = $component->get_json($get_json_options);
+			// 	$get_json_options = new stdClass();
+			// 		$get_json_options->get_context 	= true;
+			// 		$get_json_options->get_data 	= true;
+			// 	$element_json = $component->get_json($get_json_options);
 
-		// // observers_data
-		// 	if (isset($component->observers_data)) {
-		// 		$element_json->data = array_merge($element_json->data, $component->observers_data);
-		// 	}
+			// // observers_data
+			// 	if (isset($component->observers_data)) {
+			// 		$element_json->data = array_merge($element_json->data, $component->observers_data);
+			// 	}
 
-		// // context and data as result
-		// 	$result = $element_json;
+			// // context and data as result
+			// 	$result = $element_json;
 
 		// result. if the process is correct, we return the $result to the client
 			$response->result 	= true;
 			$response->msg 	  	= 'OK. Request done';
-
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-					$debug->json_data 	= $json_data;
-
-				$response->debug = $debug;
-				// dump($debug->exec_time, ' debug->exec_time ++ '.to_string());
-			}
 
 
 		return $response;
@@ -786,7 +730,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function count(object $json_data) : object {
-		$start_time = start_time();
 
 		session_write_close();
 
@@ -814,14 +757,10 @@ final class dd_core_api {
 				$result	= $search->count();
 			}
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$result->debug  = $result->debug ?? new stdClass();
-				$result->debug->exec_time = exec_time_unit($start_time,'ms').' ms';
-			}
+		// response ok
+			$response->result	= $result;
+			$response->msg		= 'Ok. Request done';
 
-		$response->result	= $result;
-		$response->msg		= 'Ok. Request done';
 
 		return $response;
 	}//end count
@@ -835,7 +774,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function get_element_context(object $rqo) : object {
-		$start_time = start_time();
 
 		session_write_close();
 
@@ -844,7 +782,7 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		// vars from rqo
+		// rqo vars
 			$source			= $rqo->source;
 
 			$tipo			= $source->tipo ?? null;
@@ -1128,7 +1066,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function get_section_elements_context(object $json_data) : object {
-		$start_time = start_time();
 
 		session_write_close();
 
@@ -1158,16 +1095,6 @@ final class dd_core_api {
 			$response->msg		= 'OK. Request done';
 
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-					$debug->json_data	= $json_data;
-				$response->debug = $debug;
-				#dump($debug, ' debug ++ '.to_string());
-			}
-
-
 		return $response;
 	}//end get_section_elements_context
 
@@ -1178,7 +1105,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function filter_get_editing_preset(object $json_data) : object {
-		$start_time = start_time();
 
 		session_write_close();
 
@@ -1192,14 +1118,10 @@ final class dd_core_api {
 
 		$editing_preset = search::get_preset($user_id, $target_section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-			}
+		// response
+			$response->result	= $editing_preset;
+			$response->msg		= 'Ok. Request done';
 
-		$response->result	= $editing_preset;
-		$response->msg		= 'Ok. Request done';
 
 		return $response;
 	}//end filter_get_editing_preset
@@ -1211,7 +1133,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function filter_set_editing_preset(object $json_data) : object {
-		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1224,14 +1145,10 @@ final class dd_core_api {
 
 		$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-			}
+		// response
+			$response->result	= $save_temp_preset;
+			$response->msg		= 'OK. Request done';
 
-		$response->result	= $save_temp_preset;
-		$response->msg		= 'OK. Request done';
 
 		return $response;
 	}//end filter_set_editing_preset
@@ -1243,7 +1160,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function filter_get_user_presets(object $json_data) : object {
-		$start_time = start_time();
 
 		session_write_close();
 
@@ -1257,14 +1173,10 @@ final class dd_core_api {
 
 		$filter_components = search::filter_get_user_presets($user_id, $target_section_tipo);
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-			}
+		// response
+			$response->result	= $filter_components;
+			$response->msg		= 'OK. Request done';
 
-		$response->result	= $filter_components;
-		$response->msg		= 'OK. Request done';
 
 		return $response;
 	}//end filter_get_user_presets
@@ -1278,7 +1190,6 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function ontology_get_children_recursive(object $json_data) : object {
-		$start_time = start_time();
 
 		// session_write_close();
 
@@ -1291,14 +1202,10 @@ final class dd_core_api {
 			$target_tipo	= $json_data->target_tipo;
 			$children		= ontology::get_children_recursive($target_tipo);
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-			}
+		// response ok
+			$response->result	= $children;
+			$response->msg		= 'OK. Request done';
 
-		$response->result	= $children;
-		$response->msg		= 'OK. Request done';
 
 		return $response;
 	}//end ontology_get_children_recursive
@@ -1848,14 +1755,14 @@ final class dd_core_api {
 			$tipo			= $ddo_source->tipo ?? null;
 			$value			= $ddo_source->value ?? null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 
-
-		# DIFFUSION_INDEX_TS
+		// diffusion_index_ts
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
 			$index_grid			= $indexation_grid->build_indexation_grid();
 
-
+		// reponse ok
 			$response->msg		= 'Ok. Request done';
 			$response->result	= $index_grid;
+
 
 		return $response;
 	}//end get_indexation_grid
@@ -1917,7 +1824,7 @@ final class dd_core_api {
 	* Method must be static and accept a only one object argument
 	* Method must return an object like { result: mixed, msg: string }
 	*
-	* @param object $request_options
+	* @param object $rqo
 	* sample:
 	* {
 	* 	action: "service_request"
@@ -1932,8 +1839,7 @@ final class dd_core_api {
 	* }
 	* @return object response { result: mixed, msg: string }
 	*/
-	public static function service_request(object $request_options) : object {
-		$start_time = start_time();
+	public static function service_request(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1941,7 +1847,7 @@ final class dd_core_api {
 			$response->error	= null;
 
 		// short vars
-			$source			= $request_options->source;
+			$source			= $rqo->source;
 			$service_name	= $source->model;
 			$service_method	= $source->action;
 			$arguments		= $source->arguments ?? new stdClass();
