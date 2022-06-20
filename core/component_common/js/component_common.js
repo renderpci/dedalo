@@ -705,14 +705,24 @@ component_common.prototype.update_datum = async function(new_data) {
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
 				const data_item			= new_data[i]
-				const current_instances	= ar_instances.filter(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
+				const current_instances	= ar_instances.filter(el =>
+					el.tipo===data_item.tipo &&
+					el.section_tipo===data_item.section_tipo &&
+					el.section_id==data_item.section_id &&
+					el.lang===data_item.lang
+				)
 				const instances_length	= current_instances.length
 				if (instances_length>0) {
 					// add
 					for (let j = 0; j < instances_length; j++) {
 						const inst		= current_instances[j]
 						// inst.data	= self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
-						inst.data		= self.datum.data.find(el => el.tipo===inst.tipo && el.section_tipo===inst.section_tipo && el.section_id==inst.section_id) || {}
+						inst.data		= self.datum.data.find(el =>
+							el.tipo===inst.tipo &&
+							el.section_tipo===inst.section_tipo &&
+							el.section_id==inst.section_id &&
+							el.lang===inst.lang
+						) || {}
 						// console.log("____ updated instance data:", inst);
 					}
 				}else{
