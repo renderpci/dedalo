@@ -11,12 +11,57 @@
 			$html .= '<section>';
 			$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" ENTER TO DEDALO " onclick="window.location.href=\'../main/?m=tool_administration&t=dd242&menu=1\';" />';
 			$html .= '</section>';
+			if (login::is_logged()===true && login::is_developer($user_id)===true) {
+				// add toponymy items (countries)
+					$html .= '<section>';
+					$html .= '<h3 class="">Install/activate additional hierarchies</h3>';
+
+					$html .= '<div class="description">It will be displayed in the thesaurus. Keep in mind that large countries can consume a lot of resources. Don\'t load unnecessary countries. You can always load more countries later.</div>';
+					$html .= '<div class="description">Source files dir: '.$hierarchy_files_path.'</div>';
+					$html .= '<ul id="hierarchies_list" class="ul_list">';
+					foreach ($hierarchies->result as $key => $item) {
+
+						// skip model
+							if ($item->type==='model') {
+								continue;
+							}
+
+						$checked = '';
+						$html .= '<li><label><input type="checkbox" name="hierarchies" value="'.$item->tld.'" '.$checked.'/>'.$item->label.'</label>';
+
+						// already_installed case
+							$already_installed = array_find($installed_hierarchies->result, function($el) use($item) {
+								return strtolower($el->hierarchy6)===strtolower($item->tld);
+							});
+							if ($already_installed!==null) {
+								$html .= '<span class="notes small"> * Installed</span>';
+							}
+
+						$html .= '</li>';
+					}
+					$html .= '</ul>';
+
+					// button INSTALL HIERARCHIES
+					$html .= '<section>';
+					$html .= '<input type="button" id="button_install" class="btn btn-primary" value=" INSTALL HIERARCHIES " onclick="install.install_hierarchies(this)" />';
+					$html .= '</section>';
+
+					$html .= '
+						<script>
+							install.init({
+								hierarchies_list : document.getElementById(\'hierarchies_list\')
+							})
+						</script>
+					';
+					$html .= '</section>';
+
+			}
 			$html .= '</section>';
 			echo $html;
 			return;
 		}
 
-	// Instalation help
+	// Installation help
 		$html .= '<section class="instalation_help">';
 		$html .= '<h3 class="">Instalation help</h3>';
 		$html .= '<div class="description"><img src="https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg" height="16px"/> Instalation info: <a href="https://dedalo.dev/v5" target="_blank">https://dedalo.dev/v5</a></div>';

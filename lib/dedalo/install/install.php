@@ -8,13 +8,17 @@
 	// config
 		$config = install::get_config();
 
+	// user
+		$user_id = navigator::get_user_id() ?? null;
+
 	// sources
 		$install_db_file			= $config->target_file_path_compress;
 		$hierarchy_files_path		= $config->hierarchy_files_dir_path;
 		$install_checked_default	= $config->install_checked_default;
 
 	// hierarchies
-		$hierarchies = install::get_available_hierarchy_files();
+		$hierarchies			= install::get_available_hierarchy_files();
+		$installed_hierarchies	= install::get_installed_hierarchies();
 
 	// db info
 		$db_config = [

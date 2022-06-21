@@ -1583,6 +1583,20 @@ abstract class install {
 			$component->set_dato($dato);
 			$component->Save();
 
+		// set real section tipo (!) needed for create virtual section
+			// source_real_section_tipo
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, true);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
+				$section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$component->set_dato([DEDALO_THESAURUS_SECTION_TIPO]);
+			$component->Save();
+
 		// create ontology tld (generate_virtual_section)
 			$options = (object)[
 				'section_id'	=> $section_id,
@@ -2172,6 +2186,26 @@ abstract class install {
 		// 	return $response;
 		// }//end check_pgpass
 
+
+
+	/**
+	* GET_INSTALLED_HIERARCHIES
+	* @return object $response
+	*/
+	public static function get_installed_hierarchies() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+
+		$hierarchy_sections = area_thesaurus::get_all_hierarchy_sections();
+
+		$response->result	= $hierarchy_sections;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+		return $response;
+	}//end get_installed_hierarchies
 
 
 }//end class
