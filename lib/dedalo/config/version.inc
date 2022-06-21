@@ -2708,6 +2708,7 @@
 		Fixed export structure (Ontology) issues when master user privileges generates a import error
 		Fix export when a humanoide order after search
 		Improved install hierarchies. Now development users can install additional hierarchies anytime
+		Fixed error on clean install sequence that creates a infinite loop
 
 
 
@@ -2744,7 +2745,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '21-06-2022T11:13:41');
+	define('DEDALO_BUILD'	, '21-06-2022T22:10:06');
 
 
 	/*
