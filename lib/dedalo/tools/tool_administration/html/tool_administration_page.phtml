@@ -817,6 +817,24 @@
 			}
 
 
+
+			// projects langs
+				$dedalo_projects_default_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+				$html .= tool_administration::show_info(
+					'DEDALO_PROJECTS_DEFAULT_LANGS',
+					'',
+					json_encode($dedalo_projects_default_langs, JSON_PRETTY_PRINT)
+				);
+
+			// diffusion langs
+				$dedalo_diffusion_langs = unserialize(DEDALO_DIFFUSION_LANGS);
+				$html .= tool_administration::show_info(
+					'DEDALO_DIFFUSION_LANGS',
+					'',
+					json_encode($dedalo_diffusion_langs, JSON_PRETTY_PRINT)
+				);
+
+
 			#
 			# DISK SPACE
 			try {
