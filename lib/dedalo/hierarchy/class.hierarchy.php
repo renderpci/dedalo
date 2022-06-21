@@ -160,44 +160,44 @@ class hierarchy {
 				$current_parent = DEDALO_THESAURUS_VIRTUALS_AREA_TIPO;
 			}
 			$default_section_tipo_term  = self::get_default_section_tipo_term($tld2);
-			$options = new stdClass();
-				$options->terminoID 	= $default_section_tipo_term; // $tld2.'1';
-				$options->parent 		= $current_parent;	// 'dd101'; // 'hierarchy56'
-				$options->modelo 		= 'dd6';
-				$options->esmodelo 		= 'no';
-				$options->esdescriptor 	= 'si';
-				$options->visible 		= 'si';
-				$options->traducible 	= 'no';
+
+			$create_term_options = new stdClass();
+				$create_term_options->terminoID		= $default_section_tipo_term; // $tld2.'1';
+				$create_term_options->parent		= $current_parent;	// 'dd101'; // 'hierarchy56'
+				$create_term_options->modelo		= 'dd6';
+				$create_term_options->esmodelo		= 'no';
+				$create_term_options->esdescriptor	= 'si';
+				$create_term_options->visible		= 'si';
+				$create_term_options->traducible	= 'no';
 				if ($tld2==='lg') {
 					# add table 'matrix_langs'
-					$options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
+					$create_term_options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
 				}else{
-					// $options->relaciones = json_decode('[{"dd6":"hierarchy20"}]');
-					$options->relaciones = [
+					// $create_term_options->relaciones = json_decode('[{"dd6":"hierarchy20"}]');
+					$create_term_options->relaciones = [
 						(object)[
 							'dd6' => $real_section_tipo # section. add real section. example: 'Thesaurus' hierarchy20
 						]
 					];
 				}
+				$create_term_options->propiedades	= '';
+				$create_term_options->tld2			= $tld2;
+				$create_term_options->name			= $name;
 
-			$options->propiedades 	= '';
-			$options->tld2 			= $tld2;
-			$options->name 			= $name;
-
-			$create_term = self::create_term( $options );
+			$create_term = self::create_term( $create_term_options );
 				if ($create_term) {
-					$response->result 	 = $create_term->result;
-					$response->msg 		.= $create_term->msg;
+					$response->result	= $create_term->result;
+					$response->msg		.= $create_term->msg;
 				}
 
-		// only for thesaurus alias
+		// only for thesaurus alias (hierarchy20)
 		if ($real_section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
-			
-			// virtual section modelo . model term			
+
+			// virtual section modelo . model term
 				$default_section_tipo_model = self::get_default_section_tipo_model($tld2);
 				$options = new stdClass();
-					$options->terminoID 	= $default_section_tipo_model;	//$tld2.'2';
-					$options->parent 		= DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;	//'dd101';
+					$options->terminoID 	= $default_section_tipo_model;	// $tld2.'2';
+					$options->parent 		= DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;	// 'dd101';
 					$options->modelo 		= 'dd6';
 					$options->esmodelo 		= 'no';
 					$options->esdescriptor 	= 'si';
@@ -207,7 +207,7 @@ class hierarchy {
 						# add table 'matrix_langs'
 						$options->relaciones 	= json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]');
 					}else{
-						$options->relaciones = json_decode('[{"dd6":"hierarchy20"}]');					
+						$options->relaciones = json_decode('[{"dd6":"hierarchy20"}]');
 					}
 					$options->propiedades 	= '';
 					$options->tld2 			= $tld2;
@@ -348,7 +348,7 @@ class hierarchy {
 						}
 
 			// virtual section-list-thesaurus . listado thesaurus
-			// use section-list-thesaurus from real section. only overwrite when really need			
+			// use section-list-thesaurus from real section. only overwrite when really need
 				$options = new stdClass();
 					$options->terminoID 	= $tld2.'9';
 					$options->parent 		= $tld2.'1';
@@ -394,7 +394,7 @@ class hierarchy {
 				// 			$response->result 	 = $create_term->result;
 				// 			$response->msg 		.= $create_term->msg;
 				// 		}
-		
+
 		}else{
 
 			// target real section section_list
@@ -407,7 +407,7 @@ class hierarchy {
 
 			// virtual section-list . terms
 				if (!empty($ar_section_list) && !empty($section_list_relaciones)) {
-				
+
 					$options = new stdClass();
 						$options->terminoID		= $tld2.'3';
 						$options->parent		= $tld2.'1';
@@ -454,7 +454,7 @@ class hierarchy {
 			$permissions_options->section_id 	= $current_hierarchy_section_id;
 			$ar_sections = (isset($default_section_tipo_model))
 				? [$default_section_tipo_term, $default_section_tipo_model]
-				: [$default_section_tipo_term];			
+				: [$default_section_tipo_term];
 			$permissions_options->ar_sections 	= $ar_sections;
 
 		hierarchy::set_hierarchy_permissions( $permissions_options );

@@ -30,6 +30,7 @@
 		$dedalo_install_status = defined('DEDALO_INSTALL_STATUS')
 			? DEDALO_INSTALL_STATUS
 			: null;
+
 		// prevents legacy systems from being exposed to unwanted installation
 			if ($dedalo_install_status===null) {
 

@@ -80,7 +80,7 @@
 
 				# Section tipos . Simple array of current sections tipo
 				$ar_section_tipos	= [];
-				$ar_section_names 	= [];				
+				$ar_section_names 	= [];
 				foreach ($ar_sections_by_type as $key => $ar_value) {
 					foreach ($ar_value as $obj_value) {
 						$ar_section_tipos[] = $obj_value->hierarchy_target_section_tipo;
@@ -207,7 +207,7 @@
 
 
 				#
-				# TEST					
+				# TEST
 					// if(SHOW_DEBUG===true) {
 
 					// 	include(DEDALO_LIB_BASE_PATH."/tools/tool_ts_print/class.tool_ts_print.php");
