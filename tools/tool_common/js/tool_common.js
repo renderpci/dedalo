@@ -182,11 +182,11 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 					// lang. If is defined in properties, parse and use it, else use the tool lang
 					// taking care to do not re-parse the value
-						const current_el_lang = el.lang && el.lang.indexOf('DEDALO_')===0
-							? page_globals[el.lang.toLowerCase()] // parse properties lang
-							: el.lang
-								? el.lang // already exists
-								: self.lang // fallback to tool lang
+						const current_el_lang = el.lang
+							? el.lang // already exists
+							: (typeof el.is_translatable!=='undefined' && el.is_translatable===false)
+								? page_globals.dedalo_data_nolan // lg-nolan
+								: self.lang // current tool lang
 
 					ar_promises.push( new Promise(async (resolve) => {
 
