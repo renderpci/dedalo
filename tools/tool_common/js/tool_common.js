@@ -180,9 +180,14 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 					const el = ddo_map[i]
 
+					// lang. If is defined in properties, parse and use it, else use the tool lang
+						el.lang = el.lang
+							? page_globals[el.lang.toLowerCase()] // parse properties lang
+							: self.lang
+
 					ar_promises.push( new Promise(async (resolve) => {
 
-						// context. In is not given get from caller or request to the API
+						// context. If it's not given, get from caller or request to the API
 							const context = el.context
 								? el.context
 								: await (async function(){
@@ -212,7 +217,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							tipo			: el.tipo,
 							section_tipo	: el.section_tipo,
 							section_id		: el.section_id,
-							lang			: self.lang,
+							lang			: el.lang,
 							type			: el.type,
 							context			: context,
 							id_variant		: self.model,  // id_variant prevents id conflicts
