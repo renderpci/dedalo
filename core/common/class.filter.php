@@ -68,7 +68,7 @@ abstract class filter {
 	* Como tarda poco, unos 0.008 secs, no hacemos cache del dato
 	* @return array|null $dato
 	*/
-	public static function get_user_projects( int $user_id ) : ?array {
+	public static function get_user_projects(int $user_id) : ?array {
 
 		// cache
 			static $user_projects_cache;
@@ -103,7 +103,7 @@ abstract class filter {
 	* Works like ar_list_of_values but filtered by user authorized projects
 	* @return array $ar_projects
 	*/
-	public static function get_user_authorized_projects( int $user_id, string $from_component_tipo ) : array {
+	public static function get_user_authorized_projects(int $user_id, string $from_component_tipo) : array {
 		$start_time = start_time();
 
 		// cache
@@ -256,9 +256,10 @@ abstract class filter {
 	* GET_FILTER_USER_RECORDS_BY_ID
 	* Filter user access to section records by section_id
 	* In process.... (need specific component for manage)
-	* @return string $sql_filtro
+	* @param int $user_id
+	* @return array $filter_user_records_by_id
 	*/
-	public static function get_filter_user_records_by_id( int $user_id ) : array {
+	public static function get_filter_user_records_by_id(int $user_id) : array {
 
 		$filter_user_records_by_id = array();
 
