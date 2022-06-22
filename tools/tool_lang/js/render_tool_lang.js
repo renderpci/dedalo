@@ -143,9 +143,13 @@ const get_content_data_edit = async function(self) {
 					selected 	: self.target_lang,
 					class_name	: 'target_lang'
 				})
-				target_select_lang.addEventListener("change", function(e){
+				target_select_lang.addEventListener("change", async function(e){
 					const lang = e.target.value
-					self.target_component = add_component(self, target_component_container, lang)
+					// self.target_component = await add_component(self, target_component_container, lang)
+					add_component(self, target_component_container, lang)
+					.then(function(response){
+						self.target_component = response
+					})
 
 					data_manager.prototype.set_local_db_data({
 						id		: 'tool_lang_target_lang',
