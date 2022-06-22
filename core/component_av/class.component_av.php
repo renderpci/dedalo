@@ -227,6 +227,15 @@ class component_av extends component_media_common {
 		// 	$locator	= new locator($dato[0]);
 		// 	$video_id	= $locator->get_flat();
 
+		// section_id check
+			$section_id = $this->get_section_id();
+			if (!isset($section_id)) {
+				if(SHOW_DEBUG===true) {
+					error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
+				}
+				return null;
+			}
+
 		// flat locator as id
 			$locator = new locator();
 				$locator->set_section_tipo($this->get_section_tipo());

@@ -325,8 +325,10 @@ class component_image extends component_media_common {
 					? pathinfo($external_source)['filename']
 					: null;
 				break;
+		}
 
-			default:
+		// fallback default
+			if (is_null($image_id)) {
 				// $image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 				// flat locator as id
 				$locator = new locator();
@@ -335,8 +337,7 @@ class component_image extends component_media_common {
 					$locator->set_component_tipo($this->get_tipo());
 
 				$image_id	= $locator->get_flat();
-				break;
-		}
+			}
 
 		// fix value
 			$this->image_id = $image_id;
