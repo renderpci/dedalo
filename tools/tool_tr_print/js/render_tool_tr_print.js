@@ -4,12 +4,13 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
-	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
 	import {tr} from '../../../core/common/js/tr.js'
+	// import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
+	// import {render_node_info} from '../../../core/common/js/utils/notifications.js'
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+
 
 
 /**
@@ -26,6 +27,7 @@ export const render_tool_tr_print = function() {
 /**
 * EDIT
 * Render node
+* @param object options = {render_level:'full'}
 * @return DOM node
 */
 render_tool_tr_print.prototype.edit = async function(options={render_level:'full'}) {
@@ -126,7 +128,7 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_HEAD_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return DOM DocumentFragment
 */
 const render_head_options = async function(self, content_data) {
 
@@ -140,7 +142,7 @@ const render_head_options = async function(self, content_data) {
 /**
 * RENDER_TEXT_PROCESS_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return DOM DocumentFragment
 */
 const render_text_process_options = function(self, content_data) {
 
@@ -599,17 +601,22 @@ const render_text_process_options = function(self, content_data) {
 };//end render_text_process_options
 
 
-/*
+
+/**
 * RENDER_DEFAULT
 * Process the raw_data as simple html to be printed
+* @param object self
+* @return array ar_default_render
 */
 const render_default = function(self) {
 
 	const fragment = new DocumentFragment()
-	const ar_default_render = []
-	const node_len 	= self.ar_raw_data.length
+
+	const node_len			= self.ar_raw_data.length
+	const ar_default_render	= []
 
 	for (let i = 0; i < node_len; i++) {
+
 		const raw_data = self.ar_raw_data[i]
 
 		// BR
@@ -621,8 +628,8 @@ const render_default = function(self) {
 		// create the data block for as global container
 		const data_block = ui.create_dom_element({
 			element_type	: 'table',
-			class_name 		: 'data_block',
-			parent 			: fragment
+			class_name		: 'data_block',
+			parent			: fragment
 		})
 
 		for (let j = 0; j < ar_fragment_data_len; j++) {
@@ -630,23 +637,23 @@ const render_default = function(self) {
 			// for every block create a fragment and left block for indexation ans right block for the text
 			const fragment_block = ui.create_dom_element({
 				element_type	: 'tr',
-				class_name 		: 'fragment_block',
-				parent 			: data_block
+				class_name		: 'fragment_block',
+				parent			: data_block
 			})
 				const left_block = ui.create_dom_element({
 					element_type	: 'td',
-					class_name 		: 'left_block',
-					parent 			: fragment_block
+					class_name		: 'left_block',
+					parent			: fragment_block
 				})
 				const right_block = ui.create_dom_element({
 					element_type	: 'td',
-					class_name 		: 'right_block',
-					parent 			: fragment_block
+					class_name		: 'right_block',
+					parent			: fragment_block
 				})
 
 
 			// TC
-				function get_tc(match, p1,p2, offset){
+				function get_tc(match, p1,p2, offset) {
 
 					// the tc is inside the p2 of the match
 					const tc = p2
@@ -778,15 +785,19 @@ const render_default = function(self) {
 				right_block.insertAdjacentHTML("beforeend", current_fragment)
 		}
 		ar_default_render.push(data_block)
-	}// end for
+	}// end for (let i = 0; i < node_len; i++)
+
 
 	return ar_default_render
-}
+}//end render_default
 
 
-/*
+
+/**
 * RENDER_HEADER
 * Process the raw_data as simple html to be printed
+* @param object self
+* @return DOM DocumentFragment
 */
 const render_header = function(self) {
 
@@ -812,13 +823,13 @@ const render_header = function(self) {
 		section_id		: transcription_component.section_id
 	}]
 	// create unique array with all locators
-	const value = [...value_ref_sections, ...self_transcription_component_section]
-	const value_length = value.length
+	const value			= [...value_ref_sections, ...self_transcription_component_section]
+	const value_length	= value.length
 	for (let i = 0; i < value_length; i++) {
 
 		const head = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'head',
+			class_name		: 'head',
 			parent			: fragment
 		})
 
@@ -833,7 +844,7 @@ const render_header = function(self) {
 			// section label DOM element
 			const section_label_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'section_label',
+				class_name		: 'section_label',
 				inner_html		: section_label,
 				parent			: head
 			})
@@ -864,31 +875,42 @@ const render_header = function(self) {
 					})
 
 			for (let j = 0; j < ar_component_context.length; j++) {
-				const current_component	= ar_component_context[j] // toString(ar_component_data[j].value)
-				const label				= current_component.label
 
-				const current_component_data = data.find(el => el.model !== 'section' && el.tipo===current_component.tipo && el.section_tipo===current_locator.section_tipo && el.section_id===current_locator.section_id)
+				const current_component			= ar_component_context[j] // toString(ar_component_data[j].value)
+				const label						= current_component.label
+				const current_component_data	= data.find(el =>
+					el.model!=='section' &&
+					el.tipo===current_component.tipo &&
+					el.section_tipo===current_locator.section_tipo &&
+					el.section_id===current_locator.section_id
+				)
+				const current_component_value = current_component_data && current_component_data.value
+					? current_component_data.value.join(' | ')
+					: ''
 
 				const component_container = ui.create_dom_element({
 					element_type	: 'div',
 					class_name 		: 'component_container',
 					parent			: components
 				})
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name 		: 'component_label',
-						inner_html		: label + ': ',
-						parent			: component_container
-					})
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name 		: 'component_value',
-						inner_html		: current_component_data.value.join(' | ') || '',
-						parent			: component_container
-					})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'component_label',
+					inner_html		: label + ': ',
+					parent			: component_container
+				})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'component_value',
+					inner_html		: current_component_value,
+					parent			: component_container
+				})
 			}
 		}
-		const ar_persons_for_this_section = ar_persons.filter(el => el.section_tipo === current_locator.section_tipo && el.section_id === current_locator.section_id)
+		const ar_persons_for_this_section = ar_persons.filter(el =>
+			el.section_tipo===current_locator.section_tipo &&
+			el.section_id===current_locator.section_id
+		)
 		for (let j = 0; j < ar_persons_for_this_section.length; j++) {
 
 			const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
@@ -911,9 +933,8 @@ const render_header = function(self) {
 					parent			: person_container
 				})
 		}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
+	}//end for (let i = 0; i < value_length; i++)
 
-	}
+
 	return fragment
-}// end render_header
-
-
+}//end render_header

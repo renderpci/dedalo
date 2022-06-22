@@ -6,12 +6,14 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
+	import {common} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_tr_print} from './render_tool_tr_print.js'
 	import {tr} from '../../../core/common/js/tr.js'
+
+
 
 /**
 * TOOL_transcription
@@ -75,7 +77,7 @@ tool_tr_print.prototype.init = async function(options) {
 
 
 /**
-* BUILD_CUSTOM
+* BUILD
 */
 tool_tr_print.prototype.build = async function(autoload=false) {
 
@@ -141,7 +143,6 @@ tool_tr_print.prototype.get_component = async function(lang) {
 
 
 
-
 /**
 * LOAD_RELATION_LIST
 * Get the list of related sections with the actual resource
@@ -191,6 +192,7 @@ tool_tr_print.prototype.load_relation_list = async function() {
 };//end load_relation_list
 
 
+
 /**
 * TAGS_TO_HTML
 * Parses Dédalo server side tags to html tags
@@ -207,10 +209,9 @@ tool_tr_print.prototype.tags_to_html = function(value) {
 
 
 
-
-
 /**
 * BUILD_SUBTITLES
+* @return object self.service_subtitles
 */
 tool_tr_print.prototype.build_subtitles = async function() {
 
@@ -221,14 +222,13 @@ tool_tr_print.prototype.build_subtitles = async function() {
 			model				: 'service_subtitles',
 			mode				: 'edit',
 			caller				: self,
-			component_text_area : component_text_area
+			component_text_area	: component_text_area
 		})
 
 	self.ar_instances.push(self.service_subtitles)
 
-	self.service_subtitles.build()
-		.then(function(){
+	await self.service_subtitles.build()
 
-		})
 
+	return self.service_subtitles
 }// end build_subtitles
