@@ -1209,7 +1209,6 @@ class login extends common {
 		// short vars
 			$model			= 'login';
 			$tipo			= $this->get_tipo();
-			$translatable	= false;
 			$mode			= $this->get_modo();
 			$label			= $this->get_label();
 			$lang			= $this->get_lang();
