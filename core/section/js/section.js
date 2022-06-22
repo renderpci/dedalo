@@ -522,6 +522,20 @@ section.prototype.build = async function(autoload=false) {
 					// loading
 						// if (node) node.classList.remove('loading')
 						self.node_body.classList.remove('loading')
+
+					// navigation history. When user paginates, store navigation history to allow browser navigation too
+						const title	= self.id
+						const url	= "?t="+ self.tipo + '&m=' + self.mode
+						const user_navigation_options = {
+							source				: self.rqo.source,
+							sqo					: self.rqo.sqo,
+							event_in_history	: true
+						}
+						const state = {
+							user_navigation_options : user_navigation_options
+						}
+						console.log("navigation history state:",state, title, url,history);
+						history.pushState(state, title, url)
 				}
 		}//end if (!self.paginator)
 
