@@ -1512,22 +1512,25 @@ class component_text_area extends component_common {
 	* GET_ANNOTATIONS
 	* Used for diffusion global search annotations
 	* @see diffusion global search needs
-	* @return array $ar_terms
+	* @return array|null $ar_terms
 	*/
 	public function get_annotations() : ?array {
+
 		$lang		= $this->get_lang();
 		$properties	= $this->get_properties();
-		$tags_notes	= $properties->tags_notes ?? null;
 
-		if(!$tags_notes){
-			return null;
-		}
+		// tag notes
+			$tags_notes	= $properties->tags_notes ?? null;
+			if(empty($tags_notes)) {
+				return null;
+			}
 
-		$dato = $this->get_dato();
+		// dato
+			$dato = $this->get_dato();
+			if(empty($dato)){
+				return null;
+			}
 
-		if(empty($dato)){
-			return null;
-		}
 		$ar_annotations = [];
 		foreach ($dato as $key => $current_dato) {
 			$pattern = TR::get_mark_pattern('note', $standalone=true);
@@ -1555,13 +1558,15 @@ class component_text_area extends component_common {
 					$note_section_tipo		= $locator->section_tipo;
 					$note_section_id		= $locator->section_id;
 
-					$is_translatable		= RecordObj_dd::get_translatable($note_component_tipo);
-					$current_component		= component_common::get_instance($note_component_model,
-																	 $note_component_tipo,
-																	 $note_section_id,
-																	 'list',
-																	 ($is_translatable) ? $lang : DEDALO_DATA_NOLAN,
-																	 $note_section_tipo);
+					$translatable			= RecordObj_dd::get_translatable($note_component_tipo);
+					$current_component		= component_common::get_instance(
+						$note_component_model,
+						$note_component_tipo,
+						$note_section_id,
+						'list',
+						($translatable) ? $lang : DEDALO_DATA_NOLAN,
+						$note_section_tipo
+					);
 					$dato		= $current_component->get_dato();
 					$note_type	= $current_ddo->id;
 
@@ -1575,17 +1580,19 @@ class component_text_area extends component_common {
 				}
 
 				$ar_annotations[] = $note_obj;
-			}
-		}
+			}//end foreach ($matches[7] as $current_note)
+		}//end foreach ($dato as $key => $current_dato)
+
 
 		return $ar_annotations;
 	}//end get_component_indexations_terms
 
 
 
-
 	/**
 	* GET_DIFFUSION_OBJ
+	* @param object $properties
+	* @return object $diffusion_obj
 	*/
 	public function get_diffusion_obj(object $properties) : object {
 

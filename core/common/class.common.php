@@ -3136,8 +3136,8 @@ abstract class common {
 	*/
 	public static function get_element_lang(string $tipo, string $data_lang=DEDALO_DATA_LANG) : string {
 
-		$is_translatable	= RecordObj_dd::get_translatable($tipo);
-		$lang				= ($is_translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
+		$translatable	= RecordObj_dd::get_translatable($tipo);
+		$lang			= ($translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
 
 		return $lang;
 	}//end get_element_lang
@@ -3367,7 +3367,7 @@ abstract class common {
 			$model				= get_class($this);
 			$tipo				= $this->tipo;
 			$is_component		= strpos($model, 'component_')===0;
-			$translatable		= $this->traducible;
+			$tranducible		= $this->traducible; // string si|no fixed on construct element
 			$properties			= $this->get_properties();
 			$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
@@ -3394,11 +3394,11 @@ abstract class common {
 
 					if ($requirement_translatable===true) {
 
-						$is_translatable = ($is_component===true)
-							? (($translatable==='no' && $with_lang_versions!==true) ? false : true)
+						$translatable = ($is_component===true)
+							? (($tranducible==='no' && $with_lang_versions!==true) ? false : true)
 							: false;
 
-						if ($requirement_translatable===$is_translatable) {
+						if ($requirement_translatable===$translatable) {
 							$tools[] = $tool;
 						}
 
