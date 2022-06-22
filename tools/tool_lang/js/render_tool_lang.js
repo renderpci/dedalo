@@ -145,7 +145,7 @@ const get_content_data_edit = async function(self) {
 				})
 				target_select_lang.addEventListener("change", function(e){
 					const lang = e.target.value
-					add_component(self, target_component_container, lang)
+					self.target_component = add_component(self, target_component_container, lang)
 
 					data_manager.prototype.set_local_db_data({
 						id		: 'tool_lang_target_lang',
@@ -170,8 +170,10 @@ const get_content_data_edit = async function(self) {
 			})
 			if (target_select_lang.value) {
 				add_component(self, target_component_container, target_select_lang.value)
+				.then(function(response){
+					self.target_component = response
+				})
 			}
-
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
@@ -190,6 +192,50 @@ const get_content_data_edit = async function(self) {
 				buttons_container.appendChild(automatic_tranlation_node)
 			}//end if (translator_engine)
 
+		// copy_to_target button
+			const copy_to_target = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'secondary copy_to_target',
+				inner_html		: self.get_tool_label('copy_to_target') || 'Copy to target',
+				parent			: buttons_container
+			})
+			copy_to_target.addEventListener('click', async function(e){
+				e.stopPropagation()
+
+				// user confirmation to overwrite content
+					if (self.target_component.data.value && self.target_component.data.value.length>0) {
+						if (!confirm( get_label.sure || 'Sure?' )) {
+							return false
+						}
+					}
+
+				// source value
+					const source_component	= self.main_element
+					const source_value		= source_component.data.value
+
+				// copy value
+					self.target_component.data.value = source_value
+
+				// save value. (Expected only one value in the array)
+					for (let i = 0; i < source_value.length; i++) {
+						self.target_component.save({
+							action	: 'update',
+							key		: i,
+							value	: source_value[i]
+						})
+					}
+
+				// refresh the target component
+					self.target_component.refresh({
+						build_autoload : false
+					})
+			})
+
+		// propagate_marks
+		// (!) WORKING HERE. Note that this functionality it's not finished in v5
+			// const propagate_marks_block = render_propagate_marks_block(self)
+			// buttons_container.appendChild(propagate_marks_block)
+
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div'
@@ -199,6 +245,80 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 };//end get_content_data_edit
+
+
+
+/**
+* RENDER_PROPAGATE_MARKS_BLOCK
+* (!) WORKING HERE. Note that this functionality it's not finished in v5
+* @return DOM node propagate_marks_container
+*/
+const render_propagate_marks_block = function(self) {
+
+	const propagate_marks_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'propagate_marks_container'
+	})
+
+	// new
+		// new_only_label
+		const new_only_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label.new_only || 'New only',
+			parent			: propagate_marks_container
+		})
+		// input radio button
+		const new_only_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'radio',
+			name			: 'propagate_marks',
+			value			: 'new_only'
+		})
+		new_only_input.checked = true // default value is New only
+		new_only_label.prepend(new_only_input)
+
+	// recreate all
+		// all_label
+		const all_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label.all || 'Recreate all',
+			parent			: propagate_marks_container
+		})
+		// input radio button
+		const all_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'radio',
+			name			: 'propagate_marks',
+			value			: 'all'
+		})
+		all_label.prepend(all_input)
+
+	// propagate_marks button
+		const propagate_marks = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light propagate_marks',
+			inner_html		: self.get_tool_label('propagate_marks') || 'Propagate marks',
+			parent			: propagate_marks_container
+		})
+		propagate_marks.addEventListener('click', async function(e){
+			e.stopPropagation()
+
+			// user confirmation to overwrite content
+				if (self.target_component.data.value && self.target_component.data.value.length>0) {
+					if (!confirm( get_label.sure || 'Sure?' )) {
+						return false
+					}
+				}
+
+			// source value
+				const source_component	= self.main_element
+				const source_value		= source_component.data.value
+
+			// (!) WORKING HERE. Note that this functionality it's not finished in v5
+		})
+
+	return propagate_marks_container
+};//end render_propagate_marks_block
 
 
 
