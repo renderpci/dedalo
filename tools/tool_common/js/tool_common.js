@@ -181,9 +181,12 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					const el = ddo_map[i]
 
 					// lang. If is defined in properties, parse and use it, else use the tool lang
-						el.lang = el.lang
+					// taking care to do not re-parse the value
+						const current_el_lang = el.lang && el.lang.indexOf('DEDALO_')===0
 							? page_globals[el.lang.toLowerCase()] // parse properties lang
-							: self.lang
+							: el.lang
+								? el.lang // already exists
+								: self.lang // fallback to tool lang
 
 					ar_promises.push( new Promise(async (resolve) => {
 
@@ -217,7 +220,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							tipo			: el.tipo,
 							section_tipo	: el.section_tipo,
 							section_id		: el.section_id,
-							lang			: el.lang,
+							lang			: current_el_lang,
 							type			: el.type,
 							context			: context,
 							id_variant		: self.model,  // id_variant prevents id conflicts
