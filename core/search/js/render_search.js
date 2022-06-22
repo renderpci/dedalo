@@ -927,7 +927,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}
 
 	// li nodes
-		const ar_sections_len 	= ar_sections.length
+		const ar_sections_len = ar_sections.length
 		for (let i = 0; i < ar_sections_len; i++) {
 
 			const item = ar_sections[i]
@@ -936,24 +936,28 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			// li
 				const li = ui.create_dom_element({
-					element_type 	: 'li',
-					class_name 		: 'dd_input',
-					parent 		 	: ul
+					element_type	: 'li',
+					class_name		: 'dd_input',
+					parent			: ul
+				})
+
+			// label
+				const label = ui.create_dom_element({
+					element_type	: 'label',
+					parent			: li,
+					inner_html		: item.target_section_name
 				})
 
 			// checkbox
 				const check_box = ui.create_dom_element({
 					element_type	: 'input',
-					parent			: li,
-					class_name		: '',
-					id				: 'section_option_'+item.target_section_tipo,
+					type			: 'checkbox',
+					// id			: 'section_option_'+item.target_section_tipo,
 					// name			: item.hierarchy_target_section_tipo,
 					value			: item.target_section_tipo
 				})
-				check_box.type		= "checkbox"
-				check_box.checked	= true
-
-				check_box.addEventListener('change', async function(event){
+				check_box.checked = true
+				check_box.addEventListener('change', async function() {
 
 					if(check_box.checked){
 						self.target_section_tipo.push(check_box.value)
@@ -972,16 +976,8 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 						section_elements	: section_elements
 					})
 				})
-
-
-			// label
-				const label = ui.create_dom_element({
-					element_type	: 'label',
-					parent			: li,
-					inner_html		: item.target_section_name
-				})
-				label.setAttribute("for", 'section_option_'+item.target_section_tipo)
-		}
+				label.prepend(check_box)
+		}//end for (let i = 0; i < ar_sections_len; i++)
 
 	// Store selected value as cookie to recover later
 		const cookie_name  = "selected_typology"
