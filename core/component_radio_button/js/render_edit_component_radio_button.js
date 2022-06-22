@@ -341,7 +341,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			parent			: li
 		})
 
-	// input checkbox
+	// input radio button
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',

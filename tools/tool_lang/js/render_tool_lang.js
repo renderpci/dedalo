@@ -1,4 +1,4 @@
-/*global page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global page_globals, SHOW_DEBUG, DEDALO_CORE_URL, get_label */
 /*eslint no-undef: "error"*/
 
 
@@ -13,7 +13,7 @@
 
 /**
 * RENDER_TOOL_LANG
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_tool_lang = function() {
 
@@ -45,63 +45,6 @@ render_tool_lang.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-
-	// buttons container
-		// 	const buttons_container = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name 		: 'buttons_container',
-		// 		parent 			: wrapper
-		// 	})
-
-		// 	// automatic_translation
-		// 		const automatic_translation_container = ui.create_dom_element({
-		// 			element_type	: 'div',
-		// 			class_name 		: 'automatic_translation_container',
-		// 			parent 			: buttons_container
-		// 		})
-		// 		// button
-		// 		const button_automatic_translation = document.createElement('button');
-		// 			  button_automatic_translation.type = 'button'
-		// 			  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
-		// 			  automatic_translation_container.appendChild(button_automatic_translation)
-		// 			  button_automatic_translation.addEventListener("click", (e) => {
-
-		// 			  	const translator  = translator_engine_select.value
-		// 			  	const source_lang = wrapper.querySelector('.source_lang').value	// source_select_lang.value
-		// 			  	const target_lang = wrapper.querySelector('.target_lang').value // target_select_lang.value
-		// 			  	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
-		// 			  })
-
-		// 		// select
-		// 		const translator_engine_select = ui.create_dom_element({
-		// 			element_type	: 'select',
-		// 			parent 			: automatic_translation_container
-		// 		})
-		// 		const translator_engine = self.simple_tool_object.properties.translator_engine
-		// 		for (let i = 0; i < translator_engine.length; i++) {
-		// 			const translator = translator_engine[i]
-		// 			ui.create_dom_element({
-		// 				element_type	: 'option',
-		// 				value 			: JSON.stringify(translator),
-		// 				text_content 	: translator.label,
-		// 				parent 			: translator_engine_select
-		// 			})
-		// 		}
-
-	// tool_container
-		//const tool_container = document.getElementById('tool_container')
-		//if(tool_container!==null){
-		//	tool_container.appendChild(wrapper)
-		//}else{
-		//	const main = document.getElementById('main')
-		//	const new_tool_container = ui.create_dom_element({
-		//		id 				: 'tool_container',
-		//		element_type	: 'div',
-		//		parent 			: main
-		//	})
-		//	new_tool_container.appendChild(wrapper)
-		//}
-
 
 
 	return wrapper
@@ -179,7 +122,6 @@ const get_content_data_edit = async function(self) {
 				node.classList.add('disabled_component')
 				source_component_container.appendChild(node)
 			})
-
 
 	// right_block
 		const right_block = ui.create_dom_element({
@@ -284,7 +226,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		// 	  button_automatic_translation.type = 'button'
 		// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
 		// 	  automatic_translation_container.appendChild(button_automatic_translation)
-		button_automatic_translation.addEventListener("click", () => {
+		button_automatic_translation.addEventListener('click', () => {
 
 			components_container.classList.add('loading')
 
@@ -341,7 +283,7 @@ export const add_component = async (self, component_container, lang) => {
 
 	// user select blank lang case
 		if (!lang) {
-			// remove node from dom (not component instance)
+			// remove node from DOM (not component instance)
 			while (component_container.firstChild) {
 				component_container.removeChild(component_container.firstChild)
 			}
@@ -366,5 +308,5 @@ export const add_component = async (self, component_container, lang) => {
 		component_container.appendChild(node)
 
 
-	return node
+	return component
 };//end add_component
