@@ -194,7 +194,7 @@ class component_av extends component_media_common {
 	* GET_ID
 	* Alias of get_video_id
 	*/
-	public function get_id() : string {
+	public function get_id() : ?string {
 
 		return $this->get_video_id();
 	}//end get_id
@@ -203,29 +203,44 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VIDEO_ID
-	* @return string $video_id
+	* @return string|null $video_id
 	*/
-	public function get_video_id() : string {
+	public function get_video_id() : ?string {
 
-		if(isset($this->video_id)) return $this->video_id;
-
-		$dato = $this->get_dato();
-		if (!isset($dato->section_id)) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo", logger::WARNING);
+		// already set
+			if(isset($this->video_id) && !empty($this->video_id)) {
+				return $this->video_id;
 			}
-			return 0;
-		}
-		$locator	= new locator($dato);
-		$video_id	= $locator->get_flat($dato);
+
+		// // dato
+		// 	$dato = $this->get_dato();
+
+		// // check empty or invalid dato
+		// 	if (empty($dato) || empty($dato[0]) || empty($dato[0]->section_id)) {
+		// 		if(SHOW_DEBUG===true) {
+		// 			debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo", logger::WARNING);
+		// 		}
+		// 		return null;
+		// 	}
+
+		// // flat locator as id
+		// 	$locator	= new locator($dato[0]);
+		// 	$video_id	= $locator->get_flat();
+
+		// flat locator as id
+			$locator = new locator();
+				$locator->set_section_tipo($this->get_section_tipo());
+				$locator->set_section_id($this->get_section_id());
+				$locator->set_component_tipo($this->get_tipo());
+
+			$video_id	= $locator->get_flat();
+
+		// fix value
+			$this->video_id = $video_id;
 
 
-		return $this->video_id = $video_id;
-	}
-	public function get_av_id() : string {
-
-		return $this->get_video_id();
-	} // Alias of get_video_id()
+		return $video_id;
+	}//end get_video_id
 
 
 
@@ -994,6 +1009,10 @@ class component_av extends component_media_common {
 				}
 			// video_id (without extension, like 'test81_test65_2')
 				$video_id = $this->get_video_id();
+				if (empty($video_id)) {
+					throw new Exception("Error Processing Request. Invalid video_id: ".to_string($video_id), 1);
+				}
+
 			// quality default in upload is 'original' (!)
 				$quality  = $this->get_quality();
 

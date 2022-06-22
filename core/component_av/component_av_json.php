@@ -63,20 +63,21 @@
 			//  files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
 				$item->datalist = $this->get_files_info();
 
-
 		// player mode case. Send the media header when the component are working as player
 			if($mode==='player') {
 
+				// media info
 				$item->media_info = $this->get_media_streams();
 
-				$item->subtitles = new stdClass();
-					$item->subtitles->subtitles_url	= $this->get_subtitles_url();
-					$item->subtitles->lang_name		= lang::get_name_from_code(DEDALO_DATA_LANG);
-					$item->subtitles->lang			= lang::get_alpha2_from_code(DEDALO_DATA_LANG);
+				// subtiltes info
+				$item->subtitles = (object)[
+					'subtitles_url'	=> $this->get_subtitles_url(),
+					'lang_name'		=> lang::get_name_from_code(DEDALO_DATA_LANG),
+					'lang'			=> lang::get_alpha2_from_code(DEDALO_DATA_LANG)
+				];
 			}
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

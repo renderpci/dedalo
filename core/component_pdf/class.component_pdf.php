@@ -190,7 +190,7 @@ class component_pdf extends component_media_common {
 	* GET_ID
 	* Alias of get_pdf_id
 	*/
-	public function get_id() : string {
+	public function get_id() : ?string {
 
 		return $this->get_pdf_id();
 	}//end get_id
@@ -201,32 +201,41 @@ class component_pdf extends component_media_common {
 	* GET PDF ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* TODO:  Se puede sobreescribir en properties con json ej. {"image_id":"dd851"} y se leerá del contenido del componente referenciado
+	* @return string|null $pdf_id
 	*/
-	public function get_pdf_id() {
+	public function get_pdf_id() : ?string {
 
-		if(isset($this->pdf_id)) return $this->pdf_id;
-		$section_id = $this->get_section_id();
+		if(isset($this->pdf_id) && !empty($this->pdf_id)) {
+			return $this->pdf_id;
+		}
 
-		if (!isset($section_id)) {
-			if(SHOW_DEBUG===true) {
-				error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
+		// section_id check
+			$section_id = $this->get_section_id();
+			if (!isset($section_id)) {
+				if(SHOW_DEBUG===true) {
+					error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
+				}
+				return null;
 			}
-			return 0;
-		}
-		$locator  = new locator();
-			$locator->set_section_tipo($this->get_section_tipo());
-			$locator->set_section_id($this->get_section_id());
-			$locator->set_component_tipo($this->get_tipo());
 
-		$pdf_id	  = $locator->get_flat();
+		// flat locator as id
+			$locator = new locator();
+				$locator->set_section_tipo($this->get_section_tipo());
+				$locator->set_section_id($this->get_section_id());
+				$locator->set_component_tipo($this->get_tipo());
 
-		# Add lang
-		if ($this->traducible==='si') {
-		$pdf_id .= '_'.DEDALO_DATA_LANG;
-		}
+			$pdf_id	= $locator->get_flat();
+
+		// add lang when tanslatable
+			if ($this->traducible==='si') {
+				$pdf_id .= '_'.DEDALO_DATA_LANG;
+			}
+
+		// fix value
+			$this->pdf_id = $pdf_id;
 
 
-		return $this->pdf_id = $pdf_id;
+		return $pdf_id;
 	}//end get_pdf_id
 
 

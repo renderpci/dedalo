@@ -274,7 +274,7 @@ class component_image extends component_media_common {
 	* GET_ID
 	* Alias of get_image_id
 	*/
-	public function get_id() : string {
+	public function get_id() : ?string {
 
 		return $this->get_image_id();
 	}//end get_id
@@ -288,50 +288,61 @@ class component_image extends component_media_common {
 	*
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* Se puede sobreescribir en properties con json ej. {"image_id":"dd851"} y se leerá del contenido del componente referenciado
-	* @return string $this->image_id
+	* @return string|null $image_id
 	*/
-	public function get_image_id() : string {
+	public function get_image_id() : ?string {
 
 		// already set
-			if(isset($this->image_id)) {
+			if(isset($this->image_id) && !empty($this->image_id)) {
 				return $this->image_id;
 			}
 
-		// CASE 1 REFERENCED NAME : If isset properties "image_id" overwrite name with field ddx content
-			$properties = $this->get_properties();
-			if (isset($properties->image_id)) {
+		$properties = $this->get_properties();
 
-				$component_tipo 	= $properties->image_id;
-				$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+		switch (true) {
+			// case 1 referenced name : If isset properties "image_id" overwrite name with field ddx content
+			case isset($properties->image_id):
+				$component_tipo		= $properties->image_id;
+				$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$component			= component_common::get_instance(
+					$component_modelo,
+					$component_tipo,
+					$this->parent,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$this->section_tipo
+				);
+				$valor		= trim($component->get_valor());
+				$image_id	= (!empty($valor) && strlen($valor)>0)
+					? $valor
+					: null;
+				break;
 
-				$component 	= component_common::get_instance($component_modelo,
-															 $component_tipo,
-															 $this->parent,
-															 'edit',
-															 DEDALO_DATA_NOLAN,
-															 $this->section_tipo);
-				$valor = trim($component->get_valor());
-					// dump($valor,"valor - compoent tipo $this->tipo - section_tipo: ".$this->section_tipo);
-				if(!empty($valor) && strlen($valor)>0) {
-					return $valor;
-				}
-			}
+			// case 2 external source
+			case isset($properties->external_source):
+				$external_source = $this->get_external_source();
+				$image_id = !empty($external_source)
+					? pathinfo($external_source)['filename']
+					: null;
+				break;
 
-		// CASE 2 EXTERNAL SOURCE:
-			$external_source = $this->get_external_source();
-			if($external_source) {
+			default:
+				// $image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
+				// flat locator as id
+				$locator = new locator();
+					$locator->set_section_tipo($this->get_section_tipo());
+					$locator->set_section_id($this->get_section_id());
+					$locator->set_component_tipo($this->get_tipo());
 
-				$external_parts	= pathinfo($external_source);
-				$image_id		= $external_parts['filename'];
+				$image_id	= $locator->get_flat();
+				break;
+		}
 
-				return $image_id;
-			}
-
-		// fix
-			$this->image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
+		// fix value
+			$this->image_id = $image_id;
 
 
-		return $this->image_id;
+		return $image_id;
 	}//end get_image_id
 
 

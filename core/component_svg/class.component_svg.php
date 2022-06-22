@@ -47,7 +47,7 @@ class component_svg extends component_media_common {
 	* GET_ID
 	* Alias of get_svg_id
 	*/
-	public function get_id() : string {
+	public function get_id() : ?string {
 
 		return $this->get_svg_id();
 	}//end get_id
@@ -58,40 +58,51 @@ class component_svg extends component_media_common {
 	* GET SVG ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* Se puede sobreescribir en properties con json ej. {"svg_id":"dd851"} y se leerá del contenido del componente referenciado
-	* @return string $svg_id
+	* @return string|null $svg_id
 	*/
 	public function get_svg_id() : string {
 
-		# Already calculed id
-		if(isset($this->svg_id)) return $this->svg_id;
-
-		# Default value
-		$svg_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
-
-
-		# CASE REFERENCED NAME : If isset properties "svg_id" overwrite name with field ddx content
-		$properties = $this->get_properties();
-		if (isset($properties->svg_id)) {
-
-			$component_tipo		= $properties->svg_id;
-			$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-			$component			= component_common::get_instance(
-				$component_modelo,
-				$component_tipo,
-				$this->parent,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$this->section_tipo
-			);
-
-			$dato = trim($component->get_valor());
-			if(!empty($dato) && strlen($dato)>0) {
-				$svg_id = $dato;
+		// already set
+			if(isset($this->svg_id) && !empty($this->svg_id)) {
+				return $this->svg_id;
 			}
+
+		$properties = $this->get_properties();
+
+		switch (true) {
+			case isset($properties->svg_id):
+				$component_tipo		= $properties->svg_id;
+				$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$component			= component_common::get_instance(
+					$component_modelo,
+					$component_tipo,
+					$this->parent,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$this->section_tipo
+				);
+
+				$valor	= trim($component->get_valor());
+				$svg_id	= (!empty($valor) && strlen($valor)>0)
+					? $valor
+					: null;
+				break;
+
+			default:
+				// $svg_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
+				// flat locator as id
+				$locator = new locator();
+					$locator->set_section_tipo($this->get_section_tipo());
+					$locator->set_section_id($this->get_section_id());
+					$locator->set_component_tipo($this->get_tipo());
+
+				$svg_id	= $locator->get_flat();
+				break;
 		}
 
-		# Fix value
-		$this->svg_id = $svg_id;
+
+		// fix value
+			$this->svg_id = $svg_id;
 
 
 		return $svg_id;
