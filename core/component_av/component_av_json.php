@@ -69,7 +69,7 @@
 				// media info
 				$item->media_info = $this->get_media_streams();
 
-				// subtiltes info
+				// subtitles info
 				$item->subtitles = (object)[
 					'subtitles_url'	=> $this->get_subtitles_url(),
 					'lang_name'		=> lang::get_name_from_code(DEDALO_DATA_LANG),

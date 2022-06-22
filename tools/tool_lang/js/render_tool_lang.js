@@ -7,7 +7,7 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {clone} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -216,6 +216,12 @@ const get_content_data_edit = async function(self) {
 				// source value
 					const source_component	= self.main_element
 					const source_value		= source_component.data.value
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log("--> copy_to_target source_value:", clone(source_value));
+						console.log("--> copy_to_target target_value:", clone(self.target_component.data.value));
+					}
 
 				// copy value
 					self.target_component.data.value = source_value
