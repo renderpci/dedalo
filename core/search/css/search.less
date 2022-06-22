@@ -41,9 +41,9 @@
 
 		// search_global_container
 		>.search_global_container {
-			display: flex;
 			background-color: fade(@bg_color_global, 70%);
 			//background-color: rgba(239, 239, 239, 0.71);
+			display: flex;
 			// border-radius: 5px;
 			// padding-bottom: 0.5em;
 			position: relative;
@@ -60,6 +60,31 @@
 
 			&.hide {
 				padding: 0;
+			}
+
+			// list of available section (Thesaurus only)
+			>.wrapper_sections_selector {
+				max-width: 130px;
+				min-width: 110px;
+
+				>select {
+					padding: 0;
+				}
+
+				>.wrapper_sections_selector_ul {
+
+					>li {
+						display: inline-block;
+						height: auto;
+						font-size: 0.9rem;
+
+						>label {
+							>input {
+								margin-right: 0.33rem;
+							}
+						}
+					}
+				}
 			}
 
 			>.button_save_preset {

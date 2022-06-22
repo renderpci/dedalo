@@ -28,22 +28,23 @@
 
 // wrapper_tool
 	.wrapper_tool.tool_indexation {
-		background-color: #2bab75;
+		// background-color: #2bab75;
 		// width: 100%;
 		// height: calc(100vh - 20%);
 
 		>.tool_header {
-			position: relative;
 			background-color: @color_bg_tool;
+			position: relative;
 		}
 
 		>.content_data {
-			background-color: #f9eae0;
+			// background-color: #f9eae0;
 			width: 100%;
-			height: 90vh;
+			height: 92vh;
 			display: grid;
+			grid-gap: 1rem;
 			grid-template-columns: 1fr 1fr;
-			grid-template-rows: 80% 20%;
+			// grid-template-rows: 80% 20%;
 
 			@media screen and (max-width: @width_break_point_0) {
 				display: flex;
@@ -54,23 +55,40 @@
 				width: 100%;
 			}
 
+			// left block
 			>.thesaurus_container {
-				background-color: #91dda4;
+				// background-color: #91dda4;
+				height: 100%;
 				min-height: 700px;
-				grid-row-start: 1;
-				grid-row-end: 3;
+				max-height: 100%;
+				overflow: auto;
+				// grid-row-start: 1;
+				// grid-row-end: 3;
+
+				>.area_thesaurus {
+					padding: 0;
+				}
 			}
 
+			// right block
 			>.right_container {
 
 				// text area
 				>.component_container {
-					background-color: #d8de48;
+					// background-color: #d8de48;
+					margin-bottom: 0.5rem;
+
+					// lang selector
+					>select {
+						padding: 0;
+						width: auto;
+						margin-bottom: 0.5rem;
+					}
 				}
 
 				// selected tag info line
 				>.info_container {
-					background-color: #c4c4f9;
+					// background-color: #c4c4f9;
 
 					.common_line {
 						display: flex;
@@ -86,7 +104,7 @@
 
 				// portal
 				.component_portal {
-					background-color: #cdf64f !important;
+					// background-color: #cdf64f !important;
 				}
 			}
 		}//end content_data
