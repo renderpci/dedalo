@@ -262,6 +262,8 @@ class tool_common {
 							if (!isset($el->model)) {
 								$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
 							}
+							// check if the component is translatable and set to true or false
+							$el->is_translatable = RecordObj_dd::get_translatable($el->tipo);
 
 							$el->label = RecordObj_dd::get_termino_by_tipo($el->tipo, DEDALO_APPLICATION_LANG, true, true);
 

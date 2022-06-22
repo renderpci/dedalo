@@ -78,8 +78,8 @@ class component_relation_common extends component_common {
 	public function __construct($tipo=null, $parent=null, $modo='edit', $lang=null, $section_tipo=null) {
 
 		// lang. translatable conditioned
-			$translatable = RecordObj_dd::get_translatable($tipo);
-			if ($translatable===true) {
+			$is_translatable = RecordObj_dd::get_translatable($tipo);
+			if ($is_translatable===true) {
 				if (empty($lang)) {
 					$lang = DEDALO_DATA_LANG;
 				}else{
