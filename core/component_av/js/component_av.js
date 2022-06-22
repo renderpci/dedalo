@@ -79,29 +79,6 @@ export const component_av = function(){
 
 
 /**
-* BUILD
-* Custom tool build
-*/
-	// component_av.prototype.build99 = async function(autoload=false) {
-
-	// 	const self = this
-
-	// 	// call generic common tool build
-	// 		const common_build = await common.prototype.build.call(this, autoload);
-
-	// 	// quality. Prevents to be overwrited on rebuild from fresh context
-	// 	// (!) To refresh the component in a different quality, set instance.quality and refresh()
-	// 		self.quality = self.quality || self.context.quality
-
-
-	// 		console.log("tool av versions self:",self);
-
-	// 	return common_build
-	// };//end build_custom
-
-
-
-/**
 * GO_TO_TIME
 * the information could to come from in two ways
 * 1 from a tag, with the information in tc format (00:00:08.000), the information in this case is stored in options.tag.dataset.data
@@ -113,9 +90,12 @@ component_av.prototype.go_to_time = function(options) {
 
 	const self = this
 
-	// const tag_time = options.tag.dataset.data
-	const seconds = options.tag
-		? self.tc_to_seconds(options.tag.dataset.data)
+	// options
+		const tag = options.tag
+
+	const tag_time = tag.dataset.data
+	const seconds = tag
+		? self.tc_to_seconds(tag_time)
 		: options
 
 	self.video.currentTime = seconds;
@@ -127,8 +107,10 @@ component_av.prototype.go_to_time = function(options) {
 
 /**
 * PLAY_PAUSE
+* @param int rewind_seconds = 0
+* @return bool self.video.paused
 */
-component_av.prototype.play_pause = function(rewind_seconds = 0) {
+component_av.prototype.play_pause = function(rewind_seconds=0) {
 
 	const self = this
 
@@ -150,21 +132,26 @@ component_av.prototype.play_pause = function(rewind_seconds = 0) {
 };//end play_pause
 
 
-/*
+
+/**
 * REWIND
+* @param int seconds
+* @return float self.video.currentTime
 */
-component_av.prototype.rewind =function(seconds){
+component_av.prototype.rewind = function(seconds) {
 
 	const self = this
 	self.video.currentTime = parseFloat(self.video.currentTime - seconds);
 
 	return self.video.currentTime
-}// end rewind
+};// end rewind
+
 
 
 /**
 * GET_DATA_TAG
-* Send the data_tag to the text_area when it need create a new tag
+* Builds a tag object using current timecode
+* @return obejct data_tag
 */
 component_av.prototype.get_data_tag = function() {
 
@@ -186,7 +173,7 @@ component_av.prototype.get_data_tag = function() {
 
 /**
 * GET_CURRENT_TC
-* Send the data_tag to the text_area when it need create a new tag
+* Get current timecode
 */
 component_av.prototype.get_current_tc = function(){
 
@@ -228,15 +215,17 @@ component_av.prototype.tc_to_seconds = function(tc) {
 * TIME_TO_TC
 * Get the time of the video and convert to tc
 * with the 00:00:00.000 format
+* @param float time
+* @return string tc
 */
 component_av.prototype.time_to_tc = function(time) {
 
-	const date = (new Date())
-
-	date.setHours(0); // reset the hours to 0
-	date.setMinutes(0); // reset the minutes to 0
-	date.setSeconds(0); // reset the seconds to 0
-	date.setMilliseconds(time * 1000); // set the date with the time of the video in ms
+	// date
+		const date = (new Date())
+		date.setHours(0); // reset the hours to 0
+		date.setMinutes(0); // reset the minutes to 0
+		date.setSeconds(0); // reset the seconds to 0
+		date.setMilliseconds(time * 1000); // set the date with the time of the video in ms
 
 	// format the tc with 09
 	// current_date can be; hour, min or second
@@ -264,7 +253,8 @@ component_av.prototype.time_to_tc = function(time) {
 	const mseconds	= wrap_ms(date.getMilliseconds()) //fps: wrap(Math.floor(((time % 1) * frame_rate)));
 
 	// tc
-	const tc = hours+':'+minutes+':'+seconds+'.'+mseconds;
+		// const tc = hours+':'+minutes+':'+seconds+'.'+mseconds;
+		const tc = `${hours}:${minutes}.${seconds}.${mseconds}`
 
 
 	return tc
@@ -275,22 +265,25 @@ component_av.prototype.time_to_tc = function(time) {
 /**
 * SET_PLAYBACK_RATE
 * set the video playback to specific speed rate
+* @param int rate
+* @return float rate
 */
 component_av.prototype.set_playback_rate = function(rate) {
 
 	const self = this
 
-	if (!self.video) {
-		dd_console("Ignored rate call. No self.video is set", 'warning', [self.tipo, self.id]);
-		return false
-	}
+	// no video case
+		if (!self.video) {
+			dd_console("Ignored rate call. No self.video is set", 'warning', [self.tipo, self.id]);
+			return false
+		}
 
 	// Format number as float, precission 1
-	rate = parseFloat(rate)
-	rate = rate.toPrecision(1)
+		rate = parseFloat(rate)
+		rate = rate.toPrecision(1)
 
-	self.video.playbackRate = rate;
+	// fix value
+		self.video.playbackRate = rate;
 
 	return rate
 };//end  set_playback_rate
-
