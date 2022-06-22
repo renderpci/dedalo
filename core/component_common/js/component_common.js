@@ -200,7 +200,6 @@ component_common.prototype.build = async function(autoload=false){
 
 	const current_data_manager = new data_manager()
 
-
 	// load data on auto-load true
 		if (autoload===true) {
 
@@ -705,6 +704,8 @@ component_common.prototype.update_datum = async function(new_data) {
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
 				const data_item			= new_data[i]
+				// console.log("data_item:",data_item);
+				// console.log("ar_instances:",ar_instances);
 				const current_instances	= ar_instances.filter(el =>
 					el.tipo===data_item.tipo &&
 					el.section_tipo===data_item.section_tipo &&
