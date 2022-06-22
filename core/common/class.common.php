@@ -3136,8 +3136,8 @@ abstract class common {
 	*/
 	public static function get_element_lang(string $tipo, string $data_lang=DEDALO_DATA_LANG) : string {
 
-		$translatable 	= RecordObj_dd::get_translatable($tipo);
-		$lang 			= ($translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
+		$is_translatable	= RecordObj_dd::get_translatable($tipo);
+		$lang				= ($is_translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
 
 		return $lang;
 	}//end get_element_lang
