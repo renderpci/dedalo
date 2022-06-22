@@ -120,6 +120,7 @@ tool_common.prototype.init = async function(options) {
 									section_id		: self.caller.section_id,
 									model			: self.caller.model,
 									mode			: self.caller.mode, //'edit',
+									lang			: self.caller.lang,
 									role			: 'main_element'
 								}]
 							}
@@ -184,7 +185,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					// taking care to do not re-parse the value
 						const current_el_lang = el.lang
 							? el.lang // already exists
-							: (typeof el.is_translatable!=='undefined' && el.is_translatable===false)
+							: (typeof el.translatable!=='undefined' && el.translatable===false)
 								? page_globals.dedalo_data_nolan // lg-nolan
 								: page_globals.dedalo_data_lang // current data lang (DEDALO_DATA_LANG)
 

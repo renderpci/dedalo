@@ -1179,8 +1179,8 @@ class section extends common {
 							continue;
 						}
 
-						$is_translatable	= RecordObj_dd::get_translatable($current_component_tipo);
-						$ar_lang			= ($is_translatable === false)
+						$translatable	= RecordObj_dd::get_translatable($current_component_tipo);
+						$ar_lang		= ($translatable === false)
 							? [DEDALO_DATA_NOLAN]
 							: DEDALO_PROJECTS_DEFAULT_LANGS;
 
@@ -3610,9 +3610,10 @@ class section extends common {
 	/**
 	* GET_TM_CONTEXT
 	* Build specific context when section is in 'tm' (time machine) mode
+	* @param int permissions
 	* @return array $context
 	*/
-	public function get_tm_context($permissions) : array {
+	public function get_tm_context(int $permissions) : array {
 
 		// short vars
 			$rqo			= dd_core_api::$rqo; // from current client request
@@ -3703,7 +3704,8 @@ class section extends common {
 						'section_tipo'	=> $item->section_tipo, // this tipo
 						'label'			=> $item->label,
 						'mode'			=> $item->mode, // 'list',
-						'parent'		=> $item->parent // this tipo
+						'parent'		=> $item->parent, // this tipo
+						'translatable'	=> RecordObj_dd::get_translatable($item->tipo)
 					]
 				);
 				$context[] = $current_dd_object;
@@ -3713,13 +3715,16 @@ class section extends common {
 				// current time machine component/s
 				$component_context = (function($tipo, $section_tipo, $lang) {
 
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
-																	 $tipo,
-																	 null,
-																	 'list',
-																	 $lang,
-																	 $section_tipo);
+					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$component		= component_common::get_instance(
+						$modelo_name,
+						$tipo,
+						null,
+						'list',
+						$lang,
+						$section_tipo
+					);
+
 					// get component json
 						$get_json_options = new stdClass();
 							$get_json_options->get_context	= true;
