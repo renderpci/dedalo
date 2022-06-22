@@ -92,7 +92,7 @@ const get_content_data_edit = async function(self) {
 
 	// media_component
 		self.media_component.mode = 'player'
-		await self.media_component.build(true)
+		await self.media_component.build(false)
 		const media_component_node = await self.media_component.render();
 		right_container.appendChild(media_component_node)
 
