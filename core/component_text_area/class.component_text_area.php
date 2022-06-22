@@ -1555,12 +1555,12 @@ class component_text_area extends component_common {
 					$note_section_tipo		= $locator->section_tipo;
 					$note_section_id		= $locator->section_id;
 
-					$translatable			= RecordObj_dd::get_translatable($note_component_tipo);
+					$is_translatable		= RecordObj_dd::get_translatable($note_component_tipo);
 					$current_component		= component_common::get_instance($note_component_model,
 																	 $note_component_tipo,
 																	 $note_section_id,
 																	 'list',
-																	 ($translatable) ? $lang : DEDALO_DATA_NOLAN,
+																	 ($is_translatable) ? $lang : DEDALO_DATA_NOLAN,
 																	 $note_section_tipo);
 					$dato		= $current_component->get_dato();
 					$note_type	= $current_ddo->id;
