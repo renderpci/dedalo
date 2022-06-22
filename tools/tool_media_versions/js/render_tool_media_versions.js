@@ -88,7 +88,7 @@ const get_content_data = async function(self) {
 		self.main_element_container = main_element_container
 
 	// versions_container
-		const versions_grid = get_versions_grid(self)
+		const versions_grid = render_versions_grid(self)
 		fragment.appendChild(versions_grid)
 
 	// content_data
@@ -105,10 +105,11 @@ const get_content_data = async function(self) {
 
 
 /**
-* GET_VERSIONS_GRID
+* RENDER_VERSIONS_GRID
+* @param object self
 * @return DOM node
 */
-const get_versions_grid = function(self) {
+const render_versions_grid = function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -193,7 +194,7 @@ const get_versions_grid = function(self) {
 
 
 	return fragment
-};//end get_versions_grid
+};//end render_versions_grid
 
 
 
@@ -288,7 +289,7 @@ const get_line_file_exists = function(ar_quality, self) {
 						class_name		: 'button media',
 						parent			: file_info_node
 					})
-					button_file_av.addEventListener("click", async function() {
+					button_file_av.addEventListener('click', async function() {
 						self.node[0].classList.add('loading')
 						// change component av quality and refresh
 						self.main_element.quality = quality
@@ -409,7 +410,7 @@ const get_line_file_upload = function(ar_quality, self) {
 				class_name		: 'button upload',
 				parent			: file_info_node
 			})
-			button_file_upload.addEventListener("click", function(e){
+			button_file_upload.addEventListener('click', function(e){
 				e.stopPropagation()
 
 				// open tool_upload
@@ -490,7 +491,7 @@ const get_line_file_download = function(ar_quality, self) {
 					class_name		: 'button download',
 					parent			: file_info_node
 				})
-				button_file_download.addEventListener("click", function(){
+				button_file_download.addEventListener('click', function(){
 					// open trigger call in new window
 
 					// url
@@ -568,7 +569,7 @@ const get_line_file_delete = function(ar_quality, self) {
 					class_name		: 'button delete',
 					parent			: file_info_node
 				})
-				button_file_download.addEventListener("click", async function(){
+				button_file_download.addEventListener('click', async function(){
 					self.node[0].classList.add('loading')
 					// exec delete_file
 					const response = await self.delete_file(quality)
@@ -589,6 +590,8 @@ const get_line_file_delete = function(ar_quality, self) {
 
 /**
 * GET_LINE_BUILD_VERSION
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_build_version = function(ar_quality, self) {
@@ -622,47 +625,53 @@ const get_line_build_version = function(ar_quality, self) {
 				parent			: fragment
 			})
 
-			if (quality!=='original') {
-				const button_build_version = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button gear',
-					parent			: file_info_node
-				})
-				button_build_version.addEventListener("click", async function(){
-					self.node[0].classList.add('loading')
-					// exec build_version
-					const result = await self.build_version(quality)
-					if (result===true) {
+			// exclude original quality button from list
+				if (quality==='original') {
+					continue;
+				}
 
-						// building
-						button_build_version.remove()
+			const button_build_version = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button gear',
+				parent			: file_info_node
+			})
+			button_build_version.addEventListener('click', async function() {
 
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'blink',
-							inner_html		: get_label.procesando || 'Processing',
-							parent			: file_info_node
-						})
-						function check_file() {
-							setTimeout(async function(){
-								const files_info = await self.get_files_info()
-								const found = files_info.find(el => el.quality===quality)
-								if (found && found.url) {
-									// processing_label.remove()
-									// button_build_version.classList.remove('hide')
-									self.main_element_quality = quality
-									self.refresh()
-								}else{
-									// check again after 5 sec
-									check_file()
-								}
-							}, 5000)
-						}
-						check_file()
+				self.node[0].classList.add('loading')
+				// exec build_version
+				const result = await self.build_version(quality)
+				if (result===true) {
+
+					// building
+					button_build_version.remove()
+
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'blink',
+						inner_html		: get_label.procesando || 'Processing',
+						parent			: file_info_node
+					})
+					function check_file() {
+						setTimeout(async function(){
+							const files_info = await self.get_files_info()
+							const found = files_info.find(el => el.quality===quality)
+							if (found && found.url) {
+								// processing_label.remove()
+								// button_build_version.classList.remove('hide')
+								self.main_element_quality = quality
+								self.refresh({
+									build_autoload : false
+								})
+							}else{
+								// check again after 5 sec
+								check_file()
+							}
+						}, 5000)
 					}
-					self.node[0].classList.remove('loading')
-				})
-			}
+					check_file()
+				}
+				self.node[0].classList.remove('loading')
+			})
 		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
@@ -714,7 +723,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 					class_name		: 'button repair',
 					parent			: file_info_node
 				})
-				button_build_version.addEventListener("click", async function(){
+				button_build_version.addEventListener('click', async function(){
 					self.node[0].classList.add('loading')
 					// exec conform_headers
 					const result = await self.conform_headers(quality)
@@ -777,7 +786,7 @@ const get_line_rotate = function(ar_quality, self) {
 					class_name		: 'button rotate',
 					parent			: file_info_node
 				})
-				button_rotate_left.addEventListener("click", async function(){
+				button_rotate_left.addEventListener('click', async function(){
 					self.node[0].classList.add('loading')
 					// exec rotate
 					const result = await self.rotate(quality, -90)
@@ -794,7 +803,7 @@ const get_line_rotate = function(ar_quality, self) {
 					class_name		: 'button rotate right',
 					parent			: file_info_node
 				})
-				button_rotate_right.addEventListener("click", async function(){
+				button_rotate_right.addEventListener('click', async function(){
 					self.node[0].classList.add('loading')
 					// exec rotate
 					const result = await self.rotate(quality, 90)
