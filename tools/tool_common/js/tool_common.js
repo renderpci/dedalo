@@ -186,7 +186,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							? el.lang // already exists
 							: (typeof el.is_translatable!=='undefined' && el.is_translatable===false)
 								? page_globals.dedalo_data_nolan // lg-nolan
-								: self.lang // current tool lang
+								: page_globals.dedalo_data_lang // current data lang (DEDALO_DATA_LANG)
 
 					ar_promises.push( new Promise(async (resolve) => {
 
