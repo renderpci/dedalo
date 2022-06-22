@@ -62,7 +62,7 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 const add_events = function(self, wrapper) {
 
 	// events delegated
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+	// update_value_, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id, update_value)
 		)
@@ -72,7 +72,7 @@ const add_events = function(self, wrapper) {
 			const changed_node = wrapper.querySelector('input[data-key="'+component.selected_key+'"]')
 		}
 
-	// add button element, subscription to the events
+	// edit_element_ add button element, subscription to the events
 		self.events_tokens.push(
 			event_manager.subscribe('edit_element_'+self.id, edit_element)
 		)
@@ -83,7 +83,7 @@ const add_events = function(self, wrapper) {
 			//input_element(changed_data.key, changed_data.value, inputs_container)
 		}
 
-	// remove button element, subscription to the events
+	// reset_element_ remove button element, subscription to the events
 		self.events_tokens.push(
 			event_manager.subscribe('reset_element_'+self.id, reset_element)
 		)
@@ -113,7 +113,7 @@ const add_events = function(self, wrapper) {
 						changed_data : changed_data,
 						refresh 	 : false
 					})
-					.then((api_response)=>{
+					.then(()=>{
 						//self.selected_key = e.target.dataset.key
 						// event to update the dom elements of the instance
 						event_manager.publish('update_value_'+self.id, self)
@@ -149,7 +149,7 @@ const add_events = function(self, wrapper) {
 							label  		 : self.get_checked_value_label(),//'All',
 							refresh 	 : true
 						})
-						.then((api_response)=>{
+						.then(()=>{
 							// rebuild and save the component
 							// event_manager.publish('reset_element_'+self.id, self)
 							// event_manager.publish('save_component_'+self.id, self)
@@ -198,6 +198,7 @@ const get_content_data_edit = function(self) {
 	// short vars
 		const datalist	= self.data.datalist
 		// const mode		= self.mode
+		console.log("self:",self);
 
 	const fragment = new DocumentFragment()
 
@@ -362,20 +363,20 @@ const get_input_element_edit = (i, current_value, self) => {
 		}
 
 	// show_on_active
-		const show_on_active = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'show_on_active',
-			parent			: li
-		})
+		// const show_on_active = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'show_on_active',
+		// 	parent			: li
+		// })
 
 
 	// developer_info
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'developer_info',
-			text_content	: `[${section_id}]`,
-			parent			: show_on_active
-		})
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'developer_info',
+		// 	text_content	: `[${section_id}]`,
+		// 	parent			: show_on_active
+		// })
 
 
 	// button_edit
