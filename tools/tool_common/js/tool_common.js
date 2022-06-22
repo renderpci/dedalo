@@ -419,7 +419,8 @@ const load_default_ddo_map = async function() {
 * @return promise: object component_instance
 */
 tool_common.prototype.load_component = async function(options) {
-	// console.log("load_component:",lang, mode, matrix_id);
+	// console.log("load_component options:", options);
+	// console.log("this:",this);
 
 	const self = this
 

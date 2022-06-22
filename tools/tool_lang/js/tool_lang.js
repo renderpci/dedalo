@@ -135,9 +135,9 @@ tool_lang.prototype.load_component = async function(lang) {
 	// to_delete_instances. Select instances with different lang to main_element
 		const to_delete_instances = self.ar_instances.filter(el => el.lang!==self.main_element.lang)
 
-
 	// context (clone and edit)
-		const context = Object.assign(clone(self.main_element.context),{
+		const source_context	= clone(self.main_element.context)
+		const context			= Object.assign(source_context, {
 			lang		: lang,
 			mode		: 'edit',
 			section_id	: self.main_element.section_id
