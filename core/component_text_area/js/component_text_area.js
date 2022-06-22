@@ -448,6 +448,12 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				unwrap_element(temp_elements[i]);
 			}
 
+		// remove spaecial bogus elements (<br data-mce-bogus="1">)
+			const bogus_elements		= cloned_text.querySelector('[data-mce-bogus="1"]')
+			const bogus_elements_len	= bogus_elements.length
+			for (let i = bogus_elements_len - 1; i >= 0; i--) {
+				bogus_elements[i].remove()
+			}
 
 	if(SHOW_DEBUG===true) {
 		//const end  	= new Date().getTime()
