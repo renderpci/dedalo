@@ -328,7 +328,7 @@ class component_image extends component_media_common {
 		}
 
 		// fallback default
-			if (is_null($image_id)) {
+			if (empty($image_id)) {
 				// $image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 				// flat locator as id
 				$locator = new locator();

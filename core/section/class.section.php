@@ -81,11 +81,20 @@ class section extends common {
 
 	/**
 	* GET_INSTANCE
-	* Singleton pattern
-	* @return object
+	* Cahce section instances (singleton pattern)
+	* @param string|int|null $section_id = null
+	* @param string|null $tipo = null
+	* @param string|null $modo = 'edit'
+	* @param bool $cache = true
+	*
+	* @return instance section
 	*/
 	public static function get_instance($section_id=null, string $tipo=null, string $modo='edit', bool $cache=true) : object {
 
+		if ($modo==1) {
+			throw new Exception("Error Processing Request", 1);
+
+		}
 		if (empty($tipo)) {
 			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
 		}
@@ -138,9 +147,9 @@ class section extends common {
 	* Si se le pasa sólo el tipo, se espera un listado (modo list)
 	* Si se le pasa sólo el section_id, se espera una ficha (modo edit)
 	*/
-	private function __construct($section_id=null, $tipo=false, $modo='edit') {
+	private function __construct($section_id=null, ?string $tipo=null, ?string $modo='edit') {
 
-		if ($tipo===false) {
+		if (empty($tipo)) {
 			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
 		}
 
@@ -153,9 +162,8 @@ class section extends common {
 			$this->lang			= DEDALO_DATA_NOLAN;
 			$this->section_id	= $section_id;
 			$this->tipo			= $tipo;
-			$this->modo			= $modo;
+			$this->modo			= $modo ?? 'edit';
 			$this->parent		= 0;
-
 
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
