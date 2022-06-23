@@ -2822,7 +2822,7 @@ abstract class component_common extends common {
 			return $this->section_obj;
 		}
 
-		$this->section_obj = section::get_instance($this->section_id, $this->section_tipo, true);
+		$this->section_obj = section::get_instance($this->section_id, $this->section_tipo, $this->modo, true);
 
 
 		return $this->section_obj;
