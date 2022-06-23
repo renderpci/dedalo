@@ -32,33 +32,46 @@ export const render_edit_component_portal = function() {
 /**
 * EDIT
 * Chose the view render module to generate DOM nodes
+* based on self.context.view value
 * @param object options
+* {
+* 	render_level : string full|content_data
+* }
 * @return DOM node wrapper | null
 */
 render_edit_component_portal.prototype.edit = async function(options) {
 
 	const self = this
 
+	// options
+		// const render_level = options.render_level
+
 	// view
 		const view	= self.context.view || 'table'
 
-	switch(view) {
+	// wrapper
+		let wrapper
+		switch(view) {
 
-		case 'line':
-			return render_edit_view_line.render(self, options)
+			case 'line':
+				wrapper = render_edit_view_line.render(self, options)
+				break;
 
-		case 'tree':
-			return render_edit_view_tree.render(self, options)
+			case 'tree':
+				wrapper = render_edit_view_tree.render(self, options)
+				break;
 
-		case 'mosaic':
-			return render_edit_view_mosaic.render(self, options)
+			case 'mosaic':
+				wrapper = render_edit_view_mosaic.render(self, options)
+				break;
 
-		case 'table':
-		default:
-			return render_edit_view_table.render(self, options)
-	}
+			case 'table':
+			default:
+				wrapper = render_edit_view_table.render(self, options)
+				break;
+		}
 
-	return null
+	return wrapper
 }//end edit
 
 
