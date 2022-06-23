@@ -1,4 +1,5 @@
-
+/*global SHOW_DEBUG, QUOTA_EXCEEDED_ERR */
+/*eslint no-undef: "error"*/
 
 
 /**
