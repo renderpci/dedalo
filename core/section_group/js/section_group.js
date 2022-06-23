@@ -37,7 +37,7 @@ export const section_group = function(){
 	this.id_variant		= null
 
 	return true
-};//end section_group
+}//end section_group
 
 
 
@@ -81,7 +81,7 @@ section_group.prototype.init = function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -105,7 +105,7 @@ section_group.prototype.init = function(options) {
 	// 		// UNDER CONSTRUCTION .... !!
 
 	// 	return panels_status
-	// };//end get_panels_status
+	// }//end get_panels_status
 
 
 
@@ -147,7 +147,7 @@ section_group.prototype.render = async function(assign=true){
 
 
 	return node
-};//end render
+}//end render
 */
 
 
@@ -194,7 +194,7 @@ section_group.prototype.load_context = function() {
 	//event_manager.subscribe('stateChange', () => self.render())
 
 	return js_promise
-};//end load_context
+}//end load_context
 */
 
 
@@ -225,7 +225,7 @@ section_group.prototype.get_context_childrens = function(){
 		})
 
 	return js_promise
-};//end get_context_childrens
+}//end get_context_childrens
 */
 
 

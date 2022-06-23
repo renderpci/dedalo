@@ -19,7 +19,7 @@
 export const render_tool_import_files = function() {
 
 	return true
-};//end render_tool_import_files
+}//end render_tool_import_files
 
 
 
@@ -64,7 +64,7 @@ render_tool_import_files.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end render_tool_import_files
+}//end render_tool_import_files
 
 
 
@@ -468,7 +468,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -994,7 +994,7 @@ const create_template = async function(self) {
 
 
 	return fragment
-};//end create_template
+}//end create_template
 
 
 
@@ -1018,7 +1018,7 @@ const get_temp_sections = async function(self){
 	}
 
 	return fragment
-};//end get_temp_sections
+}//end get_temp_sections
 
 
 
@@ -1057,6 +1057,6 @@ const set_import_mode = function (self, apply){
 	}
 
 	return true
-};//end set_import_mode
+}//end set_import_mode
 
 

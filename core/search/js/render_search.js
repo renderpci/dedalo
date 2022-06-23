@@ -19,7 +19,7 @@
 export const render_search = function() {
 
 	return true
-};//end render_section
+}//end render_section
 
 
 
@@ -84,7 +84,7 @@ render_search.prototype.list = async function() {
 
 
 	return filter_wrapper
-};//end list
+}//end list
 
 
 
@@ -230,7 +230,7 @@ render_search.prototype.render_base = function() {
 
 
 	return wrapper
-};//end render_base
+}//end render_base
 
 
 
@@ -401,7 +401,7 @@ render_search.prototype.render_base = function() {
 
 
 	// 	return true
-	// };//end render_components_list
+	// }//end render_components_list
 
 
 
@@ -439,7 +439,7 @@ const render_filter = function(options){
 
 
 	return search_group_container
-};//end render_filter
+}//end render_filter
 
 
 
@@ -529,7 +529,7 @@ render_search.prototype.render_search_buttons = function(){
 
 
 	return search_buttons_container
-};//end render_search_buttons
+}//end render_search_buttons
 
 
 
@@ -625,7 +625,7 @@ render_search.prototype.render_search_group = function(parent_div, options) {
 
 
 	return search_group
-};//end render_search_group
+}//end render_search_group
 
 
 
@@ -712,7 +712,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 
 
 	return true
-};//end build_search_component
+}//end build_search_component
 
 
 
@@ -839,7 +839,7 @@ render_search.prototype.render_user_preset_list = function(ar_elements, permissi
 
 
 	return ar_nodes
-};//end render_user_preset_list
+}//end render_user_preset_list
 
 
 
@@ -906,7 +906,7 @@ const render_sections_selector = (self) => {
 
 
 	return wrapper_sections_selector
-};//end render_sections_selector
+}//end render_sections_selector
 
 
 
@@ -985,7 +985,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 	return true
-};//end build_sections_check_boxes
+}//end build_sections_check_boxes
 
 
 
@@ -1024,7 +1024,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 		return true;
-	};//end toggle_search_panel
+	}//end toggle_search_panel
 
 
 
@@ -1061,7 +1061,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}
 
 		return true
-	};//end toggle_fields
+	}//end toggle_fields
 
 
 
@@ -1096,7 +1096,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 		return true
-	};//end toggle_presets
+	}//end toggle_presets
 
 
 
@@ -1132,7 +1132,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}
 
 		return true
-	};//end toggle_operator_value
+	}//end toggle_operator_value
 
 
 
@@ -1152,6 +1152,6 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		const localized = get_label[name] || ''
 
 		return localized
-	};//end localize_operator
+	}//end localize_operator
 
 

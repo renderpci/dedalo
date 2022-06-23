@@ -33,7 +33,7 @@ export const component_publication = function(){
 
 
 	return true
-};//end component_publication
+}//end component_publication
 
 
 

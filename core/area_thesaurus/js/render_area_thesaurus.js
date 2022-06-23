@@ -18,7 +18,7 @@
 export const render_area_thesaurus = function() {
 
 	return true
-};//end render_area_thesaurus
+}//end render_area_thesaurus
 
 
 
@@ -137,7 +137,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 
 	return wrapper
-};//end list
+}//end list
 
 
 
@@ -169,7 +169,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 
 	// 	return wrapper
-	// };//end edit
+	// }//end edit
 
 
 
@@ -310,7 +310,7 @@ const render_content_data = function(self) {
 
 
 	return content_data
-};//end render_content_data
+}//end render_content_data
 
 
 
@@ -415,7 +415,7 @@ const build_widget = (item, self) => {
 
 
 	return container
-};//end  build_widget
+}//end  build_widget
 
 
 
@@ -462,7 +462,7 @@ const print_response = (container, api_response) => {
 	container.classList.remove("preload")
 
 	return container
-};//end print_response
+}//end print_response
 
 
 
@@ -541,6 +541,6 @@ const get_buttons = function(self) {
 		ui.add_tools(self, buttons_wrapper)
 
 	return fragment
-};//end get_buttons
+}//end get_buttons
 
 

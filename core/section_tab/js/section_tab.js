@@ -38,7 +38,7 @@ export const section_tab = function(){
 	this.children		= null
 
 	return true
-};//end section_tab
+}//end section_tab
 
 
 
@@ -82,7 +82,7 @@ section_tab.prototype.init = function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -106,6 +106,6 @@ section_tab.prototype.get_panels_status = async function() {
 		// UNDER CONSTRUCTION .... !!
 
 	return panels_status
-};//end get_panels_status
+}//end get_panels_status
 
 

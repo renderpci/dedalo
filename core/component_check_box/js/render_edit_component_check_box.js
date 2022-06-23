@@ -17,7 +17,7 @@
 export const render_edit_component_check_box = function() {
 
 	return true
-};//end render_edit_component_check_box
+}//end render_edit_component_check_box
 
 
 
@@ -175,7 +175,7 @@ export const add_events = function(self, wrapper) {
 		})
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -252,6 +252,6 @@ export const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 

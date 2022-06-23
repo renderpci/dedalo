@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, JsonView */
+/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView */
 /*eslint no-undef: "error"*/
 
 
@@ -220,6 +220,8 @@ common.prototype.render = async function (options={}) {
 	// result_node render based in render_level
 		const result_node = await (async () => {
 			// console.warn("///////////////////// render_level:",render_level, self.id);
+			let result
+
 			// render_level
 			switch(render_level) {
 
@@ -282,7 +284,7 @@ common.prototype.render = async function (options={}) {
 						}//end for (let i = nodes_length - 1; i >= 0; i--)
 
 					// return the first edited node
-					return self.node[0]
+					result = self.node[0]
 					break;
 
 				case 'full':
@@ -291,9 +293,11 @@ common.prototype.render = async function (options={}) {
 						self.node.push(node)
 
 					// return the new created node
-					return node
+					result = node
 					break;
-			}
+			}//end switch(render_level)
+
+			return result
 		})()//end result_node fn
 
 	// event publish
@@ -1368,10 +1372,10 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 	// optional configuration to use when the serach will be builded
 		const sqo_options = {
-			filter_free			: filter_free,
-			fixed_filter		: fixed_filter,
-			filter_by_list		: filter_by_list,
-			operator 			: operator,
+			filter_free		: filter_free,
+			fixed_filter	: fixed_filter,
+			filter_by_list	: filter_by_list,
+			operator		: operator
 		}
 
 	// DDO_MAP

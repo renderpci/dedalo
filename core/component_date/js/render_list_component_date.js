@@ -15,7 +15,7 @@
 export const render_list_component_date = function() {
 
 	return true
-};//end render_list_component_date
+}//end render_list_component_date
 
 
 
@@ -39,6 +39,6 @@ render_list_component_date.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

@@ -17,7 +17,7 @@
 export const render_mini_component_security_access = function() {
 
 	return true
-};//end render_mini_component_security_access
+}//end render_mini_component_security_access
 
 
 
@@ -42,6 +42,6 @@ render_mini_component_security_access.prototype.mini = async function() {
 		})
 
 	return wrapper
-};//end mini
+}//end mini
 
 

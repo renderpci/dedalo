@@ -16,7 +16,7 @@
 export const render_mini_component_image = function() {
 
 	return true
-};//end render_mini_component_image
+}//end render_mini_component_image
 
 
 
@@ -52,6 +52,6 @@ render_mini_component_image.prototype.mini = function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

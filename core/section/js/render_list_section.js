@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEBUG, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -22,7 +22,7 @@
 export const render_list_section = function() {
 
 	return true
-};//end render_list_section
+}//end render_list_section
 
 
 
@@ -142,7 +142,7 @@ render_list_section.prototype.list = async function(options) {
 
 
 	return wrapper
-};//end list
+}//end list
 
 
 
@@ -188,7 +188,7 @@ const get_content_data = async function(ar_section_record, self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -225,7 +225,7 @@ const rebuild_columns_map = async function(self) {
 
 
 	return columns_map
-};//end rebuild_columns_map
+}//end rebuild_columns_map
 
 
 
@@ -620,7 +620,7 @@ const get_buttons = function(self) {
 
 
 	return fragment
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -691,7 +691,7 @@ const get_buttons = function(self) {
 
 
 		// 	return wrapper
-	// };//end list_tm
+	// }//end list_tm
 
 
 
@@ -708,5 +708,5 @@ const no_records_node = () => {
 	})
 
 	return node
-};//end no_records_node
+}//end no_records_node
 

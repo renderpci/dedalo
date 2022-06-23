@@ -13,7 +13,7 @@ if (!console.log) {
 		//if (SHOW_DEBUG===true) console.log(message)
 	}
 }
-/** @define {boolean} 
+/** @define {boolean}
 //var SHOW_DEBUG ;
 if (typeof(SHOW_DEBUG)==="undefined") {
 	var SHOW_DEBUG = false;
@@ -34,7 +34,7 @@ function dump(message, name) {
 
 /**
 * GET_INSTANCE
-* @return 
+* @return
 */
 var instances;
 var get_instance = function(object_data) {
@@ -64,8 +64,8 @@ var get_instance = function(object_data) {
 
 	console.log("instances",instances );
 	console.log("current_instance", current_instance);
-return current_instance;	
-};//end get_instance
+return current_instance;
+}//end get_instance
 
 
 
@@ -135,14 +135,14 @@ var common = new function() {
 			// DATA : Only change data lang and leave unsync application lang
 			dedalo_data_lang 			= new_lang;
 		}
-		
+
 		const trigger_url  = this.trigger_url
 		const trigger_vars = {
 				mode 					: 'change_lang',
 				top_tipo				: page_globals.top_tipo,
 				dedalo_application_lang : dedalo_application_lang,
 				dedalo_data_lang 		: dedalo_data_lang
-			  }		
+			  }
 
 		//return console.log("trigger_vars",trigger_vars,this.trigger_url);
 		const html_page_wrap = document.getElementById("html_page_wrap")
@@ -150,7 +150,7 @@ var common = new function() {
 
 		const js_promise = common.get_json_data(trigger_url, trigger_vars).then(
 			function(response){
-				if(SHOW_DEBUG===true) {				
+				if(SHOW_DEBUG===true) {
 					console.log(response)
 				}
 
@@ -167,7 +167,7 @@ var common = new function() {
 				html_page.loading_content(html_page_wrap, 0)
 			})
 
-		return js_promise		
+		return js_promise
 	}//end jump_select_lang
 
 
@@ -333,11 +333,11 @@ var common = new function() {
 			for (let i = len - 1; i >= 0; i--) {
 				ar_html5_videos[i].pause();
 				ar_html5_videos[i].src='';
-				ar_html5_videos[i].removeAttribute("src");				
+				ar_html5_videos[i].removeAttribute("src");
 					//console.log("stoped video "+i);
 			}
 		}
-	};//end stop_all_videos
+	}//end stop_all_videos
 
 
 
@@ -347,37 +347,37 @@ var common = new function() {
 	* @return Promise
 	*/
 	this.get_json_data = function(trigger_url, trigger_vars, async, content_type) {
-		
+
 		const url = trigger_url;	//?mode=get_childrens_data';
-		
+
 		// ASYNC
 		if (typeof async==="undefined" || async!==false) {
 			async = true
 		}
-		
+
 		const data_send = JSON.stringify(trigger_vars)
-		//console.log("[get_json_data] data_send:",data_send); 
-	
+		//console.log("[get_json_data] data_send:",data_send);
+
 		// Create new promise with the Promise() constructor;
 		// This has as its argument a function
 		// with two parameters, resolve and reject
 		return new Promise(function(resolve, reject) {
 			// Standard XHR to load an image
 			const request = new XMLHttpRequest();
-				
-				// Open connection as post					
+
+				// Open connection as post
 					request.open("POST", url, async);
 
 				//request.timeout = 30 * 1000 * 60 ; // time in milliseconds
 				//request.ontimeout = function () {
 				//    console.error("The request for " + url + " timed out.");
 				//};
-	
+
 				// codification of the header for POST method, in GET no is necesary
 					if (typeof content_type==="undefined") {
 						content_type = "application/json"
 					}
-					request.setRequestHeader("Content-type", content_type); // application/json OR application/x-www-form-urlencoded				
+					request.setRequestHeader("Content-type", content_type); // application/json OR application/x-www-form-urlencoded
 
 				request.responseType = 'json';
 				// When the request loads, check whether it was successful
@@ -390,7 +390,7 @@ var common = new function() {
 					reject(Error('Reject error don\'t load successfully; error code: ' + request.statusText));
 				  }
 				};
-				request.onerror = function(e) {			
+				request.onerror = function(e) {
 				  // Also deal with the case when the entire request fails to begin with
 				  // This is probably a network error, so reject the promise with an appropriate message
 				  reject(Error('There was a network error. data_send: '+url+"?"+ data_send + "statusText:" + request.statusText));
@@ -399,7 +399,7 @@ var common = new function() {
 				// Send the request
 				request.send(data_send);
 		});
-	};//end get_json
+	}//end get_json
 
 
 
@@ -411,7 +411,7 @@ var common = new function() {
 	this.urldecode = function(url) {
 		let decoded_url = decodeURIComponent(url.replace(/\+/g, ' '))
 		return decoded_url
-	};//end urldecode
+	}//end urldecode
 
 
 
@@ -421,7 +421,7 @@ var common = new function() {
 
 
 
-	this.build_modal_dialog = function( options ) {		
+	this.build_modal_dialog = function( options ) {
 
 		// modal_dialog
 		let modal_dialog = document.createElement("div")
@@ -431,7 +431,7 @@ var common = new function() {
 				for (let i = options.modal_dialog_class.length - 1; i >= 0; i--) {
 					modal_dialog.classList.add(options.modal_dialog_class[i])
 				}
-			}		
+			}
 			modal_dialog.setAttribute("role", "document")
 			// Add
 			// div_note_wrapper.appendChild(modal_dialog)
@@ -458,13 +458,13 @@ var common = new function() {
 
 				let span = document.createElement("span")
 					span.setAttribute("aria-hidden", "true")
-					let t = document.createTextNode("x")					 
-					
+					let t = document.createTextNode("x")
+
 					// Add
 					span.appendChild(t)
 					// Add
 					close.appendChild(span)
-				
+
 				// Add options.header
 				if (typeof options.header!=="undefined" && options.header) {
 					modal_header.appendChild(options.header)
@@ -481,28 +481,28 @@ var common = new function() {
 					modal_body.appendChild(options.body)
 				}
 
-			// modal_footer	
-			if (typeof options.footer!=="undefined" && options.footer) {		
+			// modal_footer
+			if (typeof options.footer!=="undefined" && options.footer) {
 			let modal_footer = document.createElement("div")
 				modal_footer.classList.add('modal-footer')
 				// Add
 				modal_content.appendChild(modal_footer)
 
 				// Add options.footer
-				modal_footer.appendChild(options.footer)	
+				modal_footer.appendChild(options.footer)
 			}
-	
-		// modal_div	
+
+		// modal_div
 		let modal_div = document.createElement("div")
 			modal_div.id = options.id
 			modal_div.setAttribute("role", "dialog")
 			modal_div.setAttribute("tabindex", "-1")
-			
-			if (typeof options.animation!=="undefined" && options.animation===false) {			
+
+			if (typeof options.animation!=="undefined" && options.animation===false) {
 				modal_div.classList.add('modal')
 			}else{
 				modal_div.classList.add('modal','fade') // default
-			}						
+			}
 
 			// Add
 			modal_div.appendChild(modal_dialog)
@@ -523,7 +523,7 @@ var common = new function() {
 			return false;
 		}
 		return true;
-	};//end is_json
+	}//end is_json
 
 
 
@@ -551,9 +551,9 @@ var common = new function() {
 		const src					= element_options.src
 		const type					= element_options.type
 		const name					= element_options.name
-		
+
 		const element = document.createElement(element_type);
-	
+
 		// Add id property to element
 		if(id){
 			element.id = id;
@@ -563,7 +563,7 @@ var common = new function() {
 		if(element_type === 'a'){
 			element.href = 'javascript:;';
 		}
-		
+
 		// Class name. Add css classes property to element
 		if(class_name){
 			element.className = class_name
@@ -574,15 +574,15 @@ var common = new function() {
 			for(let key in style) {
 				element.style[key] = style[key]
 				//element.setAttribute("style", key +":"+ style[key]+";");
-			}		
+			}
 		}
 
 		// Title . Add title attribute to element
 		if(title_label){
 			element.title = title_label
 		}
-	
-		// Dataset Add dataset values to element		
+
+		// Dataset Add dataset values to element
 		if(data_set){
 			for (let key in data_set) {
 				element.dataset[key] = data_set[key]
@@ -600,7 +600,7 @@ var common = new function() {
 			for (let i = 0; i < len; i++) {
 				let function_name 		= custom_function_events[i].name
 				let event_type			= custom_function_events[i].type
-				let function_arguments	= custom_function_events[i].function_arguments					
+				let function_arguments	= custom_function_events[i].function_arguments
 
 				// Create event caller
 				this.create_custom_events(element, event_type, function_name, function_arguments)
@@ -613,8 +613,8 @@ var common = new function() {
 				}, false);
 				}*/
 		}//end if(custom_function_events){
-		
-		// Text content 
+
+		// Text content
 		if(text_node){
 			//element.appendChild(document.createTextNode(TextNode));
 			// Parse html text as object
@@ -624,7 +624,7 @@ var common = new function() {
 				let el = document.createElement('span')
 					el.innerHTML = " "+text_node // Note that prepend a space to span for avoid Chrome bug on selection
 				element.appendChild(el)
-			}			
+			}
 		}else if(text_content) {
 			element.textContent = text_content
 		}else if(inner_html) {
@@ -657,7 +657,7 @@ var common = new function() {
 
 
 		return element;
-	};//end create_dom_element
+	}//end create_dom_element
 
 
 
@@ -673,7 +673,7 @@ var common = new function() {
 		// Reserve array keys 0 and 1 to use with object and event later
 		function_arguments.unshift(null)
 		function_arguments.unshift(null)
-					
+
 		return element.addEventListener(event_type, function(event){
 
 			// Override arguments key 0 with actual DOM object
@@ -684,13 +684,13 @@ var common = new function() {
 
 			call_custom_function(function_name, function_arguments)
 		}, false);
-	};//end create_custom_events
+	}//end create_custom_events
 
 
 
 	/**
 	* UNIQ
-	*/ 
+	*/
 	this.uniq = function(a) {
 
 		var prims = {"boolean":{}, "number":{}, "string":{}}, objs = [];
@@ -702,7 +702,7 @@ var common = new function() {
 			else
 				return objs.indexOf(item) >= 0 ? false : objs.push(item);
 		});
-	};//end uniq
+	}//end uniq
 
 
 
@@ -713,7 +713,7 @@ var common = new function() {
 
 		if( !confirm('\nAre you sure to EXPORT and overwrite structure data in file \n "dedalo4_development_str.custom.backup" ?\n') ) {
 			return false
-		}		
+		}
 
 		// loading..
 			const wrapGeneral = document.getElementById("wrapGeneral")
@@ -746,7 +746,7 @@ var common = new function() {
 			if (!response) {
 				console.log("[common.export_str] Error. null response");
 			}else{
-				
+
 				if (log_messages) {
 					log_messages.innerHTML = response.msg
 				}else{
@@ -757,7 +757,7 @@ var common = new function() {
 		})
 
 		return js_promise
-	};//end export_str
+	}//end export_str
 
 
 
@@ -785,7 +785,7 @@ var common = new function() {
 			})
 			log_messages.classList.remove("hide")
 			log_messages.innerHTML = "Loading.. "
-	
+
 
 		const trigger = DEDALO_LIB_BASE_URL + "/backup/trigger.db_utils.php"
 		const trigger_vars = {
@@ -801,7 +801,7 @@ var common = new function() {
 			if (!response) {
 				console.log("[common.build_version_from_git_master] Error. null response");
 			}else{
-				
+
 				if (log_messages) {
 					log_messages.innerHTML = response.msg
 				}else{
@@ -812,7 +812,7 @@ var common = new function() {
 		})
 
 		return js_promise
-	};//end build_version_from_git_master
+	}//end build_version_from_git_master
 
 
 
@@ -821,14 +821,14 @@ var common = new function() {
 	* @return js_promise
 	*/
 	this.load_script = function(url, options) {
-		
+
 		const js_promise = new Promise(function(resolve, reject) {
 
-			const is_loaded = common.is_loaded_component_script(url, "script")				
+			const is_loaded = common.is_loaded_component_script(url, "script")
 			if (true===is_loaded) {
-				
+
 				resolve(url);
-			
+
 			}else{
 
 				// DOM tag
@@ -852,11 +852,11 @@ var common = new function() {
 
 				document.getElementsByTagName("head")[0].appendChild(element);
 			}
-			
+
 		});
 
 		return js_promise
-	};//end load_script
+	}//end load_script
 
 
 
@@ -865,20 +865,20 @@ var common = new function() {
 	* @return js_promise
 	*/
 	this.load_style = function(url) {
-			
+
 		const js_promise = new Promise(function(resolve, reject) {
 
-			const is_loaded = common.is_loaded_component_script(url, "link")				
+			const is_loaded = common.is_loaded_component_script(url, "link")
 			if (true===is_loaded) {
-				
+
 				resolve(url);
-			
+
 			}else{
 
 				// DOM tag
 				const element = document.createElement("link")
 					  element.rel  = "stylesheet"
-					  element.href = url;					
+					  element.href = url;
 
 				element.onload = function() {
 					resolve(url);
@@ -889,11 +889,11 @@ var common = new function() {
 
 				document.getElementsByTagName("head")[0].appendChild(element);
 			}
-			
+
 		});
 
 		return js_promise
-	};//end load_style
+	}//end load_style
 
 
 
@@ -902,7 +902,7 @@ var common = new function() {
 	* @return bool
 	*/
 	this.is_loaded_component_script = function(src, type) {
-		
+
 		if(type==="link") {
 
 			const links 	= document.getElementsByTagName("link");
@@ -919,10 +919,10 @@ var common = new function() {
 				if(scripts[i].getAttribute('src') === src) return true;
 			}
 		}
-		
-		
+
+
 		return false;
-	};//end is_loaded_component_script
+	}//end is_loaded_component_script
 
 
 
@@ -945,7 +945,7 @@ var common = new function() {
 	  if (typeof context[func]==="undefined") {
 		console.warn("Error: ignored function ", functionName, " not found in context ",context);
 		return false
-	  }	 
+	  }
 
 	  return context[func].apply(context, args);
 	}//end execute_function_by_name
@@ -955,7 +955,7 @@ var common = new function() {
 	* CREATE_NEW_CSS_SHEET
 	* create new css file and add to the page
 	* return the stylesheet that the components can change with you own needs.
-	* use: 
+	* use:
 	*	// create the new stylesheet
 	*	let new_CSS_sheet = common.create_new_CSS_sheet()
 	*	// inset the rule into the stylesheet
@@ -973,7 +973,7 @@ var common = new function() {
 		document.head.appendChild(style);
 
 		return style.sheet;
-	};//end create_new_CSS_sheet
+	}//end create_new_CSS_sheet
 
 
 	/**
@@ -988,7 +988,7 @@ var common = new function() {
 			case 'lg-eng':	locale='en-US'; 	break;
 			case 'lg-spa':	locale='es-ES'; 	break;
 			case 'lg-cat':	locale='ca'; 		break;
-			
+
 			default:
 				locale = lang_code.substring(3) + "-" + lang_code.substring(3).toUpperCase()
 				break;
@@ -1019,7 +1019,7 @@ var common = new function() {
 		}
 
 		return safe_number
-	};//end safe@RETURN OBJECT
+	}//end safe@RETURN OBJECT
 
 
 
@@ -1051,7 +1051,7 @@ var common = new function() {
 		const group = Array.from( groupBy(list, item => item[key]).values() )
 
 		return group;
-	};//end group_by_key
+	}//end group_by_key
 
 
 
@@ -1061,9 +1061,9 @@ var common = new function() {
 	* @return string
 	*/
 	this.addslashes = function(str) {
-	
-		return (str + '').replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0');	
-	};//end addslashes
+
+		return (str + '').replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0');
+	}//end addslashes
 
 
 
@@ -1124,20 +1124,20 @@ var confirm__DES__ = function (msg, callback, title) {
 
 		buttons: {
 			"Ok": function () {
-				
+
 				// Callback optional
 				//if (callback && typeof(callback) === "function") {
 				//	return callback();
-				//}			
+				//}
 				dfd.resolve('Success!');
 				$(this).dialog("close");
 			},
 			"Cancel": function () {
-				
+
 				// Callback optional
 				//if (callback && typeof(callback) === "function") {
 				//	callback(false);
-				//}			
+				//}
 				dfd.reject('Uh-oh!');
 				$(this).dialog("close");
 			}
@@ -1227,13 +1227,13 @@ function change_url_variable(url, keyString, replaceString) {
 	var query = url;
 	var vars  = query.split("&");
 	var len   = vars.length
-	for (var i = len - 1; i >= 0; i--) {		
+	for (var i = len - 1; i >= 0; i--) {
 		var pair = vars[i].split("=");
 		if (pair[0] == keyString) {
 			vars[i] = pair[0] + "=" + replaceString ;
 		}
 	}
-	
+
 	return vars.join("&");
 }
 // REMOVE_URL_VARIABLE
@@ -1264,7 +1264,7 @@ function build_url_arguments_from_vars( vars_obj ) {
 
 		pairs.push( key+'='+current_value )
 	}
-	
+
 	return pairs.join("&")
 }
 
@@ -1335,18 +1335,18 @@ function toogle_height( element, clipped_height ) {
 		//element.height = clipped_height
 		$(element).height(clipped_height)
 		element.style.overflow ='hidden'
-		element.style.cursor = 's-resize'			
+		element.style.cursor = 's-resize'
 	}
 	//console.log(real_height+" - "+current_height);
 }
 
 
 function resizeIframe(obj) {
-		
+
 	setTimeout(function(){
 		obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
 	},10)
-	
+
 	return true
 }
 
@@ -1359,7 +1359,7 @@ function resizeIframe(obj) {
 function exec_scripts_inside( element ) {
 
 	const scripts = Array.prototype.slice.call(element.getElementsByTagName("script"))
-	
+
 	const js_promise = new Promise((resolve, reject) => {
 
 		const start 			= new Date().getTime()
@@ -1392,10 +1392,10 @@ function exec_scripts_inside( element ) {
 				//console.log("->insertAndExecute: [done] "+" - script time: " +time+' ms' + ' (partial:'+ partial +')')
 			}
 		}
-	
+
 	});//end js_promise
 
-	
+
 	return js_promise;
 }//end exec_scripts_inside
 
@@ -1408,7 +1408,7 @@ function exec_scripts_inside( element ) {
 * @return bool
 */
 function insertAndExecute(element, content_obj) {
-		
+
 	if (content_obj) {
 
 		new Promise(function(resolve, reject) {
@@ -1417,7 +1417,7 @@ function insertAndExecute(element, content_obj) {
 			//while (element.firstChild) {
 			//	element.removeChild(element.firstChild);
 			//}
-	
+
 			// Add childrens
 			//if ( element.appendChild( content_obj.getElementsByTagName("div")[0] ) ) {
 			if ( element.innerHTML = content_obj.innerHTML ) {
@@ -1427,20 +1427,20 @@ function insertAndExecute(element, content_obj) {
 			}
 
 		}).then(function(result) {
-			
+
 			// Run scripts after dom changes are finish
 			exec_scripts_inside( element )
 
 		}, function(err) {
 			console.log("[insertAndExecute] error ",err);
-		});	
+		});
 
 		return true
 	}else{
 		console.error("[common.insertAndExecute] ERROR content_obj is null")
 
 		return false
-	}	
+	}
 }//end insertAndExecute
 
 
@@ -1482,7 +1482,7 @@ var propagate_url_var = function( url_var_name, element ) {
 		return true
 	}
 	return false
-};//end propagate_url_var
+}//end propagate_url_var
 
 
 
@@ -1494,7 +1494,7 @@ var propagate_url_var = function( url_var_name, element ) {
 function call_custom_function(function_name, function_arguments) {
 	var objects = function_name.split(".");
 	var obj = this;
-	
+
 	const len = objects.length
 	//for (var i = 0, len; i < len && obj; i++) {
 	for (let i = 0; i < len; i++) {
@@ -1625,5 +1625,5 @@ function when_in_dom(node, callback) {
 	observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
 
 	return observer
-};//end  when_in_dom
+}//end  when_in_dom
 

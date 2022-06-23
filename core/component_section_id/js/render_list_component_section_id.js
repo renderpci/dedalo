@@ -15,7 +15,7 @@
 export const render_list_component_section_id = function() {
 
 	return true
-};//end render_list_component_section_id
+}//end render_list_component_section_id
 
 
 
@@ -37,6 +37,4 @@ render_list_component_section_id.prototype.list = function() {
 		})
 
 	return wrapper
-};//end list
-
-
+}//end list

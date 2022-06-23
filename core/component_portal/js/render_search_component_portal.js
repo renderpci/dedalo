@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -21,7 +21,7 @@
 export const render_search_component_portal = function() {
 
 	return true
-};//end render_search_component_portal
+}//end render_search_component_portal
 
 
 
@@ -53,7 +53,7 @@ render_search_component_portal.prototype.search = async function(options) {
 		add_events(self, wrapper)
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -140,7 +140,7 @@ export const add_events = function(self, wrapper) {
 
 
 	return true
-};//end  add_events
+}//end  add_events
 
 
 
@@ -216,7 +216,7 @@ export const build_content_data = function(self) {
 
 
 	return content_data
-};//end build_content_data
+}//end build_content_data
 
 
 
@@ -252,6 +252,6 @@ const get_input_element = function(current_section_record){
 		})
 
 	return li
-};//end  get_input_element
+}//end  get_input_element
 
 

@@ -16,7 +16,7 @@
 export const render_list_component_svg = function() {
 
 	return true
-};//end render_list_component_svg
+}//end render_list_component_svg
 
 
 
@@ -39,7 +39,7 @@ render_list_component_svg.prototype.list = function() {
 		wrapper.appendChild(fragment)
 
 	return wrapper
-};//end list
+}//end list
 
 
 

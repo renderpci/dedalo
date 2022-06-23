@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -103,7 +103,7 @@ export const render_column_id = function(options){
 						limit				: 1,
 						filter_by_locators	: [{
 							section_tipo	: section_tipo,
-							section_id		: section_id,
+							section_id		: section_id
 						}]
 					}
 				}

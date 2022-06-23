@@ -37,7 +37,7 @@ export const component_json = function(){
 	this.editors		= []
 
 	return true
-};//end component_json
+}//end component_json
 
 
 
@@ -94,7 +94,7 @@ component_json.prototype.load_editor_files = function() {
 
 
 	return js_promise
-};//end load_editor_files
+}//end load_editor_files
 
 
 
@@ -115,7 +115,7 @@ component_json.prototype.set_value = async function(value) {
 	on_change(self, editor)
 
 	return true
-};//end set_value
+}//end set_value
 
 
 
@@ -194,7 +194,7 @@ component_json.prototype.save_sequence = async function(editor) {
 				resolve(save_response)
 			})
 		})
-};//end save_sequence
+}//end save_sequence
 
 
 
@@ -237,7 +237,7 @@ component_json.prototype.save_sequence = async function(editor) {
 	// 	//event_manager.subscribe('stateChange', () => self.render())
 
 	// 	return js_promise
-	// };//end load_context
+	// }//end load_context
 
 
 
@@ -268,7 +268,7 @@ component_json.prototype.save_sequence = async function(editor) {
 	// 		})
 
 	// 	return js_promise
-	// };//end load_data
+	// }//end load_data
 
 
 
@@ -309,6 +309,6 @@ component_json.prototype.save_sequence = async function(editor) {
 	// 				//},1000)
 	// 		})
 	// 	})
-	// };//end render
+	// }//end render
 
 

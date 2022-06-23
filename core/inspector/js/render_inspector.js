@@ -21,7 +21,7 @@
 export const render_inspector = function() {
 
 	return true
-};//end render_inspector
+}//end render_inspector
 
 
 
@@ -80,7 +80,7 @@ render_inspector.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -123,7 +123,7 @@ const add_events = (wrapper, self) => {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -334,7 +334,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -444,7 +444,7 @@ export const render_section_info = function(self) {
 	container.appendChild(fragment)
 
 	return fragment
-};//end render_section_info
+}//end render_section_info
 
 
 
@@ -595,7 +595,7 @@ export const render_component_info = function(self, component) {
 
 
 	return fragment
-};//end render_component_info
+}//end render_component_info
 
 
 
@@ -647,7 +647,7 @@ const render_element_info = function(self) {
 
 
 	return element_info_wrap
-};//end render_element_info
+}//end render_element_info
 
 
 
@@ -699,7 +699,7 @@ const render_project_block = function(self) {
 
 
 	return project_wrap
-};//end render_project_block
+}//end render_project_block
 
 
 
@@ -769,7 +769,7 @@ const render_indexation_list = function(self) {
 
 
 	return indexation_list_container
-};//end render_indexation_list
+}//end render_indexation_list
 
 
 
@@ -864,7 +864,7 @@ const render_relation_list = function(self) {
 
 
 	return relation_list_container
-};//end render_relation_list
+}//end render_relation_list
 
 
 
@@ -948,7 +948,7 @@ const render_time_machine_list = function(self) {
 
 
 	return time_machine_list_wrap
-};//end render_time_machine_list
+}//end render_time_machine_list
 
 
 
@@ -1005,7 +1005,7 @@ const render_activity_info = function(self) {
 
 
 	return wrapper
-};//end render_activity_info
+}//end render_activity_info
 
 
 
@@ -1035,6 +1035,6 @@ const open_ontology_window = function(tipo) {
 	}
 
 	return true
-};//end open_ontology_window
+}//end open_ontology_window
 
 

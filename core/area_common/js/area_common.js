@@ -16,7 +16,7 @@
 * AREA_COMMON
 */
 export const area_common = function() {
-	
+
 	this.id
 
 	// element properties declare
@@ -38,7 +38,7 @@ export const area_common = function() {
 	this.id_variant
 
 	return true
-};//end area_common
+}//end area_common
 
 
 
@@ -95,4 +95,4 @@ area_common.prototype.init = async function(options) {
 
 
 	return true
-};//end init
+}//end init

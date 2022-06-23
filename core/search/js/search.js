@@ -48,7 +48,7 @@ export const search = function() {
 	this.model		= 'search'
 
 	return true
-};//end search
+}//end search
 
 
 
@@ -171,7 +171,7 @@ search.prototype.init = async function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -290,7 +290,7 @@ search.prototype.build = async function(){
 		self.status = 'builded'
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -346,7 +346,7 @@ search.prototype.build = async function(){
 
 
 	// 	return filter_wrapper
-	// };//end render
+	// }//end render
 
 
 
@@ -392,7 +392,7 @@ search.prototype.build = async function(){
 
 
 	// 	return components
-	// };//end get_section_elements_context
+	// }//end get_section_elements_context
 
 
 
@@ -437,7 +437,7 @@ search.prototype.build = async function(){
 
 
 	// 	return components
-	// };//end load_component_context
+	// }//end load_component_context
 
 
 
@@ -476,7 +476,7 @@ search.prototype.build = async function(){
 	// 	})
 
 	// 	return calculate_component_path
-	// };//end calculate_component_path
+	// }//end calculate_component_path
 
 
 
@@ -571,7 +571,7 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 
 	return dom_group
-};//end build_dom_group
+}//end build_dom_group
 
 
 
@@ -646,7 +646,7 @@ search.prototype.get_component_instance = async function(options) {
 
 
 	return component_instance
-};//end get_component_instance
+}//end get_component_instance
 
 
 
@@ -688,7 +688,7 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 
 	return json_query_obj
-};//end parse_dom_to_json_filter
+}//end parse_dom_to_json_filter
 
 
 
@@ -772,10 +772,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			}
 
 		}
-	};//end for (let i = 0; i < len; i++) {
+	}//end for (let i = 0; i < len; i++) {
 
 	return query_group
-};//end recursive_groups
+}//end recursive_groups
 
 
 
@@ -801,7 +801,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	}
 
 	return operator_value
-};//end get_search_group_operator
+}//end get_search_group_operator
 
 
 
@@ -879,7 +879,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	// 		}
 
 	// 	return search_json_object
-	// };//end get_search_json_object
+	// }//end get_search_json_object
 
 
 
@@ -938,7 +938,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 
 		return true
-	};//end update_state
+	}//end update_state
 
 
 
@@ -964,7 +964,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 			})
 
 		return api_response
-	};//end save_temp_preset
+	}//end save_temp_preset
 
 
 
@@ -991,7 +991,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 		const js_promise = update_section(section, filter_obj, self)
 
 		return js_promise
-	};//end exec_search
+	}//end exec_search
 
 
 
@@ -1016,7 +1016,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 			const js_promise = update_section(section, filter_obj, self)
 
 		return js_promise
-	};//end show_all
+	}//end show_all
 
 
 
@@ -1085,7 +1085,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 		self.render_search_buttons()
 
 		return true
-	};//end reset
+	}//end reset
 
 
 
@@ -1120,7 +1120,7 @@ search.prototype.track_show_panel = async function(options) {
 		}, 'context')
 
 	return true
-};//end track_show_panel
+}//end track_show_panel
 
 
 
@@ -1138,7 +1138,7 @@ search.prototype.get_panels_status = async function() {
 		const panels_status = await current_data_manager.get_local_db_data(self.id, 'context')
 
 	return panels_status
-};//end get_panels_status
+}//end get_panels_status
 
 
 
@@ -1169,7 +1169,7 @@ search.prototype.get_panels_status = async function() {
 
 	// 	console.log("cookie_track is open:",name,cookie_track);
 	// 	return cookie_track
-	// };//end cookie_track
+	// }//end cookie_track
 
 
 
@@ -1192,7 +1192,7 @@ search.prototype.search_from_enter_key = function(button_submit) {
 	}
 
 	return true
-};//end search_from_enter_key
+}//end search_from_enter_key
 
 
 
@@ -1208,7 +1208,7 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 
 	return is_empty
-};//end filter_is_empty
+}//end filter_is_empty
 
 
 
@@ -1229,6 +1229,6 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 
 	// 	return true;
-	// };//end init_tipology_selector
+	// }//end init_tipology_selector
 
 

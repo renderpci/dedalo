@@ -41,7 +41,7 @@ export const page = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -301,7 +301,7 @@ page.prototype.init = async function(options) {
 
 
  	return true
-};//end init
+}//end init
 
 
 
@@ -319,7 +319,7 @@ page.prototype.build = async function() {
 		self.status = 'builded'
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -383,7 +383,7 @@ page.prototype.add_events = function() {
 		})//end keydown event
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -426,7 +426,7 @@ page.prototype.add_events = function() {
 	// 		console.log("page self.ar_instances:",self.ar_instances);
 
 	// 	return self.ar_instances
-	// };//end get_ar_instances
+	// }//end get_ar_instances
 
 
 
@@ -473,7 +473,7 @@ export const instantiate_page_element = function(self, ddo) {
 		const instance_promise = get_instance(instance_options)
 
 	return instance_promise
-};//end instantiate_page_element
+}//end instantiate_page_element
 
 
 
@@ -516,4 +516,4 @@ export const instantiate_page_element = function(self, ddo) {
 	// 		history.pushState(state, title, url)
 
 	// 	return true
-	// };//end user_navigation
+	// }//end user_navigation

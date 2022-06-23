@@ -17,7 +17,7 @@
 export const render_list_component_security_access = function() {
 
 	return true
-};//end render_list_component_security_access
+}//end render_list_component_security_access
 
 
 
@@ -44,6 +44,6 @@ render_list_component_security_access.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

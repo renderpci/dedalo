@@ -38,7 +38,7 @@ export const tool_media_versions = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -74,7 +74,7 @@ tool_media_versions.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -115,7 +115,7 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -160,7 +160,7 @@ tool_media_versions.prototype.get_files_info = async function() {
 				resolve(result)
 			})
 		})
-};//end get_files_info
+}//end get_files_info
 
 
 
@@ -211,7 +211,7 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 				resolve(result)
 			})
 		})
-};//end delete_file
+}//end delete_file
 
 
 
@@ -262,7 +262,7 @@ tool_media_versions.prototype.build_version = async function(quality) {
 				resolve(result)
 			})
 		})
-};//end build_version
+}//end build_version
 
 
 
@@ -313,7 +313,7 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 				resolve(result)
 			})
 		})
-};//end conform_headers
+}//end conform_headers
 
 
 
@@ -367,4 +367,4 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 				resolve(result)
 			})
 		})
-};//end rotate
+}//end rotate

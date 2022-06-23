@@ -17,7 +17,7 @@
 export const render_search_component_date = function() {
 
 	return true
-};//end render_search_component_date
+}//end render_search_component_date
 
 
 
@@ -45,7 +45,7 @@ render_search_component_date.prototype.search = async function() {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -163,7 +163,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -210,7 +210,7 @@ const get_content_data_search = function(self) {
 
 
 	return content_data
-};//end get_content_data_search
+}//end get_content_data_search
 
 
 
@@ -248,7 +248,7 @@ const get_content_data_search = function(self) {
 
 
 	// 	return input_element
-	// };//end get_input_element_edit
+	// }//end get_input_element_edit
 
 
 
@@ -282,7 +282,7 @@ const get_content_data_search = function(self) {
 	// 		})
 
 	// 	return true
-	// };//end get_input_element_range
+	// }//end get_input_element_range
 
 
 
@@ -351,7 +351,7 @@ const get_content_data_search = function(self) {
 	// 	})
 
 	// 	return true
-	// };//end input_element_period
+	// }//end input_element_period
 
 
 
@@ -375,7 +375,7 @@ const get_content_data_search = function(self) {
 	// 	})
 
 	// 	return true
-	// };//end input_element_time
+	// }//end input_element_time
 
 
 
@@ -397,7 +397,7 @@ const get_content_data_search = function(self) {
 	// 	})
 
 	// 	return input
-	// };//end input_element_default
+	// }//end input_element_default
 
 
 
@@ -420,6 +420,6 @@ const get_content_data_search = function(self) {
 	// 		})
 
 	// 	return input
-	// };//end get_input_element_search
+	// }//end get_input_element_search
 
 

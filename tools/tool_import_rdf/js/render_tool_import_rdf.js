@@ -16,7 +16,7 @@
 export const render_tool_import_rdf = function() {
 
 	return true
-};//end render_tool_import_rdf
+}//end render_tool_import_rdf
 
 
 
@@ -55,7 +55,7 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 
 
 	return wrapper
-};//end render_tool_import_rdf
+}//end render_tool_import_rdf
 
 
 
@@ -157,7 +157,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -198,6 +198,6 @@ const render_component_dato = function(self) {
 	}
 
 	return source_component_container
-};//end render_component_dato
+}//end render_component_dato
 
 

@@ -18,7 +18,7 @@
 export const render_tool_time_machine = function() {
 
 	return true
-};//end render_tool_time_machine
+}//end render_tool_time_machine
 
 
 
@@ -87,7 +87,7 @@ render_tool_time_machine.prototype.edit = async function (options) {
 
 
 	return wrapper
-};//end render_tool_time_machine
+}//end render_tool_time_machine
 
 
 
@@ -214,7 +214,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-};//end content_data_edit
+}//end content_data_edit
 
 
 
@@ -259,6 +259,6 @@ export const add_component = async (self, component_container, lang_value, label
 
 
 	return true
-};//end add_component
+}//end add_component
 
 

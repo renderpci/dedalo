@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/* global Promise, SHOW_DEBUG, structuredClone */
 /*eslint no-undef: "error"*/
 
 
@@ -219,7 +219,7 @@ export function open_window_with_post(url, data) {
 	document.body.removeChild(form);
 
 	return false;
-};//end open_window_with_post
+}//end open_window_with_post
 
 
 
@@ -266,7 +266,7 @@ export function bytes_format(bytes) {
 	}
 
 	return result
-};//end bytes_format
+}//end bytes_format
 
 
 
@@ -288,7 +288,7 @@ export function printf(format) {
 			? args[number]
 			: match
 	})
-};//end printf
+}//end printf
 
 
 

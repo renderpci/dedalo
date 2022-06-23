@@ -15,7 +15,7 @@
 export const render_mini_component_radio_button = function() {
 
 	return true
-};//end render_mini_component_radio_button
+}//end render_mini_component_radio_button
 
 
 /**
@@ -37,6 +37,4 @@ render_mini_component_radio_button.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
-
-
+}//end mini

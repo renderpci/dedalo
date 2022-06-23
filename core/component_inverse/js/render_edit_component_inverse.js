@@ -10,7 +10,7 @@
 export const render_edit_component_inverse = function() {
 
 	return true
-};//end render_edit_component_inverse
+}//end render_edit_component_inverse
 
 
 
@@ -50,7 +50,7 @@ render_edit_component_inverse.prototype.edit = function() {
 		})
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -88,6 +88,6 @@ const get_input_element = (i, current_value) => {
 		}
 
 	return li
-};//end get_input_element
+}//end get_input_element
 
 

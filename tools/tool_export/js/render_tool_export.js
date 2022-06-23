@@ -19,7 +19,7 @@
 export const render_tool_export = function() {
 
 	return true
-};//end render_tool_export
+}//end render_tool_export
 
 
 
@@ -61,7 +61,7 @@ render_tool_export.prototype.edit = async function (options={render_level:'full'
 		// }
 
 	return wrapper
-};//end render_tool_export
+}//end render_tool_export
 
 
 
@@ -337,7 +337,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -466,6 +466,6 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 
 
 	return true
-};//end build_export_component
+}//end build_export_component
 
 

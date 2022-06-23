@@ -36,7 +36,7 @@ export const tool_posterframe = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -71,7 +71,7 @@ tool_posterframe.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -100,7 +100,7 @@ tool_posterframe.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -115,7 +115,7 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 	self.ar_identifying_image = self.ar_identifying_image || await self.get_ar_identifying_image();
 
 	return self.ar_identifying_image
-};//end get_ar_identifying_image
+}//end get_ar_identifying_image
 
 
 
@@ -161,7 +161,7 @@ tool_posterframe.prototype.create_posterframe = function(current_time) {
 				resolve(result)
 			})
 		})
-};//end create_posterframe
+}//end create_posterframe
 
 
 
@@ -209,7 +209,7 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 				resolve(result)
 			})
 		})
-};//end delete_posterframe
+}//end delete_posterframe
 
 
 
@@ -252,7 +252,7 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 				resolve(result)
 			})
 		})
-};//end get_ar_identifying_image
+}//end get_ar_identifying_image
 
 
 
@@ -302,6 +302,6 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 				resolve(result)
 			})
 		})
-};//end create_identifying_image
+}//end create_identifying_image
 
 

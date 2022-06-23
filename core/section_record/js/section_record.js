@@ -55,7 +55,7 @@ export const section_record = function() {
 
 
 	return true
-};//end section
+}//end section
 
 
 
@@ -127,7 +127,7 @@ section_record.prototype.init = async function(options) {
 
 
 	return self
-};//end init
+}//end init
 
 
 
@@ -270,7 +270,7 @@ section_record.prototype.get_ar_instances_edit = async function(){
 
 
 	return self.ar_instances
-};//end get_ar_instances_edit
+}//end get_ar_instances_edit
 
 
 
@@ -382,7 +382,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 
 	return self.ar_instances
-};//end get_ar_columns_instances_list
+}//end get_ar_columns_instances_list
 
 
 
@@ -534,7 +534,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 
 	// 	return self.ar_instances
-	// };//end get_ar_columns_instances
+	// }//end get_ar_columns_instances
 
 
 
@@ -594,7 +594,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 		}
 
 	return component_data
-};//end get_component_data
+}//end get_component_data
 
 
 
@@ -611,7 +611,7 @@ section_record.prototype.get_component_info = function(){
 										&& item.section_tipo===self.section_tipo)
 
 	return component_info
-};//end get_component_info
+}//end get_component_info
 
 
 
@@ -667,7 +667,7 @@ section_record.prototype.get_component_info = function(){
 	// 	// self.data.push(component_data.value)
 
 	// 	return component_data
-	// };//end get_component_relation_data
+	// }//end get_component_relation_data
 
 
 
@@ -682,7 +682,7 @@ section_record.prototype.get_component_info = function(){
 	// 	const context = self.context.filter(item => item.tipo===component_tipo && item.section_tipo===self.section_tipo)[0]
 
 	// 	return context
-	// };//end get_component_context
+	// }//end get_component_context
 
 
 
@@ -700,7 +700,7 @@ section_record.prototype.get_component_info = function(){
 	// 	return Promise.all([components]).then(function(){
 	// 		self.builded = true
 	// 	})
-	// };//end build
+	// }//end build
 
 
 
@@ -768,6 +768,6 @@ section_record.prototype.get_component_info = function(){
 
 
 	// 	return load_items_promise
-	// };//end load_items
+	// }//end load_items
 
 

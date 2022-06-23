@@ -10,7 +10,7 @@
 export const render_list_component_inverse = function() {
 
 	return true
-};//end render_list_component_inverse
+}//end render_list_component_inverse
 
 
 
@@ -39,6 +39,6 @@ render_list_component_inverse.prototype.list = function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

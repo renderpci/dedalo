@@ -185,6 +185,6 @@ export const render_components_list = function(options) {
 
 
 	return true
-};//end render_components_list
+}//end render_components_list
 
 

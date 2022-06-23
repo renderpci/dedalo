@@ -35,7 +35,7 @@ var button_delete = new function() {
 		document.body.appendChild(delete_dialog);
 
 		return true
-	};//end create_delete_dialog_div
+	}//end create_delete_dialog_div
 
 
 
@@ -162,7 +162,7 @@ var button_delete = new function() {
 
 
 		return modal_dialog
-	};//end build_delete_dialog
+	}//end build_delete_dialog
 
 
 
@@ -210,7 +210,7 @@ var button_delete = new function() {
 		})
 
 		return true
-	};//end open_delete_dialog
+	}//end open_delete_dialog
 
 
 
@@ -292,7 +292,7 @@ var button_delete = new function() {
 		//}
 
 		return true;
-	};//end Del
+	}//end Del
 
 
 
@@ -332,7 +332,7 @@ var button_delete = new function() {
 		})
 
 		//return js_promise
-	};//end delete_record_action
+	}//end delete_record_action
 
 
 
@@ -385,8 +385,8 @@ var button_delete = new function() {
 				}
 			})
 		return js_promise
-	};//end person_used
+	}//end person_used
 
 
 
-};//end button__delete
+}//end button__delete

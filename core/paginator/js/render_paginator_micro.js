@@ -15,7 +15,7 @@
 export const render_paginator_micro = function() {
 
 	return true
-};//end render_paginator_micro.js
+}//end render_paginator_micro.js
 
 
 
@@ -55,7 +55,7 @@ render_paginator_micro.prototype.micro = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -76,7 +76,7 @@ const add_events = (wrapper, self) => {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -129,7 +129,7 @@ const get_content_data = function(self) {
 			const paginator_first = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_first_icon',
-				parent			: paginator_div_links,
+				parent			: paginator_div_links
 			})
 			if(page_number>1) {
 				paginator_first.addEventListener("mousedown",function(){
@@ -143,7 +143,7 @@ const get_content_data = function(self) {
 			const paginator_prev = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_prev_icon',
-				parent			: paginator_div_links,
+				parent			: paginator_div_links
 			})
 			if(prev_page_offset>=0) {
 				paginator_prev.addEventListener("mousedown",function(){
@@ -211,6 +211,6 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 

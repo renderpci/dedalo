@@ -10,7 +10,7 @@
 export const render_mini_component_inverse = function() {
 
 	return true
-};//end render_mini_component_inverse
+}//end render_mini_component_inverse
 
 
 /**
@@ -38,6 +38,6 @@ render_mini_component_inverse.prototype.mini = function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

@@ -32,7 +32,7 @@ export const component_iri = function(){
 	this.node
 
 	return true
-};//end component_iri
+}//end component_iri
 
 
 
@@ -78,7 +78,7 @@ component_iri.prototype.open_iri = function(component_obj) {
 	window.open(iri, '_blank')
 
 	return true
-};//end open_iri
+}//end open_iri
 
 
 
@@ -102,7 +102,7 @@ component_iri.prototype.set_value = function(node, key) {
 		: null
 
 	return value
-};//end set_value
+}//end set_value
 
 
 
@@ -138,6 +138,6 @@ component_iri.prototype.set_value = function(node, key) {
 	// 		self.data.value = ar_value
 
 	// 	return true
-	// };//end set_value
+	// }//end set_value
 
 

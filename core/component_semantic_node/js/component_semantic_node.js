@@ -49,7 +49,7 @@ export const component_semantic_node = component_portal
 
 
 // 	return true
-// };//end component_semantic_node
+// }//end component_semantic_node
 
 
 
@@ -93,7 +93,7 @@ export const component_semantic_node = component_portal
 // 	//console.log("Yujuu! This is my component custom active test triggered after ui.active. id:", this.id )
 
 // 	return true
-// };//end active
+// }//end active
 
 
 

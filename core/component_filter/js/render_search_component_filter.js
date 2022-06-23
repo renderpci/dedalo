@@ -16,7 +16,7 @@
 export const render_search_component_filter = function() {
 
 	return true
-};//end render_search_component_filter
+}//end render_search_component_filter
 
 
 
@@ -41,7 +41,7 @@ render_search_component_filter.prototype.search = async function() {
 		add_events(self, wrapper)
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -130,7 +130,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -201,7 +201,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -231,7 +231,7 @@ const get_grouper_element = (i, datalist_item, self) => {
 		})
 
 	return grouper
-};//end get_grouper_element
+}//end get_grouper_element
 
 
 
@@ -289,6 +289,6 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return li
-};//end get_input_element
+}//end get_input_element
 
 

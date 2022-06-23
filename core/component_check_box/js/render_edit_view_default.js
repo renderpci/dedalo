@@ -20,7 +20,7 @@
 export const render_edit_view_default = function() {
 
 	return true
-};//end render_edit_view_default
+}//end render_edit_view_default
 
 
 
@@ -53,7 +53,7 @@ render_edit_view_default.render = async function(self, options) {
 		add_events(self, wrapper)
 
 	return wrapper
-};//end render
+}//end render
 
 
 
@@ -100,7 +100,7 @@ export const get_content_data_edit = function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -200,6 +200,6 @@ const get_input_element_edit = (i, current_value, self) => {
 
 
 	return li
-};//end get_input_element_edit
+}//end get_input_element_edit
 
 

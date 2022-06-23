@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG */
+/* global get_label, Promise, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -43,7 +43,7 @@ export const paginator = function() {
 	this.id_variant			= null
 
 	return true
-};//end paginator
+}//end paginator
 
 
 
@@ -91,7 +91,7 @@ paginator.prototype.init = function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -147,7 +147,7 @@ paginator.prototype.build = async function(){
 
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -169,7 +169,7 @@ paginator.prototype.destroy = async function(){
 	result.delete_self = delete_events
 
 	return result
-};//end destroy
+}//end destroy
 
 
 
@@ -201,7 +201,7 @@ paginator.prototype.get_total = async function() {
 
 	// console.warn(`++++++++++++++++++++++++++++++++ RESOLVED ${self.caller.tipo} total:`,total);
 	return total
-};//end get_total
+}//end get_total
 
 
 
@@ -213,7 +213,7 @@ paginator.prototype.get_limit = function() {
 	const limit = this.caller.rqo.sqo.limit
 
 	return limit
-};//end get_limit
+}//end get_limit
 
 
 
@@ -225,7 +225,7 @@ paginator.prototype.get_offset = function() {
 	const offset = this.caller.rqo.sqo.offset
 
 	return offset
-};//end get_offset
+}//end get_offset
 
 
 
@@ -268,7 +268,7 @@ paginator.prototype.paginate = async function(offset) {
 
 
 	return true
-};//end paginate
+}//end paginate
 
 
 
@@ -285,7 +285,7 @@ paginator.prototype.get_page_number = function(item_per_page, offset) {
 	}
 
 	return 1;
-};//end get_page_number
+}//end get_page_number
 
 
 
@@ -307,7 +307,7 @@ paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, t
 	}
 
 	return page_row_end;
-};//end get_page_row_end
+}//end get_page_row_end
 
 
 
@@ -341,7 +341,7 @@ paginator.prototype.go_to_page_json = function(page) {
 
 
 	return true
-};//end go_to_page_json
+}//end go_to_page_json
 
 
 
@@ -359,7 +359,7 @@ paginator.prototype.navigate_to_next_page = function() {
 		const page			= current_page + 1
 
 	return self.go_to_page_json(page)
-};//end navigate_to_next_page
+}//end navigate_to_next_page
 
 
 
@@ -377,4 +377,4 @@ paginator.prototype.navigate_to_previous_page = function() {
 		const page			= current_page - 1
 
 	return self.go_to_page_json(page)
-};//end navigate_to_previous_page
+}//end navigate_to_previous_page

@@ -16,7 +16,7 @@
 export const render_tool_indexation = function() {
 
 	return true
-};//end render_tool_indexation
+}//end render_tool_indexation
 
 
 
@@ -67,7 +67,7 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 
 	return wrapper
-};//end render_tool_indexation
+}//end render_tool_indexation
 
 
 
@@ -193,7 +193,7 @@ const get_tag_info = function(self) {
 
 
 	return true;
-};//end get_tag_info
+}//end get_tag_info
 
 
 
@@ -289,7 +289,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -320,7 +320,7 @@ export const add_component = async (self, component_container, value) => {
 
 
 	return true
-};//end add_component
+}//end add_component
 
 
 
@@ -393,6 +393,6 @@ const render_related_list = function(self){
 		})
 
 	return fragment
-};//end render_related_list
+}//end render_related_list
 
 

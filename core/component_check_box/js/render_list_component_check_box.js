@@ -16,7 +16,7 @@
 export const render_list_component_check_box = function() {
 
 	return true
-};//end render_list_component_check_box
+}//end render_list_component_check_box
 
 
 
@@ -46,6 +46,6 @@ render_list_component_check_box.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

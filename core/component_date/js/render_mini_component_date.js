@@ -15,7 +15,7 @@
 export const render_mini_component_date = function() {
 
 	return true
-};//end render_mini_component_date
+}//end render_mini_component_date
 
 
 /**
@@ -36,6 +36,6 @@ render_mini_component_date.prototype.mini = async function() {
 		})
 
 	return wrapper
-};//end mini
+}//end mini
 
 

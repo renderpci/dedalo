@@ -16,7 +16,7 @@
 export const render_search_component_iri = function() {
 
 	return true
-};//end render_search_component_iri
+}//end render_search_component_iri
 
 
 
@@ -41,7 +41,7 @@ render_search_component_iri.prototype.search = async function() {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -144,7 +144,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 /**
@@ -164,6 +164,6 @@ const get_input_element = (i, current_value) => {
 
 
 	return input
-};//end get_input_element
+}//end get_input_element
 
 

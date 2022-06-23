@@ -36,7 +36,7 @@ export const component_select = function(){
 	this.datum
 
 	return true
-};//end component_select
+}//end component_select
 
 
 

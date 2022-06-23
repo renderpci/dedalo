@@ -16,7 +16,7 @@
 export const render_mini_component_email = function() {
 
 	return true
-};//end render_mini_component_email
+}//end render_mini_component_email
 
 
 
@@ -44,6 +44,6 @@ render_mini_component_email.prototype.mini = async function() {
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
-};//end mini
+}//end mini
 
 

@@ -18,7 +18,7 @@
 export const render_common_section = function() {
 
 	return true
-};//end render_common_section
+}//end render_common_section
 
 
 
@@ -125,7 +125,7 @@ render_common_section.prototype.delete_record = (options) => {
 		})
 
 	return true
-};//end delete_record
+}//end delete_record
 
 
 
@@ -217,4 +217,4 @@ const render_relation_list = function(options) {
 
 
 	return relation_list_container
-};//end render_relation_list
+}//end render_relation_list

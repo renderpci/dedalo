@@ -16,7 +16,7 @@
 export const render_list_component_email = function() {
 
 	return true
-};//end render_list_component_email
+}//end render_list_component_email
 
 
 
@@ -44,6 +44,6 @@ render_list_component_email.prototype.list = async function() {
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
-};//end list
+}//end list
 
 

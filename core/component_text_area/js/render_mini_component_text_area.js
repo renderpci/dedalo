@@ -19,7 +19,7 @@
 export const render_mini_component_text_area = function() {
 
 	return true
-};//end render_mini_component_text_area
+}//end render_mini_component_text_area
 
 
 
@@ -46,6 +46,6 @@ render_mini_component_text_area.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

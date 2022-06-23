@@ -7,111 +7,111 @@ var durationMinutos		= null;		//alert("Loaded media_player.js");
 
 ///////// KEY UP //////////////////
 $(document).keyup(function(event) {
-	
-	// CONTROL VIDEO PLAY / PAUSE BY KEY 'ESC' (DEFAULT 27)	   
+
+	// CONTROL VIDEO PLAY / PAUSE BY KEY 'ESC' (DEFAULT 27)
 	if (event.which == parseInt(av_media_player_play_pause_key) ) {
 		videoPlay(event)
-	} 
-	
+	}
+
 	// PLAY PAUSE BY SPACEBAR KEY (32)
 	/*if (event.which == 32) {
-		player_toggle_play_pause() //alert(event.which)alert(event.which)		
+		player_toggle_play_pause() //alert(event.which)alert(event.which)
 	}*/
 
 	// CREATE POSTERFRAME BY P KEY (80)
 	if (event.which == 80) {
 		if ($('.btn_posterframe').length>0) {
-			$('.btn_posterframe').trigger('click');	
-		}		
+			$('.btn_posterframe').trigger('click');
+		}
 	}
 	//alert(event.which)
 });
 ///////// DOM READY //////////////////
 $(function() {
-	
-	try{		
-	
+
+	try{
+
 		switch(get_modo()) {
-						
+
 			// QUICKTIME PLUG-IN
-			case "qt"		: 	load_video_controls(); 
+			case "qt"		: 	load_video_controls();
 								break;
-							
+
 			// JWPLAYER
-			case 'jwplayer' :	load_video_controls(); 
+			case 'jwplayer' :	load_video_controls();
 								break;
-								
-			// HTML5 STANDAR					
-			case "html5"	:	set_and_load_media(src,0); // src defined in AVPlayer		  
-								load_video_controls();															
+
+			// HTML5 STANDAR
+			case "html5"	:	set_and_load_media(src,0); // src defined in AVPlayer
+								load_video_controls();
 								// SET LISTENER TO TRIGGER SHOW VIDEO CONTROLS ON VIDEO METADATA IS LOADED
 								// loadeddata , loadedmetadata, canplay
-								var listener_name = 'loadedmetadata'; 
+								var listener_name = 'loadedmetadata';
 								/*
 								RegisterListener(listener_name, function(e) {
-									load_video_controls();		//alert('launched listener: ' + listener_name )					
+									load_video_controls();		//alert('launched listener: ' + listener_name )
 								});
 								*/
 								break;
-			
+
 			// MEDIAELEMENT PLAYER
 			case "mediaelement":load_video_controls();
 								break;
-							
-		}	
-	
+
+		}
+
 	}catch(err){
 		if(SHOW_DEBUG===true) $('#debugMovie').append("DEBUG: ready switch: " + err +"<br>");
 		//alert('ready switch: ' + err);
-	}	
-	
+	}
+
 	if(SHOW_DEBUG===true) {
 		$('#loading_msg').append(" [waiting event:" + listener_name + "] [preload:" + preload +"]" ) ;
 		$('#debugMovie').css('visibility',"visible");
 		//document.getElementById('debugMovie').style.visibility = "visible";
 	}
-	
+
 	// BUTTON play / stop
 	var button_play_pause_obj = $('.play_pause');
-	$(document.body).on('click', button_play_pause_obj.selector, function(e){	
+	$(document.body).on('click', button_play_pause_obj.selector, function(e){
 		player_toggle_play_pause()
 	});
 
 	// SET KEYS
 	av_media_player.fix_keys();
-	
+
 });
 ///////// ON LOAD //////////////////
 window.addEventListener("load", function (event) {
-	
+
 	try{
-			
+
 		switch(get_modo()) {
-												
+
 			// QUICKTIME PLUG-IN
 			case "qt"		:	start_tc_generator();
 								break;
-			
+
 			// JWPLAYER
 			case 'jwplayer' :	//load_video_controls(); //alert(videoObj_selector().readyState)
-								start_tc_generator();								
+								start_tc_generator();
 								break;
-			
-			// HTML5 STANDAR					
+
+			// HTML5 STANDAR
 			case "html5"	:	start_tc_generator();
 								break;
-								
+
 			// MEDIAELEMENT PLAYER
 			case "mediaelement":start_tc_generator();
-								break;	
+								break;
 		}
-				
+
 	}catch(err){
 		if(SHOW_DEBUG===true) $('#debugMovie').append("DEBUG: window.onload " + err +"<br>");
 	}
-	if(SHOW_DEBUG===true) $('#debugMovie').append("DEBUG: modo: " + modo + "<br>");	
+	if(SHOW_DEBUG===true) $('#debugMovie').append("DEBUG: modo: " + modo + "<br>");
 	if(SHOW_DEBUG===true) console.log("-> window load completed ");
-	
+
 	update_button_play_pause_label();
 
 	av_media_player.resize_window();
@@ -124,8 +124,8 @@ window.addEventListener("load", function (event) {
 	}
 	catch(err) {
 	}
-	
-	
+
+
 });
 
 
@@ -141,7 +141,7 @@ var av_media_player = new function() {
 	var	default_av_media_player_insert_tc_key	= 113 	// F2
 
 
-	
+
 	/**
 	* FIX KEYS
 	*/
@@ -164,25 +164,25 @@ var av_media_player = new function() {
 		$('span.insert_tc_name').first().text( keycode.getKeyCodeValue(av_media_player_insert_tc_key) );
 
 		// SET HANDLER TO INPUTS
-		$('input[name=play_pause]').keyup(function(event) {		   
+		$('input[name=play_pause]').keyup(function(event) {
 			av_media_player_play_pause_key = event.which;
-			$(this).val(av_media_player_play_pause_key).blur();			
+			$(this).val(av_media_player_play_pause_key).blur();
 			$('span.play_pause_name').first().text( keycode.getKeyCodeValue(av_media_player_play_pause_key) );
 			// store cookie
 			set_localStorage('av_playpause_key',av_media_player_play_pause_key);
 
 			$(this).click(function() {
 				$(this).select()
-			});	
+			});
 		})
 		$('input[name=play_pause]').click(function() {$(this).select();});
 
-		$('input[name=insert_tc]').keyup(function(event) {		   
+		$('input[name=insert_tc]').keyup(function(event) {
 			av_media_player_insert_tc_key = event.which;
 			$(this).val(av_media_player_insert_tc_key).blur()
 			$('span.insert_tc_name').first().text( keycode.getKeyCodeValue(av_media_player_insert_tc_key) );
 			// store cookie
-			set_localStorage('tag_insert_key',av_media_player_insert_tc_key);		
+			set_localStorage('tag_insert_key',av_media_player_insert_tc_key);
 		})
 		$('input[name=insert_tc]').click(function() {$(this).select();});
 	}//end fix_keys
@@ -193,7 +193,7 @@ var av_media_player = new function() {
 	* KEYCODE OBJ
 	*/
 	var keycode = {
-		
+
 		getKeyCode : function(e) {
 	        var keycode = null;
 	        if(window.event) {
@@ -232,7 +232,7 @@ var av_media_player = new function() {
 	        219:"{", 221:"}", 220:"|", 59:":", 222:"\"", 188:"<", 189:">", 191:"?",
 	        96:"insert", 97:"end", 98:"down", 99:"pagedown", 100:"left", 102:"right", 103:"home", 104:"up", 105:"pageup"
 	    }
-	};//end keycode obj
+	}//end keycode obj
 
 
 
@@ -249,23 +249,23 @@ var av_media_player = new function() {
 
 	/**
 	* RESIZE_WINDOW
-	* @return 
+	* @return
 	*/
 	this.resize_window = function() {
 
 		var alturaOffset  = 80 +200 ;
 		var anchuraOffset = 10 ;
-		
+
 		// solo firefox y chrome
-		if (navigator.userAgent.indexOf('Firefox') != -1 || navigator.userAgent.indexOf('Chrome') != -1){ alturaOffset = 89 ; anchuraOffset = 15 ; }	
-		
+		if (navigator.userAgent.indexOf('Firefox') != -1 || navigator.userAgent.indexOf('Chrome') != -1){ alturaOffset = 89 ; anchuraOffset = 15 ; }
+
 		//var w = document.getElementById('wrapGeneral').offsetWidth + anchuraOffset ;
 		//var h = document.getElementById('wrapGeneral').offsetHeight + alturaOffset ;
 		var w = $('#wrap_edit_video').width()  + anchuraOffset
 		var h = $('#wrap_edit_video').height() + alturaOffset ;		//alert(w + " "+ h);
-		
+
 		window.resizeTo(w, h);
-	};//end resize_window
+	}//end resize_window
 
 
 
@@ -277,61 +277,61 @@ var av_media_player = new function() {
 
 
 // SET AND LOCATE MEDIA
-function set_and_load_media(src_target, play, exec_load) {	
-	
+function set_and_load_media(src_target, play, exec_load) {
+
 	if( videoObj_selector() ) {
-		
-		videoObj_selector().setAttribute("src", src_target);	//alert(src_target)	// src defined in AVPlayer		  
-		
+
+		videoObj_selector().setAttribute("src", src_target);	//alert(src_target)	// src defined in AVPlayer
+
 		if(exec_load==1)
 		videoObj_selector().load();
-		
+
 		//videoObj_selector().setAttribute("controls","controls");
 		if(play==1) player_play(videoObj_selector());
-		
+
 	}else{
-		$('#loading_msg').append(" Error on set_and_load_media " ) ;	
+		$('#loading_msg').append(" Error on set_and_load_media " ) ;
 	}
 }
 
 
 // LOAD VIDEO CONTROLS
 function load_video_controls() {
-	
+
 	document.getElementById(tc_div_id).innerHTML = '00:00:00.000';
-	
+
 	$('#loading_msg').fadeOut(300, function() {
-									
+
 									$('#video_controls').fadeIn(600, function() {
 										/*
 										// GET DURATION OF MOVIE
 										get_movie_duration();
 
-										// SET PAGE GLOBALS	video_duration_secs						
-										top.page_globals.video_duration_secs = parseInt(videoObj_selector().duration);										
-										if(top.SHOW_DEBUG===true) {									
+										// SET PAGE GLOBALS	video_duration_secs
+										top.page_globals.video_duration_secs = parseInt(videoObj_selector().duration);
+										if(top.SHOW_DEBUG===true) {
 											console.log("[av_media_player.load_video_controls] video_duration_secs: "+top.page_globals.video_duration_secs);
 										}*/
-										
+
 										// GO TO TIME IF EXISTS TCIN
 										if(tcin!="undefined" && tcin!==null && tcin!=-1 && parseInt(tcin)>0) {
 											goto_time(tcin)
 										}
-										
-										// STATE VIDEO CONTROLS LOADED								
+
+										// STATE VIDEO CONTROLS LOADED
 										video_controls_loaded = true;
 									});
 
 	}).remove();
-	if(top.DEBUG) console.log("-> load_video_controls completed");		
+	if(top.DEBUG) console.log("-> load_video_controls completed");
 }
 
 
 // GET CURRENT MODO (html5,qt,flash)
 function get_modo() {
-	
+
 	var modo_default = 'html5';
-	
+
 	if( typeof modo=='undefined' || !modo || modo==null ) {
 		$('#debugMovie').append("DEBUG: get_modo: modo if not defined! Set default ("+modo_default+")<br>");
 		return modo_default;
@@ -342,59 +342,59 @@ function get_modo() {
 
 // CONTROL VIDEO FROM BUTTONS VIDEO BELOW
 function controlVideo(action) {
-	
+
 	var videoObj = videoObj_selector();		//alert('videoObj: ' + videoObj + ' ' +action)
-	
-	try {			 
+
+	try {
 		if(action=='play') {
-			
+
 			player_play(videoObj);
-						
-		}else if(action=='pause') {	
-					
-			player_pause(videoObj);	
-			
+
+		}else if(action=='pause') {
+
+			player_pause(videoObj);
+
 		}else{
-			
+
 			var seconds = parseFloat(action);
-			player_seek_seconds(videoObj,seconds);			
+			player_seek_seconds(videoObj,seconds);
 		}
-			
-	}catch(err){		
-		
+
+	}catch(err){
+
 		if(SHOW_DEBUG===true)
 		$('#debugMovie').append("DEBUG: controlVideo: " + err + " - " +videoObj + '<br>');
-		
-		alert("Media is not accessible.");		
-	}	
+
+		alert("Media is not accessible.");
+	}
 }
 
 
 // UPDATE LABEL BUTTON PLAY-PAUSE
 function update_button_play_pause_label() {
-	
+
 	var state = player_get_video_current_state();
-		
+
 	switch(state) {
-		
+
 		case 'play'		:	$('.play_pause').html('Stop');	break;
 		case 'pause'	:	$('.play_pause').html('Play');	break;
-		default			:	$('.play_pause').html('Play');	break;	
-	}	
-	if(SHOW_DEBUG===true) console.log("-> state: " +state);		
+		default			:	$('.play_pause').html('Play');	break;
+	}
+	if(SHOW_DEBUG===true) console.log("-> state: " +state);
 }
 
 
 // CONTROL VIDEO FROM TEXT EDITOR TINYMCE
 function videoPlay(e) {
-	
-	try{		
-				
-		var keyCode		= e.keyCode ;		//alert('videoPlay:' + e)			
-		
+
+	try{
+
+		var keyCode		= e.keyCode ;		//alert('videoPlay:' + e)
+
 		// TINYMCE KEY ESC
-		//if(keyCode=="27") { // caracter: ESC				
-			
+		//if(keyCode=="27") { // caracter: ESC
+
 			var current_state 			= player_get_video_current_state(),
 				videoObj				= videoObj_selector(),
 				av_rewind_secs_cookie 	= get_localStorage('av_rewind_secs')
@@ -402,54 +402,54 @@ function videoPlay(e) {
 			var secs_val = av_rewind_secs_cookie ? av_rewind_secs_cookie : 3; // Default 3 sec
 			var seconds  = -Math.abs(secs_val); // To negative value
 				//console.log(seconds);
-			
-			if(current_state=='play'){									
+
+			if(current_state=='play'){
 				player_pause(videoObj);		//if(SHOW_DEBUG===true) console.log(myVideo.paused)
-				player_seek_seconds(videoObj,seconds);			
+				player_seek_seconds(videoObj,seconds);
 			}else{
-				player_play(videoObj);		//if(SHOW_DEBUG===true) console.log(videoObj.paused);		
+				player_play(videoObj);		//if(SHOW_DEBUG===true) console.log(videoObj.paused);
 			}
-			return;				
-		//}// caracter: ESC (27) fin	
-		
-	
+			return;
+		//}// caracter: ESC (27) fin
+
+
 	}catch(error){
 		$('#debugMovie').append("DEBUG: videoPlay: " + error +'<br>');
 	}
-	if(SHOW_DEBUG===true) console.log("->videoPlay called keyCode: "+keyCode)	
+	if(SHOW_DEBUG===true) console.log("->videoPlay called keyCode: "+keyCode)
 }
 
 
 // GET_AND_WRITE_TC_TAG (TINYMCE KEY F2 char 113)
-function get_and_write_tc_tag(e) {	
-	
+function get_and_write_tc_tag(e) {
+
 	// FRAME PLAYER
 	var video_frame_obj = top.videoFrame;
 	if ( $(video_frame_obj).length<1 ) {
 		return alert("Error on read TC. 'videoFrame' is not available");
-	}	
+	}
 		// leemos el código de tiempo actual del movie
 		var tc = top.videoFrame.tcEtiqueta ;
 		if(tc=='0' || typeof tc=="undefined") tc = '00:00:00.000';
 
 		//console.log("tc",top.videoFrame.tcEtiqueta);
-	
+
 	// TEXT EDITOR
-	var ed = top.tinyMCE.activeEditor ;	
+	var ed = top.tinyMCE.activeEditor ;
 
 	if ( $(ed).length<1 ) {
 		return alert("Error on access text editor. 'activeEditor' is not available");
-	}	
+	}
 		// componemos y escribimos la etiqueta en la posición actual del cursor
 		//ed.selection.setContent(' <img id="[TC_'+tc+'_TC]" src="../../../inc/btn.php?t=[TC_'+tc+'_TC]" class="tc" /> ' );
-		//var img_html = top.component_text_area.build_tc_img(tc);		
-		var img_obj = top.component_text_area.build_dom_element_from_data('tc', tc)		
+		//var img_html = top.component_text_area.build_tc_img(tc);
+		var img_obj = top.component_text_area.build_dom_element_from_data('tc', tc)
 		if (typeof img_obj!=='undefined') {
 			ed.selection.setContent( img_obj.outerHTML );
 		}else{
 			console.log("[av_media_playe::get_and_write_tc_tag] Error on set tag. Ignored action because TC is undefined ");
-		}		
-	
+		}
+
 	//if(SHOW_DEBUG===true) console.log("->get_and_write_tc_tag: "+img_html);
 
 	return true;
@@ -481,8 +481,8 @@ function seconds_to_TIMECODE( secs ) {
     if (mseconds < 100) {mseconds = "0"+mseconds;}
 
     var time    = hours+':'+minutes+':'+seconds+'.'+mseconds;
- 
-	// Overwrite and store var last_secs  
+
+	// Overwrite and store var last_secs
     last_secs = {
     	'secs'  : secs,
     	'TIMECODE' : time
@@ -493,58 +493,58 @@ function seconds_to_TIMECODE( secs ) {
 }
 
 var tcEtiqueta = '00:00:00.000'
-// WRITE CURRENT TC IN TARGET DIV 
+// WRITE CURRENT TC IN TARGET DIV
 function write_current_tc() {
-		
-	try{			
-		
-		var videoObj 				= videoObj_selector();		
+
+	try{
+
+		var videoObj 				= videoObj_selector();
 		var target_div 				= document.getElementById(tc_div_id);
 		var current_time_in_seconds = player_get_current_time_in_seconds(videoObj);
-			
+
 		if(current_time_in_seconds != null) {
 			/*
 				var tcs  		= current_time_in_seconds ;
-				
-				var tcm 		= tcs/60 ; tcm.toFixed(2);	
-				var tcmE 		= parseInt(tcm);	
+
+				var tcm 		= tcs/60 ; tcm.toFixed(2);
+				var tcmE 		= parseInt(tcm);
 				var tcmRestos 	= tcm - tcmE ;
 				var segundos 	= Math.round(tcmRestos*60);
-				
-				var tch 		= tcs/3600 ; tch.toFixed(4);	
+
+				var tch 		= tcs/3600 ; tch.toFixed(4);
 				var tchE 		= parseInt(tch);
 				var tchRestos 	= tch - tchE ;
 				var minutos 	= parseInt(tchRestos*60)
 				var horas 		= parseInt(tchE) ;
-				
+
 				if (horas < 0 	|| horas >59) 		horas 	 = 0;
 				if (minutos < 0	|| minutos >59) 	minutos  = 0;
 				if (segundos < 0|| segundos >59) 	segundos = 0;
-				
+
 				if(horas<10)	horas 		= "0" + horas;
-				if(minutos<10)	minutos 	= "0" + minutos;		
+				if(minutos<10)	minutos 	= "0" + minutos;
 				if(segundos<10)	segundos	= "0" + segundos;
-				
+
 				tcEtiqueta = horas + ':' + minutos + ':' +  segundos ;
 				*/
-			
-			tcEtiqueta = seconds_to_TIMECODE(current_time_in_seconds);		
 
-			//console.log("tcEtiqueta",tcEtiqueta);	
-			
+			tcEtiqueta = seconds_to_TIMECODE(current_time_in_seconds);
+
+			//console.log("tcEtiqueta",tcEtiqueta);
+
 			if(tcEtiqueta!=-1 && tcEtiqueta!=null){
 				target_div.innerHTML = tcEtiqueta ;				//if(SHOW_DEBUG===true) div.innerHTML += " [" + i++ + "]";
 				return true;
-			}else{					
+			}else{
 				target_div.innerHTML = '00:00:00.000' ;
 				return true;
 			}
-												
-		}//if(current_time_in_seconds>0)		
-		
-	}catch(err){ 
+
+		}//if(current_time_in_seconds>0)
+
+	}catch(err){
 		window.clearInterval(t);
-		document.getElementById('debugMovie').innerHTML += "DEBUG: Error in write_current_tc:  " + err +'<br>';		
+		document.getElementById('debugMovie').innerHTML += "DEBUG: Error in write_current_tc:  " + err +'<br>';
 		console.error("[av_media_player.write_current_tc] err",err);
 	}
 }
@@ -552,72 +552,72 @@ function write_current_tc() {
 
 // EVENT LOG
 function event_log() {
-		
+
 	//var ar_listener = Array('canplay','canplaythrough','durationchange','ended','loadeddata','loadedmetadata','loadstart','progress','waiting');
 	var ar_listener = Array('canplay','canplaythrough','loadeddata','loadedmetadata');
-	
+
 	for(var i=0;i<ar_listener.length;i++) {
-	
-		var listener = ar_listener[i];	
-		
+
+		var listener = ar_listener[i];
+
 		RegisterListener(listener, function(e) {
 			$('#debugMovie').append(" - " + listener + " ") ;
-			$('#debugMovie').append("[" + listener + "]") ;	
-			$('#debugMovie').append("<br />");		
-		});/**/		
-		
+			$('#debugMovie').append("[" + listener + "]") ;
+			$('#debugMovie').append("<br />");
+		});/**/
+
 	}
 }
 
 
 // GET CURRENT TIME VALUE FROM TC DIV
-function get_current_time_div_value() {	
+function get_current_time_div_value() {
 	//return $(tc_div_id).html();
 	return $('#TCdiv').html();
 }
 
 
 // GO TO TIMECODE (USED IN TINYMCE TEXT EDITOR)
-function goto_time(timecode) {	
+function goto_time(timecode) {
 	return player_goto_timecode(videoObj_selector(),timecode);
 }
 
 
 // HTML5 VIDEO mensaje en caso de fallo
 function failed(e) {
-	
+
 	if (e.target.error===null || typeof e.target.error.code==="undefined") {
 		console.error("-> failed: UNKNOW MEDIA_ERROR (posterframe or default posterframe [0.jpg] is available?)");
 		return false;
 	}
-	
+
 	// video playback failed - show a message saying why
 	switch (e.target.error.code) {
-	 
+
 		case e.target.error.MEDIA_ERR_ABORTED:
 		   //if(nivel == 10) alert('Admin: You aborted the video playback.');
 		   console.log("-> failed:  MEDIA_ERR_ABORTED");
 		   break;
-		 
+
 		case e.target.error.MEDIA_ERR_NETWORK:
 		   //if(nivel == 10) alert('Admin: A network error caused the video download to fail part-way.');
 		   console.log("-> failed:  MEDIA_ERR_NETWORK");
 		   break;
-		 
+
 		case e.target.error.MEDIA_ERR_DECODE:
 		   //if(nivel == 10) alert('Admin: The video playback was aborted due to a corruption problem or because the video used features your browser did not support.');
 		   console.log("-> failed:  MEDIA_ERR_DECODE");
 		   break;
-		   
+
 		case e.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
 			//if(nivel == 10)	alert('Admin: The video could not be loaded, either because the server or network failed or because the format is not supported.');
 			console.log("-> failed:  MEDIA_ERR_SRC_NOT_SUPPORTED (Reload in 1 seg)");
 			// Recargamos el src tras unos segundos
 			setTimeout(function() {
-									set_and_load_media(src,1,1);	//set_and_load_media(src_target, play, exec_load)		  			 
-								}, 600);			
+									set_and_load_media(src,1,1);	//set_and_load_media(src_target, play, exec_load)
+								}, 600);
 			break;
-			
+
 		default:
 		   alert('An unknown error occurred.');
 		   break;
@@ -625,33 +625,33 @@ function failed(e) {
 
 	return true;
 }//end failed
- 
+
 
 // LOAD PLAYER BY TYPE
 function load_player_type(type) {
-	
+
 	var current_url 	= window.location.href ;
-	
+
 	var ar_current_url	= current_url.split('&');
-	
+
 	var string_final 	= new String("");
-	
+
 	for(var i=0;i<ar_current_url.length;i++) {
-		
+
 		var fragment = ar_current_url[i];//alert(fragment)
 		if( fragment.indexOf("player_type") == -1 ) {
 			string_final +=  ar_current_url[i] + '&';
 		}
 	}
-	
+
 	var final_url	= string_final + "player_type=" + type ;//alert(current_url + " - " + string_final);
-		
-	window.location	= final_url;	
+
+	window.location	= final_url;
 }
 
 // REMOVE BACKGROUND
 function remove_background() {
-		
+
 	$('body').css({ 'background-image': 'none !important','background-color': 'transparent !important' });
 }
 
@@ -663,21 +663,21 @@ function remove_background() {
 
 
 // Quicktime DOM events ////////////////////////////////////////////
-// More info in 
+// More info in
 // http://developer.apple.com/library/mac/#documentation/QuickTime/Conceptual/QTScripting_JavaScript/bQTScripting_JavaScri_Document/QuickTimeandJavaScri.html#//apple_ref/doc/uid/TP40001526-CH001-SW5
 ////////////////////////////////////////////////////////////////////
 
 
 
-/* PARÁMETROS DOM QUICKTIME PLUG-IN (http://developer.apple.com/library/mac/#documentation/QuickTime/Conceptual/QTScripting_JavaScript/bQTScripting_JavaScri_Document/QuickTimeandJavaScri.html) 
+/* PARÁMETROS DOM QUICKTIME PLUG-IN (http://developer.apple.com/library/mac/#documentation/QuickTime/Conceptual/QTScripting_JavaScript/bQTScripting_JavaScri_Document/QuickTimeandJavaScri.html)
 
       qt_begin — The plug in has been instantiated and can interact with JavaScript.
 
-      qt_loadedmetadata — The movie header information has been loaded or created. The duration, dimensions, looping state, and so on are now known.   
+      qt_loadedmetadata — The movie header information has been loaded or created. The duration, dimensions, looping state, and so on are now known.
 
-      qt_loadedfirstframe — The first frame of the movie has been loaded and can be displayed. (The frame is displayed automatically at this point.)  
+      qt_loadedfirstframe — The first frame of the movie has been loaded and can be displayed. (The frame is displayed automatically at this point.)
 
-      qt_canplay — Enough media data has been loaded to begin playback (but not necessarily enough to play the entire file without pausing).   
+      qt_canplay — Enough media data has been loaded to begin playback (but not necessarily enough to play the entire file without pausing).
 
       qt_canplaythrough — Enough media data has been loaded to play through to the end of the file without having to pause to buffer, assuming data continues to come in at the current rate or faster. (If the movie is set to autoplay, it will begin playing now.)
 

@@ -35,7 +35,7 @@ export const service_upload = function () {
 	this.allowed_extensions	= null
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -101,7 +101,7 @@ service_upload.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -122,7 +122,7 @@ service_upload.prototype.build = async function(autoload=false) {
 			self.session_cache_expire	= system_info.session_cache_expire
 
 	return true
-};//end build_custom
+}//end build_custom
 
 
 
@@ -151,7 +151,7 @@ const get_system_info = async function() {
 				resolve(result)
 			})
 		})
-};//end get_system_info
+}//end get_system_info
 
 
 
@@ -205,7 +205,7 @@ export const upload = async function(options) {
 					value	: 0,
 					msg		: 'Loading file ' + file.name
 				})
-			};//end upload_loadstart
+			}//end upload_loadstart
 
 		// upload_load.(finished)
 			const upload_load = function() {
@@ -214,7 +214,7 @@ export const upload = async function(options) {
 					value	: 100,
 					msg		: 'Loaded file ' + file.name
 				})
-			};//end upload_load
+			}//end upload_load
 
 		// upload_error
 			const upload_error = function() {
@@ -223,7 +223,7 @@ export const upload = async function(options) {
 					value	: false,
 					msg		: `${get_label.error_al_subir_el_archivo} ${file.name}`
 				})
-			};//end upload_error
+			}//end upload_error
 
 		// upload_abort
 			const upload_abort = function() {
@@ -232,7 +232,7 @@ export const upload = async function(options) {
 					value	: false,
 					msg		: `User aborts upload`
 				})
-			};//end upload_abort
+			}//end upload_abort
 
 		// upload_progress
 			const upload_progress = function(evt) {
@@ -245,7 +245,7 @@ export const upload = async function(options) {
 					value	: percent,
 					msg		: `Upload progress: ${percent} %`
 				})
-			};//end upload_progress
+			}//end upload_progress
 
 		// xhr_load
 			const xhr_load = function(evt) {
@@ -281,7 +281,7 @@ export const upload = async function(options) {
 				// print message
 					// response_msg.innerHTML = response.msg
 
-			};//end xhr_load
+			}//end xhr_load
 
 
 		// XMLHttpRequest
@@ -317,7 +317,7 @@ export const upload = async function(options) {
 				xhr.send(fd);
 
 	})
-};//end upload
+}//end upload
 
 
 
@@ -362,7 +362,7 @@ service_upload.prototype.upload_file = async function(options) {
 
 
 	return api_response
-};//end upload_file
+}//end upload_file
 
 
 

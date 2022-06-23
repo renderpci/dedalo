@@ -16,7 +16,7 @@
 export const render_search_component_section_id = function() {
 
 	return true
-};//end render_search_component_section_id
+}//end render_search_component_section_id
 
 
 
@@ -50,7 +50,7 @@ render_search_component_section_id.prototype.search = async function(options) {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -92,7 +92,7 @@ const add_events = async function(self, wrapper) {
 
 
 	return true
-};//end search
+}//end search
 
 
 
@@ -121,7 +121,7 @@ const get_content_data_search = function(self) {
 			  content_data.appendChild(fragment)
 
 	return content_data
-};//end get_content_data_search
+}//end get_content_data_search
 
 
 
@@ -142,6 +142,6 @@ const get_input_element_search = (i, current_value) => {
 
 
 	return input
-};//end get_input_element_search
+}//end get_input_element_search
 
 

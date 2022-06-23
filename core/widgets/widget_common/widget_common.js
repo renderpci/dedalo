@@ -76,7 +76,7 @@ widget_common.prototype.build = async function(autoload=false) {
 
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -101,6 +101,6 @@ widget_common.prototype.destroy = async function() {
 
 
 	return true
-};//end destroy
+}//end destroy
 
 

@@ -15,7 +15,7 @@
 export const render_relation_list = function() {
 
 	return true
-};//end relation_list
+}//end relation_list
 
 
 
@@ -47,7 +47,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 		parse_paginator_html(self, wrapper)
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -65,7 +65,7 @@ const get_content_data = function(self) {
 		parse_html(self.datum, content_data)
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -102,7 +102,7 @@ const parse_html = function(datum, content_data_node){
 	})
 
 	return true
-};//end parse_html
+}//end parse_html
 
 
 
@@ -212,7 +212,7 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 
 
 	return fragment
-};//end build_grid_html
+}//end build_grid_html
 
 
 
@@ -293,7 +293,7 @@ const parse_paginator_html = async function(self, wrapper){
 		next_button.addEventListener('click', ()=>{
 			next_records(self)
 		})
-};//end parse_paginator_html
+}//end parse_paginator_html
 
 
 
@@ -309,7 +309,7 @@ const previous_records = function(self){
 		self.offset = self.offset - self.limit
 		event_manager.publish('relation_list_paginator', self)
 	}
-};//end previous_records
+}//end previous_records
 
 
 
@@ -333,7 +333,7 @@ const next_records = function(self){
 			self.offset = current_offset + current_limit
 			event_manager.publish('relation_list_paginator', self)
 		}
-};//end next_records
+}//end next_records
 
 
 
@@ -378,6 +378,6 @@ const edit_relation = function(self, current_data){
 	event_manager.publish('user_navigation', user_navigation_rqo)
 
 	return true
-};//end edit_relation
+}//end edit_relation
 
 

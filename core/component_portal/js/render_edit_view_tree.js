@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 // imports
@@ -64,7 +64,7 @@ render_edit_view_tree.render = async function(self, options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -148,7 +148,7 @@ export const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -197,7 +197,7 @@ const get_content_data = async function(self, ar_section_record) {
 			  content_data.appendChild(fragment)
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 

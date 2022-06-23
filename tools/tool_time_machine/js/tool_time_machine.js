@@ -42,7 +42,7 @@ export const tool_time_machine = function () {
 
 
 	return true
-};//end tool_time_machine
+}//end tool_time_machine
 
 
 
@@ -95,7 +95,7 @@ tool_time_machine.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -150,7 +150,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -185,7 +185,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 
 
 	return component_instance
-};//end load_component
+}//end load_component
 
 
 
@@ -244,4 +244,4 @@ tool_time_machine.prototype.apply_value = function(options) {
 				resolve(response)
 			})
 		})
-};//end apply_value
+}//end apply_value

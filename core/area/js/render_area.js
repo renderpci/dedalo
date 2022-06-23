@@ -19,7 +19,7 @@
 export const render_area = function() {
 
 	return true
-};//end render_area
+}//end render_area
 
 
 
@@ -81,7 +81,7 @@ render_area.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -93,7 +93,7 @@ render_area.prototype.edit = async function(options) {
 render_area.prototype.list = async function(options={render_level:'full'}) {
 
 	return this.edit(options)
-};//end list
+}//end list
 
 
 
@@ -113,6 +113,6 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end content_data
+}//end content_data
 
 

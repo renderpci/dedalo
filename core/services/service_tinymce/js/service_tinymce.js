@@ -75,7 +75,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	};//end init
+	}//end init
 
 
 
@@ -108,7 +108,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	};//end save
+	}//end save
 
 
 
@@ -125,7 +125,7 @@ export const service_tinymce = function() {
 		const value	 = editor.getContent({format:'raw'})
 
 		return value
-	};//end get_value
+	}//end get_value
 
 
 
@@ -148,7 +148,7 @@ export const service_tinymce = function() {
 		}
 
 		return custom_buttons
-	};//end add_editor_buttons
+	}//end add_editor_buttons
 
 
 
@@ -333,7 +333,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	};//end onsetup_editor
+	}//end onsetup_editor
 
 
 
@@ -357,7 +357,7 @@ export const service_tinymce = function() {
 		self.caller.save_value(self.key, value)
 
 		return true
-	};//end set_content
+	}//end set_content
 
 
 
@@ -380,7 +380,7 @@ export const service_tinymce = function() {
 		}
 
 		return editor_content_data
-	};//end get_editor_content_data
+	}//end get_editor_content_data
 
 
 
@@ -400,7 +400,7 @@ export const service_tinymce = function() {
 		const selection = self.editor.selection.getContent({format:'raw'})
 
 		return selection
-	};//end get_selection
+	}//end get_selection
 
 
 
@@ -441,7 +441,7 @@ export const service_tinymce = function() {
 
 
 		return range_clon
-	};//end wrap_selection_with_tags
+	}//end wrap_selection_with_tags
 
 
 
@@ -458,7 +458,7 @@ export const service_tinymce = function() {
 		const node = editor.dom.select(selector_str)
 
 		return node
-	};//end dom_select
+	}//end dom_select
 
 
 
@@ -493,7 +493,7 @@ export const service_tinymce = function() {
 
 
 		return true
-	};//end set_dirty
+	}//end set_dirty
 
 
 

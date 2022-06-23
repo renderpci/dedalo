@@ -41,7 +41,7 @@ export const component_image = function(){
 
 
 	return true
-};//end component_image
+}//end component_image
 
 
 
@@ -104,7 +104,7 @@ component_image.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -138,7 +138,7 @@ component_image.prototype.get_data_tag = function(){
 	}
 
 	return data_tag
-};//end get_data_tag
+}//end get_data_tag
 
 
 
@@ -160,7 +160,7 @@ component_image.prototype.get_lib_data = function(){
 
 
 	return lib_data
-};//end get_lib_data
+}//end get_lib_data
 
 
 
@@ -177,7 +177,7 @@ component_image.prototype.get_last_layer_id = function(){
 	const last_layer_id	= Math.max(...ar_layer_id)
 
 	return last_layer_id
-};//end get_last_layer_id
+}//end get_last_layer_id
 
 
 
@@ -256,7 +256,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 	}//end switch
 
 	return true
-};//end load_vector_editor
+}//end load_vector_editor
 
 
 
@@ -303,7 +303,7 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 
 
 	return true
-};//end load_tag_into_vector_editor
+}//end load_tag_into_vector_editor
 
 
 
@@ -323,7 +323,7 @@ component_image.prototype.add_layer = function(){
 	})
 
 	return layer_id
-};//end get_last_layer_id
+}//end get_last_layer_id
 
 
 
@@ -357,7 +357,7 @@ component_image.prototype.delete_layer = function(layer) {
 		self.data.changed_data = changed_data
 
 	return true
-};//end delete_layer
+}//end delete_layer
 
 
 
@@ -404,6 +404,6 @@ component_image.prototype.update_draw_data = function() {
 		// current_tag.save 		= false
 
 	return true
-};//end update_draw_data
+}//end update_draw_data
 
 

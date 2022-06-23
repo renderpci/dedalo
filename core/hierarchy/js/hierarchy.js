@@ -12,17 +12,17 @@ var hierarchy = new function() {
 
 	/**
 	* GENERATE_VIRTUAL_SECTION
-	* @return 
+	* @return
 	*/
 	this.generate_virtual_section = function(button_obj, event) {
-		
+
 		button_trigger.trigger(button_obj).then(function(response){
 			if(SHOW_DEBUG===true) {
 				console.log("[hierarchy.generate_virtual_section] response ",response)
 			}
 			/*
 			if (response) {
-				var div = document.createElement('div') 
+				var div = document.createElement('div')
 					div.innerHTML = response
 				button_obj.addChild(div)
 			}
@@ -32,16 +32,16 @@ var hierarchy = new function() {
 			hierarchy.update_target_section(button_obj)
 		})
 
-	};//end generate_virtual_section
+	}//end generate_virtual_section
 
 
 
 	/**
 	* UPDATE_TARGET_SECTION
-	* @return 
+	* @return
 	*/
 	this.update_target_section = function(button_obj) {
-	
+
 		const tipo			= button_obj.dataset.tipo
 		const response_div 	= document.getElementById('button_trigger_'+tipo)
 			if (!response_div) {
@@ -53,7 +53,7 @@ var hierarchy = new function() {
 				mode 	: 'update_target_section',
 				parent 	: button_obj.dataset.parent
 		}
-		//return console.log("[hierarchy.update_target_section]trigger_vars",trigger_vars)	
+		//return console.log("[hierarchy.update_target_section]trigger_vars",trigger_vars)
 
 		html_page.loading_content( response_div, 1 );
 
@@ -62,10 +62,10 @@ var hierarchy = new function() {
 			if(SHOW_DEBUG===true) {
 				console.log("[hierarchy.update_target_section]response",response);
 			}
-			
+
 			if (response && response.result) {
 
-				// Show response	
+				// Show response
 				response_div.innerHTML += "<div>"+response.msg+"</div>";
 				//response_div.innerHTML += "<pre>"+ JSON.stringify(response, null, 2) +"</pre>";
 
@@ -96,19 +96,19 @@ var hierarchy = new function() {
 				let msg = "[hierarchy.update_target_section] Error on ajax request"
 				response_div.innerHTML = "<pre>"+msg+"</pre>";
 			}
-			
-			html_page.loading_content( response_div, 0 );					
-		}, function(error) {			
+
+			html_page.loading_content( response_div, 0 );
+		}, function(error) {
 			// log
-			console.log("[hierarchy.update_target_section] Error.", error);			
+			console.log("[hierarchy.update_target_section] Error.", error);
 			html_page.loading_content( response_div, 0 );
 		})
 
 
 		return js_promise
-	};//end update_target_section
-		
+	}//end update_target_section
 
 
 
-};//end hierarchy
+
+}//end hierarchy

@@ -16,7 +16,7 @@
 export const render_edit_component_semantic_node = function() {
 
 	return true
-};//end render_edit_component_semantic_node
+}//end render_edit_component_semantic_node
 
 
 
@@ -55,7 +55,7 @@ render_edit_component_semantic_node.prototype.edit = async function(options={ren
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -200,7 +200,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -237,7 +237,7 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -295,7 +295,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -341,6 +341,6 @@ const get_input_element_edit = (i, current_value, inputs_container, self) => {
 
 
 	return li
-};//end input_element
+}//end input_element
 
 

@@ -17,7 +17,7 @@
 export const render_search_component_security_access = function() {
 
 	return true
-};//end render_search_component_security_access
+}//end render_search_component_security_access
 
 
 
@@ -43,7 +43,7 @@ render_search_component_security_access.prototype.search = async function() {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -101,7 +101,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -132,6 +132,6 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 

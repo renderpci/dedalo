@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -15,7 +15,7 @@
 export const render_mini_component_portal = function() {
 
 	return true
-};//end render_mini_component_portal
+}//end render_mini_component_portal
 
 
 
@@ -39,12 +39,9 @@ render_mini_component_portal.prototype.mini = async function() {
 	// add all nodes
 		const length = ar_section_record.length
 		for (let i = 0; i < length; i++) {
-			const child_item = await ar_section_record[i].render()			
+			const child_item = await ar_section_record[i].render()
 			wrapper.appendChild(child_item)
 		}
 
 	return wrapper
-};//end  mini
-
-
-
+}//end  mini

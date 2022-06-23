@@ -53,7 +53,7 @@ export const area_thesaurus = function() {
 	this.thesaurus_mode
 
 	return true
-};//end area_thesaurus
+}//end area_thesaurus
 
 
 
@@ -129,7 +129,7 @@ area_thesaurus.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -278,7 +278,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -301,7 +301,7 @@ area_thesaurus.prototype.render = async function(options={}) {
 
 
 	return result_node
-};//end render
+}//end render
 
 
 
@@ -319,6 +319,6 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 		: null
 
 	return sections_selector_value
-};//end get_sections_selector_data
+}//end get_sections_selector_data
 
 

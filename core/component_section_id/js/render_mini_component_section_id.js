@@ -15,7 +15,7 @@
 export const render_mini_component_section_id = function() {
 
 	return true
-};//end render_mini_component_section_id
+}//end render_mini_component_section_id
 
 
 
@@ -40,6 +40,4 @@ render_mini_component_section_id.prototype.mini = function() {
 		})
 
 	return wrapper
-};//end mini
-
-
+}//end mini

@@ -79,4 +79,4 @@ export const get_value_string = function(self) {
 
 
 	return value_string
-};//end get_value_string
+}//end get_value_string

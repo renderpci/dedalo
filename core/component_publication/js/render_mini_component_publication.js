@@ -16,7 +16,7 @@
 export const render_mini_component_publication = function() {
 
 	return true
-};//end render_mini_component_publication
+}//end render_mini_component_publication
 
 
 
@@ -38,6 +38,6 @@ render_mini_component_publication.prototype.mini = async function() {
 		})
 
 	return wrapper
-};//end mini
+}//end mini
 
 

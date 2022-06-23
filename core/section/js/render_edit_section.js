@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEVELOPER, SHOW_DEBUG */
+/*global get_label, Promise, SHOW_DEVELOPER, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -20,7 +20,7 @@
 export const render_edit_section = function() {
 
 	return true
-};//end render_edit_section
+}//end render_edit_section
 
 
 
@@ -143,7 +143,7 @@ render_edit_section.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -197,7 +197,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -211,7 +211,7 @@ const get_buttons = function(self) {
 
 
 	return buttons
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -228,6 +228,6 @@ const no_records_node = () => {
 	})
 
 	return node
-};//end no_records_node
+}//end no_records_node
 
 

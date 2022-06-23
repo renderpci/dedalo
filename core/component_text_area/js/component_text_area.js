@@ -42,7 +42,7 @@ export const component_text_area = function(){
 		// this.services	= []
 
 	return true
-};//end component_text_area
+}//end component_text_area
 
 
 
@@ -203,7 +203,7 @@ component_text_area.prototype.init = async function(options) {
 
 
 	return common_init
-};//end  init
+}//end  init
 
 
 
@@ -219,7 +219,7 @@ component_text_area.prototype.tags_to_html = function(value) {
 		: null
 
 	return html
-};//end tags_to_html
+}//end tags_to_html
 
 
 
@@ -245,7 +245,7 @@ component_text_area.prototype.set_value = function(value) {
 		changed_data	: changed_data,
 		refresh			: true
 	})
-};//end set_value
+}//end set_value
 
 
 
@@ -282,7 +282,7 @@ component_text_area.prototype.save_value = function(key, value) {
 	})
 
 	return js_promise
-};//end save_value
+}//end save_value
 
 
 
@@ -463,7 +463,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 	}
 
 	return cloned_text.innerHTML
-};//end preprocess_text_to_save
+}//end preprocess_text_to_save
 
 
 
@@ -483,7 +483,7 @@ const unwrap_element = function(el) {
 	parent.removeChild(el);
 
 	return true
-};//end unwrap_element
+}//end unwrap_element
 
 
 
@@ -498,7 +498,7 @@ const unwrap_element = function(el) {
 	// 		: true  // USING TINYMCE EDITOR
 
 	// 	return is_tiny
-	// };//end is_tiny
+	// }//end is_tiny
 
 
 
@@ -573,7 +573,7 @@ component_text_area.prototype.update_tag = async function(options) {
 			}
 
 	return true
-};//end update_tag
+}//end update_tag
 
 
 
@@ -620,7 +620,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 
 	return dedalo_tag
-};//end build_data_tag
+}//end build_data_tag
 
 
 
@@ -733,7 +733,7 @@ component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) 
 
 
 	return last_tag_id
-};//end get_last_tag_id
+}//end get_last_tag_id
 
 
 
@@ -789,7 +789,7 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 	return (range_clon)
 		? tag_id
 		: false
-};//end create_fragment
+}//end create_fragment
 
 
 /*	Persons

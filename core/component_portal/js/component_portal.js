@@ -1,4 +1,4 @@
-/* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/* global get_label, page_globals, SHOW_DEBUG, Promise */
 /* eslint no-undef: "error" */
 
 
@@ -58,7 +58,7 @@ export const component_portal = function() {
 	this.rqo					= null
 
 	return true
-};//end  component_portal
+}//end  component_portal
 
 
 
@@ -171,7 +171,7 @@ component_portal.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -367,7 +367,7 @@ component_portal.prototype.build = async function(autoload=false) {
 
 
 	return true
-};//end component_portal.prototype.build
+}//end component_portal.prototype.build
 
 
 
@@ -485,7 +485,7 @@ component_portal.prototype.add_value = async function(value) {
 		}
 
 	return true
-};//end add_value
+}//end add_value
 
 
 
@@ -568,7 +568,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 
 	return true
-};//end update_pagination_values
+}//end update_pagination_values
 
 
 
@@ -668,7 +668,7 @@ component_portal.prototype.get_search_value = function() {
 	}
 
 	return new_value
-};//end get_search_value
+}//end get_search_value
 
 
 
@@ -703,6 +703,6 @@ component_portal.prototype.get_search_value = function() {
 	// 	}
 
 	// 	return offset_last
-	// };//end  get_last_offset
+	// }//end  get_last_offset
 
 

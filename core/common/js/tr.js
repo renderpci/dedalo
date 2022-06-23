@@ -225,4 +225,4 @@ export const tr = {
 
 
 
-};//end tr
+}//end tr

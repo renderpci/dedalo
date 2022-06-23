@@ -16,7 +16,7 @@
 export const render_edit_component_geolocation = function() {
 
 	return true
-};//end render_edit_component_geolocation
+}//end render_edit_component_geolocation
 
 
 
@@ -77,7 +77,7 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -174,7 +174,7 @@ const add_events = function(wrapper, self) {
 		})//end wrapper.addEventListener("click"
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -210,7 +210,7 @@ export const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -341,7 +341,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 
 
 	return li
-};//end get_input_element_edit
+}//end get_input_element_edit
 
 
 
@@ -396,6 +396,6 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 

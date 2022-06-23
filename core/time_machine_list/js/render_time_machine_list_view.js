@@ -109,7 +109,7 @@ export const render_time_machine_list_view = async function(self, options) {
 
 
 	return wrapper
-};//end render_time_machine_list_view
+}//end render_time_machine_list_view
 
 
 
@@ -157,7 +157,7 @@ const get_content_data = async function(ar_section_record, self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -186,7 +186,7 @@ const rebuild_columns_map = async function(self) {
 
 
 	return await self.columns_map
-};//end rebuild_columns_map
+}//end rebuild_columns_map
 
 
 

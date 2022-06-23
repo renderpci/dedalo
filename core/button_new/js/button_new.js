@@ -5,7 +5,7 @@
 *
 */
 var button_new = new function() {
-	
+
 
 	this.trigger_url = DEDALO_CORE_URL + '/button_new/trigger.button_new.php';
 
@@ -60,8 +60,8 @@ var button_new = new function() {
 		})
 
 		return js_promise
-	};//end  this.New
+	}//end  this.New
 
 
 
-};//end button_new
+}//end button_new

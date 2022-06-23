@@ -33,7 +33,7 @@ export const component_email = function(){
 	this.tools			= null
 
 	return true
-};//end component_email
+}//end component_email
 
 
 
@@ -105,7 +105,7 @@ component_email.prototype.verify_email = function(email_value) {
 
 
 	return valid_email;
-};//end verify_email
+}//end verify_email
 
 
 
@@ -124,7 +124,7 @@ component_email.prototype.send_email = function(component_obj) {
 	window.location.href = 'mailto:' + email
 
 	return true
-};//end send_email
+}//end send_email
 
 
 
@@ -146,6 +146,6 @@ component_email.prototype.send_multiple_email_calculation = function(component_o
 		//let mail_body = document.createElement( 'html' );
 		window.location.href = "mailto:?bcc=" + emails ; //+ "&body=" +mail_body
 	});
-};//end send_multiple_email_calculation
+}//end send_multiple_email_calculation
 
 

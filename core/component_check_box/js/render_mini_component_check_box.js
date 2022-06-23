@@ -16,7 +16,7 @@
 export const render_mini_component_check_box = function() {
 
 	return true
-};//end render_mini_component_check_box
+}//end render_mini_component_check_box
 
 
 
@@ -44,6 +44,6 @@ render_mini_component_check_box.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

@@ -19,7 +19,7 @@
 export const render_search_component_geolocation = function() {
 
 	return true
-};//end render_search_component_geolocation
+}//end render_search_component_geolocation
 
 
 
@@ -47,7 +47,7 @@ render_search_component_geolocation.prototype.search = async function() {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -106,7 +106,7 @@ const add_events = function(wrapper, self) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -141,7 +141,7 @@ const add_events = function(wrapper, self) {
 
 
 	// 	return content_data
-	// };//end get_content_data_edit
+	// }//end get_content_data_edit
 
 
 
@@ -273,6 +273,6 @@ const add_events = function(wrapper, self) {
 
 
 	// 	return li
-	// };//end get_input_element_edit
+	// }//end get_input_element_edit
 
 

@@ -20,7 +20,7 @@
 export const render_menu = function() {
 
 	return true
-};//end render_menu
+}//end render_menu
 
 
 
@@ -322,7 +322,7 @@ render_menu.prototype.edit = async function() {
 
 
 	return menu_wrapper
-};//end edit
+}//end edit
 
 
 
@@ -382,7 +382,7 @@ const get_debug_info_bar = (self) => {
 
 
 	return debug_info_bar
-};//end get_debug_info_bar
+}//end get_debug_info_bar
 
 
 
@@ -424,7 +424,7 @@ const level_hierarchy = (options) => {
 		}
 
 	return true
-};//end level_hierarchy
+}//end level_hierarchy
 
 
 
@@ -457,7 +457,7 @@ const item_hierarchy = (options) => {
 				//e.stopPropagation();
 				if(self.menu_active===false) {
 					return false
-				};//end if self.menu_active
+				}//end if self.menu_active
 
 				// get current node mouse is over
 				const active_li = e.target.nodeName==='A' ? e.target.parentNode : e.target
@@ -591,7 +591,7 @@ const item_hierarchy = (options) => {
 		}//end children_item
 
 	return li
-};//end item_hierarchy
+}//end item_hierarchy
 
 
 
@@ -626,7 +626,7 @@ const close_all_drop_menu = function(self) {
 	}
 
 	return true
-};//end close_all_drop_menu
+}//end close_all_drop_menu
 
 
 
@@ -656,7 +656,7 @@ const close_all_children = function(tipo){
 	}
 
 	return true
-};//end close_all_children
+}//end close_all_children
 
 
 
@@ -684,6 +684,6 @@ const change_lang = async function(event) {
 	//event_manager.publish('user_navigation', {lang: current_lang})
 
 	return api_response
-};//end change_lang
+}//end change_lang
 
 

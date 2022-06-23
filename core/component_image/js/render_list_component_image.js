@@ -16,7 +16,7 @@
 export const render_list_component_image = function() {
 
 	return true
-};//end render_list_component_image
+}//end render_list_component_image
 
 
 
@@ -70,6 +70,6 @@ render_list_component_image.prototype.list = function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

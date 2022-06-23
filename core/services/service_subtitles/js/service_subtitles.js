@@ -31,7 +31,7 @@ export const service_subtitles = function () {
 	this.caller				= null
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -63,7 +63,7 @@ service_subtitles.prototype.init = async function(options) {
 	// events
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -76,7 +76,7 @@ service_subtitles.prototype.build = async function(autoload=false) {
 
 
 	return true
-};//end build_custom
+}//end build_custom
 
 
 

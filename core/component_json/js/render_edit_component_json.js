@@ -60,7 +60,7 @@ render_edit_component_json.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -165,7 +165,7 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -223,7 +223,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -403,7 +403,7 @@ export const on_change = function(self, editor) {
 
 
 	return true
-};//end on_change
+}//end on_change
 
 
 
@@ -425,6 +425,6 @@ const download_object_as_json = function(export_obj, export_name){
     download_anchor_node.remove();
 
     return true
-};//end download_object_as_json
+}//end download_object_as_json
 
 

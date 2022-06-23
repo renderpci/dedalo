@@ -20,7 +20,7 @@
 export const render_tool_transcription = function() {
 
 	return true
-};//end render_tool_transcription
+}//end render_tool_transcription
 
 
 
@@ -57,7 +57,7 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 
 
 	return wrapper
-};//end render_tool_transcription
+}//end render_tool_transcription
 
 
 
@@ -316,7 +316,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -393,7 +393,7 @@ const render_related_list = function(self){
 		})
 
 	return fragment
-};//end render_related_list
+}//end render_related_list
 
 
 
@@ -498,7 +498,7 @@ const render_tanscription_options = async function(self, content_data) {
 		}
 
 	return fragment
-};//end render_tanscription_options
+}//end render_tanscription_options
 
 
 
@@ -529,4 +529,4 @@ const render_activity_info = function(self) {
 
 
 	return fragment
-};//end render_activity_info
+}//end render_activity_info

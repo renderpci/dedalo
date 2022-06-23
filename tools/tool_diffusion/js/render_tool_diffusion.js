@@ -16,7 +16,7 @@
 export const render_tool_diffusion = function() {
 
 	return true
-};//end render_tool_diffusion
+}//end render_tool_diffusion
 
 
 
@@ -56,7 +56,7 @@ render_tool_diffusion.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -204,6 +204,6 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 

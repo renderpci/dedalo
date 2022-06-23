@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL, DEDALO_CORE_URL */
+/*global Promise, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -17,7 +17,7 @@
 export const tool_common = function(){
 
 	return true
-};//end tool_common
+}//end tool_common
 
 
 
@@ -148,7 +148,7 @@ tool_common.prototype.init = async function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -315,7 +315,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -340,7 +340,7 @@ tool_common.prototype.render = async function(options={}) {
 
 
 	return result
-};//end render
+}//end render
 
 
 
@@ -502,7 +502,7 @@ tool_common.prototype.load_component = async function(options) {
 
 
 	return component_instance
-};//end load_component
+}//end load_component
 
 
 
@@ -551,32 +551,23 @@ export const open_tool = async (options) => {
 			: null
 
 	// open tool visualization
-		switch (open_as) {
-			case 'window':
-				// window modes
-				return view_window({
-					tool_context	: tool_context, // object
-					caller			: caller, // object like component_input_text instance
-					open_as			: open_as, // string like 'tab' | 'popup'
-					windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
-				})
-				break;
-
-			case 'modal':
-			default:
-				// modal mode (default)
-				return view_modal({
-					tool_context	: tool_context, // object
-					caller			: caller, // object like component_input_text instance
-					open_as			: open_as, // string like 'tab' | 'popup'
-					windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
-				})
-				break;
-		}
+		const js_promise = (open_as==='window')
+			? view_window({
+				tool_context	: tool_context, // object
+				caller			: caller, // object like component_input_text instance
+				open_as			: open_as, // string like 'tab' | 'popup'
+				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
+			  })
+			: view_modal({
+				tool_context	: tool_context, // object
+				caller			: caller, // object like component_input_text instance
+				open_as			: open_as, // string like 'tab' | 'popup'
+				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
+			  })
 
 
-	return true
-};//end open_tool
+	return js_promise
+}//end open_tool
 
 
 
@@ -853,7 +844,7 @@ const view_window = async function(options) {
 
 
 	// 	return trigger_response
-	// };//end trigger_request
+	// }//end trigger_request
 
 
 
