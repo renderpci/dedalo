@@ -6,7 +6,7 @@
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone} from '../../common/js/utils/index.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
@@ -523,7 +523,15 @@ render_list_section.render_column_id = function(options){
 								event_manager.publish('delete_section_' + options.caller.id, {
 									section_tipo	: section_tipo,
 									section_id		: section_id,
-									caller			: options.caller // section
+									caller			: options.caller, // section
+									sqo				: {
+										section_tipo		: [section_tipo],
+										filter_by_locators	: [{
+											section_tipo	: section_tipo,
+											section_id		: section_id
+										}],
+										limit				: 1
+									}
 								})
 							})
 						// delete_icon
@@ -538,7 +546,7 @@ render_list_section.render_column_id = function(options){
 
 
 	return fragment
-};// end render_column_id()
+};//end render_column_id()
 
 
 
@@ -601,11 +609,16 @@ const get_buttons = function(self) {
 							event_manager.publish('new_section_' + self.id)
 							break;
 						case 'button_delete':
+
+							const delete_sqo = clone(self.rqo.sqo)
+							delete_sqo.limit = null
+							delete delete_sqo.offset
+
 							event_manager.publish('delete_section_' + self.id, {
 								section_tipo	: self.section_tipo,
 								section_id		: null,
 								caller			: self,
-								sqo				: self.rqo.sqo
+								sqo				: delete_sqo
 							})
 							break;
 						default:

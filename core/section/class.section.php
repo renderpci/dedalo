@@ -1130,9 +1130,8 @@ class section extends common {
 
 	/**
 	* DELETE (SECTION)
-	* @param section id
-	* @param delete_mode (data / record)
 	* Delete section with options
+	* @param string $delete_mode data|record
 	* @return bool
 	*/
 	public function Delete( string $delete_mode ) : bool {
@@ -1142,6 +1141,7 @@ class section extends common {
 			$section_id = intval($this->section_id);
 			// prevent delete <1 records
 			if($section_id<1) {
+				debug_log(__METHOD__." Invalid section_id: $section_id. Delete action is aborted ".to_string(), logger::WARNING);
 				return false;
 			}
 
@@ -1155,6 +1155,7 @@ class section extends common {
 			$user_id = navigator::get_user_id();
 			// matrix_table
 			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+
 
 		// delete_mode based actions
 			switch($delete_mode) {
@@ -1237,15 +1238,6 @@ class section extends common {
 					break;
 
 				case 'delete_record' :
-
-					if(SHOW_DEBUG===true) {
-						if ((int)$this->section_id===0) {
-							if(SHOW_DEBUG===true) {
-								dump((int)$this->section_id,"this section_id");
-							}
-							throw new Exception("Error Processing Request. Record is NOT deleted (1)", 1);
-						}
-					}
 
 					#
 					# TIME MACHINE : prepare matrix_time_machine data for recover this section later
@@ -1340,7 +1332,7 @@ class section extends common {
 			try {
 				diffusion::delete_record($this->tipo, $this->section_id);
 			} catch (Exception $e) {
-				debug_log(__METHOD__." Error on diffusion::delete_record: ".$e->getMessage(), logger::ERROR);
+				debug_log(__METHOD__." Error on diffusion::delete_record: ".$e->getMessage(), logger::WARNING);
 			}
 
 		// log
@@ -3882,6 +3874,7 @@ class section extends common {
 									$date_value->start = $date;
 								$component_dato = [$date_value];
 								$component->set_dato($component_dato);
+								$component->set_permissions(1);
 
 							// get component json
 								$get_json_options = new stdClass();
@@ -3913,6 +3906,7 @@ class section extends common {
 								$component_dato = [$locator];
 
 								$component->set_dato($component_dato);
+								$component->set_permissions(1);
 
 							// get component json
 								$get_json_options = new stdClass();

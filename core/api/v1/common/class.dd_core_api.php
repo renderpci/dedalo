@@ -450,6 +450,15 @@ final class dd_core_api {
 				return $response;
 			}
 
+		// permissions
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			debug_log(__METHOD__." permissions: $permissions ".to_string($section_tipo), logger::DEBUG);
+			if ($permissions<2) {
+				$response->error = 2;
+				$response->msg 	.= 'Insufficient permissions: '.$permissions;
+				return $response;
+			}
+
 		// sqo. search_query_object. If empty, we will create a new one with default values
 			$sqo = $rqo->sqo;
 			if(empty($sqo)){
@@ -457,13 +466,13 @@ final class dd_core_api {
 
 				// section_id check (is mandatory when no sqo is received)
 					if (empty($section_id)) {
-						$response->error = 2;
+						$response->error = 3;
 						$response->msg 	.= 'section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
 						return $response;
 					}
 
 				// sqo to create new one
-					$limit			= 0; // overwrite the default 10 records
+					$limit			= null; // overwrite the default 10 records
 					$self_locator	= new locator();
 						$self_locator->set_section_tipo($section_tipo);
 						$self_locator->set_section_id($section_id);
@@ -519,7 +528,7 @@ final class dd_core_api {
 						return $record->section_id;
 					}, $check_ar_records);
 
-					$response->error = 3;
+					$response->error = 4;
 					$response->msg 	.= 'Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
 					return $response;
 				}
