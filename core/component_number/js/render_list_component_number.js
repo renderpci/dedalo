@@ -16,7 +16,7 @@
 export const render_list_component_number = function() {
 
 	return true
-};//end render_list_component_number
+}//end render_list_component_number
 
 
 
@@ -41,6 +41,6 @@ render_list_component_number.prototype.list = async function() {
 		})
 
 	return wrapper
-};//end list
+}//end list
 
 

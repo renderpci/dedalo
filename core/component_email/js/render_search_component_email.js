@@ -16,7 +16,7 @@
 export const render_search_component_email = function() {
 
 	return true
-};//end render_search_component_email
+}//end render_search_component_email
 
 
 
@@ -41,7 +41,7 @@ render_search_component_email.prototype.search = async function() {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -103,7 +103,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -143,7 +143,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -164,6 +164,6 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return input
-};//end get_input_element
+}//end get_input_element
 
 

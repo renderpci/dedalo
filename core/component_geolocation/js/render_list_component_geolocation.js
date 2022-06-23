@@ -16,7 +16,7 @@
 export const render_list_component_geolocation = function() {
 
 	return true
-};//end render_list_component_geolocation
+}//end render_list_component_geolocation
 
 
 
@@ -46,6 +46,6 @@ render_list_component_geolocation.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

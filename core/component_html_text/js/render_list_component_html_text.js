@@ -17,7 +17,7 @@
 export const render_list_component_html_text = function() {
 
 	return true
-};//end render_list_component_html_text
+}//end render_list_component_html_text
 
 
 
@@ -46,6 +46,6 @@ render_list_component_html_text.prototype.list = async function() {
 		wrapper.innerHTML = value_string
 
 	return wrapper
-};//end list
+}//end list
 
 

@@ -16,7 +16,7 @@
 export const render_edit_service_upload = function() {
 
 	return true
-};//end render_edit_service_upload
+}//end render_edit_service_upload
 
 
 
@@ -47,7 +47,7 @@ render_edit_service_upload.prototype.edit = async function (options) {
 
 
 	return wrapper
-};//end render_edit_service_upload
+}//end render_edit_service_upload
 
 
 
@@ -139,7 +139,7 @@ export const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -221,7 +221,7 @@ export const render_info = function(self) {
 
 
 	return info
-};//end render_info
+}//end render_info
 
 
 
@@ -295,7 +295,7 @@ export const render_filedrag = function(self) {
 
 
 	return filedrag
-};//end render_filedrag
+}//end render_filedrag
 
 
 
@@ -361,7 +361,7 @@ export const render_progress_bar = function(self) {
 
 
 	return progress_bar_container
-};//end render_progress_bar
+}//end render_progress_bar
 
 
 
@@ -380,6 +380,6 @@ export const file_drag_hover = function(e) {
 	}
 
 	return true
-};//end file_drag_hover
+}//end file_drag_hover
 
 

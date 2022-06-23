@@ -31,7 +31,7 @@ export const component_section_id = function(){
 		this.id				= null
 
 	return true
-};//end component_section_id
+}//end component_section_id
 
 
 

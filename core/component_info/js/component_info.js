@@ -36,7 +36,7 @@ export const component_info = function(){
 	this.tools
 
 	return true
-};//end component_info
+}//end component_info
 
 
 
@@ -172,7 +172,7 @@ component_info.prototype.get_widgets = async function(){
 			})
 
 	return self.ar_instances
-};//end get_widgets
+}//end get_widgets
 
 
 
@@ -205,6 +205,6 @@ component_info.prototype.update_data = async function(){
 		}
 
 	return true
-};//end update_data
+}//end update_data
 
 

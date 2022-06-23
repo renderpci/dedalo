@@ -31,7 +31,7 @@ export const component_html_text = function(){
 	this.node
 
 	return true
-};//end component_html_text
+}//end component_html_text
 
 
 
@@ -92,7 +92,7 @@ component_html_text.prototype.save_value = async function(key, value) {
 	})
 
 	return true
-};//end save_value
+}//end save_value
 
 
 
@@ -108,7 +108,7 @@ component_html_text.prototype.save_value = async function(key, value) {
 // 	if (text_area.length==1) {
 // 		tinyMCE.get( text_area[0].id ).focus()
 // 	}
-// };//end select_component
+// }//end select_component
 
 
 
@@ -167,7 +167,7 @@ component_html_text.prototype.save_value = async function(key, value) {
 // 		alert("text editor obj_html_text not found "+ text_area_id);
 // 	}
 
-// };//end save_command
+// }//end save_command
 
 // component_html_text.prototype.click_event = function(e, wrapper) {
 

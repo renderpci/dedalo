@@ -16,7 +16,7 @@
 export const render_mini_component_geolocation = function() {
 
 	return true
-};//end render_mini_component_geolocation
+}//end render_mini_component_geolocation
 
 
 /**
@@ -43,6 +43,6 @@ render_mini_component_geolocation.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

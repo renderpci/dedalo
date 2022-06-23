@@ -16,7 +16,7 @@
 export const render_mini_component_password = function() {
 
 	return true
-};//end render_mini_component_password
+}//end render_mini_component_password
 
 
 
@@ -46,6 +46,6 @@ render_mini_component_password.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

@@ -38,7 +38,7 @@ export const tool_propagate_component_data = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -73,7 +73,7 @@ tool_propagate_component_data.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -99,7 +99,7 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -150,7 +150,7 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 				resolve(response)
 			})
 		})
-};//end propagate_component_data
+}//end propagate_component_data
 
 
 

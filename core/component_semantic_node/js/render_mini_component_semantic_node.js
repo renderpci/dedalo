@@ -15,7 +15,7 @@
 export const render_mini_component_semantic_node = function() {
 
 	return true
-};//end render_mini_component_semantic_node
+}//end render_mini_component_semantic_node
 
 
 /**
@@ -41,6 +41,6 @@ render_mini_component_semantic_node.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

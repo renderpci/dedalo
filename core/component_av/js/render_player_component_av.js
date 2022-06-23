@@ -16,7 +16,7 @@
 export const render_player_component_av = function() {
 
 	return true
-};//end  render_player_component_av
+}//end  render_player_component_av
 
 
 
@@ -58,7 +58,7 @@ render_player_component_av.prototype.player = async function(options) {
 
 
 	return wrapper
-};//end  player
+}//end  player
 
 
 
@@ -142,7 +142,7 @@ const get_content_data_player = function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -298,7 +298,7 @@ const get_av_control_buttons =  (self) =>{
 
 
 	return av_control_buttons
-};//end get_av_control_buttons
+}//end get_av_control_buttons
 
 
 
@@ -480,6 +480,6 @@ const get_av_control_buttons =  (self) =>{
 
 
 	// 	return video
-	// };//end  build_video_html5
+	// }//end  build_video_html5
 
 

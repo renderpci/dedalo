@@ -16,7 +16,7 @@
 export const render_mini_component_pdf = function() {
 
 	return true
-};//end render_mini_component_pdf
+}//end render_mini_component_pdf
 
 
 

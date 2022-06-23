@@ -21,7 +21,7 @@
 		event.dataTransfer.setData('text/plain', data);
 
 		return true
-	};//end ondrag_start
+	}//end ondrag_start
 
 
 
@@ -37,7 +37,7 @@
 
 		// Add drag_over class
 		//	obj.classList.add('drag_over')
-	};//end on_dragover
+	}//end on_dragover
 
 
 
@@ -48,7 +48,7 @@
 
 		//console.log("dragleave");
 		//obj.classList.remove('drag_over')
-	};//end on_dragleave
+	}//end on_dragleave
 
 
 
@@ -90,6 +90,6 @@
 		})
 
 		return true
-	};//end on_drop
+	}//end on_drop
 
 

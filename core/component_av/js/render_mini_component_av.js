@@ -16,7 +16,7 @@
 export const render_mini_component_av = function() {
 
 	return true
-};//end  render_mini_component_av
+}//end  render_mini_component_av
 
 
 
@@ -49,4 +49,4 @@ render_mini_component_av.prototype.mini = async function() {
 
 
 	return wrapper
-};//end  mini
+}//end  mini

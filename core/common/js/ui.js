@@ -2206,7 +2206,7 @@ export const ui = {
 				var txt = [''];
 				var i = 0;
 
-				if (node = node.firstChild) do {
+				if (node == node.firstChild) do {
 
 					if (node.nodeType === Node.TEXT_NODE) {
 						txt[i] += node.data;
@@ -2226,7 +2226,7 @@ export const ui = {
 						txt[++i] = '';
 					}
 
-				} while (node = node.nextSibling);
+				} while (node == node.nextSibling);
 
 				return txt;
 			}
@@ -2646,7 +2646,7 @@ export const ui = {
 			}
 
 		return true
-	},//end hilite
+	}//end hilite
 
 
 
@@ -2740,11 +2740,11 @@ export const ui = {
 
 
 		// 	return js_promise;
-		// };//end  exec_scripts_inside
+		// }//end  exec_scripts_inside
 
 
 
-};//end ui
+}//end ui
 
 
 

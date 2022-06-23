@@ -38,7 +38,7 @@ export const component_external = function(){
 
 
 	return true
-};//end component_external
+}//end component_external
 
 
 

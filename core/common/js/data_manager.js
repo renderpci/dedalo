@@ -8,7 +8,7 @@
 */
 export const data_manager = function() {
 
-};//end data_manager
+}//end data_manager
 
 
 
@@ -100,7 +100,7 @@ data_manager.prototype.request = async function(options) {
 
 
 	return api_response
-};//end request
+}//end request
 
 
 
@@ -131,7 +131,7 @@ data_manager.prototype.get_element_context = async function(source) {
 
 
 	return api_response
-};//end get_element_context
+}//end get_element_context
 
 
 
@@ -163,7 +163,7 @@ data_manager.prototype.get_page_element = async function(options) {
 
 
 	return api_response
-};//end get_page_element
+}//end get_page_element
 
 
 
@@ -241,7 +241,7 @@ data_manager.prototype.get_local_db = async function() {
 			};
 	})
 	.catch(err => { console.error(err) });
-};//end local_db
+}//end local_db
 
 
 
@@ -297,7 +297,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 				reject(event.target.error);
 			};
 	})
-};//end set_local_db_data
+}//end set_local_db_data
 
 
 
@@ -354,7 +354,7 @@ data_manager.prototype.get_local_db_data = async function(id, table, cache=false
 				reject(event.target.error);
 			};
 	})
-};//end get_local_db_data
+}//end get_local_db_data
 
 
 
@@ -396,7 +396,7 @@ data_manager.prototype.delete_local_db_data = async function(id, table) {
 				reject(event.target.error);
 			};
 	})
-};//end get_local_db_data
+}//end get_local_db_data
 
 
 
@@ -417,7 +417,7 @@ export function download_url(url, filename) {
 		}
 		);
 	});
-};//end download_url
+}//end download_url
 
 
 
@@ -442,7 +442,7 @@ export function download_data(data, filename) {
 	window.URL.revokeObjectURL(url)
 
 	return true
-};//end download_data
+}//end download_data
 
 
 
@@ -468,7 +468,7 @@ data_manager.prototype.area_load_data = async function(basic_context) {
 		}
 
 	return api_response
-};//end area_load_data
+}//end area_load_data
 */
 
 
@@ -500,7 +500,7 @@ data_manager.prototype.component_load_data = async function() {
 		component.data = data
 
 	return data
-};//end component_load_data
+}//end component_load_data
 */
 
 
@@ -530,5 +530,5 @@ data_manager.prototype.component_load_context = async function(component) {
 		component.context = context
 
 	return context
-};//end component_load_context
+}//end component_load_context
 */

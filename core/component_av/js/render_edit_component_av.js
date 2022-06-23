@@ -16,7 +16,7 @@
 export const render_edit_component_av = function() {
 
 	return true
-};//end  render_edit_component_av
+}//end  render_edit_component_av
 
 
 
@@ -52,7 +52,7 @@ render_edit_component_av.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end  edit
+}//end  edit
 
 
 
@@ -99,7 +99,7 @@ render_edit_component_av.prototype.edit = async function(options) {
 
 
 	// 	return true
-	// };//end  add_events
+	// }//end  add_events
 
 
 
@@ -212,7 +212,7 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-};//end  get_content_data_edit
+}//end  get_content_data_edit
 
 
 
@@ -291,7 +291,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end  get_buttons
+}//end  get_buttons
 
 
 
@@ -340,7 +340,7 @@ const get_quality_selector = (self) => {
 
 
 	return quality_selector
-};//end get_quality_selector
+}//end get_quality_selector
 
 
 
@@ -522,5 +522,5 @@ const get_quality_selector = (self) => {
 
 
 	// 	return video
-	// };//end  build_video_html5
+	// }//end  build_video_html5
 

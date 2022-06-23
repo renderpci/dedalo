@@ -17,7 +17,7 @@
 export const render_tool_import_dedalo_csv = function() {
 
 	return true
-};//end render_tool_import_dedalo_csv
+}//end render_tool_import_dedalo_csv
 
 
 
@@ -88,7 +88,7 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end tool_import_dedalo_csv
+}//end tool_import_dedalo_csv
 
 
 
@@ -374,7 +374,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -567,7 +567,7 @@ const render_file_info = function(self, item) {
 
 
 	return item_wrapper
-};//end render_file_info
+}//end render_file_info
 
 
 
@@ -800,7 +800,7 @@ const render_columns_mapper = async function(self, item) {
 
 
 	return fragment
-};//end render_columns_mapper
+}//end render_columns_mapper
 
 
 
@@ -857,6 +857,6 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
 
 	return true
-};//end upload_done
+}//end upload_done
 
 

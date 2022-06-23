@@ -16,7 +16,7 @@
 export const render_mini_component_filter_records = function() {
 
 	return true
-};//end render_mini_component_filter_records
+}//end render_mini_component_filter_records
 
 
 
@@ -44,6 +44,6 @@ render_mini_component_filter_records.prototype.mini = function() {
 
 
 	return wrapper
-};//end min
+}//end min
 
 

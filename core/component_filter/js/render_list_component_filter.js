@@ -16,7 +16,7 @@
 export const render_list_component_filter = function() {
 
 	return true
-};//end render_list_component_filter
+}//end render_list_component_filter
 
 
 
@@ -45,6 +45,6 @@ render_list_component_filter.prototype.list = function() {
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
-};//end list
+}//end list
 
 

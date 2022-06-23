@@ -8,7 +8,7 @@
 */
 export const data_manager = function() {
 
-};//end data_manager
+}//end data_manager
 
 
 
@@ -30,7 +30,7 @@ data_manager.prototype.request = async function(options) {
 	this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 	this.body			= options.body // body data type must match "Content-Type" header
 
-	const handle_errors = function(response) {		
+	const handle_errors = function(response) {
 		if (!response.ok) {
 			console.warn("-> HANDLE_ERRORS response:",response);
 			throw Error(response.statusText);
@@ -90,7 +90,7 @@ data_manager.prototype.request = async function(options) {
 	// }
 
 	return api_response
-};//end request
+}//end request
 
 
 
@@ -121,7 +121,7 @@ data_manager.prototype.request = async function(options) {
 	// 		}
 
 	// 	return api_response
-	// };//end get_login
+	// }//end get_login
 
 
 
@@ -151,7 +151,7 @@ data_manager.prototype.request = async function(options) {
 	// 		}
 
 	// 	return api_response
-	// };//end read
+	// }//end read
 
 
 
@@ -180,7 +180,7 @@ data_manager.prototype.count = async function(sqo) {
 		}
 
 	return api_response
-};//end count
+}//end count
 
 
 
@@ -211,7 +211,7 @@ data_manager.prototype.count_OLD = async function(sqo) {
 		}
 
 	return total
-};//end count
+}//end count
 
 
 
@@ -242,7 +242,7 @@ data_manager.prototype.get_element_context = async function(source) {
 
 
 	return api_response
-};//end get_element_context
+}//end get_element_context
 
 
 
@@ -274,7 +274,7 @@ data_manager.prototype.get_page_element = async function(options) {
 
 
 	return api_response
-};//end get_page_element
+}//end get_page_element
 
 
 
@@ -312,8 +312,8 @@ data_manager.prototype.get_local_db = async function() {
 		// success case
 			db_request.onsuccess = function(event) {
 				// console.log("-> get_local_db success:", event.target);
-				
-				const db = event.target.result;			
+
+				const db = event.target.result;
 
 				resolve(db)
 			};
@@ -321,7 +321,7 @@ data_manager.prototype.get_local_db = async function() {
 		// onupgradeneeded event
 			db_request.onupgradeneeded = function(event) {
 				console.log("-> get_local_db onupgradeneeded:", event.target);
-					
+
 				const db = event.target.result;
 
 				// objectStore
@@ -349,7 +349,7 @@ data_manager.prototype.get_local_db = async function() {
 					// };
 			};
 	})
-};//end local_db
+}//end local_db
 
 
 
@@ -382,7 +382,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 			// const request	= objectStore.add(data);
 			// Put this updated object back into the database.
   			const request = objectStore.put(data);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);
@@ -424,7 +424,7 @@ data_manager.prototype.get_local_db_data = async function(id, table) {
 		// request
 			const objectStore	= transaction.objectStore(table);
 			const request		= objectStore.get(id);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);
@@ -466,7 +466,7 @@ data_manager.prototype.delete_local_db_data = async function(id, table) {
 		// request
 			const objectStore	= transaction.objectStore(table);
 			const request		= objectStore.delete(id);
-		 
+
 			request.onsuccess = function(event) {
 				// event.target.result === customer.ssn;
 				// console.log("Yuppiii:", event.target);
@@ -498,7 +498,7 @@ export function download_url(url, filename) {
 		}
 		);
 	});
-};//end download_url
+}//end download_url
 
 
 
@@ -524,7 +524,7 @@ data_manager.prototype.area_load_data = async function(basic_context) {
 		}
 
 	return api_response
-};//end area_load_data
+}//end area_load_data
 */
 
 
@@ -556,7 +556,7 @@ data_manager.prototype.component_load_data = async function() {
 		component.data = data
 
 	return data
-};//end component_load_data
+}//end component_load_data
 */
 
 
@@ -586,7 +586,7 @@ data_manager.prototype.component_load_context = async function(component) {
 		component.context = context
 
 	return context
-};//end component_load_context
+}//end component_load_context
 */
 
 

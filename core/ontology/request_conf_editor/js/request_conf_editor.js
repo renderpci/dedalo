@@ -11,9 +11,9 @@
 // request_conf_editor
 export const request_conf_editor = function () {
 
-	
 
-};//end request_conf_editor
+
+}//end request_conf_editor
 
 
 
@@ -41,29 +41,29 @@ request_conf_editor.init = async function(options) {
 	// load properties
 		function test_flow(i) {
 			self.get_properties()
-			.then(function(properties){			
-				
+			.then(function(properties){
+
 				main_div.innerHTML = ''
 				const pre = document.createElement("pre")
 				pre.innerHTML = JSON.stringify(properties, null, 2)
 				main_div.appendChild(pre)
-				
+
 				i++; if (i<=10) {
-					setTimeout(function(){						
+					setTimeout(function(){
 						const new_properties = Object.assign(properties, {"test": i})
 						self.save_properties(new_properties)
 						.then(function(response){
 							test_flow(i)
-						})						
+						})
 					}, 1000/4)
 				}
 			})
 		}
 		test_flow(1)
-		
 
 
-};//end init
+
+}//end init
 
 
 
@@ -94,7 +94,7 @@ request_conf_editor.get_properties = function() {
 			resolve(properties)
 		})
 	})
-};//end get_properties
+}//end get_properties
 
 
 
@@ -106,7 +106,7 @@ request_conf_editor.save_properties = function(value) {
 
 	const self = this
 
-	return new Promise(function(resolve){		
+	return new Promise(function(resolve){
 
 		const current_data_manager = new data_manager()
 		current_data_manager.request({
@@ -123,6 +123,6 @@ request_conf_editor.save_properties = function(value) {
 			resolve(response)
 		})
 	})
-};//end save_properties
+}//end save_properties
 
 

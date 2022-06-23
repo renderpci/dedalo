@@ -36,7 +36,7 @@ export const tool_user_admin = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -74,7 +74,7 @@ tool_user_admin.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -126,7 +126,7 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -235,7 +235,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 	]
 
 	return ddo_map
-};//end get_ddo_map
+}//end get_ddo_map
 
 
 
@@ -306,7 +306,7 @@ tool_user_admin.prototype.build_context = function() {
 		console.log("tool_user_admin build_context context:",context);
 
 	return context
-};//end build_context
+}//end build_context
 
 
 
@@ -334,6 +334,6 @@ tool_user_admin.prototype.load_component_sample = async function(lang) {
 
 
 	return component_instance
-};//end load_component_sample
+}//end load_component_sample
 
 

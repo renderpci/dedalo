@@ -16,7 +16,7 @@
 export const render_tool_tc = function() {
 
 	return true
-};//end render_tool_tc
+}//end render_tool_tc
 
 
 
@@ -56,7 +56,7 @@ render_tool_tc.prototype.edit = async function (options={render_level:'full'}) {
 
 
 	return wrapper
-};//end render_tool_tc
+}//end render_tool_tc
 
 
 
@@ -201,7 +201,7 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-};//end content_data_edit
+}//end content_data_edit
 
 
 
@@ -240,4 +240,4 @@ export const add_component = async (self, component_container, lang) => {
 
 
 	return component
-};//end add_component
+}//end add_component

@@ -39,7 +39,7 @@ export const tool_indexation = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -190,7 +190,7 @@ tool_indexation.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -242,7 +242,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -293,7 +293,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	// 		}
 
 	// 	return true
-	// };//end load_indexing_component
+	// }//end load_indexing_component
 
 
 
@@ -334,7 +334,7 @@ tool_indexation.prototype.get_component = async function(lang) {
 
 
 	return component_instance
-};//end get_component
+}//end get_component
 
 
 
@@ -384,7 +384,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 	const datum = api_response.result
 
 	return datum
-};//end load_related_sections_list
+}//end load_related_sections_list
 
 
 
@@ -437,7 +437,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 
 
 	// 	return area_thesaurus
-	// };//end get_thesaurus
+	// }//end get_thesaurus
 
 
 
@@ -526,7 +526,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 	// 		button_obj.style.display = 'none'
 
 	// 	return js_promise
-	// };//end create_fragment
+	// }//end create_fragment
 
 
 
@@ -604,7 +604,7 @@ tool_indexation.prototype.active_value = function(name, callback) {
 		}
 
 	return true
-};//end active_value
+}//end active_value
 
 
 
@@ -632,7 +632,7 @@ tool_indexation.prototype.update_active_values = function(values) {
 	// console.log("Fired update_active_values self.active_elements list:", self.active_elements);
 
 	return true
-};//end update_active_values
+}//end update_active_values
 
 
 
@@ -685,7 +685,7 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 				resolve(response)
 			})
 		})
-};//end delete_tag
+}//end delete_tag
 
 
 
@@ -732,6 +732,6 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 	// 	// 			resolve(response)
 	// 	// 		})
 	// 	// 	})
-	// };//end change_tag_state
+	// }//end change_tag_state
 
 

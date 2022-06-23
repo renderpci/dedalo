@@ -218,7 +218,7 @@ export const get_instance = async function(options){
 	const instance = load_instance()
 
 	return instance
-};//end get_instance
+}//end get_instance
 
 
 
@@ -229,7 +229,7 @@ export const get_instance = async function(options){
 export const get_all_instances = function() {
 
 	return instances
-};//end get_all_instances
+}//end get_all_instances
 
 
 
@@ -310,7 +310,7 @@ export const delete_instance = async function(options) {
 		// console.log(" ++++++++ instances:",instances, deleted)
 
 	return deleted
-};//end delete_instance
+}//end delete_instance
 
 
 
@@ -334,6 +334,6 @@ export const key_instances_builder = function(options){
 	const key = key_parts.join('_')
 
 	return key
-};//end key_instances_builder
+}//end key_instances_builder
 
 

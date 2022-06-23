@@ -20,7 +20,7 @@
 export const render_tool_tr_print = function() {
 
 	return true
-};//end render_tool_tr_print
+}//end render_tool_tr_print
 
 
 
@@ -58,7 +58,7 @@ render_tool_tr_print.prototype.edit = async function(options={render_level:'full
 
 
 	return wrapper
-};//end render_tool_tr_print
+}//end render_tool_tr_print
 
 
 
@@ -121,7 +121,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -135,7 +135,7 @@ const render_head_options = async function(self, content_data) {
 	const fragment = new DocumentFragment()
 
 	return fragment
-};//end render_head_options
+}//end render_head_options
 
 
 
@@ -598,7 +598,7 @@ const render_text_process_options = function(self, content_data) {
 
 
 	return fragment
-};//end render_text_process_options
+}//end render_text_process_options
 
 
 

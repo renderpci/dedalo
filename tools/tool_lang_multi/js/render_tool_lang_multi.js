@@ -18,7 +18,7 @@
 export const render_tool_lang_multi = function() {
 
 	return true
-};//end render_tool_lang_multi
+}//end render_tool_lang_multi
 
 
 
@@ -55,7 +55,7 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 
 	return wrapper
-};//end render_tool_lang_multi
+}//end render_tool_lang_multi
 
 
 
@@ -131,7 +131,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -212,7 +212,7 @@ export const create_target_component = (lang, self) => {
 	}
 
 	return target_component_container
-};//end create_target_component
+}//end create_target_component
 
 
 
@@ -286,4 +286,4 @@ const build_automatic_translation = (options) => {
 
 
 	return automatic_translation_container
-};//end build_automatic_translation
+}//end build_automatic_translation

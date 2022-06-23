@@ -22,7 +22,7 @@
 export const inspector = function() {
 
 	return true
-};//end inspector
+}//end inspector
 
 
 
@@ -99,7 +99,7 @@ inspector.prototype.init = async function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -120,6 +120,6 @@ inspector.prototype.build = async function() {
 		self.status = 'builded'
 
 	return true
-};//end build
+}//end build
 
 

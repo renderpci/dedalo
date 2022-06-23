@@ -14,7 +14,7 @@ var widget_sum = new function() {
 
 	/**
 	* INIT
-	* @return 
+	* @return
 	*/
 	this.init = function(widget_id) {
 		// Overwrites default behaviour of form submit button
@@ -29,25 +29,25 @@ var widget_sum = new function() {
 
 		var update_info_button = wrap_div.querySelector('.update_info')
 			update_info_button.setAttribute( "onClick", "widget_sum.reset(this)" )
-	};//end init
-	
+	}//end init
+
 
 
 	/**
 	* ACTIVATE_LISTENER_VALUE
 	*/
 	this.activate_listener_value = function(component_target_tipo) {
-				
+
 		var reference_input	= document.querySelector('input[data-tipo="' + component_target_tipo + '"]')
-		if (reference_input) {	
+		if (reference_input) {
 
 			// Remove listener to avoid duplicates
-			reference_input.removeEventListener('change', this.add_sum_ev)				
-			
+			reference_input.removeEventListener('change', this.add_sum_ev)
+
 			// Add listner change
 			reference_input.addEventListener("change", this.add_sum_ev, false);
-		}		
-	};//end activate_listener_value
+		}
+	}//end activate_listener_value
 
 
 
@@ -58,20 +58,20 @@ var widget_sum = new function() {
 
 		// Select current widget element
 		var widget_sum = document.getElementById('widget_sum')
-		
+
 		// Update info (reload component info)
 		var js_promise = component_info.update_info(widget_sum)
 			//js_promise.then(function() { })
-	};//end add_sum_ev
+	}//end add_sum_ev
 
 
 
 	/**
 	* RESET
-	* @return 
+	* @return
 	*/
 	this.reset = function(section_tipo) {
-		
+
 		var trigger_vars = {
 			mode 		 : 'reset_cache',
 			section_tipo : section_tipo
@@ -86,10 +86,10 @@ var widget_sum = new function() {
 			widget_sum.add_sum_ev() // reloads component info
 		})
 
-	};//end reset
-	
-	
+	}//end reset
 
-		
+
+
+
 
 }//end widget_sum

@@ -1,4 +1,4 @@
-/*global get_label, SHOW_DEBUG */
+/*global get_label, SHOW_DEBUG, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -80,7 +80,7 @@ export const service_autocomplete = function() {
 			})
 
 		return true
-	};//end init
+	}//end init
 
 
 
@@ -131,7 +131,7 @@ export const service_autocomplete = function() {
 		}
 
 		return true
-	};//end service_autocomplete_keys
+	}//end service_autocomplete_keys
 
 
 
@@ -145,7 +145,7 @@ export const service_autocomplete = function() {
 
 
 		return true
-	};//end build
+	}//end build
 
 
 
@@ -165,7 +165,7 @@ export const service_autocomplete = function() {
 		self.status = 'destroyed'
 
 		return true
-	};//end destroy
+	}//end destroy
 
 
 
@@ -243,7 +243,7 @@ export const service_autocomplete = function() {
 
 
 		return true
-	};//end render
+	}//end render
 
 
 
@@ -317,7 +317,7 @@ export const service_autocomplete = function() {
 			// self.build_filter_fields(select.value, options)
 
 		return source_selector
-	};//end render_source_selector
+	}//end render_source_selector
 
 
 
@@ -353,7 +353,7 @@ export const service_autocomplete = function() {
 				});
 
 		return search_input
-	};//end get_input
+	}//end get_input
 
 
 
@@ -440,7 +440,7 @@ export const service_autocomplete = function() {
 						}
 						const path				= [{
 							section_tipo	: section,
-							component_tipo	: component_tipo,
+							component_tipo	: component_tipo
 						}]
 						const datalist_item		= {
 							grouper	: component_tipo,
@@ -484,7 +484,7 @@ export const service_autocomplete = function() {
 			// console.log("ar_filter_by_list 2:",self.ar_filter_by_list);
 
 		return filters_container
-	};//end render_filters_selector
+	}//end render_filters_selector
 
 
 
@@ -541,7 +541,7 @@ export const service_autocomplete = function() {
 			}
 
 		return filter_node
-	};//end build_filter
+	}//end build_filter
 
 
 
@@ -655,7 +655,7 @@ export const service_autocomplete = function() {
 
 
 		return li
-	};//end render_option_chekbox
+	}//end render_option_chekbox
 
 
 
@@ -715,7 +715,7 @@ export const service_autocomplete = function() {
 
 
 		return inputs_list
-	};//end render_inputs_list
+	}//end render_inputs_list
 
 
 
@@ -770,7 +770,7 @@ export const service_autocomplete = function() {
 				}
 
 		return operator_selector
-	};//end render_operator_selector
+	}//end render_operator_selector
 
 
 
@@ -958,7 +958,7 @@ export const service_autocomplete = function() {
 		}// end for of current_section (section_tipo)
 
 		return datalist
-	};//end render_datalist
+	}//end render_datalist
 
 
 
@@ -1011,7 +1011,7 @@ export const service_autocomplete = function() {
 
 
 		return js_promise
-	};//end autocomplete_search
+	}//end autocomplete_search
 
 
 
@@ -1097,7 +1097,7 @@ export const service_autocomplete = function() {
 
 
 		return rqo_search
-	};//end rebuild_search_query_object
+	}//end rebuild_search_query_object
 
 
 
@@ -1134,7 +1134,7 @@ export const service_autocomplete = function() {
 			}
 
 		return api_response
-	};//end dedalo_engine
+	}//end dedalo_engine
 
 
 
@@ -1354,10 +1354,10 @@ export const service_autocomplete = function() {
 					request.send();
 
 			})//end Promise
-	};//end zenon_engine
+	}//end zenon_engine
 
 
 
-};//end service_autocomplete
+}//end service_autocomplete
 
 

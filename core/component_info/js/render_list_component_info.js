@@ -19,7 +19,7 @@
 export const render_list_component_info = function() {
 
 	return true
-};//end render_list_component_info
+}//end render_list_component_info
 
 
 
@@ -48,7 +48,7 @@ render_list_component_info.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 
 
@@ -84,7 +84,7 @@ render_list_component_info.prototype.list = async function() {
 
 
 	// 	return content_data
-	// };//end get_content_data_edit
+	// }//end get_content_data_edit
 
 
 
@@ -111,4 +111,4 @@ render_list_component_info.prototype.list = async function() {
 
 
 	// 	return li
-	// };//end input_element
+	// }//end input_element

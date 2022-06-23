@@ -16,7 +16,7 @@
 export const render_list_component_iri = function() {
 
 	return true
-};//end render_list_component_iri
+}//end render_list_component_iri
 
 
 
@@ -60,6 +60,6 @@ render_list_component_iri.prototype.list = async function() {
 		})
 
 	return wrapper
-};//end list
+}//end list
 
 

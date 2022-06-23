@@ -36,7 +36,7 @@ export const tool_dummy = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -74,7 +74,7 @@ tool_dummy.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -102,7 +102,7 @@ tool_dummy.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -130,4 +130,4 @@ tool_dummy.prototype.load_component_sample = async function(lang) {
 
 
 	return component_instance
-};//end load_component_sample
+}//end load_component_sample

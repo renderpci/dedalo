@@ -22,7 +22,7 @@
 export const render_edit_view_tools = function() {
 
 	return true
-};//end render_edit_view_tools
+}//end render_edit_view_tools
 
 
 
@@ -56,7 +56,7 @@ render_edit_view_tools.render = async function(self, options) {
 		add_events(self, wrapper)
 
 	return wrapper
-};//end render
+}//end render
 
 
 
@@ -104,7 +104,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -214,6 +214,6 @@ const get_input_element = (i, current_value, self) => {
 		li.prepend(tool_icon)
 
 	return li
-};//end get_input_element
+}//end get_input_element
 
 

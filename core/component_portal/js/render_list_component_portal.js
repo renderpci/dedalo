@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/* global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -23,7 +23,7 @@
 export const render_list_component_portal = function() {
 
 	return true
-};//end render_list_component_portal
+}//end render_list_component_portal
 
 
 
@@ -114,7 +114,7 @@ render_list_component_portal.prototype.list = async function(options) {
 			// add_events(self, wrapper)
 
 	return wrapper
-};//end list
+}//end list
 
 
 
@@ -158,6 +158,6 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 

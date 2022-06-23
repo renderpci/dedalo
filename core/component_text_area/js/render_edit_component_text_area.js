@@ -19,7 +19,7 @@
 export const render_edit_component_text_area = function() {
 
 	return true
-};//end render_edit_component_text_area
+}//end render_edit_component_text_area
 
 
 
@@ -65,7 +65,7 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -207,7 +207,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -256,7 +256,7 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -308,7 +308,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -471,7 +471,7 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return li
-};//end get_input_element
+}//end get_input_element
 
 
 
@@ -658,7 +658,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 
 	return custom_buttons
-};//end get_custom_buttons
+}//end get_custom_buttons
 
 
 
@@ -679,13 +679,13 @@ const get_custom_events = (self, i, text_editor) => {
 		custom_events.focus = (evt, options) => {
 
 			event_manager.publish('active_component', self)
-		};//end focus
+		}//end focus
 
 	// blur
 		custom_events.blur = (evt, options) => {
 			// save. text_editor save function calls current component save_value()
 			text_editor.save()
-		};//end blur
+		}//end blur
 
 	// click
 		custom_events.click = (evt, options) => {
@@ -876,14 +876,14 @@ const get_custom_events = (self, i, text_editor) => {
 				// click_no_tag_
 				event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
 			}//end click on img
-		};//end click
+		}//end click
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
 			// user text selection event
 			const selection = options.selection
 			event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
-		};//end MouseUp
+		}//end MouseUp
 
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
@@ -970,11 +970,11 @@ const get_custom_events = (self, i, text_editor) => {
 
 					break;
 			}
-		};//end KeyUp
+		}//end KeyUp
 
 
 	return custom_events
-};//end get_custom_events
+}//end get_custom_events
 
 
 
@@ -1036,7 +1036,7 @@ export const build_node_tag = function(data_tag, tag_id) {
 	})
 
 	return node_tag
-};//end build_node_tag
+}//end build_node_tag
 
 
 
@@ -1143,7 +1143,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 	self.wrapper.appendChild(layer_selector)
 
 	return fragment
-};//end render_layer_selector
+}//end render_layer_selector
 
 
 
@@ -1246,7 +1246,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 
 
 	return true
-};//end render_page_selector
+}//end render_page_selector
 
 
 
@@ -1424,7 +1424,7 @@ const render_note = async function(options) {
 
 
 	return true
-};//end render_note
+}//end render_note
 
 
 
@@ -1580,7 +1580,7 @@ const render_persons_list = function(self, text_editor, i) {
 
 
 	return true
-};//end render_persons_list
+}//end render_persons_list
 
 
 
@@ -1686,7 +1686,7 @@ const render_langs_list = function(self, text_editor, i) {
 
 
 	return true
-};//end render_langs_list
+}//end render_langs_list
 
 
 
@@ -1755,7 +1755,7 @@ const render_langs_list = function(self, text_editor, i) {
 
 
 	// 	return contenteditable_buttons
-	// };//end get_contenteditable_buttons
+	// }//end get_contenteditable_buttons
 
 
 

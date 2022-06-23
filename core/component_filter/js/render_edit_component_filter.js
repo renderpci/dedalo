@@ -16,7 +16,7 @@
 export const render_edit_component_filter = function() {
 
 	return true
-};//end render_edit_component_filter
+}//end render_edit_component_filter
 
 
 
@@ -52,7 +52,7 @@ render_edit_component_filter.prototype.edit = async function(options={render_lev
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -200,7 +200,7 @@ const add_events = function(self, wrapper) {
 		},true)
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -272,7 +272,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -339,7 +339,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -395,7 +395,7 @@ const get_grouper_element = (i, datalist_item, self) => {
 
 
 	return grouper
-};//end get_grouper_element
+}//end get_grouper_element
 
 
 
@@ -451,6 +451,6 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return li
-};//end get_input_element
+}//end get_input_element
 
 

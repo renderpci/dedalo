@@ -42,6 +42,6 @@ render_mini_component_json.prototype.mini = function() {
 		})
 
 	return wrapper
-};//end mini
+}//end mini
 
 

@@ -17,7 +17,7 @@
 export const render_time_machine_list = function() {
 
 	return true
-};//end render_time_machine_list
+}//end render_time_machine_list
 
 
 
@@ -48,7 +48,7 @@ render_time_machine_list.prototype.edit = async function (options) {
 		wrapper.appendChild(current_content_data)
 
 	return wrapper
-};//end render_time_machine_list
+}//end render_time_machine_list
 
 
 
@@ -64,6 +64,6 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 

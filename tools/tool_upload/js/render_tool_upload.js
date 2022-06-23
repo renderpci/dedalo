@@ -16,7 +16,7 @@
 export const render_tool_upload = function() {
 
 	return true
-};//end render_tool_upload
+}//end render_tool_upload
 
 
 
@@ -102,7 +102,7 @@ render_tool_upload.prototype.edit = async function (options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -143,7 +143,7 @@ export const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -207,7 +207,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		})
 
 	return true
-};//end upload_done
+}//end upload_done
 
 
 /**
@@ -310,7 +310,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 
 
 	// 	return filedrag
-	// };//end render_filedrag
+	// }//end render_filedrag
 
 
 
@@ -385,7 +385,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 
 
 	// 	return progress_bar_container
-	// };//end render_progress_bar
+	// }//end render_progress_bar
 
 
 
@@ -404,7 +404,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 	// 	}
 
 	// 	return true
-	// };//end file_drag_hover
+	// }//end file_drag_hover
 
 
 
@@ -434,7 +434,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 	// 	}
 
 	// 	return true
-	// };//end file_select_handler
+	// }//end file_select_handler
 
 
 // Removed for the time being (!)
@@ -478,4 +478,4 @@ render_tool_upload.prototype.upload_done = async function (options) {
 	// 	}
 
 	// 	return true
-	// };//end parse_local_file
+	// }//end parse_local_file

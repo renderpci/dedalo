@@ -6,7 +6,7 @@
 * BUTTON_STATS  CLASS
 */
 var button_stats = new function() {
-	
+
 	this.trigger_url = DEDALO_CORE_URL + '/button_stats/trigger.button_stats.php';
 
 
@@ -102,7 +102,7 @@ var button_stats = new function() {
 			html_page.loading_content( $('body'), 0 );
 		})
 
-	};//end this.Stats
+	}//end this.Stats
 
 
 
@@ -126,4 +126,4 @@ var button_stats = new function() {
 
 
 
-};//end button_stats
+}//end button_stats

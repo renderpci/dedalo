@@ -18,7 +18,7 @@
 export const render_section_tab = function() {
 
 	return true
-};//end render_section_tab
+}//end render_section_tab
 
 
 
@@ -113,7 +113,7 @@ render_section_tab.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -176,6 +176,6 @@ const get_wrapper = function(self) {
 
 
 	// 	return content_data
-	// };//end get_content_data
+	// }//end get_content_data
 
 

@@ -17,7 +17,7 @@
 export const render_mini_component_html_text = function() {
 
 	return true
-};//end render_mini_component_html_text
+}//end render_mini_component_html_text
 
 
 
@@ -46,6 +46,6 @@ render_mini_component_html_text.prototype.mini = async function() {
 		wrapper.innerHTML = value_string
 
 	return wrapper
-};//end mini
+}//end mini
 
 

@@ -115,7 +115,7 @@ export const relation_list = function() {
 	this.rqo			= null
 
 	return true
-};//end relation_list
+}//end relation_list
 
 
 
@@ -156,7 +156,7 @@ relation_list.prototype.init = function(options) {
 	self.status = 'initiated'
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -252,6 +252,6 @@ relation_list.prototype.build = async function(autoload=true){
 		self.status = 'builded'
 
 	return true
-};//end build
+}//end build
 
 

@@ -1,4 +1,4 @@
-/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL */
+/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -62,7 +62,7 @@ export const section = function() {
 
 
 	return true
-};//end section
+}//end section
 
 
 
@@ -265,7 +265,7 @@ section.prototype.init = async function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -596,7 +596,7 @@ section.prototype.build = async function(autoload=false) {
 
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -619,7 +619,7 @@ section.prototype.render = async function(options={}) {
 
 
 	return result_node
-};//end render
+}//end render
 
 
 
@@ -724,7 +724,7 @@ export const get_ar_instances = async function(self){
 
 
 	return ar_instances
-};//end get_ar_instances
+}//end get_ar_instances
 
 
 
@@ -754,7 +754,7 @@ section.prototype.load_section_tool_files = function() {
 
 
 	return js_promise
-};//end load_section_tool_files
+}//end load_section_tool_files
 
 
 

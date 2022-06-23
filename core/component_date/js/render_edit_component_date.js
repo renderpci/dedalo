@@ -17,7 +17,7 @@
 export const render_edit_component_date = function() {
 
 	return true
-};//end render_edit_component_date
+}//end render_edit_component_date
 
 
 
@@ -61,7 +61,7 @@ render_edit_component_date.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -280,7 +280,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -321,7 +321,7 @@ const get_content_data_edit = function(self) {
 		content_data.appendChild(fragment)
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -357,7 +357,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -408,7 +408,7 @@ export const get_input_element_edit = (i, current_value, self) => {
 
 
 	return li
-};//end get_input_element_edit
+}//end get_input_element_edit
 
 
 
@@ -435,7 +435,7 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 		input_element_flatpicker(i, 'range_end', input_value_end, inputs_container, self)
 
 	return true
-};//end input_element_range
+}//end input_element_range
 
 
 
@@ -504,7 +504,7 @@ const input_element_period = (i, current_value, inputs_container) => {
 	})
 
 	return true
-};//end input_element_period
+}//end input_element_period
 
 
 
@@ -528,7 +528,7 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 	})
 
 	return true
-};//end input_element_time
+}//end input_element_time
 
 
 
@@ -543,7 +543,7 @@ export const input_element_default = (i, current_value, inputs_container, self) 
 	input_element_flatpicker(i, 'default', input_value, inputs_container, self)
 
 	return true
-};//end input_element_default
+}//end input_element_default
 
 
 
@@ -588,6 +588,6 @@ export const input_element_flatpicker = (i, role_name, input_value, inputs_conta
 		})
 
 	return true
-};//end input_element_flatpicker
+}//end input_element_flatpicker
 
 

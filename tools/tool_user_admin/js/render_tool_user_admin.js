@@ -18,7 +18,7 @@
 export const render_tool_user_admin = function() {
 
 	return true
-};//end render_tool_user_admin
+}//end render_tool_user_admin
 
 
 
@@ -59,7 +59,7 @@ render_tool_user_admin.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -165,7 +165,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -200,6 +200,6 @@ export const add_component_sample = async (self, component_container, lang) => {
 
 
 	return true
-};//end add_component_sample
+}//end add_component_sample
 
 

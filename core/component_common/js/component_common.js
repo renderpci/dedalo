@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -17,7 +17,7 @@
 export const component_common = function(){
 
 	return true
-};//end component_common
+}//end component_common
 
 
 
@@ -173,7 +173,7 @@ component_common.prototype.init = async function(options) {
 
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -251,7 +251,7 @@ component_common.prototype.build = async function(autoload=false){
 	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
 
 	return true
-};//end component_common.prototype.build
+}//end component_common.prototype.build
 
 
 
@@ -333,7 +333,7 @@ component_common.prototype.build = async function(autoload=false){
 	// 	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
 
 	// 	return true
-	// };//end component_common.prototype.build
+	// }//end component_common.prototype.build
 
 
 
@@ -405,7 +405,7 @@ export const init_events_subscription = function(self) {
 		self.init_events_subscribed = true
 
 	return true
-};//end init_events_subscription
+}//end init_events_subscription
 
 
 
@@ -592,7 +592,7 @@ component_common.prototype.save = async function(changed_data) {
 
 
 	return save_promise
-};//end save
+}//end save
 
 
 
@@ -606,7 +606,7 @@ component_common.prototype.get_value = function() {
 	const value = this.data.value
 
 	return value
-};//end get_value
+}//end get_value
 
 
 
@@ -621,7 +621,7 @@ component_common.prototype.set_value = function(value) {
 	this.data.value = value
 
 	return true
-};//end set_value
+}//end set_value
 
 
 
@@ -758,7 +758,7 @@ component_common.prototype.update_datum = async function(new_data) {
 
 
 	return self.datum
-};//end update_datum
+}//end update_datum
 
 
 
@@ -816,7 +816,7 @@ component_common.prototype.update_data_value = function(changed_data){
 
 
 	return true
-};//end update_data_value
+}//end update_data_value
 
 
 
@@ -893,7 +893,7 @@ component_common.prototype.change_value = async function(options) {
 	// console.log("/////////////////////////// *** self.data.value:",self.data.value);
 
 	return api_response
-};//end change_value
+}//end change_value
 
 
 
@@ -921,7 +921,7 @@ const function_queue = function(context, pool, fn, options) {
 
 
 	return fun
-};//end function_queue
+}//end function_queue
 
 
 
@@ -943,7 +943,7 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 	//current_node.parentNode.replaceChild(new_node, current_node);
 
 	return current_node
-};//end update_node_contents
+}//end update_node_contents
 
 
 
@@ -1054,7 +1054,7 @@ component_common.prototype.get_ar_instances = async function(options={}){
 
 
 	return ar_instances
-};//end get_ar_instances
+}//end get_ar_instances
 
 
 
@@ -1123,4 +1123,4 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 
 
 	return true
-};//end change_mode
+}//end change_mode

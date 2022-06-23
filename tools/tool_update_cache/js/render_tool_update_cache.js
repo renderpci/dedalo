@@ -16,7 +16,7 @@
 export const render_tool_update_cache = function() {
 
 	return true
-};//end render_tool_update_cache
+}//end render_tool_update_cache
 
 
 
@@ -58,7 +58,7 @@ render_tool_update_cache.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -186,6 +186,6 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 

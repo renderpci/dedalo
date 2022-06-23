@@ -42,4 +42,4 @@ export const render_error = async function(self, options) {
 
 
 	return wrapper
-};//end render_error
+}//end render_error

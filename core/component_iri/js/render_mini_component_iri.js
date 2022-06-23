@@ -16,7 +16,7 @@
 export const render_mini_component_iri = function() {
 
 	return true
-};//end render_mini_component_iri
+}//end render_mini_component_iri
 
 
 
@@ -60,6 +60,6 @@ render_mini_component_iri.prototype.mini = async function() {
 		})
 
 	return wrapper
-};//end mini
+}//end mini
 
 

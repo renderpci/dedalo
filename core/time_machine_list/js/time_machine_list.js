@@ -41,7 +41,7 @@ export const time_machine_list = function() {
 	this.rqo			= null
 
 	return true
-};//end time_machine_list
+}//end time_machine_list
 
 
 
@@ -72,7 +72,7 @@ time_machine_list.prototype.init = function(options) {
 	self.status = 'initiated'
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -115,7 +115,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 
 
 	return true
-};//end build
+}//end build
 
 
 

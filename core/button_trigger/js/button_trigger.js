@@ -97,7 +97,7 @@ var button_trigger = new function() {
 
 
 		return js_promise
-	};//end  this.trigger
+	}//end  this.trigger
 
 
-};//end button_trigger
+}//end button_trigger

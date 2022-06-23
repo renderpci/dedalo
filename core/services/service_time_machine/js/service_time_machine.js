@@ -32,7 +32,7 @@ export const service_time_machine = function () {
 	this.caller				= null
 
 	return true
-};//end service_time_machine
+}//end service_time_machine
 
 
 
@@ -85,7 +85,7 @@ service_time_machine.prototype.init = function(options) {
 	self.status = 'initiated'
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -214,7 +214,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		self.status = 'builded'
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -392,7 +392,7 @@ service_time_machine.prototype.build_context = function() {
 
 
 	return context
-};//end build_context
+}//end build_context
 
 
 
@@ -414,6 +414,6 @@ service_time_machine.prototype.tm = async function(options) {
 		}
 
 	return self.view(self, options)
-};//end tm
+}//end tm
 
 

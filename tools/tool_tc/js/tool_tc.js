@@ -37,7 +37,7 @@ export const tool_tc = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -69,7 +69,7 @@ tool_tc.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -96,7 +96,7 @@ tool_tc.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -128,7 +128,7 @@ tool_tc.prototype.load_component = async function(lang) {
 
 
 	return component_instance
-};//end load_component
+}//end load_component
 
 
 
@@ -223,7 +223,7 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 	// }
 
 	// return true
-};//end change_all_time_codes
+}//end change_all_time_codes
 
 
 
@@ -251,4 +251,4 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 	// 	const new_tag = '[TC_'.concat(new_hours.toString().padStart(2, '0'), ':', new_minutes.toString().padStart(2, '0'), ':', new_seconds.toString().padStart(2, '0'), '.', mseconds, '_TC]')
 
 	// 	return new_tag
-	// };//end add_time_code_offset
+	// }//end add_time_code_offset

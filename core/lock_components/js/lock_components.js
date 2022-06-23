@@ -71,7 +71,7 @@ var lock_components = new function() {
 			lock_components.procces_msg(e)
 
 		});
-	};//end init_node_msg
+	}//end init_node_msg
 
 
 
@@ -106,7 +106,7 @@ var lock_components = new function() {
 			console.log("[lock_components.init_php] Error [lock_components:init] on addEventListener to lock_components msg: ", lock_components.msg_url);
 			if(SHOW_DEBUG===true) {console.log("[lock_components.init_php] Error:", e);}
 		});
-	};//end init_php
+	}//end init_php
 
 
 
@@ -147,7 +147,7 @@ var lock_components = new function() {
 				//console.log("->lock_components: procces_msg succesufully more..");
 			}
 		}
-	};//end procces_msg
+	}//end procces_msg
 
 
 
@@ -214,7 +214,7 @@ var lock_components = new function() {
 
 
 		return js_promise
-	};//end update_lock_components_state
+	}//end update_lock_components_state
 
 
 
@@ -268,7 +268,7 @@ var lock_components = new function() {
 				component_common.lock_component( wrap, full_username )
 			}
 		}
-	};//end update_locks_state
+	}//end update_locks_state
 
 
 
@@ -310,8 +310,8 @@ var lock_components = new function() {
 
 
 		return js_promise
-	};//end delete_user_section_locks
+	}//end delete_user_section_locks
 
 
 
-};//end lock_components
+}//end lock_components

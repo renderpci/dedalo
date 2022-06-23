@@ -38,7 +38,7 @@ export const tool_update_cache = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -74,7 +74,7 @@ tool_update_cache.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -95,7 +95,7 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -138,7 +138,7 @@ tool_update_cache.prototype.get_component_list = function() {
 				resolve(result)
 			})
 		})
-};//end get_component_list
+}//end get_component_list
 
 
 
@@ -183,4 +183,4 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 				resolve(result)
 			})
 		})
-};//end update_cache
+}//end update_cache

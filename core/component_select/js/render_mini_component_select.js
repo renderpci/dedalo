@@ -15,7 +15,7 @@
 export const render_mini_component_select = function() {
 
 	return true
-};//end render_mini_component_select
+}//end render_mini_component_select
 
 
 
@@ -38,6 +38,6 @@ render_mini_component_select.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

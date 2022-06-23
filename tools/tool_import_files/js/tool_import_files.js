@@ -40,7 +40,7 @@ export const tool_import_files = function () {
 	this.files_data			= []
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -73,7 +73,7 @@ tool_import_files.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -151,4 +151,4 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build
+}//end build

@@ -13,15 +13,15 @@ var diffusion_section_stats = new function() {
 	* BUILD_CHARTS
 	* Build every stats charts from json object received
 	* Example schema (JSON)
-	[ 
+	[
 	  {
 	    key: 'Series1',
 	    values: [
-	      { 
+	      {
 	        "label" : "Group A" ,
 	        "value" : -1.8746444827653
-	      } , 
-	      { 
+	      } ,
+	      {
 	        "label" : "Group B" ,
 	        "value" : -8.0961543492239
 	      }
@@ -30,7 +30,7 @@ var diffusion_section_stats = new function() {
 	]
 	*/
 	this.build_charts = function (ar_value_stats_json, key) {
-		//console.log(ar_value_stats_json);//return;		
+		//console.log(ar_value_stats_json);//return;
 		if(ar_value_stats_json==null || typeof ar_value_stats_json != 'object') {
 			if(SHOW_DEBUG===true) { console.warn("build_charts: Empty 'ar_value_stats_json' received"); };
 			return false;
@@ -42,12 +42,12 @@ var diffusion_section_stats = new function() {
 			current_data 		= ar_value_stats_json.data;
 			//console.log(current_data); console.log(current_data2); return false;
 			//console.log(current_data); return false;
-			
+
 		var new_div 			= $("<div class='wrap_stats_graphic' id='wrap_stats_"+key+"'/>"),
 			title_div 			= '<div class="titulo_chart">'+title_chart_text+'</div>',
 			svg_element 		= '<svg class="chart '+graph_type+'" id="'+ chart_id +'"></svg>',
 			info_button 		= '<div class="icon_bs info_button" onclick="diffusion_section_stats.toggle_info(this)"></div>';
-			 
+
 			//$( "#stats_container" ).append( new_div );
 			$( "#current_stats_item_"+key ).prepend( new_div );
 			$( new_div ).append( title_div, svg_element, info_button );
@@ -71,7 +71,7 @@ var diffusion_section_stats = new function() {
 
 	/**
 	* STATS_PIE
-	* Schema sample : 
+	* Schema sample :
 	[
 	    {
 	      key: "One",
@@ -86,7 +86,7 @@ var diffusion_section_stats = new function() {
 	this.stats_pie = function(current_dato, chart_id) {
 
 		if (!current_dato) return;
-		
+
 	    var dato = current_dato[0].values;
 		var chartOptions = {
 			delay: 150
@@ -106,7 +106,7 @@ var diffusion_section_stats = new function() {
 
 		    chart = nv.models.pieChart()
 		        .x(function(d) { return d.x })
-		        .y(function(d) { return d.y })	      
+		        .y(function(d) { return d.y })
 		        .color(d3.scale.category20().range())
 		        //.width(width)
 		        //.height(height)
@@ -115,11 +115,11 @@ var diffusion_section_stats = new function() {
 		        .pieLabelsOutside(true)
 		        .labelThreshold(.025)
 		        .tooltips(true)
-		        .options(chartOptions);		        
-		        //.tooltipContent(function(a){ 
+		        .options(chartOptions);
+		        //.tooltipContent(function(a){
 		        //			//console.log(d);
-		        //			return a 
-		        //		});		    	
+		        //			return a
+		        //		});
 
 		      d3.select("#"+ chart_id )
 		          .datum(dato)
@@ -136,21 +136,21 @@ var diffusion_section_stats = new function() {
 	}//end stats_pie
 
 
-	
+
 
 	/**
 	* STATS_BAR
 	* Schema example:
-	[ 
+	[
 	  {
 	    key: "Cumulative Return",
 	    values: [
-	      { 
+	      {
 	        "label" : "A" ,
 	        "value" : 29.765957771107
-	      } , 
-	      { 
-	        "label" : "B" , 
+	      } ,
+	      {
+	        "label" : "B" ,
 	        "value" : 0
 	      }
 	    ]
@@ -160,15 +160,15 @@ var diffusion_section_stats = new function() {
 	this.stats_bar = function(current_dato, chart_id) {
 
 		if (!current_dato) return;
-		
+
 	    var dato = current_dato;
 		var chartOptions = {
 			delay: 150
 		}
-		
+
 	    // NV GRAPH
 	    var chart;
-		nv.addGraph(function() {  
+		nv.addGraph(function() {
 		  chart = nv.models.discreteBarChart()
 		      .x(function(d) { return d.x })
 		      .y(function(d) { return d.y })
@@ -196,26 +196,26 @@ var diffusion_section_stats = new function() {
 	/**
 	* STATS_BAR_HORIZONTAL
 	* Schema example:
-	[ 
+	[
 	  {
 	    key: 'Series1',
 	    color: '#d62728',
 	    values: [
-	      { 
+	      {
 	        "label" : "Group A" ,
 	        "value" : -1.8746444827653
-	      } , 
-	      { 
+	      } ,
+	      {
 	        "label" : "Group B" ,
 	        "value" : -8.0961543492239
-	      }	     
+	      }
 	    ]
 	  }
 	]
 	*/
 	this.stats_bar_horizontal = function(current_dato, chart_id) {
 
-		if (!current_dato) return;		
+		if (!current_dato) return;
 
 		// Adjust height to current number of items/values
 		var n = current_dato[0].values.length,
@@ -227,7 +227,7 @@ var diffusion_section_stats = new function() {
 		var chartOptions = {
 			delay: 150
 		}
-		
+
 		// NV GRAPH
 		var chart;
 		nv.addGraph(function() {
@@ -256,7 +256,7 @@ var diffusion_section_stats = new function() {
 		  //chart.dispatch.on('stateChange', function(e) { nv.log('New State:', JSON.stringify(e)); });
 
 		  return chart;
-		});	
+		});
 	}//end stats_bar_horizontal
 
 
@@ -269,8 +269,8 @@ var diffusion_section_stats = new function() {
 			//$(button_obj).hide(0);
 			$('DIV.div_main_list').fadeIn(150, function() {
 				$('.tm_list_wrap').show();
-				$('#stats_info').remove();	
-			});		
+				$('#stats_info').remove();
+			});
 		}
 		*/
 
@@ -283,4 +283,4 @@ var diffusion_section_stats = new function() {
 
 
 
-};//end class
+}//end class

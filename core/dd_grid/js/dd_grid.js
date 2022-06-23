@@ -34,7 +34,7 @@ export const dd_grid = function(){
 
 		this.events_tokens = []
 	return true
-};//end dd_grid
+}//end dd_grid
 
 
 
@@ -76,6 +76,6 @@ dd_grid.prototype.build	= async function(autoload=true){
 		self.status = 'builded'
 
 	return
-};//end build
+}//end build
 
 

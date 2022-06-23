@@ -37,7 +37,7 @@ export const component_svg = function(){
 	this.file_dir
 
 	return true
-};//end component_svg
+}//end component_svg
 
 
 
@@ -84,6 +84,6 @@ export const component_svg = function(){
 
 
 	// 	return common_build
-	// };//end build_custom
+	// }//end build_custom
 
 

@@ -44,7 +44,7 @@ export const ts_object = new function() {
 		this.component_name = url_vars.component_name || null
 
 		return true
-	};//end init
+	}//end init
 
 
 
@@ -151,7 +151,7 @@ export const ts_object = new function() {
 					}
 				})
 		})
-	};//end get_children
+	}//end get_children
 
 
 
@@ -181,7 +181,7 @@ export const ts_object = new function() {
 
 
 		return true
-	};//end update_arrow_state
+	}//end update_arrow_state
 
 
 
@@ -792,7 +792,7 @@ export const ts_object = new function() {
 
 			resolve(ar_children_c);
 		})
-	};//end dom_parse_children
+	}//end dom_parse_children
 
 
 
@@ -814,7 +814,7 @@ export const ts_object = new function() {
 		//window.addEventListener ("mouseup", ts_object.on_drop_mouseup, false);
 		//window.onmouseup = ts_object.on_drop_mouseup;
 		//console.log(window.onmouseup);
-	};//end on_drag_mousedown
+	}//end on_drag_mousedown
 
 
 
@@ -848,7 +848,7 @@ export const ts_object = new function() {
 			}
 		//console.log(event);
 		//obj.parentNode.parentNode.removeEventListener("drop", 'ts_object.on_drop');
-	};//end on_dragstart
+	}//end on_dragstart
 
 
 
@@ -870,7 +870,7 @@ export const ts_object = new function() {
 
 		//handle = '';
 		//window.onmouseup = null;
-	};//end on_drag_end
+	}//end on_drag_end
 
 
 
@@ -885,7 +885,7 @@ export const ts_object = new function() {
 		}
 
 		order_handle = event;
-	};//end on_order_drag_mousedown
+	}//end on_order_drag_mousedown
 
 
 
@@ -909,7 +909,7 @@ export const ts_object = new function() {
 		} else {
 			event.preventDefault();
 		}
-	};//end on_order_dragstart
+	}//end on_order_dragstart
 
 
 
@@ -925,7 +925,7 @@ export const ts_object = new function() {
 		target = false;
 		//handle = '';
 		order_source = '';
-	};//end on_order_drag_end
+	}//end on_order_drag_end
 
 
 
@@ -941,7 +941,7 @@ export const ts_object = new function() {
 
 		// Add drag_over class
 		//obj.classList.add('drag_over')
-	};//end on_order_dragover
+	}//end on_order_dragover
 
 
 
@@ -956,7 +956,7 @@ export const ts_object = new function() {
 		}
 
 		//event.dataTransfer.dropEffect = "copy";
-	};//end on_dragenter
+	}//end on_dragenter
 
 
 	/**
@@ -971,7 +971,7 @@ export const ts_object = new function() {
 
 		// Add drag_over class
 		obj.classList.add('drag_over')
-	};//end on_dragover
+	}//end on_dragover
 
 
 
@@ -986,7 +986,7 @@ export const ts_object = new function() {
 
 		// Remove drag_over class
 			obj.classList.remove('drag_over')
-	};//end on_dragleave
+	}//end on_dragleave
 
 
 
@@ -1105,7 +1105,7 @@ export const ts_object = new function() {
 		});//end js_promise
 
 		return true;
-	};//end on_drop
+	}//end on_drop
 
 
 
@@ -1175,7 +1175,7 @@ export const ts_object = new function() {
 			})
 
 		return js_promise
-	};//end update_parent_data
+	}//end update_parent_data
 
 
 
@@ -1238,7 +1238,7 @@ export const ts_object = new function() {
 
 
 		return result
-	};//end toggle_view_children
+	}//end toggle_view_children
 
 
 
@@ -1279,7 +1279,7 @@ export const ts_object = new function() {
 		}
 
 		return true
-	};//end save_opened_elements
+	}//end save_opened_elements
 
 
 
@@ -1301,7 +1301,7 @@ export const ts_object = new function() {
 		}
 
 		return true
-	};//end remove_children_from_opened_elements
+	}//end remove_children_from_opened_elements
 
 
 
@@ -1338,7 +1338,7 @@ export const ts_object = new function() {
 			}
 
 		return len
-	};//end hilite_element
+	}//end hilite_element
 
 
 
@@ -1355,7 +1355,7 @@ export const ts_object = new function() {
 		}
 
 		return true
-	};//end reset_hilites
+	}//end reset_hilites
 
 
 
@@ -1408,7 +1408,7 @@ export const ts_object = new function() {
 		}
 
 		return len;
-	};//end refresh_element
+	}//end refresh_element
 
 
 
@@ -1471,7 +1471,7 @@ export const ts_object = new function() {
 
 
 		return true
-	};//end edit
+	}//end edit
 
 
 
@@ -1574,7 +1574,7 @@ export const ts_object = new function() {
 					resolve(response)
 				})
 		})
-	};//end add_child
+	}//end add_child
 
 
 
@@ -1640,7 +1640,7 @@ export const ts_object = new function() {
 		// 		});
 
 		// 	return js_promise
-		// };//end add_child_from_hierarchy
+		// }//end add_child_from_hierarchy
 
 
 
@@ -1727,7 +1727,7 @@ export const ts_object = new function() {
 					resolve(response)
 				});
 		})
-	};//end delete
+	}//end delete
 
 
 
@@ -1749,7 +1749,7 @@ export const ts_object = new function() {
 			}
 
 		return true
-	};//end select_first_input_in_editor
+	}//end select_first_input_in_editor
 
 
 
@@ -1905,7 +1905,7 @@ export const ts_object = new function() {
 
 
 		return component_node;
-	};//end show_component_in_ts_object
+	}//end show_component_in_ts_object
 
 
 
@@ -1965,7 +1965,7 @@ export const ts_object = new function() {
 
 
 		return dd_grid
-	};//end show_indexations
+	}//end show_indexations
 
 
 
@@ -1987,7 +1987,7 @@ export const ts_object = new function() {
 
 
 		// 	return true
-		// };//end link_term
+		// }//end link_term
 
 
 
@@ -2051,7 +2051,7 @@ export const ts_object = new function() {
 		// 			// Send the request
 		// 			request.send(data_send);
 		// 	});
-		// };//end get_json
+		// }//end get_json
 
 
 
@@ -2279,7 +2279,7 @@ export const ts_object = new function() {
 
 
 		return true
-	};//end parser_search_result
+	}//end parser_search_result
 
 
 
@@ -2326,7 +2326,7 @@ export const ts_object = new function() {
 			input.select();
 
 		return true
-	};//end build_order_form
+	}//end build_order_form
 
 
 
@@ -2456,7 +2456,7 @@ export const ts_object = new function() {
 					resolve(response)
 				})
 		})
-	};//end save_order
+	}//end save_order
 
 
 
@@ -2510,7 +2510,7 @@ export const ts_object = new function() {
 		}
 
 		return true
-	};//end toggle_nd
+	}//end toggle_nd
 
 
 
@@ -2541,7 +2541,7 @@ export const ts_object = new function() {
 			}
 
 		return parent_container
-	};//end get_my_parent_container
+	}//end get_my_parent_container
 
 
 
@@ -2584,8 +2584,8 @@ export const ts_object = new function() {
 		}
 
 		return link_children;
-	};//end get_link_children_from_wrap
+	}//end get_link_children_from_wrap
 
 
 
-};//end ts_object
+}//end ts_object

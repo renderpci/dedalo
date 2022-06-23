@@ -30,7 +30,7 @@ export const component_password = function(){
 	this.duplicates = false
 
 	return true
-};//end component_password
+}//end component_password
 
 
 
@@ -164,4 +164,4 @@ component_password.prototype.validate_password_format = function (pw, options) {
 
 	// great success!
 	return true;
-};//end password validator
+}//end password validator

@@ -19,7 +19,7 @@
 export const render_list_component_text_area = function() {
 
 	return true
-};//end render_list_component_text_area
+}//end render_list_component_text_area
 
 
 
@@ -47,6 +47,6 @@ render_list_component_text_area.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

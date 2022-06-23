@@ -16,7 +16,7 @@
 export const render_list_component_av = function() {
 
 	return true
-};//end  render_list_component_av
+}//end  render_list_component_av
 
 
 
@@ -64,4 +64,4 @@ render_list_component_av.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list

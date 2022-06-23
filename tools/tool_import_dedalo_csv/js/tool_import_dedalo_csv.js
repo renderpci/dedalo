@@ -40,7 +40,7 @@ export const tool_import_dedalo_csv = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -87,7 +87,7 @@ tool_import_dedalo_csv.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -133,7 +133,7 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -183,7 +183,7 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 				resolve(result)
 			})
 		})
-};//end load_csv_files_list
+}//end load_csv_files_list
 
 
 
@@ -230,7 +230,7 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 				resolve(result)
 			})
 		})
-};//end remove_file
+}//end remove_file
 
 
 
@@ -273,7 +273,7 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 				resolve(response)
 			})
 		})
-};//end import_files
+}//end import_files
 
 
 
@@ -334,7 +334,7 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 				resolve(self.resolved_section_components_list[section_tipo])
 			})
 		})
-};//end get_section_components_list
+}//end get_section_components_list
 
 
 

@@ -16,7 +16,7 @@
 export const render_search_component_radio_button = function() {
 
 	return true
-};//end render_search_component_radio_button
+}//end render_search_component_radio_button
 
 
 
@@ -46,7 +46,7 @@ render_search_component_radio_button.prototype.search = async function() {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -135,7 +135,7 @@ const add_events = function(self, wrapper) {
 				}
 		})
 
-};//end add_events
+}//end add_events
 
 
 
@@ -183,7 +183,7 @@ const get_content_data_search = function(self) {
 
 
 	return content_data
-};//end get_content_data_search
+}//end get_content_data_search
 
 
 
@@ -241,6 +241,4 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return li
-};//end get_input_element
-
-
+}//end get_input_element

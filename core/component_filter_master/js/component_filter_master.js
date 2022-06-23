@@ -33,7 +33,7 @@ export const component_filter_master = function(){
 	this.tools			= null
 
 	return true
-};//end component_filter_master
+}//end component_filter_master
 
 
 

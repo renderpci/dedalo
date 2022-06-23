@@ -32,7 +32,7 @@ export const component_radio_button = function(){
 	this.node
 
 	return true
-};//end component_radio_button
+}//end component_radio_button
 
 
 
@@ -84,6 +84,6 @@ component_radio_button.prototype.get_checked_value_label = function() {
 	const label = self.data.datalist[checked_key].label
 
 	return label
-};//end get_checked_value_label
+}//end get_checked_value_label
 
 

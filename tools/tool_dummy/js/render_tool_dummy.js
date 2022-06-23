@@ -16,7 +16,7 @@
 export const render_tool_dummy = function() {
 
 	return true
-};//end render_tool_dummy
+}//end render_tool_dummy
 
 
 
@@ -58,7 +58,7 @@ render_tool_dummy.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -105,7 +105,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -140,6 +140,6 @@ export const add_component_sample = async (self, component_container, lang) => {
 
 
 	return true
-};//end add_component_sample
+}//end add_component_sample
 
 

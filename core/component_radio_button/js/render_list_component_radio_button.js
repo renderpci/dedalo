@@ -16,7 +16,7 @@
 export const render_list_component_radio_button = function() {
 
 	return true
-};//end render_list_component_radio_button
+}//end render_list_component_radio_button
 
 
 
@@ -40,6 +40,4 @@ render_list_component_radio_button.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
-
-
+}//end list

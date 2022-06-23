@@ -16,7 +16,7 @@ var component_ip = new function() {
 
 
 		return true
-	};//end init
+	}//end init
 
 
 
@@ -44,7 +44,7 @@ var component_ip = new function() {
 		}
 
 		return dato
-	};//end get_dato
+	}//end get_dato
 
 
 
@@ -83,7 +83,7 @@ var component_ip = new function() {
 			});
 
 		return js_promise
-	};//end Save
+	}//end Save
 
 
 
@@ -101,7 +101,7 @@ var component_ip = new function() {
 		}
 
 		return true;
-	};//end open_ip_info
+	}//end open_ip_info
 
 
 
@@ -114,8 +114,8 @@ var component_ip = new function() {
 		$.getJSON("http://ip-api.com/json/"+ip, function(data) {
 			console.log(data)
 		});
-	};//end load_ip_info
+	}//end load_ip_info
 
 
 
-};//end component_ip
+}//end component_ip

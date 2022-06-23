@@ -16,7 +16,7 @@
 export const render_edit_component_pdf = function() {
 
 	return true
-};//end render_edit_component_pdf
+}//end render_edit_component_pdf
 
 
 

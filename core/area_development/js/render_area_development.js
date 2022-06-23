@@ -18,7 +18,7 @@
 export const render_area_development = function() {
 
 	return true
-};//end render_area_development
+}//end render_area_development
 
 
 
@@ -50,7 +50,7 @@ render_area_development.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -62,7 +62,7 @@ render_area_development.prototype.edit = async function(options) {
 render_area_development.prototype.list = async function(options={render_level:'full'}) {
 
 	return this.edit(options)
-};//end list
+}//end list
 
 
 
@@ -110,7 +110,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end content_data
+}//end content_data
 
 
 
@@ -260,7 +260,7 @@ const build_widget = (item, self) => {
 
 
 	return container
-};//end build_widget
+}//end build_widget
 
 
 
@@ -308,7 +308,7 @@ const print_response = (container, api_response) => {
 	// container.classList.remove("preload")
 
 	return container
-};//end print_response
+}//end print_response
 
 
 
@@ -321,7 +321,7 @@ const buttons = async function(self) {
 	const buttons = []
 
 	return buttons
-};//end buttons
+}//end buttons
 
 
 
@@ -469,6 +469,6 @@ export const build_form = function(widget_object) {
 
 
 	return form_container
-};//end build_form
+}//end build_form
 
 

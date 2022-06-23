@@ -18,7 +18,7 @@
 export const render_tool_media_versions = function() {
 
 	return true
-};//end render_tool_media_versions
+}//end render_tool_media_versions
 
 
 
@@ -60,7 +60,7 @@ render_tool_media_versions.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end tool_media_versions
+}//end tool_media_versions
 
 
 
@@ -100,7 +100,7 @@ const get_content_data = async function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -194,7 +194,7 @@ const render_versions_grid = function(self) {
 
 
 	return fragment
-};//end render_versions_grid
+}//end render_versions_grid
 
 
 
@@ -243,7 +243,7 @@ const get_line_labels = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_labels
+}//end get_line_labels
 
 
 
@@ -310,7 +310,7 @@ const get_line_file_exists = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_file_exists
+}//end get_line_file_exists
 
 
 
@@ -366,7 +366,7 @@ const get_line_file_size = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_file_size
+}//end get_line_file_size
 
 
 
@@ -445,7 +445,7 @@ const get_line_file_upload = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_file_upload
+}//end get_line_file_upload
 
 
 
@@ -523,7 +523,7 @@ const get_line_file_download = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_file_download
+}//end get_line_file_download
 
 
 
@@ -584,7 +584,7 @@ const get_line_file_delete = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_file_delete
+}//end get_line_file_delete
 
 
 
@@ -676,7 +676,7 @@ const get_line_build_version = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_build_version
+}//end get_line_build_version
 
 
 
@@ -738,7 +738,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_conform_headers
+}//end get_line_conform_headers
 
 
 
@@ -818,6 +818,6 @@ const get_line_rotate = function(ar_quality, self) {
 
 
 	return fragment
-};//end get_line_rotate
+}//end get_line_rotate
 
 

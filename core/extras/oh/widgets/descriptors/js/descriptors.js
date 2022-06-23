@@ -30,12 +30,12 @@ var descriptors = new function() {
 			component_portal_tipo 	 : button_obj.dataset.component_portal_tipo,
 			component_text_area_tipo : button_obj.dataset.component_text_area_tipo,
 		}; //return  console.log(trigger_vars);
-		
+
 		const jsPromise = common.get_json_data(trigger_url, trigger_vars).then(function(response){
 				if(SHOW_DEBUG===true) {
 					console.log("[descriptors.load_terms] response",response);
 				}
-				
+
 				response_div.innerHTML = response.result
 
 				// Hide button
@@ -51,22 +51,22 @@ var descriptors = new function() {
 
 
 		return jsPromise
-	};//end load_terms
+	}//end load_terms
 
 
 
 	/**
 	* TOGGLE_TAB_CONTENT
-	* @return 
+	* @return
 	*/
 	this.toggle_tab_content = function(button) {
-		
+
 		const tab_content = button.parentNode.querySelector(".tab_content")
 
 		$(tab_content).toggle()
 
 		return true
-	};//end toggle_tab_content
+	}//end toggle_tab_content
 
 
 

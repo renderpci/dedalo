@@ -31,7 +31,7 @@ export const component_check_box = function(){
 		this.id
 
 	return true
-};//end component_check_box
+}//end component_check_box
 
 
 
@@ -92,7 +92,7 @@ export const component_check_box = function(){
 
 
 	// 	return common_build
-	// };//end build_custom
+	// }//end build_custom
 
 
 
@@ -140,6 +140,6 @@ component_check_box.prototype.get_changed_key = function(action, value) {
 
 
 	return changed_key
-};//end get_changed_key
+}//end get_changed_key
 
 

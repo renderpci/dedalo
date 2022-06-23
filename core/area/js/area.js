@@ -38,7 +38,7 @@ export const area = function() {
 
 
 	return true
-};//end area
+}//end area
 
 
 
@@ -118,7 +118,7 @@ area.prototype.build = async function(autoload=true) {
 
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -141,7 +141,7 @@ area.prototype.render = async function(options={}) {
 
 
 	return result_node
-};//end render
+}//end render
 
 
 
@@ -227,6 +227,6 @@ area.prototype.init_json_editor = async function(widget_object) {
 
 
 	return true
-};//end init_json_editor
+}//end init_json_editor
 
 

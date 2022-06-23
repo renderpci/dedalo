@@ -36,7 +36,7 @@ export const component_security_access = function(){
 	this.tools
 
 	return true
-};//end component_security_access
+}//end component_security_access
 
 
 

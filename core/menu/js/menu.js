@@ -30,7 +30,7 @@ export const menu = function(){
 	this.ar_instances
 
 	return true
-};//end menu
+}//end menu
 
 
 
@@ -75,7 +75,7 @@ menu.prototype.init = function(options) {
 		self.status = 'initiated'
 
 	return true
-};//end init
+}//end init
 
 
 
@@ -151,6 +151,6 @@ menu.prototype.build = async function(autoload=true){
 
 
 	return true
-};//end build
+}//end build
 
 

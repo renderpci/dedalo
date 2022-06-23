@@ -17,7 +17,7 @@
 export const render_edit_component_security_access = function() {
 
 	return true
-};//end render_edit_component_security_access
+}//end render_edit_component_security_access
 
 
 
@@ -51,7 +51,7 @@ render_edit_component_security_access.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -93,7 +93,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -353,7 +353,7 @@ const render_area_item = function(item, datalist, value, self) {
 		}//end direct_children
 
 	return li
-};//end render_area_item
+}//end render_area_item
 
 
 
@@ -430,7 +430,7 @@ const render_permissions_item = function(item, datalist, value, self) {
 		// li.section_tipo	= item.section_tipo
 
 	return li
-};//end render_permissions_item
+}//end render_permissions_item
 
 
 
@@ -695,6 +695,6 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 

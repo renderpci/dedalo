@@ -20,7 +20,7 @@
 export const render_mini_component_svg = function() {
 
 	return true
-};//end render_mini_component_svg
+}//end render_mini_component_svg
 
 
 
@@ -42,6 +42,6 @@ render_mini_component_svg.prototype.mini = function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

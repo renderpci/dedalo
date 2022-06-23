@@ -16,7 +16,7 @@
 export const render_list_component_semantic_node = function() {
 
 	return true
-};//end render_list_component_semantic_node
+}//end render_list_component_semantic_node
 
 
 
@@ -45,6 +45,6 @@ render_list_component_semantic_node.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

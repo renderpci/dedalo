@@ -35,7 +35,7 @@ export const tool_lang_multi = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -78,7 +78,7 @@ tool_lang_multi.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -112,7 +112,7 @@ tool_lang_multi.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -144,7 +144,7 @@ tool_lang_multi.prototype.load_component = async function(lang) {
 
 
 	return component_instance
-};//end load_component
+}//end load_component
 
 
 
@@ -208,7 +208,7 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 				resolve(response)
 			})
 		})
-};//end automatic_translation
+}//end automatic_translation
 
 
 
@@ -280,4 +280,4 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 
 
 	// 	return trigger_response
-	// };//end automatic_translation
+	// }//end automatic_translation

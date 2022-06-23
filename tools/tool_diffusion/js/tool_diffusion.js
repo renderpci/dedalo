@@ -37,7 +37,7 @@ export const tool_diffusion = function () {
 
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -72,7 +72,7 @@ tool_diffusion.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -99,7 +99,7 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -142,7 +142,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 				resolve(result)
 			})
 		})
-};//end get_diffusion_info
+}//end get_diffusion_info
 
 
 
@@ -187,7 +187,7 @@ tool_diffusion.prototype.update_cache = function(ar_component_tipo) {
 				resolve(result)
 			})
 		})
-};//end update_cache
+}//end update_cache
 
 
 

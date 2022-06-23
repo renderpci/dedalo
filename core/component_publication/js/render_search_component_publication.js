@@ -16,7 +16,7 @@
 export const render_search_component_publication = function() {
 
 	return true
-};//end render_search_component_publication
+}//end render_search_component_publication
 
 
 
@@ -48,7 +48,7 @@ render_search_component_publication.prototype.search = async function(options) {
 
 
 	return wrapper
-};//end search
+}//end search
 
 
 
@@ -143,7 +143,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -181,7 +181,7 @@ const add_events = function(self, wrapper) {
 
 
 	// 	return content_data
-	// };//end get_content_data
+	// }//end get_content_data
 
 
 
@@ -229,7 +229,7 @@ const get_content_data = function(self) {
 
 
 	return content_data
-};//end get_content_data
+}//end get_content_data
 
 
 
@@ -315,6 +315,6 @@ const get_input_element = (i, current_value, self) => {
 	// 	// switch_label.setAttribute("for",input_id)
 
 	return li
-};//end get_input_element
+}//end get_input_element
 
 

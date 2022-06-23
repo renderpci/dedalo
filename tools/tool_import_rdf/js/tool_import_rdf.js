@@ -39,7 +39,7 @@ export const tool_import_rdf = function () {
 	this.files_data			= []
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -67,7 +67,7 @@ tool_import_rdf.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -88,7 +88,7 @@ tool_import_rdf.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -121,7 +121,7 @@ tool_import_rdf.prototype.load_component = async function(lang) {
 			console.log("component_instance:",component_instance);
 
 	return component_instance
-};//end load_component
+}//end load_component
 
 
 
@@ -174,6 +174,6 @@ tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_value
 				resolve(response)
 			})
 		})
-};//end get_rdf_data
+}//end get_rdf_data
 
 

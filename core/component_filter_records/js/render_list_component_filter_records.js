@@ -16,7 +16,7 @@
 export const render_list_component_filter_records = function() {
 
 	return true
-};//end render_list_component_filter_records
+}//end render_list_component_filter_records
 
 
 
@@ -46,6 +46,6 @@ render_list_component_filter_records.prototype.list = function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

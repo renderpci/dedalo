@@ -39,7 +39,7 @@ export const tool_export = function () {
 	this.data_format		= null
 
 	return true
-};//end tool_export
+}//end tool_export
 
 
 
@@ -105,7 +105,7 @@ tool_export.prototype.init = async function(options) {
 		// await common.prototype.load_script(DEDALO_ROOT_WEB + '/lib/sheetjs/dist/xlsx.full.min.js')
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -133,7 +133,7 @@ tool_export.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -210,7 +210,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 		self.ar_instances.push(dd_grid)
 
 	return dd_grid_node
-};//end get_export_grid
+}//end get_export_grid
 
 
 
@@ -235,7 +235,7 @@ tool_export.prototype.get_export_csv = async function (options) {
 	})
 
 	return dd_grid
-};//end get_export_csv
+}//end get_export_csv
 
 
 
@@ -284,7 +284,7 @@ tool_export.prototype.get_export_xsl = async function (options) {
 	link.download = filename;
 	link.href = uri + base64(format(template, ctx));
 	link.click();
-};//end get_export_xsl
+}//end get_export_xsl
 
 
 

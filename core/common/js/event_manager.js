@@ -60,7 +60,7 @@ const event_manager_class = function(){
 
 		// return the token to save into the events_tokens properties inside the caller instance
 			return token
-	};//end subscribe
+	}//end subscribe
 
 
 
@@ -89,7 +89,7 @@ const event_manager_class = function(){
 			})
 
 		return new_events_list
-	};//end unsubscribe
+	}//end unsubscribe
 
 
 
@@ -115,7 +115,7 @@ const event_manager_class = function(){
 			: false // if don't find events, don't run
 
 		return result
-	};//end  publish
+	}//end  publish
 
 
 
@@ -132,7 +132,7 @@ const event_manager_class = function(){
 	this.get_events = function() {
 
 		return this.events
-	};//end  get_events
+	}//end  get_events
 
 
 
@@ -163,7 +163,7 @@ const event_manager_class = function(){
 		observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
 
 		return observer
-	};//end  when_in_dom
+	}//end  when_in_dom
 
 
 
@@ -192,7 +192,7 @@ const event_manager_class = function(){
 		}
 
 		return true
-	};//end set_before_unload
+	}//end set_before_unload
 
 
 
@@ -205,11 +205,11 @@ const event_manager_class = function(){
 		event.preventDefault();
 
 		return event.returnValue = 'Are you sure you want to exit with unsaved changes?';
-	};//end beforeUnloadListener
+	}//end beforeUnloadListener
 
 
 
-};//end event_manager_class
+}//end event_manager_class
 
 
 

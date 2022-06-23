@@ -44,7 +44,7 @@ export const component_av = function(){
 
 
 	return true
-};//end  component_av
+}//end  component_av
 
 
 
@@ -101,7 +101,7 @@ component_av.prototype.go_to_time = function(options) {
 	self.video.currentTime = seconds;
 
 	return seconds
-};//end  go_to_time
+}//end  go_to_time
 
 
 
@@ -129,7 +129,7 @@ component_av.prototype.play_pause = function(rewind_seconds=0) {
 	}
 
 	return self.video.paused
-};//end play_pause
+}//end play_pause
 
 
 
@@ -167,7 +167,7 @@ component_av.prototype.get_data_tag = function() {
 	}
 
 	return data_tag
-};//end get_data_tag
+}//end get_data_tag
 
 
 
@@ -182,7 +182,7 @@ component_av.prototype.get_current_tc = function(){
 	const tc = self.time_to_tc(self.video.currentTime)
 
 	return tc
-};//end get_current_tc
+}//end get_current_tc
 
 
 
@@ -207,7 +207,7 @@ component_av.prototype.tc_to_seconds = function(tc) {
 
 
 	return total_seconds
-};//end  tc_to_seconds
+}//end  tc_to_seconds
 
 
 
@@ -258,7 +258,7 @@ component_av.prototype.time_to_tc = function(time) {
 
 
 	return tc
-};//end time_to_tc
+}//end time_to_tc
 
 
 
@@ -286,4 +286,4 @@ component_av.prototype.set_playback_rate = function(rate) {
 		self.video.playbackRate = rate;
 
 	return rate
-};//end  set_playback_rate
+}//end  set_playback_rate

@@ -16,7 +16,7 @@
 export const render_list_component_publication = function() {
 
 	return true
-};//end render_list_component_publication
+}//end render_list_component_publication
 
 
 
@@ -39,6 +39,6 @@ render_list_component_publication.prototype.list = async function() {
 		})
 
 	return wrapper
-};//end list
+}//end list
 
 

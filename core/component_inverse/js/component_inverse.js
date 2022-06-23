@@ -29,7 +29,7 @@ export const component_inverse = function(){
 		this.id
 
 	return true
-};//end component_inverse
+}//end component_inverse
 
 
 

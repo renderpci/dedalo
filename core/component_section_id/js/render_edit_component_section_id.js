@@ -16,7 +16,7 @@
 export const render_edit_component_section_id = function() {
 
 	return true
-};//end render_edit_component_section_id
+}//end render_edit_component_section_id
 
 
 
@@ -48,7 +48,7 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -71,6 +71,4 @@ const get_content_data_edit = function(self) {
 		})
 
 	return content_data
-};//end get_content_data_edit
-
-
+}//end get_content_data_edit

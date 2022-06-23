@@ -38,7 +38,7 @@ export const area_development = function() {
 
 
 	return true
-};//end area_development
+}//end area_development
 
 
 
@@ -118,7 +118,7 @@ area_development.prototype.build = async function(autoload=true) {
 
 
 	return true
-};//end build
+}//end build
 
 
 
@@ -141,7 +141,7 @@ area_development.prototype.render = async function(options={}) {
 
 
 	return result_node
-};//end render
+}//end render
 
 
 
@@ -227,7 +227,7 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 
 
 	return true
-};//end init_json_editor
+}//end init_json_editor
 
 
 
@@ -315,7 +315,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 
 	return js_promise
-};//end init_json_editor_api
+}//end init_json_editor_api
 
 
 
@@ -340,7 +340,7 @@ const load_json_editor_files = function() {
 	})
 
 	return load_all
-};//end load_json_editor_files
+}//end load_json_editor_files
 
 
 
@@ -353,4 +353,4 @@ area_development.prototype.init_form = async function(widget_object) {
 	build_form(widget_object)
 
 	return true
-};//end init_form
+}//end init_form

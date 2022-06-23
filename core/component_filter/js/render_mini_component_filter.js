@@ -16,7 +16,7 @@
 export const render_mini_component_filter = function() {
 
 	return true
-};//end render_mini_component_filter
+}//end render_mini_component_filter
 
 
 
@@ -44,6 +44,6 @@ render_mini_component_filter.prototype.mini = function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

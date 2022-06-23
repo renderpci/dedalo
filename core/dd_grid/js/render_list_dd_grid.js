@@ -17,7 +17,7 @@
 export const render_list_dd_grid = function() {
 
 	return true
-};//end render_list_dd_grid
+}//end render_list_dd_grid
 
 
 
@@ -47,7 +47,7 @@ render_list_dd_grid.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 
 

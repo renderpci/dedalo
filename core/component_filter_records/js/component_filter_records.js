@@ -34,7 +34,7 @@ export const component_filter_records = function(){
 	this.tools			= null
 
 	return true
-};//end component_filter_records
+}//end component_filter_records
 
 
 
@@ -90,6 +90,6 @@ component_filter_records.prototype.validate_value = (value) => {
 	}
 
 	return safe_values
-};//end validate_value
+}//end validate_value
 
 

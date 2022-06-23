@@ -16,7 +16,7 @@
 export const render_list_component_external = function() {
 
 	return true
-};//end render_list_component_external
+}//end render_list_component_external
 
 
 
@@ -41,6 +41,6 @@ render_list_component_external.prototype.list = async function() {
 
 
 	return wrapper
-};//end list
+}//end list
 
 

@@ -16,7 +16,7 @@
 export const render_edit_component_email = function() {
 
 	return true
-};//end render_edit_component_email
+}//end render_edit_component_email
 
 
 
@@ -51,7 +51,7 @@ render_edit_component_email.prototype.edit = async function(options={render_leve
 		add_events(self, wrapper)
 
 	return wrapper
-};//end edit
+}//end edit
 
 
 
@@ -199,7 +199,7 @@ const add_events = function(self, wrapper) {
 
 
 	return true
-};//end add_events
+}//end add_events
 
 
 
@@ -235,7 +235,7 @@ const get_content_data_edit = function(self) {
 			  content_data.appendChild(fragment)
 
 	return content_data
-};//end render_content_data
+}//end render_content_data
 
 
 
@@ -272,7 +272,7 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-};//end get_buttons
+}//end get_buttons
 
 
 
@@ -319,6 +319,6 @@ const get_input_element_edit = (i, current_value, self) => {
 		}
 
 	return li
-};//end input_element
+}//end input_element
 
 

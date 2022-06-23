@@ -16,7 +16,7 @@
 export const render_mini_component_external = function() {
 
 	return true
-};//end render_mini_component_external
+}//end render_mini_component_external
 
 
 
@@ -41,6 +41,6 @@ render_mini_component_external.prototype.mini = async function() {
 
 
 	return wrapper
-};//end mini
+}//end mini
 
 

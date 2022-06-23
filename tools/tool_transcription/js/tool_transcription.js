@@ -37,7 +37,7 @@ export const tool_transcription = function () {
 	this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
 
 	return true
-};//end page
+}//end page
 
 
 
@@ -79,7 +79,7 @@ tool_transcription.prototype.init = async function(options) {
 
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -115,7 +115,7 @@ tool_transcription.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 
@@ -156,7 +156,7 @@ tool_transcription.prototype.get_component = async function(lang) {
 
 
 	return component_instance
-};//end get_component
+}//end get_component
 
 
 
@@ -206,7 +206,7 @@ tool_transcription.prototype.load_relation_list = async function() {
 	const datum = api_response.result
 
 	return datum
-};//end load_relation_list
+}//end load_relation_list
 
 
 
