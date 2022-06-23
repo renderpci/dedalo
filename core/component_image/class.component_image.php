@@ -74,6 +74,8 @@ class component_image extends component_media_common {
 			#
 			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
 			#
+			if (!empty($this->section_id)) {
+
 				# IMAGE_ID : Set and fix current image_id
 				$this->image_id = $this->get_image_id();
 					#dump($this->image_id,"image_id $modo");
@@ -97,6 +99,7 @@ class component_image extends component_media_common {
 					$this->initial_media_path,
 					$this->external_source
 				);
+			}
 
 
 		return true;
