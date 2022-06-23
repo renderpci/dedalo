@@ -1084,12 +1084,6 @@ final class dd_core_api {
 				'context_type'		=> $context_type
 			]);
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-					$response->debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-			}
-
 		// response
 			$response->result	= $filtered_components;
 			$response->msg		= 'OK. Request done';

@@ -186,5 +186,3 @@
 
 // JSON string
 	return common::build_element_json_output($context, $data);
-
-
