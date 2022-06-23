@@ -87,6 +87,13 @@ tool_indexation.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.langs = page_globals.dedalo_projects_default_langs
 
+	// label_states
+		self.label_states = [
+			{ label	: get_label.etiqueta_normal,	value : 'n' },
+			{ label	: get_label.etiqueta_borrada,	value : 'd' },
+			{ label	: get_label.etiqueta_revisar,	value : 'r' }
+		]
+
 	// id_base from transcription_component. Needed to set event subscriptions on init
 		const transcription_component_ddo = self.tool_config.ddo_map.find(el => el.role==='transcription_component')
 		if (!transcription_component_ddo) {
@@ -117,13 +124,29 @@ tool_indexation.prototype.init = async function(options) {
 					const value		= options.value
 
 				// update_tag
-					return self.transcription_component.update_tag({
+					self.transcription_component.update_tag({
 						type	: 'indexIn',
 						tag_id	: tag_id,
 						dataset	: {
 							state : value
 						},
 						save	: true
+					})
+					.then(function(response){
+						console.log("++++ response:",response);
+						if (response===true) {
+
+							// update tag_info_container color matching tag state
+								self.label_states.map((el)=>{
+									if (el.value==value) {
+										self.tag_info_container.classList.add(el.value)
+									}else{
+										if (self.tag_info_container.classList.contains(el.value)) {
+											self.tag_info_container.classList.remove(el.value)
+										}
+									}
+								})
+						}
 					})
 			}
 

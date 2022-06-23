@@ -90,18 +90,20 @@ const get_tag_info = function(self) {
 			info_container.removeChild(info_container.lastChild)
 		}
 
-	// common_line. line info about tag
-		const common_line = ui.create_dom_element({
+	// tag_info_container. line info about tag
+		const tag_info_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'common_line',
+			class_name		: 'tag_info_container',
 			parent			: info_container
 		})
+		// fix node
+		self.tag_info_container = tag_info_container
 
 	// tag id info
 		const fragment_id_info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'fragment_id_info',
-			parent			: common_line
+			parent			: tag_info_container
 		})
 		const fragment_id_label = ui.create_dom_element({
 			element_type	: 'span',
@@ -120,41 +122,49 @@ const get_tag_info = function(self) {
 				element_type	: 'div',
 				class_name		: 'wrap_tag_state_selector',
 				inner_html		: get_label.state || "State",
-				parent			: common_line
+				parent			: tag_info_container
 			})
 		// state selector
 			const tag_state_selector = ui.create_dom_element({
 				element_type	: 'select',
 				class_name		: 'tag_state_selector',
 				inner_html		: get_label.state || "State",
-				parent			: common_line
+				parent			: tag_info_container
 			})
-			const states = [
-				{ label	: get_label.etiqueta_normal,	value : "n"},
-				{ label	: get_label.etiqueta_borrada,	value : "d"},
-				{ label	: get_label.etiqueta_revisar,	value : "r"}
-			]
-			for (let k = 0; k < states.length; k++) {
+
+			for (let k = 0; k < self.label_states.length; k++) {
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: states[k].label,
-					value			: states[k].value,
+					inner_html		: self.label_states[k].label,
+					value			: self.label_states[k].value,
 					parent			: tag_state_selector
 				})
 			}
 			tag_state_selector.addEventListener("change", function(e){
+				const value = this.value
 				event_manager.publish('change_tag_state_' + self.id, {
 					tag_id	: tag_id,
-					value	: this.value
+					value	: value
 				})
+				// update tag_info_container color matching tag state
+					// self.label_states.map((el)=>{
+					// 	if (el.value==value) {
+					// 		tag_info_container.classList.add(el.value)
+					// 	}else{
+					// 		if (tag_info_container.classList.contains(el.value)) {
+					// 			tag_info_container.classList.remove(el.value)
+					// 		}
+					// 	}
+					// })
 			})
+
 
 	// delete_tag
 		// wrap_delete_tag
 		const wrap_delete_tag = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'wrap_delete_tag',
-			parent			: common_line
+			parent			: tag_info_container
 		})
 		// button delete tag
 			const button_delete = ui.create_dom_element({
@@ -182,13 +192,26 @@ const get_tag_info = function(self) {
 			fragment_id_tag_id.textContent	= value // update fragment label
 			button_delete_label.textContent	= get_label.borrar + " " + value // update delete label
 
-
+			// show/hide info_container
 			if (self.info_container.classList.contains('hide')) {
 				self.info_container.classList.remove('hide')
 			}
 		})
 		self.active_value("state", function(value){
-			tag_state_selector.value = value
+
+			// fix selector value
+				tag_state_selector.value = value
+
+			// update tag_info_container color matching tag state
+				self.label_states.map((el)=>{
+					if (el.value==value) {
+						self.tag_info_container.classList.add(el.value)
+					}else{
+						if (self.tag_info_container.classList.contains(el.value)) {
+							self.tag_info_container.classList.remove(el.value)
+						}
+					}
+				})
 		})
 
 
