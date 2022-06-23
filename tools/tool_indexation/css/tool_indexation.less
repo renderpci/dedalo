@@ -90,11 +90,47 @@
 				>.info_container {
 					// background-color: #c4c4f9;
 
-					.common_line {
+					.tag_info_container {
 						display: flex;
 						padding: 0.5em;
-						background-color: aliceblue;
-						align-items: baseline;
+						padding-left: 1rem;
+						// background-color: @color_grey_light;
+						background-color: transparent;
+						align-items: center;
+						margin-bottom: 0.33rem;
+
+						// border-radius: 20px;
+						border-top-left-radius: 20px;
+						border-bottom-left-radius: 20px;
+						// background-image: radial-gradient(circle at 98% 50%, rgba(0, 0, 0, 0) 15px, rgba(0, 0, 0, 0) 3%, #aeaebd 25px);
+						transition: all 0.5s ease;
+
+						>* {
+							display: flex;
+						}
+
+						>.fragment_id_info {
+							>span {
+								margin-right: 0.5rem;
+							}
+						}
+
+						.fn_background(@bg_color) {
+							background-image: radial-gradient(circle at 101% 50%,transparent 15px,transparent 25px,@bg_color 15px);
+						}
+
+						&.n {
+							// background-color: #facc6d;
+							.fn_background(#facc6d);
+						}
+						&.d {
+							// background-color: #c8dff9;
+							.fn_background(#c8dff9);
+						}
+						&.r {
+							// background-color: #ff9e87;
+							.fn_background(#ff9e87);
+						}
 
 						>* {
 							padding-right: 1em;
