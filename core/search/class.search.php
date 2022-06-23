@@ -179,7 +179,7 @@ class search {
 		}
 
 		// records limit default
-		if(!isset($this->search_query_object->limit)) {
+		if(!property_exists($this->search_query_object, 'limit')) {
 			$this->search_query_object->limit = 10;
 		}
 

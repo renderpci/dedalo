@@ -771,7 +771,7 @@ section.prototype.delete_section = async function (options) {
 		const delete_mode	= options.delete_mode
 
 	// sqo
-		sqo.limit = 0
+		// sqo.limit = null
 
 	// source
 		const source		= create_source(self, 'delete')
