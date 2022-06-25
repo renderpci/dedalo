@@ -4,7 +4,8 @@
 
 
 // imports
-	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
+	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
+	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {tr} from '../../common/js/tr.js'
@@ -355,7 +356,8 @@ const get_input_element = (i, current_value, self) => {
 		const init_current_text_editor = function() {
 
 			// service_tinymce
-				const current_text_editor = new service_tinymce()
+				// const current_text_editor = new service_tinymce()
+				const current_text_editor = new service_ckeditor()
 
 			// toolbar_buttons
 				const toolbar_buttons = self.context.toolbar_buttons

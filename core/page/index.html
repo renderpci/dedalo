@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html xml:lang="en-US" lang="en-US">
 <head>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 	<link rel="shortcut icon" href="../../favicon.ico" />
 	<title>Dédalo V6</title>
 	<meta charset="utf-8">
@@ -31,6 +31,8 @@
 	<script defer="defer" rel="preload" src="../common/js/environment.js.php" as="script"></script>
 	<link rel="stylesheet" type="text/css" href="../page/css/main.css">
 	<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
+	<script defer="defer" src="../../lib/ckeditor/build/ckeditor.js"></script>
+
 </head>
 <body>
 	<div id="main" class="hide"></div>
@@ -111,7 +113,7 @@
 			// debug
 				if(SHOW_DEBUG===true) {
 					// console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
-					dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
+					// dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
 				}
 		})()
 	</script>
