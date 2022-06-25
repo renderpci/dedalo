@@ -145,6 +145,8 @@ export const service_tinymce = function() {
 
 			// button add
 			editor.addButton(custom_buttons[i].name, options)
+			// v5
+			// editor.ui.registry.addButton(custom_buttons[i].name, options);
 		}
 
 		return custom_buttons

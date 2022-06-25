@@ -136,7 +136,6 @@ const get_content_data = function(self) {
 	// short vars
 		const section			= self.caller
 		const section_buttons	= section.context.buttons || []
-		console.log("section_buttons:",section_buttons);
 
 	// content_data
 		const content_data = ui.create_dom_element({
