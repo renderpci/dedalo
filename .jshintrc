@@ -1,4 +1,4 @@
 {
-  "esversion": 8,
-  "asi": true // allow missing semicolon 
+  "esversion": 12,
+  "asi": true // allow missing semicolon
 }

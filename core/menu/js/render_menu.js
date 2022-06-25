@@ -9,7 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {quit} from '../../login/js/login.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {clone} from '../../common/js/utils/index.js'
 	// import {instances} from '../../common/js/instances.js'
 
 

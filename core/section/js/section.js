@@ -333,7 +333,7 @@ section.prototype.build = async function(autoload=false) {
 						console.error("section build autoload api_response:",api_response);
 					}
 					const response	= clone(api_response)
-					const exec_time	= api_response.debug ? api_response.debug.exec_time : null
+					const exec_time	= api_response.debug ? api_response.debug.real_execution_time : null
 					dd_console("SECTION api_response:", 'DEBUG', [self.id, response, exec_time]);
 				}
 

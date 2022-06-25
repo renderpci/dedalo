@@ -197,8 +197,7 @@ const get_content_data_edit = function(self) {
 
 	// short vars
 		const datalist	= self.data.datalist
-		// const mode		= self.mode
-		console.log("self:",self);
+		// const mode	= self.mode
 
 	const fragment = new DocumentFragment()
 
