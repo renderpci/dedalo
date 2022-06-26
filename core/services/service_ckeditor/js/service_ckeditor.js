@@ -7,7 +7,7 @@
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
 
-	import {render_toolbar, render_button} from '../../../component_text_area/js/render_text_editor_toolbar.js'
+	import {render_toolbar, render_button} from './render_text_editor_toolbar.js'
 
 
 
@@ -436,10 +436,10 @@ export const service_ckeditor = function() {
 		// 	onValueChange();
 		// }
 
-
 		// The object we wanna control
 		const obj = {}
-
+			console.log("obj:",obj);
+				console.log("command:",command);
 		// Our handler to control object via Proxy
 		const handler = {
 			get(obj, prop) {
@@ -471,7 +471,9 @@ export const service_ckeditor = function() {
 		}
 
 		// Set the proxy
-		const proxifiedObj = new Proxy(command, handler)
+		const proxy_field_obj = new Proxy(command, handler)
+
+console.log("proxy_field_obj:",proxy_field_obj);
 
 	};//end factory_events_for_buttons
 

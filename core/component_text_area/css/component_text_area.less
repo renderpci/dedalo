@@ -30,17 +30,27 @@
 					>.toolbar_container {
 						display: flex;
 						position: absolute;
-						top: -2rem;
+						top: -2.25rem;
 						left: 0;
-						width: 100%;
-						height: 2em;
+						width: auto;
+						height: 2.2em;
 						padding: 0.25rem;
 						z-index: 1;
-						background-color: @color_grey_light;
+						// background-color: @color_grey_light;
+						background-color: #fafafa;
+						// border: 1px solid #c4c4c4;
+						outline: 1px solid #e6e6e6;
+
+						>.toolbar_button {
+							height: 100%;
+							padding: 0.35rem;
+							padding-right: 0.7em;
+							padding-left: 0.7em;
+						}
 
 						img {
 							height: 100%;
-							padding: 0.25rem;
+							// padding: 0.25rem;
 						}
 					}
 
