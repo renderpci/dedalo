@@ -393,17 +393,17 @@ const get_input_element = (i, current_value, self) => {
 					// fix current_service_text_editor
 					self.text_editor[i] = current_service_text_editor
 					// show toolbar_container
-					toolbar_container.classList.remove('hide')
-					// li.addEventListener("mouseup", function(){
-					// 	toolbar_container.classList.remove('hide')
-					// })
-					// document.addEventListener("click", fn_remove)
-					// function fn_remove(e) {
-					// 	if (e.target!=li) {
-					// 		toolbar_container.classList.add('hide')
-					// 		document.removeEventListener("click", fn_remove)
-					// 	}
-					// }
+					// toolbar_container.classList.remove('hide')
+					li.addEventListener("mouseup", function(){
+						toolbar_container.classList.remove('hide')
+					})
+					document.addEventListener("click", fn_remove)
+					function fn_remove(e) {
+						if (e.target!=li) {
+							toolbar_container.classList.add('hide')
+							document.removeEventListener("click", fn_remove)
+						}
+					}
 				})
 
 			return current_service_text_editor
@@ -422,7 +422,9 @@ const get_input_element = (i, current_value, self) => {
 				// observer.unobserve(entry.target);
 			}
 		}, { threshold: [0] });
-		observer.observe(li);
+		// observer.observe(li);
+
+		value_container.innerHTML = value
 
 	// add button create fragment (Only when caller is a tool_indexation instance)
 		if (self.caller && self.caller.constructor.name==="tool_indexation") {

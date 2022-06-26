@@ -136,7 +136,7 @@
 
 			.left_container{
 				>.wrapper_component >.content_data {
-					min-height: calc(100vh - 9rem);
+					height: calc(100vh - 9rem);
 
 					// background-color: #fbf082;
 					@media screen and (max-width: @width_break_point_0) {
@@ -152,6 +152,8 @@
 					>.content_data {
 						// min-height: 88vh;
 						// background-color: #9bffb4;
+						max-height: calc(100vh - 10rem);
+						overflow: auto;
 					}
 				}
 
