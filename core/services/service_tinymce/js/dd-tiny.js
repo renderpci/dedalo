@@ -2,7 +2,10 @@
 /*eslint no-undef: "error"*/
 
 
-
+/**
+* DDTiny
+* 	This is a HTML component to abstract in shadow DOM the tinyMCE editor
+*/
 class DDTiny extends HTMLElement {
 	constructor() {
 		super();

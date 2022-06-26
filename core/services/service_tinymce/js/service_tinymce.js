@@ -32,14 +32,17 @@ export const service_tinymce = function() {
 	/**
 	* INIT
 	*/
-	this.init = async function (caller, container, options) {
+	this.init = async function (options) {
 
 		const self = this
 
 		// options vars
-			const value			= options.value
-			const key			= options.key
-			const editor_config	= options.editor_config
+			const caller				= options.caller
+			const container				= options.value_container.parentNode
+			// const toolbar_container	= options.toolbar_container
+			const value					= options.value
+			const key					= options.key
+			const editor_config			= options.editor_config
 
 		// fix vars
 			self.caller		= caller
@@ -48,16 +51,26 @@ export const service_tinymce = function() {
 			self.key		= key
 
 		// editor options
+			// toolbar items
 			const toolbar = editor_config.toolbar
-				|| 'bold italic underline undo redo searchreplace pastetext code | button_geo button_save' // fullscreen
+				|| ['bold', 'italic', 'underline', 'undo', 'redo', 'searchreplace', 'pastetext', 'code', '|', 'button_geo', 'button_save'] // fullscreen
+			// normalize toolbar names
+			for (let index = 0; index < toolbar.length; index++) {
+				if (toolbar[index]==='find_and_replace') {
+					toolbar[index] = 'searchreplace';
+				}else if (toolbar[index]==='html_source') {
+					toolbar[index] = 'code';
+				}
+			}
+
+			// plugins
 			const plugins = editor_config.plugins
 				|| ['paste', 'image', 'print', 'searchreplace', 'code', 'noneditable'] // 'wordcount'  'fullscreen'
 
 		// dd-tiny dom element (cusmtomHTML element)
 			const dd_tinny = document.createElement('dd-tiny');
 				  dd_tinny.style.opacity = 0 // on init the editor, will be set to 1
-
-		// store
+			// fix dd_tinny
 			self.dd_tinny = dd_tinny
 
 		// dd-tiny options (to config editor)
@@ -65,7 +78,7 @@ export const service_tinymce = function() {
 				// called when tinymce editor is ready
 				onsetup_editor	: self.onsetup_editor.bind(this),
 				value			: value,
-				toolbar			: toolbar,
+				toolbar			: toolbar.join(' '), // as string e.g. 'bold italic underline'
 				plugins			: plugins,
 				container		: container
 			}
