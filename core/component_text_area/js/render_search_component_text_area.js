@@ -119,8 +119,25 @@ const get_content_data = function(self) {
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i])
-			fragment.appendChild(input_element)
+			const q_operator = self.data.q_operator
+			// input_q_operator
+			 const input_q_operator = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'text',
+					value			: q_operator,
+					class_name		: 'q_operator',
+					parent			: fragment
+				})
+
+			// input field
+				const input = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'text',
+					class_name		: 'input_value',
+					dataset			: { key : i },
+					value			: current_value,
+					parent 			: fragment
+				})
 		}
 
 	// content_data
@@ -130,25 +147,3 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
-
-
-
-/**
-* GET_INPUT_ELEMENT
-* @return DOM element input
-*/
-const get_input_element = (i, current_value) => {
-
-	// input field
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_value',
-			dataset			: { key : i },
-			value			: current_value
-		})
-
-	return input
-}//end get_input_element
-
-
