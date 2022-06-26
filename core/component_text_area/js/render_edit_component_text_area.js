@@ -362,7 +362,6 @@ const get_input_element = (i, current_value, self) => {
 				// const current_service_text_editor = new service_ckeditor()
 				const current_service_text_editor = new self.service_text_editor()
 
-					console.log("self.context.toolbar_buttons:",self.context.toolbar_buttons);
 			// toolbar. create the toolbar base
 				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','full_screen','|']
 				// toolbar add custum_buttons
@@ -371,7 +370,6 @@ const get_input_element = (i, current_value, self) => {
 					}
 				// toolbar add standard buttons
 					toolbar.push(...['button_lang','|','button_save'])
-
 
 			// editor_config
 				const editor_config = {
