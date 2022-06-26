@@ -581,7 +581,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'find_and_replace',
-				image	: '../../core/themes/default/icons/find.svg'
+				image	: '../../core/themes/default/icons/search.svg'
 			}
 		})
 
