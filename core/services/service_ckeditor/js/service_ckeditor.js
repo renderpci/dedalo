@@ -6,10 +6,9 @@
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
-	// import {observe_changes} from '../../../common/js/utils.js'
-	// import {clone, observe_changes} from '../../../common/js/utils/index.js'
-	// import {common} from '../../../common/js/common.js'
-	// import imageIcon from '../../../themes/default/icons/note.svg';
+
+	import {render_toolbar, render_button} from '../../../component_text_area/js/render_text_editor_toolbar.js'
+
 
 
 
@@ -22,77 +21,56 @@ export const service_ckeditor = function() {
 
 	// self vars
 		this.caller
-		this.container
-		this.dd_tinny
-		this.key
+		this.value_container
+		this.toolbar_container
 		this.options
+		this.key
 		this.editor
-
 
 
 	/**
 	* INIT
 	*/
-	this.init = async function (caller, container, options) {
+	this.init = async function (options) {
 
 		const self = this
 
 		// options vars
-			const value			= options.value
-			const key			= options.key
-			const editor_config	= options.editor_config
+			const caller			= options.caller
+			const value_container	= options.value_container
+			const toolbar_container	= options.toolbar_container
+			const value				= options.value
+			const key				= options.key
+			const editor_config		= options.editor_config
+
+			const custom_events		= editor_config.custom_events
 
 		// fix vars
-			self.caller		= caller
-			self.container	= container
-			self.options	= options
-			self.key		= key
+			self.caller				= caller
+			self.value_container	= value_container
+			self.toolbar_container 	= toolbar_container
+			self.options			= options
+			self.key				= key
 
-			container.innerHTML = value
+		// add component_text_area value
+			value_container.innerHTML = value
+
+			// setTimeout(function(){
 
 
-			// class InsertImage extends Plugin {
-			// 	init() {
-			// 		const editor = this.editor;
 
-			// 		editor.ui.componentFactory.add( 'insertImage', locale => {
-			// 			const view = new ButtonView( locale );
-			// 				console.log("view:",view);
-			// 			view.set( {
-			// 				label: 'Insert image',
-			// 				// icon: imageIcon,
-			// 				icon : '../../../themes/default/icons/note.svg',
-			// 				tooltip: true
-			// 			} );
-
-			// 			// Callback executed once the image is clicked.
-			// 			view.on( 'execute', () => {
-			// 				const imageUrl = prompt( 'Image URL' );
-
-			// 				editor.model.change( writer => {
-			// 					const imageElement = writer.createElement( 'imageBlock', {
-			// 						src: imageUrl
-			// 					} );
-
-			// 					// Insert the image in the current selection location.
-			// 					editor.model.insertContent( imageElement, editor.model.document.selection );
-			// 				} );
-			// 			} );
-
-			// 			return view;
-			// 		} );
-			// 	}
-			// }
 
 
 		// editor
-			InlineEditor.create( container, {
+			ddEditor.create( value_container, {
+				// view.element = value_container
 
 				// extraPlugins: [ InsertImage ],
-				// toolbar: [ 'bold', 'italic', 'underline', 'undo', 'redo', '|',  'findAndReplace', 'sourceEditing', 'InsertImage' ],
+				// toolbar: [ 'bold', 'italic', 'underline', 'undo', 'redo', '|','findAndReplace', 'sourceEditing', 'InsertImage' ],
 				// image: {
 				// 	toolbar: [ 'toggleImageCaption' ]
 				// }
+				// toolbar: ['bold'],
 				htmlSupport : {
 					allow : [{
 						name		: 'img',
@@ -103,9 +81,22 @@ export const service_ckeditor = function() {
 
 				})
 				.then( editor => {
-					// window.editor = editor;
-					console.log("/////////// editor:",editor);
-					setTimeout(function(){
+
+					self.editor = editor
+
+					// editor.ui.focusTracker.on( 'change:isFocused', ( evt, data, isFocused ) => {
+					//     console.log( `The editor is focused: ${ isFocused }.` );
+					// } );
+
+					// // build toolbar
+					// 	const toolbar_node = self.build_toolbar(editor_config);
+					// 	toolbar_container.appendChild(toolbar_node)
+
+					// setTimeout(function(){
+						// build toolbar
+						const toolbar_node = self.build_toolbar(editor_config);
+						// toolbar_container.appendChild(toolbar_node)
+
 
 						// const htmlDP = editor.data.processor;
 						// const viewFragment = htmlDP.toView("<p><b>patata</b> frita</p>");
@@ -115,23 +106,20 @@ export const service_ckeditor = function() {
 
 						// editor.model.insertContent( modelFragment, editor.model.document.selection );
 
+					// }, 500)
 
-					}, 5000)
+						// container.addEventListener("click", function(e){
 
-						container.addEventListener("click", function(e){
+						// 	if (e.target.matches('img')) {
+						// 		e.stopPropagation()
 
-							if (e.target.matches('img')) {
-								e.stopPropagation()
+						// 		console.log("click e:", e.target);
+						// 		console.log("parentNode:", e.target.parentNode);
 
-								console.log("click e:", e.target);
-								console.log("parentNode:", e.target.parentNode);
-
-								const data = editor.getData();
-						 		console.log("editor data:",data);
-							}
-						})
-
-
+						// 		const data = editor.getData();
+						//  		console.log("editor data:",data);
+						// 	}
+						// })
 
 				})
 				.catch( error => {
@@ -141,34 +129,7 @@ export const service_ckeditor = function() {
 					console.error( error );
 				});
 
-
-
-		// // editor options
-		// 	const toolbar = editor_config.toolbar
-		// 		|| 'bold italic underline undo redo searchreplace pastetext code | button_geo button_save' // fullscreen
-		// 	const plugins = editor_config.plugins
-		// 		|| ['paste', 'image', 'print', 'searchreplace', 'code', 'noneditable'] // 'wordcount'  'fullscreen'
-
-		// // dd-tiny dom element (cusmtomHTML element)
-		// 	const dd_tinny = document.createElement('dd-tiny');
-		// 		  dd_tinny.style.opacity = 0 // on init the editor, will be set to 1
-
-		// // store
-		// 	self.dd_tinny = dd_tinny
-
-		// // dd-tiny options (to config editor)
-		// 	dd_tinny.options = {
-		// 		// called when tinymce editor is ready
-		// 		onsetup_editor	: self.onsetup_editor.bind(this),
-		// 		value			: value,
-		// 		toolbar			: toolbar,
-		// 		plugins			: plugins,
-		// 		container		: container
-		// 	}
-
-		// // add to DOM
-		// 	container.appendChild(dd_tinny)
-
+	// }, 500)
 
 		return true
 	}//end init
@@ -598,6 +559,166 @@ export const service_ckeditor = function() {
 		return true
 	}//end set_dirty
 
+
+	/**
+	* BUILD_TOOLBAR
+	* @return bool
+	*/
+	this.build_toolbar = function(editor_config) {
+
+		const self = this
+
+		// editor config vars
+			// toolbar array with the order of the buttons like:
+			// ['bold','italic','underline','|','undo','redo']
+			const toolbar			= editor_config.toolbar
+			// custom_buttons array of the buttons objects with the own configuration
+			const custom_buttons	= editor_config.custom_buttons
+
+			const toolbar_node = self.toolbar_container
+
+			const toolbar_length = toolbar.length
+			for (let i = 0; i < toolbar_length; i++) {
+				const toolbar_item = toolbar[i]
+
+				const button_config = custom_buttons.find(el => el.name === toolbar_item)
+				if(!button_config){
+					console.warn("Button object definition doesn't exist:", toolbar_item);
+					continue
+				}
+				// create the node in the text_area render (common for all text_editors tinny, ckeditor, etc.)
+				const button_node = render_button(button_config)
+				button_config.node = button_node
+				// when the button need to be processed by the editor, use the factory
+				if(button_config.manager_editor === true){
+					self.factory_events_for_buttons(button_config)
+				}
+					console.log("button_node:",button_node);
+				toolbar_node.appendChild(button_node)
+			}
+
+		return toolbar_node
+	};//end this.build_toolbar
+
+
+	/**
+	* FACTORY_EVENTS_FOR_BUTTONS
+	* @return
+	*/
+	this.factory_events_for_buttons = function(button_obj) {
+
+		const self = this
+
+		const editor = self.editor
+
+			console.log("editor:",editor);
+
+		const name		= button_obj.name
+		const button	= button_obj.node
+
+		// Exception: editing the html_souece button doesn't has command, call it by the state of the plug-ing
+		if( name === 'html_source'){
+
+			// Clicking the buttons should execute the editor command...
+			button.addEventListener('click', function(){
+				const state = editor.plugins.get( 'SourceEditing' ).isSourceEditingMode
+				if(state === false){
+					editor.plugins.get( 'SourceEditing' ).isSourceEditingMode = true
+				}else{
+					editor.plugins.get( 'SourceEditing' ).isSourceEditingMode = false
+				}
+			})
+
+			return
+		}
+
+		 // Retrieve the editor command corresponding with the ID of the button in the DOM.
+		const command = editor.commands.get( name );
+		// const button = this.view.toolbarButtons[ name ];
+
+		// Clicking the buttons should execute the editor command...
+		// ...but it should not steal the focus so the editing is uninterrupted.
+		// button.onmousedown( evt => evt.preventDefault() );
+		button.addEventListener('click', function(evt){
+			evt.preventDefault()
+			evt.stopPropagation()
+			editor.execute( name )
+			editor.editing.view.focus();
+		})
+		// button.onclick( () => editor.execute( name ) );
+
+		// ...but it should not steal the focus so the editing is uninterrupted.
+		// button.onmousedown( evt => evt.preventDefault() );
+		// button.addEventListener('click', evt => evt.preventDefault() )
+
+		const onValueChange = () => {
+			// button.toggleClass( 'active', command.value );
+			if(command.value){
+				button.classList.add('active')
+			}else{
+				button.classList.remove('active')
+			}
+		};
+
+		const onIsEnabledChange = () => {
+			// button.attr( 'disabled', () => !command.isEnabled );
+			button.setAttribute( 'disabled', () => !command.isEnabled );
+		};
+
+		// Commands can become disabled, e.g. when the editor is read-only.
+		// Make sure the buttons reflect this state change.
+		// command.addEventListener('change',onIsEnabledChange())
+		// command.on( 'change:isEnabled', onIsEnabledChange );
+		// onIsEnabledChange();
+		// console.log("command:",command);
+		// console.log("name:",name);
+
+		// Bold, Italic and Underline commands have a value that changes
+		// when the selection starts in an element the command creates.
+		// The button should indicate that e.g. you are editing text which is already bold.
+		// if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
+		// 	command.on( 'change:value', onValueChange );
+		// 	onValueChange();
+		// }
+
+
+		// The object we wanna control
+		const obj = {}
+
+		// Our handler to control object via Proxy
+		const handler = {
+			get(obj, prop) {
+			console.log(`Getting property ${prop} from object`)
+			// Remember to so the default operation, returning the prop item inside obj
+			return obj[prop]
+			},
+			set(obj, prop, value) {
+			console.log(`Setting property ${prop} as ${value} in object`)
+
+			// Do the default operation, set prop as value in obj
+			obj[prop] = value
+
+			if( prop==='isEnabled') {
+				onIsEnabledChange()
+			}
+			if(name !== 'undo' && name !== 'redo' && prop==='value'){
+				onValueChange();
+			}
+
+			/*
+				Set method must return a value.
+				Return `true` to indicate that assignment succeeded
+				Return `false` (even a falsy value) to prevent assignment.in `strict mode`, returning false will throw TypeError
+			*/
+
+			return true
+			}
+		}
+
+		// Set the proxy
+		const proxifiedObj = new Proxy(command, handler)
+
+	};//end factory_events_for_buttons
 
 
 }//end service_ckeditor

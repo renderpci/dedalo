@@ -1,11 +1,11 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
 	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
-	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
+	// import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {tr} from '../../common/js/tr.js'
@@ -357,13 +357,14 @@ const get_input_element = (i, current_value, self) => {
 	// init_current_service_text_editor
 		const init_current_service_text_editor = function() {
 
-			// service_editor
+			// service_editor. Fixed on init
 				// const current_service_text_editor = new service_tinymce()
-				const current_service_text_editor = new service_ckeditor()
+				// const current_service_text_editor = new service_ckeditor()
+				const current_service_text_editor = new self.service_text_editor()
 
-
+					console.log("self.context.toolbar_buttons:",self.context.toolbar_buttons);
 			// toolbar. create the toolbar base
-				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','fullscreen','|']
+				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','full_screen','|']
 				// toolbar add custum_buttons
 					if(self.context.toolbar_buttons){
 						toolbar.push(...self.context.toolbar_buttons)
@@ -509,7 +510,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: '',
-				image	: '../themes/default/icons/separator.svg',
+				image	: '../../core/themes/default/icons/separator.svg',
 				onclick	: null
 			}
 		})
@@ -520,7 +521,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: true,
 			options	: {
 				tooltip	: 'bold',
-				image	: '../themes/default/icons/bold.svg'
+				image	: '../../core/themes/default/icons/bold.svg'
 			}
 		})
 
@@ -530,7 +531,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: true,
 			options	: {
 				tooltip	: 'italic',
-				image	: '../themes/default/icons/italic.svg'
+				image	: '../../core/themes/default/icons/italic.svg'
 			}
 		})
 
@@ -540,7 +541,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: true,
 			options	: {
 				tooltip	: 'underline',
-				image	: '../themes/default/icons/underline.svg'
+				image	: '../../core/themes/default/icons/underline.svg'
 			}
 		})
 
@@ -550,7 +551,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: true,
 			options	: {
 				tooltip	: 'undo',
-				image	: '../themes/default/icons/undo.svg'
+				image	: '../../core/themes/default/icons/undo.svg'
 			}
 		})
 
@@ -560,7 +561,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: true,
 			options	: {
 				tooltip	: 'redo',
-				image	: '../themes/default/icons/redo.svg'
+				image	: '../../core/themes/default/icons/redo.svg'
 			}
 		})
 
@@ -570,7 +571,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'find_and_replace',
-				image	: '../themes/default/icons/find_and_replace.svg'
+				image	: '../../core/themes/default/icons/find.svg'
 			}
 		})
 
@@ -580,17 +581,17 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: true,
 			options	: {
 				tooltip	: 'html_source',
-				image	: '../themes/default/icons/html_source.svg'
+				image	: '../../core/themes/default/icons/html_source.svg'
 			}
 		})
 
-	// fullscreen
+	// full_screen
 		custom_buttons.push({
-			name			: "fullscreen",
+			name			: "full_screen",
 			manager_editor	: false,
 			options	: {
-				tooltip	: 'fullscreen',
-				image	: '../themes/default/icons/fullscreen.svg'
+				tooltip	: 'full_screen',
+				image	: '../../core/themes/default/icons/full_screen.svg'
 			}
 		})
 
@@ -601,7 +602,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Show persons list',
-				image	: '../themes/default/icons/person.svg',
+				image	: '../../core/themes/default/icons/person.svg',
 				onclick	: function(evt) {
 					// event_manager.publish('toggle_persons_list_'+ self.id_base + '_' + i, {
 					// 	caller		: self,
@@ -618,7 +619,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add georef',
-				image	: '../themes/default/icons/geo.svg',
+				image	: '../../core/themes/default/icons/geo.svg',
 				onclick	: function(evt) {
 					event_manager.publish('create_geo_tag_'+ self.id_base, {
 						caller		: self,
@@ -634,7 +635,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add note',
-				image	: '../themes/default/icons/note.svg',
+				image	: '../../core/themes/default/icons/note.svg',
 				onclick	: function(evt) {
 					event_manager.publish('create_note_tag_'+ self.id_base + '_' + i, {
 						caller		: self,
@@ -684,7 +685,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add reference',
-				image	: '../themes/default/icons/reference.svg',
+				image	: '../../core/themes/default/icons/reference.svg',
 				onclick	: function(evt) {
 					alert("Adding reference !");
 					// component_text_area.create_new_reference(ed, evt, text_area_component)
@@ -698,7 +699,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add lang',
-				image	: '../themes/default/icons/lang.svg',
+				image	: '../../core/themes/default/icons/lang.svg',
 				onclick	: function() {
 					// show the langs list to be selected the new lang for create the new tag
 					// event_manager.publish('toggle_langs_list_'+ self.id_base + '_' + i, {
