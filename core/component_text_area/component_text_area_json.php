@@ -42,7 +42,8 @@
 				// person
 					if(isset($properties->tags_persons)) {
 						// toolbar_buttons add
-							$this->context->toolbar_buttons[] = 'button_person button_note';
+							$this->context->toolbar_buttons[] = 'button_person';
+							$this->context->toolbar_buttons[] = 'button_note';
 					}
 
 				// geo
@@ -53,7 +54,8 @@
 						true // search_exact
 					);
 					if(!empty($related_component_geolocation)){
-						$this->context->toolbar_buttons[] = 'button_geo button_note';
+						$this->context->toolbar_buttons[] = 'button_geo';
+						$this->context->toolbar_buttons[] = 'button_note';
 					}
 
 				// Notes. Add the section_tipo for the annotations
