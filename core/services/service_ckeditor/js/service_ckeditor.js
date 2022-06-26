@@ -55,22 +55,12 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			value_container.innerHTML = value
 
-			// setTimeout(function(){
-
-
-
-
 
 		// editor
 			ddEditor.create( value_container, {
-				// view.element = value_container
 
-				// extraPlugins: [ InsertImage ],
 				// toolbar: [ 'bold', 'italic', 'underline', 'undo', 'redo', '|','findAndReplace', 'sourceEditing', 'InsertImage' ],
-				// image: {
-				// 	toolbar: [ 'toggleImageCaption' ]
-				// }
-				// toolbar: ['bold'],
+				// add support for images and his own attributes
 				htmlSupport : {
 					allow : [{
 						name		: 'img',
@@ -88,48 +78,27 @@ export const service_ckeditor = function() {
 					//     console.log( `The editor is focused: ${ isFocused }.` );
 					// } );
 
-					// // build toolbar
-					// 	const toolbar_node = self.build_toolbar(editor_config);
-					// 	toolbar_container.appendChild(toolbar_node)
+					// build toolbar
+					const toolbar_node = self.build_toolbar(editor_config);
 
-					// setTimeout(function(){
-						// build toolbar
-						const toolbar_node = self.build_toolbar(editor_config);
-						// toolbar_container.appendChild(toolbar_node)
+					// container.addEventListener("click", function(e){
 
+					// 	if (e.target.matches('img')) {
+					// 		e.stopPropagation()
 
-						// const htmlDP = editor.data.processor;
-						// const viewFragment = htmlDP.toView("<p><b>patata</b> frita</p>");
-						// console.log("viewFragment:",viewFragment);
-						// const modelFragment = editor.data.toModel( viewFragment );
-						// console.log("modelFragment:",modelFragment);
+					// 		console.log("click e:", e.target);
+					// 		console.log("parentNode:", e.target.parentNode);
 
-						// editor.model.insertContent( modelFragment, editor.model.document.selection );
-
-					// }, 500)
-
-						// container.addEventListener("click", function(e){
-
-						// 	if (e.target.matches('img')) {
-						// 		e.stopPropagation()
-
-						// 		console.log("click e:", e.target);
-						// 		console.log("parentNode:", e.target.parentNode);
-
-						// 		const data = editor.getData();
-						//  		console.log("editor data:",data);
-						// 	}
-						// })
+					// 		const data = editor.getData();
+					//  		console.log("editor data:",data);
+					// 	}
+					// })
 
 				})
 				.catch( error => {
 					console.error( 'Oops, something went wrong!' );
-					console.error( 'Please, report the following error on https://github.com/ckeditor/ckeditor5/issues with the build id and the error stack trace:' );
-					console.warn( 'Build id: 7z83pgok0tkn-1117njnu31gy' );
 					console.error( error );
 				});
-
-	// }, 500)
 
 		return true
 	}//end init
@@ -183,217 +152,6 @@ export const service_ckeditor = function() {
 
 		return value
 	}//end get_value
-
-
-
-	/**
-	* ADD_EDITOR_BUTTONS
-	* @return array buttons_added
-	*/
-	this.add_editor_buttons = function() {
-
-		const editor = this.editor
-
-		const custom_buttons		= this.options.editor_config.custom_buttons
-		const custom_buttons_length	= (custom_buttons) ? custom_buttons.length : 0
-		for (let i = 0; i < custom_buttons_length; i++) {
-
-			const options = custom_buttons[i].options
-
-			// button add
-			editor.addButton(custom_buttons[i].name, options)
-			// v5
-			// editor.ui.registry.addButton(custom_buttons[i].name, options);
-		}
-
-		return custom_buttons
-	}//end add_editor_buttons
-
-
-
-	/**
-	* ONSETUP_EDITOR
-	* callback when tinymce is ready
-	* @return true
-	*/
-	this.onsetup_editor = function(editor) {
-
-		const self = this
-
-		// fix vars
-			this.editor = editor
-
-		const custom_events = this.options.editor_config.custom_events || {}
-
-
-		// additional buttons
-			this.add_editor_buttons()
-
-		// focus event
-			editor.on('focus', function(evt) {
-				// Force not dirty state
-				editor.isNotDirty = true;
-
-				if (custom_events.focus) {
-					custom_events.focus(evt, {})
-				}
-			})//end focus event
-
-		// blur event
-			editor.on('blur', function(evt) {
-				if (custom_events.blur) {
-					custom_events.blur(evt, {
-						key		: self.key,
-						value	: editor.getContent({format:'raw'}),
-						isDirty	: editor.isDirty()
-					})
-				}
-			})//end blur event
-
-		// click event
-			editor.on('click', function(evt) {
-				if (custom_events.click) {
-					custom_events.click(evt, {
-
-					})
-				}
-			})//end click event
-
-		// MouseUp
-			editor.on('MouseUp', function(evt) {
-				if (custom_events.MouseUp) {
-					custom_events.MouseUp(evt, {
-						selection : editor.selection.getContent({format:'text'})
-					})
-				}
-			})//end click event
-
-		// NodeChange
-			// editor.on('NodeChange', function(evt) {
-			// 	if (custom_events.NodeChange) {
-			// 		// custom_events.NodeChange(evt, {
-			// 			// selection : editor.selection.getContent({format:'text'})
-			// 		// })
-			// 		console.log("NodeChange evt", evt);
-			// 	}
-			// })//end click event
-
-		// KeyPress
-			// prevent that user insert special reserved chars
-			const minor_than_code	= 60 // <
-			const more_than_code	= 62 // >
-			const prevent_chars		= [minor_than_code, more_than_code]
-			editor.on('KeyPress', function(evt) {
-				if(prevent_chars.indexOf(evt.keyCode)!==-1) {
-					evt.preventDefault()
-					// when keyCode is detected, will be changed for save char
-					switch(evt.keyCode) {
-						case minor_than_code:
-							editor.insertContent("[") // < to [
-							break;
-						case more_than_code:
-							editor.insertContent("]") // > to ]
-							break;
-					}
-					alert("Warning! This key is reserved and will be replaced for safe char. Key: " + evt.key + " ["+evt.keyCode+"]" );
-				}
-
-				if (custom_events.KeyPress) {
-					custom_events.KeyPress(evt, {})
-				}
-			})//end KeyPress
-
-		// KeyUp
-			editor.on('KeyUp', function(evt) {
-				if (custom_events.KeyUp) {
-					custom_events.KeyUp(evt, {})
-				}
-				// set data as changed
-				self.caller.is_data_changed = true
-			})
-
-		// init
-			editor.on('init', function(evt) {
-
-				// set tinymce caller
-					evt.target.caller = self
-
-				const container_height  = self.dd_tinny.offsetHeight; // self.container
-
-				const toolbar			= self.dd_tinny.querySelector('.mce-toolbar-grp') // mce-toolbar-grp mce-container mce-panel mce-stack-layout-item mce-first
-				const toolbar_height	= toolbar ? toolbar.offsetHeight : 0
-
-				const statusbar			= self.dd_tinny.querySelector('.mce-statusbar') // mce-statusbar mce-container mce-panel mce-stack-layout-item mce-last
-				const statusbar_height	= statusbar ? statusbar.offsetHeight : 0
-
-				const h = container_height - toolbar_height - statusbar_height - 3
-
-				// resize editor to adjust height of container
-				editor.theme.resizeTo ('100%', h)
-
-				// show dd-tiny after resize
-				self.dd_tinny.style.opacity = 1
-
-				// placeholder. (!) See mce_editor_default.less 'contentEditable'
-					const tinyMceData = editor.getContent({ format: 'raw' });
-					if(tinyMceData.indexOf('<br data-mce-bogus="1">')>= 0 || tinyMceData==='') {
-
-						const editor_div = editor.iframeElement.contentWindow.document.body
-
-						// remove possible bogus code
-							editor.setContent('', { format: 'raw' });
-							editor_div.innerHTML = ''
-
-						// fallback_value
-							const fallback_value = self.caller.data.fallback_value
-							if (fallback_value) {
-
-								// const parsed_value = tr.add_tag_img_on_the_fly(fallback_value)
-								const parsed_value = self.caller.tags_to_html(fallback_value)
-
-								// placeholder_div. create a new div an insert before editor div
-									const placeholder_div = ui.create_dom_element({
-										element_type	: 'div',
-										class_name		: 'placeholder_div',
-										inner_html		: parsed_value
-									})
-									editor_div.parentNode.insertBefore(placeholder_div, editor_div);
-
-								// focus event. Hide placeholder_div on focus editor
-									editor_div.addEventListener("focus", function(e){
-											console.log("focus:",e, placeholder_div);
-										placeholder_div.classList.add("hide")
-									})
-
-								// blur event. If editor content is empty, show the placeholder_div again
-									editor_div.addEventListener("blur", function(e){
-										if (editor.getContent({ format: 'raw' })==='') {
-											placeholder_div.classList.remove("hide")
-										}
-									})
-							}
-					}//end if(tinyMceData.indexOf('<br data-mce-bogus="1">')>= 0 || tinyMceData==='')
-
-				// debug
-					// console.log("container_height:",container_height, self.dd_tinny);
-					// console.log("toolbar_height:",toolbar_height);
-					// console.log("statusbar_height:",statusbar_height);
-					// console.log("resizeTo h:",h);
-
-					// console.log("================================================================ editor._beforeUnload:",editor._beforeUnload);
-					// console.log("================================================================ self.dd_tinny:",self.dd_tinny);
-
-			})
-
-		// render
-			// editor.on('PostRender', function(evt) {
-			// 	// console.log('--------------- After render: ' + editor.id);
-			// })
-
-
-		return true
-	}//end onsetup_editor
-
 
 
 	/**
@@ -593,7 +351,6 @@ export const service_ckeditor = function() {
 				if(button_config.manager_editor === true){
 					self.factory_events_for_buttons(button_config)
 				}
-					console.log("button_node:",button_node);
 				toolbar_node.appendChild(button_node)
 			}
 
@@ -610,8 +367,6 @@ export const service_ckeditor = function() {
 		const self = this
 
 		const editor = self.editor
-
-			console.log("editor:",editor);
 
 		const name		= button_obj.name
 		const button	= button_obj.node
