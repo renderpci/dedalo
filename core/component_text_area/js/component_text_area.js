@@ -16,6 +16,8 @@
 	import {render_mini_component_text_area} from '../../component_text_area/js/render_mini_component_text_area.js'
 	import {render_search_component_text_area} from '../../component_text_area/js/render_search_component_text_area.js'
 	//import '../../../prosemirror/dist/prosemirror.js';
+	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
+	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 
 
 
@@ -200,6 +202,10 @@ component_text_area.prototype.init = async function(options) {
 
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
+
+
+	// service_text_editor
+		self.service_text_editor = service_ckeditor
 
 
 	return common_init
