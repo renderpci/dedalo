@@ -422,7 +422,7 @@ const get_input_element = (i, current_value, self) => {
 				// observer.unobserve(entry.target);
 			}
 		}, { threshold: [0] });
-		// observer.observe(li);
+		observer.observe(li);
 
 		value_container.innerHTML = value
 
