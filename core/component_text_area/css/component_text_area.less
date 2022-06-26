@@ -10,22 +10,30 @@
 
 	&.edit {
 		>.content_data {
-			// background-color: #7df780;
+			// background-color: #c0f5b8;
 			display: grid;
 			min-height: @media_min_height;
+			// max-height: @media_min_height;
+			// margin-bottom: 1.33rem;
+			// padding-bottom: 0;
+			margin: 0;
+			padding: 0;
 
 			// ul
 			>.inputs_container {
-				height: 100%;
+				height: inherit;
+				min-height: 100%;
 				// min-height: @media_min_height;
 				// max-height: @media_max_height;
 				// height: calc(100% - @component_label_height);
 				// margin-bottom: -1.85rem;
+				// display: none;
 
 				>li {
 					z-index: inherit;
 					// padding-bottom: 2rem;
 					position: relative;
+					height: inherit;
 
 					>.toolbar_container {
 						display: flex;
@@ -47,7 +55,14 @@
 					// value_container
 					// Where component value is placed and parsed by the editor inline
 					>.value_container, >.ck-content {
+						// background-color: #d9fdaf;
 						outline: 1px solid #e6e6e6;
+						width: 100%;
+						overflow: auto;
+						padding: 0.5rem;
+						margin: 1rem;
+						height: calc(100% - 1.5rem);
+						margin-top: 0.5rem;
 
 						img {
 							cursor: pointer;
@@ -99,6 +114,7 @@
 						}
 					}//end >.value_container
 
+					// create_fragment button bellow
 					.create_fragment {
 						position: absolute;
 						right: -5px;
@@ -107,6 +123,7 @@
 						height: 33px;
 					}
 
+					// layer_selector (editing images)
 					.layer_selector {
 						width: 10em;
 						background-color: @color_orange_dedalo;
@@ -128,8 +145,6 @@
 						>ul.layer_ul {
 							text-align: left;
 							clear: both;
-
-
 							// border: 0.5px solid #777;
 
 							>li{
@@ -152,7 +167,6 @@
 									color: initial;
 								}
 
-
 								// .layer_icon {
 								//
 								// }
@@ -174,7 +188,6 @@
 							>li:first-child {
 								border-top: 0.5px solid #777;
 							}
-
 						}
 					}
 				}//end >li
