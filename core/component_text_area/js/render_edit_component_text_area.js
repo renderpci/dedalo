@@ -393,20 +393,20 @@ const get_input_element = (i, current_value, self) => {
 					// fix current_service_text_editor
 					self.text_editor[i] = current_service_text_editor
 					// show toolbar_container
-					// toolbar_container.classList.remove('hide')
-					const node = li
-					node.addEventListener("mouseup", function(){
-						toolbar_container.classList.remove('hide')
-						setTimeout(function(){
-							document.body.addEventListener("mouseup", fn_remove)
-						}, 10)
-					})
-					function fn_remove(e) {
-						if (e.target!=node) {
-							toolbar_container.classList.add('hide')
-							document.body.removeEventListener("mouseup", fn_remove)
-						}
-					}
+					toolbar_container.classList.remove('hide')
+					// const node = li
+					// node.addEventListener("mouseup", function(){
+					// 	toolbar_container.classList.remove('hide')
+					// 	setTimeout(function(){
+					// 		document.body.addEventListener("mouseup", fn_remove)
+					// 	}, 10)
+					// })
+					// function fn_remove(e) {
+					// 	if (e.target!=node) {
+					// 		toolbar_container.classList.add('hide')
+					// 		document.body.removeEventListener("mouseup", fn_remove)
+					// 	}
+					// }
 				})
 
 			return current_service_text_editor
