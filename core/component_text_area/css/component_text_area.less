@@ -30,21 +30,23 @@
 					>.toolbar_container {
 						display: flex;
 						position: absolute;
-						top: -2.5em;
+						top: -2rem;
 						left: 0;
 						width: 100%;
 						height: 2em;
-						padding:0.25em;
+						padding: 0.25rem;
 						z-index: 1;
-						background-color: antiquewhite;
+						background-color: @color_grey_light;
+
 						img {
 							height: 100%;
+							padding: 0.25rem;
 						}
 					}
 
 					// value_container
 					// Where component value is placed and parsed by the editor inline
-					>.value_container {
+					>.value_container, >.ck-editor {
 						outline: 1px solid #e6e6e6;
 
 						img {
