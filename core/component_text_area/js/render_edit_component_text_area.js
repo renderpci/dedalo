@@ -324,23 +324,25 @@ const get_input_element = (i, current_value, self) => {
 	// value is a raw html without parse into nodes (txt format)
 		const value = self.tags_to_html(current_value)
 
-	// li container
+	// text_editor_container container
 		const li = ui.create_dom_element({
 			element_type : 'li'
 		})
 
-	// q operator (search only)
-		if(mode==='search'){
-			const q_operator = self.data.q_operator
-			// input_q_operator
-			ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'text',
-				value			: q_operator,
-				class_name		: 'q_operator',
-				parent			: li
-			})
-		}
+	// toolbar_container
+		const toolbar_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'toolbar_container',
+			parent			: li
+		})
+
+	// value_container
+		const value_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'value_container',
+			parent			: li
+		})
+
 
 	// input contenteditable
 		// const input = ui.create_dom_element({
@@ -352,42 +354,52 @@ const get_input_element = (i, current_value, self) => {
 		// 	parent 		 	: li
 		// })
 
-	// init_current_text_editor
-		const init_current_text_editor = function() {
+	// init_current_service_text_editor
+		const init_current_service_text_editor = function() {
 
-			// service_tinymce
-				// const current_text_editor = new service_tinymce()
-				const current_text_editor = new service_ckeditor()
+			// service_editor
+				// const current_service_text_editor = new service_tinymce()
+				const current_service_text_editor = new service_ckeditor()
 
-			// toolbar_buttons
-				const toolbar_buttons = self.context.toolbar_buttons
-					? ' ' + self.context.toolbar_buttons.join(' ')
-					: ''
 
+			// toolbar. create the toolbar base
+				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','fullscreen','|']
+				// toolbar add custum_buttons
+					if(self.context.toolbar_buttons){
+						toolbar.push(...self.context.toolbar_buttons)
+					}
+				// toolbar add standard buttons
+					toolbar.push(...['button_lang','|','button_save'])
+
+	console.log("toolbar:---------------",toolbar);
 			// editor_config
 				const editor_config = {
-					plugins			: ['paste','image','print','searchreplace','code','noneditable','fullscreen'], // ,'fullscreen'
-					toolbar			: 'bold italic underline undo redo searchreplace pastetext code fullscreen |'+toolbar_buttons+' button_lang | button_save', // fullscreen
-					custom_buttons	: get_custom_buttons(self, current_text_editor, i),
-					custom_events	: get_custom_events(self, i, current_text_editor)
+					// plugins		: ['paste','image','print','searchreplace','code','noneditable','fullscreen'], // ,'fullscreen'
+					// toolbar		: 'bold italic underline undo redo searchreplace pastetext code fullscreen |'+toolbar_buttons+' button_lang | button_save', // tinnyMCE
+					toolbar			: toolbar,
+					custom_buttons	: get_custom_buttons(self, current_service_text_editor, i),
+					custom_events	: get_custom_events(self, i, current_service_text_editor)
 				}
 
 			// init editor
-				current_text_editor.init(self, li, {
-					value			: value,
-					key				: i,
-					editor_config	: editor_config
+				current_service_text_editor.init({
+					caller				: self,
+					value_container		: value_container,
+					toolbar_container	: toolbar_container,
+					value				: value,
+					key					: i,
+					editor_config		: editor_config
 				})
 				.then(function(){
-					// fix current_text_editor
-					self.text_editor[i] = current_text_editor
+					// fix current_service_text_editor
+					self.text_editor[i] = current_service_text_editor
 				})
 
-			return current_text_editor
-		}//end init_current_text_editor
+			return current_service_text_editor
+		}//end init_current_service_text_editor
 
 	// direct. Init the editor now
-		// const text_editor = init_current_text_editor()
+		// const text_editor = init_current_service_text_editor()
 
 	// observer. Init the editor when container node is in DOM
 		const observer = new IntersectionObserver(function(entries) {
@@ -395,7 +407,7 @@ const get_input_element = (i, current_value, self) => {
 			const entry = entries[1] || entries[0]
 			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
 				observer.disconnect();
-				init_current_text_editor()
+				init_current_service_text_editor()
 				// observer.unobserve(entry.target);
 			}
 		}, { threshold: [0] });
@@ -423,7 +435,7 @@ const get_input_element = (i, current_value, self) => {
 
 				// 		const component_container	= li
 				// 		const button				= component_container.querySelector(".create_fragment")
-				// 		const last_tag_id			= self.get_last_tag_id('index', current_text_editor)
+				// 		const last_tag_id			= self.get_last_tag_id('index', current_service_text_editor)
 				// 		const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
 
 				// 		const create_button = function(selection) {
@@ -440,7 +452,7 @@ const get_input_element = (i, current_value, self) => {
 				// 					event_manager.publish('create_fragment_'+ self.id, {
 				// 						caller	: self,
 				// 						key		: i,
-				// 						text_editor	: current_text_editor
+				// 						text_editor	: current_service_text_editor
 				// 					})
 				// 				})
 
@@ -491,9 +503,102 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 	// const editor = get_editor()
 
+	// separator
+		custom_buttons.push({
+			name			: '|',
+			manager_editor	: false,
+			options	: {
+				tooltip	: '',
+				image	: '../themes/default/icons/separator.svg',
+				onclick	: null
+			}
+		})
+
+	// bold
+		custom_buttons.push({
+			name			: "bold",
+			manager_editor	: true,
+			options	: {
+				tooltip	: 'bold',
+				image	: '../themes/default/icons/bold.svg'
+			}
+		})
+
+	// italic
+		custom_buttons.push({
+			name			: "italic",
+			manager_editor	: true,
+			options	: {
+				tooltip	: 'italic',
+				image	: '../themes/default/icons/italic.svg'
+			}
+		})
+
+	// underline
+		custom_buttons.push({
+			name			: "underline",
+			manager_editor	: true,
+			options	: {
+				tooltip	: 'underline',
+				image	: '../themes/default/icons/underline.svg'
+			}
+		})
+
+	// undo
+		custom_buttons.push({
+			name			: "undo",
+			manager_editor	: true,
+			options	: {
+				tooltip	: 'undo',
+				image	: '../themes/default/icons/undo.svg'
+			}
+		})
+
+	// redo
+		custom_buttons.push({
+			name			: "redo",
+			manager_editor	: true,
+			options	: {
+				tooltip	: 'redo',
+				image	: '../themes/default/icons/redo.svg'
+			}
+		})
+
+	// find_and_replace
+		custom_buttons.push({
+			name			: "find_and_replace",
+			manager_editor	: false,
+			options	: {
+				tooltip	: 'find_and_replace',
+				image	: '../themes/default/icons/find_and_replace.svg'
+			}
+		})
+
+	// html_source
+		custom_buttons.push({
+			name			: "html_source",
+			manager_editor	: true,
+			options	: {
+				tooltip	: 'html_source',
+				image	: '../themes/default/icons/html_source.svg'
+			}
+		})
+
+	// fullscreen
+		custom_buttons.push({
+			name			: "fullscreen",
+			manager_editor	: false,
+			options	: {
+				tooltip	: 'fullscreen',
+				image	: '../themes/default/icons/fullscreen.svg'
+			}
+		})
+
+
 	// button_person
 		custom_buttons.push({
-			name	: "button_person",
+			name			: "button_person",
+			manager_editor	: false,
 			options	: {
 				tooltip	: 'Show persons list',
 				image	: '../themes/default/icons/person.svg',
@@ -509,7 +614,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 	// button_geo
 		custom_buttons.push({
-			name	: "button_geo",
+			name			: "button_geo",
+			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add georef',
 				image	: '../themes/default/icons/geo.svg',
@@ -524,7 +630,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 	// button_note
 		custom_buttons.push({
-			name	: "button_note",
+			name			: "button_note",
+			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add note',
 				image	: '../themes/default/icons/note.svg',
@@ -573,7 +680,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 	// button_reference
 		custom_buttons.push({
-			name	: "button_reference",
+			name			: "button_reference",
+			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add reference',
 				image	: '../themes/default/icons/reference.svg',
@@ -584,51 +692,10 @@ const get_custom_buttons = (self, text_editor, i) => {
 			}
 		})
 
-	// button_delete_structuration
-		custom_buttons.push({
-			name	: "button_delete_structuration",
-			options	: {
-				text	: 'Delete chapter',
-				tooltip	: 'Delete structuration',
-				icon	: false,
-				onclick	: function(evt) {
-					alert("Deleting structuration !");
-					// tool_lang.delete_structuration(ed, evt, text_area_component)
-				}
-			}
-		})
-
-	// button_add_structuration
-		custom_buttons.push({
-			name	: "button_add_structuration",
-			options	: {
-				text	: 'Add chapter',
-				tooltip	: 'Add structuration',
-				icon	: false,
-				onclick	: function(evt) {
-					alert("Adding structuration !");
-					// tool_lang.add_structuration(ed, evt, text_area_component)
-				}
-			}
-		})
-
-	// button_change_structuration
-		custom_buttons.push({
-			name	: "button_change_structuration",
-			options	: {
-				text	: 'Change chapter',
-				tooltip	: 'Change structuration',
-				icon	: false,
-				onclick	: function(evt) {
-					alert("Changing structuration !");
-					// tool_lang.change_structuration(ed, evt, text_area_component)
-				}
-			}
-		})
-
 	// button_lang
 		custom_buttons.push({
-			name	: "button_lang",
+			name			: "button_lang",
+			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add lang',
 				image	: '../themes/default/icons/lang.svg',
@@ -646,7 +713,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 	// button_save
 		const save_label = get_label.salvar.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
 		custom_buttons.push({
-			name	: "button_save",
+			name			: "button_save",
+			manager_editor	: false,
 			options	: {
 				text	: save_label,
 				tooltip	: save_label,
