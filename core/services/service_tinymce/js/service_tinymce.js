@@ -60,6 +60,8 @@ export const service_tinymce = function() {
 					toolbar[index] = 'searchreplace';
 				}else if (toolbar[index]==='html_source') {
 					toolbar[index] = 'code';
+				}else if (toolbar[index]==='fullscreen') {
+					toolbar[index] = 'full_screen';
 				}
 			}
 
