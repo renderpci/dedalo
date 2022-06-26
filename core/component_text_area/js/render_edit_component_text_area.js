@@ -332,7 +332,7 @@ const get_input_element = (i, current_value, self) => {
 	// toolbar_container
 		const toolbar_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'toolbar_container',
+			class_name		: 'toolbar_container hide',
 			parent			: li
 		})
 
@@ -372,7 +372,7 @@ const get_input_element = (i, current_value, self) => {
 				// toolbar add standard buttons
 					toolbar.push(...['button_lang','|','button_save'])
 
-	console.log("toolbar:---------------",toolbar);
+
 			// editor_config
 				const editor_config = {
 					// plugins		: ['paste','image','print','searchreplace','code','noneditable','fullscreen'], // ,'fullscreen'
@@ -394,6 +394,18 @@ const get_input_element = (i, current_value, self) => {
 				.then(function(){
 					// fix current_service_text_editor
 					self.text_editor[i] = current_service_text_editor
+					// show toolbar_container
+					toolbar_container.classList.remove('hide')
+					// li.addEventListener("mouseup", function(){
+					// 	toolbar_container.classList.remove('hide')
+					// })
+					// document.addEventListener("click", fn_remove)
+					// function fn_remove(e) {
+					// 	if (e.target!=li) {
+					// 		toolbar_container.classList.add('hide')
+					// 		document.removeEventListener("click", fn_remove)
+					// 	}
+					// }
 				})
 
 			return current_service_text_editor
