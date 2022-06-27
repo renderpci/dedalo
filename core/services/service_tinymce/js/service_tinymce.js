@@ -38,7 +38,7 @@ export const service_tinymce = function() {
 
 		// options vars
 			const caller				= options.caller
-			const container				= options.value_container.parentNode
+			const container				= options.value_container // .parentNode
 			// const toolbar_container	= options.toolbar_container
 			const value					= options.value
 			const key					= options.key
