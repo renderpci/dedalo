@@ -390,21 +390,18 @@ const get_input_element = (i, current_value, self) => {
 					editor_config		: editor_config
 				})
 				.then(function(){
-					// fix current_service_text_editor
+					// fix current_service_text_editor when is ready
 					self.text_editor[i] = current_service_text_editor
-					// show toolbar_container
-					// toolbar_container.classList.remove('hide')
+					// show toolbar_container on user mousedown
+					// removes the toolbar_container when user click outside
 					const node = li
-					node.addEventListener("mouseup", function() {
+					node.addEventListener("mousedown", function() {
 						toolbar_container.classList.remove('hide')
-						setTimeout(function(){
-							document.body.addEventListener("mouseup", fn_remove)
-						}, 10)
+						document.body.addEventListener("mouseup", fn_remove)
 					})
 					function fn_remove(e) {
 						if (e.target!==node) {
 							const found = e.path.find(el => el===node)
-							console.log("found:",found);
 							if (!found) {
 								toolbar_container.classList.add('hide')
 								document.body.removeEventListener("mouseup", fn_remove)
