@@ -390,7 +390,7 @@ const get_input_element = (i, current_value, self) => {
 					editor_config		: editor_config
 				})
 				.then(function(){
-					// fix current_service_text_editor
+					// fix current_service_text_editor when is ready
 					self.text_editor[i] = current_service_text_editor
 					// show toolbar_container on user mousedown
 					// removes the toolbar_container when user click outside
