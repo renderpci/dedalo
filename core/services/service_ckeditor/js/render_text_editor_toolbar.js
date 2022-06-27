@@ -38,6 +38,9 @@ export const render_button = function(button_config) {
 		const name				= button_config.name
 		const image				= button_config.options.image
 		const text				= button_config.options.text || ''
+		const class_name		= button_config.options.class_name
+			? ' '+button_config.options.class_name
+			: ''
 		const tooltip			= button_config.options.tooltip
 		const onclick			= button_config.options.onclick
 		const manager_editor	= button_config.manager_editor
@@ -45,7 +48,7 @@ export const render_button = function(button_config) {
 	// button_node
 		const button_node = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'toolbar_button ' + name,
+			class_name		: 'toolbar_button ' + name + class_name,
 			inner_html 		: text
 		})
 
