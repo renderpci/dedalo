@@ -60,6 +60,9 @@
 							&:hover {
 								background-color: #dddddd;
 							}
+							&:active {
+								opacity: 0.6;
+							}
 							&.active {
 								background-color: #dddddd;
 							}
@@ -135,6 +138,16 @@
 							}
 						}
 					}//end >.value_container
+
+					>.ck-source-editing-area {
+						width: 100%;
+						height: calc(100% - 1.5rem);
+						margin: 0.5rem;
+						margin-left: 1rem;
+						margin-right: 1rem;
+						z-index: 0;
+					}
+
 
 					// create_fragment button bellow
 					.create_fragment {
