@@ -550,8 +550,9 @@ const get_custom_buttons = (self, text_editor, i) => {
 			name			: "undo",
 			manager_editor	: true,
 			options	: {
-				tooltip	: 'undo',
-				image	: '../../core/themes/default/icons/undo.svg'
+				tooltip		: 'undo',
+				image		: '../../core/themes/default/icons/undo.svg',
+				class_name	: 'disable'
 			}
 		})
 
@@ -560,8 +561,9 @@ const get_custom_buttons = (self, text_editor, i) => {
 			name			: "redo",
 			manager_editor	: true,
 			options	: {
-				tooltip	: 'redo',
-				image	: '../../core/themes/default/icons/redo.svg'
+				tooltip		: 'redo',
+				image		: '../../core/themes/default/icons/redo.svg',
+				class_name	: 'disable'
 			}
 		})
 
@@ -978,7 +980,7 @@ const get_custom_events = (self, i, text_editor) => {
 						}
 
 					// text_editor. get editor and content data
-						const editor_content_data = text_editor.get_editor_content_data()
+						// const editor_content_data = text_editor.get_editor_content_data()
 
 					// iterate susbscriptors responses
 						for (let i = 0; i < susbscriptors_responses_length; i++) {
