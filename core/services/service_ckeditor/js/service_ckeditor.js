@@ -91,7 +91,8 @@ export const service_ckeditor = function() {
 					})
 					function fn_remove(e) {
 						if (e.target!==node) {
-							const found = e.path.find(el => el===node)
+							const path	= e.composedPath();
+							const found	= path.find(el => el===node)
 							if (!found) {
 								toolbar_container.classList.add('hide')
 								document.body.removeEventListener("mouseup", fn_remove)
