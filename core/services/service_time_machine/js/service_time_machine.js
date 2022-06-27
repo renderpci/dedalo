@@ -130,8 +130,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
 		}
 		await generate_rqo()
-
-			console.log("JSON.parse(JSON.stringify(self.rqo)):--------***********----------------",JSON.parse(JSON.stringify(self.rqo)));
+		// console.log("JSON.parse(JSON.stringify(self.rqo)): ----",JSON.parse(JSON.stringify(self.rqo)));
 
 	// load data if is not already received as option
 		if (autoload===true) {
@@ -140,7 +139,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				const api_response = await current_data_manager.request({body:self.rqo})
 				if(SHOW_DEVELOPER===true) {
 
-					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, clone(api_response), api_response.debug ? api_response.debug.exec_time : '']);
+					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']);
 				}
 
 			// set the result to the datum
@@ -366,7 +365,6 @@ service_time_machine.prototype.build_context = function() {
 		}
 
 
-
 	// request_config
 		const request_config = [{
 			api_engine	: 'dedalo',
@@ -376,7 +374,7 @@ service_time_machine.prototype.build_context = function() {
 				ddo_map : ddo_map
 			}
 		}]
-	console.log("request_config--------------------------:",request_config);
+
 	// // context
 		const context = {
 			type			: 'tm',

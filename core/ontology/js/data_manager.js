@@ -115,7 +115,7 @@ data_manager.prototype.request = async function(options) {
 	// 	// debug
 	// 		if(SHOW_DEBUG===true) {
 	// 			api_response.then((response)=>{
-	// 				const exec_time = response.debug ? response.debug.exec_time : ''
+	// 				const exec_time = response.debug ? response.debug.real_execution_time : ''
 	// 				console.log(`__Time to get_login ${exec_time} [data_manager.get_login] response:`, response);
 	// 			})
 	// 		}
@@ -145,7 +145,7 @@ data_manager.prototype.request = async function(options) {
 	// 	// debug
 	// 		if(SHOW_DEBUG===true) {
 	// 			api_response.then((response)=>{
-	// 				const exec_time = response.debug ? response.debug.exec_time : '';
+	// 				const exec_time = response.debug ? response.debug.real_execution_time : '';
 	// 				console.log(`__Time to read ${exec_time} [data_manager.read] response:`, response, `dd_request:`, dd_request);
 	// 			})
 	// 		}
@@ -176,7 +176,7 @@ data_manager.prototype.count = async function(sqo) {
 			// console.log("----------------------------------- count sqo:", sqo);
 			// console.log("----------------------------------- count total:", total);
 			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
-			// console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
+			// console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.real_execution_time}, based on sqo filter:`, sqo.filter);
 		}
 
 	return api_response
@@ -207,7 +207,7 @@ data_manager.prototype.count_OLD = async function(sqo) {
 			// console.log("----------------------------------- count sqo:", sqo);
 			// console.log("----------------------------------- count total:", total);
 			// console.log("----------------------------------- count sqo stringify:", JSON.stringify(sqo));
-			console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.exec_time}, based on sqo filter:`, sqo.filter);
+			console.log(`[data_manager.count] Count total: ${total}, time: ${api_response.result.debug.real_execution_time}, based on sqo filter:`, sqo.filter);
 		}
 
 	return total
