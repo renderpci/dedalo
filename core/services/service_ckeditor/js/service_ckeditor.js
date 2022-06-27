@@ -1,14 +1,12 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, ddEditor */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
-	import {ui} from '../../../common/js/ui.js'
-
-	import {render_toolbar, render_button} from './render_text_editor_toolbar.js'
-
+	// import {ui} from '../../../common/js/ui.js'
+	import {render_button} from './render_text_editor_toolbar.js'
 
 
 
@@ -28,10 +26,12 @@ export const service_ckeditor = function() {
 		this.editor
 
 
+
 	/**
 	* INIT
+	* @param object options
 	*/
-	this.init = async function (options) {
+	this.init = async function(options) {
 
 		const self = this
 
@@ -43,19 +43,19 @@ export const service_ckeditor = function() {
 			const key				= options.key
 			const editor_config		= options.editor_config
 
-			const custom_events		= editor_config.custom_events
-
 		// fix vars
 			self.caller				= caller
 			self.value_container	= value_container
-			self.toolbar_container 	= toolbar_container
+			self.toolbar_container	= toolbar_container
 			self.options			= options
 			self.key				= key
 
 		// add component_text_area value
 			value_container.innerHTML = value
 
-		// editor
+		// editor.
+			// ddEditor is created from lib ckeditor source using webpack.
+			// See source and webpack config files
 			ddEditor.create( value_container, {
 
 				// toolbar: [ 'bold', 'italic', 'underline', 'undo', 'redo', '|','findAndReplace', 'sourceEditing', 'InsertImage' ],
@@ -67,20 +67,21 @@ export const service_ckeditor = function() {
 						classes		: true
 					}]
 				}
+			})
+			.then( editor => {
 
-				})
-				.then( editor => {
-
+				// fix instance
 					self.editor = editor
 
+				// focus
 					// editor.ui.focusTracker.on( 'change:isFocused', ( evt, data, isFocused ) => {
 					//     console.log( `The editor is focused: ${ isFocused }.` );
 					// } );
 
-					// build toolbar
-					const toolbar_node = self.build_toolbar(editor_config);
+				// build toolbar
+					self.build_toolbar(editor_config);
 
-					// toolbar toggle
+				// toolbar toggle
 					// show toolbar_container on user mousedown
 					// removes the toolbar_container when user click outside
 					const node = toolbar_container.parentNode
@@ -98,8 +99,8 @@ export const service_ckeditor = function() {
 						}
 					}
 
+				// click event sample
 					// container.addEventListener("click", function(e){
-
 					// 	if (e.target.matches('img')) {
 					// 		e.stopPropagation()
 
@@ -110,13 +111,15 @@ export const service_ckeditor = function() {
 					//  		console.log("editor data:",data);
 					// 	}
 					// })
-					self.init_status_changes()
 
-				})
-				.catch( error => {
-					console.error( 'Oops, something went wrong!' );
-					console.error( error );
-				});
+				// init editor status changes to track isDirty value
+					self.init_status_changes()
+			})
+			.catch( error => {
+				console.error( 'Oops, something went wrong!' );
+				console.error( error );
+			});
+
 
 		return true
 	}//end init
@@ -157,9 +160,11 @@ export const service_ckeditor = function() {
 		return true
 	}//end save
 
+
+
 	/**
-	 * INIT_STATUS_CHANGES -OK
-	 *
+	* INIT_STATUS_CHANGES -OK
+	*
 	*/
 	// Listen to new changes (to enable the "Save" button) and to pending actions.
 	this.init_status_changes = function() {
@@ -370,9 +375,18 @@ export const service_ckeditor = function() {
 	}//end set_dirty
 
 
+
 	/**
 	* BUILD_TOOLBAR
-	* @return bool
+	* 	Render all toolbar buttons from editor_config
+	* @param object editor_config
+	* Like
+	* {
+	* 	custom_buttons : [{name:..},{name:..}],
+	* 	custom_events : [{name:..},{name:..}],
+	* 	toolbar : ['bold','italic',..]
+	* }
+	* @return DOM node toolbar_node
 	*/
 	this.build_toolbar = function(editor_config) {
 
@@ -408,6 +422,7 @@ export const service_ckeditor = function() {
 
 		return toolbar_node
 	};//end this.build_toolbar
+
 
 
 	/**
@@ -540,7 +555,10 @@ export const service_ckeditor = function() {
 			}
 		})
 
+
+		return true
 	};//end factory_events_for_buttons
+
 
 
 }//end service_ckeditor
