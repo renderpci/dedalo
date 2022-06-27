@@ -93,6 +93,7 @@ export const service_ckeditor = function() {
 					//  		console.log("editor data:",data);
 					// 	}
 					// })
+					self.init_status_changes()
 
 				})
 				.catch( error => {
@@ -106,7 +107,7 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* SAVE
+	* SAVE -OK
 	* Trigger save_value against caller sending key and value
 	* @param string previous_value
 	*	Used to compare changes in editor value.
@@ -120,26 +121,44 @@ export const service_ckeditor = function() {
 		const editor	= self.editor
 		const key		= self.key
 
-		// no user interactions case
-		if (editor.isDirty()!==true) {
+
+		// // no user interactions case
+		if (self.is_dirty!==true) {
 			return false
 		}
-		const value = self.get_value()	// editor.getContent({format:'raw'})
-		// const value = self.editor.getBody()
+
+		// const value = self.get_value()	// editor.getContent({format:'raw'})
+		// // const value = self.editor.getBody()
+		const value = editor.getData();
 
 		await self.caller.save_value(key, value)
 
-		// set_set_dirty after save is finish
-		self.set_dirty(false)
+		// // set_set_dirty after save is finish
+		self.is_dirty = false;
 
 
 		return true
 	}//end save
 
+	/**
+	 * INIT_STATUS_CHANGES -OK
+	 *
+	*/
+	// Listen to new changes (to enable the "Save" button) and to pending actions.
+	this.init_status_changes = function() {
+
+		const self = this
+
+		const editor	= self.editor
+
+		editor.model.document.on( 'change:data', () => {
+			self.is_dirty = true;
+		});
+	}//end init_status_changes
 
 
 	/**
-	* GET_VALUE
+	* GET_VALUE -OK
 	* Get editor value as raw string
 	* @return string
 	*/
@@ -148,14 +167,14 @@ export const service_ckeditor = function() {
 		const self = this
 
 		const editor = self.editor
-		const value	 = editor.getContent({format:'raw'})
+		const value = editor.getData();
 
 		return value
 	}//end get_value
 
 
 	/**
-	* SET_CONTENT
+	* SET_CONTENT -OK
 	*/
 	this.set_content = function(html){
 
@@ -164,17 +183,26 @@ export const service_ckeditor = function() {
 		const editor = self.editor
 
 		// Insert the html in the current selection location.
-		editor.model.insertContent( html, editor.model.document.selection );
+		// editor.model.insertContent( html, editor.model.document.selection );
 		// self.editor.selection.setContent( html ); // tiny
 
-		editor.setDirty(true);
+		// convert the html to the model of ck_editor
+		const view_fragment = editor.data.processor.toView( html );
+		const model_fragment = editor.data.toModel( view_fragment );
+
+		const position = editor.model.document.selection.getLastPosition()
+
+		editor.model.insertContent( model_fragment, position );
+
+		self.is_dirty = true;
 
 		// save. service save function calls current component save_value()
 			// const actual_value 	= self.caller.data.value[0]
 			// const actual_value 	= self.editor.getContent({format:'raw'})
 			// self.save(actual_value)
 
-		const value = editor.getContent({format:'raw'})
+		// const value = editor.getContent({format:'raw'})
+		const value = editor.getData();
 		// const value = self.editor.getBody()
 		self.caller.save_value(self.key, value)
 
@@ -184,19 +212,22 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* GET_EDITOR_CONTENT_DATA
+	* GET_EDITOR_CONTENT_DATA -OK
 	* @return DOM node | false
 	*/
 	this.get_editor_content_data = function() {
 
 		const self = this
 
-		if (!self.editor) {
+		const editor = self.editor
+
+		if (!editor) {
 			console.error("Error on get self.editor. Not available. self:", self);
 			return false
 		}
-
-		const editor_content_data = self.editor.getBody(); // Returns the root element of the editable area. For a non-inline iframe-based editor, returns the iframe's body element.
+		// get the domRoots map of the editor
+		const domRoots = editor.editing.view.domRoots;
+		const editor_content_data = domRoots.get('main') // Returns the root element of the editable area. For a non-inline iframe-based editor, returns the iframe's body element.
 		if (!editor_content_data) {
 			console.error("! INVALID editor_content_data (getBody) editor_content_data:", editor_content_data, " editor:", self.editor);
 		}
@@ -207,7 +238,7 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* GET_SELECTION
+	* GET_SELECTION -OK
 	* @return string selection
 	*	Raw string without formatting
 	*/
@@ -215,11 +246,18 @@ export const service_ckeditor = function() {
 
 		const self = this
 
-		if (!self.editor.selection) {
+		const editor = self.editor
+
+		if (!self.editor) {
 			return false
 		}
+		// get the user selection
+		const user_selection = editor.model.document.selection
 
-		const selection = self.editor.selection.getContent({format:'raw'})
+		// get the content of the selection, it get the html representation
+		const content = editor.model.getSelectedContent(user_selection)
+		// convert the ckeditor data to html in string format
+		const selection =  editor.data.stringify(content)
 
 		return selection
 	}//end get_selection
@@ -285,12 +323,11 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* SET_DIRTY
+	* SET_DIRTY -OK
 	* @param bool value
 	* @return bool
 	*/
 	this.set_dirty = function(value) {
-		console.log("///////////////// set_dirty value:",value);
 
 		const self = this
 
@@ -300,11 +337,9 @@ export const service_ckeditor = function() {
 				return false
 			}
 
-		// fix editor (tiny) as dirty trye|false
-			self.editor.setDirty(value);
-
 		// true case
 			if (value===true) {
+				self.is_dirty = true
 				// is_data_changed
 				self.caller.is_data_changed = true
 			}
@@ -400,7 +435,6 @@ export const service_ckeditor = function() {
 			editor.execute( name )
 			editor.editing.view.focus();
 		})
-		// button.onclick( () => editor.execute( name ) );
 
 		// ...but it should not steal the focus so the editing is uninterrupted.
 		// button.onmousedown( evt => evt.preventDefault() );
@@ -417,7 +451,13 @@ export const service_ckeditor = function() {
 
 		const onIsEnabledChange = () => {
 			// button.attr( 'disabled', () => !command.isEnabled );
-			button.setAttribute( 'disabled', () => !command.isEnabled );
+			// button.setAttribute( 'disabled', !command.isEnabled );
+			if(!command.isEnabled){
+				button.classList.add('disable')
+			}else{
+				button.classList.remove('disable')
+			}
+
 		};
 
 		// Commands can become disabled, e.g. when the editor is read-only.
@@ -437,43 +477,51 @@ export const service_ckeditor = function() {
 		// }
 
 		// The object we wanna control
-		const obj = {}
-			console.log("obj:",obj);
-				console.log("command:",command);
-		// Our handler to control object via Proxy
-		const handler = {
-			get(obj, prop) {
-			console.log(`Getting property ${prop} from object`)
-			// Remember to so the default operation, returning the prop item inside obj
-			return obj[prop]
-			},
-			set(obj, prop, value) {
-			console.log(`Setting property ${prop} as ${value} in object`)
+		// const obj = {}
+		// 	// console.log("obj:",obj);
+		// 	// 	console.log("command:",command);
+		// // Our handler to control object via Proxy
+		// const handler = {
+		// 	// get(obj, prop) {
+		// 	// console.log(`Getting property ${prop} from object`)
+		// 	// // Remember to so the default operation, returning the prop item inside obj
+		// 	// return obj[prop]
+		// 	// },
+		// 	set(obj, prop, value) {
+		// 	console.log(`Setting property ${prop} as ${value} in object`)
 
-			// Do the default operation, set prop as value in obj
-			obj[prop] = value
+		// 	// Do the default operation, set prop as value in obj
+		// 	obj[prop] = value
 
-			if( prop==='isEnabled') {
+		// 	if( prop==='isEnabled') {
+		// 		onIsEnabledChange()
+		// 	}
+		// 	if(name !== 'undo' && name !== 'redo' && prop==='value'){
+		// 		onValueChange();
+		// 	}
+
+		// 	/*
+		// 		Set method must return a value.
+		// 		Return `true` to indicate that assignment succeeded
+		// 		Return `false` (even a falsy value) to prevent assignment.in `strict mode`, returning false will throw TypeError
+		// 	*/
+
+		// 	return true
+		// 	}
+		// }
+
+		// // Set the proxy
+		// const proxy_field_obj = new Proxy(command, handler)
+
+		editor.listenTo( command, 'change:isEnabled',(evt)=>{
 				onIsEnabledChange()
-			}
-			if(name !== 'undo' && name !== 'redo' && prop==='value'){
+		})
+
+		editor.listenTo( command, 'change:value',(evt)=>{
+			if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
 				onValueChange();
 			}
-
-			/*
-				Set method must return a value.
-				Return `true` to indicate that assignment succeeded
-				Return `false` (even a falsy value) to prevent assignment.in `strict mode`, returning false will throw TypeError
-			*/
-
-			return true
-			}
-		}
-
-		// Set the proxy
-		const proxy_field_obj = new Proxy(command, handler)
-
-console.log("proxy_field_obj:",proxy_field_obj);
+		})
 
 	};//end factory_events_for_buttons
 
