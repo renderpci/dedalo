@@ -7,7 +7,7 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	// import {get_ar_instances} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {create_source} from '../../../core/common/js/common.js'
+	// import {create_source} from '../../../core/common/js/common.js'
 
 
 
@@ -148,7 +148,7 @@ const content_data_edit = async function(self) {
 					function on_change_select(e) {
 						const lang = e.target.value
 						if (lang!==self.lang) {
-							self.lang					= lang
+							self.lang				= lang
 							self.main_element.lang	= lang
 							self.refresh()
 						}
