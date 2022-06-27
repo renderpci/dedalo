@@ -32,11 +32,9 @@ class DDModal extends HTMLElement {
 
 			/* Modal Content */
 				.modal-content {
-					/*position: relative;*/
+					position: relative;
 					background-color: #fefefe;
 					margin: auto;
-					/*margin-top: 80px;*/
-					/*top: 4.5vh;*/
 					margin-top: 3.5vh;
 					padding: 0;
 					width: 80%;
@@ -45,7 +43,7 @@ class DDModal extends HTMLElement {
 					font-size: inherit;
 					/* border: 1px solid #888; */
 					border-radius: 7px;
-					overflow: hidden;
+					overflow: auto;
 					resize: auto;
 					/*
 					-webkit-animation-name: animatetop;
@@ -53,6 +51,11 @@ class DDModal extends HTMLElement {
 					animation-name: animatetop;
 					animation-duration: 0.4s;
 					*/
+					max-height: 95vh;
+				}
+				.dragging {
+					cursor: move;
+					user-select: none;
 				}
 
 			/* Add Animation */
@@ -71,9 +74,9 @@ class DDModal extends HTMLElement {
 					font-size: 1.75rem;
 					font-weight: bold;
 					position: absolute;
-	    			top: 0.1rem;
-	    			right: 2.75rem;
-	    			z-index: 3;
+					top: 0.1rem;
+					right: 2.75rem;
+					z-index: 3;
 				}
 				.mini_modal:hover,
 				.mini_modal:focus {
@@ -122,11 +125,10 @@ class DDModal extends HTMLElement {
 					/*
 					width: 99.79%;
 					min-height: 99.8%;
-
 					width: calc(100vw - 16px);
 					min-height: 100vh;
+					top: 1.5vh;
 					*/
-					/*top: 1.5vh;*/
 					width: 97vw;
 					height: 97vh;
 					margin-top: 1.5vh;
@@ -136,7 +138,6 @@ class DDModal extends HTMLElement {
 					/*
 					height: 100%;
 					min-height: 90vh;
-
 					width: calc(100vw - 32px);
 					min-height: 100vh;
 					*/
@@ -205,8 +206,8 @@ class DDModal extends HTMLElement {
 			/* (!) See layout.less -> dd-modal fore more styles of current element */
 		</style>
 		<div class="modal">
-			<div class="modal-content">
-				<div class="modal-header" part="header">
+			<div class="modal-content draggable">
+				<div class="modal-header dragger" part="header">
 					<span class="mini_modal">_</span>
 					<span class="close_modal">&times;</span>
 					<slot name="header" class="header">Modal box default header</slot>
@@ -229,6 +230,72 @@ class DDModal extends HTMLElement {
 		this.shadowRoot.querySelector(".modal").addEventListener('mousedown', this._hideModal.bind(this));
 		document.addEventListener('keyup', this.detect_key)
 		window.modal = this // fix modal in window for easy access to close
+
+		// draggable modal feature
+			let x, y, target, margin_left, margin_top = null
+			// header is the drag area
+			const header = this.shadowRoot.querySelector(".modal-header")
+			header.addEventListener('mousedown', function(e) {
+
+				let clickedDragger = false;
+				for(let i = 0; e.path[i] !== document; i++) {
+					if (e.path[i].classList.contains('dragger')) {
+						// dragger is clicked (header)
+						clickedDragger = true;
+					}
+					else if (clickedDragger===true && e.path[i].classList.contains('draggable')) {
+						// draggable is set (all modal-content)
+						target = e.path[i];
+						target.classList.add('dragging');
+						x = e.clientX - target.style.left.slice(0, -2);
+						y = e.clientY - target.style.top.slice(0, -2);
+
+						// this is calculated once, every time that user clicks on header
+						// to get the whole container margin and use it as position offset
+						const compStyles	= window.getComputedStyle(target);
+						margin_left			= parseInt(compStyles.getPropertyValue('margin-left'))
+						margin_top			= parseInt(compStyles.getPropertyValue('margin-top'))
+
+						return;
+					}
+				}
+			});
+
+			document.addEventListener('mouseup', function() {
+				if (target !== null) {
+					target.classList.remove('dragging');
+				}
+				target = null;
+			});
+
+			document.addEventListener('mousemove', function(e) {
+
+				// no target case (mouse position changes but target is null or undefined)
+					if (!target) {
+						return;
+					}
+
+				// re-position element based on mouse position
+					target.style.left	= e.clientX - x + 'px';
+					target.style.top	= e.clientY - y + 'px';
+
+				// limit boundaries. take care of initial margin offset
+					const pRect		= target.parentElement.getBoundingClientRect();
+					const tgtRect	= target.getBoundingClientRect();
+					if (tgtRect.left < pRect.left) {
+						target.style.left = (0 - margin_left) + 'px';
+					}
+					if (tgtRect.top < pRect.top) {
+						target.style.top = (0 - margin_top) + 'px';
+					}
+					if (tgtRect.right > (pRect.right)) {
+						target.style.left = (pRect.width - tgtRect.width - margin_left) + 'px';
+					}
+					if (tgtRect.bottom > (pRect.bottom)) {
+						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
+					}
+			});
+
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
@@ -316,12 +383,12 @@ class DDModal extends HTMLElement {
 						// console.log("el:",el);
 
 						// const elemRect = el.getBoundingClientRect()
-    					const bottom = parseInt((offset*i)) + (5*i+5)
-    					// console.log("bottom:",bottom);
+						const bottom = parseInt((offset*i)) + (5*i+5)
+						// console.log("bottom:",bottom);
 
-    					const modal = el.shadowRoot.querySelector('.modal')
-    					// console.log("modal:",modal);
-    					modal.style.bottom = bottom + "px";
+						const modal = el.shadowRoot.querySelector('.modal')
+						// console.log("modal:",modal);
+						modal.style.bottom = bottom + "px";
 					}
 				}
 
