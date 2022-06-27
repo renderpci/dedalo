@@ -1928,7 +1928,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 			return false
 		}
 
-	// console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.exec_time)
+	// console.log("["+self.model+".load_data_debug] on render event response:",response, " API TIME: "+response.debug.real_execution_time)
 	// console.log("["+self.model+".load_data_debug] context:",response.result.context)
 	// console.log("["+self.model+".load_data_debug] data:",response.result.data)
 
@@ -1993,7 +1993,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 	// time
 		// const time_info = "" +
-		// 	"Total time: " + response.debug.exec_time +
+		// 	"Total time: " + response.debug.real_execution_time +
 		// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
 		// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
 
