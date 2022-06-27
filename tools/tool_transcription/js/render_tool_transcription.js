@@ -306,9 +306,7 @@ const get_content_data_edit = async function(self) {
 		}//end if (self.media_component.model==='component_av') {
 
 	// content_data
-		const content_data = ui.create_dom_element({
-			element_type	: 'div'
-		})
+		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
 		// save the pointers of the content_data nodes, to used by the buttons to access to the components
 		content_data.left_container		= left_container

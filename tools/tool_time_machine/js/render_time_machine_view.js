@@ -147,9 +147,8 @@ const get_content_data = async function(ar_section_record, self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
-			  content_data.appendChild(fragment)
+		const content_data = ui.tool.build_content_data(self)
+		content_data.appendChild(fragment)
 
 
 	return content_data

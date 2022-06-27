@@ -92,10 +92,7 @@ const get_content_data = async function(self) {
 		fragment.appendChild(versions_grid)
 
 	// content_data
-		const content_data = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_data'
-		})
+		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
 
 

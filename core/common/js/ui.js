@@ -1226,12 +1226,9 @@ export const ui = {
 				// }
 
 
-
 			// content_data
 				if (items.content_data) {
-					const content_data = items.content_data
-					content_data.classList.add("content_data", type)
-					fragment.appendChild(content_data)
+					fragment.appendChild(items.content_data)
 				}
 
 			// wrapper
@@ -1240,6 +1237,29 @@ export const ui = {
 
 			return wrapper
 		},//end build_wrapper_edit
+
+
+
+		/**
+		* BUILD_CONTENT_DATA
+		* @param object tool instance
+		* @return DOM node content_data
+		*/
+		build_content_data : (instance, options) => {
+
+			// short vars
+				const type = instance.type // expected tool
+				const mode = instance.mode
+
+			// node
+				const content_data = document.createElement("div")
+
+			// css
+				content_data.classList.add("content_data", type, mode)
+
+
+			return content_data
+		},//end build_content_data
 
 
 
