@@ -130,9 +130,7 @@ const get_content_data = async function(self) {
 		buttons_container.appendChild(buttons_wrapper)
 
 	// content_data
-		const content_data = ui.create_dom_element({
-			element_type	: 'div'
-		})
+		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
 
 

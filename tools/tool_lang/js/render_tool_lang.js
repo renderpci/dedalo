@@ -62,11 +62,9 @@ const get_content_data_edit = async function(self) {
 
 	// main_element unavailable case
 		if (!self.main_element) {
-			const content_data = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'content_data ' + self.type,
-				inner_html		: 'Error loosed caller. main_element is not available. Please, try to reopen this tool again.'
-			})
+			const content_data = ui.tool.build_content_data(self)
+			content_data.innerHTML = 'Error loosed caller. main_element is not available. Please, try to reopen this tool again.'
+
 			return content_data
 		}
 
@@ -247,9 +245,7 @@ const get_content_data_edit = async function(self) {
 			// buttons_container.appendChild(propagate_marks_block)
 
 	// content_data
-		const content_data = ui.create_dom_element({
-			element_type	: 'div'
-		})
+		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
 
 
