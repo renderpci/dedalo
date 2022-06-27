@@ -11,9 +11,12 @@ class component_info extends component_common {
 
 	/**
 	* GET_DATO
-	* @return array $dato
+	* @return array|null $dato
 	*/
 	public function get_dato() {
+
+		// the component info dato will be the all widgets data
+		$dato = [];
 
 		$properties = $this->get_properties();
 		// get the widgets defined in the ontology
@@ -22,8 +25,7 @@ class component_info extends component_common {
 			debug_log(__METHOD__." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
 			return null;
 		}
-		// the component info dato will be the all widgets data
-		$dato = [];
+
 		// every widget will be created and calculate your own data
 		foreach ($widgets as $widget_obj) {
 
@@ -40,9 +42,11 @@ class component_info extends component_common {
 			$widget = widget_common::get_instance($widget_options);
 
 			// Widget data
-			$widget_value 	= $widget->get_dato();
+			$widget_value = $widget->get_dato();
 
-			$dato = array_merge($dato, $widget_value);
+			if (!empty($widget_value)) {
+				$dato = array_merge($dato, $widget_value);
+			}
 		}//end foreach ($widgets as $widget)
 
 		// set the component info dato with the result
@@ -97,17 +101,18 @@ class component_info extends component_common {
 	* Get and fix the ontology defined widgets data_list
 	* @return array $data_list
 	*/
-	public function get_data_list() {
+	public function get_data_list() : ?array {
+
+		// the component info dato will be the all widgets data
+		$data_list = [];
 
 		$properties = $this->get_properties();
 		// get the widgets defined in the ontology
-		$widgets = isset($properties->widgets) ? $properties->widgets : null;
+		$widgets = $properties->widgets ?? null;
 		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
+			debug_log(__METHOD__." Empty or invalid defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
 			return null;
 		}
-		// the component info dato will be the all widgets data
-		$data_list = [];
 		// every widget will be created and calculate your own data
 		foreach ($widgets as $widget_obj) {
 
@@ -139,6 +144,17 @@ class component_info extends component_common {
 
 
 
+	/**
+	* GET_TOOLS
+	* Overrides common method to prevent loading of default tools
+	* This component don't have tools
+	* @return array
+	*/
+	public function get_tools() : array {
+
+		return [];
+	}//end get_tools
+
+
+
 }//end class component_info
-
-
