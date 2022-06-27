@@ -51,15 +51,27 @@
 
 						>.toolbar_button {
 							height: 100%;
-							padding: 0.35rem;
-							padding-right: 0.7em;
-							padding-left: 0.7em;
+							padding: 0.33rem;
+							padding-right: 0.5em;
+							padding-left: 0.5em;
+							cursor: pointer;
+							border-radius: 0.33em;
+
+							&:hover {
+								background-color: #dddddd;
+							}
+							&.active {
+								background-color: #dddddd;
+							}
+							&.disable {
+								opacity: 25%;
+							}
+
+							img {
+								height: 100%;
+							}
 						}
 
-						img {
-							height: 100%;
-							// padding: 0.25rem;
-						}
 					}
 
 					// value_container
