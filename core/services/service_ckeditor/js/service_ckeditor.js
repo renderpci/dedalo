@@ -81,6 +81,24 @@ export const service_ckeditor = function() {
 					// build toolbar
 					const toolbar_node = self.build_toolbar(editor_config);
 
+					// toolbar toggle
+					// show toolbar_container on user mousedown
+					// removes the toolbar_container when user click outside
+					const node = toolbar_container.parentNode
+					node.addEventListener("mousedown", function() {
+						toolbar_container.classList.remove('hide')
+						document.body.addEventListener("mouseup", fn_remove)
+					})
+					function fn_remove(e) {
+						if (e.target!==node) {
+							const found = e.path.find(el => el===node)
+							if (!found) {
+								toolbar_container.classList.add('hide')
+								document.body.removeEventListener("mouseup", fn_remove)
+							}
+						}
+					}
+
 					// container.addEventListener("click", function(e){
 
 					// 	if (e.target.matches('img')) {
