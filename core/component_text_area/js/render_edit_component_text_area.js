@@ -375,7 +375,7 @@ const get_input_element = (i, current_value, self) => {
 				const editor_config = {
 					// plugins		: ['paste','image','print','searchreplace','code','noneditable','fullscreen'], // ,'fullscreen'
 					// toolbar		: 'bold italic underline undo redo searchreplace pastetext code fullscreen |'+toolbar_buttons+' button_lang | button_save', // tinnyMCE
-					toolbar			: toolbar,
+					toolbar			: toolbar, // array of strings like ['bold','italic']
 					custom_buttons	: get_custom_buttons(self, current_service_text_editor, i),
 					custom_events	: get_custom_events(self, i, current_service_text_editor)
 				}
