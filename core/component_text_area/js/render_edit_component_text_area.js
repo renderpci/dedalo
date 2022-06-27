@@ -392,22 +392,6 @@ const get_input_element = (i, current_value, self) => {
 				.then(function(){
 					// fix current_service_text_editor when is ready
 					self.text_editor[i] = current_service_text_editor
-					// show toolbar_container on user mousedown
-					// removes the toolbar_container when user click outside
-					const node = li
-					node.addEventListener("mousedown", function() {
-						toolbar_container.classList.remove('hide')
-						document.body.addEventListener("mouseup", fn_remove)
-					})
-					function fn_remove(e) {
-						if (e.target!==node) {
-							const found = e.path.find(el => el===node)
-							if (!found) {
-								toolbar_container.classList.add('hide')
-								document.body.removeEventListener("mouseup", fn_remove)
-							}
-						}
-					}
 				})
 
 			return current_service_text_editor
