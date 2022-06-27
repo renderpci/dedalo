@@ -55,7 +55,6 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			value_container.innerHTML = value
 
-
 		// editor
 			ddEditor.create( value_container, {
 
