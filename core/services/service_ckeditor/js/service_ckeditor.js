@@ -114,6 +114,8 @@ export const service_ckeditor = function() {
 
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
+
+					self.dom_select()
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
@@ -177,6 +179,7 @@ export const service_ckeditor = function() {
 			self.is_dirty = true;
 		});
 	}//end init_status_changes
+
 
 
 	/**
@@ -337,9 +340,53 @@ export const service_ckeditor = function() {
 		const self		= this
 		const editor	= self.editor
 
-		const node = editor.dom.select(selector_str)
+		const root = editor.model.document.getRoot();
 
-		return node
+		// Create a range spanning over the entire root content:
+		const range = editor.model.createRangeIn( root );
+
+		const walker = range.getWalker({ ignoreElementEnd: true })
+			console.log("walker:-------",walker);
+
+		// Iterate over all items in this range:
+		for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+			const item = value.item
+
+			const htmlAttributes = item.getAttribute('htmlAttributes') //.attributes //getAttributes() //.htmlAttributes //.hasAttribute('data-type')
+			if(htmlAttributes){
+
+				const attributes = htmlAttributes.attributes['data-type']
+				const id = htmlAttributes.attributes['data-tag_id']
+				if(attributes==='indexIn' && id === '6'){
+
+					const old_att = JSON.parse(JSON.stringify((htmlAttributes)))
+					old_att.attributes['data-state'] ='n'
+
+					editor.model.change( writer => {
+						writer.setAttribute( 'htmlAttributes', old_att, item );
+					});
+
+				}
+			}
+		}
+		// for ( const value of children ) {
+
+		// 	console.log("node:",node);
+		// 	const node = children[value]
+
+		// 		console.log("node:",node);
+
+		// 	// if ( node.is( type ) ) {
+		// 	// 	nodes.push(node);
+		// 	// }
+		// }
+
+		// console.log("editor.model:",children  );
+
+			// console.log("editor.model:",editor.model.viewElement.hasClass( 'placeholder' ) );
+		// const node = editor.dom.select(selector_str)
+
+		// return node
 	}//end dom_select
 
 
