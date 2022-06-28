@@ -345,9 +345,6 @@ export const service_ckeditor = function() {
 		// Create a range spanning over the entire root content:
 		const range = editor.model.createRangeIn( root );
 
-		const walker = range.getWalker({ ignoreElementEnd: true })
-			console.log("walker:-------",walker);
-
 		// Iterate over all items in this range:
 		for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
 			const item = value.item

@@ -173,6 +173,7 @@
 class request_query_object {
 
 
+
 	/**
 	* VARS
 	*/
@@ -190,8 +191,7 @@ class request_query_object {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data
-	*	optional . Default is null
+	* @param object $data = null
 	*/
 	public function __construct( object $data=null ) {
 

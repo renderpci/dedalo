@@ -17,7 +17,7 @@ class DDModal extends HTMLElement {
 					display: none;
 					position: fixed;
 					z-index: 3;
-					/*padding-top: 80px;*/
+					/* padding-top: 80px; */
 					left: 0;
 					top: 0;
 					width: 100%;
@@ -56,6 +56,8 @@ class DDModal extends HTMLElement {
 				.dragging {
 					cursor: move;
 					user-select: none;
+					-moz-user-select: none;
+					-webkit-user-select: none;
 				}
 
 			/* Add Animation */
@@ -237,15 +239,18 @@ class DDModal extends HTMLElement {
 			const header = this.shadowRoot.querySelector(".modal-header")
 			header.addEventListener('mousedown', function(e) {
 
+				const path = e.composedPath();
+
 				let clickedDragger = false;
-				for(let i = 0; e.path[i] !== document; i++) {
-					if (e.path[i].classList.contains('dragger')) {
+				for(let i = 0; path[i] !== document; i++) {
+
+					if (path[i].classList.contains('dragger')) {
 						// dragger is clicked (header)
 						clickedDragger = true;
 					}
-					else if (clickedDragger===true && e.path[i].classList.contains('draggable')) {
+					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
 						// draggable is set (all modal-content)
-						target = e.path[i];
+						target = path[i];
 						target.classList.add('dragging');
 						x = e.clientX - target.style.left.slice(0, -2);
 						y = e.clientY - target.style.top.slice(0, -2);
@@ -262,7 +267,8 @@ class DDModal extends HTMLElement {
 			});
 
 			document.addEventListener('mouseup', function() {
-				if (target !== null) {
+				// if (target !== null) {
+				if (target) {
 					target.classList.remove('dragging');
 				}
 				target = null;
