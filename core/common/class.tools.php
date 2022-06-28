@@ -197,6 +197,8 @@ abstract class tools extends common {
 		return implode("\n", $fixedtext_array);
 	}
 
+
+
 	# TRUNCATE
 	public static function truncate_text(string $string, int $limit, string $break=" ", string $pad="...") : string {
 

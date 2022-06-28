@@ -59,8 +59,7 @@ class locator extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data
-	*	optional . Default is null
+	* @param object $data = null
 	*/
 	public function __construct( object $data=null ) {
 
@@ -470,14 +469,14 @@ class locator extends stdClass {
 
 	/**
 	* IN_ARRAY_LOCATOR
-	* @return bool $founded
+	* @return bool $found
 	*/
 	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=[]) : bool {
-		$founded = false;
+		$found = false;
 
 		foreach ((array)$ar_locator as $current_locator) {
-			$founded = self::compare_locators( $locator, $current_locator, $ar_properties );
-			if($founded===true) break;
+			$found = self::compare_locators( $locator, $current_locator, $ar_properties );
+			if($found===true) break;
 		}
 
 		#$ar = array_filter(
@@ -488,7 +487,7 @@ class locator extends stdClass {
 		#); return $ar;
 
 
-		return $founded;
+		return $found;
 	}//end in_array_locator
 
 

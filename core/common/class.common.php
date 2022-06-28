@@ -1354,7 +1354,13 @@ abstract class common {
 				$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
 				if (isset(self::$structure_context_cache[$ddo_key])) {
 					if(SHOW_DEBUG===true) {
-						$tipo_line = $tipo .' '. str_repeat("-", 14 - strlen($tipo));
+						$len = !empty($this->tipo)
+							? strlen($this->tipo)
+							: 0;
+						$repeat = ($len < 14)
+							? (14 - $len)
+							: 0;
+						$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 						error_log("------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config));
 					}
 					return self::$structure_context_cache[$ddo_key];
@@ -1566,7 +1572,13 @@ abstract class common {
 				$time_string = $time>15
 					? sprintf("\033[31m%s\033[0m", $time)
 					: $time;
-				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
+				$len = !empty($this->tipo)
+					? strlen($this->tipo)
+					: 0;
+				$repeat = ($len < 14)
+					? (14 - $len)
+					: 0;
+				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				// error_log('+++++++++++++++++++++++++++++++++++ Time C : '.exec_time_unit($start_time) );
 				// error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
 			}
@@ -1623,7 +1635,13 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				$start_time = start_time();
 
-				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
+				$len = !empty($this->tipo)
+					? strlen($this->tipo)
+					: 0;
+				$repeat = ($len < 14)
+					? (14 - $len)
+					: 0;
+				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				$log = "------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
 				error_log($log);
 			}
@@ -1898,7 +1916,14 @@ abstract class common {
 				$time_string = $time>100
 					? sprintf("\033[31m%s\033[0m", $time)
 					: $time;
-				$tipo_line = $this->tipo .' '. str_repeat("-", 14 - strlen($this->tipo));
+
+				$len = !empty($this->tipo)
+					? strlen($this->tipo)
+					: 0;
+				$repeat = ($len < 14)
+					? (14 - $len)
+					: 0;
+				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				$log = "------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
 				error_log($log);
 			}
@@ -1978,27 +2003,40 @@ abstract class common {
 
 	/**
 	* BUILD_REQUEST_CONFIG
-	* Calculate the sqo for the components or section that need search by own (section, autocomplete, portal, ...)
+	* Calculate the SQO for the components or section that need search by their own (section, autocomplete, portal, ...)
 	* The search_query_object_context (request_config) have at least:
-	* one sqo, that define the search with filter, offset, limit, etc, the select option is not used (it will use the ddo)
+	* one sqo, that define the search with filter, offset, limit, etc, the select option it's not used (it will use the ddo)
 	* one ddo for the searched section (source ddo)
 	* one ddo for the component searched.
-	* 	is possible create more than one ddo for different components.
+	* 	It is possible to create more than one ddo for different components.
 	* @return array $request_config
 	*/
 	public function build_request_config() : array {
 
-		if (isset($this->request_config)) {
-			return $this->request_config;
-		}
+		// already fixed value case
+			if (isset($this->request_config)) {
+				return $this->request_config;
+			}
 
-		if(SHOW_DEBUG===true) {
-			$idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
-			// dump($idd, ' idd ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->modo));
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				// $idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
+				// dump($idd, ' idd ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->modo));
+			}
 
+		// requested_source is fixed from RQO calls to API when they exists like
+		// {
+	    //     "typo": "source",
+	    //     "action": "search",
+	    //     "model": "section",
+	    //     "tipo": "dd64",
+	    //     "section_tipo": "dd64",
+	    //     "section_id": null,
+	    //     "mode": "edit",
+	    //     "lang": "lg-eng"
+	    // }
 		$requested_source = dd_core_api::$rqo->source ?? false;
-		if($requested_source) { // && $requested_source->tipo===$this->tipo
+		if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
 
 			// set the request_config with the API rqo sent by client
 
@@ -2055,13 +2093,12 @@ abstract class common {
 			}//end if (!empty($requested_show))
 		}//end if(!empty($requested_show))
 
-
-		// $records_mode	= $this->get_records_mode();
-		$mode				= $this->get_modo();
-		$tipo				= $this->get_tipo();
-		$section_tipo		= $this->get_section_tipo();
-		$section_id			= $this->get_section_id();
-
+		// short vars
+			// $records_mode	= $this->get_records_mode();
+			$mode				= $this->get_modo();
+			$tipo				= $this->get_tipo();
+			$section_tipo		= $this->get_section_tipo();
+			$section_id			= $this->get_section_id();
 
 		// 1. From user preset
 			$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
@@ -2186,13 +2223,14 @@ abstract class common {
 	*/
 	public static function get_ar_request_config( object $request_options ) : array {
 
-		$options = new stdClass();
-			$options->tipo			= null;
-			$options->external		= false;
-			$options->section_tipo	= null;
-			$options->mode			= 'list';
-			$options->section_id	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$options = new stdClass();
+				$options->tipo			= null;
+				$options->external		= false;
+				$options->section_tipo	= null;
+				$options->mode			= 'list';
+				$options->section_id	= null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// options fix
 			$tipo			= $options->tipo;
@@ -2230,7 +2268,7 @@ abstract class common {
 						$properties		= $RecordObj_dd->get_properties();
 					}
 					else{
-						// sometime the portals don't has section_list defined, in these cases get the properties of the current tipo
+						// sometimes the portals don't has section_list defined, in these cases get the properties of the current tipo
 						$RecordObj_dd	= new RecordObj_dd($tipo);
 						$properties		= $RecordObj_dd->get_properties();
 					}
@@ -2268,7 +2306,7 @@ abstract class common {
 
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
-			if(isset($properties->source->request_config) || $model==='component_autocomplete_hi'){
+			if(isset($properties->source->request_config) || $model==='component_autocomplete_hi') {
 				// V6, properties request_config is defined
 
 				// fallback component_autocomplete_hi
@@ -2310,17 +2348,17 @@ abstract class common {
 					// if($external===false && $item_request_config->sqo->type==='external') continue; // ignore external
 
 					// parsed_item. Base object to fulfill with the necessary properties (api_engine, sqo, show, search, choose)
-						$parsed_item = new stdClass();
-							// $parsed_item->typo = 'rqo';
-							// $parsed_item->sqo->tipo = $tipo;
+						$parsed_item = new request_config_object();
 
 					// api_engine
-						$parsed_item->api_engine = isset($item_request_config->api_engine)
-							? $item_request_config->api_engine
-							: 'dedalo';
+						$parsed_item->set_api_engine(
+							$item_request_config->api_engine ?? 'dedalo'
+						);
 
 					// sqo. Add search query object property
-						$parsed_item->sqo = $item_request_config->sqo ?? new stdClass();
+						$parsed_item->set_sqo(
+							$item_request_config->sqo ?? new stdClass()
+						);
 
 						// section_tipo. get the ar_sections as ddo
 							$ar_section_tipo = isset($parsed_item->sqo->section_tipo)
@@ -2346,9 +2384,11 @@ abstract class common {
 							}
 
 					// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
-						$parsed_item->show = ($mode==='list' && isset($item_request_config->show_list))
-							? $item_request_config->show_list
-							: $item_request_config->show;
+						$parsed_item->set_show(
+							($mode==='list' && isset($item_request_config->show_list))
+								? $item_request_config->show_list
+								: $item_request_config->show
+						);
 
 						// get the ddo_map from ontology, defined by specific term, like "section_map"
 							$get_ddo_map		= $parsed_item->show->get_ddo_map ?? false;
@@ -2410,9 +2450,7 @@ abstract class common {
 							}//end if($get_ddo_map!==false)
 
 						// get the all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
-						$ar_ddo_map = isset($parsed_item->show->ddo_map)
-							? $parsed_item->show->ddo_map
-							: $ar_ddo_calcutaled;
+							$ar_ddo_map = $parsed_item->show->ddo_map ?? $ar_ddo_calcutaled;
 
 						// ddo_map
 							$final_ddo_map = [];
@@ -2486,13 +2524,16 @@ abstract class common {
 								$sqo_config->offset			= $offset;
 								$sqo_config->mode			= $mode;
 								$sqo_config->operator		= '$or';
+
 							$parsed_item->show->sqo_config = $sqo_config;
 						}
 
 					// search
 						if (isset($item_request_config->search)) {
 							// set item
-							$parsed_item->search = $item_request_config->search;
+							$parsed_item->set_search(
+								$item_request_config->search
+							);
 							if (isset($parsed_item->search->sqo_config)) {
 								// fallback non defined operator
 								if (!isset($parsed_item->search->sqo_config->operator)) {
@@ -2508,6 +2549,7 @@ abstract class common {
 									$sqo_config->offset			= $offset;
 									$sqo_config->mode			= $mode;
 									$sqo_config->operator		= '$or';
+
 								$parsed_item->search->sqo_config = $sqo_config;
 							}
 						}
@@ -2533,7 +2575,9 @@ abstract class common {
 
 							// $parsed_item->show->ddo_map = $choose_ddo_map;
 							// set item
-							$parsed_item->choose = $item_request_config->choose;
+							$parsed_item->set_choose(
+								$item_request_config->choose
+							);
 						}
 
 					// add complete parsed item
@@ -2549,8 +2593,17 @@ abstract class common {
 					case 'edit':
 						if ($model==='section') {
 							// section
-							$ar_modelo_name_required = ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
-							$ar_related = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false);
+							$table						= common::get_matrix_table_from_tipo($tipo);
+							$ar_modelo_name_required	= ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
+							$ar_related					= section::get_ar_children_tipo_by_modelo_name_in_section(
+								$tipo,
+								$ar_modelo_name_required,
+								true, // bool from_cache
+								true, // bool resolve_virtual
+								true, // bool recursive
+								false, // bool search_exact
+								false // array|false ar_tipo_exclude_elements
+							);
 						}elseif (in_array($model, common::$groupers)) {
 							// groupers
 							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
@@ -2630,6 +2683,8 @@ abstract class common {
 								continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 							}else if($model==='section' && $current_model==='component_semantic_node'){
 								continue; // remove the semantic node in the section ddo_map, but maintain when is called by the portal
+							}else if($current_model==='component_filter' && isset($table) && ($table==='matrix_dd' || $table==='matrix_list')) {
+								continue; // exclude component_filter from private list like 'yes/no'
 							}
 
 							$ar_related_clean[] = $current_tipo;
@@ -2661,16 +2716,17 @@ abstract class common {
 						$sqo_config->mode			= $mode;
 						$sqo_config->operator		= '$or';
 
-				// ddo_map
+				// mode
 					$current_mode = ($model!=='section')
 						? 'list'
 						: $mode;
 
-				// auth check each element permissions
+				// auth. Check each element permissions
 					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
 						// check each element permissions
 						$result = [];
 						foreach ($ar_related_clean as $item_tipo) {
+							// permissions filter
 							$permissions = common::get_permissions($target_section_tipo, $item_tipo);
 							if ($permissions>0) {
 								$result[] = $item_tipo;
@@ -2679,27 +2735,30 @@ abstract class common {
 						return $result;
 					})();
 
+				// ddo_map
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
+
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						// the semantic node has his own section_tipo to be assigned
-						if($model ==='component_semantic_node'){
-							$RecordObj_dd	= new RecordObj_dd($current_tipo);
-							$properties		= $RecordObj_dd->get_properties();
-							if(isset($properties->source->request_config)){
-								foreach ($properties->source->request_config as $item_request_config) {
-									// sqo. Add search query object property
-									$parsed_item_sqo = $item_request_config->sqo ?? new stdClass();
-									// section_tipo. get the ar_sections as ddo
-									$target_section_tipo = isset($parsed_item_sqo->section_tipo)
-										? component_relation_common::get_request_config_section_tipo($parsed_item_sqo->section_tipo)
-										: [$target_section_tipo];
+
+						// component_semantic_node.The semantic node has his own section_tipo to be assigned
+							if($model==='component_semantic_node'){
+								$RecordObj_dd	= new RecordObj_dd($current_tipo);
+								$properties		= $RecordObj_dd->get_properties();
+								if(isset($properties->source->request_config)){
+									foreach ($properties->source->request_config as $item_request_config) {
+										// sqo. Add search query object property
+										$parsed_item_sqo = $item_request_config->sqo ?? new stdClass();
+										// section_tipo. get the ar_sections as ddo
+										$target_section_tipo = isset($parsed_item_sqo->section_tipo)
+											? component_relation_common::get_request_config_section_tipo($parsed_item_sqo->section_tipo)
+											: [$target_section_tipo];
+									}
+								}
+								if(isset($properties->mode)){
+									$current_mode = $properties->mode;
+									$current_fixed_mode = true;
 								}
 							}
-							if(isset($properties->mode)){
-								$current_mode = $properties->mode;
-								$current_fixed_mode = true;
-							}
-						}
 
 						$ddo = new dd_object();
 							$ddo->set_tipo($current_tipo);
@@ -2708,10 +2767,10 @@ abstract class common {
 							$ddo->set_parent($tipo);
 							$ddo->set_mode($current_mode);
 							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
-						// used by component_semantic_node for force the render mode
-						if(isset($current_fixed_mode)){
-							$ddo->set_fixed_mode($current_fixed_mode);
-						}
+							// fixed_mode. Used by component_semantic_node for force the render mode
+							if(isset($current_fixed_mode)){
+								$ddo->set_fixed_mode($current_fixed_mode);
+							}
 
 						return $ddo;
 					}, $ar_related_clean_auth);
@@ -2744,13 +2803,18 @@ abstract class common {
 						$sqo->section_tipo = $ddo_section_tipo;
 
 				// request_config_item. build
-					$request_config_item = new stdClass();
-						$request_config_item->api_engine	= 'dedalo';
-						$request_config_item->show			= $show;
-						$request_config_item->sqo			= $sqo;
-						// $request_config_item->sqo->tipo	= $tipo;
-						// $request_config_item->search		= $search;
-						// $request_config_item->select		= $select;
+					// $request_config_item = new stdClass();
+					// 	$request_config_item->api_engine	= 'dedalo';
+					// 	$request_config_item->show			= $show;
+					// 	$request_config_item->sqo			= $sqo;
+					// 	// $request_config_item->sqo->tipo	= $tipo;
+					// 	// $request_config_item->search		= $search;
+					// 	// $request_config_item->select		= $select;
+
+					$request_config_item = new request_config_object();
+						$request_config_item->set_api_engine('dedalo');
+						$request_config_item->set_show($show);
+						$request_config_item->set_sqo($sqo);
 
 				// set item
 					$ar_request_query_objects[] = $request_config_item;
@@ -3066,20 +3130,20 @@ abstract class common {
 
 
 	/**
-	* GET_REQUEST_QUERY_OBJECT
-	*
-	* @return object | json
+	* GET_REQUEST_CONFIG_OBJECT
+	* Call method get_ar_request_config whit current options
+	* and return the expected one request_config_object
+	* @return request_config_object|null $request_config_object
 	*/
-	public function get_request_query_object() : object {
+	public function get_request_config_object() : ?request_config_object {
 
-		// rqo. from request_config
-			$records_mode	= $this->get_modo();
-			$mode			= $records_mode;
+		// short vars
+			$mode			= $this->get_modo(); // records_mode;
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
 			$section_id		= $this->get_section_id();
 
-
+		// ar_request_config
 			$options = new stdClass();
 				$options->tipo			= $tipo;
 				$options->external		= false;
@@ -3088,12 +3152,12 @@ abstract class common {
 				$options->section_id	= $section_id;
 			$ar_request_query_objects = common::get_ar_request_config($options);
 
+		// request_config_object
+			$request_config_object = reset($ar_request_query_objects) ?? null;
 
-		$request_config = reset($ar_request_query_objects);
 
-
-		return $request_config;
-	}//end get_request_query_object
+		return $request_config_object;
+	}//end get_request_config_object
 
 
 

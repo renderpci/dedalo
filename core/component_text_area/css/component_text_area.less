@@ -8,7 +8,7 @@
 	// grid-template-rows: 1fr 1fr;
 	// background-color: #ecf564;
 
-	&.edit {
+	&.edit, &.edit_in_list {
 		>.content_data {
 			// background-color: #c0f5b8;
 			display: grid;
@@ -49,6 +49,12 @@
 						// border: 1px solid #c4c4c4;
 						outline: 1px solid #e6e6e6;
 
+						// version mini	(fit heigth)
+							// top: -1.35rem;
+							// height: 1.8em;
+							// padding: 0.05rem;
+							// width: calc(100% - 2rem);
+
 						>.toolbar_button {
 							height: 100%;
 							padding: 0.33rem;
@@ -86,6 +92,7 @@
 						margin: 1rem;
 						height: calc(100% - 1.5rem);
 						margin-top: 0.5rem;
+						resize: vertical;
 
 						img {
 							cursor: pointer;
@@ -141,6 +148,7 @@
 						padding: 0.5rem;
 					}
 
+					// source ckeditor
 					>.ck-source-editing-area {
 						width: 100%;
 						height: calc(100% - 1.5rem);
@@ -148,6 +156,9 @@
 						margin-left: 1rem;
 						margin-right: 1rem;
 						z-index: 0;
+						>textarea {
+							overflow: auto;
+						}
 					}
 
 
