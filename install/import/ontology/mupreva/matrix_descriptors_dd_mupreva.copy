@@ -1778,7 +1778,7 @@ mupreva1310	Ubicació	termino	lg-cat
 mupreva1493	Proyecto	termino	lg-spa
 mupreva515	Imatge identificativa negatius	termino	lg-cat
 mupreva927	espacios_id	termino	lg-spa
-mupreva1513	Almacen	termino	lg-spa
+mupreva1513	Inventario almacén	termino	lg-spa
 mupreva1634	titulo	termino	lg-spa
 mupreva1795	periodo_label	termino	lg-spa
 mupreva1893	yacimiento_table	termino	lg-spa
@@ -2746,7 +2746,7 @@ mupreva406	Nou	termino	lg-cat
 mupreva1418	Imatge identificativa digital	termino	lg-cat
 mupreva392	Llocs desambiguació	termino	lg-cat
 mupreva1506	Projecte	termino	lg-cat
-mupreva1513	Magatzem	termino	lg-cat
+mupreva1513	Inventari magatzem	termino	lg-cat
 mupreva1558	titulo	termino	lg-spa
 mupreva1680	audiovisual	termino	lg-spa
 mupreva1841	fecha_inicio	termino	lg-spa
@@ -4525,3 +4525,17 @@ mupreva2835	Galería de Imágenes	termino	lg-spa
 mupreva2835	Galeria d'Imatges	termino	lg-cat
 mupreva2836	view_mosaic	termino	lg-spa
 mupreva2837	ts_web	termino	lg-spa
+mupreva2838	Referencias bibliográficas	termino	lg-spa
+mupreva2838	Referències bibliogràfiques	termino	lg-cat
+mupreva2839	Listado	termino	lg-spa
+mupreva2840	view_single_line	termino	lg-spa
+mupreva2838	URL	termino	lg-spa
+mupreva2838	URL	termino	lg-cat
+mupreva2837	Topografía	termino	lg-spa
+mupreva2837	Topografia	termino	lg-cat
+mupreva2848	URL	termino	lg-spa
+mupreva2848	URL	termino	lg-cat
+mupreva2847	Topografía	termino	lg-spa
+mupreva2847	Topografia	termino	lg-cat
+mupreva2849	Topografía	termino	lg-spa
+mupreva2849	Topografia	termino	lg-cat
