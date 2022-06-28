@@ -190,9 +190,10 @@ class component_relation_related extends component_relation_common {
 	/**
 	* GET_CALCULATED_REFERENCES
 	* used for get the references, this function call the the get_references that make the recursive loop of the calculation
-	* @return
+	* @param bool $only_data = false
+	* @return array $references
 	*/
-	public function get_calculated_references($only_data=false) {
+	public function get_calculated_references(bool $only_data=false) : array {
 
 		switch ($this->relation_type_rel) {
 			case DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO:
