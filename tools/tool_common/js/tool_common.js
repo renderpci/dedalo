@@ -682,7 +682,7 @@ const view_window = async function(options) {
 			// 	width	: 760,
 			// 	height	: 500
 			// }
-
+console.log("options:",options);
 	// short vars
 		const name = tool_context.name
 
@@ -723,7 +723,7 @@ const view_window = async function(options) {
 			  })()
 
 	// tool_window
-		const window_name	= `tool_${name}_${open_as}`
+		const window_name	= name +'_'+ (caller.id_base || '')
 		const tool_window	= window.open(url, window_name, parsed_windowFeatures)
 		tool_window.focus();
 
