@@ -29,6 +29,7 @@ include(DEDALO_CORE_PATH . '/common/class.layout_map.php');# new 12-06-2019
 include(DEDALO_CORE_PATH . '/common/class.dd_object.php'); # new 12-06-2019
 include(DEDALO_CORE_PATH . '/common/class.ddo_map_object.php'); # new 28-07-2019
 include(DEDALO_CORE_PATH . '/common/class.request_query_object.php'); # new 16-05-2021
+include(DEDALO_CORE_PATH . '/common/class.request_config_object.php'); # new 16-05-2021
 include(DEDALO_CORE_PATH . '/common/class.search_query_object.php'); # new 30-06-2021
 include(DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'); # new 27-07-2021
 include(DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'); # new 28-07-2021
