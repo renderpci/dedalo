@@ -115,6 +115,7 @@
 class request_config_object {
 
 
+
 	/**
 	* VARS
 	*/
@@ -128,8 +129,7 @@ class request_config_object {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data
-	*	optional . Default is null
+	* @param object $data = null
 	*/
 	public function __construct( object $data=null ) {
 
