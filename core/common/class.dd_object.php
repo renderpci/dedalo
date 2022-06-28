@@ -60,8 +60,7 @@ class dd_object {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data
-	*	optional . Default is null
+	* @param object $data =null
 	*/
 	public function __construct( object $data=null ) {
 
@@ -554,14 +553,15 @@ class dd_object {
 
 	/**
 	* IN_ARRAY_DDO
-	* @return bool $founded
+	* @return bool $found
 	*/
 	public static function in_array_ddo(object $ddo, array $ar_ddo, array $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) : bool {
-		$founded = false;
+
+		$found = false;
 
 		foreach ((array)$ar_ddo as $current_ddo) {
-			$founded = self::compare_ddo( $ddo, $current_ddo, $ar_properties );
-			if($founded===true) break;
+			$found = self::compare_ddo( $ddo, $current_ddo, $ar_properties );
+			if($found===true) break;
 		}
 
 		#$ar = array_filter(
@@ -572,7 +572,7 @@ class dd_object {
 		#); return $ar;
 
 
-		return $founded;
+		return $found;
 	}//end in_array_ddo
 
 
