@@ -48,8 +48,8 @@ abstract class DBi {
 		}
 
 		# UTF8 : Change character set to utf8
-		if (!$mysqli->set_charset("utf8")) {
-			printf("Error loading character set utf8: %s\n", $mysqli->error);
+		if (!$mysqli->set_charset("utf8mb4")) {
+			printf("Error loading character set utf8mb4: %s\n", $mysqli->error);
 		}
 
 

@@ -47,7 +47,7 @@ class diffusion_mysql extends diffusion_sql  {
 		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
 
 		if (empty($database_name)) {
-			throw new Exception("Error Processing Request. database_name is mandatory !", 1);			
+			throw new Exception("Error Processing Request. database_name is mandatory !", 1);
 		}
 
 		$mysql_conn = self::get_conn($database_name);
@@ -139,11 +139,11 @@ class diffusion_mysql extends diffusion_sql  {
 			$sql_query .= self::generate_keys($ar_fields, $table_type);
 			switch ($engine) {
 				case 'InnoDB':
-					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 				case 'MyISAM':
 				default:
-					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 			}
 
@@ -443,20 +443,20 @@ class diffusion_mysql extends diffusion_sql  {
 				break;
 
 			case ($field_type===$pref.'text'):
-				$sql_query = "`$field_name` text COLLATE utf8_unicode_ci COMMENT '$field_coment'";
+				$sql_query = "`$field_name` text COLLATE utf8mb4_unicode_ci COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'mediumtext'):
-				$sql_query = "`$field_name` mediumtext COLLATE utf8_unicode_ci COMMENT '$field_coment'";
+				$sql_query = "`$field_name` mediumtext COLLATE utf8mb4_unicode_ci COMMENT '$field_coment'";
 				break;
 
 			case ($field_type===$pref.'enum'):
-				$sql_query = "`$field_name` enum($field_options) COLLATE utf8_unicode_ci COMMENT '$field_coment'";
+				$sql_query = "`$field_name` enum($field_options) COLLATE utf8mb4_unicode_ci COMMENT '$field_coment'";
 				if(empty($field_options)) throw new Exception("Error Processing Request. Field enum $field_name don't have 'propiedades'  ", 1);
 				break;
 
 			case ($field_type===$pref.'varchar'):
-				$sql_query = "`$field_name` varchar($field_options) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT '$field_coment'";
+				$sql_query = "`$field_name` varchar($field_options) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '$field_coment'";
 				if(empty($field_options)) throw new Exception("Error Processing Request. Field varchar $field_name don't have 'propiedades'  ", 1);
 				break;
 
@@ -752,7 +752,7 @@ class diffusion_mysql extends diffusion_sql  {
 				}else{
 					# TYPE ARRAY/OBJECT : Convert to json
 					$field_value = json_encode($field_value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-					// real escape 
+					// real escape
 					$mysql_conn		= self::get_conn($database_name);
 					$field_value	= '\''.$mysql_conn->real_escape_string($field_value).'\'';
 				}
@@ -777,13 +777,13 @@ class diffusion_mysql extends diffusion_sql  {
 			default:
 				# TYPE OTHERS : addslashes
 				// $field_value = "'".addslashes($field_value)."'";
-				// real escape 
+				// real escape
 				$mysql_conn		= self::get_conn($database_name);
 				$field_value	= '\''.$mysql_conn->real_escape_string($field_value).'\'';
 				#$sql_query_line .= "'$field_value',";
 				break;
-		}		
-		
+		}
+
 
 		return $field_value;
 	}//end conform_field_value
@@ -997,7 +997,7 @@ class diffusion_mysql extends diffusion_sql  {
 			// Generic delete way
 			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' OR `section_id` = '{$section_tipo}_{$section_id}' ";
 		}
-		
+
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 			if (!$result) {
 				if(SHOW_DEBUG===true) {
@@ -1115,6 +1115,4 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 
-}//end class
-
-
+}//end class diffusion_mysql
