@@ -996,6 +996,7 @@ class component_layout extends component_common {
 			$layout_map_plain = make_plain($layout_map, $ar_exclude_elements);
 				// dump($layout_map_plain, ' layout_map_plain ++ '.to_string());
 			$ar_layout_map_items = self::resolve_layout_map_plain($layout_map_plain, $ar_exclude_elements);
+				// dump($ar_layout_map_items, ' ar_layout_map_items ++ '.to_string());
 
 		// solve functions
 			// solve item manager
