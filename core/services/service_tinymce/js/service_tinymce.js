@@ -85,6 +85,11 @@ export const service_tinymce = function() {
 				container		: container
 			}
 
+		// clean container
+			// while (container.firstChild) {
+			// 	container.removeChild(container.firstChild);
+			// }
+
 		// add to DOM
 			container.appendChild(dd_tinny)
 
