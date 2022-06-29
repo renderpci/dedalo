@@ -14,15 +14,15 @@
 * @para object options
 * @return DOM node fragment
 */
-export const render_toolbar = function() {
+	// export const render_toolbar = function() {
 
-	const toolbar_container = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'toolbar'
-	})
+	// 	const toolbar_container = ui.create_dom_element({
+	// 		element_type	: 'div',
+	// 		class_name		: 'toolbar'
+	// 	})
 
-	return toolbar_container
-}//end render_toolbar
+	// 	return toolbar_container
+	// }//end render_toolbar
 
 
 
@@ -34,12 +34,12 @@ export const render_toolbar = function() {
 */
 export const render_button = function(button_config) {
 
-	// short vars
+	// button_config
 		const name				= button_config.name
 		const image				= button_config.options.image
 		const text				= button_config.options.text || ''
 		const class_name		= button_config.options.class_name
-			? ' '+button_config.options.class_name
+			? ' ' + button_config.options.class_name
 			: ''
 		const tooltip			= button_config.options.tooltip
 		const onclick			= button_config.options.onclick
@@ -53,8 +53,9 @@ export const render_button = function(button_config) {
 		})
 
 	// icon svg
-	 	if(text===''){
-		 	const button_icon = ui.create_dom_element({
+	 	if(text==='') {
+	 		// button_icon
+		 	ui.create_dom_element({
 				element_type	: 'img',
 				src				: image,
 				parent			: button_node
@@ -62,12 +63,11 @@ export const render_button = function(button_config) {
 	 	}
 
 
-	// // events
-	if(manager_editor !== true && onclick){
-		button_node.addEventListener("click", onclick)
-	}
+	// events
+		if(manager_editor!==true && typeof onclick==='function'){
+			button_node.addEventListener("click", onclick)
+		}
 
 
 	return button_node
 }//end render_button
-
