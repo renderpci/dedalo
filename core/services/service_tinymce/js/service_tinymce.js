@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, tinymce */
 /*eslint no-undef: "error"*/
 
 
@@ -87,6 +87,18 @@ export const service_tinymce = function() {
 
 		// add to DOM
 			container.appendChild(dd_tinny)
+
+
+		// debug
+			// setTimeout(function(){
+			// 	self.caller.update_tag({
+			// 		type	: 'indexIn',
+			// 		tag_id	: 2,
+			// 		dataset	: {
+			// 			state : 'r'
+			// 		}
+			// 	})
+			// }, 2000)
 
 
 		return true
@@ -511,6 +523,86 @@ export const service_tinymce = function() {
 
 		return true
 	}//end set_dirty
+
+
+
+	/**
+	* UPDATE_TAG
+	* Find and change target tag in editor
+	* @param object options
+	* Sample:
+	* {
+	* 	type : [indexIn,indexOut]
+	* 	tag_id : 1,
+	* 	dataset : {	type : n }
+	* }
+	* @return bool
+	*/
+	this.update_tag = function(options) {
+
+		const self = this
+
+		// options
+			// type could be an array as ['indexIn','indexOut']. We use only the first element
+			const type		= options.type // Array.isArray(options.type) ? options.type[0] : options.type
+			const tag_id	= options.tag_id
+			const dataset	= options.dataset
+
+		// image_tag_nodes. Selection from DOM
+			const image_tag_nodes = []
+			const type_length = type.length
+			for (let i = 0; i < type_length; i++) {
+				const current_type		= type[i]
+				const selection_pattern	= '[data-type="'+current_type+'"][data-tag_id="'+tag_id+'"]'
+				const current_nodes		= self.dom_select(selection_pattern)
+				if (current_nodes) {
+					image_tag_nodes.push(...current_nodes)
+				}
+			}
+			if (!image_tag_nodes.length) {
+				alert("[component_text_area.update_tag] Error on DOM select (text_editor) tag to update_tag tag_id:" +tag_id + " type:" + type)
+				return false;
+			}
+
+		// update DOM nodes dataset. Iterate and update tag state
+			let dirty = false
+			const len = image_tag_nodes.length
+			for (let i = len - 1; i >= 0; i--) {
+
+				const node = image_tag_nodes[i]
+
+				// Set new state to dataset of each dataset
+					for (let key in dataset) {
+						node.dataset[key] = dataset[key]
+					}
+
+				// id. Re-create the id like [/index-n-1-label in 1]
+					const new_id = self.caller.build_data_tag(
+						node.dataset.type, // type
+						tag_id, // tag_id
+						dataset.state || node.dataset.state, // state
+						dataset.label || node.dataset.label, // label
+						dataset.data || node.dataset.data // data
+					)
+					node.id = new_id
+
+				// image_url. Replace url var id with updated id tag
+					const current_src = node.src
+					const image_url = current_src.split('?')[0] + '?id=' + new_id
+					node.src = image_url
+
+				// set as modified
+					dirty = true
+			}
+
+		// set dirty state updated
+			if (dirty) {
+				self.set_dirty(true)
+			}
+
+
+		return true
+	}//end update_tag
 
 
 

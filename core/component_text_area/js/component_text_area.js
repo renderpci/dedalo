@@ -43,6 +43,12 @@ export const component_text_area = function(){
 		this.events_tokens	= []
 		// this.services	= []
 
+		// service_text_editor. Name of desired service  to call (service_ckeditor|service_tinymce)
+		this.service_text_editor			= null
+		// service_text_editor_instance. array of created service instances based on input key (one is expected)
+		this.service_text_editor_instance	= []
+
+
 	return true
 }//end component_text_area
 
@@ -203,9 +209,9 @@ component_text_area.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(self, options);
 
-
 	// service_text_editor
-		self.service_text_editor = service_ckeditor
+		// self.service_text_editor	= service_tinymce
+		self.service_text_editor	= service_ckeditor
 
 
 	return common_init
@@ -510,7 +516,10 @@ const unwrap_element = function(el) {
 
 /**
 * UPDATE_TAG
-* Edit selected tag and add or modify datasets
+* Edit selected tag adding or modifing the dataset and image url
+* This method has been unified to allow to use different services in the same way
+* @param object options
+* @return bool
 */
 component_text_area.prototype.update_tag = async function(options) {
 
@@ -528,57 +537,83 @@ component_text_area.prototype.update_tag = async function(options) {
 		const type			= options.type
 		const tag_id		= options.tag_id
 		const new_data_obj	= options.dataset
+		const key			= options.key || 0
 		const save			= options.save || false
 
-	// DOM elements
-		const wrapper	= self.node[0]
-		const textarea	= wrapper.querySelector('textarea')
-		const container	= (textarea)
-			? tinymce.get(textarea.id) // ED container
-			: wrapper.getElementsByClassName('text_area_tool_structuration')[0] // Struct container
+	// ar_type. Could be one like ['tc'] or a pair like ['indeIn','indexOut']
+		const ar_type = (type.indexOf('In')!==-1 || type.indexOf('Out')!==-1)
+			? (()=>{
+				const type_in = (type.indexOf('Out')!==-1)
+					? type.replace('Out', 'In')
+					: type
+				const type_out = (type.indexOf('In')!==-1)
+					? type.replace('In', 'Out')
+					: type
+				return [type_in, type_out]
+			  })()
+			: [type]
 
-	// DOM Selection pattern
-		const selection_pattern = (type.indexOf('In')!==-1 || type.indexOf('Out')!==-1)
-			? '[data-type^="' + type.replace(/In|Out/, '') + '"][data-tag_id="'+tag_id+'"]'
-			: '[data-type="'+type+'"][data-tag_id="'+tag_id+'"]'
+	// trigger service action
+		const update_options = {
+			type	: ar_type, // string|array
+			tag_id	: tag_id, // int
+			dataset	: new_data_obj // object
+		}
+		const result = self.service_text_editor_instance[key].update_tag(update_options)
 
-	// update_tag_state function
-		const update_tag_state = (current_elements, new_data_obj)=>{
+	return result
 
-			// debug
-				// console.log("Elements to update_tag_state:", current_elements);
-				// console.log("new_data_obj:",new_data_obj);
+	/* OLD WAY
+		// DOM elements
+			const wrapper	= self.node[0]
+			const textarea	= wrapper.querySelector('textarea')
+			const container	= (textarea)
+				? tinymce.get(textarea.id) // ED container
+				: wrapper.getElementsByClassName('text_area_tool_structuration')[0] // Struct container
 
-			// Iterate and update tag state
-			const len = current_elements.length
-			for (let i = len - 1; i >= 0; i--) {
-				// Set new state to dataset of each dataset
-				for (let key in new_data_obj) {
-					current_elements[i].dataset[key] = new_data_obj[key]
+		// DOM Selection pattern
+			const selection_pattern = (type.indexOf('In')!==-1 || type.indexOf('Out')!==-1)
+				? '[data-type^="' + type.replace(/In|Out/, '') + '"][data-tag_id="'+tag_id+'"]'
+				: '[data-type="'+type+'"][data-tag_id="'+tag_id+'"]'
+
+		// update_tag_state function
+			const update_tag_state = (current_elements, new_data_obj)=>{
+
+				// debug
+					// console.log("Elements to update_tag_state:", current_elements);
+					// console.log("new_data_obj:",new_data_obj);
+
+				// Iterate and update tag state
+				const len = current_elements.length
+				for (let i = len - 1; i >= 0; i--) {
+					// Set new state to dataset of each dataset
+					for (let key in new_data_obj) {
+						current_elements[i].dataset[key] = new_data_obj[key]
+					}
 				}
 			}
-		}
 
-	// editor
-		// image tags selection from DOM
-			const key = 0
-			const image_tag_nodes = self.text_editor[key].dom_select(selection_pattern)
-			if (!image_tag_nodes.length) {
-				alert("[component_text_area.update_tag] Error on DOM select (text_editor) tag to update_tag tag_id:" +tag_id + " type:" + type)
-				return false;
-			}
+		// editor
+			// image tags selection from DOM
+				// const key = 0
+				const image_tag_nodes = self.text_editor[key].dom_select(selection_pattern)
+				if (!image_tag_nodes.length) {
+					alert("[component_text_area.update_tag] Error on DOM select (text_editor) tag to update_tag tag_id:" +tag_id + " type:" + type)
+					return false;
+				}
 
-		// update DOM nodes dataset
-			update_tag_state(image_tag_nodes, new_data_obj)
+			// update DOM nodes dataset
+				update_tag_state(image_tag_nodes, new_data_obj)
 
-		// save and refresh
-			self.text_editor[key].set_dirty(true) // Force dirty state
-			if (save===true) {
-				await self.text_editor[key].save()
-				self.refresh()
-			}
+			// save and refresh
+				self.text_editor[key].set_dirty(true) // Force dirty state
+				if (save===true) {
+					await self.text_editor[key].save()
+					self.refresh()
+				}
 
-	return true
+		return true
+		*/
 }//end update_tag
 
 
@@ -614,10 +649,15 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 			? ''
 			: (label.substring(0,22)).replace(new RegExp('-', 'g'), '_');
 
+	// data
+		const data_string = data
+			? 'data:' + (typeof data==='string' ? data : JSON.stringify(data)) + ':data'
+			: ''
+
 	// dedalo_tag
 		const dedalo_tag = (type==="tc")
 			? tag_id
-			: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + safe_label + "-" + "data:" + data + ":data]"
+			: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + safe_label + "-" + data_string + ']'
 
 	// debug
 		if(SHOW_DEBUG===true) {

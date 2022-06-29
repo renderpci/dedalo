@@ -6,15 +6,17 @@
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
 	// import {ui} from '../../../common/js/ui.js'
+	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button} from './render_text_editor_toolbar.js'
 
 
 
 /**
-* service_ckeditor
+* SERVICE_CKEDITOR
 * Used as service by component_text_area
 */
 export const service_ckeditor = function() {
+
 
 
 	// self vars
@@ -115,7 +117,16 @@ export const service_ckeditor = function() {
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
 
-					self.dom_select()
+				// debug
+					// setTimeout(function(){
+					// 	self.caller.update_tag({
+					// 		type	: 'indexIn',
+					// 		tag_id	: 2,
+					// 		dataset	: {
+					// 			state : 'd'
+					// 		}
+					// 	})
+					// }, 2000)
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
@@ -335,56 +346,154 @@ export const service_ckeditor = function() {
 	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
 	* @return DOM node (one or more)
 	*/
-	this.dom_select = function(selector_str) {
+		// this.dom_select = function(selector_str) {
 
-		const self		= this
-		const editor	= self.editor
+		// 	const self		= this
+		// 	const editor	= self.editor
 
-		const root = editor.model.document.getRoot();
+		// 	const root = editor.model.document.getRoot();
 
-		// Create a range spanning over the entire root content:
-		const range = editor.model.createRangeIn( root );
+		// 	// Create a range spanning over the entire root content:
+		// 	const range = editor.model.createRangeIn( root );
+
+		// 	// Iterate over all items in this range:
+		// 	for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+		// 		const item = value.item
+
+		// 		const htmlAttributes = item.getAttribute('htmlAttributes') //.attributes //getAttributes() //.htmlAttributes //.hasAttribute('data-type')
+		// 		if(htmlAttributes){
+
+		// 			const attributes = htmlAttributes.attributes['data-type']
+		// 			const id = htmlAttributes.attributes['data-tag_id']
+		// 			if(attributes==='indexIn' && id === '6'){
+
+		// 				const old_att = JSON.parse(JSON.stringify((htmlAttributes)))
+		// 				old_att.attributes['data-state'] ='n'
+
+		// 				editor.model.change( writer => {
+		// 					writer.setAttribute( 'htmlAttributes', old_att, item );
+		// 				});
+
+		// 			}
+		// 		}
+		// 	}
+
+		// 	// des
+		// 		// for ( const value of children ) {
+
+		// 		// 	console.log("node:",node);
+		// 		// 	const node = children[value]
+
+		// 		// 		console.log("node:",node);
+
+		// 		// 	// if ( node.is( type ) ) {
+		// 		// 	// 	nodes.push(node);
+		// 		// 	// }
+		// 		// }
+
+		// 		// console.log("editor.model:",children  );
+
+		// 			// console.log("editor.model:",editor.model.viewElement.hasClass( 'placeholder' ) );
+		// 		// const node = editor.dom.select(selector_str)
+
+		// 		// return node
+		// }//end dom_select
+
+
+
+	/**
+	* UPDATE_TAG
+	* Find and change target tag in editor
+	* @param object options
+	* Sample:
+	* {
+	* 	type : [indexIn,indexOut]
+	* 	tag_id : 1,
+	* 	dataset : {	type : n }
+	* }
+	* @return bool
+	*/
+	this.update_tag = function(options) {
+
+		// options
+			const type		= options.type
+			const tag_id	= options.tag_id
+			const dataset	= options.dataset
+
+		// short vars
+			const self		= this
+			const editor	= self.editor
+			const ar_type	= Array.isArray(type)
+				? type
+				: [type]
+
+		// root. Whole editor document to traverse
+			const root = editor.model.document.getRoot();
+
+		// range. Create a range spanning over the entire root content:
+			const range = editor.model.createRangeIn( root );
 
 		// Iterate over all items in this range:
-		for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
-			const item = value.item
+			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
 
-			const htmlAttributes = item.getAttribute('htmlAttributes') //.attributes //getAttributes() //.htmlAttributes //.hasAttribute('data-type')
-			if(htmlAttributes){
+				const item = value.item
 
-				const attributes = htmlAttributes.attributes['data-type']
-				const id = htmlAttributes.attributes['data-tag_id']
-				if(attributes==='indexIn' && id === '6'){
+				// htmlAttributes. Get an object like:
+				// {
+				//   attributes : {data-data: '', data-label: 'label in 1', data-state: 'r', data-tag_id: '1', data-type: 'indexIn', …}
+				//	 classes : ['index']
+				// }
+				const htmlAttributes = item.getAttribute('htmlAttributes')
+				if(htmlAttributes) {
 
-					const old_att = JSON.parse(JSON.stringify((htmlAttributes)))
-					old_att.attributes['data-state'] ='n'
+					const current_tag_id	= htmlAttributes.attributes['data-tag_id']
+					const current_type		= htmlAttributes.attributes['data-type']
 
-					editor.model.change( writer => {
-						writer.setAttribute( 'htmlAttributes', old_att, item );
-					});
+					if(current_tag_id==tag_id && ar_type.includes(current_type)) {
 
+						console.log("update_tag item:", item);
+
+						// short vars
+							const current_state	= htmlAttributes.attributes['data-state']
+							const current_label	= htmlAttributes.attributes['data-label']
+							const current_data	= htmlAttributes.attributes['data-data']
+							const current_src	= item.getAttribute('src')
+
+						// edit_attributes. Clone htmlAttributes to prevent unwanted events trigger
+							const edit_attributes = clone(htmlAttributes)
+
+						// add/replace dataset properties given
+							for (const name in dataset) {
+								edit_attributes.attributes['data-'+name] = dataset[name]
+							}
+
+							// console.log("-> 1 changed htmlAttributes:",htmlAttributes);
+							// console.log("-> 2 changed edit_attributes:",edit_attributes);
+
+						// id. Re-create the id like [/index-n-1-label in 1]
+							const new_id = self.caller.build_data_tag(
+								current_type, // type
+								current_tag_id, // tag_id
+								dataset.state || current_state, // state
+								dataset.label || current_label, // label
+								dataset.data || current_data // data
+							)
+
+						// image_url. Replace url var id with updated id tag
+							const image_url = current_src.split('?')[0] + '?id=' + new_id
+
+						// set to model
+							editor.model.change( writer => {
+								writer.setAttribute( 'htmlAttributes', edit_attributes, item );
+								writer.setAttribute( 'src', image_url, item );
+							});
+					}
 				}
-			}
-		}
-		// for ( const value of children ) {
+			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
 
-		// 	console.log("node:",node);
-		// 	const node = children[value]
 
-		// 		console.log("node:",node);
-
-		// 	// if ( node.is( type ) ) {
-		// 	// 	nodes.push(node);
-		// 	// }
-		// }
-
-		// console.log("editor.model:",children  );
-
-			// console.log("editor.model:",editor.model.viewElement.hasClass( 'placeholder' ) );
-		// const node = editor.dom.select(selector_str)
-
-		// return node
-	}//end dom_select
+		return true
+	}//end update_tag
 
 
 

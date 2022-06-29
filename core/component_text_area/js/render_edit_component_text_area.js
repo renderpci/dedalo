@@ -13,6 +13,7 @@
 	import * as instances from '../../common/js/instances.js'
 
 
+
 /**
 * RENDER_EDIT_COMPONENT_TEXT_AREA
 * Manage the components logic and appearance in client side
@@ -361,6 +362,9 @@ const get_input_element = (i, current_value, self) => {
 				// const current_service_text_editor = new service_tinymce()
 				// const current_service_text_editor = new service_ckeditor()
 				const current_service_text_editor = new self.service_text_editor()
+
+			// fix service instance with current input key
+				self.service_text_editor_instance[i] = current_service_text_editor
 
 			// toolbar. create the toolbar base
 				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','full_screen','|']
