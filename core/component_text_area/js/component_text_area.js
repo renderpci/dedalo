@@ -99,7 +99,7 @@ component_text_area.prototype.init = async function(options) {
 			function fn_create_fragment(options) {
 
 				// options
-					const key		= options.key
+					const key			= options.key
 					const text_editor	= options.text_editor
 
 				// create the HTML fragment inside the editor adding in/out tags. Returns new created tag_index_id
@@ -536,7 +536,7 @@ component_text_area.prototype.update_tag = async function(options) {
 	// options
 		const type			= options.type
 		const tag_id		= options.tag_id
-		const new_data_obj	= options.dataset
+		const new_data_obj	= options.new_data_obj
 		const key			= options.key || 0
 		const save			= options.save || false
 
@@ -555,9 +555,9 @@ component_text_area.prototype.update_tag = async function(options) {
 
 	// trigger service action
 		const update_options = {
-			type	: ar_type, // string|array
-			tag_id	: tag_id, // int
-			dataset	: new_data_obj // object
+			type			: ar_type, // string|array
+			tag_id			: tag_id, // int
+			new_data_obj	: new_data_obj // object
 		}
 		const result = self.service_text_editor_instance[key].update_tag(update_options)
 

@@ -549,9 +549,9 @@ export const service_tinymce = function() {
 
 		// options
 			// type could be an array as ['indexIn','indexOut']. We use only the first element
-			const type		= options.type // Array.isArray(options.type) ? options.type[0] : options.type
-			const tag_id	= options.tag_id
-			const dataset	= options.dataset
+			const type			= options.type // Array.isArray(options.type) ? options.type[0] : options.type
+			const tag_id		= options.tag_id
+			const new_data_obj	= options.new_data_obj
 
 		// image_tag_nodes. Selection from DOM
 			const image_tag_nodes = []
@@ -577,17 +577,17 @@ export const service_tinymce = function() {
 				const node = image_tag_nodes[i]
 
 				// Set new state to dataset of each dataset
-					for (let key in dataset) {
-						node.dataset[key] = dataset[key]
+					for (let key in new_data_obj) {
+						node.dataset[key] = new_data_obj[key]
 					}
 
 				// id. Re-create the id like [/index-n-1-label in 1]
 					const new_id = self.caller.build_data_tag(
 						node.dataset.type, // type
 						tag_id, // tag_id
-						dataset.state || node.dataset.state, // state
-						dataset.label || node.dataset.label, // label
-						dataset.data || node.dataset.data // data
+						new_data_obj.state || node.dataset.state, // state
+						new_data_obj.label || node.dataset.label, // label
+						new_data_obj.data  || node.dataset.data // data
 					)
 					node.id = new_id
 
