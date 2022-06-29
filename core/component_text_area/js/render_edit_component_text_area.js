@@ -950,7 +950,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
-			// use the observe property into ontology of the components to suscribe to this events
+			// use the observe property into ontology of the components to subscribe to this events
 			switch(true) {
 
 				// 'Escape'

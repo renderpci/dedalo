@@ -44,6 +44,7 @@ export const service_ckeditor = function() {
 			const value				= options.value
 			const key				= options.key
 			const editor_config		= options.editor_config
+				console.log("editor_config:",editor_config);
 
 		// fix vars
 			self.caller				= caller
@@ -122,7 +123,7 @@ export const service_ckeditor = function() {
 					// 	self.caller.update_tag({
 					// 		type	: 'indexIn',
 					// 		tag_id	: 2,
-					// 		dataset	: {
+					// 		new_data_obj : {
 					// 			state : 'd'
 					// 		}
 					// 	})
@@ -309,34 +310,26 @@ export const service_ckeditor = function() {
 		const self 	 = this
 		const editor = self.editor
 
-		// Get selection range
-			const range			= editor.selection.getRng(0)
-			const range_clon	= range.cloneRange()
+		// convert the html to the model of ck_editor
+		const view_tag_node_in = editor.data.processor.toView( tag_node_in );
+		const model_tag_node_in = editor.data.toModel( view_tag_node_in );
 
-		// Save start and end position
-			const startOffset		= range_clon.startOffset
-			const startContainer	= range_clon.startContainer
+		const in_position = editor.model.document.selection.getFirstPosition()
 
-		// Go to end of range position
-			range_clon.collapse(false)
-
-		// Insert end out node
-			range_clon.insertNode(tag_node_out)
-
-		// Positioned to begin of range
-			range_clon.setStart(startContainer, startOffset)
-
-		// Go to start of range position
-			range_clon.collapse(true)
-
-		// Insert start in node
-			range_clon.insertNode(tag_node_in)
-
-		// set editor as dirty to allow save
-			editor.setDirty(true)
+		editor.model.insertContent( model_tag_node_in, in_position );
 
 
-		return range_clon
+		// convert the html to the model of ck_editor
+		const view_tag_node_out = editor.data.processor.toView( tag_node_out );
+		const model_tag_node_out = editor.data.toModel( view_tag_node_out );
+
+		const out_position = editor.model.document.selection.getLastPosition()
+
+		editor.model.insertContent( model_tag_node_out, in_position );
+
+		self.is_dirty = true;
+
+		return true
 	}//end wrap_selection_with_tags
 
 
@@ -416,9 +409,9 @@ export const service_ckeditor = function() {
 	this.update_tag = function(options) {
 
 		// options
-			const type		= options.type
-			const tag_id	= options.tag_id
-			const dataset	= options.dataset
+			const type			= options.type
+			const tag_id		= options.tag_id
+			const new_data_obj	= options.new_data_obj
 
 		// short vars
 			const self		= this
@@ -462,9 +455,9 @@ export const service_ckeditor = function() {
 						// edit_attributes. Clone htmlAttributes to prevent unwanted events trigger
 							const edit_attributes = clone(htmlAttributes)
 
-						// add/replace dataset properties given
-							for (const name in dataset) {
-								edit_attributes.attributes['data-'+name] = dataset[name]
+						// add/replace new_data_obj properties given
+							for (const name in new_data_obj) {
+								edit_attributes.attributes['data-'+name] = new_data_obj[name]
 							}
 
 							// console.log("-> 1 changed htmlAttributes:",htmlAttributes);
@@ -474,10 +467,11 @@ export const service_ckeditor = function() {
 							const new_id = self.caller.build_data_tag(
 								current_type, // type
 								current_tag_id, // tag_id
-								dataset.state || current_state, // state
-								dataset.label || current_label, // label
-								dataset.data || current_data // data
+								new_data_obj.state || current_state, // state
+								new_data_obj.label || current_label, // label
+								new_data_obj.data || current_data // data
 							)
+							edit_attributes.attributes.id = new_id
 
 						// image_url. Replace url var id with updated id tag
 							const image_url = current_src.split('?')[0] + '?id=' + new_id
