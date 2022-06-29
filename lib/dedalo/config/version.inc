@@ -2710,6 +2710,7 @@
 		Improved install hierarchies. Now development users can install additional hierarchies anytime
 		Fixed error on clean install sequence that creates a infinite loop
 		Fixed PHP 8.1 compatibility issues in class diffusion_sql
+		Updated MySQL connection defaults from utf8 to utf8mb4 to support 4 bytes uf8 chars in publication to MySQL (legends cases for instance)
 
 
 
@@ -2746,7 +2747,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-06-2022T14:23:15');
+	define('DEDALO_BUILD'	, '29-06-2022T18:28:42');
 
 
 	/*
