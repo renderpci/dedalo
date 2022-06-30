@@ -1,6 +1,6 @@
 <?php
 /**
-* CLASS component_filter_records
+* CLASS COMPONENT_FILTER_RECORDS
 *
 */
 class component_filter_records extends component_common {
@@ -75,7 +75,7 @@ class component_filter_records extends component_common {
 	* Get the list of authorized sections and resolve label
 	* @return array $sections
 	*/
-	public function get_datalist() {
+	public function get_datalist() : array {
 
 		// user areas
 		$areas_for_user = security::get_ar_authorized_areas_for_user();
@@ -143,7 +143,6 @@ class component_filter_records extends component_common {
 
 		return $sections;
 	}//end get_datalist
-
 
 
 

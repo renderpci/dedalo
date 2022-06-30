@@ -300,4 +300,4 @@ class component_html_text extends component_common {
 
 
 
-}//end component_html_text
+}//end class component_html_text

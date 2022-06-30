@@ -305,7 +305,8 @@ class component_svg extends component_media_common {
 	* GET_DEFAULT_SVG_URL
 	* @return string $url
 	*/
-	public static function get_default_svg_url() {
+	public static function get_default_svg_url() : string {
+
 		$url = DEDALO_CORE_URL . '/themes/default/upload.svg';
 
 		return $url;
@@ -344,6 +345,7 @@ class component_svg extends component_media_common {
 	* @param bool $test_file
 	*	Check if file exists. If not use 0.jpg as output. Default true
 	* @param bool $absolute
+	* @return
 	*	Return relative o absolute url. Default false (relative)
 	*/
 	public function get_url($quality=false, $test_file=true, $absolute=false, $default_add=true) {
@@ -386,16 +388,17 @@ class component_svg extends component_media_common {
 	* GET_URL_FROM_LOCATOR
 	* @return string $url
 	*/
-	public static function get_url_from_locator($locator) {
+	public static function get_url_from_locator(object $locator) : string {
 
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-		$component 		= component_common::get_instance($modelo_name,
-														 $locator->component_tipo,
-														 $locator->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $locator->section_tipo
-														 );
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
+		$component		= component_common::get_instance(
+			$modelo_name,
+			$locator->component_tipo,
+			$locator->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$locator->section_tipo
+		);
 		$url = $component->get_url();
 
 		return $url;
@@ -498,7 +501,7 @@ class component_svg extends component_media_common {
 	* GET_EXTENSION
 	* @return string DEDALO_SVG_EXTENSION from config
 	*/
-	public function get_extension() {
+	public function get_extension() : string {
 
 		return DEDALO_SVG_EXTENSION;
 	}//end get_extension

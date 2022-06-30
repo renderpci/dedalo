@@ -259,10 +259,16 @@ class component_relation_related extends component_relation_common {
 	* GET_REFERENCES_RECURSIVE
 	* Resolve references (related terms that point to current locator)
 	*  	DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
-	# 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
+	* 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	* @return array $ar_references
 	*/
-	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang=DEDALO_DATA_LANG) {
+	public static function get_references_recursive(
+		string $tipo,
+		object $locator,
+		string $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO,
+		bool $recursion=false,
+		string $lang=DEDALO_DATA_LANG
+		) : array {
 
 		static $ar_resolved = array();
 
@@ -426,33 +432,33 @@ class component_relation_related extends component_relation_common {
 	/**
 	* GET_SEARCH_FIELDS DEPRECATED
 	*/
-	// public function get_search_fields($search_tipo) {
-	// 	//chenk the recursion
-	//
-	// 	$current_tipo = $search_tipo;
-	// 	$ar_target_section_tipo = common::get_ar_related_by_model('section',$current_tipo);
-	// 	$target_section_tipo    = reset($ar_target_section_tipo);
-	// 	$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($current_tipo, true, true);
-	//
-	// 	$search_fields = array();
-	// 	foreach ($ar_terminos_relacionados as $key => $c_tipo) {
-	// 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
-	// 		if ($modelo_name==='section') continue;
-	//
-	// 		$field = new stdClass();
-	// 			$field->section_tipo 	= $target_section_tipo;
-	// 			$field->component_tipo 	= $c_tipo;
-	//
-	// 		# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc..
-	// 		if(in_array($modelo_name, component_relation_common::get_components_with_relations())) {
-	// 			$field->search 	= $this->get_search_fields($c_tipo);
-	// 		}
-	//
-	// 		$search_fields[] = $field;
-	// 	}
-	//
-	// 	return $search_fields;
-	// }//end get_search_fields
+		// public function get_search_fields($search_tipo) {
+		// 	//chenk the recursion
+		//
+		// 	$current_tipo = $search_tipo;
+		// 	$ar_target_section_tipo = common::get_ar_related_by_model('section',$current_tipo);
+		// 	$target_section_tipo    = reset($ar_target_section_tipo);
+		// 	$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($current_tipo, true, true);
+		//
+		// 	$search_fields = array();
+		// 	foreach ($ar_terminos_relacionados as $key => $c_tipo) {
+		// 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
+		// 		if ($modelo_name==='section') continue;
+		//
+		// 		$field = new stdClass();
+		// 			$field->section_tipo 	= $target_section_tipo;
+		// 			$field->component_tipo 	= $c_tipo;
+		//
+		// 		# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc..
+		// 		if(in_array($modelo_name, component_relation_common::get_components_with_relations())) {
+		// 			$field->search 	= $this->get_search_fields($c_tipo);
+		// 		}
+		//
+		// 		$search_fields[] = $field;
+		// 	}
+		//
+		// 	return $search_fields;
+		// }//end get_search_fields
 
 
 
@@ -548,4 +554,4 @@ class component_relation_related extends component_relation_common {
 
 
 
-}//end component_relation_related
+}//end class component_relation_related

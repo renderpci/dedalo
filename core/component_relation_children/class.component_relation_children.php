@@ -147,7 +147,7 @@ class component_relation_children extends component_relation_common {
 	* GET_CHILDREN
 	* @return array $ar_children_recursive
 	*/
-	public static function get_children($section_id, $section_tipo, $component_tipo=null, bool $recursive=true, $is_recursion=false) {
+	public static function get_children($section_id, $section_tipo, $component_tipo=null, bool $recursive=true, $is_recursion=false) : array {
 
 		static $locators_resolved = array();
 

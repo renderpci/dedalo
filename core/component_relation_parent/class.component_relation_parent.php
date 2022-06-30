@@ -989,4 +989,4 @@ class component_relation_parent extends component_relation_common {
 
 
 
-}//end component_relation_parent
+}//end class component_relation_parent

@@ -319,4 +319,4 @@ class component_relation_index extends component_relation_common {
 
 
 
-}//end component_relation_index
+}//end class component_relation_index

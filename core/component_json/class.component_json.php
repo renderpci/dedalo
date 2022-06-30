@@ -248,7 +248,4 @@ class component_json extends component_common {
 
 
 
-
-
-
-}//end class
+}//end class component_json

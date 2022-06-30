@@ -1,5 +1,5 @@
 <?php
-require_once(dirname(dirname(__FILE__)).'/component_filter/class.component_filter.php');
+include_once(dirname(dirname(__FILE__)).'/component_filter/class.component_filter.php');
 /*
 * CLASS COMPONENT FILTER MASTER
 *
@@ -8,8 +8,10 @@ require_once(dirname(dirname(__FILE__)).'/component_filter/class.component_filte
 class component_filter_master extends component_filter {
 
 
+
 	private $user_id;
 	// protected $caller_id;
+
 
 
 	/**

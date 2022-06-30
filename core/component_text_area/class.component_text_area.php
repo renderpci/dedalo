@@ -2775,4 +2775,4 @@ class component_text_area extends component_common {
 
 
 
-}//end component_text_area
+}//end class component_text_area

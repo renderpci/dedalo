@@ -50,7 +50,7 @@ class component_security_access extends component_common {
 	* GET_DATALIST
 	* @return array $datalist
 	*/
-	public function get_datalist() {
+	public function get_datalist() : array {
 
 		if (isset($this->datalist)) {
 			return $this->datalist;
@@ -134,11 +134,11 @@ class component_security_access extends component_common {
 
 	/**
 	* GET ARRAY TIPO ADMIN
-	* @return array $ar_tipo_admin
 	* Devulve el área 'Admin' además de sus hijos
 	* (usado para excluirles las opciones admin en el arbol)
+	* @return array $ar_tipo_admin
 	*/
-	public static function get_ar_tipo_admin() {
+	public static function get_ar_tipo_admin() : array {
 
 		# STATIC CACHE
 		static $ar_tipo_admin;
@@ -242,4 +242,4 @@ class component_security_access extends component_common {
 
 
 
-}//end class
+}//end class component_security_access

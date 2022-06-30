@@ -196,4 +196,4 @@ class component_relation_model extends component_relation_common {
 
 
 
-}//end component_relation_model
+}//end class component_relation_model
