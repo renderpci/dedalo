@@ -195,7 +195,7 @@ class component_iri extends component_common {
 			$dato_unchanged	= $options->dato_unchanged;
 			$reference_id	= $options->reference_id;
 
-
+		// return true;
 	}//end update_dato_version
 
 

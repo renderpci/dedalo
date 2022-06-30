@@ -16,8 +16,10 @@
 class component_date extends component_common {
 
 
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
+
 
 
 	# American data format
@@ -400,8 +402,6 @@ class component_date extends component_common {
 
 
 
-
-
 	/**
 	* GET VALOR (Ojo: Se usa para ordenar, por lo que mantiene el formato DB. Para visualizar usar 'get_valor_local()')
 	* Dato formated as timestamp '2012-11-07 17:33:49'
@@ -624,11 +624,13 @@ class component_date extends component_common {
 
 	/**
 	* GET TIMESTAMP
-	* @return current time formated for saved to SQL timestamp field
+	* @param array $offset
+	* @return string $timestamp
+	* 	current time formated for saved to SQL timestamp field
 	*	like 2013-01-22 22:33:29 ('Y-m-d H:i:s')
 	*	DateTime is avaliable for PHP >=5.3.0
 	*/
-	public static function get_timestamp_now_for_db( $offset=null ) {
+	public static function get_timestamp_now_for_db( $offset=null ) : string {
 
 		$date = new DateTime();
 
@@ -1637,7 +1639,7 @@ class component_date extends component_common {
 	* Used to convert component dato to searchable text
 	* @return string $text
 	*/
-	public static function data_to_text($data) {
+	public static function data_to_text($data) : string {
 
 		if (empty($data)) {
 			$text = '';
@@ -1661,5 +1663,4 @@ class component_date extends component_common {
 
 
 
-}
-?>
+}//end class component_date

@@ -1173,7 +1173,7 @@ class component_image extends component_media_common {
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
 	*/
-	public function restore_component_media_files() {
+	public function restore_component_media_files() : bool {
 
 		#
 		# Image restore
@@ -1626,9 +1626,9 @@ class component_image extends component_media_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @return
+	* @return object|null
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_dato_version(object $request_options) : ?object {
 
 		$options = new stdClass();
 			$options->update_version	= null;
@@ -1762,6 +1762,8 @@ class component_image extends component_media_common {
 				# code...
 				break;
 		}
+
+		return null;
 	}//end update_dato_version
 
 
@@ -1849,7 +1851,7 @@ class component_image extends component_media_common {
 	* @param string $quality
 	* @return object $response
 	*/
-	public function build_version(string $quality) {
+	public function build_version(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

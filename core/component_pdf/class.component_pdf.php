@@ -75,6 +75,7 @@ class component_pdf extends component_media_common {
 	/**
 	* GET_ADITIONAL_PATH
 	* Calculate image aditional path from 'properties' json config.
+	* @return
 	*/
 	public function get_aditional_path() {
 
@@ -243,7 +244,7 @@ class component_pdf extends component_media_common {
 	/**
 	* GET_DEFAULT_QUALITY
 	*/
-	public function get_default_quality() {
+	public function get_default_quality() : string {
 
 		return DEDALO_PDF_QUALITY_DEFAULT;
 	}//end get_default_quality
@@ -294,6 +295,7 @@ class component_pdf extends component_media_common {
 	*	Check if file exists. If not use 0.jpg as output. Default true
 	* @param bool $absolute
 	*	Return relative o absolute url. Default false (relative)
+	* @return
 	*/
 	public function get_pdf_url($quality=false, $test_file=true, $absolute=false, $default_add=false) {
 
@@ -377,10 +379,13 @@ class component_pdf extends component_media_common {
 	*/
 	public function get_pdf_size($quality=false) {
 
-		if(!$quality)
-		$quality 	= $this->get_quality();
-		$pdf_id 	= $this->get_pdf_id();
-		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+		if(!$quality) {
+			$quality = $this->get_quality();
+		}
+
+		$pdf_id	= $this->get_pdf_id();
+		$PdfObj	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+
 		return $PdfObj->get_size();
 	}//end get_pdf_size
 
@@ -888,7 +893,8 @@ class component_pdf extends component_media_common {
 	# Implemented as a recursive descent parser based on a simple state machine
 	# copyright 2005 Maarten Meijer
 	# This cries out for a C-implementation to be included in PHP core
-	public static function valid_utf8($string) {
+	# @return bool
+	public static function valid_utf8(string $string) : bool {
 		$len = strlen($string);
 
 		function valid_1byte($char) {
@@ -943,7 +949,8 @@ class component_pdf extends component_media_common {
 	/**
 	* UTF8_CLEAN
 	*/
-	public static function utf8_clean($string, $control = false) {
+	public static function utf8_clean(string $string, bool $control=false) : string {
+
 	    $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 	    return $string;
 

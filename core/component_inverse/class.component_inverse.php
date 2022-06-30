@@ -162,9 +162,9 @@ class component_inverse extends component_common {
 
 	/**
 	* GET_INVERSE_VALUE
-	* @return string $inverse_value
+	* @return array|null $inverse_value
 	*/
-	public function get_inverse_value($locator) {
+	public function get_inverse_value(lobject $locator) : ?array {
 
 		$tipo = $this->get_tipo();
 
@@ -186,16 +186,19 @@ class component_inverse extends component_common {
 				//dump($modelo_name, ' modelo_name ++ '.to_string());
 			if ($modelo_name!=='section') {
 				# Components
-				$component = component_common::get_instance( $modelo_name,
-															 $current_tipo,
-															 $locator->from_section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $locator->from_section_tipo);
+				$component = component_common::get_instance(
+					$modelo_name,
+					$current_tipo,
+					$locator->from_section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$locator->from_section_tipo
+				);
 
 				$list_item = new stdClass();
-				$list_item->label = $component->get_label();
-				$list_item->value = $component->get_valor();
+					$list_item->label	= $component->get_label();
+					$list_item->value	= $component->get_valor();
+
 				$ar_value[] = $list_item;
 			}
 		}
@@ -205,6 +208,4 @@ class component_inverse extends component_common {
 
 
 
-
 }//end class component_inverse
-?>

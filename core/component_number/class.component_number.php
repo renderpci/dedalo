@@ -381,4 +381,4 @@ class component_number extends component_common {
 
 
 
-}//end component_number
+}//end class component_number

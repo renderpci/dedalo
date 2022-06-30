@@ -269,4 +269,4 @@ class component_semantic_node extends component_relation_common {
 
 
 
-}//end semantic_node
+}//end class component_semantic_node
