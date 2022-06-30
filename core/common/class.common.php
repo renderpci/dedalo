@@ -218,6 +218,7 @@ abstract class common {
 	* SET_PERMISSIONS
 	*/
 	public function set_permissions( int $number ) {
+
 		$this->permissions = (int)$number;
 	}//end set_permissions
 

@@ -98,47 +98,48 @@ section.prototype.init = async function(options) {
 
 	const self = this
 
-	// instance key used vars
-	self.model				= options.model
-	self.tipo				= options.tipo
-	self.section_tipo		= options.section_tipo
-	self.section_id			= options.section_id
-	self.mode				= options.mode
-	self.lang				= options.lang
+	// vars
+		// instance key used vars
+		self.model				= options.model
+		self.tipo				= options.tipo
+		self.section_tipo		= options.section_tipo
+		self.section_id			= options.section_id
+		self.mode				= options.mode
+		self.lang				= options.lang
 
-	// DOM
-	self.node				= []
+		// DOM
+		self.node				= []
 
-	self.section_lang		= options.section_lang
-	self.parent				= options.parent
+		self.section_lang		= options.section_lang
+		self.parent				= options.parent
 
-	self.events_tokens		= []
-	self.ar_instances		= []
+		self.events_tokens		= []
+		self.ar_instances		= []
 
-	self.caller				= options.caller	|| null
+		self.caller				= options.caller	|| null
 
-	self.datum				= options.datum		|| null
-	self.context			= options.context	|| null
-	self.data				= options.data		|| null
+		self.datum				= options.datum		|| null
+		self.context			= options.context	|| null
+		self.data				= options.data		|| null
 
-	self.type				= 'section'
-	self.label				= null
+		self.type				= 'section'
+		self.label				= null
 
-	// filter. Allow false as value when no filter is required
-	self.filter				= options.filter!==undefined ? options.filter : null
+		// filter. Allow false as value when no filter is required
+		self.filter				= options.filter!==undefined ? options.filter : null
 
-	// inspector. Allow false as value when no inspector is required (notes cases)
-	self.inspector			= options.inspector!==undefined ? options.inspector : null
+		// inspector. Allow false as value when no inspector is required (notes cases)
+		self.inspector			= options.inspector!==undefined ? options.inspector : null
 
-	// paginator. Allow false as value when no paginator is required
-	self.paginator			= options.paginator!==undefined ? options.paginator : null
+		// paginator. Allow false as value when no paginator is required
+		self.paginator			= options.paginator!==undefined ? options.paginator : null
 
-	self.permissions		= options.permissions || null
+		self.permissions		= options.permissions || null
 
-	// columns_map
-	self.columns_map 		= options.columns_map || []
+		// columns_map
+		self.columns_map 		= options.columns_map || []
 
-	self.config 			= options.config || null
+		self.config 			= options.config || null
 
 	// event subscriptions
 		// new_section_ event
@@ -184,7 +185,7 @@ section.prototype.init = async function(options) {
 				}
 			}//end fn_create_new_section
 
-		// delete_section_
+		// delete_section_ event
 			self.events_tokens.push(
 				event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
 			)
@@ -226,7 +227,7 @@ section.prototype.init = async function(options) {
 				toggle_search_panel(self.filter)
 			}//end fn_toggle_search_panel
 
-		// render event
+		// render_ event
 			self.events_tokens.push(
 				event_manager.subscribe('render_'+self.id, fn_render)
 			)
@@ -468,7 +469,7 @@ section.prototype.build = async function(autoload=false) {
 	// update instance properties from context
 		set_context_vars(self, self.context)
 
-	// initiator . Url defined var or Caller of parent section
+	// initiator . URL defined var or Caller of parent section
 	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
 		const searchParams = new URLSearchParams(window.location.href);
 		const initiator = searchParams.has("initiator")
@@ -760,6 +761,11 @@ section.prototype.load_section_tool_files = function() {
 
 /**
 * DELETE_SECTION
+* @param object options
+* {
+* 	sqo : object,
+* 	delete_mode : string
+* }
 * @return promise
 */
 section.prototype.delete_section = async function (options) {

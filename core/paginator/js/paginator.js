@@ -97,7 +97,8 @@ paginator.prototype.init = function(options) {
 
 /**
 * BUILD
-* @return bool true
+* @return promise
+* 	resolve bool true
 */
 paginator.prototype.build = async function(){
 	const t0 = performance.now()
@@ -107,9 +108,10 @@ paginator.prototype.build = async function(){
 	// status update
 		self.status = 'building'
 
-	const total		= await self.get_total();
-	const limit		= self.caller.rqo.sqo.limit // self.get_limit()
-	const offset	= self.get_offset()
+	// short vars
+		const total		= await self.get_total();
+		const limit		= self.caller.rqo.sqo.limit // self.get_limit()
+		const offset	= self.get_offset()
 
 	// pages fix vars
 		self.limit				= limit
@@ -153,6 +155,8 @@ paginator.prototype.build = async function(){
 
 /**
 * DESTROY
+* @return promise
+* 	resolve object result
 */
 paginator.prototype.destroy = async function(){
 
@@ -175,6 +179,9 @@ paginator.prototype.destroy = async function(){
 
 /**
 * GET_TOTAL
+* Exec a API call to count the current sqo records
+* @return promise
+* 	resolve int total
 */
 paginator.loading_total_status = null
 paginator.prototype.get_total = async function() {
@@ -207,6 +214,7 @@ paginator.prototype.get_total = async function() {
 
 /**
 * GET_LIMIT
+* @return int limit
 */
 paginator.prototype.get_limit = function() {
 
@@ -219,6 +227,7 @@ paginator.prototype.get_limit = function() {
 
 /**
 * GET_OFFSET
+* @return int offset
 */
 paginator.prototype.get_offset = function() {
 
@@ -231,9 +240,10 @@ paginator.prototype.get_offset = function() {
 
 /**
 * PAGINATE
-* @return promise
-*	bool true on successful, false on error
 * Update self offset and publish a public event 'paginator_goto_' that is listened by section/portal to load another record data
+* @param int offset
+* @return promise
+*	bool (true on successful, false on error)
 */
 paginator.prototype.paginate = async function(offset) {
 

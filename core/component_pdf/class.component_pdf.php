@@ -991,7 +991,7 @@ class component_pdf extends component_media_common {
 	* GET_EXTENSION
 	* @return string DEDALO_PDF_EXTENSION from config
 	*/
-	public function get_extension() {
+	public function get_extension() : string {
 
 		return DEDALO_PDF_EXTENSION;
 	}//end get_extension

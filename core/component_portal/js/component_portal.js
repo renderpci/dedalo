@@ -97,7 +97,9 @@ export const component_portal = function() {
 
 /**
 * INIT
-* @return bool
+* @param object options
+* @return promise
+* 	resolve bool
 */
 component_portal.prototype.init = async function(options) {
 
@@ -177,8 +179,10 @@ component_portal.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param object value (locator)
-* @return bool
+* @param object value
+* 	(locator)
+* @return promise
+* 	resolve bool
 */
 component_portal.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()

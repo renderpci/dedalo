@@ -6,8 +6,11 @@
 */
 class component_geolocation extends component_common {
 
+
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
+
 
 
 	# COMPONENT_GEOLOCATION COSNTRUCT
@@ -51,16 +54,19 @@ class component_geolocation extends component_common {
 			# debug_log(__METHOD__."  Added default component_geolocation data $section_id with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
 		}
 
-
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='si') {
-				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
+		// debug
+			if(SHOW_DEBUG) {
+				$traducible = $this->RecordObj_dd->get_traducible();
+				if ($traducible==='si') {
+					#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+					trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
+				}
 			}
-		}
 
-	}
+
+		return true;
+	}//end __construct
+
 
 
 	# GET DATO : Format [{lat: 39.462571354311095, lon: -0.3763031959533692, zoom: 15, alt: 16}]
@@ -72,7 +78,9 @@ class component_geolocation extends component_common {
 		}
 
 		return (array)$dato;
-	}
+	}//end get_dato
+
+
 
 	# SET_DATO
 	public function set_dato($dato) {
@@ -87,7 +95,8 @@ class component_geolocation extends component_common {
 		// }
 
 		parent::set_dato( (array)$dato );
-	}
+	}//end set_dato
+
 
 
 	/**
@@ -168,9 +177,9 @@ class component_geolocation extends component_common {
 	*	]
 	* }
 	*
-	* @return
+	* @return string $result
 	*/
-	public static function build_geolocation_tag_string($tag_id, $lon, $lat) {
+	public static function build_geolocation_tag_string(string $tag_id, $lon, $lat) : string {
 		/*
 		$geometry = new stdClass();
 			$geometry->type 		= "Point";
@@ -196,11 +205,11 @@ class component_geolocation extends component_common {
 	* GET_DIFFUSION_VALUE_SOCRATA
 	* Calculate current component diffusion value for target field in socrata
 	* Used for diffusion_mysql to unify components diffusion value call to publish in socrata
-	* @return string $diffusion_value_socrata
+	* @return object $diffusion_value_socrata
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value_socrata() {
+	public function get_diffusion_value_socrata() : object {
 
 		$dato 			= $this->get_dato();
 		$socrata_data 	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
