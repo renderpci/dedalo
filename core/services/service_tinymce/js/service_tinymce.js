@@ -549,9 +549,9 @@ export const service_tinymce = function() {
 
 		// options
 			// type could be an array as ['indexIn','indexOut']. We use only the first element
-			const type		= options.type // Array.isArray(options.type) ? options.type[0] : options.type
-			const tag_id	= options.tag_id
-			const dataset	= options.dataset
+			const type			= options.type // Array.isArray(options.type) ? options.type[0] : options.type
+			const tag_id		= options.tag_id
+			const new_data_obj	= options.new_data_obj
 
 		// image_tag_nodes. Selection from DOM
 			const image_tag_nodes = []
@@ -577,17 +577,17 @@ export const service_tinymce = function() {
 				const node = image_tag_nodes[i]
 
 				// Set new state to dataset of each dataset
-					for (let key in dataset) {
-						node.dataset[key] = dataset[key]
+					for (let key in new_data_obj) {
+						node.dataset[key] = new_data_obj[key]
 					}
 
 				// id. Re-create the id like [/index-n-1-label in 1]
 					const new_id = self.caller.build_data_tag(
 						node.dataset.type, // type
 						tag_id, // tag_id
-						dataset.state || node.dataset.state, // state
-						dataset.label || node.dataset.label, // label
-						dataset.data || node.dataset.data // data
+						new_data_obj.state || node.dataset.state, // state
+						new_data_obj.label || node.dataset.label, // label
+						new_data_obj.data  || node.dataset.data // data
 					)
 					node.id = new_id
 
@@ -610,5 +610,99 @@ export const service_tinymce = function() {
 	}//end update_tag
 
 
+
+	/**
+	* GET_LAST_TAG_ID
+	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
+	* @param ed
+	*	Text editor instance (tinyMCE)
+	* @param tag_type
+	*	Class name of image searched like 'geo'
+	*
+	* @return int tag_id
+	*/
+	this.get_last_tag_id = function(options) {
+
+		const self = this
+
+			const text_editor = self.editor
+			// options
+			const tag_type	= options.tag_type
+
+		// default value zero
+			const ar_id_final = [0];
+
+		// text_editor check
+			if (!text_editor) {
+				console.error(`Error on get text_editor. Empty text_editor:`, text_editor);
+				return false
+			}
+
+		// container . editor_content_data is a DOM node <body> from editor
+			const container = text_editor.get_editor_content_data()
+			if (!container) {
+				console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
+				console.warn(`current text_editor:`, text_editor);
+				console.warn(`current text_editor.editor:`, text_editor.editor);
+				console.warn(`current text_editor.editor.getBody():`, text_editor.editor.getBody());
+				return false
+			}
+
+		// get all tags of type
+			switch(tag_type) {
+
+				case 'reference':
+					// reference : Select all reference in text
+					const ar_tags = container.getElementsByTagName('reference')
+
+					// iterate to find tipo_tag
+					const ar_tags_length = ar_tags.length
+					for (let i = ar_tags_length - 1; i >= 0; i--) {
+
+						// current tag like [svg-n-1]
+						const current_tag	= ar_tags[i].id;
+						const ar_parts		= current_tag.split('_');
+
+						const number = (typeof ar_parts[1]!=="undefined")
+							? parseInt(ar_parts[1])
+							: 0
+
+						// Insert id formated as number in final array
+						ar_id_final.push(number)
+					}
+					break;
+
+				default:
+					// like img as id: [index-n-1--label-data:**]
+					const ar_img = container.querySelectorAll('img.'+tag_type)
+
+					// iterate to find tipo_tag (filter by classname: index, etc.)
+					const ar_img_length = ar_img.length
+					for (let i = ar_img_length - 1; i >= 0; i--) {
+
+						const current_tag	= ar_img[i].id;
+						const ar_parts		= current_tag.split('-');
+
+						const number = (typeof ar_parts[2]!=="undefined")
+							? parseInt(ar_parts[2])
+							: 0
+
+						// Insert id formatted as number in final array
+							ar_id_final.push(number)
+					}
+					break;
+			}
+
+		// last id
+			const last_tag_id = parseInt( Math.max.apply(null, ar_id_final) );
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
+			}
+
+
+	return last_tag_id
+	};//end get_last_tag_id
 
 }//end service_tinymce

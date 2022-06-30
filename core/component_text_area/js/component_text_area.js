@@ -99,7 +99,7 @@ component_text_area.prototype.init = async function(options) {
 			function fn_create_fragment(options) {
 
 				// options
-					const key		= options.key
+					const key			= options.key
 					const text_editor	= options.text_editor
 
 				// create the HTML fragment inside the editor adding in/out tags. Returns new created tag_index_id
@@ -536,7 +536,7 @@ component_text_area.prototype.update_tag = async function(options) {
 	// options
 		const type			= options.type
 		const tag_id		= options.tag_id
-		const new_data_obj	= options.dataset
+		const new_data_obj	= options.new_data_obj
 		const key			= options.key || 0
 		const save			= options.save || false
 
@@ -555,9 +555,9 @@ component_text_area.prototype.update_tag = async function(options) {
 
 	// trigger service action
 		const update_options = {
-			type	: ar_type, // string|array
-			tag_id	: tag_id, // int
-			dataset	: new_data_obj // object
+			type			: ar_type, // string|array
+			tag_id			: tag_id, // int
+			new_data_obj	: new_data_obj // object
 		}
 		const result = self.service_text_editor_instance[key].update_tag(update_options)
 
@@ -652,7 +652,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 	// data
 		const data_string = data
 			? 'data:' + (typeof data==='string' ? data : JSON.stringify(data)) + ':data'
-			: ''
+			: 'data::data'
 
 	// dedalo_tag
 		const dedalo_tag = (type==="tc")
@@ -684,99 +684,7 @@ component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) 
 
 	const self = this
 
-	// default value zero
-		const ar_id_final = [0];
-
-	// text_editor check
-		if (!text_editor) {
-			console.error(`Error on get text_editor. Empty text_editor:`, text_editor);
-			return false
-		}
-
-	// container . editor_content_data is a DOM node <body> from editor
-		const container = text_editor.get_editor_content_data()
-		if (!container) {
-			console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
-			console.warn(`current text_editor:`, text_editor);
-			console.warn(`current text_editor.editor:`, text_editor.editor);
-			console.warn(`current text_editor.editor.getBody():`, text_editor.editor.getBody());
-			return false
-		}
-
-	// get all tags of type
-		switch(tag_type) {
-
-			case 'struct':
-				// section : Select all sections in text
-				const ar_struct_tags = container.getElementsByTagName('section')
-
-				// iterate to find tipo_tag
-				const ar_struct_tags_length = ar_struct_tags.length
-				for (let i = ar_struct_tags_length - 1; i >= 0; i--) {
-
-					// current tag like [svg-n-1]
-					const current_tag	= ar_struct_tags[i].id;
-					const ar_parts		= current_tag.split('_');
-
-					const number = (typeof ar_parts[1]!=="undefined")
-						? parseInt(ar_parts[1])
-						: 0
-
-					// Insert id formated as number in final array
-					ar_id_final.push(number)
-				}
-				break;
-
-			case 'reference':
-				// reference : Select all reference in text
-				const ar_tags = container.getElementsByTagName('reference')
-
-				// iterate to find tipo_tag
-				const ar_tags_length = ar_tags.length
-				for (let i = ar_tags_length - 1; i >= 0; i--) {
-
-					// current tag like [svg-n-1]
-					const current_tag	= ar_tags[i].id;
-					const ar_parts		= current_tag.split('_');
-
-					const number = (typeof ar_parts[1]!=="undefined")
-						? parseInt(ar_parts[1])
-						: 0
-
-					// Insert id formated as number in final array
-					ar_id_final.push(number)
-				}
-				break;
-
-			default:
-				// like img as id: [index-n-1--label-data:**]
-				const ar_img = container.querySelectorAll('img.'+tag_type)
-
-				// iterate to find tipo_tag (filter by classname: index, etc.)
-				const ar_img_length = ar_img.length
-				for (let i = ar_img_length - 1; i >= 0; i--) {
-
-					const current_tag	= ar_img[i].id;
-					const ar_parts		= current_tag.split('-');
-
-					const number = (typeof ar_parts[2]!=="undefined")
-						? parseInt(ar_parts[2])
-						: 0
-
-					// Insert id formatted as number in final array
-						ar_id_final.push(number)
-				}
-				break;
-		}
-
-	// last id
-		const last_tag_id = parseInt( Math.max.apply(null, ar_id_final) );
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
-		}
-
+	const last_tag_id = text_editor.get_last_tag_id({tag_type:tag_type})
 
 	return last_tag_id
 }//end get_last_tag_id
