@@ -2021,6 +2021,7 @@ export const ui = {
 	* 	body	: node|string,
 	* 	footer	: node|string,
 	* 	size	: string
+	* 	remove_overlay : bool
 	* }
 	* @return DOM element modal_container
 	*/
@@ -2054,8 +2055,9 @@ export const ui = {
 					  })
 					: options.footer // DOM node
 				: null
-			const size			= options.size || 'normal' // string size='normal'
-			const modal_parent	= options.modal_parent || document.querySelector('.wrapper_page')
+			const size				= options.size || 'normal' // string size='normal'
+			const modal_parent		= options.modal_parent || document.querySelector('.wrapper_page')
+			const remove_overlay	= options.remove_overlay || false
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
@@ -2072,6 +2074,13 @@ export const ui = {
 			// const wrapper_page		= document.querySelector('.wrapper_page')
 			modal_parent.appendChild(modal_container)
 
+		// modal_node
+			const modal_node = modal_container.get_modal_node()
+
+		// remove_overlay
+			if (remove_overlay===true) {
+				modal_node.classList.add("remove_overlay")
+			}
 
 		// publish close event
 			modal_container.publish_close = function(e) {
