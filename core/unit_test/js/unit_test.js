@@ -80,8 +80,8 @@ import * as fn from './data.js'
 			tipo			: 'test145',
 			section_tipo	: section_tipo,
 			section_id		: section_id,
-			mode			: page_globals.dedalo_data_nolan,
-			lang			: lang,
+			mode			: mode,
+			lang			: page_globals.dedalo_data_nolan,
 			new_value		: fn.random_date
 		})
 
@@ -91,8 +91,8 @@ import * as fn from './data.js'
 			tipo			: 'test208',
 			section_tipo	: section_tipo,
 			section_id		: section_id,
-			mode			: page_globals.dedalo_data_nolan,
-			lang			: lang,
+			mode			: mode,
+			lang			: page_globals.dedalo_data_nolan,
 			new_value		: fn.random_email
 		})
 
@@ -104,8 +104,8 @@ import * as fn from './data.js'
 			tipo				: 'test101',
 			section_tipo		: section_tipo,
 			section_id			: section_id,
-			mode				: page_globals.dedalo_data_nolan,
-			lang				: lang,
+			mode				: mode,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
 		})
@@ -529,7 +529,7 @@ import * as fn from './data.js'
 						model	: "component_input_text",
 						tipo	: "test52",
 						mode	: mode,
-						lang	: "lg-vlca",
+						lang	: "lg-eng",
 						context	: {}
 					}
 					const new_instance = get_instance(elements)
