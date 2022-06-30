@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_CORE_URL, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
@@ -422,29 +422,29 @@ export const ui = {
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: `wrapper_${type} ${model} ${tipo} ${section_tipo+'_'+tipo} list` //  + mode
- 				})
+				})
 
- 			// span value. Add span if value_string is received
- 				if (value_string) {
- 					ui.create_dom_element({
+			// span value. Add span if value_string is received
+				if (value_string) {
+					ui.create_dom_element({
 						element_type	: 'span',
 						inner_html		: value_string,
 						parent			: wrapper
 					})
- 				}
+				}
 
- 			// event dblclick change component mode
-	 			if(edit_in_list) {
+			// event dblclick change component mode
+				if(edit_in_list) {
 
-	 				wrapper.addEventListener("dblclick", function(e){
+					wrapper.addEventListener("dblclick", function(e){
 						e.stopPropagation()
 
 						// change mode (from 'list' to 'edit_in_list')
 						instance.change_mode('edit_in_list', autoload)
 					})
-	 			}
+				}
 
-	 		// debug
+			// debug
 				if(SHOW_DEBUG===true) {
 					wrapper.addEventListener("click", function(e){
 						if (e.altKey) {
@@ -473,12 +473,12 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'span'
- 				})
+				})
 
- 			// value_string
- 				if (value_string) {
- 					wrapper.insertAdjacentHTML('afterbegin', value_string)
- 				}
+			// value_string
+				if (value_string) {
+					wrapper.insertAdjacentHTML('afterbegin', value_string)
+				}
 
 			return wrapper
 		},//end build_wrapper_mini
@@ -526,7 +526,7 @@ export const ui = {
 					})
 					fragment.appendChild(component_label)
 					// css
-		 				const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
+						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
 						component_label.classList.add(...ar_css)
 				}
@@ -585,9 +585,9 @@ export const ui = {
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
 					id				: id // (!) set id
- 				})
- 				// CSS
-	 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+				})
+				// CSS
+					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
 					if (mode==="search") ar_css.push("tooltip_toggle")
@@ -896,7 +896,7 @@ export const ui = {
 			// 	const main_context 	= instance.context
 			// 	const element_css 	= main_context.css || {}
 
-	 	// const fragment = new DocumentFragment()
+		// const fragment = new DocumentFragment()
 
 			// 	// label
 			// 		if (label===null || items.label===null) {
@@ -1065,10 +1065,10 @@ export const ui = {
 					element_type	: 'div',
 					// class_name		: 'wrapper_' + type + ' ' + model + ' area' + ' ' + tipo + ' ' + mode
 					class_name		: `${'wrapper_'+type} ${model} ${tipo} ${section_tipo+'_'+tipo} ${mode}`
- 				})
- 				wrapper.appendChild(fragment)
+				})
+				wrapper.appendChild(fragment)
 
- 			// css new way v6
+			// css new way v6
 				if (instance.context.css) {
 					const selector = `${section_tipo}_${tipo}.edit`
 					set_element_css(selector, instance.context.css)
@@ -1232,7 +1232,7 @@ export const ui = {
 				}
 
 			// wrapper
- 				wrapper.appendChild(fragment)
+				wrapper.appendChild(fragment)
 
 
 			return wrapper
@@ -1390,8 +1390,8 @@ export const ui = {
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'wrapper_' + type + ' ' + name + ' ' + mode
- 				})
- 				wrapper.appendChild(fragment)
+				})
+				wrapper.appendChild(fragment)
 
 
 			return wrapper

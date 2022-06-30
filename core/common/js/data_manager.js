@@ -329,7 +329,7 @@ data_manager.prototype.get_local_db_data = async function(id, table, cache=false
 	return new Promise(function(resolve, reject){
 
 		// transaction
-			const transaction = db.transaction(table, "readwrite");
+			const transaction = db.transaction(table, 'readwrite');
 			// oncomplete. Do something when all the data is added to the database.
 				// transaction.oncomplete = function(event) {
 				// 	console.log("All done!");
@@ -337,6 +337,7 @@ data_manager.prototype.get_local_db_data = async function(id, table, cache=false
 			// error
 				transaction.onerror = function(event) {
 					console.error("-> get_local_db_data error:", event.target);
+					console.log('table:', table, 'db:',db);
 					reject(false)
 				};
 

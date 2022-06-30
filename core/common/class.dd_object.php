@@ -460,7 +460,7 @@ class dd_object {
 
 
 	/**
-	* SET_config
+	* SET_CONFIG
 	* Used by tools
 	*/
 	public function set_config(?object $value) : void {
