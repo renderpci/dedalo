@@ -132,97 +132,12 @@ export const ui = {
 
 			const fragment = new DocumentFragment()
 
-			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
-				if (label===null || items.label===null) {
-					// no label add
-				}else if(items.label) {
-					// add custom label
-					fragment.appendChild(items.label)
-				}else{
-					// default
-					const component_label = ui.create_dom_element({
-						element_type	: 'div',
-						inner_html		: label // + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
-					})
-					fragment.appendChild(component_label)
-					// css
-		 				const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
-						const ar_css = ['label', ...label_structure_css]
-						component_label.classList.add(...ar_css)
-				}
-
-			// top
-				if (items.top) {
-					fragment.appendChild(items.top)
-				}
-
-			// buttons
-				if (items.buttons && instance.permissions>1) { // && instance.permissions>1
-					fragment.appendChild(items.buttons)
-				}
-
-			// filter
-				if (instance.filter) {
-					const filter = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'filter',
-						parent			: fragment
-					})
-					instance.filter.build().then(function(){
-						instance.filter.render().then(filter_wrapper =>{
-							filter.appendChild(filter_wrapper)
-						})
-					})
-				}
-
-			// paginator
-				if (instance.paginator) {
-					const paginator = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'paginator_container',
-						parent			: fragment
-					})
-					instance.paginator.render().then(paginator_wrapper => {
-						paginator.appendChild(paginator_wrapper)
-					})
-				}
-
-			// header
-				// if (items.header) {
-				// 	fragment.appendChild(items.header)
-				// }
-
-			// list_body
-				if (items.list_body) {
-					fragment.appendChild(items.list_body)
-				}
-
-			// content_data
-				if (items.content_data) {
-					// const content_data = items.content_data
-					// // css
-					// 	const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
-					// 	const ar_css = ["content_data", type, ...content_data_structure_css]
-					// 	content_data.classList.add(...ar_css)
-					fragment.appendChild(items.content_data)
-				}
-
-			// tooltip
-				// if (mode==="search" && instance.context.search_options_title) {
-				// 	//fragment.classList.add("tooltip_toggle")
-				// 	const tooltip = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'tooltip hidden_tooltip',
-				// 		inner_html		: instance.context.search_options_title || '',
-				// 		parent			: fragment
-				// 	})
-				// }
-
 			// wrapper
 				const wrapper = ui.create_dom_element({
-					element_type : 'div'
- 				})
- 				// CSS
+					element_type	: 'div',
+					// parent			: fragment
+				})
+				// CSS
 					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
 					const ar_css = ['wrapper_'+type, model, tipo, section_tipo+'_'+tipo, mode, ...wrapper_structure_css]
 					if (view) {ar_css.push(view)}
@@ -274,6 +189,11 @@ export const ui = {
 						}
 					}//end if (model!=='component_filter')
 
+				// read only. Disable events on permissions <2
+					if (instance.permissions<2) {
+						wrapper.classList.add("disabled_component")
+					}
+
 				// event click . Activate component on event
 					wrapper.addEventListener("click", e => {
 						e.stopPropagation()
@@ -285,12 +205,94 @@ export const ui = {
 						}
 					})
 
-				wrapper.appendChild(fragment)
+			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
+				if (label===null || items.label===null) {
+					// no label add
+				}else if(items.label) {
+					// add custom label
+					wrapper.appendChild(items.label)
+				}else{
+					// default
+					const component_label = ui.create_dom_element({
+						element_type	: 'div',
+						inner_html		: label // + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+					})
+					wrapper.appendChild(component_label)
+					// css
+						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
+						const ar_css = ['label', ...label_structure_css]
+						component_label.classList.add(...ar_css)
+				}
 
-				// read only. Disable events on permissions <2
-					if (instance.permissions<2) {
-						wrapper.classList.add("disabled_component")
-					}
+			// top
+				if (items.top) {
+					wrapper.appendChild(items.top)
+				}
+
+			// buttons
+				if (items.buttons && instance.permissions>1) { // && instance.permissions>1
+					wrapper.appendChild(items.buttons)
+				}
+
+			// filter
+				if (instance.filter) {
+					const filter = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'filter',
+						parent			: fragment
+					})
+					instance.filter.build().then(function(){
+						instance.filter.render().then(filter_wrapper =>{
+							filter.appendChild(filter_wrapper)
+						})
+					})
+				}
+
+			// paginator
+				if (instance.paginator) {
+					const paginator = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'paginator_container',
+						parent			: wrapper
+					})
+					instance.paginator.render().then(paginator_wrapper => {
+						paginator.appendChild(paginator_wrapper)
+					})
+				}
+
+			// header
+				// if (items.header) {
+				// 	wrapper.appendChild(items.header)
+				// }
+
+			// list_body
+				if (items.list_body) {
+					wrapper.appendChild(items.list_body)
+				}
+
+			// content_data
+				if (items.content_data) {
+					// const content_data = items.content_data
+					// // css
+					// 	const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
+					// 	const ar_css = ["content_data", type, ...content_data_structure_css]
+					// 	content_data.classList.add(...ar_css)
+					wrapper.appendChild(items.content_data)
+					// set pointer
+					wrapper.content_data = items.content_data
+				}
+
+			// tooltip
+				// if (mode==="search" && instance.context.search_options_title) {
+				// 	//fragment.classList.add("tooltip_toggle")
+				// 	const tooltip = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'tooltip hidden_tooltip',
+				// 		inner_html		: instance.context.search_options_title || '',
+				// 		parent			: fragment
+				// 	})
+				// }
+
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -2377,16 +2379,23 @@ export const ui = {
 	*/
 	render_list_header : (columns_map, self) =>{
 
+		// header_wrapper
+			const header_wrapper = ui.create_dom_element({
+				element_type	: "div",
+				class_name		: "header_wrapper_list " + self.model
+			})
+
 		const ar_nodes				= []
+		const sort_nodes			= []
 		const columns_map_length	= columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
-			const column = columns_map[i]
-
-			if (!column) {
-				console.warn("ignored empty component: [key, columns_map]", i, columns_map);
-				continue;
-			}
+			// column
+				const column = columns_map[i]
+				if (!column) {
+					console.warn("ignored empty component: [key, columns_map]", i, columns_map);
+					continue;
+				}
 
 			// label
 				const label = []
@@ -2398,19 +2407,35 @@ export const ui = {
 			// node header_item
 				const id			= column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
 				const header_item	= ui.create_dom_element({
-					element_type	: "div",
+					element_type	: 'div',
 					id				: id,
-					inner_html		: label.join(' ')
+					class_name		: 'head_column'
+				})
+				// item_text
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'name',
+					inner_html		: label.join(' '),
+					parent			: header_item
 				})
 
 			// sub header items
 				if(column.columns_map){
 
-					header_item.classList.add("with_sub_header")
-					header_item.innerHTML = '<span>' + label.join(' ') + '</span>'
+					header_item.classList.add('with_sub_header')
+					// header_item.innerHTML = '<span>' + label.join(' ') + '</span>'
+					if (!header_item.hasChildNodes()) {
+						// item_text include once
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'name',
+							inner_html		: label.join(' '),
+							parent			: header_item
+						})
+					}
 
 					const sub_header	= ui.create_dom_element({
-						element_type	: "div",
+						element_type	: 'div',
 						class_name		: 'sub_header',
 						parent			: header_item
 					})
@@ -2420,25 +2445,45 @@ export const ui = {
 					for (let j = 0; j < columns_map_length; j++) {
 						const current_column  = current_column_map[j]
 						// node header_item
-						const id				=  current_column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+						const id				= current_column.id //component.tipo + '_' + component.section_tipo +  '_'+ component.parent
 						const sub_header_item	= ui.create_dom_element({
-							element_type	: "div",
+							element_type	: 'div',
 							id				: id,
-							inner_html		: current_column.label,
+							class_name		: 'head_column',
 							parent			: sub_header
 						})
+						// item_text
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'name',
+							inner_html		: current_column.label,
+							parent			: sub_header_item
+						})
+
+						// add sort column icons
+							if (self.constructor.name==='section' && current_column.sortable===true) {
+								const sort_node = ui.add_column_order_set(self, current_column, header_wrapper)
+								sort_nodes.push(sort_node)
+								sub_header_item.appendChild(sort_node)
+							}
 					}
+				}else{
+					// add sort column icons
+						if (self.constructor.name==='section' && column.sortable===true) {
+							const sort_node = ui.add_column_order_set(self, column, header_wrapper)
+							sort_nodes.push(sort_node)
+							header_item.appendChild(sort_node)
+						}
 				}
 
 			ar_nodes.push(header_item)
 		}//end for (let i = 0; i < columns_length; i++)
 
-		// header_wrapper
-			const header_wrapper = ui.create_dom_element({
-				element_type	: "div",
-				class_name		: "header_wrapper_list " + self.model
-			})
+		// header_wrapper pointers add
+			header_wrapper.ar_nodes		= ar_nodes
+			header_wrapper.sort_nodes	= sort_nodes
 
+		// header_wrapper
 			const searchParams = new URLSearchParams(window.location.href);
 			const initiator = searchParams.has("initiator")
 				? searchParams.get("initiator")
@@ -2468,6 +2513,151 @@ export const ui = {
 
 		return header_wrapper
 	},//end render_list_header
+
+
+
+	/**
+	* ADD_COLUMN_ORDER_SET
+	* Creates the arrows to sort list by column and
+	* place it into the header_item node
+	* @param object self
+	* 	Instance of section/component_portal
+	* @param DOM node header_item
+	* 	Container where place the sort buttons
+	* @param object column
+	* @return DOM node sort_node
+	*/
+	add_column_order_set(self, column, header_wrapper) {
+
+		// short vars
+			const title_asc			= (get_label.sort || 'Sort') + ' ' + (get_label.ascending || 'ascending')
+			const title_desc		= (get_label.sort || 'Sort') + ' ' + (get_label.descending || 'descending')
+			let default_direction	= 'DESC'
+			let current_direction	= undefined
+
+		// current_direction. current order current_direction check from sqo
+		// default is undefined
+			const sqo_order = self.rqo.sqo.order || null
+			if (sqo_order) {
+
+				const sqo_order_length = sqo_order.length
+				for (let i = 0; i < sqo_order_length; i++) {
+
+					const item = sqo_order[i]
+
+					const last_path	= item.path[item.path.length-1]
+					if (last_path.component_tipo===column.tipo) {
+						current_direction = item.direction
+						break;
+					}
+				}
+			}
+			// console.log("current_direction:", column.tipo, current_direction);
+
+		// exec_order function
+			const exec_order = (direction) => {
+
+				// sample
+					// [
+					//    {
+					//        "direction": "DESC",
+					//        "path": [
+					//            {
+					//                "name": "Code",
+					//                "modelo": "component_input_text",
+					//                "section_tipo": "oh1",
+					//                "component_tipo": "oh14"
+					//            }
+					//        ]
+					//    }
+					// ]
+
+				// order sqo build
+					const order = [{
+						direction: direction, // ASC|DESC
+						path : [{
+							component_tipo	: column.tipo || column.id,
+							section_tipo	: column.section_tipo
+						}]
+					}]
+					// console.log("order:",order);
+
+				// update rqo
+					self.navigate(
+						() => { // callback
+							self.rqo.sqo.order = order
+						},
+						false // bool navigation_history save
+					)
+
+				// update current_direction
+					current_direction = direction
+
+				// reset all other sort nodes styles
+					const sort_nodes		= header_wrapper.sort_nodes // header_wrapper.querySelectorAll('.order')
+					const sort_nodes_length	= sort_nodes.length
+					for (let i = 0; i < sort_nodes_length; i++) {
+						sort_nodes[i].classList.remove('asc','desc')
+					}
+
+				// set current class
+					sort_node.classList.add( direction.toLowerCase() )
+
+				// update title
+					sort_node.title = direction==='DESC'
+						? title_asc
+						: title_desc
+			}
+
+		// title
+			const title = current_direction && current_direction==='DESC'
+				? title_asc
+				: title_desc
+
+		// sort_node
+			const sort_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'order',
+				title			: title
+			})
+			// set current style
+			if (current_direction) {
+				sort_node.classList.add( current_direction.toLowerCase() )
+			}
+			// mouseenter
+			sort_node.addEventListener('mouseenter', function(){
+				// selected is self. Nothing to do
+				if (current_direction) {
+					return
+				}
+
+				// check if any other sort item is used
+				// if true, change default action from desc to asc
+				const sort_nodes		= header_wrapper.sort_nodes // header_wrapper.querySelectorAll('.order')
+				const sort_nodes_length	= sort_nodes.length
+				for (let i = 0; i < sort_nodes_length; i++) {
+					if (sort_nodes[i].classList.contains('asc') || sort_nodes[i].classList.contains('desc')) {
+						// console.log("---------------------- sort_nodes[i]:", sort_nodes[i]);
+						default_direction = 'ASC'
+						sort_node.title = title_asc
+						break;
+					}
+				}
+			})
+			// click
+			sort_node.addEventListener('click', function(e){
+				e.stopPropagation()
+
+				const direction = current_direction
+					? current_direction==='ASC' ? 'DESC' : 'ASC' // reverse current value
+					: default_direction // defaults
+
+				exec_order(direction)
+			})
+
+
+		return sort_node
+	},//end add_column_order_set
 
 
 

@@ -365,6 +365,7 @@ section.prototype.build = async function(autoload=false) {
 					delete count_sqo.limit
 					delete count_sqo.offset
 					delete count_sqo.select
+					delete count_sqo.order
 					delete count_sqo.generated_time
 					const rqo_count = {
 						action			: 'count',
@@ -494,49 +495,18 @@ section.prototype.build = async function(autoload=false) {
 					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
 				)
 				async function fn_paginator_goto(offset) {
+					// navigate section rows
+					self.navigate(
+						() => { // callback
+							// fix new offset value
+								self.rqo.sqo.offset = offset
 
-					// unsaved_data check
-						if (window.unsaved_data===true) {
-							if (!confirm('Are you sure you want to exit with unsaved changes?')) {
-								return false
-							}
-						}
-
-					// loading
-						// const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
-						// const node		= self.node && self.node[0]
-						// 	? await self.node[0].querySelector(selector)
-						// 	: null
-						// if (node) node.classList.add('loading')
-						self.node_body.classList.add('loading')
-
-					// fix new offset value
-						self.rqo.sqo.offset = offset
-
-					// set_local_db_data updated rqo
-						const rqo = self.rqo
-						current_data_manager.set_local_db_data(rqo, 'rqo')
-
-					// refresh
-						await self.refresh() // refresh current section
-
-					// loading
-						// if (node) node.classList.remove('loading')
-						self.node_body.classList.remove('loading')
-
-					// navigation history. When user paginates, store navigation history to allow browser navigation too
-						const title	= self.id
-						const url	= "?t="+ self.tipo + '&m=' + self.mode
-						const user_navigation_options = {
-							source				: self.rqo.source,
-							sqo					: self.rqo.sqo,
-							event_in_history	: true
-						}
-						const state = {
-							user_navigation_options : user_navigation_options
-						}
-						console.log("navigation history state:",state, title, url,history);
-						history.pushState(state, title, url)
+							// set_local_db_data updated rqo
+								const rqo = self.rqo
+								current_data_manager.set_local_db_data(rqo, 'rqo')
+						},
+						true // bool navigation_history save
+					)
 				}
 		}//end if (!self.paginator)
 
@@ -560,7 +530,7 @@ section.prototype.build = async function(autoload=false) {
 		}
 
 	// columns_map. Get the columns_map to use into the list
-		self.columns_map = get_columns_map(self.context)
+		self.columns_map = get_columns_map(self.context, self.datum.context)
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -797,4 +767,59 @@ section.prototype.delete_section = async function (options) {
 			// const ar_section_id = api_response.result
 			self.refresh()
 		}
-};// delete_section
+
+	return true
+}//end delete_section
+
+
+
+/**
+* NAVIGATE
+* Refresh the section instance with new sqo params creating a
+* history footprint. Used to paginate and sort records
+* @param function callback
+* @return promise
+*/
+section.prototype.navigate = async function(callback, navigation_history=false) {
+
+	const self = this
+
+	// unsaved_data check
+		if (window.unsaved_data===true) {
+			if (!confirm('Are you sure you want to exit with unsaved changes?')) {
+				return false
+			}
+		}
+
+	// callback execute
+		if (callback) {
+			await callback()
+		}
+
+	// loading
+		self.node_body.classList.add('loading')
+
+	// refresh
+		await self.refresh()
+
+	// loading
+		self.node_body.classList.remove('loading')
+
+	// navigation history. When user paginates, store navigation history to allow browser navigation too
+		if (navigation_history===true) {
+			const title	= self.id
+			const url	= '?t='+ self.tipo + '&m=' + self.mode
+			const user_navigation_options = {
+				source				: self.rqo.source,
+				sqo					: self.rqo.sqo,
+				event_in_history	: true
+			}
+			const state = {
+				user_navigation_options : user_navigation_options
+			}
+			console.log('navigation history state:',state, title, url,history);
+			history.pushState(state, title, url)
+		}
+
+	return true
+}//end navigate

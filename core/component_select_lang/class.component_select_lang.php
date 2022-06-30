@@ -269,4 +269,16 @@ class component_select_lang extends component_relation_common {
 
 
 
-}//end class
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is true. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return true;
+	}//end get_sortable
+
+
+
+}//end class component_select_lang

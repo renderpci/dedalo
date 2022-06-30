@@ -39,6 +39,7 @@ class dd_object {
 		# show_in_inspector	: bool // Used by tools
 		# show_in_component	: bool // Used by tools
 		# config			: object // Used by tools
+		# sortable			: bool // Used by components (columns)
 
 
 
@@ -467,6 +468,17 @@ class dd_object {
 
 		$this->config = $value;
 	}//end set_config
+
+
+
+	/**
+	* SET_SORTABLE
+	* Used by components (columns)
+	*/
+	public function set_sortable(bool $value) : void {
+
+		$this->sortable = $value;
+	}//end set_sortable
 
 
 

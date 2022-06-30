@@ -302,14 +302,12 @@ component_portal.prototype.build = async function(autoload=false) {
 						event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
 					)//end events push
 					function fn_paginator_goto(offset) {
-
-						self.rqo.sqo.offset = offset
-
-						// set_local_db_data updated rqo
-							// const rqo = self.rqo
-							// current_data_manager.set_local_db_data(rqo, 'rqo')
-
-						self.refresh()
+						// navigate
+						self.navigate(
+							() => {
+								self.rqo.sqo.offset = offset
+							}
+						)
 					}//end fn_paginator_goto
 
 				}else{
@@ -673,6 +671,40 @@ component_portal.prototype.get_search_value = function() {
 
 	return new_value
 }//end get_search_value
+
+
+
+/**
+* NAVIGATE
+* Refresh the portal instance with new sqo params.
+* Used to paginate and sort records
+* @param function callback
+* @return promise
+*/
+component_portal.prototype.navigate = async function(callback) {
+
+	const self = this
+
+	// callback execute
+		if (callback) {
+			await callback()
+		}
+
+	// container
+		const container = self.node[0].querySelector('.list_body')
+
+	// loading
+		container.classList.add('loading')
+
+	// refresh
+		await self.refresh()
+
+	// loading
+		container.classList.remove('loading')
+
+
+	return true
+}//end navigate
 
 
 

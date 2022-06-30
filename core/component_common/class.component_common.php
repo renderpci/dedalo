@@ -3173,4 +3173,16 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is true. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return true;
+	}//end get_sortable
+
+
+
 }//end class component_common
