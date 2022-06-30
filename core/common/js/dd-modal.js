@@ -26,6 +26,10 @@ class DDModal extends HTMLElement {
 					overflow-x: hidden;
 					background-color: rgba(0,0,0,0.4);
 				}
+				.remove_overlay {
+					/* background-color: transparent !important; */
+					background-color: rgba(0,0,0,0.075);
+				}
 				.modal_show {
 					display: block;
 				}
@@ -468,6 +472,9 @@ class DDModal extends HTMLElement {
 			window.modal = null
 			return
 		}
+	}
+	get_modal_node() {
+		return this._modal
 	}
 }
 customElements.define('dd-modal',DDModal);
