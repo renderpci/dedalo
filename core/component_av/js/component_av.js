@@ -89,7 +89,7 @@ export const component_av = function(){
 component_av.prototype.go_to_time = function(options) {
 
 	const self = this
-
+	console.log("options:",options);
 	// options
 		const tag = options.tag
 
@@ -253,8 +253,7 @@ component_av.prototype.time_to_tc = function(time) {
 	const mseconds	= wrap_ms(date.getMilliseconds()) //fps: wrap(Math.floor(((time % 1) * frame_rate)));
 
 	// tc
-		// const tc = hours+':'+minutes+':'+seconds+'.'+mseconds;
-		const tc = `${hours}:${minutes}.${seconds}.${mseconds}`
+		const tc = `${hours}:${minutes}:${seconds}.${mseconds}`
 
 
 	return tc

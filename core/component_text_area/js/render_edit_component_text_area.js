@@ -754,11 +754,12 @@ const get_custom_events = (self, i, text_editor) => {
 		custom_events.click = (evt, options) => {
 			// use the observe property into ontology of the components to subscribe to this events
 			// img : click on img
-			if(evt.target.nodeName==='IMG' || evt.target.nodeName==='REFERENCE') {
-				const tag_obj = evt.target
-				switch(evt.target.className) {
+			if(options.node_name==='img' || options.node_name==='REFERENCE') {
+				const tag_obj = options
+				switch(tag_obj.dataset.type) {
 
 					case 'tc':
+						console.log("aquí:");
 						// Video go to timecode by tc tag
 						event_manager.publish('click_tag_tc_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						break;
@@ -930,11 +931,6 @@ const get_custom_events = (self, i, text_editor) => {
 
 						break;
 				}//end switch evt.target.className
-			}else if(evt.target.nodeName==='LABEL') {
-				// Fix text area selection values
-				if (page_globals.modo==='tool_lang') {
-					component_text_area.show_structuration_info(ed, evt, text_area_component)
-				}
 			}else{
 				// click_no_tag_
 				event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
@@ -950,7 +946,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
-			// use the observe property into ontology of the components to suscribe to this events
+			// use the observe property into ontology of the components to subscribe to this events
 			switch(true) {
 
 				// 'Escape'
