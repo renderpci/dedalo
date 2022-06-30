@@ -156,4 +156,16 @@ class component_publication extends component_relation_common {
 
 
 
-}//end component_publication
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is true. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return true;
+	}//end get_sortable
+
+
+
+}//end class component_publication

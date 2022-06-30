@@ -750,10 +750,11 @@ common.prototype.load_script = async function(src) {
 * GET_COLUMNS
 * Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc)
 * and create the columns to be render by the section or portals
+* @param object context
 * @return array columns_map
 * 	The the specific columns to render into the list.
 */
-export const get_columns_map = function(context) {
+export const get_columns_map = function(context, datum_context) {
 
 	const columns_map = []
 
@@ -761,7 +762,7 @@ export const get_columns_map = function(context) {
 		const tipo				= context.tipo
 	// request_config. get the request_config with all ddo to use in the columns
 		const request_config	= context.request_config || []
-	// source_columns_map. Get the columns_maps defined in the properties and assigned in context in the server or by the client.
+	// source_columns_map.  Get the columns_maps defined in the properties and assigned in context in the server or by the client.
 		// the columns_maps become as structure to complete with the request_config
 		// by default the columns are for every component that has direct link to the component(portal) or section
 		// if the portal has more component in deep, it can define as columns in the properties,
@@ -769,6 +770,7 @@ export const get_columns_map = function(context) {
 		const source_columns_map = (context.columns_map)
 			? context.columns_map
 			: false
+
 	// view
 		const view = context.view
 
@@ -790,18 +792,22 @@ export const get_columns_map = function(context) {
 			for (let j = 0; j < ar_first_level_ddo_len; j++) {
 
 				const dd_object = ar_first_level_ddo[j]
+
 				// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
 				if (dd_object.column_id && source_columns_map){
-					const column_exists = columns_map.find(el => el.id === dd_object.column_id)
-					// if the column has stored by previous ddo, don't touch the array, it's necessary maintain the order of the columns_map
-					if(column_exists) continue
 
-					const found		= source_columns_map.find(el => el.id===dd_object.column_id)
+					// column_exists. If the column has stored by previous ddo, don't touch the array, it's necessary maintain the order of the columns_map
+						const column_exists = columns_map.find(el => el.id === dd_object.column_id)
+						if(column_exists) continue
+
 					// check if the ddo has defined the column_id in the columns_map, if not add new column with the ddo information.
-					const column	= (found)
-						? found
-						: {	id		: dd_object.tipo,
-							label	: dd_object.tipo}
+						const found	= source_columns_map.find(el => el.id===dd_object.column_id)
+						const column = (found)
+							? found
+							: {
+								id		: dd_object.tipo,
+								label	: dd_object.tipo
+							  }
 
 					dd_object.column_id = column.id
 					columns_map.push(column)
@@ -817,7 +823,8 @@ export const get_columns_map = function(context) {
 							columns_map.push(
 								{
 									id		: dd_object.tipo,
-									label	: dd_object.tipo
+									label	: dd_object.tipo,
+									tipo	: dd_object.tipo
 								}
 							)
 							dd_object.column_id = dd_object.tipo
@@ -838,9 +845,9 @@ export const get_columns_map = function(context) {
 							}else{
 								//create the general column with the tipo of the component_portal
 								const column = {
-										id		: tipo,
-										label	: tipo
-									}
+									id		: tipo,
+									label	: tipo
+								}
 
 								columns_map.push(column)
 								// set the column_id of the component with the column id
@@ -853,7 +860,7 @@ export const get_columns_map = function(context) {
 								{
 									id		: dd_object.tipo,
 									label	: dd_object.tipo,
-									mosaic 	: dd_object.mosaic
+									mosaic	: dd_object.mosaic
 										? true
 										: false
 								}
@@ -875,30 +882,58 @@ export const get_columns_map = function(context) {
 			}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
 		}//end for (let i = 0; i < request_config_length; i++)
 
-	// parse_columns. resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
-	// here will be using the full_ddo_map to find the specific ddo
+	// parse_columns
+		// Resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
+		// here will be using the full_ddo_map to find the specific ddo
 		function parse_columns(columns_map){
 
 			const columns_map_len = columns_map.length
-
 			for (let i = columns_map_len - 1; i >= 0; i--) {
+
 				const column_item = columns_map[i]
-				// all columns has a label  property that point to the ddo tipo to use, finding the ddo it is possible obtain the label to use in the column.
-				const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label)
+
+				// all columns has a label property that point to the ddo tipo to use, finding the ddo it is possible obtain the label to use in the column.
+					const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label)
+
+				// add tipo always
+					column_item.tipo = ddo_object
+						? ddo_object.tipo
+						: column_item.label
+
+				// add section_tipo always
+					column_item.section_tipo = ddo_object
+						? Array.isArray(ddo_object.section_tipo)
+							? ddo_object.section_tipo[0]
+							: ddo_object.section_tipo
+						: null
+
+				//  sortable
+					const found = datum_context
+						? datum_context.find(el => el.tipo===column_item.tipo)
+						: false
+					column_item.sortable = found
+						? found.sortable
+						: false
+
 				// check if the ddo has label, if not empty label will set.
-				column_item.label = (ddo_object && ddo_object.label)
-					? ddo_object.label
-					: column_item.label
+					column_item.label = (ddo_object && ddo_object.label)
+						? ddo_object.label
+						: column_item.label
 
 				// if the columns has sub-columns, begin again.
-				if(column_item.columns_map)
-					parse_columns(column_item.columns_map)
+					if(column_item.columns_map) {
+						parse_columns(column_item.columns_map)
+					}
 			}
 		}
-		// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
-
-	// exec parse_columns of result columns_map
+		// exec parse_columns of result columns_map
 		parse_columns(columns_map)
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
+			// console.log("columns_map:",columns_map); // throw 'stop'
+		}
 
 
 	return columns_map

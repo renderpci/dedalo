@@ -366,4 +366,16 @@ class component_media_common extends component_common {
 
 
 
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is true. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return false;
+	}//end get_sortable
+
+
+
 }//end component_media_common

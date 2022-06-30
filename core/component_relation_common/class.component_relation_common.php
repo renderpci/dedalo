@@ -2111,4 +2111,16 @@ class component_relation_common extends component_common {
 
 
 
-}//end component_relation_common
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is true. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return false;
+	}//end get_sortable
+
+
+
+}//end class component_relation_common

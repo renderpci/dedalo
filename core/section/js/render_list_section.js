@@ -205,7 +205,9 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
-			width 		: 'auto',
+			tipo		: 'section_id', // used to sort only
+			sortable	: true,
+			width		: 'auto',
 			callback	: render_list_section.render_column_id
 		})
 
@@ -493,7 +495,8 @@ render_list_section.render_column_id = function(options){
 										section_tipo	: [{tipo : section_tipo}],
 										limit			: 1,
 										offset			: offset,
-										filter			: self.rqo.sqo.filter || null
+										filter			: self.rqo.sqo.filter || null,
+										order			: self.rqo.sqo.order || null
 									}
 								}
 								event_manager.publish('user_navigation', user_navigation_rqo)

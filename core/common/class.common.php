@@ -1346,6 +1346,7 @@ abstract class common {
 			$mode			= $this->get_modo();
 			$label			= $this->get_label();
 			$lang			= $this->get_lang();
+			$sortable		= $this->get_sortable() ?? false; // Used by section columns to sort list
 
 		// cache structure_context using ddo_key
 			// (!) Note that 'sections_json.php' will filter out duplicated context items using this criteria:
@@ -1520,7 +1521,8 @@ abstract class common {
 				'tools'				=> $tools,
 				'buttons'			=> $buttons,
 				'request_config'	=> $request_config,
-				'columns_map'		=> $columns_map
+				'columns_map'		=> $columns_map,
+				'sortable'			=> $sortable
 			]);
 
 		// optional properties

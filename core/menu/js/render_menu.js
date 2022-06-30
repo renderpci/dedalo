@@ -285,7 +285,8 @@ render_menu.prototype.edit = async function() {
 						sqo			: { // new sqo to use in list mode
 							section_tipo	: current_instance.rqo_config.sqo.section_tipo,
 							filter			: current_instance.rqo_config.sqo.filter,
-							offset			: 0
+							offset			: 0,
+							order			: current_instance.rqo.sqo.order || null
 						}
 					}
 					event_manager.publish('user_navigation', user_navigation_rqo)
