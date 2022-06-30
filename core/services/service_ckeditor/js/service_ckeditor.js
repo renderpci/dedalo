@@ -102,6 +102,10 @@ export const service_ckeditor = function() {
 						}
 					}
 
+				// setup_events
+					self.setup_events(editor_config);
+
+
 				// click event sample
 					// container.addEventListener("click", function(e){
 					// 	if (e.target.matches('img')) {
@@ -128,6 +132,9 @@ export const service_ckeditor = function() {
 					// 		}
 					// 	})
 					// }, 2000)
+
+
+
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
@@ -154,7 +161,6 @@ export const service_ckeditor = function() {
 
 		const editor	= self.editor
 		const key		= self.key
-
 
 		// // no user interactions case
 		if (self.is_dirty!==true) {
@@ -210,6 +216,81 @@ export const service_ckeditor = function() {
 	}//end get_value
 
 
+
+	/**
+	* SETUP_EVENTS -Ok
+	* callback when ckeditor is ready
+	* @return true
+	*/
+	this.setup_events = function(editor_config) {
+
+		const self		= this
+		const editor	= self.editor
+
+		const custom_events = editor_config.custom_events || {}
+
+		// focus event
+			editor.editing.view.document.on('focus', function(evt, data ) {
+				if (custom_events.focus) {
+					custom_events.focus(evt, {})
+				}
+			});//end focus event
+
+
+		// blur event
+			editor.editing.view.document.on('blur', function(evt, data ) {
+				if (custom_events.blur) {
+					custom_events.blur(evt, {})
+				}
+			});//end blur event
+
+
+		// click event
+			editor.editing.view.document.on('click', function(evt, data ) {
+
+				const click_element = data.target.name
+
+					const item = data.target.parent._attrs
+					const tag_obj = {
+						node_name : data.target.name,
+						dataset :{
+							type	: item.get('data-type'),
+							tag_id	: item.get('data-tag_id'),
+							state	: item.get('data-state'),
+							label	: item.get('data-label'),
+							data	: item.get('data-data')
+						}
+					}
+					if (custom_events.click) {
+						custom_events.click(evt, tag_obj)
+					}
+
+
+				// }else{
+					const options = (click_element !== 'img')
+						? {selection : self.get_selection()}
+						: {selection : ''}
+
+
+					if (custom_events.MouseUp) {
+						custom_events.MouseUp(evt, options)
+					}
+
+			});//end click event
+
+		// keyup event
+			editor.editing.view.document.on('keyup', function(evt, data ) {
+				if (custom_events.KeyUp) {
+					custom_events.KeyUp(data.domEvent, {})
+				}
+			}); //end keyup event
+
+
+		return true
+	}//end onsetup_editor
+
+
+
 	/**
 	* SET_CONTENT -OK
 	*/
@@ -219,16 +300,12 @@ export const service_ckeditor = function() {
 
 		const editor = self.editor
 
-		// Insert the html in the current selection location.
-		// editor.model.insertContent( html, editor.model.document.selection );
-		// self.editor.selection.setContent( html ); // tiny
-
 		// convert the html to the model of ck_editor
-		const view_fragment = editor.data.processor.toView( html );
-		const model_fragment = editor.data.toModel( view_fragment );
+		const view_fragment		= editor.data.processor.toView( html );
+		const model_fragment	= editor.data.toModel( view_fragment );
 
 		const position = editor.model.document.selection.getLastPosition()
-
+		// Insert the html in the current selection location.
 		editor.model.insertContent( model_fragment, position );
 
 		self.is_dirty = true;
@@ -302,7 +379,7 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* WRAP_SELECTION_WITH_TAGS
+	* WRAP_SELECTION_WITH_TAGS -OK
 	* @return bool true
 	*/
 	this.wrap_selection_with_tags = function(tag_node_in, tag_node_out) {
@@ -311,23 +388,29 @@ export const service_ckeditor = function() {
 		const editor = self.editor
 
 		// convert the html to the model of ck_editor
-		const view_tag_node_in = editor.data.processor.toView( tag_node_in );
-		const model_tag_node_in = editor.data.toModel( view_tag_node_in );
+		const data_tag_node_in		= editor.data.processor.toView( tag_node_in.outerHTML  );
+
+		const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
 
 		const in_position = editor.model.document.selection.getFirstPosition()
 
 		editor.model.insertContent( model_tag_node_in, in_position );
 
-
 		// convert the html to the model of ck_editor
-		const view_tag_node_out = editor.data.processor.toView( tag_node_out );
+		const view_tag_node_out	= editor.data.processor.toView( tag_node_out.outerHTML );
+		// const view_tag_node_out = editor.editing.view.domConverter.domToView( tag_node_out );
 		const model_tag_node_out = editor.data.toModel( view_tag_node_out );
 
 		const out_position = editor.model.document.selection.getLastPosition()
 
-		editor.model.insertContent( model_tag_node_out, in_position );
-
+		editor.model.insertContent( model_tag_node_out, out_position );
+		editor.editing.view.focus();
 		self.is_dirty = true;
+
+		// const value = editor.getContent({format:'raw'})
+		const value = editor.getData();
+		// const value = self.editor.getBody()
+		self.caller.save_value(self.key, value)
 
 		return true
 	}//end wrap_selection_with_tags
