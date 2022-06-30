@@ -611,4 +611,98 @@ export const service_tinymce = function() {
 
 
 
+	/**
+	* GET_LAST_TAG_ID
+	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
+	* @param ed
+	*	Text editor instance (tinyMCE)
+	* @param tag_type
+	*	Class name of image searched like 'geo'
+	*
+	* @return int tag_id
+	*/
+	this.get_last_tag_id = function(options) {
+
+		const self = this
+
+			const text_editor = self.editor
+			// options
+			const tag_type	= options.tag_type
+
+		// default value zero
+			const ar_id_final = [0];
+
+		// text_editor check
+			if (!text_editor) {
+				console.error(`Error on get text_editor. Empty text_editor:`, text_editor);
+				return false
+			}
+
+		// container . editor_content_data is a DOM node <body> from editor
+			const container = text_editor.get_editor_content_data()
+			if (!container) {
+				console.error(`Error on get_last_tag_id. get_editor_content_data container not found:`, container);
+				console.warn(`current text_editor:`, text_editor);
+				console.warn(`current text_editor.editor:`, text_editor.editor);
+				console.warn(`current text_editor.editor.getBody():`, text_editor.editor.getBody());
+				return false
+			}
+
+		// get all tags of type
+			switch(tag_type) {
+
+				case 'reference':
+					// reference : Select all reference in text
+					const ar_tags = container.getElementsByTagName('reference')
+
+					// iterate to find tipo_tag
+					const ar_tags_length = ar_tags.length
+					for (let i = ar_tags_length - 1; i >= 0; i--) {
+
+						// current tag like [svg-n-1]
+						const current_tag	= ar_tags[i].id;
+						const ar_parts		= current_tag.split('_');
+
+						const number = (typeof ar_parts[1]!=="undefined")
+							? parseInt(ar_parts[1])
+							: 0
+
+						// Insert id formated as number in final array
+						ar_id_final.push(number)
+					}
+					break;
+
+				default:
+					// like img as id: [index-n-1--label-data:**]
+					const ar_img = container.querySelectorAll('img.'+tag_type)
+
+					// iterate to find tipo_tag (filter by classname: index, etc.)
+					const ar_img_length = ar_img.length
+					for (let i = ar_img_length - 1; i >= 0; i--) {
+
+						const current_tag	= ar_img[i].id;
+						const ar_parts		= current_tag.split('-');
+
+						const number = (typeof ar_parts[2]!=="undefined")
+							? parseInt(ar_parts[2])
+							: 0
+
+						// Insert id formatted as number in final array
+							ar_id_final.push(number)
+					}
+					break;
+			}
+
+		// last id
+			const last_tag_id = parseInt( Math.max.apply(null, ar_id_final) );
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				console.log("[component_text_area.get_last_tag_id] last_tag_id of type: " + tag_type +" -> ", last_tag_id )
+			}
+
+
+	return last_tag_id
+	};//end get_last_tag_id
+
 }//end service_tinymce

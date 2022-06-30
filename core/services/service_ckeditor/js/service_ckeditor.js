@@ -476,6 +476,61 @@ export const service_ckeditor = function() {
 		// }//end dom_select
 
 
+	/**
+	* GET_LAST_TAG_ID
+	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
+	* @param ed
+	*	Text editor instance (tinyMCE)
+	* @param tag_type
+	*	Class name of image searched like 'geo'
+	*
+	* @return int tag_id
+	*/
+	this.get_last_tag_id = function(options) {
+
+		// options
+			const type			= options.tag_type==='index'
+				? 'indexIn'
+				: options.tag_type
+
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+			// root. Whole editor document to traverse
+			const root = editor.model.document.getRoot();
+
+		// range. Create a range spanning over the entire root content:
+			const range = editor.model.createRangeIn( root );
+
+		// ar_tag_id, array with all id of the tags nodes
+			const ar_tag_id = []
+		// Iterate over all items in this range:
+			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+
+				const item = value.item
+
+				// htmlAttributes. Get an object like:
+				// {
+				//   attributes : {data-data: '', data-label: 'label in 1', data-state: 'r', data-tag_id: '1', data-type: 'indexIn', …}
+				//	 classes : ['index']
+				// }
+				const htmlAttributes = item.getAttribute('htmlAttributes')
+				if(htmlAttributes) {
+
+					const current_type		= htmlAttributes.attributes['data-type']
+					const current_tag_id	= htmlAttributes.attributes['data-tag_id']
+
+					if(current_type===type) {
+						ar_tag_id.push(current_tag_id)
+					}
+				}
+			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+
+			const last_tag_id = Math.max(...ar_tag_id);
+
+			return last_tag_id
+	};//end get_last_tag_id
 
 	/**
 	* UPDATE_TAG
