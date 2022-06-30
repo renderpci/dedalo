@@ -7,7 +7,7 @@
 	import {event_manager} from '../../../common/js/event_manager.js'
 	// import {ui} from '../../../common/js/ui.js'
 	import {clone} from '../../../common/js/utils/index.js'
-	import {render_button} from './render_text_editor_toolbar.js'
+	import {render_button, render_find_and_replace} from './render_text_editor.js'
 
 
 
@@ -304,16 +304,16 @@ export const service_ckeditor = function() {
 		const view_fragment		= editor.data.processor.toView( html );
 		const model_fragment	= editor.data.toModel( view_fragment );
 
-		const position = editor.model.document.selection.getLastPosition()
-		// Insert the html in the current selection location.
-		editor.model.insertContent( model_fragment, position );
+		editor.model.change( writer => {
+
+			const position = editor.model.document.selection.getLastPosition()
+			// Insert the html in the current selection location.
+			editor.model.insertContent( model_fragment, position );
+			// Put the selection on the inserted element.
+			writer.setSelection( model_fragment, 'on' );
+		});
 
 		self.is_dirty = true;
-
-		// save. service save function calls current component save_value()
-			// const actual_value 	= self.caller.data.value[0]
-			// const actual_value 	= self.editor.getContent({format:'raw'})
-			// self.save(actual_value)
 
 		// const value = editor.getContent({format:'raw'})
 		const value = editor.getData();
@@ -387,23 +387,28 @@ export const service_ckeditor = function() {
 		const self 	 = this
 		const editor = self.editor
 
-		// convert the html to the model of ck_editor
-		const data_tag_node_in		= editor.data.processor.toView( tag_node_in.outerHTML  );
+		editor.model.change( writer => {
+			// convert the html to the model of ck_editor
+			const data_tag_node_in		= editor.data.processor.toView( tag_node_in.outerHTML  );
+			const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
 
-		const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
+			// get the in position of the selection
+			const in_position = editor.model.document.selection.getFirstPosition()
 
-		const in_position = editor.model.document.selection.getFirstPosition()
+			editor.model.insertContent( model_tag_node_in, in_position );
 
-		editor.model.insertContent( model_tag_node_in, in_position );
+			// convert the html to the model of ck_editor
+			const view_tag_node_out	= editor.data.processor.toView( tag_node_out.outerHTML );
+			const model_tag_node_out = editor.data.toModel( view_tag_node_out );
+			// get the out position of the selection
+			const out_position = editor.model.document.selection.getLastPosition()
 
-		// convert the html to the model of ck_editor
-		const view_tag_node_out	= editor.data.processor.toView( tag_node_out.outerHTML );
-		// const view_tag_node_out = editor.editing.view.domConverter.domToView( tag_node_out );
-		const model_tag_node_out = editor.data.toModel( view_tag_node_out );
+			editor.model.insertContent( model_tag_node_out, out_position );
 
-		const out_position = editor.model.document.selection.getLastPosition()
+			writer.setSelection( model_tag_node_out, 'on' );
+			writer.setSelection( model_tag_node_in, 'on' );
+		});
 
-		editor.model.insertContent( model_tag_node_out, out_position );
 		editor.editing.view.focus();
 		self.is_dirty = true;
 
@@ -414,66 +419,6 @@ export const service_ckeditor = function() {
 
 		return true
 	}//end wrap_selection_with_tags
-
-
-
-	/**
-	* DOM_SELECT
-	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
-	* @return DOM node (one or more)
-	*/
-		// this.dom_select = function(selector_str) {
-
-		// 	const self		= this
-		// 	const editor	= self.editor
-
-		// 	const root = editor.model.document.getRoot();
-
-		// 	// Create a range spanning over the entire root content:
-		// 	const range = editor.model.createRangeIn( root );
-
-		// 	// Iterate over all items in this range:
-		// 	for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
-		// 		const item = value.item
-
-		// 		const htmlAttributes = item.getAttribute('htmlAttributes') //.attributes //getAttributes() //.htmlAttributes //.hasAttribute('data-type')
-		// 		if(htmlAttributes){
-
-		// 			const attributes = htmlAttributes.attributes['data-type']
-		// 			const id = htmlAttributes.attributes['data-tag_id']
-		// 			if(attributes==='indexIn' && id === '6'){
-
-		// 				const old_att = JSON.parse(JSON.stringify((htmlAttributes)))
-		// 				old_att.attributes['data-state'] ='n'
-
-		// 				editor.model.change( writer => {
-		// 					writer.setAttribute( 'htmlAttributes', old_att, item );
-		// 				});
-
-		// 			}
-		// 		}
-		// 	}
-
-		// 	// des
-		// 		// for ( const value of children ) {
-
-		// 		// 	console.log("node:",node);
-		// 		// 	const node = children[value]
-
-		// 		// 		console.log("node:",node);
-
-		// 		// 	// if ( node.is( type ) ) {
-		// 		// 	// 	nodes.push(node);
-		// 		// 	// }
-		// 		// }
-
-		// 		// console.log("editor.model:",children  );
-
-		// 			// console.log("editor.model:",editor.model.viewElement.hasClass( 'placeholder' ) );
-		// 		// const node = editor.dom.select(selector_str)
-
-		// 		// return node
-		// }//end dom_select
 
 
 	/**
@@ -739,6 +684,15 @@ export const service_ckeditor = function() {
 			return
 		}
 
+		if( name === 'find_and_replace'){
+
+			button.addEventListener('click', function(evt){
+				render_find_and_replace(editor)
+			})
+
+			return
+		}
+
 		 // Retrieve the editor command corresponding with the ID of the button in the DOM.
 		const command = editor.commands.get( name );
 		// const button = this.view.toolbarButtons[ name ];
@@ -747,8 +701,8 @@ export const service_ckeditor = function() {
 		// ...but it should not steal the focus so the editing is uninterrupted.
 		// button.onmousedown( evt => evt.preventDefault() );
 		button.addEventListener('click', function(evt){
-			evt.preventDefault()
-			evt.stopPropagation()
+			// evt.preventDefault()
+			// evt.stopPropagation()
 			editor.execute( name )
 			editor.editing.view.focus();
 		})
