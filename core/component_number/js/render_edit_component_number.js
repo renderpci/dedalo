@@ -192,7 +192,9 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = function(self) {
 
-	const value	= (self.data.value.length<1) ? [null] : self.data.value
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	const fragment = new DocumentFragment()
 
@@ -204,7 +206,7 @@ const get_content_data_edit = function(self) {
 		})
 
 	// build values
-		const inputs_value	= value//(value.length<1) ? [''] : value
+		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element = get_input_element_edit(i, inputs_value[i], self)

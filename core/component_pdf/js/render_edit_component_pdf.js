@@ -125,7 +125,8 @@ const add_events = function(self, wrapper) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const value = self.data.value
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	const fragment = new DocumentFragment()
 
@@ -138,7 +139,7 @@ const get_content_data_edit = function(self) {
 
 	// url
 		const quality		= self.quality || self.context.quality
-		const datalist		= self.data.datalist
+		const datalist		= self.data.datalist || []
 		const file_info		= datalist.find(el => el.quality===quality && el.file_exist===true)
 		const pdf_url		= file_info
 			? file_info.url

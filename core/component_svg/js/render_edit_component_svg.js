@@ -59,6 +59,10 @@ render_edit_component_svg.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
+	// short vars
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+
 	const fragment = new DocumentFragment()
 
 	// value (array)
@@ -66,7 +70,6 @@ const get_content_data_edit = function(self) {
 
 	// media url from data.datalist based on selected context quality
 		const quality	= self.quality || self.context.quality
-		const datalist	= self.data.datalist
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		const url		= file_info
 			? file_info.url

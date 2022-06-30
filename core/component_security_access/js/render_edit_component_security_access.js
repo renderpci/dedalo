@@ -61,10 +61,12 @@ render_edit_component_security_access.prototype.edit = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	// array of objects with all elements from Ontology
-	const datalist	= self.data.datalist
-	// array from DB
-	const value		= self.data.value || []
+	// short vars
+		const data		= self.data || {}
+		// array of objects with all elements from Ontology
+		const datalist	= data.datalist || []
+		// array from DB
+		const value		= data.value || []
 
 	// debug
 		if(SHOW_DEBUG===true) {
