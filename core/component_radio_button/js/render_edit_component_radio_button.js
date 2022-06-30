@@ -196,7 +196,8 @@ const add_events = function(self, wrapper) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const datalist	= self.data.datalist
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
 		// const mode	= self.mode
 
 	const fragment = new DocumentFragment()
@@ -209,8 +210,8 @@ const get_content_data_edit = function(self) {
 		})
 
 	// inputs
-		// const value				= (self.data.value.length<1) ? [null] : self.data.value
-		// const value_compare		= value.length>0 ? value[0] : null
+		// const value			= (self.data.value.length<1) ? [null] : self.data.value
+		// const value_compare	= value.length>0 ? value[0] : null
 		const datalist_length	= datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			const input_element = get_input_element_edit(i, datalist[i], self)
