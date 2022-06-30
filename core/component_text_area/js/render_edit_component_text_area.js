@@ -560,7 +560,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 	// find_and_replace
 		custom_buttons.push({
 			name			: "find_and_replace",
-			manager_editor	: false,
+			manager_editor	: true,
 			options	: {
 				tooltip	: 'find_and_replace',
 				image	: '../../core/themes/default/icons/search.svg'
@@ -663,7 +663,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 								self		: self,
 								text_editor	: text_editor,
 								i			: i,
-								tag			: inserted_tag
+								tag			: tag
 							})
 						}
 					})
