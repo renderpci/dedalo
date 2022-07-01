@@ -2489,7 +2489,6 @@ export const ui = {
 		}//end for (let i = 0; i < columns_length; i++)
 
 		// header_wrapper pointers add
-			header_wrapper.ar_nodes		= ar_nodes
 			header_wrapper.sort_nodes	= sort_nodes
 
 		// header_wrapper

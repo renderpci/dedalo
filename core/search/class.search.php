@@ -1372,7 +1372,9 @@ class search {
 
 
 	/**
-	* BUILD_SQL_QUERY_ORDER_DEFaULT
+	* BUILD_SQL_QUERY_ORDER_DEFAULT
+	* Creates the default query order for searches:
+	* section_is ASC except section activity (DESC)
 	* @return string $sql_query_order_default
 	*/
 	public function build_sql_query_order_default() : string {
@@ -1381,11 +1383,9 @@ class search {
 			return $this->sql_query_order_default;
 		}
 
-		$section_tipo  = $this->main_section_tipo;
-
-		$default_order = ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-
-		$sql_query_order_default = $this->main_section_tipo_alias.'.section_id '.$default_order;
+		$section_tipo				= $this->main_section_tipo;
+		$default_order				= ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
+		$sql_query_order_default	= $this->main_section_tipo_alias.'.section_id '.$default_order;
 
 
 		return $sql_query_order_default;
@@ -1395,6 +1395,8 @@ class search {
 
 	/**
 	* BUILD_SQL_QUERY_ORDER
+	* Creates the sql to order based on search_query_object order property
+	* Could be 'order_custom' when is special full defined order or default 'order'
 	* @return string $sql_query_order
 	*/
 	public function build_sql_query_order() : string {
@@ -1404,77 +1406,76 @@ class search {
 		if (!empty($this->search_query_object->order_custom)) {
 
 			// custom order
-				$ar_custom_query 	  = [];
-				$ar_custom_queryorder = [];
+				$ar_custom_query		= [];
+				$ar_custom_query_order	= [];
 				foreach ($this->search_query_object->order_custom as $item_key => $order_item) {
 
-					$column_section_tipo   	= '\''.$order_item->section_tipo.'\''; // added 21-08-2019
-					$column_name   			= $order_item->column_name;
-					$column_values 			= $order_item->column_values;
-					$table 					= ($item_key>0) ? 'x'.$item_key : 'x';
+					$column_section_tipo	= '\''.$order_item->section_tipo.'\''; // added 21-08-2019
+					$column_name			= $order_item->column_name;
+					$column_values			= $order_item->column_values;
+					$table					= ($item_key>0) ? 'x'.$item_key : 'x';
 
 					$pairs = [];
 					foreach ($column_values as $key => $value) {
-						$value 	 = is_string($value) ? "'" . $value . "'" : $value;
-						$pair 	 = '('.$column_section_tipo.','.$value.','.($key+1).')';
-						$pairs[] = $pair;
+						$value		= is_string($value) ? "'" . $value . "'" : $value;
+						$pair		= '('.$column_section_tipo.','.$value.','.($key+1).')';
+						$pairs[]	= $pair;
 					}
 					// Join like: LEFT JOIN (VALUES (7,1),(1,2)) as x(ordering_id, ordering) ON main_select.section_id = x.ordering_id ORDER BY x.ordering ASC
-					$ar_custom_query[] 		= 'LEFT JOIN (VALUES '.implode(',', $pairs).') as '.$table.'(ordering_section_tipo, ordering_id, ordering) ON main_select.'.$column_name.'='.$table.'.ordering_id AND main_select.section_tipo='.$table.'.ordering_section_tipo'; // added 21-08-2019
-					$ar_custom_queryorder[] = 'ORDER BY '.$table.'.ordering ASC';
+					$ar_custom_query[]			= 'LEFT JOIN (VALUES '.implode(',', $pairs).') as '.$table.'(ordering_section_tipo, ordering_id, ordering) ON main_select.'.$column_name.'='.$table.'.ordering_id AND main_select.section_tipo='.$table.'.ordering_section_tipo'; // added 21-08-2019
+					$ar_custom_query_order[]	= 'ORDER BY '.$table.'.ordering ASC';
 				}
-				// flat and set
-				$this->sql_query_order_custom = implode(' ', $ar_custom_query) . ' ' . implode(',', $ar_custom_queryorder);
 
+			// flat and set. Note that no $sql_query_order value is filled and returned
+				$this->sql_query_order_custom = implode(' ', $ar_custom_query) . ' ' . implode(',', $ar_custom_query_order);
 
 		}elseif (!empty($this->search_query_object->order)) {
 
-			// order
-				$ar_order = [];
-				$ar_direct_columns = $this->ar_direct_columns; // ['section_id','section_tipo','id']
+			// order default
+				$ar_order			= [];
+				$ar_direct_columns	= $this->ar_direct_columns; // ['section_id','section_tipo','id']
 				foreach ($this->search_query_object->order as $order_obj) {
 
-					$direction 		= strtoupper($order_obj->direction);
-					$path 	   		= $order_obj->path;
-					$end_path  		= end($path);
-					$component_tipo = $end_path->component_tipo;
-
+					$direction		= strtoupper($order_obj->direction);
+					$path			= $order_obj->path;
+					$end_path		= end($path);
+					$component_tipo	= $end_path->component_tipo;
 
 					if (in_array($component_tipo, $ar_direct_columns)===true) {
 
-						# direct column case
+						// direct column case
 						$line = $component_tipo . ' ' . $direction;
 
 					}else{
 
-						# Add join if not exists
+						// Add join if not exists
 						$this->build_sql_join($path);
 
-						$table_alias= $this->get_table_alias_from_path($path);
-						$selector 	= implode(',', $order_obj->component_path);
-						$alias 		= $component_tipo . '_order';
-						$base 		= $table_alias . '.datos#>>\'{'.$selector.'}\'';
-						$column 	= $base .' as '.$alias;
+						//  short vars
+							$table_alias	= $this->get_table_alias_from_path($path);
+							$selector		= implode(',', $order_obj->component_path);
+							$alias			= $component_tipo . '_order';
+							$base			= $table_alias . '.datos#>>\'{'.$selector.'}\'';
+							$column			= $base .' as '. $alias;
 
-						# Add to global order columns (necessary for order...)
-						# This array is added when query select is calculated
+						// Add to global order columns (necessary for order...)
+						// This array is added when query select is calculated
 						$this->order_columns[] = $column;
 
 						$line = $alias . ' ' . $direction;
-						#$line = $base . ' ' . $direction;
-						#debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);
 					}
 
-
+					// line add
 					$ar_order[] = $line;
 				}
-				// flat
+				// flat sql sentences array
 				$sql_query_order = implode(',', $ar_order);
 		}
 
-		if(SHOW_DEBUG===true) {
-			#debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
-		}
+		// debug
+			// if(SHOW_DEBUG===true) {
+			// 	debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
+			// }
 
 
 		return $sql_query_order;
@@ -1490,7 +1491,7 @@ class search {
 
 		$main_from_sql = $this->matrix_table .' AS '. $this->main_section_tipo_alias;
 
-		# Fix
+		// Fix value
 		$this->main_from_sql = $main_from_sql;
 
 		return $main_from_sql;
@@ -1528,8 +1529,9 @@ class search {
 				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
 			}
 
-		# Fix values
-		$this->main_where_sql = $main_where_sql;
+		// Fix value
+			$this->main_where_sql = $main_where_sql;
+
 
 		return $main_where_sql;
 	}//end build_main_where_sql
@@ -1546,14 +1548,14 @@ class search {
 
 		if (!empty($this->search_query_object->filter)) {
 
-			// $operator	= key($this->search_query_object->filter); // deprecated in PHP>=8.1
-			$operator		= array_key_first(get_object_vars($this->search_query_object->filter));
+			$operator	= array_key_first(get_object_vars($this->search_query_object->filter));
+			$ar_value	= $this->search_query_object->filter->{$operator};
 
-			$ar_value = $this->search_query_object->filter->{$operator};
 			if(!empty($ar_value)) {
-				$filter_query .= ' AND (';
-				$filter_query .= $this->filter_parser($operator, $ar_value);
-				$filter_query .= ')';
+
+				$filter_query	.= ' AND (';
+				$filter_query	.= $this->filter_parser($operator, $ar_value);
+				$filter_query	.= ')';
 
 				#if (isset($this->global_group_query)) {
 				#	$filter_query .= "\n" . $this->global_group_query;
@@ -1623,7 +1625,9 @@ class search {
 			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
 		}
 
+		// sql_filter
 		$sql_filter = PHP_EOL . '-- filter_by_locators' . PHP_EOL . implode(' OR ', $ar_parts);
+
 
 		return $sql_filter;
 	}//end build_sql_filter_by_locators
@@ -1639,7 +1643,7 @@ class search {
 		$ar_values = [];
 		foreach ($this->filter_by_locators as $key => $current_locator) {
 
-			$value = '(\''.$current_locator->section_tipo.'\'';
+			$value  = '(\''.$current_locator->section_tipo.'\'';
 			$value .= ','.$current_locator->section_id;
 			$value .= ','.($key+1).')';
 
@@ -1772,8 +1776,8 @@ class search {
 		foreach ($path as $key => $step_object) {
 
 			if ($key===0) {
-				$base_key 		= $this->main_section_tipo_alias; //self::trim_tipo($step_object->section_tipo);
-				$ar_key_join[] 	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
+				$base_key		= $this->main_section_tipo_alias; //self::trim_tipo($step_object->section_tipo);
+				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 				continue;
 			}
 
@@ -1786,9 +1790,9 @@ class search {
 				: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 
 			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
-			$last_section_tipo 	= $step_object->section_tipo;
-			$t_name 			= implode('_', $ar_key_join);
-			#$t_name2 			= $this->get_table_alias_from_path($path); // Test !!
+			$last_section_tipo	= $step_object->section_tipo;
+			$t_name				= implode('_', $ar_key_join);
+			#$t_name2			= $this->get_table_alias_from_path($path); // Test !!
 			#debug_log(__METHOD__." t_name  ".to_string($t_name), logger::DEBUG);
 			#debug_log(__METHOD__." t_name2 ".to_string($t_name2), logger::DEBUG);
 			$t_relation			= 'r_'.$t_name ;
@@ -1822,9 +1826,8 @@ class search {
 				// Add to joins
 				$this->ar_sql_joins[$t_name] = $sql_join;
 			}
-		}
-		#$key_group = implode('_', $ar_key_join);
-		#dump($this->ar_sql_joins, '$this->ar_sql_joins ++ '.to_string());
+		}//end foreach ($path as $key => $step_object)
+
 
 		return true;
 	}//end build_sql_join
@@ -1858,8 +1861,8 @@ class search {
 				debug_log(__METHOD__." Error on preg match tipo: $tipo ".to_string(), logger::ERROR);
 			}
 
-		$name 	= $matches[1];
-		$number = $matches[2];
+		$name	= $matches[1];
+		$number	= $matches[2];
 
 		$trimmed_tipo = substr($name, 0, $max) . $number;
 
@@ -2786,9 +2789,12 @@ class search {
 	/**
 	* GET_PRESET
 	* Find requested preset section_id (in presets list or temp presets)
-	* @return object | null
+	* @param int $user_id
+	* @param string $target_section_tipo
+	* @param string $preset_section_tipo
+	* @return object|null $preset_obj
 	*/
-	public static function get_preset(int $user_id, string $target_section_tipo, string $preset_section_tipo) {
+	public static function get_preset(int $user_id, string $target_section_tipo, string $preset_section_tipo) : ?object {
 
 		$preset_obj = null;
 
@@ -2823,7 +2829,7 @@ class search {
 				$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
 			break; // Only one expected
 		}
-		#debug_log(__METHOD__." preset_id: $preset_id ".PHP_EOL.to_string($strQuery), logger::DEBUG);
+
 
 		return $preset_obj;
 	}//end get_preset
@@ -3114,6 +3120,4 @@ class search {
 
 
 
-}//end search_development
-
-
+}//end class search

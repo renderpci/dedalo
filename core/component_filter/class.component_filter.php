@@ -776,18 +776,19 @@ class component_filter extends component_relation_common {
 
 		$ar_label = [];
 		foreach ((array)$dato as $key => $locator) {
-			$label = ts_object::get_term_by_locator( $locator, $lang, true );
-			$label = strip_tags(trim($label));
+			$label = ts_object::get_term_by_locator($locator, $lang, true);
 			if (!empty($label)) {
-				$ar_label[] = $label;
+				$label = strip_tags(trim($label));
+				if (!empty($label)) {
+					$ar_label[] = $label;
+				}
 			}
 		}
 
-		if (empty($ar_label)) {
-			$diffusion_value = null;
-		}else{
-			$diffusion_value = implode(' | ', $ar_label);
-		}
+		$diffusion_value = empty($ar_label)
+			? null
+			: implode(' | ', $ar_label);
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value
@@ -847,10 +848,8 @@ class component_filter extends component_relation_common {
 																		  $locator->section_tipo);
 						$label = $component->get_valor($lang);
 					}else{
-						$label = ts_object::get_term_by_locator( $locator, $lang, true );
+						$label = ts_object::get_term_by_locator($locator, $lang, true) ?? '';
 					}
-
-
 
 					$label 	= strip_tags(trim($label));
 

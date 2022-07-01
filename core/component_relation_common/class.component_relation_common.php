@@ -1728,7 +1728,7 @@ class component_relation_common extends component_common {
 					foreach ((array)$ar_locators as $locator) {
 
 						$label = ts_object::get_term_by_locator( $locator, $lang, true );
-						$label = strip_tags(trim($label));
+						$label = !empty($label) ? strip_tags(trim($label)) : $label;
 
 						$uid = $locator->section_tipo.'_'.$locator->section_id;
 

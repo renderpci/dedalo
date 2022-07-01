@@ -551,20 +551,26 @@ class ts_object {
 	/**
 	* GET_TERM_BY_LOCATOR
 	* Resolve locator to string value to show in list etc.
-	* @return mixed bool|string $valor
-	*	Default is bool false
+	* @param object $locator
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param bool $from_cache = false
+	*
+	* @return string|null $valor
 	*/
-	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) {
+	public static function get_term_by_locator(object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false) : ?string {
 
-		if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
-			if(SHOW_DEBUG===true) {
-				#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
-				debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+		$valor = null;
+
+		// check locator->section_tipo mandatory property
+			if (!property_exists($locator, 'section_tipo')) {
+				if(SHOW_DEBUG===true) {
+					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
+					debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+				}
+				return $valor; // null
 			}
-			return false;
-		}
 
-		# Cache control (session)
+		// Cache control (session)
 			$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
 			#if ($from_cache===true && isset($_SESSION['dedalo']['config']['term_by_locator'][$cache_uid])) {
 			#	return $_SESSION['dedalo']['config']['term_by_locator'][$cache_uid];
@@ -573,93 +579,89 @@ class ts_object {
 				return $term_by_locator_data[$cache_uid];
 			}
 
-		$valor = false;
+		// thesaurus_map conditional value
+			$section_map	= section::get_section_map($locator->section_tipo);
+			$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+			if ($thesaurus_map===false) {
 
-		$section_map 	= section::get_section_map($locator->section_tipo);
-		$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-			#dump($section_map, ' section_map ++ '.to_string($locator->section_tipo));
+				$valor = $locator->section_tipo .'_'. $locator->section_id ;
+				if(isset($locator->component_tipo))
+					$valor .= '_'. $locator->component_tipo;
+				if(isset($locator->tag_id))
+					$valor .= '_'. $locator->tag_id;
+			}else{
 
-		if ($thesaurus_map===false) {
-			#dump($locator, ' locator ++ '.to_string());
-			#$valor = "Undefined section_map for $locator->section_tipo";
+				$term		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term]; // source could be an array or string
+				$ar_valor	= [];
+				foreach ($term as $tipo) {
 
-			$valor = $locator->section_tipo .'_'. $locator->section_id ;
-			if(isset($locator->component_tipo))
-				$valor .= '_'. $locator->component_tipo;
-			if(isset($locator->tag_id))
-				$valor .= '_'. $locator->tag_id;
+					$parent			= $locator->section_id;
+					$section_tipo	= $locator->section_tipo;
+					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					// debug
+						// if(SHOW_DEBUG===true) {
+						// 	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						// 	if ($real_modelo_name!==$modelo_name) {
+						// 		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
+						// 	}
+						// }
+					$component = component_common::get_instance(
+						$modelo_name,
+						$tipo,
+						$parent,
+						'edit',
+						$lang,
+						$section_tipo
+					);
+					$current_value = $component->get_valor($lang);
+					if (!empty($current_value)) {
+						$ar_valor[] = $current_value;
+					}
+				}
+				$valor = implode(', ', $ar_valor);
 
-		}else{
+				if (empty($valor)) {
 
-			$term		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term]; // source could be an array or string
-			$ar_valor	= [];
-			foreach ($term as $tipo) {
+					$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
+					#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
+					#if($lang!==$main_lang) {
+					#	$component->set_lang($main_lang);
+					#	$valor = $component->get_valor($main_lang);
+					#	if (strlen($valor)>0) {
+					#		$valor = component_common::decore_untranslated( $valor );
+					#	}
+					#
+					#	# return component to previous lang
+					#	$component->set_lang($lang);
+					#}
+					#
+					#if (empty($valor)) {
 
-				$parent			= $locator->section_id;
-				$section_tipo	= $locator->section_tipo;
-				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				#if(SHOW_DEBUG===true) {
-				#	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				#	if ($real_modelo_name!==$modelo_name) {
-				#		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
-				#	}
-				#}
-				$component 		= component_common::get_instance( $modelo_name,
-																  $tipo,
-																  $parent,
-																  'edit',
-																  $lang,
-																  $section_tipo);
-				$current_value = $component->get_valor($lang);
-				if (!empty($current_value)) {
-					$ar_valor[] = $current_value;
+						$dato_full = $component->get_dato_full();
+						# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
+						$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
+						if (is_array($valor)) {
+							$valor = implode(', ', $valor);
+						}
+						#dump($valor, ' valor ++ '.to_string());
+					#}
 				}
 			}
-			$valor = implode(', ', $ar_valor);
-
-			if (empty($valor)) {
-
-				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-				#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
-				#if($lang!==$main_lang) {
-				#	$component->set_lang($main_lang);
-				#	$valor = $component->get_valor($main_lang);
-				#	if (strlen($valor)>0) {
-				#		$valor = component_common::decore_untranslated( $valor );
-				#	}
-				#
-				#	# return component to previous lang
-				#	$component->set_lang($lang);
-				#}
-				#
-				#if (empty($valor)) {
-
-					$dato_full = $component->get_dato_full();
-					# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-					$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
-					if (is_array($valor)) {
-						$valor = implode(', ', $valor);
-					}
-					#dump($valor, ' valor ++ '.to_string());
-				#}
-			}
-		}
-		#dump($valor, ' valor ++ '.to_string($locator->section_tipo."-".$locator->section_id));
+			#dump($valor, ' valor ++ '.to_string($locator->section_tipo."-".$locator->section_id));
 
 		/*
-		# En proceso. De momento devuelve el locator en formato json, sin resolver..
-		if (!isset($valor)) {
-			$valor = json_encode($locator);
-		}
+			# En proceso. De momento devuelve el locator en formato json, sin resolver..
+			if (!isset($valor)) {
+				$valor = json_encode($locator);
+			}
 
-		if(SHOW_DEBUG===true) {
-			$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
-		}
-		*/
-		#debug_log(__METHOD__." valor $cache_uid ".htmlentities($valor), logger::DEBUG);
+			if(SHOW_DEBUG===true) {
+				$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
+			}
+			*/
 
-		# Cache control (session)
-			#$_SESSION['dedalo']['config']['term_by_locator'][$cache_uid] = $valor;
+		// cache control
+			// $_SESSION['dedalo']['config']['term_by_locator'][$cache_uid] = $valor;
 			$term_by_locator_data[$cache_uid] = $valor;
 
 
@@ -788,4 +790,4 @@ class ts_object {
 
 
 
-}//end ts_object
+}//end class ts_object
