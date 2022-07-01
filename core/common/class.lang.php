@@ -189,9 +189,10 @@ class lang {
 
 	/**
 	* GET_LANG_NAME_BY_LOCATOR
-	* @return string $lang_name
+	* @return string|null $lang_name
 	*/
-	public static function get_lang_name_by_locator(object $locator, string $lang=DEDALO_APPLICATION_LANG, bool $from_cache=false) : string {
+	public static function get_lang_name_by_locator(object $locator, string $lang=DEDALO_APPLICATION_LANG, bool $from_cache=false) : ?string {
+
 		$lang_name = ts_object::get_term_by_locator( $locator, $lang, $from_cache );
 
 		return $lang_name;

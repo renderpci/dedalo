@@ -2587,6 +2587,7 @@ abstract class component_common extends common {
 		# Convert to array always
 		$ar_query_object = is_array($current_query_object) ? $current_query_object : array($current_query_object);
 
+
 		return $ar_query_object;
 	}//end get_search_query2
 

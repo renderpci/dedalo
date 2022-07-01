@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS SEARCH
+* CLASS SEARCH_TM
 *
 *
 */
@@ -226,4 +226,4 @@ class search_tm extends search {
 
 
 
-}//end search_development
+}//end class search_tm

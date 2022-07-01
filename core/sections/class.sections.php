@@ -4,6 +4,8 @@
 */
 class sections extends common {
 
+
+
 	/**
 	* CLASS VARS
 	*/
@@ -31,7 +33,7 @@ class sections extends common {
     * Singleton pattern
     * @returns array array of section objects by key
     */
-    public static function get_instance($ar_locators=[], $search_query_object=null, $caller_tipo=null, $modo='list', $lang=DEDALO_DATA_NOLAN) {
+    public static function get_instance(array $ar_locators=null, object $search_query_object=null, string $caller_tipo=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN) {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $modo, $lang);
 
@@ -169,4 +171,4 @@ class sections extends common {
 
 
 
-}//end section
+}//end class sections

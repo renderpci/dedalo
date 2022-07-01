@@ -1219,7 +1219,7 @@ class diffusion_sql extends diffusion  {
 						foreach ((array)$dato as $current_locator) {
 							if (isset($current_locator->dataframe)) {
 								foreach ($current_locator->dataframe as $key => $locator_dataframe) {
-										$ar_term_dataframe[] = ts_object::get_term_by_locator( $locator_dataframe, $options->lang, $from_cache=true );
+									$ar_term_dataframe[] = ts_object::get_term_by_locator( $locator_dataframe, $options->lang, $from_cache=true );
 								}
 							}
 						}

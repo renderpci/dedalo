@@ -91,11 +91,18 @@ class search_related extends search {
 	* GET_REFERENCED_LOCATORS
 	* Get the sections that is pointed by any kind of locator to the caller (reference_locator)
 	* @see section::get_inverse_locators
+	*
 	* @param object $reference_locator
 	*	Basic locator with section_tipo and section_id properties
+	* @param int|null $limit = null
+	* @param int|null $offset
+	* @param bool $count
+	*
 	* @return array $ar_inverse_locators
 	*/
 	public static function get_referenced_locators( object $reference_locator, ?int $limit=null, ?int $offset=null, bool $count=false ) : array {
+
+		$ar_inverse_locators = [];
 
 		//new way done in relations field with standard sqo
 			$sqo = new search_query_object();
@@ -110,8 +117,6 @@ class search_related extends search {
 			$rows_data	= $search->search();
 			// fix result ar_records as dato
 			$result	= $rows_data->ar_records;
-
-			$ar_inverse_locators = array();
 
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
@@ -140,9 +145,9 @@ class search_related extends search {
 			}
 
 
-		return (array)$ar_inverse_locators;
+		return $ar_inverse_locators;
 	}//end get_referenced_locators
 
 
 
-}//end search_development
+}//end class search_related

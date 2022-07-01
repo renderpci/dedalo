@@ -187,12 +187,12 @@ class component_relation_index extends component_relation_common {
 
 		# Search relation index in hierarchy tables
 		$options = new stdClass();
-			$options->fields 	= new stdClass();
-				$options->fields->section_tipo 	= $section_tipo;
-				$options->fields->section_id 	= $section_id;
-				$options->fields->component_tipo= $component_tipo;
-				$options->fields->type 			= $type;
-				$options->fields->tag_id 		= $tag_id;
+			$options->fields = new stdClass();
+				$options->fields->section_tipo		= $section_tipo;
+				$options->fields->section_id		= $section_id;
+				$options->fields->component_tipo	= $component_tipo;
+				$options->fields->type				= $type;
+				$options->fields->tag_id			= $tag_id;
 
 		$result = component_relation_index::get_indexations_search( $options );
 
@@ -211,13 +211,13 @@ class component_relation_index extends component_relation_common {
 				$locator_resolve_term->set_section_tipo($inverse_locator->from_section_tipo);
 			 	$locator_resolve_term->set_section_id($inverse_locator->from_section_id);
 
-			$term_label = ts_object::get_term_by_locator( $locator_resolve_term, $lang, $from_cache=true );
+			$term_label = ts_object::get_term_by_locator($locator_resolve_term, $lang, $from_cache=true) ?? '';
 
 			$data = new stdClass();
-				$data->section_tipo = $inverse_locator->from_section_tipo;
-				$data->section_id 	= $inverse_locator->from_section_id;
-				$data->term 		= strip_tags($term_label);
-				$data->locator 		= $locator;
+				$data->section_tipo	= $inverse_locator->from_section_tipo;
+				$data->section_id	= $inverse_locator->from_section_id;
+				$data->term			= strip_tags($term_label);
+				$data->locator		= $locator;
 
 			$ar_indexations_resolved[] = $data;
 		}

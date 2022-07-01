@@ -63,10 +63,13 @@ class security {
 
 	/**
 	* GET_SECURITY_PERMISSIONS
+	* Resolve permissions value from $parent_tipo and $tipo
+	* normally section_tipo, component_tipo
 	* @param string $parent_tipo
 	*	tipo of section / area
 	* @param string $tipo
 	* 	tipo of element (usually component)
+	* @return int $permissions
 	*/
 	public static function get_security_permissions(string $parent_tipo, string $tipo) : int {
 
@@ -172,9 +175,9 @@ class security {
 	/**
 	* GET_USER_SECURITY_ACCESS
 	* Locate component_security_access of current logged user based on user profile
-	* @return component
+	* @return object|null $component_security_access
 	*/
-	private static function get_user_security_access() {
+	private static function get_user_security_access() : ?object {
 
 		// Default behavior is false (use logged user to calculate permissions)
 			$user_id = $_SESSION['dedalo']['auth']['user_id'];
@@ -182,7 +185,7 @@ class security {
 		// user profile
 			$user_profile = security::get_user_profile($user_id);
 			if (empty($user_profile)) {
-				return false;
+				return null;
 			}
 
 			// locator
@@ -208,9 +211,9 @@ class security {
 	* GET_USER_PROFILE
 	* Resolve user profile id by user_id
 	* @param int $user_id
-	* @return object|false $locator
+	* @return object|null $locator
 	*/
-	public static function get_user_profile(int $user_id) {
+	public static function get_user_profile(int $user_id) : ?object {
 
 		// user profile
 			$component_profile_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
@@ -224,7 +227,7 @@ class security {
 			);
 			$profile_dato = $component_profile->get_dato();
 			if (empty($profile_dato)) {
-				return false;
+				return null;
 			}
 
 			// locator
@@ -239,7 +242,7 @@ class security {
 	/**
 	* GET_PERMISSIONS_TABLE_OF_SPECIFIC_USER
 	* Custom user calculus
-	*
+	* @param int $user_id
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
 	*/
@@ -257,7 +260,7 @@ class security {
 	* Force to recalculate global permissions
 	* @return bool true
 	*/
-	public static function reset_permissions_table() {
+	public static function reset_permissions_table() : bool {
 
 		// unset static var
 		unset($permissions_table);
@@ -438,4 +441,4 @@ class security {
 
 
 
-}//end security class
+}//end class security
