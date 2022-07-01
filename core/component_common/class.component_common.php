@@ -1961,9 +1961,11 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @return $response->result =0; // the component don't have the function "update_dato_version"
-	* @return $response->result =1; // the component do the update"
-	* @return $response->result =2; // the component try the update but the dato don't need change"
+	* @param object $request_options
+	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
 	public static function update_dato_version(object $request_options) : object {
 

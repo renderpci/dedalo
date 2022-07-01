@@ -2581,7 +2581,10 @@ class component_text_area extends component_common {
 	/**
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
-	* @return object
+	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -2599,9 +2602,7 @@ class component_text_area extends component_common {
 			$dato_unchanged	= $options->dato_unchanged;
 			$reference_id	= $options->reference_id;
 
-
 		$update_version = implode(".", $update_version);
-
 		switch ($update_version) {
 
 			case '6.0.0':
@@ -2627,12 +2628,14 @@ class component_text_area extends component_common {
 								$lib_data = [];
 
 								// create the component relation for save the layers
-								$image_component = component_common::get_instance($model,
-																				 $current_tipo,
-																				 $options->section_id,
-																				 'edit',
-																				 DEDALO_DATA_NOLAN,
-																				 $options->section_tipo);
+								$image_component = component_common::get_instance(
+									$model,
+									$current_tipo,
+									$options->section_id,
+									'edit',
+									DEDALO_DATA_NOLAN,
+									$options->section_tipo
+								);
 								$image_dato = $image_component->get_dato();
 
 								if(empty($image_dato[0]->lib_data)){
@@ -2685,7 +2688,6 @@ class component_text_area extends component_common {
 								$image_component->set_dato($image_dato);
 								$image_component->save();
 
-
 								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
 								break;
 
@@ -2694,12 +2696,14 @@ class component_text_area extends component_common {
 								$lib_data = [];
 
 								// create the component relation for save the layers
-								$geo_component = component_common::get_instance($model,
-																				 $current_tipo,
-																				 $options->section_id,
-																				 'edit',
-																				 DEDALO_DATA_NOLAN,
-																				 $options->section_tipo);
+								$geo_component = component_common::get_instance(
+									$model,
+									$current_tipo,
+									$options->section_id,
+									'edit',
+									DEDALO_DATA_NOLAN,
+									$options->section_tipo
+								);
 								$geo_dato = $geo_component->get_dato();
 
 								if(!empty($geo_dato[0]->lib_data)){
@@ -2742,9 +2746,7 @@ class component_text_area extends component_common {
 								$geo_component->set_dato($geo_dato);
 								$geo_component->save();
 
-
 								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
-
 								break;
 						}
 					}
@@ -2756,21 +2758,23 @@ class component_text_area extends component_common {
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
 						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-
-					return $response;
 				}else{
+
 					$response = new stdClass();
 						$response->result	= 2;
 						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-
-					return $response;
 				}
 				break;
 
 			default:
-
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
 				break;
 		}
+
+
+		return $response;
 	}//end update_dato_version
 
 

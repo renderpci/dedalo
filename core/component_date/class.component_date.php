@@ -1270,7 +1270,11 @@ class component_date extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @return
+	* @param object $request_options
+	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -1288,9 +1292,7 @@ class component_date extends component_common {
 			$dato_unchanged = $options->dato_unchanged;
 			$reference_id 	= $options->reference_id;
 
-
 		$update_version = implode(".", $update_version);
-
 		switch ($update_version) {
 			/* EN PROCESO
 			case '4.9.2':
@@ -1315,7 +1317,9 @@ class component_date extends component_common {
 				}
 				break;
 				*/
+
 			case '4.9.1':
+
 				if (!empty($dato_unchanged)) {
 
 					/* 	Change the dato to be compatible with the range format {"start":{...}}
@@ -1332,14 +1336,14 @@ class component_date extends component_common {
 					switch (true) {
 						case isset($dato_unchanged[0]->start):
 						case isset($dato_unchanged[0]->period):
-							$response = new stdClass();
-							$response->result = 2;
-							$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 
+							$response = new stdClass();
+								$response->result	= 2;
+								$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 							break;
+
 						default:
 							$conversion = new stdClass();
-
 							foreach ($dato_unchanged as $value) {
 								$conversion->start = $value;
 							}
@@ -1348,23 +1352,18 @@ class component_date extends component_common {
 							$new_dato[] = $conversion;
 
 							$response = new stdClass();
-							$response->result = 1;
-							$response->new_dato = $new_dato;
-							$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+								$response->result	= 1;
+								$response->new_dato	= $new_dato;
+								$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 							break;
 					}
-
-
-					return $response;
-
 				}else{
+
 					$response = new stdClass();
-					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}
 				break;
-
 
 			case '4.8.1':
 				if (!empty($dato_unchanged)) {
@@ -1372,64 +1371,53 @@ class component_date extends component_common {
 					$new_dato = $dato_unchanged; // Only we need re-save the dato to recalculate time in seconds
 
 					$response = new stdClass();
-					$response->result = 1;
-					$response->new_dato = $new_dato;
-					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
+
 					$response = new stdClass();
-					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}
 				break;
 
 			case '4.7.0':
 				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
-					#dump($dato_unchanged, ' dato_unchanged ++ '.to_string($reference_id)); #die();
 
 					$new_dato = [];
 					$new_dato = $dato_unchanged;
-						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));
 
 					$response = new stdClass();
-					$response->result = 1;
-					$response->new_dato = $new_dato;
-					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
+
 					$response = new stdClass();
-					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}
 				break;
 
 			case '4.0.14':
 				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
-					#dump($dato_unchanged, ' dato_unchanged ++ '.to_string($reference_id)); #die();
 
 					$new_dato = component_date::add_time($dato_unchanged);
-						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));
 
 					$response = new stdClass();
-					$response->result = 1;
-					$response->new_dato = $new_dato;
-					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
+
 					$response = new stdClass();
-					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}
 				break;
 
 			case '4.0.10':
-				#$dato = $this->get_dato_unchanged();
 
 				# Compatibility old dedalo instalations
 				if (is_string($dato_unchanged) && !empty($dato_unchanged)) {
@@ -1438,27 +1426,26 @@ class component_date extends component_common {
 					$new_dato 	= (object)$dd_date->get_date_from_timestamp( $dato_unchanged );
 
 					$response = new stdClass();
-					$response->result =1;
-					$response->new_dato = $new_dato;
-					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-
-
+						$response->result	=1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
+
 					$response = new stdClass();
-					$response->result = 2;
-					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}
 				break;
-			case '4.0.10':
-				$result = true;
-				return $result;
-				break;
+
 			default:
-				# code...
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
 				break;
 		}
+
+
+		return $response;
 	}//end update_dato_version
 
 
