@@ -613,7 +613,11 @@ class component_filter extends component_relation_common {
 
 	/**
 	* UPDATE_DATO_VERSION
+	* @param object $request_options
 	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -627,60 +631,65 @@ class component_filter extends component_relation_common {
 			$options->context 			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
-			$reference_id 	= $options->reference_id;
-			#dump($dato_unchanged, ' dato_unchanged ++ '." $options->section_tipo - $options->tipo - $options->section_id " .to_string()); die();
+			$update_version	= $options->update_version;
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
 
 		$update_version = implode(".", $update_version);
-
 		switch ($update_version) {
+
 			case '4.9.0':
 
-					# Compatibility old dedalo instalations
-					# Old dato is and object (associative array for php)
-					// Like {"1": 2}
-					if (!empty($dato_unchanged)) {
-						// Old format is received case
-						/*
-						$ar_locators = [];
-						foreach ($dato_unchanged as $key => $value) {
+				# Compatibility old dedalo instalations
+				# Old dato is and object (associative array for php)
+				// Like {"1": 2}
+				if (!empty($dato_unchanged)) {
+					// Old format is received case
+					/*
+					$ar_locators = [];
+					foreach ($dato_unchanged as $key => $value) {
 
-							if (isset($value->section_id) && isset($value->section_tipo)) {
-								# Updated dato (is locator)
-								$filter_locator = $value;
+						if (isset($value->section_id) && isset($value->section_tipo)) {
+							# Updated dato (is locator)
+							$filter_locator = $value;
 
-							}else{
-								# Old dato Like {"1": 2}
-								$filter_locator = new locator();
-									$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
-									$filter_locator->set_section_id($key);
-									$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-									$filter_locator->set_from_component_tipo($options->tipo);
-							}
-							# Add to clean array
-							$ar_locators[] = $filter_locator;
+						}else{
+							# Old dato Like {"1": 2}
+							$filter_locator = new locator();
+								$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+								$filter_locator->set_section_id($key);
+								$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+								$filter_locator->set_from_component_tipo($options->tipo);
 						}
-						*/
-						$ar_locators = self::convert_dato_pre_490( $dato_unchanged, $options->tipo );
-						# Replace old formatted value with new formatted array of locators
-						$new_dato = $ar_locators;
-						$response = new stdClass();
-							$response->result   = 1;
-							$response->new_dato = $new_dato;
-							$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-						return $response;
-
-					}else{
-
-						debug_log(__METHOD__." No project found in $options->section_tipo - $options->tipo - $options->section_id ".to_string(), logger::DEBUG);
-						$response = new stdClass();
-						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-						return $response;
+						# Add to clean array
+						$ar_locators[] = $filter_locator;
 					}
+					*/
+					$ar_locators = self::convert_dato_pre_490( $dato_unchanged, $options->tipo );
+					# Replace old formatted value with new formatted array of locators
+					$new_dato = $ar_locators;
+					$response = new stdClass();
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+				}else{
+
+					debug_log(__METHOD__." No project found in $options->section_tipo - $options->tipo - $options->section_id ".to_string(), logger::DEBUG);
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}
+				break;
+
+			default:
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
 				break;
 		}
+
+
+		return $response;
 	}//end update_dato_version
 
 

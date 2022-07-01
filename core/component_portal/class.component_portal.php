@@ -326,7 +326,11 @@ class component_portal extends component_relation_common {
 
 	/**
 	* UPDATE_DATO_VERSION
+	* @param object $request_options
 	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -340,22 +344,22 @@ class component_portal extends component_relation_common {
 			$options->context 			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
-			$reference_id 	= $options->reference_id;
+			$update_version	= $options->update_version;
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
 
 
 		$update_version = implode(".", $update_version);
-
 		switch ($update_version) {
+
 			case '4.8.0':
 
 				if ($options->context==='update_component_dato') {
 					# Current component is already get and set dato with component_relation_common (in "relations")
 					# We need recover here the old dato from section->components->tipo->dato
 					# This context is different to time machine update dato
-					$section  		= section::get_instance($options->section_id, $options->section_tipo);
-					$dato_unchanged = $section->get_component_dato($options->tipo, DEDALO_DATA_NOLAN, $lang_fallback=false);
+					$section		= section::get_instance($options->section_id, $options->section_tipo);
+					$dato_unchanged	= $section->get_component_dato($options->tipo, DEDALO_DATA_NOLAN, $lang_fallback=false);
 				}
 
 				# Compatibility old dedalo instalations
@@ -374,17 +378,14 @@ class component_portal extends component_relation_common {
 					$new_dato = (array)$ar_locators;
 
 					$response = new stdClass();
-						$response->result   = 1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
 
 					$response = new stdClass();
-						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-					return $response;
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}
 				break;
 
@@ -393,7 +394,16 @@ class component_portal extends component_relation_common {
 				throw new Exception("Error Processing Request. Remember DELETE ALL OLD COMPONENT DATO (inside section->components->tipo)", 1);
 				# PENDING TO DO !!
 				break;
-		}
+
+			default:
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
+				break;
+			}
+
+
+		return $response;
 	}//end update_dato_version
 
 

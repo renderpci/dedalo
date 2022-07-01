@@ -177,7 +177,11 @@ class component_iri extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
+	* @param object $request_options
 	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -195,7 +199,18 @@ class component_iri extends component_common {
 			$dato_unchanged	= $options->dato_unchanged;
 			$reference_id	= $options->reference_id;
 
-		// return true;
+		$update_version = implode(".", $update_version);
+		switch ($update_version) {
+
+			default:
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
+				break;
+		}
+
+
+		return $response;
 	}//end update_dato_version
 
 

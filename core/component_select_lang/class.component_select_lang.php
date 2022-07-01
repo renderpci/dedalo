@@ -171,10 +171,11 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @param string $update_version
-	* 	like '4.0.11'
-	* @param string | array $dato_unchanged
+	* @param object $request_options
 	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
 	public static function update_dato_version(object $request_options) : object {
 
@@ -188,14 +189,12 @@ class component_select_lang extends component_relation_common {
 			$options->context 			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
-			$reference_id 	= $options->reference_id;
+			$update_version	= $options->update_version;
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
 
 
 		$update_version = implode(".", $update_version);
-		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
-
 		switch ($update_version) {
 
 			case '4.0.12':
@@ -225,24 +224,25 @@ class component_select_lang extends component_relation_common {
 				# Compatibility old dedalo instalations
 				if ($data_changed) {
 					$response = new stdClass();
-						$response->result =1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-
-					return $response;
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
 					$response = new stdClass();
-						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-
-					return $response;
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}
 				break;
 
 			default:
-				# code...
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
 				break;
 		}
+
+
+		return $response;
 	}//end update_dato_version
 
 
