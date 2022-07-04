@@ -55,9 +55,9 @@ class component_filter_master extends component_filter {
 	*/
 	public function propagate_filter() : bool {
 		# Nothing to do
-		debug_log(__METHOD__." Invalid call !! ".to_string(), logger::ERROR);
+		// debug_log(__METHOD__." Invalid call !! ".to_string(), logger::ERROR);
 
-		return false;
+		return true;
 	}//end propagate_filter
 
 
