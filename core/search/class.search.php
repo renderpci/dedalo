@@ -2201,16 +2201,13 @@ class search {
 
 		$term_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-		# Add first level always
-		$current_path = new stdClass();
-
-			$current_path->name				= strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
-			$current_path->modelo			= $term_model;
-			$current_path->section_tipo		= $section_tipo;
-			$current_path->component_tipo	= $tipo;
-
-		# Add direct level to array path
-		$path[] = $current_path;
+		// Add first level always
+			$current_path = new stdClass();
+				$current_path->name				= strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
+				$current_path->modelo			= $term_model;
+				$current_path->section_tipo		= $section_tipo;
+				$current_path->component_tipo	= $tipo;
+			$path[] = $current_path;
 
 		if ($resolve_related===true) {
 			$ar_related_components 	= component_relation_common::get_components_with_relations();
@@ -3102,12 +3099,14 @@ class search {
 		$result = [];
 		foreach ($ar_locator as $locator) {
 			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($path_item->component_tipo,true);
-			$component	= component_common::get_instance($model_name,
-														 $path_item->component_tipo,
-														 $locator->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $locator->section_tipo);
+			$component	= component_common::get_instance(
+				$model_name,
+				$path_item->component_tipo,
+				$locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
 			$component_dato = $component->get_dato_full();
 
 			if (!empty($component_dato)) {
