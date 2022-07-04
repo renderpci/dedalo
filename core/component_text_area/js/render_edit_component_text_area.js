@@ -756,7 +756,7 @@ const get_custom_events = (self, i, text_editor) => {
 			// img : click on img
 			if(options.node_name==='img' || options.node_name==='REFERENCE') {
 				const tag_obj = options
-				switch(tag_obj.dataset.type) {
+				switch(tag_obj.type) {
 
 					case 'tc':
 						console.log("aquí:");
@@ -1299,10 +1299,10 @@ const render_note = async function(options) {
 		const self				= options.self
 		const text_editor		= options.text_editor
 		const i					= options.i
-		const tag_node 			= options.tag
+		const tag_view 			= options.tag
 
 	// short vars
-		const data_string		= tag_node.dataset.data
+		const data_string		= tag_view.data
 		// convert the data_tag form string to json*-
 		const data				= data_string.replace(/\'/g, '"')
 		// replace the ' to " stored in the html data to JSON "
@@ -1337,20 +1337,20 @@ const render_note = async function(options) {
 			const state = changed_value.section_id=='2' // no active value
 				? 'a' // no publishable
 				: 'b' // publishable
-				console.log("tag_node:-------------------",tag_node.dataset.state);
-			const current_tag_state = tag_node.dataset.state || 'a'
+				console.log("tag_node:-------------------",tag_view.state);
+			const current_tag_state = tag_view.state || 'a'
 			// create new tag with the new state of the tag
 			if (current_tag_state !== state){
 				const note_tag		= {
 					type	: 'note',
-					label	: tag_node.dataset.label,
-					tag_id	: tag_node.dataset.tag_id,
+					label	: tag_view.label,
+					tag_id	: tag_view.tag_id,
 					state	: state,
 					data	: data_string
 				}
 				text_editor.update_tag({
 					type			: 'note',
-					tag_id			: tag_node.dataset.tag_id,
+					tag_id			: tag_view.tag_id,
 					new_data_obj	: note_tag
 				})
 
@@ -1358,7 +1358,7 @@ const render_note = async function(options) {
 				// // change the values to the current tag node
 				// tag_node.id				= tag.id
 				// tag_node.src			= tag.src
-				// tag_node.dataset.state	= tag.dataset.state
+				// tag_view.state	= tag.dataset.state
 				// Save the change, set the text_editor as dirty (has changes) and save it
 				text_editor.set_dirty(true)
 				text_editor.save()
@@ -1409,7 +1409,7 @@ const render_note = async function(options) {
 			button_remove.addEventListener("click", function(e){
 				e.stopPropagation()
 				// ask to user if really want delete the note
-				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
+				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_view.tag_id
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
 					// create sqo the the filter_by_locators of the section to be deleted
@@ -1428,7 +1428,7 @@ const render_note = async function(options) {
 						delete_mode	: 'delete_record'
 					})
 					// remove the tag of the note in the component_text_area
-					tag_node.remove()
+					tag_view.remove()
 					// prepare the text_editor to save setting it in dirty mode and save the change
 					text_editor.set_dirty(true)
 					text_editor.save()
