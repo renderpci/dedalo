@@ -280,13 +280,13 @@ export const service_ckeditor = function() {
 					const item = data.target.parent._attrs
 					const tag_obj = {
 						node_name : data.target.name,
-						dataset :{
-							type	: item.get('data-type'),
-							tag_id	: item.get('data-tag_id'),
-							state	: item.get('data-state'),
-							label	: item.get('data-label'),
-							data	: item.get('data-data')
-						}
+						// dataset
+						type	: item.get('data-type'),
+						tag_id	: item.get('data-tag_id'),
+						state	: item.get('data-state'),
+						label	: item.get('data-label'),
+						data	: item.get('data-data')
+
 					}
 					if (custom_events.click) {
 						custom_events.click(evt, tag_obj)
@@ -570,8 +570,6 @@ export const service_ckeditor = function() {
 
 					if(current_tag_id==tag_id && ar_type.includes(current_type)) {
 
-						console.log("update_tag item:", item);
-
 						// short vars
 							const current_state	= attributes.get('state')
 							const current_label	= attributes.get('label')
@@ -583,7 +581,6 @@ export const service_ckeditor = function() {
 
 						// add/replace new_data_obj properties given
 							for (const name in new_data_obj) {
-								console.log("edit_attributes/////////***", edit_attributes);
 								edit_attributes.set(name, new_data_obj[name])
 							}
 
@@ -591,13 +588,15 @@ export const service_ckeditor = function() {
 							// console.log("-> 2 changed edit_attributes:",edit_attributes);
 
 						// id. Re-create the id like [/index-n-1-label in 1]
-							const new_id = self.caller.build_data_tag(
-								current_type, // type
-								current_tag_id, // tag_id
-								new_data_obj.state || current_state, // state
-								new_data_obj.label || current_label, // label
-								new_data_obj.data || current_data // data
-							)
+							const data_tag = {
+								type	: current_type, // type
+								tag_id	: current_tag_id, // tag_id
+								state	: new_data_obj.state || current_state, // state
+								label 	: new_data_obj.label || current_label, // label
+								data	: new_data_obj.data || current_data // data
+							}
+							const new_tag	= self.caller.build_view_tag( data_tag, current_tag_id )
+							const new_id	= new_tag.id
 							edit_attributes.set('src_id' , new_id)
 
 						// image_url. Replace url var id with updated id tag
