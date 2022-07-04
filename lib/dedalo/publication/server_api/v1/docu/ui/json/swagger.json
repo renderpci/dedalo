@@ -1,7 +1,7 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.21",
+    "version" : "1.0.22",
     "title" : "Dédalo Publication Server REST API 1.0.21",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
@@ -134,7 +134,7 @@
       "name" : "ar_fields",
       "in" : "query",
       "required" : false,
-      "description" : "Comma separated list of required columns in table",
+      "description" : "Comma separated list of required columns in table. Stringified array is also allowed <br>Sample:<br> [\"name\",\"surname\"] ",
       "type" : "string"
     },
     "rows_per_page" : {
@@ -203,11 +203,7 @@
           "format" : "string",
           "default" : "interview"
         }, {
-          "name" : "ar_fields",
-          "in" : "query",
-          "required" : false,
-          "description" : "Comma separated list of required columns in table.<br>Stringified array is also allowed like [\"id\",\"lang\"]",
-          "type" : "string"
+          "$ref" : "#/parameters/ar_fields"
         }, {
           "name" : "section_id",
           "in" : "query",
@@ -233,7 +229,7 @@
         }, {
           "name" : "order",
           "in" : "query",
-          "description" : "Custom order for result.Set null for no sort",
+          "description" : "Custom order for result. Set null for no sort. Sample: 'name ASC, surname ASC'",
           "required" : false,
           "type" : "string",
           "format" : "string"
@@ -1037,7 +1033,7 @@
         }, {
           "name" : "ar_calls",
           "in" : "query",
-          "description" : "JSON stringified array of calls to api. Will be iterated and resolved in the server side. Example: [{\"id\":\"templates_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"template_map\",\"ar_fields\":[\"data\",\"name\"],\"lang\":\"lg-spa\"}},{\"id\":\"menu_all\",\"options\":{\"dedalo_get\":\"records\",\"table\":\"ts_web\",\"ar_fields\":[\"section_id\",\"term_id\",\"term\",\"web_path\",\"parent\",\"children\",\"template_name\",\"title\",\"abstract\",\"body\",\"norder\",\"image\"],\"lang\":\"lg-spa\"}}] ",
+          "description" : "JSON array of calls to api (stringified or not). Will be iterated and resolved in the server side. <br>Sample:<br> [ { \"id\":\"templates_all\", \"options\":{ \"dedalo_get\":\"records\", \"table\":\"template_map\", \"ar_fields\":[\"data\",\"name\"], \"lang\":\"lg-spa\" } }, { \"id\":\"menu_all\", \"options\":{ \"dedalo_get\":\"records\", \"table\":\"ts_web\", \"ar_fields\":[\"section_id\",\"term_id\",\"term\",\"web_path\",\"parent\",\"children\",\"template_name\",\"title\",\"abstract\",\"body\",\"norder\",\"image\"], \"lang\":\"lg-spa\" } } ]",
           "required" : true,
           "type" : "string",
           "format" : "string"
