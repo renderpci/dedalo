@@ -1076,7 +1076,7 @@ abstract class common {
 
 	/**
 	* TRUNCATE_TEXT
-	* Multibyte truncate or trim text
+	* Multi-byte truncate or trim text
 	* @return string $final_string
 	*/
 	public static function truncate_text(string $string, int $limit, string $break=" ", string $pad='...') : string {
@@ -2292,10 +2292,8 @@ abstract class common {
 						return $section->pagination->limit;
 						break;
 					case strpos($model, 'component_')===0:
-						$recordObjdd = new RecordObj_dd($tipo);
-						$translatable = $recordObjdd->get_traducible()=== 'si';
-
-						$current_lang = $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$translatable	= RecordObj_dd::get_translatable($tipo);
+						$current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$component = component_common::get_instance($model, $tipo, null, $mode, $current_lang, $section_tipo);
 
 						return $component->pagination->limit;
@@ -3253,20 +3251,24 @@ abstract class common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// options set
+			$context_type				= $options->context_type;
 			$ar_section_tipo			= $options->ar_section_tipo;
 			$path						= $options->path;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements;
 			$ar_components_exclude		= $options->ar_components_exclude;
 			$ar_include_elements		= $options->ar_include_elements;
-			$context_type				= $options->context_type;
 
 		// common section info
-			$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(DEDALO_SECTION_INFO_SECTION_GROUP, 'component', 'children', $search_exact=false);
+			$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				DEDALO_SECTION_INFO_SECTION_GROUP,
+				'component',
+				'children',
+				false // bool search_exact
+			);
 			$section_info_elements = array_merge([DEDALO_SECTION_INFO_SECTION_GROUP], $ar_elements);
 
-		# Manage multiple sections
-		# section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
-		#$ar_section_tipo = (array)$section_tipo;
+		// Manage multiple sections
+		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
 		$resolved_section = [];
 		$context = [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
@@ -3290,28 +3292,28 @@ abstract class common {
 			//create the section instance and get the context_simple
 				$dd_section = section::get_instance(null, $section_tipo, $modo='list', $cache=true);
 
-			// // element json
-			// 	$get_json_options = new stdClass();
-			// 		$get_json_options->get_context 		= true;
-			// 		$get_json_options->context_type 	= $context_type;
-			// 		$get_json_options->get_data 		= false;
-			// 	$element_json = $dd_section->get_json($get_json_options);
+			// element json
+				// 	$get_json_options = new stdClass();
+				// 		$get_json_options->get_context 		= true;
+				// 		$get_json_options->context_type 	= $context_type;
+				// 		$get_json_options->get_data 		= false;
+				// 	$element_json = $dd_section->get_json($get_json_options);
 
-			// // item context simple
-			// 	$item_context = $element_json->context;
-			$item_context = [$dd_section->get_structure_context_simple($section_permisions, $add_rqo=false)];
+			// item context add to context
+				// $item_context	= $element_json->context;
+				$item_context	= [$dd_section->get_structure_context_simple($section_permisions, $add_rqo=false)];
+				$context		= array_merge($context, $item_context);
 
-			$context = array_merge($context, $item_context);
-
-			$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section(
-				$section_tipo, // section_tipo
-				$ar_include_elements, // ar_include_elements
-				true, // from_cache
-				true, // resolve_virtual
-				true, // recursive
-				false, // search_exact
-				$ar_tipo_exclude_elements // exclude_elements
-			);
+			// section children
+				$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$section_tipo, // section_tipo
+					$ar_include_elements, // ar_include_elements
+					true, // from_cache
+					true, // resolve_virtual
+					true, // recursive
+					false, // search_exact
+					$ar_tipo_exclude_elements // exclude_elements
+				);
 
 			// Add common section info elements
 				foreach ($section_info_elements as $current_section_info_el) {
@@ -3342,16 +3344,16 @@ abstract class common {
 
 					// component case
 					case (strpos($model, 'component_')===0):
-						$recordObjdd = new RecordObj_dd($element_tipo);
-						$translatable = $recordObjdd->get_traducible()=== 'si';
-
+						$translatable	= RecordObj_dd::get_translatable($element_tipo);
 						$current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$element		= component_common::get_instance($model,
-																		 $element_tipo,
-																		 null,
-																		 'list',
-																		 $current_lang,
-																		 $section_tipo);
+						$element		= component_common::get_instance(
+							$model,
+							$element_tipo,
+							null,
+							'list',
+							$current_lang,
+							$section_tipo
+						);
 						break;
 
 					// grouper case

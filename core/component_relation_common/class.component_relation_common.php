@@ -338,16 +338,18 @@ class component_relation_common extends component_common {
 				$section_tipo			= $locator->section_tipo;
 				// set the path that will be used to create the column_obj id
 				$current_path			= $section_tipo.'_'.$ddo->tipo;
-				$RecordObj_dd			= new RecordObj_dd($ddo->tipo);
-				$current_lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
+				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
 				// dump($component_model,'$component_model');
-				$current_component 	= component_common::get_instance($component_model,
-																	 $ddo->tipo,
-																	 $locator->section_id,
-																	 $this->modo,
-																	 $current_lang,
-																	 $locator->section_tipo);
+				$current_component 	= component_common::get_instance(
+					$component_model,
+					$ddo->tipo,
+					$locator->section_id,
+					$this->modo,
+					$current_lang,
+					$locator->section_tipo
+				);
 				// set the locator to the new component, it will used in the next loop
 				$current_component->set_locator($this->locator);
 
@@ -696,10 +698,12 @@ class component_relation_common extends component_common {
 			return $this->lang;
 		}
 
-		$termonioID_related = array_values($related[0])[0];
-		$RecordObj_dd 		= new RecordObj_dd($termonioID_related);
+		$termonioID_related	= array_values($related[0])[0];
+		$translatable		= RecordObj_dd::get_translatable($termonioID_related);
 
-		$lang = ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+		$lang = $translatable===true
+			? DEDALO_DATA_LANG
+			: DEDALO_DATA_NOLAN;
 
 
 		return $lang;
@@ -2069,23 +2073,23 @@ class component_relation_common extends component_common {
 
 				case 'component_dato':
 					foreach ($search_item->value as $object) {
-						$tipo 			= $object->q->value;
-						$model 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						$RecordObj_dd 	= new RecordObj_dd($tipo);
-						$translatable	= $RecordObj_dd->get_traducible();
-
-						$component = component_common::get_instance($model,
-														$tipo,
-														$section_id,
-														'list',
-														$translatable === 'si'? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
-														$section_tipo);
+						$tipo			= $object->q->value;
+						$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$translatable	= RecordObj_dd::get_translatable($tipo);
+						$component		= component_common::get_instance(
+							$model,
+							$tipo,
+							$section_id,
+							'list',
+							$translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
 						$dato = $component->get_dato();
 						if(empty($dato)) continue;
 						foreach ($dato as $value) {
 							$filter_item = new stdClass();
-								$filter_item->q 	= json_encode($value);
-								$filter_item->path 	= search::get_query_path($section_tipo, $tipo,false,false)[0];
+								$filter_item->q		= json_encode($value);
+								$filter_item->path	= search::get_query_path($section_tipo, $tipo,false,false)[0];
 
 							$dato_filter->{$operator}[] =  $filter_item;
 						}

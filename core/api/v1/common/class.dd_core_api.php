@@ -1069,7 +1069,7 @@ final class dd_core_api {
 
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
-	* Get all components of current section (used in section filter)
+	* Get all components of current section (used in section search filter)
 	* @param object $json_data
 	*	array $json_data->ar_section_tipo
 	* @return object $response
