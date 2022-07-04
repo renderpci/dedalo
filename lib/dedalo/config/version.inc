@@ -2711,6 +2711,8 @@
 		Fixed error on clean install sequence that creates a infinite loop
 		Fixed PHP 8.1 compatibility issues in class diffusion_sql
 		Updated MySQL connection defaults from utf8 to utf8mb4 to support 4 bytes uf8 chars in publication to MySQL (legends cases for instance)
+		Updated swagger.json file in publication API server docu from 1.0.21 to 1.0.22
+		Fixed component_geolocation method get_diffusion_value_as_geojson check issue when value is empty
 
 
 
@@ -2747,7 +2749,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-06-2022T18:28:42');
+	define('DEDALO_BUILD'	, '04-07-2022T13:24:11');
 
 
 	/*
