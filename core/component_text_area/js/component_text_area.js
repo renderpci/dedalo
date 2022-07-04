@@ -649,15 +649,10 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 			? ''
 			: (label.substring(0,22)).replace(new RegExp('-', 'g'), '_');
 
-	// data
-		const data_string = data
-			? 'data:' + (typeof data==='string' ? data : JSON.stringify(data)) + ':data'
-			: 'data::data'
-
 	// dedalo_tag
 		const dedalo_tag = (type==="tc")
 			? tag_id
-			: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + safe_label + "-" + data_string + ']'
+			: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + safe_label + "-" + data + ']'
 
 	// debug
 		if(SHOW_DEBUG===true) {
