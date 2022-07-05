@@ -1227,7 +1227,11 @@ abstract class common {
 	* @param object $request_options
 	* 	Optional. Default is false
 	* @return object $json
-	*	Array of objects with data and context (configurable)
+	*	Object with data and context (configurable) like:
+	* {
+	* 	context : [...],
+	* 	data : [...]
+	* }
 	*/
 	public function get_json(object $request_options=null) : object {
 

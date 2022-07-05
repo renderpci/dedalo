@@ -1806,13 +1806,10 @@ final class dd_core_api {
 
 			$relation_list_json = $relation_list->get_json();
 
-			if ($relation_list_json !== false) {
-				$response->result 	= $relation_list_json;
-				$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-			}else{
-				$response->result 	= false;
-				$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-			}
+		// response ok
+			$response->result 	= $relation_list_json;
+			$response->msg 		= 'OK. Request done ['.__FUNCTION__.']';
+
 
 		return $response;
 	}//end get_relation_list

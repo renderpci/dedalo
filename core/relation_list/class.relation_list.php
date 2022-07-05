@@ -19,7 +19,7 @@ class relation_list extends common {
 	* CONSTRUCT
 	*
 	*/
-	public function __construct($tipo, $section_id, $section_tipo, $mode='edit') {
+	public function __construct(string $tipo, $section_id, string $section_tipo, string $mode='list') {
 
 		$this->tipo 		= $tipo;
 		$this->section_id 	= $section_id;
@@ -37,7 +37,7 @@ class relation_list extends common {
 	* @see search::calculate_inverse_locator
 	* @return array $inverse_locators
 	*/
-	public function get_inverse_references($sqo) {
+	public function get_inverse_references(object $sqo) : array {
 
 		// if (empty($this->section_id)) {
 		// 	# Section not exists yet. Return empty $arrayName = array('' => , );
@@ -207,23 +207,25 @@ class relation_list extends common {
 
 	/**
 	* GET_JSON
+	* @param object $request_options
+	* 	Optional. Default is false
 	* @return object $json
+	*	Object with data and context (configurable) like:
+	* {
+	* 	context : [...],
+	* 	data : [...]
+	* }
 	*/
-	public function get_json($request_options=false) : object {
+	public function get_json(object $request_options=null) : object {
 
-		if(SHOW_DEBUG===true) $start_time = start_time();
+		$path = DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php';
 
-			# Class name is called class (ex. component_input_text), not this class (common)
-			include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
-
-		if(SHOW_DEBUG===true) {
-			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
-			// global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
-		}
+		// controller include
+			$json = include( $path );
 
 		return $json;
 	}//end get_json
 
 
 
-}//relation_list
+}//end class relation_list

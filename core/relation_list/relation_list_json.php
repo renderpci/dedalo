@@ -1,31 +1,33 @@
 <?php
 
-#CONTROLER
+// configuration vars
+	$tipo			= $this->tipo;
+	$section_tipo	= $this->section_tipo;
+	$section_id		= $this->section_id;
+	$mode			= $this->mode;
+	$sqo			= $this->sqo;
+	$count			= $this->count;
+	$permissions	= common::get_permissions($section_tipo, $tipo);
+	$file_name		= $mode;
 
-$tipo			= $this->tipo;
-$section_tipo 	= $this->section_tipo;
-$section_id 	= $this->section_id;
-$mode 			= $this->mode;
-$sqo 			= $this->sqo;
-$count			= $this->count;
-$permissions	= common::get_permissions($section_tipo, $tipo);
-$json 			= null;
+	// default value empty
+		$json = common::build_element_json_output([], []);
 
-if($permissions===0) return false;
+	// calculated value based on permissions and mode
+		if($permissions>0) {
 
-$file_name = $mode;
+			switch($mode) {
 
-	switch($mode) {
-		
-		case 'edit':
-			$ar_inverse_references 	= $this->get_inverse_references($sqo);
+				case 'edit':
+					$ar_inverse_references 	= $this->get_inverse_references($sqo);
 
-			if($count === true){
-				$json 					= $ar_inverse_references;
-			}else{
-				$ar_relations_lists 	= $this->get_relation_list_obj($ar_inverse_references);
-				$json 					= $ar_relations_lists;
+					// note that result is already an object with properties context and data
+					$json = ($count===true)
+						? $ar_inverse_references
+						: $this->get_relation_list_obj($ar_inverse_references);
+					break;
 			}
-			break;	
-	}
 
+		}
+
+	return $json;
