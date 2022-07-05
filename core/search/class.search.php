@@ -1472,6 +1472,11 @@ class search {
 				$sql_query_order = implode(',', $ar_order);
 		}
 
+		// add NULLS LAST for convenience
+			if (!empty($sql_query_order)) {
+				$sql_query_order .= ' NULLS LAST';
+			}
+
 		// debug
 			// if(SHOW_DEBUG===true) {
 			// 	debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
