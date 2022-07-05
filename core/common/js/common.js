@@ -915,6 +915,11 @@ export const get_columns_map = function(context, datum_context) {
 						? found.sortable
 						: false
 
+				// path
+					if (column_item.sortable===true) {
+						column_item.path = found.path
+					}
+
 				// check if the ddo has label, if not empty label will set.
 					column_item.label = (ddo_object && ddo_object.label)
 						? ddo_object.label
