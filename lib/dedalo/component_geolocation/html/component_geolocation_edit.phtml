@@ -83,6 +83,12 @@
 							# SEPARATOR
 							$html_content .= '<span class="geolocation_separator"></span>';
 
+							# SAVE BUTTON
+							$html_content .= "<span id=\"map_fixed\" class=\"ink glyphicon glyphicon-map-marker\" onclick=\"component_geolocation.create_point(this)\"></span>";
+
+							# SEPARATOR
+							$html_content .= '<span class="geolocation_separator"></span>';
+
 							# TOGGLE BUTTON
 							$html_content .= "<span id=\"map_fixed\" class=\"link glyphicon glyphicon-fullscreen geolocation_text\" onclick=\"component_geolocation.toggle_full_map(this)\"></span>";
 
