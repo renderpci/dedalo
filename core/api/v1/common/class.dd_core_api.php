@@ -1807,8 +1807,8 @@ final class dd_core_api {
 			$relation_list_json = $relation_list->get_json();
 
 		// response ok
-			$response->result 	= $relation_list_json;
-			$response->msg 		= 'OK. Request done ['.__FUNCTION__.']';
+			$response->result	= $relation_list_json;
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 
 		return $response;
