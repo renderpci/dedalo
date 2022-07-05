@@ -1,13 +1,13 @@
 <?php
-	
+
 	# RECORD CONTROLLER
 
 	/*
 
-		For only one row in edit mode 
+		For only one row in edit mode
 
 	*/
-	
+
 	$search_options	= $this->section_records_obj->search_options;
 	$modo			= $this->section_records_obj->search_options->modo;
 	$context		= (object)$this->section_records_obj->search_options->context; # inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
@@ -19,13 +19,13 @@
 	$tipo			= $this->section_records_obj->get_tipo();
 	$section_tipo	= $tipo;
 	$permissions	= common::get_permissions($section_tipo, $tipo);
-	
+
 	$ar_component_resolved		= array();
 	$button_delete_permissions	= (int)$this->section_records_obj->button_delete_permissions;
 
 
 	switch($modo) {
-		
+
 		#
 		# EDIT
 		#

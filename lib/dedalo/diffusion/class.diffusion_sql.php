@@ -4126,8 +4126,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 			// split string value (see qdp291)
-				if (isset($process_dato_arguments->split_string_value)) {
-
+				if (isset($process_dato_arguments->split_string_value) && $value!==null) {
 					$value = json_encode( explode($process_dato_arguments->split_string_value, $value), JSON_UNESCAPED_UNICODE );
 				}
 
@@ -4138,11 +4137,11 @@ class diffusion_sql extends diffusion  {
 					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
 						if (true===self::empty_value($value) && isset($process_dato_arguments->empty_value)) {
 							$value = $process_dato_arguments->empty_value; // any type is accepted: array, object, string ..
-							$value_array = is_array($value)
+							$value_array = (is_array($value) || is_null($value))
 								? $value
 								: json_decode($value);
 						}else{
-							$value_array = (is_array($value))
+							$value_array = (is_array($value) || is_null($value))
 								? $value
 								: json_decode($value);
 						}
