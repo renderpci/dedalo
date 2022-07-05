@@ -1,11 +1,9 @@
 <?php
+include dirname(__FILE__) . "/class.dd_iri.php";
 /*
 * CLASS COMPONENT_IRI
 *
-*
 */
-include dirname(__FILE__) . "/class.dd_iri.php";
-
 class component_iri extends component_common {
 
 

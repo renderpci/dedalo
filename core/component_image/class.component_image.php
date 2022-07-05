@@ -8,9 +8,6 @@ class component_image extends component_media_common {
 
 
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
-
 	# file name formatted as 'tipo'-'order_id' like dd732-1
 	public $image_id;
 	public $image_url;
@@ -26,23 +23,18 @@ class component_image extends component_media_common {
 	public $ImageObj; # Instance of ImageObj with current data
 
 	# Default image dimensions (as showed in section edit)
-	public $widht 	= 539;
-	public $height 	= 404;
+	public $widht	= 539;
+	public $height	= 404;
 
 
 
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $tipo, $parent, string $modo='edit', string $lang=null, string $section_tipo=null) {
-
-		if(SHOW_DEBUG===true) {
-			$start_time = start_time();
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.start_time()]=start_time();
-		}
+	public function __construct(string $tipo, $parent, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		// lang. Force always DEDALO_DATA_NOLAN
-			$lang = $this->lang;
+		$lang = DEDALO_DATA_NOLAN;
 
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);

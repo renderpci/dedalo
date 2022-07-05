@@ -9,11 +9,17 @@ abstract class component_common extends common {
 
 
 	# GENERAL VARS
-		protected $tipo;					# string component tipo in ontology ex ('dd22') eq. terminoID
-		protected $parent;					# int parent section_id
-		protected $section_id;				# int parent section_id
-		protected $section_tipo;			# string parent section tipo
-		protected $lang;					# string lang en estructura ('lg-esp')
+		// string tipo. Component tipo in ontology e.g. ('dd22') -equivalent of 'terminoID'-
+		protected string $tipo;
+		// string|int parent. Component's section section_id
+		protected $parent;
+		// string|int parent. Component's section section_id (alias of $parent)
+		protected $section_id;
+		// string section_tipo. Component's section tipo
+		protected string $section_tipo;
+		// string lang. Component's lang code as 'lg-eng'
+		protected ?string $lang;
+
 		protected $valor_lang;				# string Idioma del valor final del componente (si es una lista de valor, el idioma del campo al que apunta que puede ser traducible aunque el componente no lo sea dato"1" valor:"Si" o "yes")
 		protected $traducible;				# string definido en tesauro (si/no)
 		protected $modo;					# string default edit
@@ -31,8 +37,13 @@ abstract class component_common extends common {
 
 		protected $required;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
 		protected $debugger;				# info for admin
-
-		protected $ar_tools_name = array('tool_time_machine','tool_lang','tool_replace_component_data','tool_add_component_data');
+		// ar_tools_name. Default list of tools for every component. Override if component don't need this minimum tools
+		protected $ar_tools_name = [
+			'tool_time_machine',
+			'tool_lang',
+			'tool_replace_component_data',
+			'tool_add_component_data'
+		];
 		protected $ar_tools_obj;
 		protected $ar_authorized_tool_name;
 

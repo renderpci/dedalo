@@ -8,16 +8,13 @@ class component_geolocation extends component_common {
 
 
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
-
-
-
-	# COMPONENT_GEOLOCATION COSNTRUCT
-	function __construct($tipo, $section_id=null, $modo='edit', $lang=NULL, $section_tipo=null) {
+	/**
+	* __CONSTRUCT
+	*/
+	function __construct(string $tipo, $section_id=null, string $modo='list', string $lang=null, string $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
+		$lang = DEDALO_DATA_NOLAN;
 
 		# Build the component
 		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);

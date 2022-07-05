@@ -15,7 +15,7 @@ class component_text_area extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// Overwrite lang when component_select_lang is present
 		if ( ($modo==='edit') && (!empty($parent) && !empty($section_tipo)) ) {
@@ -239,7 +239,7 @@ class component_text_area extends component_common {
 	* If index var is received, return dato element corresponding to this index if exists
 	* @return string|null $valor
 	*/
-	public function get_valor( string $lang=DEDALO_DATA_LANG, $index='all' ) : ?string {
+	public function get_valor(string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
 
 		$valor ='';
 
@@ -280,7 +280,9 @@ class component_text_area extends component_common {
 	* el texto (1 si no hay fragmentos definidos) limitados a un largo apropiado a los listados (ej. 25 chars)
 	*
 	* @see class.section.php
-	* @return string $html
+	*
+	* @param int $max_char = 256
+	* @return array $value_fragment
 	*/
 	public function get_value_fragment(int $max_char=256) : array {
 
@@ -299,10 +301,10 @@ class component_text_area extends component_common {
 
 
 		 // set the fragment
-		 	$object_fragment[] = $text_fragment;
+		 	$value_fragment = [$text_fragment];
 
 
-		 return $object_fragment;
+		 return $value_fragment;
 	}//end get_value_fragment
 
 
@@ -1390,27 +1392,29 @@ class component_text_area extends component_common {
 	* GET_COMPONENT_INDEXATIONS
 	* @return array $ar_indexations
 	*/
-	public function get_component_indexations() {
-		$properties = $this->get_properties();
-		$tags_index = $properties->tags_index ?? null;
+	public function get_component_indexations() : array {
+
+		$properties	= $this->get_properties();
+		$tags_index	= $properties->tags_index ?? null;
 
 		if(!$tags_index){
 			return null;
 		}
 
 		// relation index
-		$section_tipo	= $this->section_tipo;
-		$section_id		= $this->section_id;
-		$component_tipo	= $tags_index->tipo;
+			$section_tipo	= $this->section_tipo;
+			$section_id		= $this->section_id;
+			$component_tipo	= $tags_index->tipo;
 
-		$model_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-
-		$componet_index = component_common::get_instance($model_name,
-														 $component_tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$componet_index	= component_common::get_instance(
+			$model_name,
+			$component_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
 
 		$ar_indexations = $componet_index->get_dato();
 
@@ -2069,7 +2073,7 @@ class component_text_area extends component_common {
 	* PERSON_USED
 	* @return array $ar_section_id
 	*/
-	public static function person_used( object $locator ) : array {
+	public static function person_used(object $locator) : array {
 
 		$ar_section_id = array();
 
@@ -2373,7 +2377,7 @@ class component_text_area extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql( object $query_object ) : object {
+	public static function resolve_query_object_sql(object $query_object) : object {
 
 		# Always set fixed values
 		$query_object->type = 'string';

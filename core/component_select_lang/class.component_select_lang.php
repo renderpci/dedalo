@@ -12,9 +12,6 @@ class component_select_lang extends component_relation_common {
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
 	protected $default_relation_type_rel	= null;
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
-
 	# test_equal_properties is used to verify duplicates when add locators
 	#public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
@@ -24,25 +21,25 @@ class component_select_lang extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+		// function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
+		// 	# Force always DEDALO_DATA_NOLAN
+		// 	$lang = DEDALO_DATA_NOLAN;
 
-		# Build the component normally
-		$result = parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		// 	# Build the component normally
+		// 	$result = parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-		if(SHOW_DEBUG) {
-			// check lang is properly configured
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='si') {
-				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
-			}
-		}
+		// 	if(SHOW_DEBUG) {
+		// 		// check lang is properly configured
+		// 		$traducible = $this->RecordObj_dd->get_traducible();
+		// 		if ($traducible==='si') {
+		// 			#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+		// 			trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
+		// 		}
+		// 	}
 
-		return $result;
-	}//end __construct
+		// 	return $result;
+		// }//end __construct
 
 
 
@@ -145,13 +142,13 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA
-	* @return string $tipo | null
+	* @return string|null $tipo
 	*/
-	public function get_related_component_text_area() {
+	public function get_related_component_text_area() : ?string {
 
 		$tipo = null;
+
 		$related_terms = common::get_ar_related_by_model('component_text_area', $this->tipo);
-			#dump($related_terms, ' related_terms ++ '.to_string());
 
 		switch (true) {
 			case count($related_terms)==1 :

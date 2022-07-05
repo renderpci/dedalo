@@ -17,10 +17,12 @@ class component_filter_master extends component_filter {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct($tipo=false, $parent=null, $modo='edit', $lang=NULL, $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+
+		$lang = DEDALO_DATA_NOLAN;
 
 		// Note that parent is NOT component_common here (is component_filter)
-		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		// $this->user_id  = $this->get_parent();
 

@@ -1528,7 +1528,7 @@ abstract class common {
 		// optional properties
 			// Filter_by_list
 				if (isset($properties->source->filter_by_list)) {
-					// Calculate ar elements to show in filter. Resolve self section items
+					// Calculate array of elements to show in filter. Resolve self section items
 						$filter_list = array_map(function($item){
 							$item->section_tipo = ($item->section_tipo==='self')
 								? $this->section_tipo

@@ -15,7 +15,7 @@ class component_relation_parent extends component_relation_common {
 
 
 	# test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 	# sql query stored for debug only
 	static $get_parents_query;
@@ -80,6 +80,38 @@ class component_relation_parent extends component_relation_common {
 
 		return (array)$dato_fixed;
 	}//end get_dato
+
+
+
+	/**
+	* GET_DATO_FULL
+	* @return array $dato_export
+	*/
+	public function get_dato_full() {
+
+		$dato = $this->get_dato();
+		$tipo = $this->get_tipo();
+
+		if (empty($dato)) {
+			$dato_export = $dato;
+		}else{
+			$dato_export	= [];
+			$dato_length	= sizeof($dato);
+			for ($i=0; $i < $dato_length; $i++) {
+
+				$item = &$dato[i];
+				// create a new locator and change from component tipo. Note that this component dont have relation type (!)
+				$locator = new locator();
+					$locator->set_section_tipo($item->section_tipo);
+					$locator->set_section_id($item->section_id);
+					$locator->set_from_component_tipo($tipo);
+
+				$dato_export[] = $locator;
+			}
+		}
+
+		return $dato_export;
+	}//end get_dato_full
 
 
 
@@ -242,9 +274,10 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* ADD_PARENT
+	* 	Alias of update_children with specific action 'add'
 	* @return bool
 	*/
-	public function add_parent($children_section_tipo, $children_section_id, $component_relation_children_tipo=null) {
+	public function add_parent(string $children_section_tipo, $children_section_id, ?string $component_relation_children_tipo=null) : bool {
 
 		$action = 'add';
 
@@ -255,7 +288,7 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* REMOVE_PARENT
-	* 	Alias of update_children
+	* 	Alias of update_children with specific action 'remove'
 	* @return bool
 	*/
 	public function remove_parent(string $children_section_tipo, $children_section_id, ?string $component_relation_children_tipo=null) : bool {
@@ -356,7 +389,7 @@ class component_relation_parent extends component_relation_common {
 	* GET_COMPONENT_RELATION_CHILDREN_TIPO
 	* @return string $component_relation_children_tipo
 	*/
-	public static function get_component_relation_children_tipo( $component_tipo ) {
+	public static function get_component_relation_children_tipo( string $component_tipo ) : string {
 
 		$modelo_name 	 = 'component_relation_children';
 		$ar_children 	 = (array)common::get_ar_related_by_model($modelo_name, $component_tipo);
@@ -378,7 +411,7 @@ class component_relation_parent extends component_relation_common {
 	* GET_MY_PARENTS
 	* @return array $parents
 	*/
-	protected function get_my_parents() {
+	protected function get_my_parents() : array {
 
 		$target_component_children_tipos = (array)component_relation_parent::get_target_component_children_tipos($this->tipo);
 
@@ -387,7 +420,7 @@ class component_relation_parent extends component_relation_common {
 			$parents = array_merge($parents, component_relation_parent::get_parents($this->section_id, $this->section_tipo, $children_component_tipo));
 		}
 
-		return (array)$parents;
+		return $parents;
 
 		/*
 			# Calculate current target component_relation_children_tipo from structure
@@ -449,20 +482,17 @@ class component_relation_parent extends component_relation_common {
 	* GET_PARENTS
 	* Get parents of current section
 	* If you call this method from component_relation_parent, always send $from_component_tipo var to avoid recreate the component statically
-	* @param int $section_id
+	* @param int|string $section_id
 	* @param string $section_tipo
-	* @param string $from_component_tipo
+	* @param string $from_component_tipo = null
 	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
-	* @param array $ar_tables
+	* @param array $ar_tables = null
 	*	Optional. If set, union tables search is made over all tables received
 	*
 	* @return array $parents
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
-	public static function get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables=null) {
-		if(SHOW_DEBUG===true) {
-			// $start_time=start_time();
-		}
+	public static function get_parents($section_id, string $section_tipo, string $from_component_tipo=null, ?array $ar_tables=null) {
 
 		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 			return array(); // We are in last level of parent
@@ -496,7 +526,7 @@ class component_relation_parent extends component_relation_common {
 		}else{
 			// Iterate tables and make union search
 			$ar_query=array();
-			foreach ((array)$ar_tables as $table) {
+			foreach ($ar_tables as $table) {
 				$ar_query[] = "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
 			}
 			$strQuery .= implode(" UNION ALL ", $ar_query);
@@ -591,7 +621,7 @@ class component_relation_parent extends component_relation_common {
 		}
 
 
-		return (array)$parents;
+		return $parents;
 	}//end get_parents
 
 
@@ -601,12 +631,11 @@ class component_relation_parent extends component_relation_common {
 	* Iterate recursively all parents of current term
 	* @param int $section_id
 	* @param string $section_tipo
+	* @param bool $skip_root = true
+	* @param bool $is_recursion = true
 	* @return array $parents_recursive
 	*/
-	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false) {
-		if(SHOW_DEBUG===true) {
-			$start_time=start_time();
-		}
+	public static function get_parents_recursive($section_id, string $section_tipo, bool $skip_root=true, bool $is_recursion=false) : array {
 
 		// static vars set
 			static $ar_parents_recursive_resolved = array();
@@ -744,10 +773,10 @@ class component_relation_parent extends component_relation_common {
 	* RESOLVE_CHILDRENS
 	* @return
 	*/
-	private function resolve_children() {
+		// private function resolve_children() {
 
-		return true;
-	}//end resolve_children
+		// 	return true;
+		// }//end resolve_children
 
 
 
@@ -896,7 +925,7 @@ class component_relation_parent extends component_relation_common {
 	* Resolve all possible component relation children targeted to current component relation parent
 	* @return array $target_component_children_tipos
 	*/
-	public static function get_target_component_children_tipos($component_tipo) {
+	public static function get_target_component_children_tipos(string $component_tipo) : array {
 
 		# Static cache
 		static $ar_resolved_target_component_children_tipos = [];
@@ -915,12 +944,12 @@ class component_relation_parent extends component_relation_common {
 
 		#
 		# Look in children properties different possible sources
-		$RecordObj 								= new RecordObj_dd($from_component_tipo);
-		$my_component_children_tipo_properties = $RecordObj->get_properties();
+		$RecordObj								= new RecordObj_dd($from_component_tipo);
+		$my_component_children_tipo_properties	= $RecordObj->get_properties();
 
 		# hierarchy_sections
-		$hierarchy_types 	= !empty($my_component_children_tipo_properties->source->hierarchy_types) 	 ? $my_component_children_tipo_properties->source->hierarchy_types : null;
-		$hierarchy_sections = !empty($my_component_children_tipo_properties->source->hierarchy_sections) ? $my_component_children_tipo_properties->source->hierarchy_sections : null;
+		$hierarchy_types	= !empty($my_component_children_tipo_properties->source->hierarchy_types) 	 ? $my_component_children_tipo_properties->source->hierarchy_types : null;
+		$hierarchy_sections	= !empty($my_component_children_tipo_properties->source->hierarchy_sections) ? $my_component_children_tipo_properties->source->hierarchy_sections : null;
 		# Resolve hierarchy_sections for speed
 		if (!empty($hierarchy_types)) {
 			$hierarchy_types_sections	= component_relation_common::get_hierarchy_sections_from_types($hierarchy_types);
@@ -935,13 +964,15 @@ class component_relation_parent extends component_relation_common {
 			$modelo_name = 'component_relation_children';
 			foreach ($hierarchy_sections as $children_section_tipo) {
 				# Resolve children component tipo from children_section_tipo
-				$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo,
-																										[$modelo_name],
-																										true, # from_cache
-																										true, # resolve_virtual
-																										true, # recursive
-																										true, # search_exact
-																										false); # ar_tipo_exclude_elements
+				$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$children_section_tipo, // string $section_tipo
+					[$modelo_name], // array $ar_modelo_name_required
+					true, // bool from_cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true, // bool search_exact
+					false // array|bool ar_tipo_exclude_elements
+				);
 				$children_component_tipo = reset($ar_children_component_tipo);
 				if (!in_array($children_component_tipo, $target_component_children_tipos)) {
 					$target_component_children_tipos[] = $children_component_tipo;
@@ -954,38 +985,6 @@ class component_relation_parent extends component_relation_common {
 
 		return $target_component_children_tipos;
 	}//end get_target_component_children_tipos
-
-
-
-	/**
-	* GET_DATO_full
-	* @return array $dato_export
-	*/
-	public function get_dato_full() {
-
-		$dato = $this->get_dato();
-		$tipo = $this->get_tipo();
-
-		if (empty($dato)) {
-			$dato_export = $dato;
-		}else{
-			$dato_export	= [];
-			$dato_length	= sizeof($dato);
-			for ($i=0; $i < $dato_length; $i++) {
-
-				$item = &$dato[i];
-				// create a new locator and change from component tipo. Note that this component dont have relation type (!)
-				$locator = new locator();
-					$locator->set_section_tipo($item->section_tipo);
-					$locator->set_section_id($item->section_id);
-					$locator->set_from_component_tipo($tipo);
-
-				$dato_export[] = $locator;
-			}
-		}
-
-		return $dato_export;
-	}//end get_dato_full
 
 
 

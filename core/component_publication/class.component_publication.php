@@ -12,11 +12,8 @@ class component_publication extends component_relation_common {
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
 	protected $default_relation_type_rel	= null;
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
-
 	# test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 
@@ -24,10 +21,10 @@ class component_publication extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
+		$lang = DEDALO_DATA_NOLAN;
 
 		# construct the component normally
 		return parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);

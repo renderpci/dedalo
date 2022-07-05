@@ -1001,8 +1001,8 @@ class search {
 
 		$search_query_object = $this->search_query_object;
 
-		$ar_sql_select = [];
-		$ar_key_path   = [];
+		$ar_sql_select	= [];
+		$ar_key_path	= [];
 
 		$ar_sql_select[] = ($this->remove_distinct===true)
 			? $this->main_section_tipo_alias.'.section_id'
@@ -1020,16 +1020,16 @@ class search {
 			}else{
 				foreach ($search_query_object->select as $key => $select_object) {
 
-					$path 				 = $select_object->path;
-					$table_alias 		 = $this->get_table_alias_from_path($path);
-					$last_item 		 	 = end($path);
-					$component_tipo 	 = $last_item->component_tipo;
-					$column_alias 		 = $component_tipo;
-					$modelo_name 		 = $last_item->modelo;
-					$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
-					#$apply_distinct 	 = isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
-					$apply_distinct 		 = (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
-					$component_path 	 = implode(',', $select_object->component_path);
+					$path				= $select_object->path;
+					$table_alias		= $this->get_table_alias_from_path($path);
+					$last_item			= end($path);
+					$component_tipo		= $last_item->component_tipo;
+					$column_alias		= $component_tipo;
+					$modelo_name		= $last_item->modelo;
+					$select_object_type	= isset($select_object->type) ? $select_object->type : 'string';
+					#$apply_distinct	= isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
+					$apply_distinct		= (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
+					$component_path		= implode(',', $select_object->component_path);
 					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 						# In activity section, data container is always 'dato'
 						$component_path  = str_replace('valor_list', 'dato', $component_path);
@@ -2213,7 +2213,7 @@ class search {
 			$ar_related_components 	= component_relation_common::get_components_with_relations();
 			if(in_array($term_model, $ar_related_components)===true) {
 
-				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
+				$ar_terminos_relacionados	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
 				$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
 
 				if (!empty($ar_related_section)) {
@@ -2222,8 +2222,8 @@ class search {
 
 					if ($related_tipo!==false) {
 
-						$current_tipo = $related_tipo;
-						$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$current_tipo	= $related_tipo;
+						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						if (strpos($modelo_name,'component')===0) {
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
@@ -2252,7 +2252,7 @@ class search {
 		}
 
 
-		return (array)$path;
+		return $path;
 	}//end get_query_path
 
 

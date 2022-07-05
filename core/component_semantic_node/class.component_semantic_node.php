@@ -53,8 +53,10 @@ class component_semantic_node extends component_relation_common {
 	* 			{section_tipo: rsc87, section_id: 3}
 	* 		]
 	* 	}
+	* @return bool
 	*/
-	public function set_row_locator($row_locator) {
+	public function set_row_locator(object $row_locator) : bool {
+
 		// fix whole full locator
 		$this->row_locator = $row_locator;
 
@@ -102,6 +104,8 @@ class component_semantic_node extends component_relation_common {
 
 		// set as db loaded
 		$this->bl_loaded_matrix_data = true;
+
+		return true;
 	}//end set_row_locator
 
 
