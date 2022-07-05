@@ -11,7 +11,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {tr} from '../../common/js/tr.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_edit_component_text_area, build_node_tag} from '../../component_text_area/js/render_edit_component_text_area.js'
+	import {render_edit_component_text_area} from '../../component_text_area/js/render_edit_component_text_area.js'
 	import {render_list_component_text_area} from '../../component_text_area/js/render_list_component_text_area.js'
 	import {render_mini_component_text_area} from '../../component_text_area/js/render_mini_component_text_area.js'
 	import {render_search_component_text_area} from '../../component_text_area/js/render_search_component_text_area.js'
@@ -314,46 +314,46 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 
 	// section tags (struct)
 		// Iterate all section elements
-		const section_elements 			= cloned_text.getElementsByTagName('section')
-		const ar_section_id 			= []
-		const ar_section_id_duplicates 	= []
-		if (section_elements) {
-			//console.log(section_elements)
-			const section_elements_len = section_elements.length
-			for (let i = section_elements_len - 1; i >= 0; i--) {
-				// Convert section tags to dedalo internal labels
-				// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">..</section>
-				// [struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]...[/struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]
-				const tag_id		= section_elements[i].dataset.tag_id
-				const state			= section_elements[i].dataset.state
-				const label			= section_elements[i].dataset.label
-				const data			= section_elements[i].dataset.data
-				// Compose Dédalo tags
-				const tag_in		= self.build_data_tag('structIn', tag_id, state, label, data)
-				const tag_out		= self.build_data_tag('structOut', tag_id, state, label, data)
-				const final_string	= tag_in + section_elements[i].innerHTML + tag_out
+		// const section_elements 			= cloned_text.getElementsByTagName('section')
+		// const ar_section_id 			= []
+		// const ar_section_id_duplicates 	= []
+		// if (section_elements) {
+		// 	//console.log(section_elements)
+		// 	const section_elements_len = section_elements.length
+		// 	for (let i = section_elements_len - 1; i >= 0; i--) {
+		// 		// Convert section tags to dedalo internal labels
+		// 		// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">..</section>
+		// 		// [struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]...[/struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]
+		// 		const tag_id		= section_elements[i].dataset.tag_id
+		// 		const state			= section_elements[i].dataset.state
+		// 		const label			= section_elements[i].dataset.label
+		// 		const data			= section_elements[i].dataset.data
+		// 		// Compose Dédalo tags
+		// 		const tag_in		= self.build_data_tag('structIn', tag_id, state, label, data)
+		// 		const tag_out		= self.build_data_tag('structOut', tag_id, state, label, data)
+		// 		const final_string	= tag_in + section_elements[i].innerHTML + tag_out
 
-				// Replaces tag content string with new created
-				section_elements[i].innerHTML = final_string
+		// 		// Replaces tag content string with new created
+		// 		section_elements[i].innerHTML = final_string
 
-				// Unwrap section tag node (removes tags and leaves only contents)
-				unwrap_element(section_elements[i]);
+		// 		// Unwrap section tag node (removes tags and leaves only contents)
+		// 		unwrap_element(section_elements[i]);
 
-				// Check if current tag already exists (duplicates)
-				if(ar_section_id.indexOf(tag_id) !== -1) {
-					// Duplication detected!
-					ar_section_id_duplicates.push(tag_id)
-				}
+		// 		// Check if current tag already exists (duplicates)
+		// 		if(ar_section_id.indexOf(tag_id) !== -1) {
+		// 			// Duplication detected!
+		// 			ar_section_id_duplicates.push(tag_id)
+		// 		}
 
-				ar_section_id.push(tag_id)
-			}//end for (var i = len - 1; i >= 0; i--) {
-		}//end section_elements
-		//console.log("ar_section_id",ar_section_id);
-		if (ar_section_id_duplicates.length>0) {
-			if(SHOW_DEBUG===true) {
-			console.log("DEBUG Warning: Duplicate structuration tags found! \nDuplicates: ",ar_section_id_duplicates)	//.join(',')+" \nThis may be because you have inadvertently copied labels more than once from the source text. Please contact your administrator to fix this inconsistency");
-			}
-		}
+		// 		ar_section_id.push(tag_id)
+		// 	}//end for (var i = len - 1; i >= 0; i--) {
+		// }//end section_elements
+		// //console.log("ar_section_id",ar_section_id);
+		// if (ar_section_id_duplicates.length>0) {
+		// 	if(SHOW_DEBUG===true) {
+		// 	console.log("DEBUG Warning: Duplicate structuration tags found! \nDuplicates: ",ar_section_id_duplicates)	//.join(',')+" \nThis may be because you have inadvertently copied labels more than once from the source text. Please contact your administrator to fix this inconsistency");
+		// 	}
+		// }
 
 	// reference tags
 		// Iterate all reference elements
@@ -651,7 +651,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 	// data
 		const data_string = data
-			? 'data:' + (typeof data==='string' ? data : JSON.stringify(data)) + ':data'
+			? 'data:' + data + ':data'
 			: 'data::data'
 
 	// dedalo_tag
@@ -667,6 +667,74 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 	return dedalo_tag
 }//end build_data_tag
+
+
+
+
+/**
+* BUILD_VIEW_TAG
+* Create a view object from tag info (type, state, label, data, id)
+* @param object data_tag
+* @param int tag_id
+* @return object view_tag
+*/
+component_text_area.prototype.build_view_tag = function(data_tag, tag_id) {
+
+	const type			= data_tag.type
+	const state			= data_tag.state
+	const label			= data_tag.label
+	// convert the data_tag to string to be used it in html
+	const data_string	= JSON.stringify(data_tag.data)
+	// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
+	// json use " but it's not compatible with the data-data storage in html5
+	const data			= data_string.replace(/"/g, '\'')
+
+
+	const images_factory_url = "../component_text_area/tag/?id="
+
+	// Bracket_in is different for close tag
+	const bracket_in = (type.indexOf("Out")!==-1)
+		? "[/"
+		: "["
+
+	// Removes sufixes 'In' and 'Out'
+	const type_name = type.replace(/In|Out/, '');
+
+	const src = (type==='tc')
+		? images_factory_url  + "[TC_" + tag_id + "_TC]"
+		: images_factory_url  + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
+
+	const id = (type==='tc')
+		? tag_id
+		: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
+
+	const class_name = (type==='tc')
+		? type
+		: type_name
+
+	// const dataset = {
+	// 	type	: type,
+	// 	tag_id	: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
+	// 	state	: (type==='tc') ? 'n': state,
+	// 	label	: (type==='tc') ? tag_id : label,
+	// 	data	: (type==='tc') ? tag_id : data
+	// }
+
+	const view_tag ={
+		src			: src,
+		id			: id,
+		class_name	: class_name,
+		// dataset
+		type		: type,
+		tag_id		: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
+		state		: (type==='tc') ? 'n': state,
+		label		: (type==='tc') ? tag_id : label,
+		data		: (type==='tc') ? tag_id : data
+	}
+
+	return view_tag
+}//end build_view_tag
+
 
 
 
@@ -724,13 +792,13 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 			const tag_id = parseInt(last_tag_index_id) + 1
 
 		// tag images
-			const image_in  = build_node_tag({
+			const image_in  = self.build_view_tag({
 				type	: "indexIn",
 				state	: tag_state,
 				label	: "label in " + tag_id,
 				data	: ""
 			}, tag_id)
-			const image_out  = build_node_tag({
+			const image_out  = self.build_view_tag({
 				type	: "indexOut",
 				state	: tag_state,
 				label	: "label in " + tag_id,

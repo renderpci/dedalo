@@ -6,10 +6,70 @@
 @import '../../../common/css/library.less';
 
 
+	.toolbar_container {
+		display: flex;
+		position: absolute;
+		top: -1.75rem;
+		left: 1rem;
+		width: auto;
+		height: 2.2em;
+		padding: 0.25rem;
+		z-index: 1;
+		// background-color: @color_grey_light;
+		background-color: #fafafa;
+		// border: 1px solid #c4c4c4;
+		outline: 1px solid #e6e6e6;
+
+		// version mini	(fit heigth)
+			// top: -1.35rem;
+			// height: 1.8em;
+			// padding: 0.05rem;
+			// width: calc(100% - 2rem);
+
+		>.toolbar_button {
+			height: 100%;
+			padding: 0.33rem;
+			padding-right: 0.5em;
+			padding-left: 0.5em;
+			cursor: pointer;
+			border-radius: 0.33em;
+
+			&:hover {
+				background-color: #dddddd;
+			}
+			&:active {
+				opacity: 0.6;
+			}
+			&.active {
+				background-color: #dddddd;
+			}
+			&.disable {
+				opacity: 25%;
+			}
+
+			img {
+				height: 100%;
+			}
+		}
+	}
+
+
+	// source ckeditor
+	.ck-source-editing-area {
+		width: 100%;
+		height: calc(100% - 1.5rem);
+		margin: 0.5rem;
+		margin-left: 1rem;
+		margin-right: 1rem;
+		z-index: 0;
+		>textarea {
+			overflow: auto;
+		}
+	}
 
 .ck.ck-content {
 
-	// (!) Moved to component text area to allow view befor init the editor
+	// (!) Moved to component text area to allow view before init the editor
 		// @image_height: 15px;
 
 		// // editor tags

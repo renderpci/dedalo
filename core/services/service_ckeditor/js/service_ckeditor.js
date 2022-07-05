@@ -17,8 +17,6 @@
 */
 export const service_ckeditor = function() {
 
-
-
 	// self vars
 		this.caller
 		this.value_container
@@ -26,8 +24,6 @@ export const service_ckeditor = function() {
 		this.options
 		this.key
 		this.editor
-
-
 
 	/**
 	* INIT
@@ -63,13 +59,13 @@ export const service_ckeditor = function() {
 
 				// toolbar: [ 'bold', 'italic', 'underline', 'undo', 'redo', '|','findAndReplace', 'sourceEditing', 'InsertImage' ],
 				// add support for images and his own attributes
-				htmlSupport : {
-					allow : [{
-						name		: 'img',
-						attributes	: true,
-						classes		: true
-					}]
-				}
+				// htmlSupport : {
+				// 	allow : [{
+				// 		name		: 'img',
+				// 		attributes	: true,
+				// 		classes		: true
+				// 	}]
+				// }
 			})
 			.then( editor => {
 
@@ -80,6 +76,37 @@ export const service_ckeditor = function() {
 					// editor.ui.focusTracker.on( 'change:isFocused', ( evt, data, isFocused ) => {
 					//     console.log( `The editor is focused: ${ isFocused }.` );
 					// } );
+
+
+
+
+
+
+
+					// editor.conversion.for( 'downcast' ).add( dispatcher => {
+					// 	dispatcher.on( 'attribute:dSource:image', ( evt, data, conversionApi ) => {
+
+					// 			console.log("data.item:",data.item);
+
+
+					// 		if ( !conversionApi.consumable.consume( data.item, evt.name ) ) {
+					// 			return;
+					// 		}
+
+					// 		const viewWriter = conversionApi.writer;
+					// 		const figure = conversionApi.mapper.toViewElement( data.item );
+					// 		const img = figure.getChild( 0 );
+
+					// 		if ( data.attributeNewValue !== null ) {
+					// 			viewWriter.setAttribute( 'data-source', data.attributeNewValue, img );
+					// 		} else {
+					// 			viewWriter.removeAttribute( 'data-source', img );
+					// 		}
+					// 	} );
+					// } );
+
+
+
 
 				// build toolbar
 					self.build_toolbar(editor_config);
@@ -253,13 +280,13 @@ export const service_ckeditor = function() {
 					const item = data.target.parent._attrs
 					const tag_obj = {
 						node_name : data.target.name,
-						dataset :{
-							type	: item.get('data-type'),
-							tag_id	: item.get('data-tag_id'),
-							state	: item.get('data-state'),
-							label	: item.get('data-label'),
-							data	: item.get('data-data')
-						}
+						// dataset
+						type	: item.get('data-type'),
+						tag_id	: item.get('data-tag_id'),
+						state	: item.get('data-state'),
+						label	: item.get('data-label'),
+						data	: item.get('data-data')
+
 					}
 					if (custom_events.click) {
 						custom_events.click(evt, tag_obj)
@@ -294,23 +321,26 @@ export const service_ckeditor = function() {
 	/**
 	* SET_CONTENT -OK
 	*/
-	this.set_content = function(html){
+	this.set_content = function(view_tag){
 
 		const self = this
 
 		const editor = self.editor
 
 		// convert the html to the model of ck_editor
-		const view_fragment		= editor.data.processor.toView( html );
-		const model_fragment	= editor.data.toModel( view_fragment );
+		// const view_fragment		= editor.data.processor.toView( html );
+		// const model_tag_node	= editor.data.toModel( view_fragment );
 
 		editor.model.change( writer => {
 
+			// get the end position of the selection
 			const position = editor.model.document.selection.getLastPosition()
+			// create the tag_node
+			const model_tag_node = writer.createElement( 'imageInline', view_tag);
 			// Insert the html in the current selection location.
-			editor.model.insertContent( model_fragment, position );
+			editor.model.insertContent( model_tag_node, position );
 			// Put the selection on the inserted element.
-			writer.setSelection( model_fragment, 'on' );
+			writer.setSelection( model_tag_node, 'on' );
 		});
 
 		self.is_dirty = true;
@@ -387,35 +417,43 @@ export const service_ckeditor = function() {
 		const self 	 = this
 		const editor = self.editor
 
+
 		editor.model.change( writer => {
 			// convert the html to the model of ck_editor
-			const data_tag_node_in		= editor.data.processor.toView( tag_node_in.outerHTML  );
-			const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
+			// const data_tag_node_in		= editor.data.processor.toView( tag_node_in.outerHTML  );
+			// const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
 
 			// get the in position of the selection
 			const in_position = editor.model.document.selection.getFirstPosition()
 
+			const model_tag_node_in = writer.createElement( 'imageInline', tag_node_in);
+
 			editor.model.insertContent( model_tag_node_in, in_position );
 
-			// convert the html to the model of ck_editor
-			const view_tag_node_out	= editor.data.processor.toView( tag_node_out.outerHTML );
-			const model_tag_node_out = editor.data.toModel( view_tag_node_out );
-			// get the out position of the selection
+		});
+			editor.model.change( writer => {
+
+				// get the out position of the selection
 			const out_position = editor.model.document.selection.getLastPosition()
+
+			const model_tag_node_out = writer.createElement( 'imageInline', tag_node_out );
+			// convert the html to the model of ck_editor
+			// const view_tag_node_out	= editor.data.processor.toView( tag_node_out.outerHTML );
+			// const model_tag_node_out = editor.data.toModel( view_tag_node_out );
 
 			editor.model.insertContent( model_tag_node_out, out_position );
 
-			writer.setSelection( model_tag_node_out, 'on' );
-			writer.setSelection( model_tag_node_in, 'on' );
+			// writer.setSelection( model_tag_node_out, 'on' );
+			// writer.setSelection( model_tag_node_in, 'on' );
 		});
 
 		editor.editing.view.focus();
-		self.is_dirty = true;
+		self.is_dirty = false;
 
 		// const value = editor.getContent({format:'raw'})
-		const value = editor.getData();
+		// const value = editor.getData();
 		// const value = self.editor.getBody()
-		self.caller.save_value(self.key, value)
+		// self.caller.save_value(self.key, value)
 
 		return true
 	}//end wrap_selection_with_tags
@@ -455,16 +493,19 @@ export const service_ckeditor = function() {
 
 				const item = value.item
 
-				// htmlAttributes. Get an object like:
+				// attributes. Get an object like:
 				// {
-				//   attributes : {data-data: '', data-label: 'label in 1', data-state: 'r', data-tag_id: '1', data-type: 'indexIn', …}
+				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
 				//	 classes : ['index']
 				// }
-				const htmlAttributes = item.getAttribute('htmlAttributes')
-				if(htmlAttributes) {
+				// const htmlAttributes = item.getAttribute('htmlAttributes')
+				// const htmlAttributes = item.getAttributes()
+				const attributes = item._attrs
 
-					const current_type		= htmlAttributes.attributes['data-type']
-					const current_tag_id	= htmlAttributes.attributes['data-tag_id']
+				if(item._attrs && item._attrs.size > 0) {
+
+					const current_type		= attributes.get('type')
+					const current_tag_id	= attributes.get('tag_id')
 
 					if(current_type===type) {
 						ar_tag_id.push(current_tag_id)
@@ -519,51 +560,55 @@ export const service_ckeditor = function() {
 				//   attributes : {data-data: '', data-label: 'label in 1', data-state: 'r', data-tag_id: '1', data-type: 'indexIn', …}
 				//	 classes : ['index']
 				// }
-				const htmlAttributes = item.getAttribute('htmlAttributes')
-				if(htmlAttributes) {
 
-					const current_tag_id	= htmlAttributes.attributes['data-tag_id']
-					const current_type		= htmlAttributes.attributes['data-type']
+				const attributes = item._attrs
+
+				if(item._attrs && item._attrs.size > 0) {
+
+					const current_type		= attributes.get('type')
+					const current_tag_id	= attributes.get('tag_id')
 
 					if(current_tag_id==tag_id && ar_type.includes(current_type)) {
 
-						console.log("update_tag item:", item);
-
 						// short vars
-							const current_state	= htmlAttributes.attributes['data-state']
-							const current_label	= htmlAttributes.attributes['data-label']
-							const current_data	= htmlAttributes.attributes['data-data']
+							const current_state	= attributes.get('state')
+							const current_label	= attributes.get('label')
+							const current_data	= attributes.get('data')
 							const current_src	= item.getAttribute('src')
 
-						// edit_attributes. Clone htmlAttributes to prevent unwanted events trigger
-							const edit_attributes = clone(htmlAttributes)
+						// edit_attributes. Clone attributes to prevent unwanted events trigger
+							const edit_attributes = clone(attributes)
 
 						// add/replace new_data_obj properties given
 							for (const name in new_data_obj) {
-								edit_attributes.attributes['data-'+name] = new_data_obj[name]
+								edit_attributes.set(name, new_data_obj[name])
 							}
 
-							// console.log("-> 1 changed htmlAttributes:",htmlAttributes);
+							// console.log("-> 1 changed attributes:",attributes);
 							// console.log("-> 2 changed edit_attributes:",edit_attributes);
 
 						// id. Re-create the id like [/index-n-1-label in 1]
-							const new_id = self.caller.build_data_tag(
-								current_type, // type
-								current_tag_id, // tag_id
-								new_data_obj.state || current_state, // state
-								new_data_obj.label || current_label, // label
-								new_data_obj.data || current_data // data
-							)
-							edit_attributes.attributes.id = new_id
+							const data_tag = {
+								type	: current_type, // type
+								tag_id	: current_tag_id, // tag_id
+								state	: new_data_obj.state || current_state, // state
+								label 	: new_data_obj.label || current_label, // label
+								data	: new_data_obj.data || current_data // data
+							}
+							const new_tag	= self.caller.build_view_tag( data_tag, current_tag_id )
+							const new_id	= new_tag.id
+							edit_attributes.set('src_id' , new_id)
 
 						// image_url. Replace url var id with updated id tag
 							const image_url = current_src.split('?')[0] + '?id=' + new_id
 
 						// set to model
 							editor.model.change( writer => {
-								writer.setAttribute( 'htmlAttributes', edit_attributes, item );
+								writer.setAttributes( edit_attributes, item );
 								writer.setAttribute( 'src', image_url, item );
 							});
+
+							console.log("update_tag item:", item);
 					}
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )

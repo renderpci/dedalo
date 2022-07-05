@@ -655,9 +655,9 @@ const get_custom_buttons = (self, text_editor, i) => {
 								state	: 'a',
 								data	: locator
 							}
-							const tag = build_node_tag(note_tag, note_tag.tag_id)
+							const tag = self.build_view_tag(note_tag, note_tag.tag_id)
 							// insert the new note tag in the caret position of the text_editor
-							const inserted_tag = text_editor.set_content(tag.outerHTML)
+							const inserted_tag = text_editor.set_content(tag)
 							// render and open the note section inside a modal
 							render_note({
 								self		: self,
@@ -756,7 +756,7 @@ const get_custom_events = (self, i, text_editor) => {
 			// img : click on img
 			if(options.node_name==='img' || options.node_name==='REFERENCE') {
 				const tag_obj = options
-				switch(tag_obj.dataset.type) {
+				switch(tag_obj.type) {
 
 					case 'tc':
 						console.log("aquí:");
@@ -984,8 +984,8 @@ const get_custom_events = (self, i, text_editor) => {
 									render_page_selector(self, data_tag, tag_id, text_editor)
 									break;
 								default:
-									const tag = build_node_tag(data_tag, tag_id)
-									text_editor.set_content(tag.outerHTML)
+									const tag = self.build_view_tag(data_tag, tag_id)
+									text_editor.set_content(tag)
 							}// end switch
 						}
 					break;
@@ -998,9 +998,9 @@ const get_custom_events = (self, i, text_editor) => {
 					const person_tag		= self.data.tags_persons[key_person_number[0]]
 					event_manager.publish('key_up_persons' +'_'+ self.id_base, key_person_number)
 					// get the node tag defined in the person (it's prepared in server)
-					const node_tag_person	= build_node_tag(person_tag, person_tag.tag_id)
+					const node_tag_person	= self.build_view_tag(person_tag, person_tag.tag_id)
 					// set the new tag at caret position in the text.
-					text_editor.set_content(node_tag_person.outerHTML)
+					text_editor.set_content(node_tag_person)
 
 					break;
 
@@ -1023,9 +1023,9 @@ const get_custom_events = (self, i, text_editor) => {
 						state	: 'a',
 						data	: current_lang.value
 					}
-					const node_tag_lang = build_node_tag(lang_tag, lang_tag.tag_id)
+					const node_tag_lang = self.build_view_tag(lang_tag, lang_tag.tag_id)
 					// set the new tag at caret position in the text.
-					text_editor.set_content(node_tag_lang.outerHTML)
+					text_editor.set_content(node_tag_lang)
 
 					break;
 			}
@@ -1040,50 +1040,27 @@ const get_custom_events = (self, i, text_editor) => {
 /**
 * BUILD_NODE_TAG
 * Create a DOM node from tag info (type, state, label, data, id)
-* @param object data_tag
+* @param object view_data
 * @param int tag_id
 * @return DOM node node_tag
 */
-export const build_node_tag = function(data_tag, tag_id) {
+export const build_node_tag = function(view_data) {
 
-	const type			= data_tag.type
-	const state			= data_tag.state
-	const label			= data_tag.label
-	// convert the data_tag to string to be used it in html
-	const data_string	= JSON.stringify(data_tag.data)
-	// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
-	// json use " but it's not compatible with the data-data storage in html5
-	const data			= data_string.replace(/"/g, '\'')
-
-
-	const images_factory_url = "../component_text_area/tag/?id="
-
-	// Bracket_in is different for close tag
-	const bracket_in = (type.indexOf("Out")!==-1)
-		? "[/"
-		: "["
-
-	// Removes sufixes 'In' and 'Out'
-	const type_name = type.replace(/In|Out/, '');
-
-	const src = (type==='tc')
-		? images_factory_url  + "[TC_" + tag_id + "_TC]"
-		: images_factory_url  + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
-
-	const id = (type==='tc')
-		? tag_id
-		: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
-
-	const class_name = (type==='tc')
-		? type
-		: type_name
+	const src			= view_data.src
+	const id			= view_data.id
+	const class_name	= view_data.class_name
+	const type			= view_data.type
+	const tag_id		= view_data.tag_id
+	const state			= view_data.state
+	const label			= view_data.label
+	const data			= view_data.data
 
 	const dataset = {
 		type	: type,
-		tag_id	: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
-		state	: (type==='tc') ? 'n': state,
-		label	: (type==='tc') ? tag_id : label,
-		data	: (type==='tc') ? tag_id : data
+		tag_id	: tag_id,
+		state	: state,
+		label	: label,
+		data	: data
 	}
 
 	const node_tag = ui.create_dom_element({
@@ -1096,6 +1073,7 @@ export const build_node_tag = function(data_tag, tag_id) {
 
 	return node_tag
 }//end build_node_tag
+
 
 
 
@@ -1119,8 +1097,8 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 		e.preventDefault()
 
 		data_tag.data = "["+data_tag.last_layer_id+"]"
-		const tag 	= build_node_tag(data_tag, tag_id)
-		text_editor.set_content(tag.outerHTML)
+		const tag 	= self.build_view_tag(data_tag, tag_id)
+		text_editor.set_content(tag)
 		layer_selector.remove()
 	})
 
@@ -1159,8 +1137,8 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 				e.preventDefault()
 
 				data_tag.data = "["+layer.layer_id+"]"
-				const tag = build_node_tag(data_tag, tag_id)
-				text_editor.set_content(tag.outerHTML)
+				const tag = self.build_view_tag(data_tag, tag_id)
+				text_editor.set_content(tag)
 				layer_selector.remove()
 			})
 
@@ -1294,8 +1272,8 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 		const data		= body_input.value - (offset -1)
 		data_tag.label	= body_input.value
 		data_tag.data	= "["+data+"]"
-		const tag		= build_node_tag(data_tag, tag_id)
-		text_editor.set_content(tag.outerHTML)
+		const tag		= self.build_view_tag(data_tag, tag_id)
+		text_editor.set_content(tag)
 		modal.remove()
 	})
 
@@ -1321,10 +1299,10 @@ const render_note = async function(options) {
 		const self				= options.self
 		const text_editor		= options.text_editor
 		const i					= options.i
-		const tag_node 			= options.tag
+		const tag_view 			= options.tag
 
 	// short vars
-		const data_string		= tag_node.dataset.data
+		const data_string		= tag_view.data
 		// convert the data_tag form string to json*-
 		const data				= data_string.replace(/\'/g, '"')
 		// replace the ' to " stored in the html data to JSON "
@@ -1359,21 +1337,28 @@ const render_note = async function(options) {
 			const state = changed_value.section_id=='2' // no active value
 				? 'a' // no publishable
 				: 'b' // publishable
-			const current_tag_state = tag_node.dataset.state || 'a'
+				console.log("tag_node:-------------------",tag_view.state);
+			const current_tag_state = tag_view.state || 'a'
 			// create new tag with the new state of the tag
 			if (current_tag_state !== state){
 				const note_tag		= {
 					type	: 'note',
-					label	: tag_node.dataset.label,
-					tag_id	: tag_node.dataset.tag_id,
+					label	: tag_view.label,
+					tag_id	: tag_view.tag_id,
 					state	: state,
-					data	: locator
+					data	: data_string
 				}
-				const tag				= build_node_tag(note_tag, note_tag.tag_id)
-				// change the values to the current tag node
-				tag_node.id				= tag.id
-				tag_node.src			= tag.src
-				tag_node.dataset.state	= tag.dataset.state
+				text_editor.update_tag({
+					type			: 'note',
+					tag_id			: tag_view.tag_id,
+					new_data_obj	: note_tag
+				})
+
+				// const tag				= self.build_view_tag(note_tag, note_tag.tag_id)
+				// // change the values to the current tag node
+				// tag_node.id				= tag.id
+				// tag_node.src			= tag.src
+				// tag_view.state	= tag.dataset.state
 				// Save the change, set the text_editor as dirty (has changes) and save it
 				text_editor.set_dirty(true)
 				text_editor.save()
@@ -1424,7 +1409,7 @@ const render_note = async function(options) {
 			button_remove.addEventListener("click", function(e){
 				e.stopPropagation()
 				// ask to user if really want delete the note
-				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_node.dataset.tag_id
+				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_view.tag_id
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
 					// create sqo the the filter_by_locators of the section to be deleted
@@ -1443,7 +1428,7 @@ const render_note = async function(options) {
 						delete_mode	: 'delete_record'
 					})
 					// remove the tag of the note in the component_text_area
-					tag_node.remove()
+					tag_view.remove()
 					// prepare the text_editor to save setting it in dirty mode and save the change
 					text_editor.set_dirty(true)
 					text_editor.save()
@@ -1620,8 +1605,8 @@ const render_persons_list = function(self, text_editor, i) {
 						evt.stopPropagation()
 
 						// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
-						const tag = build_node_tag(current_person, current_person.tag_id)
-						text_editor.set_content(tag.outerHTML)
+						const tag = self.build_view_tag(current_person, current_person.tag_id)
+						text_editor.set_content(tag)
 					});
 				}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
 			}//end for (let i = 0; i < value_length; i++)
@@ -1697,9 +1682,9 @@ const render_langs_list = function(self, text_editor, i) {
 						state	: 'a',
 						data	: current_lang.value
 					}
-					const tag = build_node_tag(lang_tag, lang_tag.tag_id)
+					const tag = self.build_view_tag(lang_tag, lang_tag.tag_id)
 					// set the new lang tag at caret position of the text_editor.
-					text_editor.set_content(tag.outerHTML)
+					text_editor.set_content(tag)
 					// save value
 					text_editor.save()
 					.then(function(){
