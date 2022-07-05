@@ -36,7 +36,7 @@ class component_relation_related extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		# relation_type
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
@@ -127,7 +127,7 @@ class component_relation_related extends component_relation_common {
 	* NOTE: This method updates component 'dato' but NOT saves
 	* @return bool
 	*/
-	public function add_related( $locator ) {
+	public function add_related( object $locator ) : bool {
 
 		#dump($locator, ' locator ++ '.to_string()); die();
 
@@ -158,7 +158,7 @@ class component_relation_related extends component_relation_common {
 	* NOTE: This method updates component 'dato' but NOT saves
 	* @return bool
 	*/
-	public function remove_related( $locator ) {
+	public function remove_related( object $locator ) : bool {
 
 		# Add current locator to component dato
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
@@ -248,7 +248,7 @@ class component_relation_related extends component_relation_common {
 	* GET_TYPE_REL
 	* @return string $relation_type_rel
 	*/
-	public function get_type_rel() {
+	public function get_type_rel() : string {
 
 		return $this->relation_type_rel;
 	}//end get_type_rel
@@ -350,18 +350,19 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* GET_REFEreNCES
+	* GET_REFERENCES
 	* Get bidireccional / multidireccional references to current term
+	* @param string $type_rel = null
 	* @return array $ar_result
 	*/
-	public function get_references( $type_rel=false ) {
+	public function get_references( string $type_rel=null ) : array {
 
 		$locator = new locator();
 			$locator->set_section_tipo($this->section_tipo);
 			$locator->set_section_id($this->section_id);
 			$locator->set_from_component_tipo($this->tipo);
 
-		if ($type_rel!==false) {
+		if (!empty($type_rel)) {
 			# Add type_rel filter
 			$locator->set_type_rel($type_rel);
 		}

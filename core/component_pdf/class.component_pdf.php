@@ -25,14 +25,9 @@ class component_pdf extends component_media_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
-		if(SHOW_DEBUG===true) {
-			$start_time = start_time();
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.start_time()]=start_time();
-		}
-
-		# Creamos el componente normalmente
+		// We create the component normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 			#
@@ -61,10 +56,6 @@ class component_pdf extends component_media_common {
 				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}
 		}//end if ($need_save)
-
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
-		}
 		*/
 
 		return true;
@@ -354,10 +345,10 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_PATH complete absolute file path like '/Users/myuser/works/Dedalo/pdf/standar/dd152-1.pdf'
-	* @param string $quality default false
-	* @return string $pdf_path
+	* @param ?string $quality = null
+	* @return string $path
 	*/
-	public function get_path($quality=false) {
+	public function get_path(string $quality=null) {
 
 		if(empty($quality)) {
 			$quality = $this->get_quality();
@@ -376,32 +367,41 @@ class component_pdf extends component_media_common {
 	/**
 	* GET_PDF_SIZE
 	* Alias of $ImageObj->get_size()
+	* @param string $quality = null
+	* @return string|null $size
 	*/
-	public function get_pdf_size($quality=false) {
+	public function get_pdf_size(string $quality=null) : ?string {
 
-		if(!$quality) {
+		if(empty($quality)) {
 			$quality = $this->get_quality();
 		}
 
 		$pdf_id	= $this->get_pdf_id();
 		$PdfObj	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+		$size	= $PdfObj->get_size();
 
-		return $PdfObj->get_size();
+		return $size;
 	}//end get_pdf_size
 
 
 
 	/**
 	* GET_FILE_EXISTS
+	* @param string $quality = null
+	* @return bool $file_exists
 	*/
-	public function get_file_exists($quality=false) {
+	public function get_file_exists(string $quality=null) {
 
-		if(!$quality)
-		$quality 	= $this->get_quality();
-		$pdf_id 	= $this->get_pdf_id();
-		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+		if(empty($quality)) {
+			$quality = $this->get_quality();
+		}
 
-		return $PdfObj->get_file_exists();
+		$pdf_id	= $this->get_pdf_id();
+		$PdfObj	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+
+		$file_exists = $PdfObj->get_file_exists();
+
+		return $file_exists;
 	}//end get_file_exists
 
 
@@ -456,36 +456,37 @@ class component_pdf extends component_media_common {
 	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
+	* @return bool
 	*/
-	public function restore_component_media_files() {
+	public function restore_component_media_files() : bool {
 
-		#
-		# PDF restore
+		// PDF restore
 		$ar_quality = DEDALO_PDF_AR_QUALITY;
 		foreach ($ar_quality as $current_quality) {
 
 			# media_path
-			$media_path = $this->get_target_dir().'/deleted';
+			$media_path = $this->get_target_dir() . '/deleted';
 			$pdf_id 	= $this->get_pdf_id();
 
 			$file_pattern 	= $media_path .'/'. $pdf_id .'_*.'. $this->get_extension();
 			$ar_files 		= glob($file_pattern);
-
 			if (empty($ar_files)) {
-				error_log("No files to restore were found for pdf_id:$pdf_id. Nothing was restored (1)");
+				debug_log(__METHOD__." No files to restore were found for pdf_id:$pdf_id. Nothing was restored (1) ".to_string(), logger::WARNING);
 				continue; // Skip
 			}
-			natsort($ar_files);	# sort the files from newest to oldest
-			$last_file_path = end($ar_files);
-			$new_file_path 	= $this->get_path($current_quality);
-			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
-			if(SHOW_DEBUG===true) {
-				$msg=__METHOD__." \nMoved file \n$last_file_path to \n$new_file_path";
-				error_log($msg);
+			natsort($ar_files);	# sort the files from newest to oldest
+			$last_file_path	= end($ar_files);
+			$new_file_path	= $this->get_path($current_quality);
+
+			// move file
+			if( !rename($last_file_path, $new_file_path) ) {
+				throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 			}
 
+			debug_log(__METHOD__." Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::WARNING);
 		}//end foreach
+
 
 		return true;
 	}//end restore_component_media_files
@@ -502,12 +503,13 @@ class component_pdf extends component_media_common {
 	* with
 	* command="&quot;/usr/local/bin/gs&quot;
 	* Once the full path is specified, the command is working as desired.
-	*
-	* @return string | false $result
+	* @param bool $force_create = false
+	* @param bool $absolute = false
+	* @return string|false $result
 	*/
-	public function get_pdf_thumb($force_create=false, $absolute=false) {
+	public function get_pdf_thumb(bool $force_create=false, bool $absolute=false) : ?string {
 
-		$url = false;
+		$url = null;
 
 		if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
 			define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
@@ -543,8 +545,7 @@ class component_pdf extends component_media_common {
 			$command 	= MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
 
 			exec($command.' 2>&1', $output, $result);
-
-			if ($result===0) {
+			if ($result==0) {
 				# All is ok
 				$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
@@ -555,7 +556,7 @@ class component_pdf extends component_media_common {
 				return $url;
 			}else{
 				# An error occurred
-				$url = false;
+				debug_log(__METHOD__." An error ocurred! Failed command: '$command'  ".to_string(), logger::ERROR);
 			}
 		}
 
@@ -573,7 +574,7 @@ class component_pdf extends component_media_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$diffusion_value = $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT);
 
@@ -608,12 +609,14 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
-	* @return string | null $related_component_text_area_tipo
+	* @return array $related_component_text_area_tipo
 	*/
-	public function get_related_component_text_area_tipo() {
+	public function get_related_component_text_area_tipo() : array {
 
-		$modelo_name = 'component_text_area';
-		$related_component_text_area_tipo = common::get_ar_related_by_model($modelo_name, $this->tipo);
+		$related_component_text_area_tipo = common::get_ar_related_by_model(
+			'component_text_area', // model,
+			$this->tipo // tipo
+		);
 
 		return $related_component_text_area_tipo;
 	}//end get_related_component_text_area_tipo
@@ -778,9 +781,9 @@ class component_pdf extends component_media_common {
 	* @param object $new_options
 	* @return object $response
 	*/
-	public static function get_text_from_pdf( $new_options ) {
+	public static function get_text_from_pdf(object $new_options) : object {
 
-		$response=new stdClass();
+		$response = new stdClass();
 
 		$options = new stdClass();
 			$options->path_pdf 	 = null;	# full source pdf file path
@@ -874,9 +877,9 @@ class component_pdf extends component_media_common {
 		    $i++;
 		}
 
-		$response->result  = (string)$pdf_text;
-		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
-		$response->original = trim($original_text);
+		$response->result	= (string)$pdf_text;
+		$response->msg		= "Ok Processing Request pdf_automatic_transcription: text processed";
+		$response->original	= trim($original_text);
 
 
 		return $response;

@@ -140,28 +140,33 @@ class component_svg extends component_media_common {
 	/**
 	* GET_ADITIONAL_PATH
 	* Calculate image aditional path from 'properties' json config.
+	* @return string|null $aditional_path
 	*/
-	public function get_aditional_path() {
+	public function get_aditional_path() : ?string {
 
 		# Already resolved
-		if(isset($this->aditional_path)) return $this->aditional_path;
+		if(isset($this->aditional_path)) {
+			return $this->aditional_path;
+		}
 
-		$aditional_path = false;
-		$svg_id 		= $this->get_svg_id();
-		$parent 		= $this->get_parent();
-		$section_tipo 	= $this->get_section_tipo();
+		$aditional_path	= false;
+		$svg_id			= $this->get_svg_id();
+		$parent			= $this->get_parent();
+		$section_tipo	= $this->get_section_tipo();
 
 		$properties = $this->get_properties();
 		if (isset($properties->aditional_path) && !empty($parent) ) {
 
-			$component_tipo 	= $properties->aditional_path;
-			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 			= component_common::get_instance($component_modelo,
-																 $component_tipo,
-																 $parent,
-																 'edit',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+			$component_tipo		= $properties->aditional_path;
+			$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component			= component_common::get_instance(
+				$component_modelo,
+				$component_tipo,
+				$parent,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$dato = trim($component->get_valor());
 
 			# Add / at begin if not exits
@@ -202,6 +207,7 @@ class component_svg extends component_media_common {
 
 		# Fix
 		$this->aditional_path = $aditional_path;
+
 
 		return $aditional_path;
 	}//end get_aditional_path
@@ -247,9 +253,10 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_PATH
+	* @param string $quality = null
 	* @return string $file_path
 	*/
-	public function get_path($quality=false) : string {
+	public function get_path(string $quality=null) : string {
 
 		if(empty($quality)) {
 			$quality = $this->get_quality();
@@ -267,9 +274,9 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_FILE_CONTENT
-	* @return string | null
+	* @return string|null $file_content
 	*/
-	public function get_file_content() {
+	public function get_file_content() : ?string {
 
 		$file_path		= $this->get_path();
 		$file_content	= (file_exists($file_path))
@@ -316,9 +323,9 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_URL
-	* @return string $url
-	* @param bool $absolute
 	*	Return relative o absolute url. Default false (relative)
+	* @param bool $absolute
+	* @return string $url
 	*/
 		// public function get_url($absolute=false) {
 
@@ -340,18 +347,21 @@ class component_svg extends component_media_common {
 	/**
 	* GET_IMAGE_URL
 	* Get image url for current quality
-	* @param string | bool $quality
+	* @param string $quality = null
 	*	optional default (bool)false
-	* @param bool $test_file
+	* @param bool $test_file = true
 	*	Check if file exists. If not use 0.jpg as output. Default true
-	* @param bool $absolute
-	* @return
+	* @param bool $absolute = false
+	* @param bool $default_add = true
+	* @return string|null $image_url
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url($quality=false, $test_file=true, $absolute=false, $default_add=true) {
+	public function get_url(string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
 
 		// quality fallback to default
-			if(!$quality) $quality = $this->get_quality();
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
 
 		// image id
 			$image_id 	= $this->get_svg_id();
@@ -368,7 +378,7 @@ class component_svg extends component_media_common {
 
 				if(!file_exists($file)) {
 					if ($default_add===false) {
-						return false;
+						return null;
 					}
 					$image_url = DEDALO_CORE_URL . '/themes/default/icons/dedalo_icon_grey.svg';
 				}
@@ -386,9 +396,10 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_URL_FROM_LOCATOR
-	* @return string $url
+	* @param object $locator
+	* @return string|null $url
 	*/
-	public static function get_url_from_locator(object $locator) : string {
+	public static function get_url_from_locator(object $locator) : ?string {
 
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
 		$component		= component_common::get_instance(
@@ -472,6 +483,7 @@ class component_svg extends component_media_common {
 	* Remove quality version moving the file to a deleted files dir
 	* @see component_image->remove_component_media_files
 	*
+	* @param string $quality
 	* @return object $response
 	*/
 	public function delete_file(string $quality) : object {

@@ -41,41 +41,10 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_COMPONENTS_WITH_RELATIONS
-	* Array of components model name that using locators in dato and extends component_relation_common
-	* @return array
-	*/
-	public static function get_components_with_relations() : array {
-
-		$components_with_relations = [
-			'component_autocomplete',
-			'component_autocomplete_hi',
-			'component_check_box',
-			'component_filter',
-			'component_filter_master',
-			'component_portal',
-			'component_publication',
-			'component_radio_button',
-			'component_relation_children',
-			'component_relation_index',
-			'component_relation_model',
-			'component_relation_parent',
-			'component_relation_related',
-			'component_relation_struct',
-			'component_select',
-			'component_select_lang'
-		];
-
-		return $components_with_relations;
-	}//end get_components_with_relations
-
-
-
-	/**
 	* __CONSTRUCT
 	* @return bool
 	*/
-	public function __construct($tipo=null, $parent=null, $modo='edit', $lang=null, $section_tipo=null) {
+	public function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=null, string $section_tipo=null) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
@@ -130,6 +99,37 @@ class component_relation_common extends component_common {
 
 		return true;
 	}//end __construct
+
+
+
+	/**
+	* GET_COMPONENTS_WITH_RELATIONS
+	* Array of components model name that using locators in dato and extends component_relation_common
+	* @return array
+	*/
+	public static function get_components_with_relations() : array {
+
+		$components_with_relations = [
+			'component_autocomplete',
+			'component_autocomplete_hi',
+			'component_check_box',
+			'component_filter',
+			'component_filter_master',
+			'component_portal',
+			'component_publication',
+			'component_radio_button',
+			'component_relation_children',
+			'component_relation_index',
+			'component_relation_model',
+			'component_relation_parent',
+			'component_relation_related',
+			'component_relation_struct',
+			'component_select',
+			'component_select_lang'
+		];
+
+		return $components_with_relations;
+	}//end get_components_with_relations
 
 
 

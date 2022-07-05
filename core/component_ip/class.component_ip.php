@@ -11,20 +11,18 @@
 class component_ip extends component_common {
 
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
 
+	/**
+	* __CONSTRUCT
+	*/
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
-	# GET DATO
-	public function get_dato() {
-		$dato = parent::get_dato();
-		return (string)$dato;
-	}
+		$lang = DEDALO_DATA_NOLAN;
 
-	# SET_DATO
-	public function set_dato($dato) {
-		parent::set_dato( (string)$dato );
-	}
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+
+		return true;
+	}//end __construct
 
 
 
@@ -187,4 +185,4 @@ class component_ip extends component_common {
 
 
 
-}//end class component_iri
+}//end class component_ip

@@ -14,7 +14,7 @@ class component_check_box extends component_relation_common {
 
 
 	# test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 
@@ -110,4 +110,4 @@ class component_check_box extends component_relation_common {
 
 
 
-}//end component_check_box
+}//end class component_check_box

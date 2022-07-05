@@ -31,7 +31,7 @@ class component_av extends component_media_common {
 	* __CONSTRUCT
 	*
 	*/
-	function __construct($tipo, $section_id=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
+	function __construct(string $tipo, $section_id=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);

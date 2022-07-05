@@ -13,7 +13,7 @@ class component_portal extends component_relation_common {
 	protected $default_relation_type_rel	= null;
 
 	# test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 	# ar_target_section_tipo
 	public $ar_target_section_tipo;		# Used to fix section tipo (get the section from relation terms, section can be real or virtual.

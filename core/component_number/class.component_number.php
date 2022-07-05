@@ -9,6 +9,20 @@ class component_number extends component_common {
 
 
 	/**
+	* __CONSTRUCT
+	*/
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+
+		$lang = DEDALO_DATA_NOLAN;
+
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+
+		return true;
+	}//end __construct
+
+
+
+	/**
 	* GET_DATO
 	*/
 	public function get_dato() {

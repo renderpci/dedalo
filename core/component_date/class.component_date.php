@@ -17,31 +17,25 @@ class component_date extends component_common {
 
 
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
-
-
-
 	# American data format
-	public static $ar_american = array('lg-eng','lg-angl','lg-ango','lg-meng');
+	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
 
 
 
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
+		// Force always DEDALO_DATA_NOLAN
+		$lang = DEDALO_DATA_NOLAN;
 
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		if(SHOW_DEBUG===true) {
 			if ($this->RecordObj_dd->get_traducible()==='si') {
-				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
+				debug_log(__METHOD__." Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is NOT 'traducible'. Please fix this ASAP ".to_string(), logger::ERROR);
 			}
 		}
 	}//end __construct

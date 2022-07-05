@@ -106,9 +106,10 @@ class component_relation_index extends component_relation_common {
 	* ADD_LOCATOR
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
 	* NOTE: This method updates component 'dato' but NOT save
+	* @param object $locator
 	* @return bool
 	*/
-	public function add_locator( $locator ) {
+	public function add_locator( object $locator ) : bool {
 
 
 		$locator = clone($locator);
@@ -142,9 +143,10 @@ class component_relation_index extends component_relation_common {
 	* REMOVE_LOCATOR
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
 	* NOTE: This method updates component 'dato' and save
+	* @param object $locator
 	* @return bool
 	*/
-	public function remove_locator( $locator ) {
+	public function remove_locator( object $locator ) : bool {
 
 		$locator = clone($locator);
 
@@ -183,49 +185,49 @@ class component_relation_index extends component_relation_common {
 	* Used by tool_indexation to get list of terms with index relation to current tag
 	* @return array $ar_indexations
 	*/
-	public static function get_indexations_from_tag_DES($component_tipo, $section_tipo, $section_id, $tag_id, $lang=DEDALO_DATA_LANG, $type=DEDALO_RELATION_TYPE_INDEX_TIPO) {
+		// public static function get_indexations_from_tag_DES($component_tipo, $section_tipo, $section_id, $tag_id, $lang=DEDALO_DATA_LANG, $type=DEDALO_RELATION_TYPE_INDEX_TIPO) {
 
-		# Search relation index in hierarchy tables
-		$options = new stdClass();
-			$options->fields = new stdClass();
-				$options->fields->section_tipo		= $section_tipo;
-				$options->fields->section_id		= $section_id;
-				$options->fields->component_tipo	= $component_tipo;
-				$options->fields->type				= $type;
-				$options->fields->tag_id			= $tag_id;
+		// 	# Search relation index in hierarchy tables
+		// 	$options = new stdClass();
+		// 		$options->fields = new stdClass();
+		// 			$options->fields->section_tipo		= $section_tipo;
+		// 			$options->fields->section_id		= $section_id;
+		// 			$options->fields->component_tipo	= $component_tipo;
+		// 			$options->fields->type				= $type;
+		// 			$options->fields->tag_id			= $tag_id;
 
-		$result = component_relation_index::get_indexations_search( $options );
+		// 	$result = component_relation_index::get_indexations_search( $options );
 
-		$ar_indexations_resolved = [];
-		foreach ($result as $key => $inverse_locator) {
+		// 	$ar_indexations_resolved = [];
+		// 	foreach ($result as $key => $inverse_locator) {
 
-			$locator = new locator();
-			 	$locator->set_section_tipo($inverse_locator->section_tipo);
-			 	$locator->set_section_id($inverse_locator->section_id);
-			 	$locator->set_from_component_tipo($inverse_locator->from_component_tipo);
-			 	$locator->set_component_tipo($inverse_locator->component_tipo);
-			 	$locator->set_type($inverse_locator->type);
-			 	$locator->set_tag_id($inverse_locator->tag_id);
+		// 		$locator = new locator();
+		// 		 	$locator->set_section_tipo($inverse_locator->section_tipo);
+		// 		 	$locator->set_section_id($inverse_locator->section_id);
+		// 		 	$locator->set_from_component_tipo($inverse_locator->from_component_tipo);
+		// 		 	$locator->set_component_tipo($inverse_locator->component_tipo);
+		// 		 	$locator->set_type($inverse_locator->type);
+		// 		 	$locator->set_tag_id($inverse_locator->tag_id);
 
-			$locator_resolve_term = new locator();
-				$locator_resolve_term->set_section_tipo($inverse_locator->from_section_tipo);
-			 	$locator_resolve_term->set_section_id($inverse_locator->from_section_id);
+		// 		$locator_resolve_term = new locator();
+		// 			$locator_resolve_term->set_section_tipo($inverse_locator->from_section_tipo);
+		// 		 	$locator_resolve_term->set_section_id($inverse_locator->from_section_id);
 
-			$term_label = ts_object::get_term_by_locator($locator_resolve_term, $lang, $from_cache=true) ?? '';
+		// 		$term_label = ts_object::get_term_by_locator($locator_resolve_term, $lang, $from_cache=true) ?? '';
 
-			$data = new stdClass();
-				$data->section_tipo	= $inverse_locator->from_section_tipo;
-				$data->section_id	= $inverse_locator->from_section_id;
-				$data->term			= strip_tags($term_label);
-				$data->locator		= $locator;
+		// 		$data = new stdClass();
+		// 			$data->section_tipo	= $inverse_locator->from_section_tipo;
+		// 			$data->section_id	= $inverse_locator->from_section_id;
+		// 			$data->term			= strip_tags($term_label);
+		// 			$data->locator		= $locator;
 
-			$ar_indexations_resolved[] = $data;
-		}
-		$ar_indexations = $ar_indexations_resolved;
+		// 		$ar_indexations_resolved[] = $data;
+		// 	}
+		// 	$ar_indexations = $ar_indexations_resolved;
 
 
-		return (array)$ar_indexations;
-	}//end get_indexations_from_tag
+		// 	return (array)$ar_indexations;
+		// }//end get_indexations_from_tag
 
 
 
@@ -233,38 +235,38 @@ class component_relation_index extends component_relation_common {
 	* GET_INDEXATIONS_SEARCH
 	* @return resource $result
 	*/
-	public static function get_indexations_search_DES( $request_options ) {
+		// public static function get_indexations_search_DES( $request_options ) {
 
-		$options = new stdClass();
-			$options->fields = new stdClass();
-				$options->fields->section_tipo 	= false;
-				$options->fields->section_id 	= false;
-				$options->fields->component_tipo= false;
-				$options->fields->type 			= DEDALO_RELATION_TYPE_INDEX_TIPO;
-				$options->fields->tag_id 		= false;
+		// 	$options = new stdClass();
+		// 		$options->fields = new stdClass();
+		// 			$options->fields->section_tipo 	= false;
+		// 			$options->fields->section_id 	= false;
+		// 			$options->fields->component_tipo= false;
+		// 			$options->fields->type 			= DEDALO_RELATION_TYPE_INDEX_TIPO;
+		// 			$options->fields->tag_id 		= false;
 
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-
-		$locator = new locator();
-			$locator->set_section_tipo($options->fields->section_tipo);
-			$locator->set_section_id($options->fields->section_id);
-			if (isset($options->fields->component_tipo) && $options->fields->component_tipo!==false) {
-			$locator->set_component_tipo($options->fields->component_tipo);
-			}
-			if (isset($options->fields->type) && $options->fields->type!==false) {
-			$locator->set_type($options->fields->type);
-			}
-			if (isset($options->fields->tag_id) && $options->fields->tag_id!==false) {
-			$locator->set_tag_id($options->fields->tag_id);
-			}
-
-		# calculate_inverse_locators: $locator, $limit=false, $offset=false, $count=false
-		$result = search::calculate_inverse_locators( $locator );
+		// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
-		return $result;
-	}//end get_indexations_search
+		// 	$locator = new locator();
+		// 		$locator->set_section_tipo($options->fields->section_tipo);
+		// 		$locator->set_section_id($options->fields->section_id);
+		// 		if (isset($options->fields->component_tipo) && $options->fields->component_tipo!==false) {
+		// 		$locator->set_component_tipo($options->fields->component_tipo);
+		// 		}
+		// 		if (isset($options->fields->type) && $options->fields->type!==false) {
+		// 		$locator->set_type($options->fields->type);
+		// 		}
+		// 		if (isset($options->fields->tag_id) && $options->fields->tag_id!==false) {
+		// 		$locator->set_tag_id($options->fields->tag_id);
+		// 		}
+
+		// 	# calculate_inverse_locators: $locator, $limit=false, $offset=false, $count=false
+		// 	$result = search::calculate_inverse_locators( $locator );
+
+
+		// 	return $result;
+		// }//end get_indexations_search
 
 
 
@@ -274,31 +276,31 @@ class component_relation_index extends component_relation_common {
 	* Used to locate the correct locator inside relations container returned for SQL search
 	* @return objet $current_locator | null
 	*/
-	public static function get_locator_from_ar_relations_DES($relations, $section_tipo, $section_id, $type, $tag_id=false) {
+		// public static function get_locator_from_ar_relations_DES($relations, $section_tipo, $section_id, $type, $tag_id=false) {
 
-		// Locator to find
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
-				$locator->set_type($type);
+		// 	// Locator to find
+		// 		$locator = new locator();
+		// 			$locator->set_section_tipo($section_tipo);
+		// 			$locator->set_section_id($section_id);
+		// 			$locator->set_type($type);
 
-				if ($tag_id!==false) {
-					$locator->set_tag_id($tag_id);
-				}
+		// 			if ($tag_id!==false) {
+		// 				$locator->set_tag_id($tag_id);
+		// 			}
 
-		$ar_properties = array_keys((array)$locator);
+		// 	$ar_properties = array_keys((array)$locator);
 
-		foreach ((array)$relations as $current_locator) {
+		// 	foreach ((array)$relations as $current_locator) {
 
-			if (true===locator::compare_locators($current_locator, $locator, $ar_properties) ) {
-				// Full locator (with from tipo)
-				return $current_locator;
-			}
-		}
-		debug_log(__METHOD__." Zero locators are located in relations data. This is abnormal situation. Please review this data. ar_relations: ".to_string($relations), logger::ERROR);
+		// 		if (true===locator::compare_locators($current_locator, $locator, $ar_properties) ) {
+		// 			// Full locator (with from tipo)
+		// 			return $current_locator;
+		// 		}
+		// 	}
+		// 	debug_log(__METHOD__." Zero locators are located in relations data. This is abnormal situation. Please review this data. ar_relations: ".to_string($relations), logger::ERROR);
 
-		return null;
-	}//end get_locator_from_ar_relations
+		// 	return null;
+		// }//end get_locator_from_ar_relations
 
 
 

@@ -8,8 +8,15 @@ class component_password extends component_common {
 
 
 
-	// Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
+	/**
+	* __CONSTRUCT
+	*/
+	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+
+		$lang = DEDALO_DATA_NOLAN;
+
+		return parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+	}//end __construct
 
 
 

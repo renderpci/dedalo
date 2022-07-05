@@ -149,9 +149,10 @@ class component_relation_model extends component_relation_common {
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
 	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}//end build_search_comparison_operators
+		// public function build_search_comparison_operators( array $comparison_operators=array('=','!=') ) {
+
+		// 	return (object)parent::build_search_comparison_operators($comparison_operators);
+		// }//end build_search_comparison_operators
 
 
 
@@ -170,29 +171,29 @@ class component_relation_model extends component_relation_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		$search_query='';
-		if ( empty($search_value) ) {
-			return $search_query;
-		}
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+		// public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
+		// 	$search_query='';
+		// 	if ( empty($search_value) ) {
+		// 		return $search_query;
+		// 	}
+		// 	$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
-		switch (true) {
-			case $comparison_operator==='=':
-				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
-				break;
-			case $comparison_operator==='!=':
-				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
-				break;
-		}
+		// 	switch (true) {
+		// 		case $comparison_operator==='=':
+		// 			$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+		// 			break;
+		// 		case $comparison_operator==='!=':
+		// 			$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
+		// 			break;
+		// 	}
 
-		if(SHOW_DEBUG) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		}
+		// 	if(SHOW_DEBUG) {
+		// 		$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+		// 		#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
+		// 	}
 
-		return $search_query;
-	}//end get_search_query
+		// 	return $search_query;
+		// }//end get_search_query
 
 
 

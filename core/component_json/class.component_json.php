@@ -7,19 +7,16 @@
 class component_json extends component_common {
 
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
 
+	/**
+	* __CONSTRUCT
+	*/
+	public function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
+		// Force always DEDALO_DATA_NOLAN
+		$lang = DEDALO_DATA_NOLAN;
 
-	# CONSTRUCT
-	public function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		return parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 	}//end __construct
 
 
