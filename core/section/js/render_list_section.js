@@ -208,6 +208,9 @@ const rebuild_columns_map = async function(self) {
 			tipo		: 'section_id', // used to sort only
 			sortable	: true,
 			width		: 'auto',
+			path		: [{
+				component_tipo : 'section_id'
+			}],
 			callback	: render_list_section.render_column_id
 		})
 

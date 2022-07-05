@@ -2538,6 +2538,7 @@ export const ui = {
 	add_column_order_set(self, column, header_wrapper) {
 
 		// short vars
+			const path				= column.path
 			const title_asc			= (get_label.sort || 'Sort') + ' ' + (get_label.ascending || 'ascending')
 			const title_desc		= (get_label.sort || 'Sort') + ' ' + (get_label.descending || 'descending')
 			let default_direction	= 'DESC'
@@ -2583,12 +2584,13 @@ export const ui = {
 				// order sqo build
 					const order = [{
 						direction: direction, // ASC|DESC
-						path : [{
-							component_tipo	: column.tipo || column.id,
-							section_tipo	: column.section_tipo
-						}]
+						// path : [{
+						// 	component_tipo	: column.tipo || column.id,
+						// 	section_tipo	: column.section_tipo
+						// }]
+						path : path
 					}]
-					// console.log("order:",order);
+					console.log("order:",order);
 
 				// update rqo
 					self.navigate(

@@ -3199,4 +3199,37 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_ORDER_PATH
+	* Calculate full path of current element to use in columns order path (context)
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return array $path
+	*/
+	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+
+		// get standard search query path. This get component path downwards
+			$path = search::get_query_path($component_tipo, $section_tipo);
+
+		// from_section_tipo. When is defined, this component is inside a portal and
+		// we need the parent portal path too to add at beginning
+			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
+				// recursion
+				// $pre_path = $this->get_order_path($this->from_component_tipo, $this->from_section_tipo);
+				// $pre_path = search::get_query_path($this->from_component_tipo, $this->from_section_tipo);
+				// array_unshift($path, ...$pre_path);
+				array_unshift($path, (object)[
+					'component_tipo'	=> $this->from_component_tipo,
+					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
+					'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
+					'section_tipo'		=> $this->from_section_tipo
+				]);
+			}
+
+
+		return $path;
+	}//end get_order_path
+
+
+
 }//end class component_common

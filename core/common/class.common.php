@@ -1543,10 +1543,20 @@ abstract class common {
 					$filter_by_list = component_relation_common::get_filter_list_data($filter_list);
 					$dd_object->filter_by_list = $filter_by_list;
 				}
-			// search operators info (tool tips)
-				if ($mode==='search' && strpos($model, 'component_')===0) {
-					$dd_object->search_operators_info	= $this->search_operators_info();
-					$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
+			// component specific
+				if (strpos($model, 'component_')===0) {
+					if ($mode==='list') {
+						// add component path to allow sort columns properly
+						// ? remove if because forbids cache list mode uniformly
+						// if (!empty($this->from_parent)) {
+							$dd_object->path = $this->get_order_path($tipo, $section_tipo);
+						// }
+					}
+					elseif ($mode==='search') {
+						// search operators info (tool tips)
+						$dd_object->search_operators_info	= $this->search_operators_info();
+						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
+					}
 				}
 			// view, used only by portals
 				// if($model==='component_portal' || strpos($model, 'component_relation_')===0 || $model==='component_semantic_node'){
@@ -3354,7 +3364,7 @@ abstract class common {
 							$model,
 							$element_tipo,
 							null,
-							'list',
+							'search',
 							$current_lang,
 							$section_tipo
 						);
