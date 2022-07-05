@@ -2558,34 +2558,34 @@ class search {
 
 		// options
 			$options = new stdClass();
-				$options->ar_locators 		  = null;
-				$options->section_tipo 		  = null;
-				$options->section_id 		  = null;
-				$options->from_component_tipo = null;
+				$options->ar_locators			= null;
+				$options->section_tipo			= null;
+				$options->section_id			= null;
+				$options->from_component_tipo	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			if (strpos($options->section_id, DEDALO_SECTION_ID_TEMP)!==false) {
-				$response->result 	= true;
-				$response->msg 		= 'Ok. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
+				$response->result	= true;
+				$response->msg		= 'Ok. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
 				return $response;
 			}
 
 			if (empty($options->from_component_tipo)) {
-				$response->msg[] = " options->from_component_tipo is mandatory ! Stopped action";
-				$response->msg   = implode(', ', $response->msg);
+				$response->msg[]	= " options->from_component_tipo is mandatory ! Stopped action";
+				$response->msg		= implode(', ', $response->msg);
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 
-		// sort vars
-			$table 				 = 'relations';
-			$section_id 		 = $options->section_id;
-			$section_tipo 		 = $options->section_tipo;
-			$from_component_tipo = $options->from_component_tipo;
+		// short vars
+			$table					= 'relations';
+			$section_id				= $options->section_id;
+			$section_tipo			= $options->section_tipo;
+			$from_component_tipo	= $options->from_component_tipo;
 
 		// DELETE . Remove all relations of current component
-			$strQuery 	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
-			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+			$strQuery	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
+			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 
 		// INSERT . Create all relations again (multiple)
 			/* Old way, one insert by record
@@ -2632,14 +2632,14 @@ class search {
 					debug_log(__METHOD__." Error. empty section_tipo or section_id. Ignored relations insert locator: ".to_string($locator), logger::ERROR);
 					continue;
 				}
-				$target_section_tipo  = $locator->section_tipo;
-				$target_section_id 	  = $locator->section_id;
+				$target_section_tipo	= $locator->section_tipo;
+				$target_section_id		= $locator->section_id;
 
 
-				// avoid save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO) - DEDALO_SECTION_USERS_TIPO ?
-				if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO) {
-					continue;
-				}
+				// prevents to save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO) - DEDALO_SECTION_USERS_TIPO ?
+					// if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO) {
+					// 	continue;
+					// }
 
 				$value = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
 				if (!in_array($value, $ar_insert_values)) {
@@ -2668,9 +2668,9 @@ class search {
 					}
 
 					// response
-						$response->result = true;
-						$response->msg[0] = "Ok. Relations row successfully"; // Override first message
-						$response->msg    = "<br>".implode('<br>', $response->msg);
+						$response->result	= true;
+						$response->msg[0]	= "Ok. Relations row successfully"; // Override first message
+						$response->msg		= implode(PHP_EOL, $response->msg);
 				}
 
 

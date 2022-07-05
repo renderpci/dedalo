@@ -209,7 +209,13 @@ const rebuild_columns_map = async function(self) {
 			sortable	: true,
 			width		: 'auto',
 			path		: [{
-				component_tipo : 'section_id'
+				// note that component_tipo=section_id is valid here
+				// because section_id is a direct column in search
+				component_tipo	: 'section_id',
+				// optionals. Only added for stetic
+				modelo			: 'component_section_id',
+				name			: 'ID',
+				section_tipo	: self.section_tipo
 			}],
 			callback	: render_list_section.render_column_id
 		})
