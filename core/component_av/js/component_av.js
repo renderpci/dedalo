@@ -89,7 +89,12 @@ export const component_av = function(){
 component_av.prototype.go_to_time = function(options) {
 
 	const self = this
-	console.log("options:",options);
+
+	if (!self.video) {
+		dd_console("Ignored go_to_time call. No self.video is set", 'warning', [self.tipo, self.id]);
+		return false
+	}
+
 	// options
 		const tag = options.tag
 
