@@ -77,37 +77,6 @@ export const service_ckeditor = function() {
 					//     console.log( `The editor is focused: ${ isFocused }.` );
 					// } );
 
-
-
-
-
-
-
-					// editor.conversion.for( 'downcast' ).add( dispatcher => {
-					// 	dispatcher.on( 'attribute:dSource:image', ( evt, data, conversionApi ) => {
-
-					// 			console.log("data.item:",data.item);
-
-
-					// 		if ( !conversionApi.consumable.consume( data.item, evt.name ) ) {
-					// 			return;
-					// 		}
-
-					// 		const viewWriter = conversionApi.writer;
-					// 		const figure = conversionApi.mapper.toViewElement( data.item );
-					// 		const img = figure.getChild( 0 );
-
-					// 		if ( data.attributeNewValue !== null ) {
-					// 			viewWriter.setAttribute( 'data-source', data.attributeNewValue, img );
-					// 		} else {
-					// 			viewWriter.removeAttribute( 'data-source', img );
-					// 		}
-					// 	} );
-					// } );
-
-
-
-
 				// build toolbar
 					self.build_toolbar(editor_config);
 
@@ -121,7 +90,8 @@ export const service_ckeditor = function() {
 					})
 					function fn_remove(e) {
 						if (e.target!==node) {
-							const found = e.path.find(el => el===node)
+							const path	= e.composedPath()
+							const found	= path.find(el => el===node)
 							if (!found) {
 								toolbar_container.classList.add('hide')
 								document.body.removeEventListener("mouseup", fn_remove)
@@ -133,18 +103,63 @@ export const service_ckeditor = function() {
 					self.setup_events(editor_config);
 
 
-				// click event sample
-					// container.addEventListener("click", function(e){
-					// 	if (e.target.matches('img')) {
-					// 		e.stopPropagation()
+				// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
+				// the drop event doesn't has any effect in the final position of the drop,
+				// the final check position is fired in the clipboardInput event.
+				editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
+					//check the target name of the element
+					if(data.target.name === 'img'){
+						editor.editing.view.change((writer) => {
+							// create new position at start and end of the target
+							// use the target parent because the img is wrapped inside a span
+							// the parent span has other position of the image and it's necessary avoid the parent position
+							const start = writer.createPositionAt(
+								data.target.parent,
+								"after"
+							);
+							const end = writer.createPositionAt(
+								data.target.parent,
+								"after"
+							);
+							// create the range of the new position
+							const range = writer.createRange(start, end);
 
-					// 		console.log("click e:", e.target);
-					// 		console.log("parentNode:", e.target.parentNode);
+							// it's not necessary change the range to model range
+							// comment this code
+								// writer.setSelection( range );
+								// transform to the model_range
+								// const model_range = editor.editing.mapper.toModelRange( range )
+								// editor.model.change( writer => writer.setSelection( model_range ) );
+								// data.targetRanges = [ editor.editing.mapper.toViewRange( model_range ) ];
+							// set new range to the targetRanges of the data
+							// it will use to calculate the drop position when will insertContect()
+							data.targetRanges = [ range ];
+						});
+					}
+				}, { priority: 'high' } );
 
-					// 		const data = editor.getData();
-					//  		console.log("editor data:",data);
+				// Active this drop event listeners to change the visual effect, but any of them will change the result
+					// editor.editing.view.document.on( 'drop', ( evt, data ) => {
+					// }, { priority: 'high' } );
+
+					// editor.editing.view.document.on( 'dragover', ( evt, data ) => {
+
+					// 	if(data.target.name === 'img'){
+					// 		evt.stop();
+					// 		//Stop the default event action.
+					// 		data.preventDefault();
 					// 	}
-					// })
+					// }, { priority: 'high' } );
+
+					// editor.editing.view.document.on( 'dragenter', ( evt, data ) => {
+
+					// 	if(data.target.name === 'img'){
+
+					// 		evt.stop();
+					// 		//Stop the default event action.
+					// 		data.preventDefault();
+					// 	}
+					// }, { priority: 'high' } );
 
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
@@ -159,8 +174,6 @@ export const service_ckeditor = function() {
 					// 		}
 					// 	})
 					// }, 2000)
-
-
 
 			})
 			.catch( error => {
@@ -356,6 +369,66 @@ export const service_ckeditor = function() {
 
 
 	/**
+	* delete_tag
+	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
+	* @param ed
+	*	Text editor instance (tinyMCE)
+	* @param tag_type
+	*	Class name of image searched like 'geo'
+	*
+	* @return int tag_id
+	*/
+	this.delete_tag = function(view_tag) {
+
+		// options
+			const type		= view_tag.type
+			const tag_id	= view_tag.tag_id
+
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+		return new Promise(function(resolve) {
+
+			// root. Whole editor document to traverse
+				const root = editor.model.document.getRoot();
+
+			// range. Create a range spanning over the entire root content:
+				const range = editor.model.createRangeIn( root );
+
+			// Iterate over all items in this range:
+				for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+
+					const item = value.item
+
+					// attributes. Get an object like:
+					// {
+					//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+					//	 classes : ['index']
+					// }
+					// const htmlAttributes = item.getAttribute('htmlAttributes')
+					// const htmlAttributes = item.getAttributes()
+					const attributes = item._attrs
+
+					if(item._attrs && item._attrs.size > 0) {
+
+						const current_type		= attributes.get('type')
+						const current_tag_id	= attributes.get('tag_id')
+
+						if(current_type===type && current_tag_id === tag_id) {
+
+							editor.model.change( writer => {
+								writer.remove( item )
+							});
+							resolve(true)
+							break;
+						}
+					}
+				}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+		})
+	};//end delete_tag
+
+	/**
 	* GET_EDITOR_CONTENT_DATA -OK
 	* @return DOM node | false
 	*/
@@ -417,10 +490,9 @@ export const service_ckeditor = function() {
 		const self 	 = this
 		const editor = self.editor
 
-
 		editor.model.change( writer => {
 			// convert the html to the model of ck_editor
-			// const data_tag_node_in		= editor.data.processor.toView( tag_node_in.outerHTML  );
+			// const data_tag_node_in	= editor.data.processor.toView( tag_node_in.outerHTML  );
 			// const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
 
 			// get the in position of the selection
@@ -450,17 +522,123 @@ export const service_ckeditor = function() {
 		editor.editing.view.focus();
 		self.is_dirty = false;
 
-		// const value = editor.getContent({format:'raw'})
-		// const value = editor.getData();
-		// const value = self.editor.getBody()
-		// self.caller.save_value(self.key, value)
-
 		return true
 	}//end wrap_selection_with_tags
 
 
 	/**
-	* GET_LAST_TAG_ID
+	* SET_SELECTION_FROM_TAG
+	* @return
+	*/
+	this.set_selection_from_tag = function (tag_obj) {
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+		// Check the tag to be the type indexXX
+			if(tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut'){
+				return false
+			}
+
+		// get_tag_view_in
+		tag_obj.type = 'indexIn'
+		const tag_view_in	= self.get_view_tag(tag_obj)
+
+		tag_obj.type = 'indexOut'
+		const tag_view_out	= self.get_view_tag(tag_obj)
+
+		if(tag_view_in && tag_view_out){
+			self.set_selection_from_view_tags(tag_view_in, tag_view_out)
+		}
+	}//end set_selection_from_tag
+
+
+	/**
+	* GET_SELECTION_FROM_TAGS
+	* @return
+	*/
+	this.set_selection_from_view_tags = function(tag_view_in, tag_view_out) {
+
+		const self 	 = this
+		const editor = self.editor
+
+		editor.editing.view.change((writer) => {
+			const start = writer.createPositionAt(
+				tag_view_in,
+				"after"
+			);
+			const end = writer.createPositionAt(
+				tag_view_out,
+				"before"
+			);
+			// create the range of the new position
+			const range = writer.createRange(start, end);
+			writer.setSelection( range );
+		});
+
+	};//end get_selection_from_tags
+
+
+	/**
+	* GET_PAIR_TAG
+	* @return
+	*/
+	this.get_view_tag = function(tag_obj) {
+
+		// the view type will need to be the same of the tag_obj
+			const type = tag_obj.type
+
+		// the view tag_id will need to be the same of the tag_obj
+			const tag_id = tag_obj.tag_id
+
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+		// root. Whole editor document to traverse
+			const root = editor.editing.view.document.getRoot();
+
+		// range. Create a range spanning over the entire root content:
+			const range = editor.editing.view.createRangeIn( root );
+
+		// Iterate over all items in this range:
+			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+
+				const item = value.item
+
+				if(item.name !== 'img'){
+					continue
+				}
+
+				// attributes. Get an object like:
+				// {
+				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+				//	 classes : ['index']
+				// }
+				// const htmlAttributes = item.getAttribute('htmlAttributes')
+				// const htmlAttributes = item.getAttributes()
+				const parent_item = item.parent
+
+				const attributes = parent_item._attrs
+
+				if(parent_item._attrs && parent_item._attrs.size > 0) {
+
+					const current_type		= attributes.get('data-type')
+					const current_tag_id	= attributes.get('data-tag_id')
+
+					if(current_type===type && current_tag_id===tag_id) {
+						return parent_item
+					}
+				}
+			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+
+			return false
+
+	};//end get_pair_tag
+
+
+	/**
+	* GET_LAST_TAG_ID -Ok
 	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
 	* @param ed
 	*	Text editor instance (tinyMCE)
@@ -513,10 +691,12 @@ export const service_ckeditor = function() {
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
 
-			const last_tag_id = Math.max(...ar_tag_id);
+		const last_tag_id = Math.max(...ar_tag_id);
 
-			return last_tag_id
+		return last_tag_id
 	};//end get_last_tag_id
+
+
 
 	/**
 	* UPDATE_TAG
@@ -555,12 +735,11 @@ export const service_ckeditor = function() {
 
 				const item = value.item
 
-				// htmlAttributes. Get an object like:
+				// attributes. Get an object like:
 				// {
-				//   attributes : {data-data: '', data-label: 'label in 1', data-state: 'r', data-tag_id: '1', data-type: 'indexIn', …}
+				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
 				//	 classes : ['index']
 				// }
-
 				const attributes = item._attrs
 
 				if(item._attrs && item._attrs.size > 0) {
@@ -608,11 +787,11 @@ export const service_ckeditor = function() {
 								writer.setAttribute( 'src', image_url, item );
 							});
 
-							console.log("update_tag item:", item);
+						// if the tag was found break the loop
+							break;
 					}
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
-
 
 		return true
 	}//end update_tag
