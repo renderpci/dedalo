@@ -763,13 +763,14 @@ const get_custom_events = (self, i, text_editor) => {
 						event_manager.publish('click_tag_tc_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						break;
 
-					case 'index':
+					case 'indexOut':
+					case 'indexIn':
 						// click_tag_index_
 						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
 						// 'self.id' for specific uses like tool indexation
 						// console.log("PUBLISH self.id:",self.id, self.id_base);
 						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-
+						text_editor.set_selection_from_tag(tag_obj)
 						break;
 
 					case 'svg' :

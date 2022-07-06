@@ -77,37 +77,6 @@ export const service_ckeditor = function() {
 					//     console.log( `The editor is focused: ${ isFocused }.` );
 					// } );
 
-
-
-
-
-
-
-					// editor.conversion.for( 'downcast' ).add( dispatcher => {
-					// 	dispatcher.on( 'attribute:dSource:image', ( evt, data, conversionApi ) => {
-
-					// 			console.log("data.item:",data.item);
-
-
-					// 		if ( !conversionApi.consumable.consume( data.item, evt.name ) ) {
-					// 			return;
-					// 		}
-
-					// 		const viewWriter = conversionApi.writer;
-					// 		const figure = conversionApi.mapper.toViewElement( data.item );
-					// 		const img = figure.getChild( 0 );
-
-					// 		if ( data.attributeNewValue !== null ) {
-					// 			viewWriter.setAttribute( 'data-source', data.attributeNewValue, img );
-					// 		} else {
-					// 			viewWriter.removeAttribute( 'data-source', img );
-					// 		}
-					// 	} );
-					// } );
-
-
-
-
 				// build toolbar
 					self.build_toolbar(editor_config);
 
@@ -169,7 +138,7 @@ export const service_ckeditor = function() {
 					}
 				}, { priority: 'high' } );
 
-				// Active this event listeners to change the visual effect, but any of them will change the result
+				// Active this drop event listeners to change the visual effect, but any of them will change the result
 					// editor.editing.view.document.on( 'drop', ( evt, data ) => {
 					// }, { priority: 'high' } );
 
@@ -192,20 +161,6 @@ export const service_ckeditor = function() {
 					// 	}
 					// }, { priority: 'high' } );
 
-
-				// click event sample
-					// container.addEventListener("click", function(e){
-					// 	if (e.target.matches('img')) {
-					// 		e.stopPropagation()
-
-					// 		console.log("click e:", e.target);
-					// 		console.log("parentNode:", e.target.parentNode);
-
-					// 		const data = editor.getData();
-					//  		console.log("editor data:",data);
-					// 	}
-					// })
-
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
 
@@ -219,8 +174,6 @@ export const service_ckeditor = function() {
 					// 		}
 					// 	})
 					// }, 2000)
-
-
 
 			})
 			.catch( error => {
@@ -537,10 +490,9 @@ export const service_ckeditor = function() {
 		const self 	 = this
 		const editor = self.editor
 
-
 		editor.model.change( writer => {
 			// convert the html to the model of ck_editor
-			// const data_tag_node_in		= editor.data.processor.toView( tag_node_in.outerHTML  );
+			// const data_tag_node_in	= editor.data.processor.toView( tag_node_in.outerHTML  );
 			// const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
 
 			// get the in position of the selection
@@ -572,6 +524,117 @@ export const service_ckeditor = function() {
 
 		return true
 	}//end wrap_selection_with_tags
+
+
+	/**
+	* SET_SELECTION_FROM_TAG
+	* @return
+	*/
+	this.set_selection_from_tag = function (tag_obj) {
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+		// Check the tag to be the type indexXX
+			if(tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut'){
+				return false
+			}
+
+		// get_tag_view_in
+		tag_obj.type = 'indexIn'
+		const tag_view_in	= self.get_view_tag(tag_obj)
+
+		tag_obj.type = 'indexOut'
+		const tag_view_out	= self.get_view_tag(tag_obj)
+
+		if(tag_view_in && tag_view_out){
+			self.set_selection_from_view_tags(tag_view_in, tag_view_out)
+		}
+	}//end set_selection_from_tag
+
+
+	/**
+	* GET_SELECTION_FROM_TAGS
+	* @return
+	*/
+	this.set_selection_from_view_tags = function(tag_view_in, tag_view_out) {
+
+		const self 	 = this
+		const editor = self.editor
+
+		editor.editing.view.change((writer) => {
+			const start = writer.createPositionAt(
+				tag_view_in,
+				"after"
+			);
+			const end = writer.createPositionAt(
+				tag_view_out,
+				"before"
+			);
+			// create the range of the new position
+			const range = writer.createRange(start, end);
+			writer.setSelection( range );
+		});
+
+	};//end get_selection_from_tags
+
+
+	/**
+	* GET_PAIR_TAG
+	* @return
+	*/
+	this.get_view_tag = function(tag_obj) {
+
+		// the view type will need to be the same of the tag_obj
+			const type = tag_obj.type
+
+		// the view tag_id will need to be the same of the tag_obj
+			const tag_id = tag_obj.tag_id
+
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+		// root. Whole editor document to traverse
+			const root = editor.editing.view.document.getRoot();
+
+		// range. Create a range spanning over the entire root content:
+			const range = editor.editing.view.createRangeIn( root );
+
+		// Iterate over all items in this range:
+			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+
+				const item = value.item
+
+				if(item.name !== 'img'){
+					continue
+				}
+
+				// attributes. Get an object like:
+				// {
+				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+				//	 classes : ['index']
+				// }
+				// const htmlAttributes = item.getAttribute('htmlAttributes')
+				// const htmlAttributes = item.getAttributes()
+				const parent_item = item.parent
+
+				const attributes = parent_item._attrs
+
+				if(parent_item._attrs && parent_item._attrs.size > 0) {
+
+					const current_type		= attributes.get('data-type')
+					const current_tag_id	= attributes.get('data-tag_id')
+
+					if(current_type===type && current_tag_id===tag_id) {
+						return parent_item
+					}
+				}
+			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+
+			return false
+
+	};//end get_pair_tag
 
 
 	/**
@@ -628,9 +691,9 @@ export const service_ckeditor = function() {
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
 
-			const last_tag_id = Math.max(...ar_tag_id);
+		const last_tag_id = Math.max(...ar_tag_id);
 
-			return last_tag_id
+		return last_tag_id
 	};//end get_last_tag_id
 
 
@@ -724,7 +787,8 @@ export const service_ckeditor = function() {
 								writer.setAttribute( 'src', image_url, item );
 							});
 
-							console.log("update_tag item:", item);
+						// if the tag was found break the loop
+							break;
 					}
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
