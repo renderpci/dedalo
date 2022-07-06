@@ -139,7 +139,7 @@ class component_inverse extends component_common {
 
 
 	/**
-	* GET_SEARCH_QUERY
+	* GET_SEARCH_QUERY_OLD
 	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
@@ -153,10 +153,9 @@ class component_inverse extends component_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query($json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-
-		debug_log(__METHOD__." DISABLED OPTION !!! ".to_string(), logger::ERROR);
-	}//end get_search_query
+		// public static function get_search_query_old($json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
+		// 	debug_log(__METHOD__." DISABLED OPTION !!! ".to_string(), logger::ERROR);
+		// }//end get_search_query_old
 
 
 

@@ -214,7 +214,7 @@ class component_iri extends component_common {
 
 
 	/**
-	* GET_SEARCH_QUERY
+	* GET_SEARCH_QUERY_OLD
 	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
@@ -228,65 +228,65 @@ class component_iri extends component_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND'
+		// public static function get_search_query_old( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {
 
-		if (empty($search_value)) return false;
+		// 	if (empty($search_value)) return false;
 
-		#$tipo_de_dato_search = 'valor';
+		// 	#$tipo_de_dato_search = 'valor';
 
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+		// 	$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
-		$search_query='';
-		switch (true) {
-			case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
-				// Allow wildcards like "house*" or "*house"
-				// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
-				$separator 	   = '*';
-				if ( $search_value[0] === $separator ) {
-					// Begin with * like
-					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value' ";
+		// 	$search_query='';
+		// 	switch (true) {
+		// 		case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
+		// 			// Allow wildcards like "house*" or "*house"
+		// 			// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
+		// 			$separator 	   = '*';
+		// 			if ( $search_value[0] === $separator ) {
+		// 				// Begin with * like
+		// 				$search_value = str_replace($separator, '', $search_value);
+		// 				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value' ";
 
-				}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
-					// End with *
-					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value%' ";
+		// 			}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
+		// 				// End with *
+		// 				$search_value = str_replace($separator, '', $search_value);
+		// 				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value%' ";
 
-				}else{
-					// Contain
-					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
-				}
-				break;
+		// 			}else{
+		// 				// Contain
+		// 				$search_value = str_replace($separator, '', $search_value);
+		// 				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
+		// 			}
+		// 			break;
 
-			case ($comparison_operator==='=' || $comparison_operator==='!='):
-				$comparison_operator = '@>';
-				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '\"$search_value\"' ";
-				break;
+		// 		case ($comparison_operator==='=' || $comparison_operator==='!='):
+		// 			$comparison_operator = '@>';
+		// 			$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '\"$search_value\"' ";
+		// 			break;
 
-			case ($comparison_operator==='IS NULL' || $comparison_operator==='IS NOT NULL'):
-				if($comparison_operator === 'IS NULL'){
-					$comparison_operator2 = '=';
-					$union_operator = 'OR';
-				}else{
-					$comparison_operator2 = '!=';
-					$union_operator = 'AND';
-				}
-				$search_query  = " ({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
-				$search_query .= " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
-				break;
+		// 		case ($comparison_operator==='IS NULL' || $comparison_operator==='IS NOT NULL'):
+		// 			if($comparison_operator === 'IS NULL'){
+		// 				$comparison_operator2 = '=';
+		// 				$union_operator = 'OR';
+		// 			}else{
+		// 				$comparison_operator2 = '!=';
+		// 				$union_operator = 'AND';
+		// 			}
+		// 			$search_query  = " ({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
+		// 			$search_query .= " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
+		// 			break;
 
-			default:
-				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
-				break;
-		}
+		// 		default:
+		// 			$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
+		// 			break;
+		// 	}
 
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-		}
+		// 	if(SHOW_DEBUG===true) {
+		// 		$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+		// 	}
 
-		return (string)$search_query;
-	}//end get_search_query
+		// 	return (string)$search_query;
+		// }//end get_search_query_old
 
 
 
