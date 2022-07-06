@@ -724,6 +724,7 @@ class component_date extends component_common {
 		#if($caller_component=='component_autocomplete_ts')
 		#dump($current_stats_value ,'$current_stats_value '.$tipo ." $caller_component");
 
+		$ar_values = [];
 		foreach ($current_stats_value as $current_dato => $value) {
 
 			# properties 'year_only' : Return only year as '1997'
@@ -734,11 +735,11 @@ class component_date extends component_common {
 			if( empty($current_dato) ) {
 
 				$current_dato = 'nd';
-				$ar_final[$current_dato] = $value;
+				$ar_values[$current_dato] = $value;
 
 			}else if($current_dato==='nd') {
 
-				$ar_final[$current_dato] = $value;
+				$ar_values[$current_dato] = $value;
 
 			}else{
 
@@ -746,14 +747,13 @@ class component_date extends component_common {
 				$current_component->set_dato($current_dato);
 
 				$valor = $current_component->get_valor();
-					#dump($valor,'valor '.$caller_component. " - current_dato:$current_dato");
 
-				$ar_final[$valor] = $value;
+				$ar_values[$valor] = $value;
 			}
 		}//end foreach
 
-		$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true ).':'.$stats_model;
-		$ar_final	= array($label => $ar_final);
+		$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true).':'.$stats_model;
+		$ar_final	= array($label => $ar_values);
 
 		return $ar_final;
 	}//end get_stats_value_resolved
