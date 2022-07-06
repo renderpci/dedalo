@@ -40,7 +40,6 @@ export const service_ckeditor = function() {
 			const value				= options.value
 			const key				= options.key
 			const editor_config		= options.editor_config
-				console.log("editor_config:",editor_config);
 
 		// fix vars
 			self.caller				= caller
@@ -913,7 +912,6 @@ export const service_ckeditor = function() {
 			button.addEventListener('click', function(evt){
 				render_find_and_replace(editor)
 			})
-
 			return
 		}
 

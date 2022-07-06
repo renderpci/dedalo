@@ -46,9 +46,13 @@ export const render_button = function(button_config) {
 		const manager_editor	= button_config.manager_editor
 
 	// button_node
+		const name_to_class = name !== '|'
+			? ' ' + name
+			: ''
+
 		const button_node = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'toolbar_button ' + name + class_name,
+			class_name		: 'toolbar_button' + name_to_class + class_name,
 			inner_html 		: text
 		})
 
@@ -144,7 +148,7 @@ export const render_find_and_replace = function(editor) {
 
 		const button_previous = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'warning button_previous',
+			class_name		: 'light button_previous',
 			inner_html		: get_label.previous || 'Previous',
 			parent 			: body_contanier,
 		})
@@ -153,7 +157,7 @@ export const render_find_and_replace = function(editor) {
 		})
 		const button_next = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'warning button_next',
+			class_name		: 'light button_next',
 			inner_html		: get_label.next || 'Next',
 			parent 			: body_contanier,
 		})
@@ -181,7 +185,7 @@ export const render_find_and_replace = function(editor) {
 		})
 			const button_replace = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning button_replace',
+				class_name		: 'light button_replace',
 				inner_html		: get_label.replace || 'Replace',
 				parent 			: replace_contanier,
 			})
@@ -194,7 +198,7 @@ export const render_find_and_replace = function(editor) {
 			})
 			const button_replace_all = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning button_replace_all',
+				class_name		: 'light button_replace_all',
 				inner_html		: get_label.replace_all || 'Replace All',
 				parent 			: replace_contanier,
 			})
@@ -202,20 +206,41 @@ export const render_find_and_replace = function(editor) {
 				editor.execute( 'replaceAll', input_replace.value, input_search.value );
 			})
 
+	const options_contanier = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'options_contanier',
+		parent 			: replace_contanier,
+	})
+
 		const label_match_case = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'label_match_case',
 			inner_html		: get_label.match_case  || 'Match case',
-			parent 			: replace_contanier,
+			parent 			: options_contanier,
+		})
+		const match_case = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'check',
+				parent 			: options_contanier,
 		})
 			const button_match_case = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
-				class_name		: 'button_match_case',
+				class_name		: 'check_match_case',
 				name			: 'match_case',
-				parent 			: replace_contanier,
+				parent 			: match_case,
 			})
-			button_match_case.addEventListener('change',function(){
+
+			const selector_match_case = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'check',
+				parent 			: match_case,
+			})
+			selector_match_case.addEventListener('click',function(){
+				button_match_case.checked = button_match_case.checked
+					? false
+					: true
+
 				find_options.match_case = button_match_case.checked
 					? true
 					: false
@@ -225,16 +250,31 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'label',
 			class_name		: 'label_whole_words',
 			inner_html		: get_label.whole_words  || 'Whole words',
-			parent 			: replace_contanier,
+			parent 			: options_contanier,
+		})
+		const whole_words = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'check',
+				parent 			: options_contanier,
 		})
 			const button_whole_words = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
-				class_name		: 'button_whole_words',
+				class_name		: 'check_whole_words',
 				name			: 'whole_words',
-				parent 			: replace_contanier,
+				parent 			: whole_words,
 			})
-			button_whole_words.addEventListener('change',function(){
+			const selector_whole_words = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'check',
+				parent 			: whole_words,
+			})
+			selector_whole_words.addEventListener('click',function(){
+
+				button_whole_words.checked = button_whole_words.checked
+					? false
+					: true
+
 				find_options.whole_words = button_whole_words.checked
 					? true
 					: false
