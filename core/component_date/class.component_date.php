@@ -714,13 +714,13 @@ class component_date extends component_common {
 
 	/**
 	* GET_STATS_VALUE_RESOLVED
+	* @return array $ar_final
 	*/
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) {
+	public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
 
 		$caller_component = get_called_class();
 
-			#dump($stats_properties,'stats_properties '.$caller_component);
-
+		#dump($stats_properties,'stats_properties '.$caller_component);
 		#if($caller_component=='component_autocomplete_ts')
 		#dump($current_stats_value ,'$current_stats_value '.$tipo ." $caller_component");
 
@@ -750,12 +750,10 @@ class component_date extends component_common {
 
 				$ar_final[$valor] = $value;
 			}
-
 		}//end foreach
 
-		$label 		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true ).':'.$stats_model;
-		$ar_final 	= array($label => $ar_final );
-			#dump($ar_final,'$ar_final '.$caller_component . " ".print_r($current_stats_value,true));
+		$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true ).':'.$stats_model;
+		$ar_final	= array($label => $ar_final);
 
 		return $ar_final;
 	}//end get_stats_value_resolved
@@ -764,6 +762,7 @@ class component_date extends component_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $request_query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql( object $request_query_object) : object {
