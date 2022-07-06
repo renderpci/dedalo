@@ -111,7 +111,7 @@ class component_publication extends component_relation_common {
 
 
 	/**
-	* GET_SEARCH_QUERY
+	* GET_SEARCH_QUERY_OLD
 	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
@@ -125,7 +125,7 @@ class component_publication extends component_relation_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-		// public static function get_search_query(string $json_field, string $search_tipo, string $tipo_de_dato_search, string $current_lang, string $search_value, string $comparison_operator='=') : string {
+		// public static function get_search_query_old(string $json_field, string $search_tipo, string $tipo_de_dato_search, string $current_lang, string $search_value, string $comparison_operator='=') : string {
 
 		// 	$search_query='';
 		// 	if ( empty($search_value) ) {
@@ -149,7 +149,7 @@ class component_publication extends component_relation_common {
 		// 	}
 
 		// 	return $search_query;
-		// }//end get_search_query
+		// }//end get_search_query_old
 
 
 
