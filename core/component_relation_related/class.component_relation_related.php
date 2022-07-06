@@ -555,4 +555,47 @@ class component_relation_related extends component_relation_common {
 
 
 
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is false. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return true;
+	}//end get_sortable
+
+
+
+	/**
+	* GET_ORDER_PATH
+	* Calculate full path of current element to use in columns order path (context)
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return array $path
+	*/
+	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+
+		$path = [
+			// self component path
+			(object)[
+				'component_tipo'	=> $component_tipo,
+				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+				'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
+				'section_tipo'		=> $section_tipo
+			],
+			// thesaurus langs (component_input_text hierarchy25, section_tipo lg-1)
+			(object)[
+				'component_tipo'	=> DEDALO_THESAURUS_TERM_TIPO,
+				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_TERM_TIPO,true),
+				'name'				=> RecordObj_dd::get_termino_by_tipo(DEDALO_THESAURUS_TERM_TIPO),
+				'section_tipo'		=> $section_tipo
+			]
+		];
+
+		return $path;
+	}//end get_order_path
+
+
+
 }//end class component_relation_related
