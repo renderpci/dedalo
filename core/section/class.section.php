@@ -3378,45 +3378,48 @@ class section extends common {
 
 
 	/**
-	* GET_SEARCH_QUERY2
+	* GET_SEARCH_QUERY
 	* Used for compatibility of search queries when need filter by section_tipo inside filter (thesaurus case for example)
+	* @param object $query_object
 	* @return array $ar_query_object
 	*/
-	public static function get_search_query2(object $query_object) : array {
+	public static function get_search_query(object $query_object) : array {
 
-		# component path default
-		$query_object->component_path = ['section_tipo'];
+		// component path default
+			$query_object->component_path = ['section_tipo'];
 
-		# Component class name calling here
-		$called_class = get_called_class();
+		// component class name calling here
+			$called_class = get_called_class();
 
-		# component lang
-		if (!isset($query_object->lang)) {
-			# default
-			$query_object->lang = 'all';
-		}
-
-		$current_query_object = $query_object;
-
-
-		# conform each object
-		if (search::is_search_operator($current_query_object)===true) {
-			foreach ($current_query_object as $operator => $ar_elements) {
-				foreach ($ar_elements as $c_query_object) {
-					// Inject all resolved query objects
-					$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
-				}
+		// component lang
+			if (!isset($query_object->lang)) {
+				# default
+				$query_object->lang = 'all';
 			}
-		}else{
-			$current_query_object = $called_class::resolve_query_object_sql($current_query_object);
-		}
 
-		# Convert to array always
-		$ar_query_object = is_array($current_query_object) ? $current_query_object : array($current_query_object);
+		// current_query_object default
+			$current_query_object = $query_object;
+
+		// conform each object
+			if (search::is_search_operator($current_query_object)===true) {
+				foreach ($current_query_object as $operator => $ar_elements) {
+					foreach ($ar_elements as $c_query_object) {
+						// Inject all resolved query objects
+						$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
+					}
+				}
+			}else{
+				$current_query_object = $called_class::resolve_query_object_sql($current_query_object);
+			}
+
+		// convert to array always
+			$ar_query_object = is_array($current_query_object)
+				? $current_query_object
+				: [$current_query_object];
 
 
 		return $ar_query_object;
-	}//end get_search_query2
+	}//end get_search_query
 
 
 

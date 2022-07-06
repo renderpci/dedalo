@@ -2526,12 +2526,15 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_SEARCH_QUERY2
+	* GET_SEARCH_QUERY
+	* Builds a search_query taking care of split multiple values and conform output objects
+	* @param object $query_object
 	* @return array $ar_query_object
+	* 	Array of one or more SQO (search query object)
 	*/
-	public static function get_search_query2( object $query_object ) : array {
+	public static function get_search_query( object $query_object ) : array {
 
-		# Example
+		// sample
 			# {
 			#   "q": "pepe",
 			#   "lang": "lg-spa",
@@ -2551,56 +2554,53 @@ abstract class component_common extends common {
 			#   ]
 			# }
 
-		# Empty q case
-		#if (empty($query_object->q)) {
-			#return array();
-		#}
+		// empty q case
+			// if (empty($query_object->q)) {
+			// 	return array();
+			// }
 
-		# component_path
-		if(isset(end($query_object->path)->component_tipo)) {
-			$component_tipo = end($query_object->path)->component_tipo;
-
-			# component path default
-			$query_object->component_path = ['components',$component_tipo,'dato'];
-		}
-
-		# component lang
-		if (!isset($query_object->lang)) {
-			# default
-			$query_object->lang = 'all';
-		}
-
-		# Component class name calling here
-		$called_class = get_called_class();
-
-		# split multiple (true by default)
-		$q_split = isset($query_object->q_split) ? (bool)$query_object->q_split : true;
-		if ($q_split===false) {
-			# With query_object property 'q_split' as false (autocomplete_hi)
-			$current_query_object = $query_object;
-		}else{
-			# Default mode
-			$current_query_object = component_common::split_query($query_object);
-		}
-
-		# conform each object
-		if (search::is_search_operator($current_query_object)===true) {
-			foreach ($current_query_object as $operator => $ar_elements) {
-				foreach ($ar_elements as $c_query_object) {
-					// Inject all resolved query objects
-					$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
-				}
+		// component_path
+			if(isset(end($query_object->path)->component_tipo)) {
+				$component_tipo = end($query_object->path)->component_tipo;
+				# component path default
+				$query_object->component_path = ['components',$component_tipo,'dato'];
 			}
-		}else{
-			$current_query_object = $called_class::resolve_query_object_sql($current_query_object);
-		}
 
-		# Convert to array always
-		$ar_query_object = is_array($current_query_object) ? $current_query_object : array($current_query_object);
+		// component lang
+			if (!isset($query_object->lang)) {
+				# default
+				$query_object->lang = 'all';
+			}
+
+		// component class name calling here
+			$called_class = get_called_class();
+
+		// split multiple (true by default)
+			$q_split				= isset($query_object->q_split) ? (bool)$query_object->q_split : true;
+			$current_query_object	= ($q_split===false)
+				? $query_object # With query_object property 'q_split' as false (autocomplete_hi)
+				: component_common::split_query($query_object); # Default mode
+
+		// conform each object
+			if (search::is_search_operator($current_query_object)===true) {
+				foreach ($current_query_object as $operator => $ar_elements) {
+					foreach ($ar_elements as $c_query_object) {
+						// Inject all resolved query objects
+						$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
+					}
+				}
+			}else{
+				$current_query_object = $called_class::resolve_query_object_sql($current_query_object);
+			}
+
+		// convert to array always
+			$ar_query_object = is_array($current_query_object)
+				? $current_query_object
+				: [$current_query_object];
 
 
 		return $ar_query_object;
-	}//end get_search_query2
+	}//end get_search_query
 
 
 
