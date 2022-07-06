@@ -117,4 +117,16 @@ class component_radio_button extends component_relation_common {
 
 
 
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is false. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return true;
+	}//end get_sortable
+
+
+
 }//end class component_radio_button
