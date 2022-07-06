@@ -1,7 +1,12 @@
 <?php
 include( dirname(dirname(__FILE__)) . '/shared/class.subtitles.php');
+/**
+* SERVICE_SUBTITLES
+*
+*/
+class service_subtitles {
 
-class service_subtitles{
+
 
 	/**
 	* BUILD_SUBTITLES_TEXT
@@ -14,4 +19,7 @@ class service_subtitles{
 
 		return (object)$response;
 	}//end build_subtitles_text
-}
+
+
+
+}//end class service_subtitles

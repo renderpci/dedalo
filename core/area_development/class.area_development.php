@@ -8,7 +8,7 @@ class area_development extends area_common {
 
 
 
-	static $ar_tables_with_relations = array(
+	static $ar_tables_with_relations = [
 		'matrix_users',
 		'matrix_projects',
 		'matrix',
@@ -28,7 +28,7 @@ class area_development extends area_common {
 		'matrix_layout_dd',
 		'matrix_activity',
 		'matrix_tools'
-	);//end ar_tables_with_relations
+	];//end ar_tables_with_relations
 
 
 
@@ -536,13 +536,15 @@ class area_development extends area_common {
 
 	/**
 	* GENERATE_RELATIONS_TABLE_DATA
+	*
+	* @param string $tables = '*'
 	* @return object
 	*/
-	public static function generate_relations_table_data($tables='*') : object {
+	public static function generate_relations_table_data(string $tables='*') : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= array('Error. Request failed '.__METHOD__);
+			$response->result	= false;
+			$response->msg		= array('Error. Request failed '.__METHOD__);
 
 
 		// tables to propagate
@@ -594,22 +596,20 @@ class area_development extends area_common {
 					$response->msg 	 = implode('<br>', $response->msg);
 					return $response;
 				}
-				$rows 		= pg_fetch_assoc($result);
+				$rows = pg_fetch_assoc($result);
 				if (!$rows) {
 					continue;
 				}
-				$max 		= $rows['id'];
-
-				$min = 1;
-				if ($table==='matrix_users') {
-					$min = -1;
-				}
+				$max = $rows['id'];
+				$min = ($table==='matrix_users')
+					? -1
+					: 1;
 
 			// iterate from 1 to last id
 			for ($i=$min; $i<=$max; $i++) {
 
-				$strQuery 	= "SELECT section_id, section_tipo, datos FROM $table WHERE id = $i";
-				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				$strQuery	= "SELECT section_id, section_tipo, datos FROM $table WHERE id = $i";
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
 					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
@@ -633,7 +633,7 @@ class area_development extends area_common {
 								if (isset($current_locator->from_component_tipo)) {
 									$component_dato[$current_locator->from_component_tipo][] = $current_locator;
 								}else{
-									debug_log(__METHOD__." Error on get from_component_tipo of locator $table - id:$id (ignored) ".to_string($current_locator), logger::ERROR);
+									debug_log(__METHOD__." Error on get from_component_tipo from locator (table:$table) (ignored) locator:".to_string($current_locator), logger::ERROR);
 								}
 							}
 
@@ -680,7 +680,7 @@ class area_development extends area_common {
 		// response
 			$response->result = true;
 			$response->msg[0] = "OK. All data is propagated successfully"; // Override first message
-			$response->msg    = "<br>".implode('<br>', $response->msg);
+			$response->msg    = implode('<br>', $response->msg);
 
 
 		return $response;
@@ -688,4 +688,4 @@ class area_development extends area_common {
 
 
 
-}//end area_development
+}//end class area_development

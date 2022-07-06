@@ -246,7 +246,7 @@ class security {
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
 	*/
-	public static function get_permissions_table_of_specific_user( int $user_id ) : array {
+	public static function get_permissions_table_of_specific_user(int $user_id) : array {
 
 		$permissions_table = security::get_ar_permissions_in_matrix_for_current_user( $user_id );
 
@@ -369,7 +369,7 @@ class security {
 	* Allow current user access to created default sections
 	* @return bool
 	*/
-	private static function set_section_permissions( object $request_options ) : bool {
+	private static function set_section_permissions(object $request_options) : bool {
 
 		$options = new stdClass();
 			$options->section_tipo	= null;

@@ -56,9 +56,11 @@ class component_relation_children extends component_relation_common {
 	* MAKE_ME_YOUR_CHILD
 	* Add one locator to current 'dato' from parent side
 	* NOTE: This method updates component 'dato' and save
+	* @param string $section_tipo
+	* @param string|int $section_id
 	* @return bool
 	*/
-	public function make_me_your_child( $section_tipo, $section_id ) {
+	public function make_me_your_child(string $section_tipo, $section_id) : bool {
 
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
@@ -145,9 +147,16 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_CHILDREN
+	*  Recursive get children function
+	* @param string|int $section_id
+	* @param string $section_tipo
+	* @param string $component_tipo = null
+	* @param bool $recursive = true
+	* @param bool $is_recursion = false
+	*
 	* @return array $ar_children_recursive
 	*/
-	public static function get_children($section_id, $section_tipo, $component_tipo=null, bool $recursive=true, $is_recursion=false) : array {
+	public static function get_children($section_id, string $section_tipo, string $component_tipo=null, bool $recursive=true, bool $is_recursion=false) : array {
 
 		static $locators_resolved = array();
 
@@ -158,55 +167,70 @@ class component_relation_children extends component_relation_common {
 
 		$ar_children_recursive = [];
 
-		# Infinite loops prevention
-		$pseudo_locator = $section_id .'_'. $section_tipo;
-		if (in_array($pseudo_locator, $locators_resolved)) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Skipped already resolved locator ".to_string($pseudo_locator), logger::DEBUG);
+		// Infinite loops prevention
+			$pseudo_locator = $section_id .'_'. $section_tipo;
+			if (in_array($pseudo_locator, $locators_resolved)) {
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." Skipped already resolved locator ".to_string($pseudo_locator), logger::DEBUG);
+				}
+				return [];
 			}
-			return [];
-		}
 
 		# Locate component children in current section when is not received
 		# Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
 		# $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false
-		if (empty($component_tipo)) {
-			$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
-			$component_tipo = reset($ar_tipos);
-		}
+			if (empty($component_tipo)) {
+				$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
+				$component_tipo = reset($ar_tipos);
+			}
 
 		# Create first component to get dato
-		$component 		= component_common::get_instance(get_called_class(),
-														 $component_tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_LANG,
-														 $section_tipo,
-														 false);
-		$dato = $component->get_dato();
+			$component = component_common::get_instance(
+				get_called_class(),
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo,
+				false
+			);
+			$dato = $component->get_dato();
 
-		if ($recursive!==true) {
+		// ar_children_recursive
+			if ($recursive!==true) {
 
-			$ar_children_recursive = $dato;
+				$ar_children_recursive = $dato;
 
-		}else{
+			}else{
 
-			if (!empty($dato)) {
+				if (!empty($dato)) {
 
-				$ar_children_recursive = array_merge($ar_children_recursive, $dato);
+					$ar_children_recursive = array_merge($ar_children_recursive, $dato);
 
-				# Set as resolved to avoid loops
-				$locators_resolved[] = $section_id .'_'. $section_tipo;
+					# Set as resolved to avoid loops
+					$locators_resolved[] = $section_id .'_'. $section_tipo;
 
-				foreach ((array)$dato as $key => $current_locator) {
-					$ar_children_recursive = array_merge($ar_children_recursive, self::get_children($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive, $is_recursion=true));
+					foreach ((array)$dato as $key => $current_locator) {
+						$ar_children_recursive = array_merge($ar_children_recursive, self::get_children($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive, $is_recursion=true));
+					}
 				}
 			}
-		}
 
 
 		return $ar_children_recursive;
 	}//end get_children
+
+
+
+	/**
+	* GET_SORTABLE
+	* @return bool
+	* 	Default is false. Override when component is sortable
+	*/
+	public function get_sortable() : bool {
+
+		return true;
+	}//end get_sortable
 
 
 

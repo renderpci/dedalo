@@ -30,10 +30,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	#protected $ar_reels_of_this				= array();
 
 
+
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $terminoID=null, $prefijo=false) {
+	function __construct(string $terminoID=null, string $prefijo=null) {
 
 		if( !empty($terminoID) ) {
 			# CASO GENERAL
@@ -46,7 +47,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			#$id 	= self::get_id_from_tipo($terminoID);
 			#$this->set_ID(intval($id));
 
-		}else if(strlen($prefijo)>=2) {
+		}else if(!empty($prefijo) && strlen($prefijo)>=2) {
 
 			$terminoID = null;
 			$this->set_prefijo($prefijo);
@@ -87,12 +88,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	# DEFINETABLENAME : define current table (tr for this obj)
-	protected function defineTableName() {
-		return ('jer_dd');	#echo ' jer_'.$this->current_table.' ';
+	protected function defineTableName() : string {
+		return 'jer_dd';	#echo ' jer_'.$this->current_table.' ';
 	}
 	# DEFINEPRIMARYKEYNAME : define PrimaryKeyName (id)
-	protected function definePrimaryKeyName() {
-		return ('terminoID');
+	protected function definePrimaryKeyName() : string {
+		return 'terminoID';
 	}
 	# DEFINERELATIONMAP : array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() : array {
@@ -207,17 +208,17 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* SAVE_TERM_AND_DESCRIPTOR
 	* Used to save elements in class hierarchy
+	* @see class.hierarchy.php
 	* @param string $descriptor_dato
 	* @return string $terminoID
-	* @see class.hierarchy.php
 	*/
-	public function save_term_and_descriptor( $descriptor_dato=null ) {
+	public function save_term_and_descriptor(string $descriptor_dato=null) : ?string {
 
 		if (empty($this->parent)) {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Error on save 'RecordObj_dd_edit'. Parent is empty. Nothing is saved! ".to_string(), logger::DEBUG);
 			}
-			return false;
+			return null;
 		}
 
 		$terminoID = $this->terminoID;
@@ -263,13 +264,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string $tld
 	* @param int $current_value=false
 	*
-	* @return int $counter_dato_updated
+	* @return int|false $counter_dato_updated
 	* Actualiza el contador para el tld dado (ej. 'dd').
 	* El 'current_value' es opcional. Si no se recibe se calcula
 	*/
-	protected static function update_counter(string $tld, $current_value=false) {
+	// protected static function update_counter(string $tld, int $current_value=null) : int { // removed by compatibility wit v5 ontology
+	protected static function update_counter(string $tld, $current_value=null) {
 
-		if ($current_value===false) {
+		if ($current_value===null) {
 			$current_value = self::get_counter_value($tld);
 		}
 		$counter_dato_updated = intval($current_value+1) ;
@@ -277,13 +279,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$strQuery 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
 		$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $counter_dato_updated, $tld));
 		if ($result===false) {
-			if(SHOW_DEBUG===true) {
-				trigger_error("Error on update_counter 'RecordObj_dd_edit'. Nothing is saved! : $strQuery");
-			}
+			debug_log(__METHOD__." Error on update_counter 'RecordObj_dd_edit'. Nothing is saved! ".to_string($strQuery), logger::ERROR);
 			return false;
 		}
 
-		return (int)$counter_dato_updated;
+		return $counter_dato_updated;
 	}//end update_counter
 
 
@@ -314,9 +314,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_DESCRIPTOR_DATO_BY_TIPO
-	* GET TERMINO DATO BY TIPO ('termino','def','obs') STATIC VERSION
+	* Get termino dato by tipO ('termino','def','obs') static version
+	* @return string|null
 	*/
-	public static function get_descriptor_dato_by_tipo(string $terminoID, string $lang=null, string $tipo, bool $fallback=false) {
+	public static function get_descriptor_dato_by_tipo(string $terminoID, string $lang=null, string $tipo, bool $fallback=false) : ?string {
 
 		# Verify : En casos como por ejemplo, al resolver el modelo de un término relacionado que no tiene modelo asignado, el terminoID estará vacío.
 		# Esto no es un error pero debemos evitar resolverlo.
@@ -343,8 +344,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return $dato;
 	}
-	# GET_TERMINO_BY_TIPO STATIC VERSION
-	public static function get_termino_by_tipo(string $terminoID, string $lang=null, bool $from_cache=false, bool $fallback=true) : string {
+
+
+
+	/**
+	* GET_TERMINO_BY_TIPO
+	* Static version
+	*/
+	public static function get_termino_by_tipo(string $terminoID, string $lang=null, bool $from_cache=false, bool $fallback=true) : ?string {
 		#$from_cache=false;
 
 		static $termino_by_tipo;
@@ -364,18 +371,34 @@ class RecordObj_dd extends RecordDataBoundObject {
 		#}
 
 		return $result;
-	}
-	# GET DEF STATIC VERSION
-	public static function get_def_by_tipo($terminoID, $lang=false) {
-		return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'def');
-	}
-	# GET OBS STATIC VERSION
-	public static function get_obs_by_tipo($terminoID, $lang=false) {
-		return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'obs');
-	}
+	}//end get_termino_by_tipo
+
+
 
 	/**
-	* GET MODELO NAME (CURRENT OBJ)
+	* GET_DEF_BY_TIPO
+	* Static version
+	*/
+	public static function get_def_by_tipo($terminoID, $lang=false) : ?string {
+
+		return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'def');
+	}//end get_def_by_tipo
+
+
+
+	/**
+	* GET_OBS_BY_TIPO
+	* Static version
+	*/
+	public static function get_obs_by_tipo($terminoID, $lang=false) : ?string {
+
+		return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'obs');
+	}//end get_obs_by_tipo
+
+
+
+	/**
+	* GET_MODELO_NAME
 	* Alias of $this->get_termino_by_tipo($modelo_tipo)
 	* @return string $model
 	*/
@@ -435,7 +458,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
-	# GET MODELO NAME BY TIPO (STATIC)
+	/**
+	* GET_MODELO_NAME_BY_TIPO
+	* Static version
+	*/
 	public static function get_modelo_name_by_tipo(string $tipo, bool $from_cache=false) : string {
 		#$from_cache=false;
 
@@ -471,6 +497,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return $model_name;
 	}//end get_real_model_name_by_tipo
+
 
 
 	/**
@@ -744,7 +771,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens( string $terminoID, bool $is_recursion=false, array $ar_exclude_models=null, string $order_by=null ) : array {
+	public static function get_ar_recursive_childrens(string $terminoID, bool $is_recursion=false, array $ar_exclude_models=null, string $order_by=null) : array {
 
 		$ar_resolved=array();
 
@@ -939,21 +966,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	#   )
 	public function get_relaciones($modo=false) : ?array {
 
-		#$dato = $this->relaciones;
 		$dato = parent::get_relaciones();
 
-		if (empty($dato)) {
-			return null;
-		}
-
-		$relaciones = json_decode($dato, true);
-
-		/*
-		if ($modo==='simple') {
-			#$termonioID_related = array_values($relacionados[0]);
-			#$RecordObjt_dd 		= new RecordObj_dd($termonioID_related);
-		}
-		*/
+		$relaciones = !empty($dato)
+			? json_decode($dato, true)
+			: null;
 
 		return $relaciones;
 	}//end get_relaciones
@@ -964,17 +981,19 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* SET_RELACIONES
 	* Set relaciones as JSON (MODELO: $ar_relaciones[$terminoID_source][] = array($modelo => $terminoID_rel))
 	*/
-	public function set_relaciones($ar_relaciones) {
+	public function set_relaciones(array $ar_relaciones) {
+
 		return parent::set_relaciones(json_encode($ar_relaciones));
-	}
+	}//end set_relaciones
 
 
 
 	/**
 	* REMOVE_ELEMENT_FROM_AR_TERMINOS_RELACIONADOS
 	* @param string $terminoID_to_unlink
+	* @return bool
 	*/
-	public function remove_element_from_ar_terminos_relacionados($terminoID_to_unlink) {
+	public function remove_element_from_ar_terminos_relacionados(string $terminoID_to_unlink) : bool {
 
 		# Recorremos los elementos en terminos relacionados para este objeto
 		$ar_relaciones = $this->get_relaciones();
@@ -1044,21 +1063,23 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
-	/* DESACTIVA PORQUE NO SE EXPERIMENTA INCREMENTO DE VELOCIDAD...
-	public static function get_ar_recursive_childrens_of_this_static($terminoID) {
-
-		#static $ar_recursive_childrens_of_this_static;
-		#if(isset($ar_recursive_childrens_of_this_static[$terminoID])) return $ar_recursive_childrens_of_this_static ;
-
-		$RecordObj_dd 					= new RecordObj_dd($terminoID);
-		$ar_recursive_childrens_of_this = $RecordObj_dd->get_ar_recursive_childrens_of_this($terminoID);
-
-		# Store in cache
-		#$ar_recursive_childrens_of_this_static = $ar_recursive_childrens_of_this;
-
-		return $ar_recursive_childrens_of_this;
-	}
+	/**
+	* GET_AR_RECURSIVE_CHILDRENS_OF_THIS_STATIC
+	*  DESACTIVA PORQUE NO SE EXPERIMENTA INCREMENTO DE VELOCIDAD...
 	*/
+		// public static function get_ar_recursive_childrens_of_this_static($terminoID) {
+
+		// 	#static $ar_recursive_childrens_of_this_static;
+		// 	#if(isset($ar_recursive_childrens_of_this_static[$terminoID])) return $ar_recursive_childrens_of_this_static ;
+
+		// 	$RecordObj_dd 					= new RecordObj_dd($terminoID);
+		// 	$ar_recursive_childrens_of_this = $RecordObj_dd->get_ar_recursive_childrens_of_this($terminoID);
+
+		// 	# Store in cache
+		// 	#$ar_recursive_childrens_of_this_static = $ar_recursive_childrens_of_this;
+
+		// 	return $ar_recursive_childrens_of_this;
+		// }
 
 
 
@@ -1266,4 +1287,4 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
-}//end RecordObj_dd
+}//end class RecordObj_dd
