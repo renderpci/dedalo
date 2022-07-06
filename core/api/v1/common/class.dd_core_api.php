@@ -1763,7 +1763,7 @@ final class dd_core_api {
 			$index_grid			= $indexation_grid->build_indexation_grid();
 
 		// reponse ok
-			$response->msg		= 'Ok. Request done';
+			$response->msg		= 'OK. Request done';
 			$response->result	= $index_grid;
 
 

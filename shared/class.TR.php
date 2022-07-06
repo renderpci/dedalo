@@ -238,31 +238,33 @@ abstract class TR {
 	/**
 	* ADDTAGIMGONTHEFLY
 	* Convert Dédalo tags like index, tc, etc. to images
+	* @param string $text
+	* @param object $request_options = null
+	* @return string $text
 	*/
-	public static function addTagImgOnTheFly(string $text, object $request_options=null) {
+	public static function addTagImgOnTheFly(string $text, object $request_options=null) : string {
 
 		#$hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
 
 		# Temporal (for catch old calls only)
-		if (is_bool($request_options)) {
-			throw new Exception("Error. Only a object is valid for addTagImgOnTheFly options. Update your call to new format please", 1);
-		}
-
-		$options = new stdClass();
-			$options->hilite			= false;
-			$options->indexEditable		= false;
-			$options->tcEditable		= false;
-			$options->svgEditable		= false;
-			$options->geoEditable		= false;
-			$options->pageEditable		= false;
-			$options->personEditable	= false;
-			$options->noteEditable		= false;
-			$options->struct_as_labels	= false;
-			$options->tag_url			= '../../component_text_area/tag';
-			$options->force_tr_tags_cdn	= false;
-			if (is_object($request_options)) {
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			if (is_bool($request_options)) {
+				throw new Exception("Error. Only a object is valid for addTagImgOnTheFly options. Update your call to new format please", 1);
 			}
+
+		// options
+			$options = new stdClass();
+				$options->hilite			= false;
+				$options->indexEditable		= false;
+				$options->tcEditable		= false;
+				$options->svgEditable		= false;
+				$options->geoEditable		= false;
+				$options->pageEditable		= false;
+				$options->personEditable	= false;
+				$options->noteEditable		= false;
+				$options->struct_as_labels	= false;
+				$options->tag_url			= '../../component_text_area/tag';
+				$options->force_tr_tags_cdn	= false;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// hilite
 			$codeHiliteIn = ($options->hilite===true)
@@ -392,7 +394,7 @@ abstract class TR {
 			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 
-		return (string)$text;
+		return $text;
 	}//end addTagImgOnTheFly
 
 
@@ -1175,5 +1177,3 @@ abstract class TR {
 
 
 }//end class tr
-
-

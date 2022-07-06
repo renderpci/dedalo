@@ -2625,11 +2625,11 @@ abstract class component_common extends common {
 			// [lang] => lg-spa
 			# $selector = isset($select_object->selector) ? $select_object->selector : 'valor_list';
 
-		// component_path check
+		// component_path check. If not exists, its not parsed yet
 			if(!isset($select_object->component_path)) {
 
-				$end_path 		= end($select_object->path);
-				$component_tipo = $end_path->component_tipo;
+				$end_path		= end($select_object->path);
+				$component_tipo	= $end_path->component_tipo;
 
 				// selector
 					$selector = isset($end_path->selector)
@@ -2643,20 +2643,11 @@ abstract class component_common extends common {
 
 					}else{
 
-						if (isset($end_path->lang)) {
-							$lang = $end_path->lang;
-						}else{
-							$RecordObj_dd = new RecordObj_dd($component_tipo);
-							$traducible   = $RecordObj_dd->get_traducible();
-							if ($traducible!=='si') {
-								$default_lang = DEDALO_DATA_NOLAN;
-							}else{
-								$default_lang = DEDALO_DATA_LANG;
-							}
-							$lang = $default_lang;
-						}
+						$lang = isset($end_path->lang)
+							? $end_path->lang
+							: (RecordObj_dd::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
 
-						# Set default
+						// Set default
 						$select_object->component_path = ['components',$component_tipo,$selector,$lang];
 					}
 			}

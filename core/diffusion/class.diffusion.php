@@ -861,7 +861,7 @@ abstract class diffusion  {
 
 		$section_id 	= (int)$dato;
 		$lang 			= $options->lang;
-		$subtitles_url 	= subtitles::get_subtitles_url($section_id, $tc_in=false, $tc_out=false, $lang);
+		$subtitles_url 	= subtitles::get_subtitles_url($section_id, $tc_in=null, $tc_out=null, $lang);
 
 		return $subtitles_url;
 	}//end map_section_id_to_subtitles_url

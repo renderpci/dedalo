@@ -658,6 +658,12 @@ abstract class subtitles {
 
 	/**
 	* GET_SUBTITLES_URL
+	*
+	* @param int|string $section_id
+	* @param float|int|null $tc_in = null
+	* @param float|int|null $tc_out = null
+	* @param string $lang = DEDALO_DATA_LANG
+	*
 	* @return string $subtitles_url
 	*/
 	public static function get_subtitles_url($section_id, $tc_in=null, $tc_out=null, string $lang=DEDALO_DATA_LANG) : string {
@@ -685,9 +691,10 @@ abstract class subtitles {
 
 		$subtitles_url = $TEXT_SUBTITLES_URL_BASE . '?' . implode('&', $url_vars);
 
+
 		return $subtitles_url;
 	}//end get_subtitles_url
 
 
 
-}//end subtitles
+}//end class subtitles

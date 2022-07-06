@@ -67,6 +67,11 @@ if(SHOW_DEBUG===true) $start_time = start_time();
 				// activity 'Where' case
 					if ($this->tipo==='dd546') {
 						$first_value = reset($value);
+						if (is_array($first_value)) {
+							$first_value = reset($first_value);
+							// dump($value, ' value ++ '.$this->section_id.' - '.to_string($modo));
+							debug_log(__METHOD__." Fixed bad data (array of arrays) in $this->tipo - $this->section_id ".to_string(), logger::DEBUG);
+						}
 						$term = RecordObj_dd::get_termino_by_tipo($first_value, DEDALO_DATA_LANG, true, true);
 						$term = strip_tags($term);
 						$value = [$term . ' ['. $first_value."]"];

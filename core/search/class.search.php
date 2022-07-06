@@ -1395,7 +1395,7 @@ class search {
 
 	/**
 	* BUILD_SQL_QUERY_ORDER
-	* Creates the sql to order based on search_query_object order property
+	* Creates the SQL to order based on search_query_object order property
 	* Could be 'order_custom' when is special full defined order or default 'order'
 	* @return string $sql_query_order
 	*/

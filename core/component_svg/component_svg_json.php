@@ -57,7 +57,7 @@
 
 		// value as array always
 			$value = $this->get_dato();
-			if (!is_array($value)) {
+			if (!is_null($value) && !is_array($value)) {
 				$value = [$value];
 			}
 

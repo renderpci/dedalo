@@ -31,12 +31,17 @@ class sections extends common {
 	/**
 	* GET_INSTANCE
     * Singleton pattern
-    * @returns array array of section objects by key
+    * @param array|null $ar_locators
+    * @param object $search_query_object = null
+    * @param string $caller_tipo = null
+    * @param string $modo = list
+    * @param string $lang = DEDALO_DATA_NOLAN
+    * @return object $instance
+    * 	Instance of sections class
     */
-    public static function get_instance(array $ar_locators=null, object $search_query_object=null, string $caller_tipo=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN) {
+    public static function get_instance(?array $ar_locators, object $search_query_object=null, string $caller_tipo=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN) {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $modo, $lang);
-
 
         return $instance;
     }//end get_instance

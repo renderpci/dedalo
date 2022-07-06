@@ -2,7 +2,7 @@
 /**
 * DBI
 * DB CONNECTION
-* To close connection use pg_close(DBi::_getConnection()); at end of page
+* To close connection, use pg_close(DBi::_getConnection()); at end of page
 */
 abstract class DBi {
 
@@ -10,7 +10,7 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTION
-	* @return resource $pg_conn (object in PHP >=8.1)
+	* @return resource|object $pg_conn (object in PHP >=8.1)
 	*/
 	public static function _getConnection(
 		$host=DEDALO_HOSTNAME_CONN,
@@ -53,7 +53,7 @@ abstract class DBi {
 	/**
 	* _GETNEWCONNECTION
 	* Get a new postgresql database connection without rehuse existing connections
-	* @return resource $pg_conn
+	* @return resource|object $pg_conn (object in PHP >=8.1)
 	*/
 	public static function _getNewConnection(
 		$host=DEDALO_HOSTNAME_CONN,
@@ -97,7 +97,7 @@ abstract class DBi {
 		$password=MYSQL_DEDALO_PASSWORD_CONN,
 		$database=MYSQL_DEDALO_DATABASE_CONN,
 		$port=MYSQL_DEDALO_DB_PORT_CONN,
-		$socket=MYSQL_DEDALO_SOCKET_CONN) {
+		$socket=MYSQL_DEDALO_SOCKET_CONN) : object {
 
 		static $mysqli;
 
@@ -151,11 +151,9 @@ abstract class DBi {
 			#die( wrap_pre('Dedalo '.'Connect Error (' . mysqli_connect_errno() . ') ' . mysqli_connect_error()) );
 		}
 
-		#echo 'Success... ' . $mysqli->host_info . "\n";
-
-		# UTF8 : Change character set to utf8
-		if (!$mysqli->set_charset("utf8")) {
-			printf("Error loading character set utf8: %s\n", $mysqli->error);
+		# UTF8 : Change character set to utf8mb4
+		if (!$mysqli->set_charset("utf8mb4")) {
+			printf("Error loading character set utf8mb4: %s\n", $mysqli->error);
 		}
 
 
@@ -165,5 +163,3 @@ abstract class DBi {
 
 
 }//end class DBi
-
-

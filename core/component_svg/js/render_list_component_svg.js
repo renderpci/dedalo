@@ -59,11 +59,17 @@ export const get_value_fragment = function(self) {
 		const value_length = value.length
 		for (let i = 0; i < value_length; i++) {
 
-			const item_value	= value[i]
-			const url			= item_value.url
+			const item_value = value[i]
 
-			const image = ui.create_dom_element({
-				element_type	: "img",
+			// check value
+				// if (!item_value) {
+				// 	console.warn("Ignored invalid item value:", item_value, self.data.value)
+				// 	continue
+				// }
+
+			const url	= item_value.url
+			const image	= ui.create_dom_element({
+				element_type	: 'img',
 				src				: url,
 				parent			: fragment
 			})
@@ -72,5 +78,3 @@ export const get_value_fragment = function(self) {
 
 	return fragment
 }//end get_value_fragment
-
-
