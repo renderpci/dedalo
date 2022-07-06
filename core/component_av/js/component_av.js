@@ -81,7 +81,7 @@ export const component_av = function(){
 /**
 * GO_TO_TIME
 * the information could to come from in two ways
-* 1 from a tag, with the information in tc format (00:00:08.000), the information in this case is stored in options.tag.dataset.data
+* 1 from a tag, with the information in tc format (00:00:08.000), the information in this case is stored in options.tag.data
 * 2 direct in seconds (8)
 * the video player use seconds, if the information comes from tag it will convert this tc to seconds.
 * @return int seconds
@@ -93,7 +93,7 @@ component_av.prototype.go_to_time = function(options) {
 	// options
 		const tag = options.tag
 
-	const tag_time = tag.dataset.data
+	const tag_time = tag.data
 	const seconds = tag
 		? self.tc_to_seconds(tag_time)
 		: options

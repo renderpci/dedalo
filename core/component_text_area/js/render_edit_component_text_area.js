@@ -651,7 +651,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 							const note_tag		= {
 								type	: tag_type,
 								label	: note_number,
-								tag_id	: note_number,
+								tag_id	: String(note_number),
 								state	: 'a',
 								data	: locator
 							}
@@ -759,48 +759,18 @@ const get_custom_events = (self, i, text_editor) => {
 				switch(tag_obj.type) {
 
 					case 'tc':
-						console.log("aquí:");
 						// Video go to timecode by tc tag
 						event_manager.publish('click_tag_tc_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						break;
 
-					case 'index':
+					case 'indexOut':
+					case 'indexIn':
 						// click_tag_index_
 						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
 						// 'self.id' for specific uses like tool indexation
 						// console.log("PUBLISH self.id:",self.id, self.id_base);
 						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-						// event_manager.publish('click_tag_index_'+ self.id, {tag:tag_obj, caller: self})
-						// des
-							// const tipo			= text_area_component.dataset.tipo
-							// const lang			= text_area_component.dataset.lang
-							// const section_tipo	= text_area_component.dataset.section_tipo
-							// const parent		= text_area_component.dataset.parent
-
-							// switch(page_globals.modo) {
-
-							// 	case 'edit' :
-							// 		// inspector : Show info about indexations in inspector
-							// 		tool_indexation.load_inspector_indexation_list(tag_obj, tipo, parent, section_tipo, lang)
-
-							// 		// relations
-							// 		//component_text_area.load_relation(tag, tipo, parent, section_tipo);
-							// 		//alert("Show info about in inspector relations - context_name:"+get_current_url_vars()['context_name'])
-
-							// 		// portal select fragment from tag button
-							// 		if (page_globals.context_name=='list_into_tool_portal') {
-							// 			// Show hidden button link_fragmet_to_portal and configure to add_resource
-							// 			component_text_area.show_button_link_fragmet_to_portal(tag_obj, tipo, parent, section_tipo);
-							// 		}
-							// 		break;
-
-							// 	case 'tool_indexation' :
-							// 		// Show info about in tool relation window
-							// 		component_text_area.load_fragment_info_in_indexation(tag_obj, tipo, parent, section_tipo, lang);	//alert(tag+' - '+ tipo+' - '+ parent)
-							// 		break;
-							// }
-							// // mask_tags on click image index
-							// mce_editor.mask_tags(ed, evt);
+						text_editor.set_selection_from_tag(tag_obj)
 						break;
 
 					case 'svg' :
@@ -810,26 +780,7 @@ const get_custom_events = (self, i, text_editor) => {
 					case 'draw' :
 						// Load draw editor
 						event_manager.publish('click_tag_draw_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-						// des
-							// switch(page_globals.modo) {
-
-							// 	case 'tool_transcription' :
-							// 		if (typeof component_image==="undefined") {
-							// 			console.warn("[mde_editor.image_command] component_image class is not avilable. Ignored draw action");
-							// 		}else{
-							// 			component_image.load_draw_editor(tag_obj);
-							// 		}
-							// 		break;
-
-							// 	case 'edit' :
-							// 		var canvas_id = text_area_component.dataset.canvas_id;
-							// 		if (typeof component_image_read!=="undefined") {
-							// 			component_image_read.load_draw_editor_read(tag_obj, canvas_id);
-							// 		}else{
-							// 			console.log("component_image_read is lod loaded! Ignoring action load_draw_editor_read");
-							// 		}
-							// 	break;
-							// }
+						
 						break;
 
 					case 'geo' :
@@ -846,7 +797,7 @@ const get_custom_events = (self, i, text_editor) => {
 						// Show person info
 						event_manager.publish('click_tag_person_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						// get the locator in string format
-						const data_string	= tag_obj.dataset.data
+						const data_string	= tag_obj.data
 						// rebuild the correct locator witht the " instead '
 						const data			= data_string.replace(/\'/g, '"')
 						// parse the string to object or create new one
@@ -896,7 +847,7 @@ const get_custom_events = (self, i, text_editor) => {
 						event_manager.publish('click_tag_lang_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 
 						const ar_project_langs		= page_globals.dedalo_projects_default_langs
-						const tag_data_lang_string	= tag_obj.dataset.data
+						const tag_data_lang_string	= tag_obj.data
 						// rebuild the correct data with the " instead '
 						const data_lang			= tag_data_lang_string.replace(/\'/g, '"')
 						// parse the string to object or create new one
@@ -1019,7 +970,7 @@ const get_custom_events = (self, i, text_editor) => {
 					const lang_tag			= {
 						type	: tag_type,
 						label	: current_lang.value.split('-')[1],
-						tag_id	: lang_number,
+						tag_id	: String(lang_number),
 						state	: 'a',
 						data	: current_lang.value
 					}
@@ -1299,10 +1250,10 @@ const render_note = async function(options) {
 		const self				= options.self
 		const text_editor		= options.text_editor
 		const i					= options.i
-		const tag_view 			= options.tag
+		const view_tag 			= options.tag
 
 	// short vars
-		const data_string		= tag_view.data
+		const data_string		= view_tag.data
 		// convert the data_tag form string to json*-
 		const data				= data_string.replace(/\'/g, '"')
 		// replace the ' to " stored in the html data to JSON "
@@ -1337,20 +1288,19 @@ const render_note = async function(options) {
 			const state = changed_value.section_id=='2' // no active value
 				? 'a' // no publishable
 				: 'b' // publishable
-				console.log("tag_node:-------------------",tag_view.state);
-			const current_tag_state = tag_view.state || 'a'
+			const current_tag_state = view_tag.state || 'a'
 			// create new tag with the new state of the tag
 			if (current_tag_state !== state){
 				const note_tag		= {
 					type	: 'note',
-					label	: tag_view.label,
-					tag_id	: tag_view.tag_id,
+					label	: view_tag.label,
+					tag_id	: view_tag.tag_id,
 					state	: state,
 					data	: data_string
 				}
 				text_editor.update_tag({
 					type			: 'note',
-					tag_id			: tag_view.tag_id,
+					tag_id			: view_tag.tag_id,
 					new_data_obj	: note_tag
 				})
 
@@ -1358,7 +1308,7 @@ const render_note = async function(options) {
 				// // change the values to the current tag node
 				// tag_node.id				= tag.id
 				// tag_node.src			= tag.src
-				// tag_view.state	= tag.dataset.state
+				// view_tag.state	= tag.dataset.state
 				// Save the change, set the text_editor as dirty (has changes) and save it
 				text_editor.set_dirty(true)
 				text_editor.save()
@@ -1409,33 +1359,39 @@ const render_note = async function(options) {
 			button_remove.addEventListener("click", function(e){
 				e.stopPropagation()
 				// ask to user if really want delete the note
-				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ tag_view.tag_id
+				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ view_tag.tag_id
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
-					// create sqo the the filter_by_locators of the section to be deleted
-					const sqo = {
-						section_tipo		: [note_section.section_tipo],
-						filter_by_locators	: [{
-							section_tipo	: note_section.section_tipo,
-							section_id		: note_section.section_id
-						}],
-						limit				: 1
-					}
-					// create the request to delete the record
-					// telling the section to do the action
-					note_section.delete_section({
-						sqo			: sqo,
-						delete_mode	: 'delete_record'
-					})
 					// remove the tag of the note in the component_text_area
-					tag_view.remove()
-					// prepare the text_editor to save setting it in dirty mode and save the change
-					text_editor.set_dirty(true)
-					text_editor.save()
-					// destroy the instance of the note section
-					note_section.destroy(true,true,true)
-					// remove the modal
-					modal.remove()
+					text_editor.delete_tag(view_tag)
+					.then(function(){
+						// Delete the server note data in the DDBB
+							// create sqo the the filter_by_locators of the section to be deleted
+							const sqo = {
+								section_tipo		: [note_section.section_tipo],
+								filter_by_locators	: [{
+									section_tipo	: note_section.section_tipo,
+									section_id		: note_section.section_id
+								}],
+								limit				: 1
+							}
+							// create the request to delete the record
+							// telling the section to do the action
+							note_section.delete_section({
+								sqo			: sqo,
+								delete_mode	: 'delete_record'
+							})
+							// destroy the instance of the note section
+							note_section.destroy(true,true,true)
+
+						// text_area. Prepare the text_editor to save setting it in dirty mode and save the change
+							text_editor.set_dirty(true)
+							text_editor.save()
+
+						// remove the modal
+							modal.remove()
+					})
+
 				}
 			})
 
@@ -1678,7 +1634,7 @@ const render_langs_list = function(self, text_editor, i) {
 					const lang_tag		= {
 						type	: tag_type,
 						label	: current_lang.value.split('-')[1], //.substring(0, 3),
-						tag_id	: lang_number,
+						tag_id	: String(lang_number),
 						state	: 'a',
 						data	: current_lang.value
 					}
