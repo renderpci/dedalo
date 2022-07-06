@@ -726,7 +726,7 @@ component_text_area.prototype.build_view_tag = function(data_tag, tag_id) {
 		class_name	: class_name,
 		// dataset
 		type		: type,
-		tag_id		: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
+		tag_id		: (type==='tc') ? "[TC_" + tag_id + "_TC]" : String(tag_id),
 		state		: (type==='tc') ? 'n': state,
 		label		: (type==='tc') ? tag_id : label,
 		data		: (type==='tc') ? tag_id : data
