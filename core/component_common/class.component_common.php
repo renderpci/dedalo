@@ -1770,7 +1770,7 @@ abstract class component_common extends common {
 			$diffusion_obj->columns['valor'] 	= $valor;
 			*/
 
-		# Set standar 'valor' (Overwrite when need resolve dato. Ex. portals)
+		# Set standard 'valor' (Overwrite when need resolve dato. Ex. portals)
 		$diffusion_obj->columns['valor'] = $this->get_valor();
 
 
@@ -1781,17 +1781,19 @@ abstract class component_common extends common {
 
 	/**
 	* GET_STATS_VALUE_RESOLVED
+	* @return array $ar_final
 	*/
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) {
+	public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
 
 		$caller_component = get_called_class();
 
+		$ar_values = [];
 		foreach ($current_stats_value as $current_dato => $value) {
 
 			if( empty($current_dato) ) {
 
 				$current_dato = 'nd';
-				$ar_final[$current_dato] = $value;
+				$ar_values[$current_dato] = $value;
 
 			}else{
 
@@ -1800,15 +1802,13 @@ abstract class component_common extends common {
 
 				$valor = $current_component->get_valor();
 
-				$ar_final[$valor] = $value;
+				$ar_values[$valor] = $value;
 			}
-
-
 		}//end foreach
 
+		$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
+		$ar_final	= array($label => $ar_values);
 
-		$label 		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
-		$ar_final 	= array($label => $ar_final );
 
 		return $ar_final;
 	}//end get_stats_value_resolved
@@ -1817,16 +1817,15 @@ abstract class component_common extends common {
 
 	/**
 	* GET_COMPONENT_AR_LANGS
-	* Devuelve un array con todos los idiomas usados por este componente a partir del dato de la sección que lo aloja
+	* Returns an array with all the languages used by this component from the data of the section that hosts it
 	* @return array $component_ar_langs
 	*/
 	public function get_component_ar_langs() : array {
 
-		$component_ar_langs=array();
+		$component_ar_langs = [];
 
-		$tipo 			= $this->tipo;
-		$section_id 	= $this->section_id;
-
+		$tipo		= $this->tipo;
+		$section_id	= $this->section_id;
 		if (empty($section_id)) {
 			trigger_error("Error: section_id is mandatory for ".__METHOD__);
 			if(SHOW_DEBUG===true) {
@@ -1834,18 +1833,11 @@ abstract class component_common extends common {
 				throw new Exception("Error Processing Request", 1);
 			}
 		}
-		// $section_tipo	= $this->section_tipo;
-		// $section			= section::get_instance($this->section_id, $section_tipo);
-		$section			= $this->get_my_section();
-		$section_dato		= $section->get_dato();
 
-		if (isset($section_dato->components->$tipo->dato)) {
-			$component_dato_full = $section_dato->components->$tipo->dato;
-		}else{
-			$component_dato_full = null;
-		}
+		$section				= $this->get_my_section();
+		$section_dato			= $section->get_dato();
 
-
+		$component_dato_full	= $section_dato->components->$tipo->dato ?? null;
 		if ($component_dato_full!==null) {
 			foreach ($component_dato_full as $key => $value) {
 				$component_ar_langs[] = $key; // Old way
@@ -1859,7 +1851,7 @@ abstract class component_common extends common {
 			}
 		}
 
-		return (array)$component_ar_langs;
+		return $component_ar_langs;
 	}//end get_component_ar_langs
 
 

@@ -511,37 +511,37 @@ class component_filter extends component_relation_common {
 	}//end get_project_groupers
 
 
-	//
-	// /**
-	// * GET_STATS_VALUE
-	// */
-	// public static function get_stats_value( $tipo, $ar_value ) {
-	//
-	// 	if(!isset($stats_value)) static $stats_value;
-	//
-	// 	if( !is_array($ar_value) ) $ar_value = array('' => 1 );
-	//
-	// 	foreach ($ar_value as $key => $value) {
-	//
-	// 		if(!isset($stats_value[$tipo][$key])) $stats_value[$tipo][$key] = 0;
-	// 		$stats_value[$tipo][$key] = $stats_value[$tipo][$key] + 1;
-	// 	}
-	//
-	// 	return $stats_value[$tipo];
-	// }//end get_stats_value
-	//
+
+	/**
+	* GET_STATS_VALUE
+	*/
+		// public static function get_stats_value( $tipo, $ar_value ) {
+		//
+		// 	if(!isset($stats_value)) static $stats_value;
+		//
+		// 	if( !is_array($ar_value) ) $ar_value = array('' => 1 );
+		//
+		// 	foreach ($ar_value as $key => $value) {
+		//
+		// 		if(!isset($stats_value[$tipo][$key])) $stats_value[$tipo][$key] = 0;
+		// 		$stats_value[$tipo][$key] = $stats_value[$tipo][$key] + 1;
+		// 	}
+		//
+		// 	return $stats_value[$tipo];
+		// }//end get_stats_value
+
 
 
 	/**
 	* GET_STATS_VALUE_RESOLVED
+	* @return array $ar_final
 	*/
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_properties=NULL ) : array {
+	public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
 
-		$caller_component = get_called_class();
+		$caller_component	= get_called_class();
+		$current_component	= component_common::get_instance($caller_component,$tipo,NULL,'stats');
 
-		#dump($current_stats_value ,'$current_stats_value ');
-
-		$current_component = component_common::get_instance($caller_component,$tipo,NULL,'stats');
+		$ar_values = [];
 
 		# DATO : Component filter está pensado para albergar un arary de proyectos en formato
 		# 'project_id':'2' . Le pasamos por tanto el array completo al componente dummy
@@ -550,17 +550,17 @@ class component_filter extends component_relation_common {
 
 		# VALOR : Recupera el array completo resuelto
 		$valor = $current_component->get_valor(DEDALO_DATA_LANG, 'array');
-			#dump($valor,'valor');
 
-		# AR FINAL : Formateamos el array final de salida resuelto
+		# ar_values : Formateamos el array final de salida resuelto
 		foreach ($current_stats_value as $key => $value) {
-			if(isset($valor[$key]))
-				$ar_final[$valor[$key]] = $value;
+			if(isset($valor[$key])) {
+				$ar_values[$valor[$key]] = $value;
+			}
 		}
 
-		$label 		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
-		$ar_final 	= array($label => $ar_final );
-			#dump($ar_final,'$ar_final');
+		$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
+		$ar_final	= array($label => $ar_values);
+
 
 		return $ar_final;
 	}//end get_stats_value_resolved
@@ -572,13 +572,11 @@ class component_filter extends component_relation_common {
 	*/
 	public static function get_stats_value_resolved_activity( $value ) {
 
-		$caller_component = get_called_class();
+		$caller_component	= get_called_class();
 
-		#dump($current_stats_value ,'$current_stats_value ');
+		$proyectos_tipo		= logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ;
 
-		$proyectos_tipo = logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ;
-
-		$current_component = component_common::get_instance($caller_component,$proyectos_tipo,NULL,'stats');
+		$current_component	= component_common::get_instance($caller_component,$proyectos_tipo,NULL,'stats');
 
 		# DATO : Component filter está pensado para albergar un arary de proyectos en formato
 		# 'project_id':'2' . Le pasamos por tanto el array completo al componente dummy
@@ -588,9 +586,9 @@ class component_filter extends component_relation_common {
 
 		# VALOR : Recupera el array completo resuelto
 		$ar_valor = $current_component->get_valor(DEDALO_DATA_LANG, 'array');
-			#dump($valor,'valor');
 
 		$valor = $ar_valor[$value];
+
 
 		return $valor;
 	}//end get_stats_value_resolved_activity
