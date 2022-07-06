@@ -501,6 +501,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: '',
 				image	: '../../core/themes/default/icons/separator.svg',
+				class_name	: 'separator',
 				onclick	: null
 			}
 		})
