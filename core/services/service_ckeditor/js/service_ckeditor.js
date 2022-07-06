@@ -121,7 +121,8 @@ export const service_ckeditor = function() {
 					})
 					function fn_remove(e) {
 						if (e.target!==node) {
-							const found = e.path.find(el => el===node)
+							const path	= e.composedPath()
+							const found	= path.find(el => el===node)
 							if (!found) {
 								toolbar_container.classList.add('hide')
 								document.body.removeEventListener("mouseup", fn_remove)
@@ -131,6 +132,65 @@ export const service_ckeditor = function() {
 
 				// setup_events
 					self.setup_events(editor_config);
+
+
+				// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
+				// the drop event doesn't has any effect in the final position of the drop,
+				// the final check position is fired in the clipboardInput event.
+				editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
+					//check the target name of the element
+					if(data.target.name === 'img'){
+						editor.editing.view.change((writer) => {
+							// create new position at start and end of the target
+							// use the target parent because the img is wrapped inside a span
+							// the parent span has other position of the image and it's necessary avoid the parent position
+							const start = writer.createPositionAt(
+								data.target.parent,
+								"after"
+							);
+							const end = writer.createPositionAt(
+								data.target.parent,
+								"after"
+							);
+							// create the range of the new position
+							const range = writer.createRange(start, end);
+
+							// it's not necessary change the range to model range
+							// comment this code
+								// writer.setSelection( range );
+								// transform to the model_range
+								// const model_range = editor.editing.mapper.toModelRange( range )
+								// editor.model.change( writer => writer.setSelection( model_range ) );
+								// data.targetRanges = [ editor.editing.mapper.toViewRange( model_range ) ];
+							// set new range to the targetRanges of the data
+							// it will use to calculate the drop position when will insertContect()
+							data.targetRanges = [ range ];
+						});
+					}
+				}, { priority: 'high' } );
+
+				// Active this event listeners to change the visual effect, but any of them will change the result
+					// editor.editing.view.document.on( 'drop', ( evt, data ) => {
+					// }, { priority: 'high' } );
+
+					// editor.editing.view.document.on( 'dragover', ( evt, data ) => {
+
+					// 	if(data.target.name === 'img'){
+					// 		evt.stop();
+					// 		//Stop the default event action.
+					// 		data.preventDefault();
+					// 	}
+					// }, { priority: 'high' } );
+
+					// editor.editing.view.document.on( 'dragenter', ( evt, data ) => {
+
+					// 	if(data.target.name === 'img'){
+
+					// 		evt.stop();
+					// 		//Stop the default event action.
+					// 		data.preventDefault();
+					// 	}
+					// }, { priority: 'high' } );
 
 
 				// click event sample
@@ -356,6 +416,66 @@ export const service_ckeditor = function() {
 
 
 	/**
+	* delete_tag
+	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
+	* @param ed
+	*	Text editor instance (tinyMCE)
+	* @param tag_type
+	*	Class name of image searched like 'geo'
+	*
+	* @return int tag_id
+	*/
+	this.delete_tag = function(view_tag) {
+
+		// options
+			const type		= view_tag.type
+			const tag_id	= view_tag.tag_id
+
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+		return new Promise(function(resolve) {
+
+			// root. Whole editor document to traverse
+				const root = editor.model.document.getRoot();
+
+			// range. Create a range spanning over the entire root content:
+				const range = editor.model.createRangeIn( root );
+
+			// Iterate over all items in this range:
+				for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+
+					const item = value.item
+
+					// attributes. Get an object like:
+					// {
+					//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+					//	 classes : ['index']
+					// }
+					// const htmlAttributes = item.getAttribute('htmlAttributes')
+					// const htmlAttributes = item.getAttributes()
+					const attributes = item._attrs
+
+					if(item._attrs && item._attrs.size > 0) {
+
+						const current_type		= attributes.get('type')
+						const current_tag_id	= attributes.get('tag_id')
+
+						if(current_type===type && current_tag_id === tag_id) {
+
+							editor.model.change( writer => {
+								writer.remove( item )
+							});
+							resolve(true)
+							break;
+						}
+					}
+				}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+		})
+	};//end delete_tag
+
+	/**
 	* GET_EDITOR_CONTENT_DATA -OK
 	* @return DOM node | false
 	*/
@@ -450,17 +570,12 @@ export const service_ckeditor = function() {
 		editor.editing.view.focus();
 		self.is_dirty = false;
 
-		// const value = editor.getContent({format:'raw'})
-		// const value = editor.getData();
-		// const value = self.editor.getBody()
-		// self.caller.save_value(self.key, value)
-
 		return true
 	}//end wrap_selection_with_tags
 
 
 	/**
-	* GET_LAST_TAG_ID
+	* GET_LAST_TAG_ID -Ok
 	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
 	* @param ed
 	*	Text editor instance (tinyMCE)
@@ -518,6 +633,8 @@ export const service_ckeditor = function() {
 			return last_tag_id
 	};//end get_last_tag_id
 
+
+
 	/**
 	* UPDATE_TAG
 	* Find and change target tag in editor
@@ -555,12 +672,11 @@ export const service_ckeditor = function() {
 
 				const item = value.item
 
-				// htmlAttributes. Get an object like:
+				// attributes. Get an object like:
 				// {
-				//   attributes : {data-data: '', data-label: 'label in 1', data-state: 'r', data-tag_id: '1', data-type: 'indexIn', …}
+				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
 				//	 classes : ['index']
 				// }
-
 				const attributes = item._attrs
 
 				if(item._attrs && item._attrs.size > 0) {
@@ -612,7 +728,6 @@ export const service_ckeditor = function() {
 					}
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
-
 
 		return true
 	}//end update_tag
