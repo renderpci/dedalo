@@ -1644,4 +1644,69 @@ class component_date extends component_common {
 
 
 
+	/**
+	* GET_ORDER_PATH
+	* Calculate full path of current element to use in columns order path (context)
+	* @see https://habr.com/en/company/postgrespro/blog/500440/
+	* @see https://www.postgresql.org/docs/current/functions-json.html
+	* @see https://www.postgresql.org/docs/current/datatype-json.html#TYPE-JSONPATH-ACCESSORS
+	*
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return array $path
+	*/
+	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+
+		// column explicit definition
+			// working sample 1 (using jsonb_array_elements):
+				// SELECT p.id, p.section_id, p.section_tipo, a.time
+				// from matrix p
+				//    left join lateral (
+				//       select item #> '{start,time}' as time
+				//       from jsonb_array_elements(p.datos#>'{components,rsc224,dato,lg-nolan}') as x(item)
+				//    ) a on true
+				// order by a.time DESC nulls last;
+
+			// working sample 2 (using jsonb_path_query):
+				// SELECT rs167.id, rs167.section_id, rs167.section_tipo
+				// ,jsonb_path_query(datos, 'lax $.components.rsc224.dato."lg-nolan"[0].start.time', silent => true) as time
+				// FROM matrix rs167
+				// WHERE rs167.section_tipo='rsc205'
+				// LIMIT 10;
+
+		// self path
+			$path = [
+				// self component path
+				(object)[
+					'component_tipo'	=> $component_tipo,
+					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+					'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
+					'section_tipo'		=> $section_tipo,
+					// 'column'			=> "jsonb_path_query(datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
+					// 'column'			=> "jsonb_path_query(datos, '$.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time')"
+					'column'			=> "jsonb_path_query_first(datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
+				]
+			];
+
+		// from_section_tipo. When is defined, this component is inside a portal and
+		// we need the parent portal path too to add at beginning
+			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
+				// recursion
+				// $pre_path = $this->get_order_path($this->from_component_tipo, $this->from_section_tipo);
+				// $pre_path = search::get_query_path($this->from_component_tipo, $this->from_section_tipo);
+				// array_unshift($path, ...$pre_path);
+				array_unshift($path, (object)[
+					'component_tipo'	=> $this->from_component_tipo,
+					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
+					'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
+					'section_tipo'		=> $this->from_section_tipo
+				]);
+			}
+
+
+		return $path;
+	}//end get_order_path
+
+
+
 }//end class component_date

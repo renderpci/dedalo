@@ -66,7 +66,7 @@ class search {
 		protected $filter_by_locators;
 
 		# ar_direct_columns. Useful to calculate efficient order sentences
-		public $ar_direct_columns = ['section_id','section_tipo','id'];
+		public static $ar_direct_columns = ['section_id','section_tipo','id'];
 
 		# include_negative
 		# negative section_id used in profiles for the root user, root record could be avoid or include
@@ -413,8 +413,10 @@ class search {
 
 	/**
 	* GET_FILTERED_RELATIONS
-	* @return string $filtered_relations
-	* json encoded array
+	* @param array $relations_data
+	* @param string $component_tipo
+	*
+	* @return array $filtered_relations
 	*/
 	public static function get_filtered_relations(array $relations_data, string $component_tipo) : array {
 
@@ -472,7 +474,7 @@ class search {
 			# Replace select array with components preparsed values
 			$this->search_query_object->select = $new_search_query_object_select;
 
-		# ORDER
+		# ORDER. Note that order is parsed with same parser as 'select' (component_parser_select)
 			if (!empty($this->search_query_object->order)) {
 				$new_search_query_object_order = [];
 				foreach ((array)$this->search_query_object->order as $key => $select_object) {
@@ -500,17 +502,23 @@ class search {
 	/**
 	* COMPONENT_PARSER_SELECT
 	* Call to component to parse select query (add component path)
+	* @param object $select_objec
 	* @return object $select_object
 	*/
 	public static function component_parser_select( object $select_object ) {
 
 		$path				= $select_object->path;
 		$component_tipo 	= end($path)->component_tipo;
-		if ($component_tipo==='section_id' || $component_tipo==='section_tipo' || $component_tipo==='id') {
-			return $select_object; // No parse section_id
-		}
-		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$select_object 		= $modelo_name::get_select_query2($select_object);
+
+		// prevent direct columns (section_id, section_tipo, id) parse
+			if (true===in_array($component_tipo, self::$ar_direct_columns)) {
+				return $select_object; // No parse section_id
+			}
+
+		// call to component to resolve each select sentence (are different results depends of the component)
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$select_object	= $modelo_name::get_select_query2($select_object);
+
 
 		return $select_object;
 	}//end component_parser_select
@@ -575,7 +583,7 @@ class search {
 						$search_component->modelo = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
 					}
 					$model_name			= $search_component->modelo;
-					$ar_query_object	= $model_name::get_search_query2($search_object);
+					$ar_query_object	= $model_name::get_search_query($search_object);
 				}
 
 				$new_ar_query_object->$op = array_merge($new_ar_query_object->$op, $ar_query_object);
@@ -1432,26 +1440,40 @@ class search {
 		}elseif (!empty($this->search_query_object->order)) {
 
 			// order default
-				$ar_order			= [];
-				$ar_direct_columns	= $this->ar_direct_columns; // ['section_id','section_tipo','id']
+				$ar_order = [];
 				foreach ($this->search_query_object->order as $order_obj) {
 
 					$direction		= strtoupper($order_obj->direction);
 					$path			= $order_obj->path;
 					$end_path		= end($path);
 					$component_tipo	= $end_path->component_tipo;
+					$column			= $end_path->column ?? null; // special optional full definition column (e.g. component date)
 
-					if (in_array($component_tipo, $ar_direct_columns)===true) {
+					if(isset($column)){
+
+						// column case. Special optional full definition column (e.g. component_date)
+						$alias	= $component_tipo . '_order';
+						$column	.= ' as ' . $alias; // add alias name
+
+						// Add to global order columns (necessary for order...)
+						// This array is added when query select is calculated
+						$this->order_columns[] = $column;
+
+						$line = $alias . ' ' . $direction;
+
+					}else if (true===in_array($component_tipo, self::$ar_direct_columns)) {
 
 						// direct column case
 						$line = $component_tipo . ' ' . $direction;
 
 					}else{
 
+						// default case
+
 						// Add join if not exists
 						$this->build_sql_join($path);
 
-						//  short vars
+						// short vars
 							$table_alias	= $this->get_table_alias_from_path($path);
 							$selector		= implode(',', $order_obj->component_path);
 							$alias			= $component_tipo . '_order';
@@ -1468,7 +1490,7 @@ class search {
 					// line add
 					$ar_order[] = $line;
 				}
-				// flat sql sentences array
+				// flat SQL sentences array
 				$sql_query_order = implode(',', $ar_order);
 		}
 
