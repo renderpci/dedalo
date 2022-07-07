@@ -242,154 +242,160 @@ class component_date extends component_common {
 	*/
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+		// ddo. set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$separator_fields	= $ddo->separator_fields ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
-			$class_list 		= $ddo->class_list ?? null;
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+			$class_list			= $ddo->class_list ?? null;
 
-		$value = new dd_grid_cell_object();
+		// column_obj
+			$column_obj			= isset($this->column_obj)
+				? $this->column_obj
+				: (object)[
+					'id' => $this->section_tipo.'_'.$this->tipo
+				  ];
 
-		$data	= $this->get_dato();
-		$label	= $this->get_label();
+		// short vars
+			$label		= $this->get_label();
+			$properties	= $this->get_properties();
+			$date_mode	= $this->get_date_mode();
 
-		$properties = $this->get_properties();
+		// ar_values
+			$data = $this->get_dato();
+			foreach ($data as $key => $current_dato) {
 
-		$date_mode	= $this->get_date_mode();
+				$ar_values[$key] = ''; // default
 
-		foreach ($data as $key => $current_dato) {
+				if(empty($current_dato)) {
+					continue;
+				}
 
-			$ar_values[$key] = ''; // default
+				$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
 
-			if(empty($current_dato)) {
-				continue;
-			}
+				// DES
+					// switch ($date_mode) {
 
-			switch ($date_mode) {
+					// 	case 'range':
+					// 		# Start
+					// 		$value_start = '';
+					// 		if(isset($current_dato->start)) {
+					// 			$dd_date = new dd_date($current_dato->start);
 
-				case 'range':
-					# Start
-					$value_start = '';
-					if(isset($current_dato->start)) {
-						$dd_date = new dd_date($current_dato->start);
+					// 			if(isset($current_dato->start->day)) {
+					// 				$value_start = $dd_date->get_dd_timestamp("Y-m-d");
+					// 			}else{
+					// 				$value_start = $dd_date->get_dd_timestamp("Y-m");
+					// 				if(isset($current_dato->start->month)) {
+					// 				}else{
+					// 					$value_start = $dd_date->get_dd_timestamp("Y", $padding=false);
+					// 				}
+					// 			}
 
-						if(isset($current_dato->start->day)) {
-							$value_start = $dd_date->get_dd_timestamp("Y-m-d");
-						}else{
-							$value_start = $dd_date->get_dd_timestamp("Y-m");
-							if(isset($current_dato->start->month)) {
-							}else{
-								$value_start = $dd_date->get_dd_timestamp("Y", $padding=false);
-							}
-						}
+					// 			$ar_values[$key] .= $value_start;
+					// 		}
 
-						$ar_values[$key] .= $value_start;
-					}
+					// 		# End
+					// 		$value_end = '';
+					// 		if(isset($current_dato->end)) {
+					// 			$dd_date	= new dd_date($current_dato->end);
+					// 			/*
+					// 			$value_end 	= isset($properties->method->get_valor_local)
+					// 						? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
+					// 						: component_date::get_valor_local( $dd_date, false );
+					// 			*/
 
-					# End
-					$value_end = '';
-					if(isset($current_dato->end)) {
-						$dd_date	= new dd_date($current_dato->end);
-						/*
-						$value_end 	= isset($properties->method->get_valor_local)
-									? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
-									: component_date::get_valor_local( $dd_date, false );
-						*/
+					// 			if(isset($current_dato->end->day)) {
+					// 					$value_end = $dd_date->get_dd_timestamp("Y-m-d");
+					// 				}else{
+					// 					if(isset($current_dato->end->month)) {
+					// 						$value_end = $dd_date->get_dd_timestamp("Y-m");
+					// 					}else{
+					// 						$value_end = $dd_date->get_dd_timestamp("Y", $padding=false);
+					// 					}
+					// 				}
+					// 			$ar_values[$key] .= ' <> '. $value_end;
+					// 		}
+					// 		break;
 
-						if(isset($current_dato->end->day)) {
-								$value_end = $dd_date->get_dd_timestamp("Y-m-d");
-							}else{
-								if(isset($current_dato->end->month)) {
-									$value_end = $dd_date->get_dd_timestamp("Y-m");
-								}else{
-									$value_end = $dd_date->get_dd_timestamp("Y", $padding=false);
-								}
-							}
-						$ar_values[$key] .= ' <> '. $value_end;
-					}
-					break;
+					// 	case 'period':
+					// 		if(!empty($current_dato->period)) {
 
-				case 'period':
-					if(!empty($current_dato->period)) {
+					// 			$ar_string_period = [];
 
-						$ar_string_period = [];
+					// 			$dd_date = new dd_date($current_dato->period);
+					// 			# Year
+					// 			$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
+					// 			# Month
+					// 			$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
+					// 			# Day
+					// 			$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
 
-						$dd_date = new dd_date($current_dato->period);
-						# Year
-						$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
-						# Month
-						$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
-						# Day
-						$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
+					// 			$ar_values[$key] = implode(' ', $ar_string_period);
+					// 		}
+					// 		break;
 
-						$ar_values[$key] = implode(' ', $ar_string_period);
-					}
-					break;
+					// 	case 'time':
+					// 		$dd_date = new dd_date($current_dato);
+					// 		$ar_values[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
+					// 		break;
 
-				case 'time':
-					$dd_date = new dd_date($current_dato);
-					$ar_values[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
-					break;
+					// 	case 'date_time':
+					// 		if(isset($current_dato->start)) {
+					// 			$dd_date 		= new dd_date($current_dato->start);
+					// 			$ar_values[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
+					// 		}
+					// 		break;
 
-				case 'date_time':
-					if(isset($current_dato->start)) {
-						$dd_date 		= new dd_date($current_dato->start);
-						$ar_values[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
-					}
-					break;
+					// 	case 'date':
+					// 	default:
+					// 		# Start
+					// 		$value_start = '';
+					// 		if(isset($current_dato->start)) {
+					// 			$dd_date = new dd_date($current_dato->start);
 
-				case 'date':
-				default:
-					# Start
-					$value_start = '';
-					if(isset($current_dato->start)) {
-						$dd_date = new dd_date($current_dato->start);
+					// 			if(isset($current_dato->start->day)) {
+					// 				$value_start = $dd_date->get_dd_timestamp('Y-m-d');
+					// 			}else{
+					// 				$value_start = $dd_date->get_dd_timestamp('Y-m');
+					// 				if(isset($current_dato->start->month)) {
+					// 				}else{
+					// 					$value_start = $dd_date->get_dd_timestamp('Y', $padding=false);
+					// 				}
+					// 			}
 
-						if(isset($current_dato->start->day)) {
-							$value_start = $dd_date->get_dd_timestamp('Y-m-d');
-						}else{
-							$value_start = $dd_date->get_dd_timestamp('Y-m');
-							if(isset($current_dato->start->month)) {
-							}else{
-								$value_start = $dd_date->get_dd_timestamp('Y', $padding=false);
-							}
-						}
+					// 			$ar_values[$key] .= $value_start;
+					// 		}
+					// 		break;
+					// }
+			}//end foreach ($data as $key => $current_dato)
 
-						$ar_values[$key] .= $value_start;
-					}
-					break;
-			}
-		}
+		// separator_fields
+			$separator_fields = isset($separator_fields)
+				? $separator_fields
+				: (isset($properties->separator_fields)
+					? $properties->separator_fields
+					: ' <> ');
 
-		$separator_fields = isset($separator_fields)
-			? $separator_fields
-			: (isset($properties->separator_fields)
-				? $properties->separator_fields
-				: ' <> ');
+		// separator_rows
+			$separator_rows = isset($separator_rows)
+				? $separator_rows
+				: (isset($properties->separator_rows)
+					? $properties->separator_rows
+					: ' | ');
 
-		$separator_rows = isset($separator_rows)
-			? $separator_rows
-			: (isset($properties->separator_rows)
-				? $properties->separator_rows
-				: ' | ');
+		// dd_grid_cell_object
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_cell_type('text');
+				$value->set_ar_columns_obj([$column_obj]);
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_separator_fields($separator_fields);
+				$value->set_separator_rows($separator_rows);
+				$value->set_value($ar_values);
 
-
-		$value->set_type('column');
-		$value->set_label($label);
-		$value->set_cell_type('text');
-		$value->set_ar_columns_obj([$column_obj]);
-		if(isset($class_list)){
-			$value->set_class_list($class_list);
-		}
-		$value->set_separator_fields($separator_fields);
-		$value->set_separator_rows($separator_rows);
-		$value->set_value($ar_values);
 
 		return $value;
 	}//end get_value
@@ -397,154 +403,260 @@ class component_date extends component_common {
 
 
 	/**
-	* GET VALOR (Ojo: Se usa para ordenar, por lo que mantiene el formato DB. Para visualizar usar 'get_valor_local()')
-	* Dato formated as timestamp '2012-11-07 17:33:49'
+	* DATA_ITEM_TO_VALUE
+	* Converts each data item to value (one by one)
+	* based on $date_mode (range,period,time,date)
+	* @param object $data_item
+	* @return string $item_value
 	*/
-	public function get_valor() {
+	public static function data_item_to_value(object $data_item, string $date_mode) : string {
 
+		$item_value = '';
 
-		$ar_dato	= $this->get_dato();
-		$properties	= $this->get_properties();
-		$ar_valor	= array();
-		$valor		= '';
-		$date_mode	= $this->get_date_mode();
-		foreach ($ar_dato as $key => $current_dato) {
+		switch ($date_mode) {
 
-			$ar_valor[$key] = ''; // default
-
-			if(empty($current_dato)) {
-				continue;
-			}
-
-			switch ($date_mode) {
-
-				case 'range':
-					# Start
-					$valor_start = '';
-					if(isset($current_dato->start)) {
-						$dd_date = new dd_date($current_dato->start);
-						/*
-						$valor_start= isset($properties->method->get_valor_local)
-									? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
-									: component_date::get_valor_local( $dd_date, false );
-									*/
-						if(isset($current_dato->start->day)) {
-							$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
-						}else{
-							$valor_start = $dd_date->get_dd_timestamp("Y-m");
-							if(isset($current_dato->start->month)) {
-							}else{
-								$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
-							}
-						}
-
-						$ar_valor[$key] .= $valor_start;
+			case 'range':
+				// start
+				$valor_start = '';
+				if(isset($current_dato->start)) {
+					$dd_date = new dd_date($current_dato->start);
+					if(isset($current_dato->start->day)) {
+						$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
+					}else{
+						$valor_start = isset($current_dato->start->month)
+							? $dd_date->get_dd_timestamp('Y-m')
+							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
-
-					# End
-					$valor_end = '';
-					if(isset($current_dato->end)) {
-						$dd_date	= new dd_date($current_dato->end);
-						/*
-						$valor_end 	= isset($properties->method->get_valor_local)
-									? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
-									: component_date::get_valor_local( $dd_date, false );
-						*/
-
-						if(isset($current_dato->end->day)) {
-								$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
-							}else{
-								if(isset($current_dato->end->month)) {
-									$valor_end = $dd_date->get_dd_timestamp("Y-m");
-								}else{
-									$valor_end = $dd_date->get_dd_timestamp("Y", $padding=false);
-								}
-							}
-						$ar_valor[$key] .= ' <> '. $valor_end;
+					$item_value .= $valor_start;
+				}
+				// end
+				$valor_end = '';
+				if(isset($current_dato->end)) {
+					$dd_date = new dd_date($current_dato->end);
+					if(isset($current_dato->end->day)) {
+						$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
+					}else{
+						$valor_end = isset($current_dato->end->month)
+							? $dd_date->get_dd_timestamp("Y-m")
+							: $dd_date->get_dd_timestamp("Y", $padding=false);
 					}
-					#$valor .= $valor_start .' <> '. $valor_end;
-					break;
+					$item_value .= ' <> '. $valor_end;
+				}
+				break;
 
-				case 'period':
-					if(!empty($current_dato->period)) {
+			case 'period':
+				if(!empty($current_dato->period)) {
 
-						$ar_string_period = [];
+					$ar_string_period = [];
 
-						$dd_date = new dd_date($current_dato->period);
-						# Year
-						$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
-						# Month
-						$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
-						# Day
-						$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
+					$dd_date = new dd_date($current_dato->period);
+					// year
+					$ar_string_period[] = isset($dd_date->year)
+						? $dd_date->year .' '. label::get_label('anyos')
+						: '';
+					// month
+					$ar_string_period[] = isset($dd_date->month)
+						? $dd_date->month .' '. label::get_label('meses')
+						: '';
+					// day
+					$ar_string_period[] = isset($dd_date->day)
+						? $dd_date->day .' '. label::get_label('dias')
+						: '';
 
-						$ar_valor[$key] = implode(' ', $ar_string_period);
+					$item_value = implode(' ', $ar_string_period);
+				}
+				break;
+
+			case 'time':
+				$dd_date	= new dd_date($current_dato);
+				$item_value	= $dd_date->get_dd_timestamp('H:i:s', true);
+				break;
+
+			case 'date_time':
+				if(isset($current_dato->start)) {
+					$dd_date	= new dd_date($current_dato->start);
+					$item_value	= $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
+				}
+				break;
+
+			case 'date':
+			default:
+				// start
+				$valor_start = '';
+				if(isset($current_dato->start)) {
+					$dd_date = new dd_date($current_dato->start);
+					if(isset($current_dato->start->day)) {
+						$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
+					}else{
+						$valor_start = isset($current_dato->start->month)
+							? $dd_date->get_dd_timestamp('Y-m')
+							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
-					break;
-
-				case 'time':
-					$dd_date = new dd_date($current_dato);
-					// $hour  	 = isset($dd_date->hour)	? sprintf("%02d", $dd_date->hour)   : '00';
-					// $minute  = isset($dd_date->minute)	? sprintf("%02d", $dd_date->minute) : '00';
-					// $second  = isset($dd_date->second)	? sprintf("%02d", $dd_date->second) : '00';
-					// $separator_time = ':';
-					// $ar_valor[$key] = $hour . $separator_time . $minute . $separator_time . $second;
-					$ar_valor[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
-					break;
-
-				case 'date_time':
-					if(isset($current_dato->start)) {
-						$dd_date 		= new dd_date($current_dato->start);
-						$ar_valor[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
-					}
-					break;
-
-				case 'date':
-				default:
-					# Start
-					$valor_start = '';
-					if(isset($current_dato->start)) {
-						$dd_date = new dd_date($current_dato->start);
-
-						if(isset($current_dato->start->day)) {
-							$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
-						}else{
-							$valor_start = $dd_date->get_dd_timestamp('Y-m');
-							if(isset($current_dato->start->month)) {
-							}else{
-								$valor_start = $dd_date->get_dd_timestamp('Y', $padding=false);
-							}
-						}
-
-						$ar_valor[$key] .= $valor_start;
-					}
-					/*
-					* PREVIOUS TO 4.9.1
-					if(!empty($current_dato)) {
-						$dd_date		= new dd_date($current_dato);
-						#$ar_valor[$key] = $dd_date->get_dd_timestamp("Y-m-d");
-
-						if(isset($current_dato->day)) {
-							$valor = $dd_date->get_dd_timestamp("Y-m-d");
-						}else{
-							$valor = $dd_date->get_dd_timestamp("Y-m");
-							if(isset($current_dato->month)) {
-							}else{
-								$valor = $dd_date->get_dd_timestamp("Y", $padding=false);
-							}
-						}
-
-						$ar_valor[$key] .= $valor;
-
-					}*/
-
-					break;
-			}
+					$item_value .= $valor_start;
+				}
+				break;
 		}
 
- 		$valor = implode((isset($properties->divisor) ? $properties->divisor : ' | '), $ar_valor);
+		return $item_value;
+	}//end data_item_to_value
 
-		return (string)$valor;
+
+
+	/**
+	* GET VALOR (Ojo: Se usa para ordenar, por lo que mantiene el formato DB. Para visualizar usar 'get_valor_local()')
+	* Dato formated as timestamp '2012-11-07 17:33:49'
+	* @return string $valor
+	*/
+	public function get_valor() : string {
+
+		// short vars
+			$properties	= $this->get_properties();
+			$date_mode	= $this->get_date_mode();
+
+		// ar_valor
+			$ar_valor	= array();
+			$ar_dato	= $this->get_dato();
+			foreach ($ar_dato as $key => $current_dato) {
+
+				$ar_valor[$key] = ''; // default
+
+				if(empty($current_dato)) {
+					continue;
+				}
+
+				$ar_valor[$key] = self::data_item_to_value($current_dato, $date_mode);
+
+				// DES
+					// switch ($date_mode) {
+
+					// 	case 'range':
+					// 		# Start
+					// 		$valor_start = '';
+					// 		if(isset($current_dato->start)) {
+					// 			$dd_date = new dd_date($current_dato->start);
+					// 			/*
+					// 			$valor_start= isset($properties->method->get_valor_local)
+					// 						? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
+					// 						: component_date::get_valor_local( $dd_date, false );
+					// 						*/
+					// 			if(isset($current_dato->start->day)) {
+					// 				$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
+					// 			}else{
+					// 				$valor_start = $dd_date->get_dd_timestamp("Y-m");
+					// 				if(isset($current_dato->start->month)) {
+					// 				}else{
+					// 					$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
+					// 				}
+					// 			}
+
+					// 			$ar_valor[$key] .= $valor_start;
+					// 		}
+
+					// 		# End
+					// 		$valor_end = '';
+					// 		if(isset($current_dato->end)) {
+					// 			$dd_date	= new dd_date($current_dato->end);
+					// 			/*
+					// 			$valor_end 	= isset($properties->method->get_valor_local)
+					// 						? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
+					// 						: component_date::get_valor_local( $dd_date, false );
+					// 			*/
+					// 			if(isset($current_dato->end->day)) {
+					// 					$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
+					// 				}else{
+					// 					if(isset($current_dato->end->month)) {
+					// 						$valor_end = $dd_date->get_dd_timestamp("Y-m");
+					// 					}else{
+					// 						$valor_end = $dd_date->get_dd_timestamp("Y", $padding=false);
+					// 					}
+					// 				}
+					// 			$ar_valor[$key] .= ' <> '. $valor_end;
+					// 		}
+					// 		#$valor .= $valor_start .' <> '. $valor_end;
+					// 		break;
+
+					// 	case 'period':
+					// 		if(!empty($current_dato->period)) {
+
+					// 			$ar_string_period = [];
+
+					// 			$dd_date = new dd_date($current_dato->period);
+					// 			# Year
+					// 			$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
+					// 			# Month
+					// 			$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
+					// 			# Day
+					// 			$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
+
+					// 			$ar_valor[$key] = implode(' ', $ar_string_period);
+					// 		}
+					// 		break;
+
+					// 	case 'time':
+					// 		$dd_date = new dd_date($current_dato);
+					// 		// $hour  	 = isset($dd_date->hour)	? sprintf("%02d", $dd_date->hour)   : '00';
+					// 		// $minute  = isset($dd_date->minute)	? sprintf("%02d", $dd_date->minute) : '00';
+					// 		// $second  = isset($dd_date->second)	? sprintf("%02d", $dd_date->second) : '00';
+					// 		// $separator_time = ':';
+					// 		// $ar_valor[$key] = $hour . $separator_time . $minute . $separator_time . $second;
+					// 		$ar_valor[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
+					// 		break;
+
+					// 	case 'date_time':
+					// 		if(isset($current_dato->start)) {
+					// 			$dd_date 		= new dd_date($current_dato->start);
+					// 			$ar_valor[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
+					// 		}
+					// 		break;
+
+					// 	case 'date':
+					// 	default:
+					// 		# Start
+					// 		$valor_start = '';
+					// 		if(isset($current_dato->start)) {
+					// 			$dd_date = new dd_date($current_dato->start);
+
+					// 			if(isset($current_dato->start->day)) {
+					// 				$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
+					// 			}else{
+					// 				$valor_start = $dd_date->get_dd_timestamp('Y-m');
+					// 				if(isset($current_dato->start->month)) {
+					// 				}else{
+					// 					$valor_start = $dd_date->get_dd_timestamp('Y', $padding=false);
+					// 				}
+					// 			}
+
+					// 			$ar_valor[$key] .= $valor_start;
+					// 		}
+					// 		/*
+					// 		* PREVIOUS TO 4.9.1
+					// 		if(!empty($current_dato)) {
+					// 			$dd_date		= new dd_date($current_dato);
+					// 			#$ar_valor[$key] = $dd_date->get_dd_timestamp("Y-m-d");
+
+					// 			if(isset($current_dato->day)) {
+					// 				$valor = $dd_date->get_dd_timestamp("Y-m-d");
+					// 			}else{
+					// 				$valor = $dd_date->get_dd_timestamp("Y-m");
+					// 				if(isset($current_dato->month)) {
+					// 				}else{
+					// 					$valor = $dd_date->get_dd_timestamp("Y", $padding=false);
+					// 				}
+					// 			}
+
+					// 			$ar_valor[$key] .= $valor;
+
+					// 		}*/
+					// 		break;
+					// }
+			}//end foreach ($ar_dato as $key => $current_dato)
+
+		// valor
+			$divisor	= $properties->divisor ?? ' | ';
+			$valor		= implode($divisor, $ar_valor);
+
+
+		return $valor;
 	}//end get_valor
 
 
@@ -552,30 +664,35 @@ class component_date extends component_common {
 	/**
 	* GET VALOR LOCAL
 	* Convert internal dato formated as timestamp '2012-11-07 17:33:49' to current lang data format like '07-11-2012 17:33:49'
+	* @return $valor_local
 	*/
-	public static function get_valor_local( $dd_date, $full=false ) {
-		$valor_local= '';
-		$separator  = dd_date::$separator;
+	public static function get_valor_local(object $dd_date, bool $full=false) : string {
+
+		$valor_local	= '';
+		$separator		= dd_date::$separator;
 
 		switch (true) {
-			case (empty($dd_date->month) && empty($dd_date->day) ):
-				$date_format	= "Y";
+			case ( empty($dd_date->month) && empty($dd_date->day) ):
+				$date_format = "Y";
 				break;
 			case ( empty($dd_date->day) && !empty($dd_date->month) ):
-				$date_format	= "m{$separator}Y";
+				$date_format = "m{$separator}Y";
 				break;
 			default:
-				$date_format	= "d{$separator}m{$separator}Y";
+				$date_format = "d{$separator}m{$separator}Y";
 				break;
 		}
-		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
-		$valor_local 	= $dd_date->get_dd_timestamp($date_format, $padding=false);
-			#dump($valor_local, ' valor_local ++ '.to_string());
-		#debug_log(__METHOD__." valor_local: $valor_local ".to_string($valor_local), logger::WARNING);
+
+		// dd_timestamp
+			$valor_local = $dd_date->get_dd_timestamp(
+				$date_format,
+				false // padding
+			);
 
 
-		return (string)$valor_local;
+		return $valor_local;
 	}//end get_valor_local
+
 
 
 	/**
@@ -820,7 +937,7 @@ class component_date extends component_common {
 			}else if (empty($query_object->q_operator)) {
 
 				$query_object->operator = '=';
-    			$query_object->q_parsed	= "'INVALID VALUE!'";
+				$query_object->q_parsed	= "'INVALID VALUE!'";
 				return $query_object;
 			}
 		}
@@ -831,17 +948,17 @@ class component_date extends component_common {
 		$RecordObj		= new RecordObj_dd($component_tipo);
 		$properties		= $RecordObj->get_properties();
 		$date_mode		= isset($properties->date_mode) ? $properties->date_mode : 'date';
-        	#dump($query_object, ' date_mode ++ '.to_string($date_mode));
+			#dump($query_object, ' date_mode ++ '.to_string($date_mode));
 
 		$query_object->component_path = ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
 		$query_object->type 		  = 'jsonb';
 
-        switch ($date_mode) {
-        	case 'date':
-        	case 'range':
+		switch ($date_mode) {
+			case 'date':
+			case 'range':
 
-        		# SEARCH_OBJECT 1
-	        		// Extract directly from calculated time in javascript
+				# SEARCH_OBJECT 1
+					// Extract directly from calculated time in javascript
 						$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
 						$operator = !empty($q_operator) ? trim($q_operator) : '=';
 						$dd_date  = isset($q_object->start) ? new dd_date($q_object->start) : null;
@@ -996,11 +1113,11 @@ class component_date extends component_common {
 
 				// Add query_object
 				$final_query_object = $query_object;
-        		break;
+				break;
 
-        	case 'period':
+			case 'period':
 
-        		/* En proceso ...
+				/* En proceso ...
 				$q_clean  = isset($q_object->time) ? $q_object->time : 0;
 				$operator = isset($q_object->op) ? $q_object->op : '=';
 
@@ -1020,9 +1137,9 @@ class component_date extends component_common {
 				$query_object->array_elements 	= $group_array_elements;
 
 				$final_query_object = $query_object;*/
-        		break;
+				break;
 
-        	case 'time':
+			case 'time':
 
 				// Extract directly from calculated time in javascript
 				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
@@ -1068,7 +1185,7 @@ class component_date extends component_common {
 				$query_object->array_elements 	= $group_array_elements;
 
 				$final_query_object = $query_object;
-        		break;
+				break;
 
 		}//end switch ($date_mode)
 		#dump($final_query_object, ' final_query_object ++ '.to_string());
