@@ -30,19 +30,15 @@ render_list_component_email.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(self.divisor)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
+			autoload		: false,
+			value_string	: value_string
 		})
-
-	// Value as string
-		const value_string = value.join(self.divisor)
-
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper

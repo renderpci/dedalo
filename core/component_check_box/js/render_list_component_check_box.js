@@ -23,29 +23,24 @@ export const render_list_component_check_box = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_check_box.prototype.list = async function() {
 
 	const self = this
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(self.divisor)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : true
+			// autoload. On true, load data from API when user dblclick to edit inline
+			autoload		: true,
+			value_string	: value_string
 		})
-
-	// Value as string
-		const value_string = value.join(self.divisor)
-
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper
 }//end list
-
-

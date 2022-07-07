@@ -23,24 +23,23 @@ export const render_list_component_number = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_number.prototype.list = async function() {
 
 	const self = this
 
 	// short vars
-		const data = self.data
-
-	// Value as string
-		const value_string = data.value.join(self.divisor)
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(self.divisor)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
-			value_string : value_string
+			autoload		: false,
+			value_string	: value_string
 		})
+
 
 	return wrapper
 }//end list
-
-

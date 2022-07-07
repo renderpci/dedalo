@@ -23,29 +23,23 @@ export const render_list_component_filter_records = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_filter_records.prototype.list = function() {
 
 	const self = this
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(' | ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : true
+			autoload		: false,
+			value_string	: value_string
 		})
-
-	// Value as string
-		const value_string = value.join(' | ')
-
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper
 }//end list
-
-

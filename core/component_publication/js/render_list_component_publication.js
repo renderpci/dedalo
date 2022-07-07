@@ -23,14 +23,16 @@ export const render_list_component_publication = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_publication.prototype.list = async function() {
 
 	const self = this
 
 	// short vars
-		const value_string = self.data.value
+		const data			= self.data || {}
+		const value			= data.value || ''
+		const value_string	= value
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -38,7 +40,6 @@ render_list_component_publication.prototype.list = async function() {
 			value_string	: value_string
 		})
 
+
 	return wrapper
 }//end list
-
-

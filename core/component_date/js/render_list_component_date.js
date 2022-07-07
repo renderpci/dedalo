@@ -22,17 +22,20 @@ export const render_list_component_date = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_date.prototype.list = async function() {
 
 	const self = this
 
-	// Value as string
-		const value_string = self.data.value
+	// short vars
+		const data			= self.data || {}
+		const value			= data.value || ''
+		const value_string	= value
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
+			// autoload. On true, load data from API when user dblclick to edit inline
 			autoload		: true,
 			value_string	: value_string
 		})
@@ -40,5 +43,3 @@ render_list_component_date.prototype.list = async function() {
 
 	return wrapper
 }//end list
-
-
