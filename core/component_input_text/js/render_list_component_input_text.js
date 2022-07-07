@@ -45,5 +45,3 @@ render_list_component_input_text.prototype.list = async function() {
 
 	return wrapper
 }//end list
-
-

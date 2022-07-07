@@ -2517,6 +2517,7 @@ abstract class component_common extends common {
 	################################## SEARCH 2 ########################################################
 
 
+
 	/**
 	* GET_SEARCH_QUERY
 	* Builds a search_query taking care of split multiple values and conform output objects

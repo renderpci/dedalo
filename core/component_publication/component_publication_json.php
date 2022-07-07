@@ -43,7 +43,7 @@
 		}
 
 		// data item
-		$item  = $this->get_data_item($value);
+		$item = $this->get_data_item($value);
 
 		// datalist
 		if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
@@ -51,7 +51,6 @@
 		}
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 
