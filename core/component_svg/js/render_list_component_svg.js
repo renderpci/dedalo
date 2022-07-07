@@ -51,7 +51,8 @@ render_list_component_svg.prototype.list = function() {
 export const get_value_fragment = function(self) {
 
 	// value
-	const value	= self.data.value || []
+	const data	= self.data || {}
+	const value	= data.value || []
 
 	const fragment = new DocumentFragment()
 
