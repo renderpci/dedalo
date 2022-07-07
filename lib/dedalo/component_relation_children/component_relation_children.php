@@ -1,12 +1,12 @@
 <?php
-	
+
 	# CONTROLLER
 
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$propiedades			= $this->get_propiedades();
-	$modo					= $this->get_modo();		
+	$modo					= $this->get_modo();
 	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
@@ -20,18 +20,18 @@
 	$context 				= $this->get_context();
 	$relation_type 			= $this->get_relation_type();
 	$file_name 				= $modo;
-	
+
 	if($permissions===0) return null;
-	
+
 	switch($modo) {
-		
+
 		case 'edit'	:
 				# Verify component content record is inside section record filter
-				if ($this->get_filter_authorized_record()===false) return null; //($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) 
+				if ($this->get_filter_authorized_record()===false) return null; //($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false)
 
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
-				$component_info 		= $this->get_component_info('json');			
+				$component_info 		= $this->get_component_info('json');
 				$dato_string			= json_handler::encode($dato);
 
 				$ar_values = [];
@@ -43,9 +43,9 @@
 				}
 
 				# target_section_tipo
-				$target_section_tipo = $section_tipo;				
+				$target_section_tipo = $section_tipo;
 				if (isset($propiedades->target_values)) {
-					# target_section_tipo is the value of component defined in propiedades->target_values 
+					# target_section_tipo is the value of component defined in propiedades->target_values
 					$source_component_tipo = reset($propiedades->target_values);
 						#dump($source_component_tipo, ' $source_component_tipo ++ '.to_string($tipo));
 					$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo, true);
@@ -59,9 +59,9 @@
 				}
 
 				# Parent area is model (default is false)
-				# hierarchy_sections			
+				# hierarchy_sections
 				if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-					
+
 					if ($tipo===DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO) {
 						# model
 						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
@@ -69,27 +69,27 @@
 						# term
 						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 					}
-					
+
 					$_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($_current_target_tipo,true);
 					$_component 	= component_common::get_instance($_modelo_name,
 																	 $_current_target_tipo,
 																	 $parent,
 																	 'list',
 																	 $lang,
-																	 $section_tipo);					
+																	 $section_tipo);
 					$hierarchy_sections = (array)$_component->get_dato(); // Is array
-				
+
 				}else{
-					
+
 					$hierarchy_types 	= isset($propiedades->source->hierarchy_types) 	  ? $propiedades->source->hierarchy_types 	 : null;
 					$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
-		
+
 					# Resolve hierarchy_sections for speed
 					if (!empty($hierarchy_types)) {
 						$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
 						$hierarchy_types 	= null; // Remove filter by type because we know all hierarchy_sections now
 					}
-					
+
 					# Fallback to default (self section)
 					if (empty($hierarchy_sections)) {
 						$hierarchy_sections = [$section_tipo];
@@ -98,16 +98,23 @@
 
 				// service autocomplete options
 					$search_sections = $hierarchy_sections;
-				
 
-				# search_tipos
-				$search_tipos = [];
-				foreach ($hierarchy_sections as $current_section_tipo) {
-					$current_term_tipo 	= hierarchy::get_element_tipo_from_section_map( $current_section_tipo, 'term' );
-					if (!in_array($current_term_tipo, $search_tipos)) {
-						$search_tipos[] = $current_term_tipo;
+				// search_tipos
+					$search_tipos = [];
+					foreach ($hierarchy_sections as $current_section_tipo) {
+						$current_term_tipo = hierarchy::get_element_tipo_from_section_map( $current_section_tipo, 'term' );
+						if (is_array($current_term_tipo)) {
+							foreach ((array)$current_term_tipo as $term_tipo) {
+								if (!in_array($term_tipo, $search_tipos)) {
+									$search_tipos[] = $term_tipo;
+								}
+							}
+						}else{
+							if (!in_array($current_term_tipo, $search_tipos)) {
+								$search_tipos[] = $current_term_tipo;
+							}
+						}
 					}
-				}
 
 				# LIMIT (Max items allow. 0 for unlimited)
 				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 0;
@@ -131,7 +138,7 @@
 
 				#if(SHOW_DEBUG===true && DEVELOPMENT_SERVER===true) {
 				#	$this->build_list_data();
-				#}				
+				#}
 				break;
 
 		case 'tool_time_machine' :
@@ -139,13 +146,13 @@
 				$input_name = "{$tipo}_{$parent}_tm";
 				$file_name 	= 'edit';
 				break;
-						
+
 		case 'search':
 				# dato is injected by trigger search wen is needed
 				$dato 		= isset($this->dato) ? $this->dato : [];
 				$dato_json 	= json_encode($dato);
-				
-				$ar_valor 	= [];				
+
+				$ar_valor 	= [];
 				foreach ((array)$dato as $key => $current_locator) {
 					$current_locator_json = json_encode($current_locator);
 					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
@@ -153,7 +160,7 @@
 					$ar_valor[$current_locator_json] = $value;
 				}
 
-				$id_wrapper 	= 'wrapper_'.$identificador_unico;				
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info = $this->get_component_info('json');
 
 				# q_operator is injected by trigger search2
@@ -172,7 +179,7 @@
 						# term
 						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 					}
-					
+
 					$_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($_current_target_tipo,true);
 					$_component 	= component_common::get_instance($_modelo_name,
 																	 $_current_target_tipo,
@@ -180,7 +187,7 @@
 																	 'list',
 																	 $lang,
 																	 $section_tipo);
-					
+
 					$hierarchy_sections = (array)$_component->get_dato(); // Is array
 				}else{
 					$hierarchy_sections = [$section_tipo];
@@ -212,11 +219,11 @@
 				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 				break;
-					
+
 		case 'portal_list' :
 		case 'list_tm' :
 				$file_name = 'list';
-						
+
 		case 'list'	:
 				$valor	= $this->get_valor();
 				break;
@@ -225,7 +232,7 @@
 				# Force file_name to 'list'
 				$file_name  = 'list';
 				break;
-		
+
 		case 'tool_lang':
 				return null;
 				break;
@@ -249,7 +256,7 @@
 				break;
 
 	}
-		
+
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
