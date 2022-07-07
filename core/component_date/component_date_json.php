@@ -30,32 +30,25 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
+		// value
 		switch ($modo) {
 			case 'list':
-				$value = $this->get_valor();
+				$value = $this->get_list_value();
 				break;
 
 			case 'edit':
 			default:
 				// Building real value
-					$value = $this->get_dato();
-					if (!empty($value)) {
-						// process dato ?
-					}//end if (!empty($dato))
+				$value = $this->get_dato();
 				break;
 		}
-
-
-
 
 		// data item
 		$item = $this->get_data_item($value);
 
 		$data[] = $item;
-
 	}//end if $permissions>0
 
 

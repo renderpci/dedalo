@@ -30,16 +30,15 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
 		// value - this value will not be sent to the front end in any case
 		$value = [];
 
 		// data item
-		$item  = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

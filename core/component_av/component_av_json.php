@@ -45,15 +45,21 @@
 
 	if($options->get_data===true && $permissions>0) {
 
-		// value as array always
-			$value = $this->get_dato();
-			if (!is_array($value)) {
-				$value = [$value];
+		// value
+			switch ($modo) {
+				case 'list':
+					$value = $this->get_list_value();
+					break;
+
+				case 'edit':
+				default:
+					$value = $this->get_dato();
+					break;
 			}
 
-		// data item
+		// item
 			$item = $this->get_data_item($value);
-		// add useful parameters
+			// add useful properties
 			// posterframe_url
 				$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
 			// default quality video URL (usually from 404)

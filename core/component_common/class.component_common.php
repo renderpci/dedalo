@@ -2185,6 +2185,10 @@ abstract class component_common extends common {
 							if (!empty($dato_fb[$key])) break; # Stops when first data is found
 						}
 					}
+				// empty case
+					if (empty($dato_fb[$key])) {
+						$dato_fb[$key] = null;
+					}
 			}else{
 				$dato_fb[$key] = $value;
 			}
@@ -3213,6 +3217,117 @@ abstract class component_common extends common {
 
 		return $path;
 	}//end get_order_path
+
+
+
+	/**
+	* GET_LIST_VALUE
+	* Unified value list output
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value(object $options=null) : ?array {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		$list_value = [];
+		foreach ($dato as $item) {
+
+			$list_value[] = !is_scalar($item)
+				? (!empty($item) ? json_encode($item) : $item) // array, object, resource, null
+				: $item; //  int, float, string, bool
+		}
+
+		return $list_value;
+	}//end get_list_value
+
+
+
+	/**
+	* GET_LIST_VALUE_LARGE_TEXT
+	* Shared by component_text_area and component_html_text
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value_large_text(object $options=null) : ?array {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		$max_chars = 200;
+
+		$list_value = [];
+		foreach ($dato as $current_value) {
+
+			// add
+			$list_value[] = !empty($current_value)
+				? common::truncate_html(
+					$max_chars,
+					$current_value,
+					true // isUtf8
+				  )
+				: '';
+		}
+
+		return $list_value;
+	}//end get_list_value_large_text
+
+
+
+	/**
+	* GET_FALLBACK_LIST_VALUE
+	* Used by component_text_area and component_html_text to
+	* generate fallback versions of current empty values
+	* @param object $options
+	* @return array|null $list_value
+	*/
+	public function get_fallback_list_value(object $options=null) : ?array {
+
+		// options
+			$max_chars = $options->max_chars ?? 700;
+
+		// dato_fallback. array of each dato array element using fallback
+			$dato_fallback = component_common::extract_component_dato_fallback(
+				$this,
+				DEDALO_DATA_LANG, // lang
+				DEDALO_DATA_LANG_DEFAULT // main_lang
+			);
+			if (empty($dato_fallback)) {
+				return null;
+			}
+
+		// list_value. Iterate dato_fallback and truncate long text
+			$list_value = [];
+			foreach ($dato_fallback as $current_value) {
+
+				$value = !empty($current_value)
+					? common::truncate_html($max_chars, $current_value, true) // $maxLength, $html, $isUtf8=true
+					: null;
+
+				// add final ... when is truncated
+					if (!empty($value) && strlen($value)<strlen($current_value)) {
+						$value .= ' ...';
+					}
+
+				$list_value[] = $value;
+			}
+
+		return $list_value;
+	}//end get_fallback_list_value
+
 
 
 

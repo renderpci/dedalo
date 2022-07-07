@@ -52,7 +52,7 @@
 		// value
 			switch ($modo) {
 				case 'list':
-					$value = $this->get_valor(null,'array');
+					$value				= $this->get_list_value();
 					break;
 
 				case 'edit':

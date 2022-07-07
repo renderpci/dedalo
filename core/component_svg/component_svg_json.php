@@ -53,29 +53,25 @@
 		// 	$svg_item->url = $this->get_url(false, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 		// 	$svg_item->quality = DEDALO_SVG_QUALITY_DEFAULT;
 
-		// $value[] = $svg_item;
-
-		// value as array always
-			$value = $this->get_dato();
-			if (!is_null($value) && !is_array($value)) {
-				$value = [$value];
-			}
-
-		// get the quality url of the available image files
+		// value
 			switch ($modo) {
-				case 'edit':
-					$datalist = $this->get_files_info();
+				case 'list':
+					$value = $this->get_list_value();
+
+					// datalist
+						// files_info. For fast list we add directly the default image
+						$data_item = new stdClass();
+							$data_item->url		= $this->get_url(DEDALO_SVG_QUALITY_DEFAULT, false, false, false);
+							$data_item->quality	= DEDALO_SVG_QUALITY_DEFAULT;
+						$datalist = [$data_item];
 					break;
 
-				case 'list':
+				case 'edit':
 				default:
-					// files_info. For fast list we add directly the default image
-						$quality	= DEDALO_SVG_QUALITY_DEFAULT;
-						$url		= $this->get_url($quality, false, false, false);
-						$image_item = new stdClass();
-							$image_item->url		= $url;
-							$image_item->quality	= $quality;
-						$datalist = [$image_item];
+					$value = $this->get_dato();
+
+					// datalist. get the quality url of the available image files
+						$datalist = $this->get_files_info();
 					break;
 			}
 
