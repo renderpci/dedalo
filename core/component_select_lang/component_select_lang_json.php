@@ -52,36 +52,22 @@
 		// value
 			switch ($modo) {
 				case 'list':
-					$value = $this->get_valor();
+					$value = $this->get_list_value();
 					break;
+
 				case 'edit':
 				default:
-					$value							= $this->get_dato();
-					// datalist
-					$ar_all_project_select_langs	= DEDALO_PROJECTS_DEFAULT_LANGS;
-					$datalist = [];
-					foreach ((array)$ar_all_project_select_langs as $key => $item) {
-
-						$label		= lang::get_name_from_code($item);
-						$code		= $item;
-						$list_value	= lang::get_lang_locator_from_code($item);
-
-						$item_value = new stdClass();
-							$item_value->value		= $list_value;
-							$item_value->label		= $label;
-							$item_value->section_id	= $code;
-
-						$datalist[] = $item_value;
-					}
+					$value				= $this->get_dato();
+					$ar_list_of_values	= $this->get_ar_list_of_values();
 					break;
 			}
 
 		// data item
 			$item = $this->get_data_item($value);
 
-		// datalist
-			if (isset($datalist)) {
-				$item->datalist = $datalist;
+			// datalist
+			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
+				$item->datalist = $ar_list_of_values->result;
 			}
 
 		$data[] = $item;

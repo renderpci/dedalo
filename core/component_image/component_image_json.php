@@ -42,51 +42,27 @@
 
 	if($options->get_data===true && $permissions>0) {
 
-		// value as array always
-			$value = $this->get_dato();
-			if (!is_array($value)) {
-				$value = [$value];
-			}
-
-		// get the quality url of the available image files
+		// value
 			switch ($modo) {
-				case 'edit':
-					$datalist = $this->get_files_info();
+				case 'list':
+					$value = $this->get_list_value();
+
+					// datalist
+						// files_info. For fast list we add directly the default image
+						$data_item = new stdClass();
+							$data_item->url		= $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT, false, false, false);
+							$data_item->quality	= DEDALO_IMAGE_QUALITY_DEFAULT;
+						$datalist = [$data_item];
 					break;
 
-				case 'list':
+				case 'edit':
 				default:
-					// $valid_urls			= [];
-					// $test_file			= false;
-					// $absolute			= false;
-					// $image_ar_quality	= [DEDALO_IMAGE_QUALITY_DEFAULT];
-					// foreach ($image_ar_quality as $current_quality) {
+					$value = $this->get_dato();
 
-					// 	if($current_quality===DEDALO_IMAGE_THUMB_DEFAULT) continue;
-
-					// 	$default_add = $current_quality===DEDALO_IMAGE_QUALITY_DEFAULT ? true : false;
-
-					// 	$current_url = $this->get_image_url($current_quality, $test_file, $absolute, $default_add); // $quality=false, $test_file=true, $absolute=false, $default_add=true
-					// 	if ($current_url!==false) {
-
-					// 		$image_item = new stdClass();
-					// 			$image_item->url 	 = $current_url;
-					// 			$image_item->quality = $current_quality;
-
-					// 		$valid_urls[] = $image_item;
-					// 	}
-					// }
-
-					// files_info. For fast list we add directly the default image
-						$quality	= DEDALO_IMAGE_QUALITY_DEFAULT;  // DEDALO_IMAGE_QUALITY_DEFAULT | DEDALO_IMAGE_THUMB_DEFAULT
-						$url		= $this->get_image_url($quality, false, false, false);
-						$image_item = new stdClass();
-							$image_item->url		= $url;
-							$image_item->quality	= $quality;
-						$datalist = [$image_item];
+					// datalist. get the quality url of the available image files
+						$datalist = $this->get_files_info();
 					break;
 			}
-
 
 		// data item
 			$item = $this->get_data_item($value);

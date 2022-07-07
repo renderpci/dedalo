@@ -39,28 +39,27 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
-		switch ($modo) {
+		// value
+			switch ($modo) {
+				case 'list':
+					$value		= $this->get_list_value();
+					break;
 
-			case 'list':
-				$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-				break;
-
-			case 'edit':
-			default:
-				$value		= $this->get_dato();
-				$datalist	= $this->get_datalist();
-				break;
-		}
+				case 'edit':
+				default:
+					$value		= $this->get_dato();
+					$datalist	= $this->get_datalist();
+					break;
+			}
 
 		// data item
 			$item = $this->get_data_item($value);
 				$item->parent_tipo			= $this->get_tipo();
 				$item->parent_section_id	= $this->get_section_id();
 
-		// datalist
+			// datalist
 			if (isset($datalist)) {
 				$item->datalist = $datalist;
 			}

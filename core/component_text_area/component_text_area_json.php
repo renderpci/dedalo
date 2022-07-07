@@ -84,24 +84,14 @@
 
 	if($options->get_data===true && $permissions>0){
 
-		$dato = $this->get_dato();
-
 		// value
 			switch ($modo) {
 
 				case 'list':
-					$value	= component_common::extract_component_dato_fallback($this, DEDALO_DATA_LANG, DEDALO_DATA_LANG_DEFAULT);
-					$total	= count($value)>0 ? count($value) : 1;
-					foreach ($value as $key => $current_value) {
-						$value[$key] = !empty($current_value)
-							? common::truncate_html( ceil(200/$total), $current_value, true)
-							: '';
-					}
-					// check value fallback
-					if (!empty($dato) && (empty($value[0]) && $value[0]!=='')) {
-						$value[0] = 'Error on extract_component_dato_fallback ['.$lang.'] for '.json_encode($dato);
-					}
-					$fallback_value = null; // not necessary here because value is already fallback
+					$value			= $this->get_list_value();
+					$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
+						? $this->get_fallback_list_value((object)['max_chars'=>200])
+						: null;
 					break;
 
 				case 'edit':
@@ -137,19 +127,10 @@
 							$tags_notes = $this->get_annotations();
 						}
 
-
-					$value			= $dato;
-					$fallback_value	= (empty($value) || isset($value[0]) && empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">') || !isset($patata))
-						? (function(){
-							$dato_fallback	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-							$value			= !empty($dato_fallback[0])
-								? common::truncate_html(700, $dato_fallback[0], true) // $maxLength, $html, $isUtf8=true
-								: '';
-							if (!empty($value) && strlen($value)<strlen($dato_fallback[0])) {
-								$value .= ' ...';
-							}
-							return $value;
-						  })()
+					$value = $this->get_dato();
+					// fallback_value. Is used to create a placeholder to display a reference data to the user
+					$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
+						? $this->get_fallback_list_value((object)['max_chars'=>700])
 						: null;
 					break;
 			}

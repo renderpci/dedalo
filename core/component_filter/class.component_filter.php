@@ -932,4 +932,40 @@ class component_filter extends component_relation_common {
 
 
 
+	/**
+	* GET_LIST_VALUE
+	* Unified value list output
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value(object $options=null) : ?array {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		// (!) Note that only user authorized projects will be added, discarding others
+		// maybe this behavior must be changed in future
+		$user_id		= navigator::get_user_id();
+		$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
+
+		$list_value = [];
+		foreach ($ar_projects as $item) {
+
+			$locator = $item->locator;
+			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+				$list_value[] = $item->label;
+			}
+		}
+
+		return $list_value;
+	}//end get_list_value
+
+
+
 }//end class component_filter

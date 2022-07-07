@@ -2382,4 +2382,22 @@ class component_text_area extends component_common {
 
 
 
+	/**
+	* GET_LIST_VALUE
+	* (!) Identical to component_text_area method
+	* Unified value list output
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value(object $options=null) : ?array {
+
+		return $this->get_list_value_large_text($options);
+	}//end get_list_value
+
+
+
 }//end class component_text_area

@@ -34,18 +34,25 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
-		$value = $this->get_dato();
+		// value
+			switch ($modo) {
+				case 'list':
+					$value = $this->get_list_value();
+					break;
+
+				default:
+					$value = $this->get_dato();
+					break;
+			}
 
 		// data item
-		$item  = $this->get_data_item($value);
-		$item->parent_tipo 			= $this->get_tipo();
-		$item->parent_section_id 	= $this->get_section_id();
+			$item = $this->get_data_item($value);
+				$item->parent_tipo			= $this->get_tipo();
+				$item->parent_section_id	= $this->get_section_id();
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

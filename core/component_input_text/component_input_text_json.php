@@ -40,25 +40,33 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
+		// value
 		switch ($modo) {
 
 			case 'list':
-				$value			= $this->get_dato();
-				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$value			= $this->get_list_value();
+				$fallback_value	= component_common::extract_component_dato_fallback(
+					$this,
+					DEDALO_DATA_LANG, // lang
+					DEDALO_DATA_LANG_DEFAULT // main_lang
+				);
 				break;
 
 			case 'search':
-				$value	= [];
+				$value			= [];
 				$fallback_value	= false;
 				break;
 
 			case 'edit':
 			default:
 				$value			= $this->get_dato();
-				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$fallback_value	= component_common::extract_component_dato_fallback(
+					$this,
+					DEDALO_DATA_LANG, // lang
+					DEDALO_DATA_LANG_DEFAULT // main_lang
+				);
 				break;
 		}
 

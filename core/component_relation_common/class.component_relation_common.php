@@ -2150,4 +2150,36 @@ class component_relation_common extends component_common {
 
 
 
+	/**
+	* GET_LIST_VALUE
+	* Unified value list output
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value(object $options=null) : ?array {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		$list_value = [];
+		$ar_list_of_values = $this->get_ar_list_of_values(DEDALO_DATA_LANG);
+		foreach ($ar_list_of_values->result as $key => $item) {
+
+			$locator = $item->value;
+			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+				$list_value[] = $item->label;
+			}
+		}
+
+		return $list_value;
+	}//end get_list_value
+
+
+
 }//end class component_relation_common
