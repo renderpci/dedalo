@@ -289,31 +289,34 @@ export const service_ckeditor = function() {
 
 				const click_element = data.target.name
 
-					const item = data.target.parent._attrs
-					const tag_obj = {
-						node_name : data.target.name,
-						// dataset
-						type	: item.get('data-type'),
-						tag_id	: item.get('data-tag_id'),
-						state	: item.get('data-state'),
-						label	: item.get('data-label'),
-						data	: item.get('data-data')
+				// check if the click element was inside a empty editor
+				if(click_element==='div' && !data.target.parent){
+					return
+				}
 
-					}
-					if (custom_events.click) {
-						custom_events.click(evt, tag_obj)
-					}
+				const item = data.target.parent._attrs
+				const tag_obj = {
+					node_name : data.target.name,
+					// dataset
+					type	: item.get('data-type'),
+					tag_id	: item.get('data-tag_id'),
+					state	: item.get('data-state'),
+					label	: item.get('data-label'),
+					data	: item.get('data-data')
+
+				}
+				if (custom_events.click) {
+					custom_events.click(evt, tag_obj)
+				}
+
+				const options = (click_element !== 'img')
+					? {selection : self.get_selection()}
+					: {selection : ''}
 
 
-				// }else{
-					const options = (click_element !== 'img')
-						? {selection : self.get_selection()}
-						: {selection : ''}
-
-
-					if (custom_events.MouseUp) {
-						custom_events.MouseUp(evt, options)
-					}
+				if (custom_events.MouseUp) {
+					custom_events.MouseUp(evt, options)
+				}
 
 			});//end click event
 
