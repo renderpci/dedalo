@@ -672,13 +672,13 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 
 /**
-* BUILD_VIEW_TAG
+* BUILD_VIEW_TAG_OBJ
 * Create a view object from tag info (type, state, label, data, id)
 * @param object data_tag
 * @param int tag_id
-* @return object view_tag
+* @return object view_tag_obj
 */
-component_text_area.prototype.build_view_tag = function(data_tag, tag_id) {
+component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 
 	const type			= data_tag.type
 	const state			= data_tag.state
@@ -720,7 +720,7 @@ component_text_area.prototype.build_view_tag = function(data_tag, tag_id) {
 	// 	data	: (type==='tc') ? tag_id : data
 	// }
 
-	const view_tag ={
+	const view_tag_obj ={
 		src			: src,
 		id			: id,
 		class_name	: class_name,
@@ -732,8 +732,8 @@ component_text_area.prototype.build_view_tag = function(data_tag, tag_id) {
 		data		: (type==='tc') ? tag_id : data
 	}
 
-	return view_tag
-}//end build_view_tag
+	return view_tag_obj
+}//end build_view_tag_obj
 
 
 
@@ -792,13 +792,13 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 			const tag_id = parseInt(last_tag_index_id) + 1
 
 		// tag images
-			const image_in  = self.build_view_tag({
+			const image_in  = self.build_view_tag_obj({
 				type	: "indexIn",
 				state	: tag_state,
 				label	: "label in " + tag_id,
 				data	: ""
 			}, tag_id)
-			const image_out  = self.build_view_tag({
+			const image_out  = self.build_view_tag_obj({
 				type	: "indexOut",
 				state	: tag_state,
 				label	: "label in " + tag_id,
