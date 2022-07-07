@@ -330,7 +330,7 @@ class component_filter extends component_relation_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -415,6 +415,7 @@ class component_filter extends component_relation_common {
 			');
 			$current_search = search::get_instance($sqo);
 			$search_result  = $current_search->search();
+
 		// typology groupers
 			$ar_groupers = [];
 			foreach ($search_result->ar_records as $row) {
@@ -441,6 +442,7 @@ class component_filter extends component_relation_common {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
 			}
+
 
 		return $ar_datalist;
 	}//end get_datalist

@@ -53,7 +53,7 @@ class component_filter_master extends component_filter {
 
 	/**
 	* PROPAGATE_FILTER
-	* Catch calls to parent method
+	* Only to catch calls to parent method
 	*/
 	public function propagate_filter() : bool {
 		# Nothing to do

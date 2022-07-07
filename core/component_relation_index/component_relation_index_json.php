@@ -82,7 +82,7 @@
 
 				$data[] = $item;
 
-			//used to check if the component has the request_config of the section_tipo
+			// used to check if the component has the request_config of the section_tipo
 			$cache_request_config = [];
 
 			foreach ($value as $locator) {
@@ -132,7 +132,7 @@
 					$context[] = $current_context;
 				}
 
-				$ar_subdata		= $section_json->data;
+				$ar_subdata	= $section_json->data;
 				foreach ($ar_subdata as $sub_value) {
 					$sub_value->parent = $tipo;
 					$data[] = $sub_value;
@@ -157,9 +157,6 @@
 			// 		$context = array_merge($context, $section_json->context);
 			// 	}
 			// }
-
-
-
 
 
 			// subcontext data from layout_map items

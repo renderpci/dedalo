@@ -159,20 +159,20 @@
 			$item = $this->get_data_item($value);
 
 			// another data to add
-			$item->parent_tipo			= $this->get_tipo();
-			$item->parent_section_id	= $this->get_section_id();
-			$item->fallback_value		= $fallback_value;
-			// optional data to add
-			if(isset($properties->tags_persons) && $modo==='edit') {
-				$item->related_sections	= $related_sections;
-				$item->tags_persons		= $tags_persons;
-			}
-			if(isset($properties->tags_index) && $modo==='edit') {
-				$item->tags_index = $tags_index;
-			}
-			if(isset($properties->tags_notes) && $modo==='edit') {
-				$item->tags_notes = $tags_notes;
-			}
+				$item->parent_tipo			= $this->get_tipo();
+				$item->parent_section_id	= $this->get_section_id();
+				$item->fallback_value		= $fallback_value;
+				// optional data to add
+				if(isset($properties->tags_persons) && $modo==='edit') {
+					$item->related_sections	= $related_sections;
+					$item->tags_persons		= $tags_persons;
+				}
+				if(isset($properties->tags_index) && $modo==='edit') {
+					$item->tags_index = $tags_index;
+				}
+				if(isset($properties->tags_notes) && $modo==='edit') {
+					$item->tags_notes = $tags_notes;
+				}
 
 
 		$data[] = $item;

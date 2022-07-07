@@ -64,10 +64,10 @@
 		// data item
 			$item = $this->get_data_item($value);
 
-		// datalist
-			if (isset($datalist)) {
-				$item->datalist = $datalist;
-			}
+			// datalist
+				if (isset($datalist)) {
+					$item->datalist = $datalist;
+				}
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

@@ -18,6 +18,7 @@ export const render_mini_component_semantic_node = function() {
 }//end render_mini_component_semantic_node
 
 
+
 /**
 * MINI
 * Render node to be used in current mode
@@ -42,5 +43,3 @@ render_mini_component_semantic_node.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-

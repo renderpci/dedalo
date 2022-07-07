@@ -44,5 +44,3 @@ render_mini_component_input_text.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-

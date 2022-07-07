@@ -138,16 +138,30 @@ class component_external extends component_common {
 	*/
 	public function get_dato() {
 
-		//$dato = parent::get_dato();
-
-		// load data from remote
+		// load data from remote returns a object as
+			// {
+			//     "id": "001327065",
+			//     "title": "Arse : Boletín del Centro Arqueológico Saguntino (Sagunto).",
+			//     "authors": {
+			//         "primary": [],
+			//         "secondary": [],
+			//         "corporate": []
+			//     },
+			//     "publicationDates": [
+			//         "2011"
+			//     ],
+			//     "recordPage": "/Record/001327065",
+			//     "physicalDescriptions": [
+			//         "213 p."
+			//     ]
+			// }
 			$row_data = $this->load_data_from_remote();
 
 		// properties
 			$properties = $this->get_properties();
 
 		// dato
-			$dato = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
+			$value = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
 				if($item->local==='dato') {
 					$name = $item->remote;
 					if (isset($row_data->{$name})) {
@@ -179,6 +193,10 @@ class component_external extends component_common {
 				}
 				return $carry;
 			});
+
+		$dato = is_array($value)
+			? $value
+			: [$value];
 
 
 		return $dato;

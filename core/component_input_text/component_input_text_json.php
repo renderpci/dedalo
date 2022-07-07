@@ -1,6 +1,6 @@
 <?php
 // JSON data component controller
-if(SHOW_DEBUG===true) $start_time = start_time();
+// if(SHOW_DEBUG===true) $start_time = start_time();
 // error_log('input text json .......................................................');
 
 
@@ -92,12 +92,12 @@ if(SHOW_DEBUG===true) $start_time = start_time();
 				// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
 
 		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+			// if(SHOW_DEBUG===true) {
+			// 	$debug = new stdClass();
+			// 		$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
 
-				$item->debug = $debug;
-			}
+			// 	$item->debug = $debug;
+			// }
 
 
 		$data[] = $item;
