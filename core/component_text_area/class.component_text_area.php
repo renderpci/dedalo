@@ -121,7 +121,7 @@ class component_text_area extends component_common {
 	*  SET_DATO
 	* @param array $dato
 	* 	Dato now is multiple. For this expected type is array
-	*	but in some cases can be an array json encoded or some rare times a plain string
+	*	but in some cases can be an array json encoded or some rare times as plain string
 	*/
 	public function set_dato($dato) {
 
@@ -2353,6 +2353,10 @@ class component_text_area extends component_common {
 								break;
 						}
 					}
+
+					// update the <br> tag to <p> and </p>, the new editor, ckeditor, it doesn't use <br> as return. (<br> tags are deprecated)
+						$format_dato	= '<p>'.$dato.'</p>';
+						$dato			= preg_replace('/^(<\/?br>)|(<\/?br>)$/gmi', '</p><p>', $format_dato);
 
 					// fix final dato with new format as array
 						$new_dato = [$dato];
