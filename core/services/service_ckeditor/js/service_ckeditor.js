@@ -27,6 +27,12 @@ export const service_ckeditor = function() {
 
 	/**
 	* INIT
+	* Get the options of the caller that do the initialization and set the instance
+	* the caller is a component_text_area and the editor is a instance of the ckeditor
+	* CkEditor is compiled with custom plug-in: dedalo_tags to upcast and downcast the dédalo tags into the ckeditor model
+	* 	See the ckeditor.js file in ../libs_dev/ckeditor to change the conversion tags
+	* Editor load the core and common commands and plugins from ckEditor but Dédalo will not use the ckEditor user interface
+	* the interface is created inside the toolbar_container with custom icons and functionalities
 	* @param object options
 	*/
 	this.init = async function(options) {
@@ -34,12 +40,12 @@ export const service_ckeditor = function() {
 		const self = this
 
 		// options vars
-			const caller			= options.caller
-			const value_container	= options.value_container
-			const toolbar_container	= options.toolbar_container
-			const value				= options.value
-			const key				= options.key
-			const editor_config		= options.editor_config
+			const caller			= options.caller // compnent_text_area that create the instance
+			const value_container	= options.value_container // dom node to be used as value container (empty when is set by the caller)
+			const toolbar_container	= options.toolbar_container // dom node for the toolbar
+			const value				= options.value // the html data to be incorporated to the editor
+			const key				= options.key // array key of the value of the caller data
+			const editor_config		= options.editor_config // options for build custom buttons in the toolbar or custom events
 
 		// fix vars
 			self.caller				= caller
@@ -54,21 +60,12 @@ export const service_ckeditor = function() {
 		// editor.
 			// ddEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
+			// ckEditor is initiated without user interface
 			ddEditor.create( value_container, {
-
-				// toolbar: [ 'bold', 'italic', 'underline', 'undo', 'redo', '|','findAndReplace', 'sourceEditing', 'InsertImage' ],
-				// add support for images and his own attributes
-				// htmlSupport : {
-				// 	allow : [{
-				// 		name		: 'img',
-				// 		attributes	: true,
-				// 		classes		: true
-				// 	}]
-				// }
 			})
 			.then( editor => {
 
-				// fix instance
+				// fix the instance
 					self.editor = editor
 
 				// focus
@@ -79,11 +76,12 @@ export const service_ckeditor = function() {
 				// build toolbar
 					self.build_toolbar(editor_config);
 
-				// toolbar toggle
+				// toolbar toggle event
 					// show toolbar_container on user mousedown
 					// removes the toolbar_container when user click outside
 					const node = toolbar_container.parentNode
 					node.addEventListener("mousedown", function() {
+						// remove the hide class to show the toolbar
 						toolbar_container.classList.remove('hide')
 						document.body.addEventListener("mouseup", fn_remove)
 					})
@@ -101,7 +99,7 @@ export const service_ckeditor = function() {
 				// setup_events
 					self.setup_events(editor_config);
 
-
+				// Drag and Drop control
 				// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
 				// the drop event doesn't has any effect in the final position of the drop,
 				// the final check position is fired in the clipboardInput event.
@@ -162,18 +160,6 @@ export const service_ckeditor = function() {
 
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
-
-				// debug
-					// setTimeout(function(){
-					// 	self.caller.update_tag({
-					// 		type	: 'indexIn',
-					// 		tag_id	: 2,
-					// 		new_data_obj : {
-					// 			state : 'd'
-					// 		}
-					// 	})
-					// }, 2000)
-
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
@@ -187,7 +173,7 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* SAVE -OK
+	* SAVE
 	* Trigger save_value against caller sending key and value
 	* @param string previous_value
 	*	Used to compare changes in editor value.
@@ -222,16 +208,14 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* INIT_STATUS_CHANGES -OK
-	*
+	* INIT_STATUS_CHANGES
+	* Listen to new changes (to enable the "Save" button) and to pending actions.
 	*/
-	// Listen to new changes (to enable the "Save" button) and to pending actions.
 	this.init_status_changes = function() {
 
-		const self = this
-
+		const self		= this
 		const editor	= self.editor
-
+		// the editor send a event when the data is changed and change the is_dirty state
 		editor.model.document.on( 'change:data', () => {
 			self.is_dirty = true;
 		});
@@ -240,8 +224,8 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* GET_VALUE -OK
-	* Get editor value as raw string
+	* GET_VALUE
+	* Get editor value as raw html string
 	* @return string
 	*/
 	this.get_value = function() {
@@ -257,15 +241,18 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* SETUP_EVENTS -Ok
+	* SETUP_EVENTS
 	* callback when ckeditor is ready
+	* Capture the event fired in the editor and callback to the caller to be processed. See render_edit_component_text_area.js
 	* @return true
 	*/
 	this.setup_events = function(editor_config) {
 
 		const self		= this
 		const editor	= self.editor
-
+		// used to pass the the events in the editor to the custom_events in the caller
+		// defined in the render of the component_text_area with the events that it could process
+		// when the event in the editor is fired, it call to the event in the caller and do the process of data
 		const custom_events = editor_config.custom_events || {}
 
 		// focus event
@@ -286,14 +273,14 @@ export const service_ckeditor = function() {
 
 		// click event
 			editor.editing.view.document.on('click', function(evt, data ) {
-
+				// get the name of the node clicked, 'img' 'p' 'div', etc
 				const click_element = data.target.name
 
-				// check if the click element was inside a empty editor
+				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
 				if(click_element==='div' && !data.target.parent){
 					return
 				}
-
+				// get the parent of the img, it will be a span with the data of the tag in attributes
 				const item = data.target.parent._attrs
 				const tag_obj = {
 					node_name : data.target.name,
@@ -308,11 +295,10 @@ export const service_ckeditor = function() {
 				if (custom_events.click) {
 					custom_events.click(evt, tag_obj)
 				}
-
+				// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
 				const options = (click_element !== 'img')
 					? {selection : self.get_selection()}
 					: {selection : ''}
-
 
 				if (custom_events.MouseUp) {
 					custom_events.MouseUp(evt, options)
@@ -334,12 +320,15 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* SET_CONTENT -OK
+	* SET_CONTENT
+	* get the tag parameters and create the node of the dom using the ckeditor tools
+	* insert the node in the caret position
+	* @param tag_obj
+	* Tag object with all parameters for create a view node in dom
 	*/
-	this.set_content = function(view_tag){
+	this.set_content = function(tag_obj){
 
 		const self = this
-
 		const editor = self.editor
 
 		// convert the html to the model of ck_editor
@@ -351,7 +340,7 @@ export const service_ckeditor = function() {
 			// get the end position of the selection
 			const position = editor.model.document.selection.getLastPosition()
 			// create the tag_node
-			const model_tag_node = writer.createElement( 'imageInline', view_tag);
+			const model_tag_node = writer.createElement( 'imageInline', tag_obj);
 			// Insert the html in the current selection location.
 			editor.model.insertContent( model_tag_node, position );
 			// Put the selection on the inserted element.
@@ -371,20 +360,17 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* delete_tag
-	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
-	* @param ed
-	*	Text editor instance (tinyMCE)
-	* @param tag_type
-	*	Class name of image searched like 'geo'
+	* DELETE_TAG
+	* @param tag_obj
+	* Tag object with all parameters for search the tag inside the model structure of ckeditor
 	*
-	* @return int tag_id
+	* @return promise bool
 	*/
-	this.delete_tag = function(view_tag) {
+	this.delete_tag = function(tag_obj) {
 
 		// options
-			const type		= view_tag.type
-			const tag_id	= view_tag.tag_id
+			const type		= tag_obj.type
+			const tag_id	= tag_obj.tag_id
 
 		// short vars
 			const self		= this
@@ -430,8 +416,10 @@ export const service_ckeditor = function() {
 		})
 	};//end delete_tag
 
+
 	/**
-	* GET_EDITOR_CONTENT_DATA -OK
+	* GET_EDITOR_CONTENT_DATA
+	* get the full data of the editor in html format to be saved
 	* @return DOM node | false
 	*/
 	this.get_editor_content_data = function() {
@@ -457,7 +445,8 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* GET_SELECTION -OK
+	* GET_SELECTION
+	* get the html fragment, in string format, selected by the user
 	* @return string selection
 	*	Raw string without formatting
 	*/
@@ -484,25 +473,30 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* WRAP_SELECTION_WITH_TAGS -OK
+	* WRAP_SELECTION_WITH_TAGS
+	* get the tag_in and the tag out
+	* @param tag_obj_in
+	* object with the definition of the in tag options
+	* @param tag_obj_out
+	* object with the definition of the out tag options
 	* @return bool true
 	*/
-	this.wrap_selection_with_tags = function(tag_node_in, tag_node_out) {
+	this.wrap_selection_with_tags = function(tag_obj_in, tag_obj_out) {
 
 		const self 	 = this
 		const editor = self.editor
 
 		editor.model.change( writer => {
 			// convert the html to the model of ck_editor
-			// const data_tag_node_in	= editor.data.processor.toView( tag_node_in.outerHTML  );
-			// const model_tag_node_in	= editor.data.toModel( data_tag_node_in );
+			// const data_tag_obj_in	= editor.data.processor.toView( tag_obj_in.outerHTML  );
+			// const model_tag_obj_in	= editor.data.toModel( data_tag_obj_in );
 
 			// get the in position of the selection
 			const in_position = editor.model.document.selection.getFirstPosition()
 
-			const model_tag_node_in = writer.createElement( 'imageInline', tag_node_in);
+			const model_tag_obj_in = writer.createElement( 'imageInline', tag_obj_in);
 
-			editor.model.insertContent( model_tag_node_in, in_position );
+			editor.model.insertContent( model_tag_obj_in, in_position );
 
 		});
 			editor.model.change( writer => {
@@ -510,15 +504,15 @@ export const service_ckeditor = function() {
 				// get the out position of the selection
 			const out_position = editor.model.document.selection.getLastPosition()
 
-			const model_tag_node_out = writer.createElement( 'imageInline', tag_node_out );
+			const model_tag_obj_out = writer.createElement( 'imageInline', tag_obj_out );
 			// convert the html to the model of ck_editor
-			// const view_tag_node_out	= editor.data.processor.toView( tag_node_out.outerHTML );
-			// const model_tag_node_out = editor.data.toModel( view_tag_node_out );
+			// const view_tag_obj_out	= editor.data.processor.toView( tag_obj_out.outerHTML );
+			// const model_tag_obj_out = editor.data.toModel( tag_obj_out );
 
-			editor.model.insertContent( model_tag_node_out, out_position );
+			editor.model.insertContent( model_tag_obj_out, out_position );
 
-			// writer.setSelection( model_tag_node_out, 'on' );
-			// writer.setSelection( model_tag_node_in, 'on' );
+			// writer.setSelection( model_tag_obj_out, 'on' );
+			// writer.setSelection( model_tag_obj_in, 'on' );
 		});
 
 		editor.editing.view.focus();
@@ -530,6 +524,8 @@ export const service_ckeditor = function() {
 
 	/**
 	* SET_SELECTION_FROM_TAG
+	* @param tag_obj
+	* Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return
 	*/
 	this.set_selection_from_tag = function (tag_obj) {
@@ -542,10 +538,10 @@ export const service_ckeditor = function() {
 				return false
 			}
 
-		// get_tag_view_in
+		// change the type to set it as indexIn and get the view tag in
 		tag_obj.type = 'indexIn'
 		const tag_view_in	= self.get_view_tag(tag_obj)
-
+		// change the type to set it as indexOut and get the view tag out
 		tag_obj.type = 'indexOut'
 		const tag_view_out	= self.get_view_tag(tag_obj)
 
@@ -557,6 +553,10 @@ export const service_ckeditor = function() {
 
 	/**
 	* GET_SELECTION_FROM_TAGS
+	* @param tag_view_in
+	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag in
+	* @param tag_view_out
+	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag out
 	* @return
 	*/
 	this.set_selection_from_view_tags = function(tag_view_in, tag_view_out) {
@@ -583,6 +583,8 @@ export const service_ckeditor = function() {
 
 	/**
 	* GET_PAIR_TAG
+	* @param tag_obj
+	* Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return
 	*/
 	this.get_view_tag = function(tag_obj) {
@@ -640,10 +642,10 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* GET_LAST_TAG_ID -Ok
-	* Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
-	* @param ed
-	*	Text editor instance (tinyMCE)
+	* GET_LAST_TAG_ID
+	* Calculates all current text_editor editor tags id of given type (ex. 'tc') and get last used id
+	* @param options
+	*	object with the tag parameters, here use only tag_type to search in the ckeditor model structure
 	* @param tag_type
 	*	Class name of image searched like 'geo'
 	*
@@ -651,7 +653,7 @@ export const service_ckeditor = function() {
 	*/
 	this.get_last_tag_id = function(options) {
 
-		// options
+		// if the tag_type is index change to indexIn, index type is not used in the dataset of the tag and it's not parse to the model.
 			const type			= options.tag_type==='index'
 				? 'indexIn'
 				: options.tag_type
@@ -660,7 +662,7 @@ export const service_ckeditor = function() {
 			const self		= this
 			const editor	= self.editor
 
-			// root. Whole editor document to traverse
+		// root. Whole editor document to traverse
 			const root = editor.model.document.getRoot();
 
 		// range. Create a range spanning over the entire root content:
@@ -801,7 +803,7 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* SET_DIRTY -OK
+	* SET_DIRTY
 	* @param bool value
 	* @return bool
 	*/
@@ -883,12 +885,29 @@ export const service_ckeditor = function() {
 
 	/**
 	* FACTORY_EVENTS_FOR_BUTTONS
+	* @param button_obj
+	* definition of the button, it's created at render of the caller as: render_edit_component_text_area.js
+	* Like
+	* {
+	*	name			: "button_geo",
+	*	manager_editor	: false,
+	*	options	: {
+	*		tooltip	: 'Add georef',
+	*		image	: '../../core/themes/default/icons/geo.svg',
+	*		onclick	: function(evt) {
+	*			event_manager.publish('create_geo_tag_'+ self.id_base, {
+	*				caller		: self,
+	*				text_editor	: text_editor
+	*			})
+	*		}
+	*	}
+	* }
+	*
 	* @return
 	*/
 	this.factory_events_for_buttons = function(button_obj) {
 
 		const self = this
-
 		const editor = self.editor
 
 		const name		= button_obj.name
@@ -923,7 +942,6 @@ export const service_ckeditor = function() {
 		// const button = this.view.toolbarButtons[ name ];
 
 		// Clicking the buttons should execute the editor command...
-		// ...but it should not steal the focus so the editing is uninterrupted.
 		// button.onmousedown( evt => evt.preventDefault() );
 		button.addEventListener('click', function(evt){
 			// evt.preventDefault()
@@ -933,18 +951,20 @@ export const service_ckeditor = function() {
 		})
 
 		// ...but it should not steal the focus so the editing is uninterrupted.
-		// button.onmousedown( evt => evt.preventDefault() );
-		// button.addEventListener('click', evt => evt.preventDefault() )
-
 		const onValueChange = () => {
-			// button.toggleClass( 'active', command.value );
+
 			if(command.value){
 				button.classList.add('active')
 			}else{
 				button.classList.remove('active')
 			}
 		};
-
+		editor.listenTo( command, 'change:value',(evt)=>{
+			if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
+				onValueChange();
+			}
+		})
+		// change the state of the button if the command is not enable
 		const onIsEnabledChange = () => {
 			// button.attr( 'disabled', () => !command.isEnabled );
 			// button.setAttribute( 'disabled', !command.isEnabled );
@@ -955,74 +975,11 @@ export const service_ckeditor = function() {
 			}
 
 		};
-
-		// Commands can become disabled, e.g. when the editor is read-only.
-		// Make sure the buttons reflect this state change.
-		// command.addEventListener('change',onIsEnabledChange())
-		// command.on( 'change:isEnabled', onIsEnabledChange );
-		// onIsEnabledChange();
-		// console.log("command:",command);
-		// console.log("name:",name);
-
-		// Bold, Italic and Underline commands have a value that changes
-		// when the selection starts in an element the command creates.
-		// The button should indicate that e.g. you are editing text which is already bold.
-		// if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
-		// 	command.on( 'change:value', onValueChange );
-		// 	onValueChange();
-		// }
-
-		// The object we wanna control
-		// const obj = {}
-		// 	// console.log("obj:",obj);
-		// 	// 	console.log("command:",command);
-		// // Our handler to control object via Proxy
-		// const handler = {
-		// 	// get(obj, prop) {
-		// 	// console.log(`Getting property ${prop} from object`)
-		// 	// // Remember to so the default operation, returning the prop item inside obj
-		// 	// return obj[prop]
-		// 	// },
-		// 	set(obj, prop, value) {
-		// 	console.log(`Setting property ${prop} as ${value} in object`)
-
-		// 	// Do the default operation, set prop as value in obj
-		// 	obj[prop] = value
-
-		// 	if( prop==='isEnabled') {
-		// 		onIsEnabledChange()
-		// 	}
-		// 	if(name !== 'undo' && name !== 'redo' && prop==='value'){
-		// 		onValueChange();
-		// 	}
-
-		// 	/*
-		// 		Set method must return a value.
-		// 		Return `true` to indicate that assignment succeeded
-		// 		Return `false` (even a falsy value) to prevent assignment.in `strict mode`, returning false will throw TypeError
-		// 	*/
-
-		// 	return true
-		// 	}
-		// }
-
-		// // Set the proxy
-		// const proxy_field_obj = new Proxy(command, handler)
-
 		editor.listenTo( command, 'change:isEnabled',(evt)=>{
 				onIsEnabledChange()
 		})
 
-		editor.listenTo( command, 'change:value',(evt)=>{
-			if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
-				onValueChange();
-			}
-		})
-
-
 		return true
 	};//end factory_events_for_buttons
-
-
 
 }//end service_ckeditor
