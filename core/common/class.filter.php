@@ -64,8 +64,7 @@ abstract class filter {
 
 	/**
 	* GET_USER_PROJECTS
-	* Revisada 19-08-2014
-	* Como tarda poco, unos 0.008 secs, no hacemos cache del dato
+	* Return all user active projects from user section data (component_filter_master)
 	* @return array|null $dato
 	*/
 	public static function get_user_projects(int $user_id) : ?array {

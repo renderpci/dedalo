@@ -1448,7 +1448,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_AR_LIST_OF_VALUES
-	* @param string $lang = DEDALO_DATA_LANG
+	* @param string|null $lang = DEDALO_DATA_LANG
 	* @param bool $include_negative = false
 	* @return array $ar_list_of_values
 	*/

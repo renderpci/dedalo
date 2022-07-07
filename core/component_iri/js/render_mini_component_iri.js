@@ -30,20 +30,21 @@ render_mini_component_iri.prototype.mini = async function() {
 	const self = this
 
 	// short vars
-		const data = self.data
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// Value as string
 		const ar_value_string	= [];
-		const value_length		= data.value.length
+		const value_length		= value.length
 		for (let i = 0; i < value_length; i++) {
 
 			const ar_line = []
 
-			if (data.value[i].title) {
-				ar_line.push(data.value[i].title)
+			if (value[i].title) {
+				ar_line.push(value[i].title)
 			}
-			if (data.value[i].iri) {
-				ar_line.push(data.value[i].iri)
+			if (value[i].iri) {
+				ar_line.push(value[i].iri)
 			}
 
 			if (ar_line.length>0) {
@@ -59,7 +60,6 @@ render_mini_component_iri.prototype.mini = async function() {
 			value_string : value_string
 		})
 
+
 	return wrapper
 }//end mini
-
-

@@ -33,19 +33,16 @@
 	if($options->get_data===true && $permissions>0){
 
 		// Value
-		$value 		= $this->get_dato();
-		$data_list 	= $this->get_data_list();
 
 		// data item
-		$item  = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
 
-		// data_list
-		if (isset($data_list) && !empty($data_list)) {
-			$item->datalist = $data_list;
-		}
+			// data_list
+			if (isset($data_list) && !empty($data_list)) {
+				$item->datalist = $data_list;
+			}
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
-	$mode			= $this->get_modo();
+	$modo			= $this->get_modo();
 
 
 
@@ -64,17 +64,17 @@
 				$item->datalist = $this->get_files_info();
 
 		// player mode case. Send the media header when the component are working as player
-			if($mode==='player') {
+			if($modo==='player') {
 
 				// media info
-				$item->media_info = $this->get_media_streams();
+					$item->media_info = $this->get_media_streams();
 
 				// subtitles info
-				$item->subtitles = (object)[
-					'subtitles_url'	=> $this->get_subtitles_url(),
-					'lang_name'		=> lang::get_name_from_code(DEDALO_DATA_LANG),
-					'lang'			=> lang::get_alpha2_from_code(DEDALO_DATA_LANG)
-				];
+					$item->subtitles = (object)[
+						'subtitles_url'	=> $this->get_subtitles_url(),
+						'lang_name'		=> lang::get_name_from_code(DEDALO_DATA_LANG),
+						'lang'			=> lang::get_alpha2_from_code(DEDALO_DATA_LANG)
+					];
 			}
 
 		$data[] = $item;

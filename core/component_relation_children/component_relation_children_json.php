@@ -82,11 +82,10 @@
 			}
 
 
-			$ar_subdata		= $subdatum->data;
+			$ar_subdata = $subdatum->data;
 			// subdata add
 			if ($modo==='list') {
 				foreach ($ar_subdata as $current_data) {
-
 					$current_data->parent_tipo			= $tipo;
 					$current_data->parent_section_id	= $section_id;
 
