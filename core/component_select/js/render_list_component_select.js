@@ -30,8 +30,9 @@ render_list_component_select.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data			= self.data
-		const value_string	= data.value || ''
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(' ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

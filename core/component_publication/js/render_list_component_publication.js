@@ -31,8 +31,8 @@ render_list_component_publication.prototype.list = async function() {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || ''
-		const value_string	= value
+		const value			= data.value || []
+		const value_string	= value.join(' ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

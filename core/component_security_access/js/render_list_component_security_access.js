@@ -31,10 +31,11 @@ render_list_component_security_access.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data = self.data
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// Value as string
-		const value_string = JSON.stringify(data.value, null, 2)
+		const value_string = JSON.stringify(value, null, 2)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -45,5 +46,3 @@ render_list_component_security_access.prototype.list = async function() {
 
 	return wrapper
 }//end list
-
-
