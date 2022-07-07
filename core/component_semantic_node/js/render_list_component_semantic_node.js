@@ -36,7 +36,6 @@ render_list_component_semantic_node.prototype.list = async function() {
 		// const fallback			= self.get_fallback_value(value, fallback_value)
 		// const value_string		= fallback.join(self.divisor)
 
-	console.log("self.data---------------:",self.data);
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload		: false,
@@ -46,5 +45,3 @@ render_list_component_semantic_node.prototype.list = async function() {
 
 	return wrapper
 }//end list
-
-

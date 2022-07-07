@@ -35,6 +35,7 @@ render_list_component_select.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
+			// autoload. On true, load edit  data from API when user dblclick to edit inline
 			autoload		: true,
 			value_string	: value_string
 		})
@@ -42,5 +43,3 @@ render_list_component_select.prototype.list = async function() {
 
 	return wrapper
 }//end list
-
-

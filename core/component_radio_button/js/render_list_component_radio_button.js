@@ -29,12 +29,15 @@ render_list_component_radio_button.prototype.list = async function() {
 
 	const self = this
 
-	// Value as string
-		const value_string = self.data.value
+	// short vars
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(' | ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload		: true, // used in dblclick change component mode
+			// autoload. On true, load data from API when user dblclick to edit inline
+			autoload		: true,
 			value_string	: value_string
 		})
 

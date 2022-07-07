@@ -30,13 +30,14 @@ render_list_component_external.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data				= self.data
+		const data				= self.data || {}
 		const value				= data.value || []
-		const value_string		= value
+		const value_string		= value.join(' | ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
+			autoload		: false,
+			value_string	: value_string
 		})
 
 

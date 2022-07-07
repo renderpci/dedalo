@@ -38,6 +38,7 @@ render_list_component_json.prototype.list = function() {
 			value_string	: value_string
 		})
 
+
 	return wrapper
 }; //end list
 

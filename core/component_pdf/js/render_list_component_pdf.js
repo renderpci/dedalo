@@ -23,24 +23,23 @@ export const render_list_component_pdf = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_pdf.prototype.list = function() {
 
 	const self = this
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self)
+		const wrapper = ui.component.build_wrapper_list(self, {})
 
 	// image append to wrapper
-		const url = DEDALO_CORE_URL + "/themes/default/pdf_icon.png"
+		const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
 		ui.create_dom_element({
-			element_type	: "img",
-			src 			: url,
-			parent 			: wrapper
+			element_type	: 'img',
+			src				: url,
+			parent			: wrapper
 		})
 
+
 	return wrapper
-}; //end list
-
-
+}//end list

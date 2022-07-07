@@ -30,7 +30,8 @@ render_list_component_image.prototype.list = function() {
 	const self = this
 
 	// short vars
-		const datalist 	= self.data.datalist || []
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -48,7 +49,7 @@ render_list_component_image.prototype.list = function() {
 
 	// image
 		const image = ui.create_dom_element({
-			element_type	: "img",
+			element_type	: 'img',
 			class_name		: 'hidden', // loading
 			parent			: wrapper
 		})

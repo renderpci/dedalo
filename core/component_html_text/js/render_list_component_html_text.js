@@ -24,28 +24,23 @@ export const render_list_component_html_text = function() {
 /**
 * LIST
 * Render node for use in current mode
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_html_text.prototype.list = async function() {
 
 	const self = this
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(self.divisor)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
+			autoload		: false,
+			value_string	: value_string
 		})
 
-	// Value as string
-		const value_string = value.join(self.divisor)
-
-	// Set value
-		wrapper.innerHTML = value_string
 
 	return wrapper
 }//end list
-
-

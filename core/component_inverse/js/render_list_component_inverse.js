@@ -24,11 +24,12 @@ render_list_component_inverse.prototype.list = function() {
 	const self = this
 
 	// short vars
-		const data = self.data
+		const data = self.data || {}
+		const value = data.value || []
 
 	// Value as string
-		const value_string = data.value && data.value[0] && data.value[0].locator
-			? data.value[0].locator.from_section_id
+		const value_string = value && value[0] && value[0].locator
+			? value[0].locator.from_section_id
 			: null
 
 	// wrapper
@@ -40,5 +41,3 @@ render_list_component_inverse.prototype.list = function() {
 
 	return wrapper
 }//end list
-
-

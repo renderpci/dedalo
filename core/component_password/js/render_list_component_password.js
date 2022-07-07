@@ -23,27 +23,24 @@ export const render_list_component_password = function() {
 /**
 * LIST
 * Render node for use in list. It shouldn't be use but just in case someone added it to a list the page would work properly
-* @return DOM node
+* @return DOM node wrapper
 */
 render_list_component_password.prototype.list = async function() {
 
 	const self = this
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
-
-	// Value as string
-		const value_string = value
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(' | ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
-			value_string : value_string
+			autoload		: false,
+			value_string	: value_string
 		})
 		wrapper.type = 'password'
 
 
 	return wrapper
 }//end list
-
-
