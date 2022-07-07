@@ -101,7 +101,6 @@ if(SHOW_DEBUG===true) $start_time = start_time();
 
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 
