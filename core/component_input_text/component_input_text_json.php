@@ -1,6 +1,6 @@
 <?php
 // JSON data component controller
-if(SHOW_DEBUG===true) $start_time = start_time();
+// if(SHOW_DEBUG===true) $start_time = start_time();
 // error_log('input text json .......................................................');
 
 
@@ -40,25 +40,33 @@ if(SHOW_DEBUG===true) $start_time = start_time();
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
+		// value
 		switch ($modo) {
 
 			case 'list':
-				$value			= $this->get_dato();
-				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$value			= $this->get_list_value();
+				$fallback_value	= component_common::extract_component_dato_fallback(
+					$this,
+					DEDALO_DATA_LANG, // lang
+					DEDALO_DATA_LANG_DEFAULT // main_lang
+				);
 				break;
 
 			case 'search':
-				$value	= [];
+				$value			= [];
 				$fallback_value	= false;
 				break;
 
 			case 'edit':
 			default:
 				$value			= $this->get_dato();
-				$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				$fallback_value	= component_common::extract_component_dato_fallback(
+					$this,
+					DEDALO_DATA_LANG, // lang
+					DEDALO_DATA_LANG_DEFAULT // main_lang
+				);
 				break;
 		}
 
@@ -92,12 +100,12 @@ if(SHOW_DEBUG===true) $start_time = start_time();
 				// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
 
 		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
+			// if(SHOW_DEBUG===true) {
+			// 	$debug = new stdClass();
+			// 		$debug->exec_time = exec_time_unit($start_time,'ms')." ms";
 
-				$item->debug = $debug;
-			}
+			// 	$item->debug = $debug;
+			// }
 
 
 		$data[] = $item;

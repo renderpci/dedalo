@@ -48,12 +48,11 @@
 	$context	= [];
 	$data		= [];
 
-
 	// context get and fix
 		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
 		$context[]		= $this->context;
 
-	if($permissions>0){
+	if($permissions>0) {
 
 		// short vars
 			$section_id	= $this->get_section_id();
@@ -77,9 +76,6 @@
 
 		$dato = $this->get_dato();
 
-		// $valor = $this->get_valor();
-			// dump($valor, ' valor ++ '.to_string());
-
 		// value
 			switch ($modo) {
 				case 'list':
@@ -99,69 +95,56 @@
 			}//end switch ($modo)
 
 		// data
-		if (!empty($dato)) {
+			if (!empty($dato)) {
 
-			// data item (list mode result don't include self data, only subdata)
-				$item = $this->get_data_item($value);
-					$item->parent_tipo			= $tipo;
-					$item->parent_section_id	= $section_id;
-					// fix pagination vars
-						$pagination = new stdClass();
-							$pagination->total	= count($dato);
-							$pagination->limit	= $limit;
-							$pagination->offset	= $offset;
-							// $pagination->offset	= $offset>=$pagination->total
-							// 	? floor($pagination->total/$limit) * $limit
-							// 	: $offset;
+				// data item (list mode result don't include self data, only subdata)
+					$item = $this->get_data_item($value);
+						$item->parent_tipo			= $tipo;
+						$item->parent_section_id	= $section_id;
+						// fix pagination vars
+							$pagination = new stdClass();
+								$pagination->total	= count($dato);
+								$pagination->limit	= $limit;
+								$pagination->offset	= $offset;
+								// $pagination->offset	= $offset>=$pagination->total
+								// 	? floor($pagination->total/$limit) * $limit
+								// 	: $offset;
 
-					$item->pagination = $pagination;
+						$item->pagination = $pagination;
 
-				$data[] = $item;
+					$data[] = $item;
 
-				$subdatum = $this->get_subdatum($tipo, $value);
+					$subdatum = $this->get_subdatum($tipo, $value);
 
-					// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
+						// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
 
-				$ar_subcontext = $subdatum->context;
-				foreach ($ar_subcontext as $current_context) {
-					$context[] = $current_context;
-				}
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
 
-				$ar_subdata = $subdatum->data;
-				foreach ($ar_subdata as $sub_value) {
-					$data[] = $sub_value;
-				}
+					$ar_subdata = $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$data[] = $sub_value;
+					}
 
-
-			// // subdata from subcontext items
-				// 	$ar_subdata = $this->get_ar_subdata($value);
-
-				// 	// if ($modo==='list') {
-				// 		foreach ($ar_subdata as $current_data) {
-
-				// 			// add subdata items parent_tipo/parent_section_id to identify indirect data
-				// 				// $current_data->parent_tipo			= $tipo;
-				// 				// $current_data->parent_section_id	= $current_data->section_id; //	$section_id;
-
-				// 			$data[] = $current_data;
-				// 		}
-				// 	// }else{
-				// 	// 	foreach ($ar_subdata as $current_data) {
-				// 	// 		$data[] = $current_data;
-				// 	// 	}
-				// 	// }
-
-
-		}//end if (!empty($dato))
-		// dump(null, 'Time to data portal 2 : '.exec_time_unit($api_start_time_data,'ms')." ms".to_string());
+				// subdata from subcontext items
+					// 	$ar_subdata = $this->get_ar_subdata($value);
+					// 	// if ($modo==='list') {
+					// 		foreach ($ar_subdata as $current_data) {
+					// 			// add subdata items parent_tipo/parent_section_id to identify indirect data
+					// 				// $current_data->parent_tipo			= $tipo;
+					// 				// $current_data->parent_section_id	= $current_data->section_id; //	$section_id;
+					// 			$data[] = $current_data;
+					// 		}
+					// 	// }else{
+					// 	// 	foreach ($ar_subdata as $current_data) {
+					// 	// 		$data[] = $current_data;
+					// 	// 	}
+					// 	// }
+			}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
-	// if ($this->tipo==='rsc88') {
-		// dump($context, ' portal context ++ '.to_string($this->tipo));
-		// $bt = debug_backtrace();
-		// 	dump($bt, ' bt ++ '.to_string());
-	// }
 
-	// dump($data, ' data ++ '.to_string($this->tipo));
 
 
 // JSON string

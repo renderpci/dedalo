@@ -18,6 +18,7 @@ export const render_mini_component_semantic_node = function() {
 }//end render_mini_component_semantic_node
 
 
+
 /**
 * MINI
 * Render node to be used in current mode
@@ -28,11 +29,12 @@ render_mini_component_semantic_node.prototype.mini = async function() {
 	const self = this
 
 	// short vars
-		const data				= self.data
+		const data				= self.data || {}
 		const value				= data.value || []
-		const fallback_value	= data.fallback_value || []
-		const fallback			= self.get_fallback_value(value, fallback_value)
-		const value_string		= fallback.join(self.divisor)
+		// const fallback_value	= data.fallback_value || []
+		// const fallback		= get_fallback_value(value, fallback_value)
+		// const value_string	= fallback.join(self.divisor)
+		const value_string		= JSON.stringify(value)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
@@ -42,5 +44,3 @@ render_mini_component_semantic_node.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-
