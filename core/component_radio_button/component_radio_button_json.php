@@ -47,12 +47,12 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
 		// value
 			switch ($modo) {
 				case 'list':
-					$value = $this->get_valor();
+					$value				= $this->get_list_value();
 					break;
 
 				case 'edit':
@@ -65,7 +65,7 @@
 		// data item
 			$item = $this->get_data_item($value);
 
-		// datalist add if exits
+			// datalist add if exits
 			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 				$datalist = $ar_list_of_values->result;
 				usort($datalist, function($a, $b) {

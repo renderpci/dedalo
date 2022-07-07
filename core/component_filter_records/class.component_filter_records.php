@@ -62,10 +62,17 @@ class component_filter_records extends component_common {
 
 	/**
 	* GET_VALOR
-	* @return
+	* @return string|null $valor
 	*/
 	public function get_valor() {
-		return json_encode($this->get_dato());
+
+		$dato = $this->get_dato();
+
+		$valor = empty($dato)
+			? null
+			: json_encode($dato);
+
+		return $valor;
 	}//end get_valor
 
 
@@ -146,4 +153,4 @@ class component_filter_records extends component_common {
 
 
 
-}//end component_filter_records
+}//end class component_filter_records

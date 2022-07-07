@@ -47,13 +47,14 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
 		// value
 			switch ($modo) {
 				case 'list':
-					$value = $this->get_valor(null,'array');
+					$value = $this->get_list_value();
 					break;
+
 				case 'edit':
 				default:
 					$value		= $this->get_dato();
@@ -64,10 +65,10 @@
 		// data item
 			$item = $this->get_data_item($value);
 
-		// datalist
-			if (isset($datalist)) {
-				$item->datalist = $datalist;
-			}
+			// datalist
+				if (isset($datalist)) {
+					$item->datalist = $datalist;
+				}
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

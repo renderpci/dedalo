@@ -330,7 +330,7 @@ class component_filter extends component_relation_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -415,6 +415,7 @@ class component_filter extends component_relation_common {
 			');
 			$current_search = search::get_instance($sqo);
 			$search_result  = $current_search->search();
+
 		// typology groupers
 			$ar_groupers = [];
 			foreach ($search_result->ar_records as $row) {
@@ -441,6 +442,7 @@ class component_filter extends component_relation_common {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
 			}
+
 
 		return $ar_datalist;
 	}//end get_datalist
@@ -927,6 +929,42 @@ class component_filter extends component_relation_common {
 
 		return $path;
 	}//end get_order_path
+
+
+
+	/**
+	* GET_LIST_VALUE
+	* Unified value list output
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value(object $options=null) : ?array {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		// (!) Note that only user authorized projects will be added, discarding others
+		// maybe this behavior must be changed in future
+		$user_id		= navigator::get_user_id();
+		$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
+
+		$list_value = [];
+		foreach ($ar_projects as $item) {
+
+			$locator = $item->locator;
+			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+				$list_value[] = $item->label;
+			}
+		}
+
+		return $list_value;
+	}//end get_list_value
 
 
 

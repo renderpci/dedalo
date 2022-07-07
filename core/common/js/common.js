@@ -2294,3 +2294,33 @@ export const validate_tipo = function(tipo) {
 }//end validate_tipo
 
 
+/**
+* GET_FALLBACK_VALUE
+* Get the fallback values when the current language version of the data is missing
+* @return array values data with fallback
+*/
+export const get_fallback_value = function(value, fallback_value) {
+
+	const fallback		= []
+	const value_length	= (value.length===0)
+		? 1
+		: value.length
+
+	for (let i = 0; i < value_length; i++) {
+
+		if(value[i]){
+
+			fallback.push(value[i])
+
+		}else{
+
+			const marked_value = (fallback_value && fallback_value[i])
+				? '<mark>'+fallback_value[i]+'</mark>'
+				: ''
+
+			fallback.push(marked_value)
+		}
+	}
+
+	return fallback
+}//end get_fallback_value

@@ -30,24 +30,31 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
-		switch ($modo) {
-			case 'list':
-				$value = component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-				break;
-			case 'edit':
-			default:
-				$value = $this->get_dato();
-				break;
-		}
+		// value
+			switch ($modo) {
+				case 'list':
+					$value			= $this->get_list_value();
+					$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
+						? $this->get_fallback_list_value((object)['max_chars'=>200])
+						: null;
+					break;
+
+				case 'edit':
+				default:
+					$value = $this->get_dato();
+					// fallback_value. Is used to create a placeholder to display a reference data to the user
+					$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
+						? $this->get_fallback_list_value((object)['max_chars'=>700])
+						: null;
+					break;
+			}
 
 		// data item
-		$item  = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
 
 		$data[] = $item;
-
 	}//end if($options->get_data===true && $permissions>0)
 
 

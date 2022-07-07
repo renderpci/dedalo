@@ -28,27 +28,28 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
-		// Value
-		switch ($modo) {
-			case 'list':
-				$value 				= $this->get_valor();
-				break;
-			case 'edit':
-			default:
-				$value 				= $this->get_dato();
-				$ar_list_of_values	= $this->get_ar_list_of_values();
-				break;
-		}
+		// value
+			switch ($modo) {
+				case 'list':
+					$value				= $this->get_list_value();
+					break;
+
+				case 'edit':
+				default:
+					$value				= $this->get_dato();
+					$ar_list_of_values	= $this->get_ar_list_of_values();
+					break;
+			}
 
 		// data item
-		$item = $this->get_data_item($value);
+			$item = $this->get_data_item($value);
 
-		// datalist
-		if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-			$item->datalist = $ar_list_of_values->result;
-		}
+			// datalist
+			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
+				$item->datalist = $ar_list_of_values->result;
+			}
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

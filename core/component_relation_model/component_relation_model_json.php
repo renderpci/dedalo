@@ -47,13 +47,14 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
 		// value
 			switch ($modo) {
 				case 'list':
-					$value = $this->get_valor();
+					$value				= $this->get_list_value();
 					break;
+
 				case 'edit':
 				default:
 					$value				= $this->get_dato();
@@ -64,7 +65,7 @@
 		// data item
 			$item = $this->get_data_item($value);
 
-		// dataset
+			// datalist
 			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 				$item->datalist = $ar_list_of_values->result;
 			}

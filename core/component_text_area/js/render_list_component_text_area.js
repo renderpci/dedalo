@@ -6,6 +6,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {tr} from '../../common/js/tr.js'
+	import {get_fallback_value} from '../../common/js/common.js'
 	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
@@ -33,17 +34,20 @@ render_list_component_text_area.prototype.list = async function() {
 	const self = this
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data				= self.data
+		const value				= data.value || []
+		const fallback_value	= data.fallback_value || []
+		const fallback			= get_fallback_value(value, fallback_value)
+		const value_string		= fallback.join(self.divisor)
 
 	// Value as string
-		const value_string = tr.add_tag_img_on_the_fly( value.join(self.divisor) )
+		const value_string_with_tags = tr.add_tag_img_on_the_fly( value_string )
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			// autoload. On true, load edit data from API when user dblclick to edit inline
 			autoload		: false,
-			value_string	: value_string
+			value_string	: value_string_with_tags
 		})
 
 

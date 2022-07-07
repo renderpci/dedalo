@@ -43,27 +43,25 @@
 
 	if($options->get_data===true && $permissions>0) {
 
-		// value as array always
-			$value = $this->get_dato();
-			if (!is_array($value)) {
-				$value = [$value];
-			}
-
-		// get the quality url of the available image files
+		// value
 			switch ($modo) {
-				case 'edit':
-					$datalist = $this->get_files_info();
+				case 'list':
+					$value = $this->get_list_value();
+
+					// datalist
+						// files_info. For fast list we add directly the default image
+						$data_item = new stdClass();
+							$data_item->url		= $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT, true);
+							$data_item->quality	= DEDALO_PDF_QUALITY_DEFAULT;
+						$datalist = [$data_item];
 					break;
 
-				case 'list':
 				default:
-					// files_info. For fast list we add directly the default image
-						$quality	= DEDALO_PDF_QUALITY_DEFAULT;
-						$url		= $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT, true);
-						$pdf_item = new stdClass();
-							$pdf_item->url		= $url;
-							$pdf_item->quality	= $quality;
-						$datalist = [$pdf_item];
+				case 'edit':
+					$value = $this->get_dato();
+
+					// datalist
+						$datalist = $this->get_files_info();
 					break;
 			}
 

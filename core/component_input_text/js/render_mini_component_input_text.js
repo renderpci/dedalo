@@ -6,6 +6,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_fallback_value} from '../../common/js/common.js'
 
 
 
@@ -33,7 +34,7 @@ render_mini_component_input_text.prototype.mini = async function() {
 		const data				= self.data
 		const value				= data.value || []
 		const fallback_value	= data.fallback_value || []
-		const fallback			= self.get_fallback_value(value, fallback_value)
+		const fallback			= get_fallback_value(value, fallback_value)
 		const value_string		= fallback.join(self.divisor)
 
 	// wrapper
@@ -44,5 +45,3 @@ render_mini_component_input_text.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-
