@@ -656,7 +656,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 								state	: 'a',
 								data	: locator
 							}
-							const tag = self.build_view_tag(note_tag, note_tag.tag_id)
+							const tag = self.build_view_tag_obj(note_tag, note_tag.tag_id)
 							// insert the new note tag in the caret position of the text_editor
 							const inserted_tag = text_editor.set_content(tag)
 							// render and open the note section inside a modal
@@ -936,7 +936,7 @@ const get_custom_events = (self, i, text_editor) => {
 									render_page_selector(self, data_tag, tag_id, text_editor)
 									break;
 								default:
-									const tag = self.build_view_tag(data_tag, tag_id)
+									const tag = self.build_view_tag_obj(data_tag, tag_id)
 									text_editor.set_content(tag)
 							}// end switch
 						}
@@ -950,7 +950,7 @@ const get_custom_events = (self, i, text_editor) => {
 					const person_tag		= self.data.tags_persons[key_person_number[0]]
 					event_manager.publish('key_up_persons' +'_'+ self.id_base, key_person_number)
 					// get the node tag defined in the person (it's prepared in server)
-					const node_tag_person	= self.build_view_tag(person_tag, person_tag.tag_id)
+					const node_tag_person	= self.build_view_tag_obj(person_tag, person_tag.tag_id)
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_person)
 
@@ -975,7 +975,7 @@ const get_custom_events = (self, i, text_editor) => {
 						state	: 'a',
 						data	: current_lang.value
 					}
-					const node_tag_lang = self.build_view_tag(lang_tag, lang_tag.tag_id)
+					const node_tag_lang = self.build_view_tag_obj(lang_tag, lang_tag.tag_id)
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_lang)
 
@@ -1049,7 +1049,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 		e.preventDefault()
 
 		data_tag.data = "["+data_tag.last_layer_id+"]"
-		const tag 	= self.build_view_tag(data_tag, tag_id)
+		const tag 	= self.build_view_tag_obj(data_tag, tag_id)
 		text_editor.set_content(tag)
 		layer_selector.remove()
 	})
@@ -1089,7 +1089,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 				e.preventDefault()
 
 				data_tag.data = "["+layer.layer_id+"]"
-				const tag = self.build_view_tag(data_tag, tag_id)
+				const tag = self.build_view_tag_obj(data_tag, tag_id)
 				text_editor.set_content(tag)
 				layer_selector.remove()
 			})
@@ -1224,7 +1224,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 		const data		= body_input.value - (offset -1)
 		data_tag.label	= body_input.value
 		data_tag.data	= "["+data+"]"
-		const tag		= self.build_view_tag(data_tag, tag_id)
+		const tag		= self.build_view_tag_obj(data_tag, tag_id)
 		text_editor.set_content(tag)
 		modal.remove()
 	})
@@ -1305,7 +1305,7 @@ const render_note = async function(options) {
 					new_data_obj	: note_tag
 				})
 
-				// const tag				= self.build_view_tag(note_tag, note_tag.tag_id)
+				// const tag				= self.build_view_tag_obj(note_tag, note_tag.tag_id)
 				// // change the values to the current tag node
 				// tag_node.id				= tag.id
 				// tag_node.src			= tag.src
@@ -1562,7 +1562,7 @@ const render_persons_list = function(self, text_editor, i) {
 						evt.stopPropagation()
 
 						// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
-						const tag = self.build_view_tag(current_person, current_person.tag_id)
+						const tag = self.build_view_tag_obj(current_person, current_person.tag_id)
 						text_editor.set_content(tag)
 					});
 				}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
@@ -1639,7 +1639,7 @@ const render_langs_list = function(self, text_editor, i) {
 						state	: 'a',
 						data	: current_lang.value
 					}
-					const tag = self.build_view_tag(lang_tag, lang_tag.tag_id)
+					const tag = self.build_view_tag_obj(lang_tag, lang_tag.tag_id)
 					// set the new lang tag at caret position of the text_editor.
 					text_editor.set_content(tag)
 					// save value
