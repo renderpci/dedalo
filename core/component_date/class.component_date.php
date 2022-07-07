@@ -407,6 +407,18 @@ class component_date extends component_common {
 	* Converts each data item to value (one by one)
 	* based on $date_mode (range,period,time,date)
 	* @param object $data_item
+	* data_item sample:
+	* {
+	*    "start": {
+	*        "day": 8,
+	*        "hour": 12,
+	*        "time": 64638475292,
+	*        "year": 2011,
+	*        "month": 2,
+	*        "minute": 1,
+	*        "second": 32
+	*    }
+	* }
 	* @return string $item_value
 	*/
 	public static function data_item_to_value(object $data_item, string $date_mode) : string {
@@ -418,12 +430,12 @@ class component_date extends component_common {
 			case 'range':
 				// start
 				$valor_start = '';
-				if(isset($current_dato->start)) {
-					$dd_date = new dd_date($current_dato->start);
-					if(isset($current_dato->start->day)) {
+				if(isset($data_item->start)) {
+					$dd_date = new dd_date($data_item->start);
+					if(isset($data_item->start->day)) {
 						$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
 					}else{
-						$valor_start = isset($current_dato->start->month)
+						$valor_start = isset($data_item->start->month)
 							? $dd_date->get_dd_timestamp('Y-m')
 							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
@@ -431,12 +443,12 @@ class component_date extends component_common {
 				}
 				// end
 				$valor_end = '';
-				if(isset($current_dato->end)) {
-					$dd_date = new dd_date($current_dato->end);
-					if(isset($current_dato->end->day)) {
+				if(isset($data_item->end)) {
+					$dd_date = new dd_date($data_item->end);
+					if(isset($data_item->end->day)) {
 						$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
 					}else{
-						$valor_end = isset($current_dato->end->month)
+						$valor_end = isset($data_item->end->month)
 							? $dd_date->get_dd_timestamp("Y-m")
 							: $dd_date->get_dd_timestamp("Y", $padding=false);
 					}
@@ -445,11 +457,11 @@ class component_date extends component_common {
 				break;
 
 			case 'period':
-				if(!empty($current_dato->period)) {
+				if(!empty($data_item->period)) {
 
 					$ar_string_period = [];
 
-					$dd_date = new dd_date($current_dato->period);
+					$dd_date = new dd_date($data_item->period);
 					// year
 					$ar_string_period[] = isset($dd_date->year)
 						? $dd_date->year .' '. label::get_label('anyos')
@@ -468,13 +480,13 @@ class component_date extends component_common {
 				break;
 
 			case 'time':
-				$dd_date	= new dd_date($current_dato);
+				$dd_date	= new dd_date($data_item);
 				$item_value	= $dd_date->get_dd_timestamp('H:i:s', true);
 				break;
 
 			case 'date_time':
-				if(isset($current_dato->start)) {
-					$dd_date	= new dd_date($current_dato->start);
+				if(isset($data_item->start)) {
+					$dd_date	= new dd_date($data_item->start);
 					$item_value	= $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
 				}
 				break;
@@ -483,12 +495,12 @@ class component_date extends component_common {
 			default:
 				// start
 				$valor_start = '';
-				if(isset($current_dato->start)) {
-					$dd_date = new dd_date($current_dato->start);
-					if(isset($current_dato->start->day)) {
+				if(isset($data_item->start)) {
+					$dd_date = new dd_date($data_item->start);
+					if(isset($data_item->start->day)) {
 						$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
 					}else{
-						$valor_start = isset($current_dato->start->month)
+						$valor_start = isset($data_item->start->month)
 							? $dd_date->get_dd_timestamp('Y-m')
 							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
@@ -1565,11 +1577,13 @@ class component_date extends component_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		// ar_dato
 			$ar_dato = $this->get_dato();
@@ -1579,73 +1593,78 @@ class component_date extends component_common {
 
 		$diffusion_value	= '';
 		$date_mode			= $this->get_date_mode();
+
 		$ar_diffusion_values = array();
-		foreach ($ar_dato as $dato) {
-			switch ($date_mode) {
-				case 'range':
-					$ar_date=array();
-					// start
-					if (isset($dato->start) && isset($dato->start->year)) {
-						$dd_date 		= new dd_date($dato->start);
-						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-						$ar_date[] 		= $timestamp;
-					}
-					// end
-					if (isset($dato->end) && isset($dato->end->year)) {
-						$dd_date 		= new dd_date($dato->end);
-						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-						$ar_date[] 		= $timestamp;
-					}
-					$ar_diffusion_values[] = implode(',',$ar_date);
-					break;
+		foreach($ar_dato as $dato) {
 
-				case 'period':
-					// Compute days
-					if (isset($dato->period)) {
-						# $seconds = $dato->period->time;
-						# $days = ceil($seconds/3600/24);
-						$ar_string_period = [];
-						if (isset($dato->period->year)) {
-							$ar_string_period[] = $dato->period->year .' '. label::get_label('anyos', $lang);
-						}
-						if (isset($dato->period->month)) {
-							$ar_string_period[] = $dato->period->month .' '. label::get_label('meses', $lang);
-						}
-						if (isset($dato->period->day)) {
-							$ar_string_period[] = $dato->period->day .' '. label::get_label('dias', $lang);
-						}
-						$ar_diffusion_values[] = implode(' ',$ar_string_period);
-					}
-					break;
+			$ar_diffusion_values[] = self::data_item_to_value($dato, $date_mode);
 
-				case 'date':
-					/*
-						$dd_date 	= new dd_date($dato);
-						if(isset($dato->day)) {
+			// DES
+				// switch ($date_mode) {
+				// 	case 'range':
+				// 		$ar_date=array();
+				// 		// start
+				// 		if (isset($dato->start) && isset($dato->start->year)) {
+				// 			$dd_date 		= new dd_date($dato->start);
+				// 			$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+				// 			$ar_date[] 		= $timestamp;
+				// 		}
+				// 		// end
+				// 		if (isset($dato->end) && isset($dato->end->year)) {
+				// 			$dd_date 		= new dd_date($dato->end);
+				// 			$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+				// 			$ar_date[] 		= $timestamp;
+				// 		}
+				// 		$ar_diffusion_values[] = implode(',',$ar_date);
+				// 		break;
 
-								$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
-						}else{
-								$timestamp = $dd_date->get_dd_timestamp("Y-m");
-							if(isset($dato->month)) {
-								}else{
-										$timestamp = $dd_date->get_dd_timestamp("Y");
-									}
-							}
+				// 	case 'period':
+				// 		// Compute days
+				// 		if (isset($dato->period)) {
+				// 			# $seconds = $dato->period->time;
+				// 			# $days = ceil($seconds/3600/24);
+				// 			$ar_string_period = [];
+				// 			if (isset($dato->period->year)) {
+				// 				$ar_string_period[] = $dato->period->year .' '. label::get_label('anyos', $lang);
+				// 			}
+				// 			if (isset($dato->period->month)) {
+				// 				$ar_string_period[] = $dato->period->month .' '. label::get_label('meses', $lang);
+				// 			}
+				// 			if (isset($dato->period->day)) {
+				// 				$ar_string_period[] = $dato->period->day .' '. label::get_label('dias', $lang);
+				// 			}
+				// 			$ar_diffusion_values[] = implode(' ',$ar_string_period);
+				// 		}
+				// 		break;
 
-						$ar_diffusion_values[] = $timestamp;
-						break;*/
+				// 	case 'date':
+				// 		/*
+				// 			$dd_date 	= new dd_date($dato);
+				// 			if(isset($dato->day)) {
 
-				default:
-					$current_date = reset($dato);
-					if (isset($current_date->start)) {
-						$current_date = $current_date->start;
-					}
-					$dd_date 		 		= new dd_date($current_date);
-					$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-					$ar_diffusion_values[] 	= $timestamp;
-					break;
-			}
-		}
+				// 					$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
+				// 			}else{
+				// 					$timestamp = $dd_date->get_dd_timestamp("Y-m");
+				// 				if(isset($dato->month)) {
+				// 					}else{
+				// 							$timestamp = $dd_date->get_dd_timestamp("Y");
+				// 						}
+				// 				}
+
+				// 			$ar_diffusion_values[] = $timestamp;
+				// 			break;*/
+
+				// 	default:
+				// 		$current_date = reset($dato);
+				// 		if (isset($current_date->start)) {
+				// 			$current_date = $current_date->start;
+				// 		}
+				// 		$dd_date 		 		= new dd_date($current_date);
+				// 		$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+				// 		$ar_diffusion_values[] 	= $timestamp;
+				// 		break;
+				// }
+		}//end foreach($ar_dato as $dato)
 
 		#$diffusion_value = implode('|',$ar_diffusion_values);
 
@@ -1822,6 +1841,36 @@ class component_date extends component_common {
 
 		return $path;
 	}//end get_order_path
+
+
+
+	/**
+	* GET_LIST_VALUE
+	* Unified value list output
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value(object $options=null) : ?array {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		$date_mode = $this->get_date_mode();
+
+		$list_value = [];
+		foreach ($dato as $data_item) {
+			$list_value[] = self::data_item_to_value($data_item, $date_mode);
+		}
+
+
+		return $list_value;
+	}//end get_list_value
 
 
 
