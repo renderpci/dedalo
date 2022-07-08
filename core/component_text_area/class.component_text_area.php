@@ -700,10 +700,6 @@ class component_text_area extends component_common {
 					$tag_in  = TR::get_mark_pattern('indexIn',  $standalone=false, $tag_id, $data=false);
 					$tag_out = TR::get_mark_pattern('indexOut', $standalone=false, $tag_id, $data=false);
 					break;
-				case 'struct':
-					$tag_in  = TR::get_mark_pattern('structIn',  $standalone=false, $tag_id, $data=false);
-					$tag_out = TR::get_mark_pattern('structOut', $standalone=false, $tag_id, $data=false);
-					break;
 				default:
 					throw new Exception("Error Processing Request. Invalid tag type: $tag_type", 1);
 					break;
@@ -1065,60 +1061,60 @@ class component_text_area extends component_common {
 
 
 
-	/**
-	* PLACE_BROKEN_TAG_IN_APPROXIMATE_POSITION
-	* @return string $raw_text
-	*/
-	public function place_broken_tag_in_approximate_position(string $raw_text, string $tag_in, string $tag_out, string $tag_id, string $source_lang) : string {
+	// /**
+	// * PLACE_BROKEN_TAG_IN_APPROXIMATE_POSITION
+	// * @return string $raw_text
+	// */
+	// public function place_broken_tag_in_approximate_position DEPRECATED(string $raw_text, string $tag_in, string $tag_out, string $tag_id, string $source_lang) : string {
 
-		$blank_space = " ";
+	// 	$blank_space = " ";
 
-		# Search existing tag in original lang
-		# source_lang is user selected as source lang of current text in edit mode
-		if ($this->lang===$source_lang) {
-			// Lang is the original. No references exists..
-			$raw_text = $tag_in ." Deleted tag $tag_id ". $tag_out . $blank_space . $raw_text;
+	// 	# Search existing tag in original lang
+	// 	# source_lang is user selected as source lang of current text in edit mode
+	// 	if ($this->lang===$source_lang) {
+	// 		// Lang is the original. No references exists..
+	// 		$raw_text = $tag_in ." Deleted tag $tag_id ". $tag_out . $blank_space . $raw_text;
 
-		}else{
-			// Lang is different. Check the source lang for additional data
-			$component 		= component_common::get_instance(get_class($this),
-															 $this->tipo,
-															 $this->parent,
-															 $this->modo,
-															 $source_lang,
-															 $this->section_tipo);
-			$source_raw_text = $component->get_dato();
+	// 	}else{
+	// 		// Lang is different. Check the source lang for additional data
+	// 		$component 		= component_common::get_instance(get_class($this),
+	// 														 $this->tipo,
+	// 														 $this->parent,
+	// 														 $this->modo,
+	// 														 $source_lang,
+	// 														 $this->section_tipo);
+	// 		$source_raw_text = $component->get_dato();
 
-			# INDEX IN
-			$pattern = TR::get_mark_pattern('structIn',$standalone=false, $tag_id); //$mark, $standalone=true, $id=false, $data=false, $state=false
-			preg_match($pattern,  $source_raw_text,  $matches_indexIn, PREG_OFFSET_CAPTURE);
-			if (empty($matches_indexIn[0][0])) {
-				// No. tag not found in original lan. Not exists the same tag in the original lang ...
-				$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
+	// 		# INDEX IN
+	// 		$pattern = TR::get_mark_pattern('structIn',$standalone=false, $tag_id); //$mark, $standalone=true, $id=false, $data=false, $state=false
+	// 		preg_match($pattern,  $source_raw_text,  $matches_indexIn, PREG_OFFSET_CAPTURE);
+	// 		if (empty($matches_indexIn[0][0])) {
+	// 			// No. tag not found in original lan. Not exists the same tag in the original lang ...
+	// 			$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
 
-			}else{
-				// Yes. Founded current broken tag in the original lang. Lets go..
+	// 		}else{
+	// 			// Yes. Founded current broken tag in the original lang. Lets go..
 
-				# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
-				# Override tag_in and out calculated with real full data locator
-				$tag_in_full = $matches_indexIn[0][0];
-				preg_match("/data:(.*):data/", $tag_in_full, $output_array);
-				$data_locator = $output_array[1];
-				if (!empty($output_array[1])) {
-					$tag_in  = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_in);
-					$tag_out = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_out);
-				}
+	// 			# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
+	// 			# Override tag_in and out calculated with real full data locator
+	// 			$tag_in_full = $matches_indexIn[0][0];
+	// 			preg_match("/data:(.*):data/", $tag_in_full, $output_array);
+	// 			$data_locator = $output_array[1];
+	// 			if (!empty($output_array[1])) {
+	// 				$tag_in  = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_in);
+	// 				$tag_out = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_out);
+	// 			}
 
-				$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
-
-
-			}//end if (empty($matches_indexIn[0][0]))
-
-		}//end if ($this->lang===$source_lang)
+	// 			$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
 
 
-		return $raw_text;
-	}//end place_broken_tag_in_approximate_position
+	// 		}//end if (empty($matches_indexIn[0][0]))
+
+	// 	}//end if ($this->lang===$source_lang)
+
+
+	// 	return $raw_text;
+	// }//end place_broken_tag_in_approximate_position
 
 
 
