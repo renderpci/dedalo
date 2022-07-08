@@ -13,7 +13,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
-	import {common} from '../../common/js/common.js'
+	import {common, push_browser_history} from '../../common/js/common.js'
 	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
@@ -89,17 +89,17 @@ page.prototype.init = async function(options) {
 			async function fn_user_navigation(user_navigation_options) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 
+				// options
+					const source			= user_navigation_options.source
+					const sqo				= user_navigation_options.sqo || null
+					const event_in_history	= user_navigation_options.event_in_history || false
+
 				// unsaved_data check
 					if (window.unsaved_data===true) {
 						if (!confirm('Are you sure you want to exit with unsaved changes?')) {
 							return false
 						}
 					}
-
-				// options
-					const source			= user_navigation_options.source
-					const sqo				= user_navigation_options.sqo || null
-					const event_in_history	= user_navigation_options.event_in_history || false
 
 				// check valid vars
 					if (!source) {
@@ -112,7 +112,7 @@ page.prototype.init = async function(options) {
 
 				// loading css add
 					const node = self.node && self.node[0]
-						? self.node[0].querySelector('.content_data.page')
+						? self.node[0].querySelector('section') // .content_data.page
 						: null
 					if (node) { node.classList.add('loading') }
 
@@ -124,11 +124,12 @@ page.prototype.init = async function(options) {
 						// basic vars
 							// Only source is mandatory but if sqo is received, is placed in a new request_config
 							// to allow sections and components manage properly the offset and limit
-							const request_config	= [{
-								api_engine	: 'dedalo',
-								sqo			: sqo
-							}]
-							source.request_config = request_config
+							if (!source.request_config && sqo) {
+								source.request_config = [{
+									api_engine	: 'dedalo',
+									sqo			: sqo
+								}]
+							}
 
 						// destroy previous page instances
 							// await self.ar_instances.map(async function(el){
@@ -173,24 +174,26 @@ page.prototype.init = async function(options) {
 							const refresh_result = await self.refresh()
 
 						// url history track
-							if(refresh_result===true && event_in_history!==true)  {
+							if(refresh_result===true && event_in_history!==true) {
 
-								const current_tipo = (source.config && source.config.source_section_tipo)
-									? source.config.source_section_tipo
-									: source.tipo
+								// page tile
+									const title	= new_page_element_instance.id
 
-								// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
-								const title	= new_page_element_instance.id
-								const url	= "?t="+ current_tipo + '&m=' + source.mode
+								// page url
+									const current_tipo = (source.config && source.config.source_section_tipo)
+										? source.config.source_section_tipo
+										: source.tipo
+									// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
+									const url = "?t="+ current_tipo + '&m=' + source.mode
 
-								const new_user_navigation_options = Object.assign({
-									event_in_history : false
-								}, user_navigation_options);
-								const state = {
-									user_navigation_options : new_user_navigation_options
-								}
-								console.log("navigation history state:",state, title, url,history);
-								history.pushState(state, title, url)
+								// browser navigation update
+									push_browser_history({
+										source				: source,
+										sqo					: sqo,
+										event_in_history	: false,
+										title				: title,
+										url					: url
+									})
 							}
 
 						// loading css remove

@@ -8,7 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common, set_context_vars, create_source, load_data_debug, get_columns_map} from '../../common/js/common.js'
+	import {common, set_context_vars, create_source, load_data_debug, get_columns_map, push_browser_history} from '../../common/js/common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
@@ -502,20 +502,21 @@ section.prototype.build = async function(autoload=false) {
 				)
 				async function fn_paginator_goto(offset) {
 					// navigate section rows
-					self.navigate(
-						() => { // callback
-							// fix new offset value
-								self.rqo.sqo.offset = offset
+						self.navigate(
+							() => { // callback
+								// fix new offset value
+									self.rqo_config.sqo.offset	= offset
+									self.rqo.sqo.offset			= offset
 
-							// set_local_db_data updated rqo
-								// const rqo = self.rqo
-								// current_data_manager.set_local_db_data(
-								// 	rqo,
-								// 	'rqo'
-								// )
-						},
-						true // bool navigation_history save
-					)
+								// set_local_db_data updated rqo
+									// const rqo = self.rqo
+									// current_data_manager.set_local_db_data(
+									// 	rqo,
+									// 	'rqo'
+									// )
+							},
+							true // bool navigation_history save
+						)
 				}
 		}//end if (!self.paginator)
 
@@ -803,6 +804,9 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 	// callback execute
 		if (callback) {
 			await callback()
+			if(SHOW_DEBUG===true) {
+				// console.log("-> Executed section navigate received callback:", callback);
+			}
 		}
 
 	// loading
@@ -816,19 +820,26 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 
 	// navigation history. When user paginates, store navigation history to allow browser navigation too
 		if (navigation_history===true) {
-			const title	= self.id
-			const url	= '?t='+ self.tipo + '&m=' + self.mode
-			const user_navigation_options = {
-				source				: self.rqo.source,
-				sqo					: self.rqo.sqo,
-				event_in_history	: true
+
+			const source	= {
+				mode			: self.mode,
+				model			: self.model,
+				tipo			: self.tipo,
+				section_tipo	: self.tipo
 			}
-			const state = {
-				user_navigation_options : user_navigation_options
-			}
-			console.log('navigation history state:',state, title, url,history);
-			history.pushState(state, title, url)
+			const sqo		= self.rqo_config.sqo
+			const title		= self.id
+			const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode
+
+			// browser navigation update
+				push_browser_history({
+					source	: source,
+					sqo		: sqo,
+					title	: title,
+					url		: url
+				})
 		}
+
 
 	return true
 }//end navigate
