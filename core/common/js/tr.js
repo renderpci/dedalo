@@ -45,19 +45,6 @@ export const tr = {
 				reg_ex = /(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
 				break;
 
-			// STRUCT
-			case 'struct' :
-				reg_ex = /\[\/{0,1}(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]/g;
-				break;
-
-			case 'structIn' :
-				reg_ex = /(\[(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-				break;
-
-			case 'structOut' :
-				reg_ex = /(\[\/(struct)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
-				break;
-
 			// REFERENCE
 			case 'reference' :
 				reg_ex = /\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]/g;
@@ -201,24 +188,6 @@ export const tr = {
 		// LANG
 			const pattern_lang = tr.get_mark_pattern('lang');
 			text = text.replace(pattern_lang, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="lang" data-type="lang" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
-
-
-
-		// STRUCT IN V5 Incompatible
-			// const pattern_structIn 	= tr.get_mark_pattern('structIn');
-			// if ($options->pattern_structIn===true) {
-			// 	text	= preg_replace(pattern, `<div class="structuration_label stl_in">structuration $4</div>`);
-			// }else{
-			// 	text	= preg_replace(pattern, `<section id="section_$4" class="section_struct text_selectable text_unselectable" data-type="struct" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
-			// }
-
-			// // STRUCT OUT
-			// const pattern_structOut 	= tr.get_mark_pattern('structOut');
-			// if ($options->struct_as_labels===true) {
-			// 	text = text.replace(pattern_structOut, '<div class="structuration_label stl_out"> /structuration $4</div>');
-			// }else{
-			// 	text = text.replace(pattern_structOut, "</section>");
-			// }
 
 		return text
 	}//end add_tag_img_on_the_fly
