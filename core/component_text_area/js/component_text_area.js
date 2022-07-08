@@ -406,16 +406,16 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				temp_elements[i].remove()
 			}
 
-		// remove <p> (and change </p> by <br>)
-			temp_elements = cloned_text.getElementsByTagName("p")
-			const p_len = temp_elements.length
-			for (let i = p_len - 1; i >= 0; i--) {
-				// Add tag <br> after </p>
-				let new_element = document.createElement("br")
-				temp_elements[i].parentNode.insertBefore(new_element, temp_elements[i].nextSibling);
-				// Unwrap tag p content (removes tags and leaves only contents)
-				unwrap_element(temp_elements[i]);
-			}
+		// // remove <p> (and change </p> by <br>)
+		// 	temp_elements = cloned_text.getElementsByTagName("p")
+		// 	const p_len = temp_elements.length
+		// 	for (let i = p_len - 1; i >= 0; i--) {
+		// 		// Add tag <br> after </p>
+		// 		let new_element = document.createElement("br")
+		// 		temp_elements[i].parentNode.insertBefore(new_element, temp_elements[i].nextSibling);
+		// 		// Unwrap tag p content (removes tags and leaves only contents)
+		// 		unwrap_element(temp_elements[i]);
+		// 	}
 
 		// remove spaecial bogus elements (<br data-mce-bogus="1">)
 			const bogus_elements		= cloned_text.querySelectorAll('[data-mce-bogus="1"]')
@@ -424,6 +424,13 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				bogus_elements[i].remove()
 			}
 
+		//remove <br> and change for <p> </p>
+			const string_text = cloned_text.innerHTML
+			const reg_ex = /(<\/? ?br>)/gmi;
+			const clean_text_value	= string_text.replace(reg_ex,'</p><p>')
+			// const new_div			= document.createElement("div")
+			// new_div.innerHTML		= clean_text_value
+
 	if(SHOW_DEBUG===true) {
 		//const end  	= new Date().getTime()
 		//const time 	= end - start
@@ -431,7 +438,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 		//console.log("[component_text_area.render_all_tags] time: " +time+ " ms")
 	}
 
-	return cloned_text.innerHTML
+	return clean_text_value
 }//end preprocess_text_to_save
 
 
