@@ -141,7 +141,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 			const info = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'column column_info',
-				inner_html		: info_value
+				text_node		: info_value // wrap into span the text
 			})
 			//wrapper.appendChild(info)
 			fragment.appendChild(info)

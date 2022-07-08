@@ -111,9 +111,20 @@ render_list_section.prototype.list = async function(options) {
 		// 		"grid-template-columns": template_columns
 		// 	}
 		// )
+
+		// re-parse template_columns as percent
+			// const items_lenght = items.length
+			// const percent_template_columns = items.map(el => {
+			// 	if (el==='1fr') {
+			// 		return Math.ceil(90 / (items_lenght -1)) + '%'
+			// 	}
+			// 	return el
+			// }).join(' ')
+			// console.log("percent_template_columns:",percent_template_columns);
+
 		const css_object = {
 			'.list_body' : {
-				'grid-template-columns': template_columns
+				'grid-template-columns' : template_columns
 			}
 		}
 		const selector = `${self.section_tipo}_${self.tipo}.list`
