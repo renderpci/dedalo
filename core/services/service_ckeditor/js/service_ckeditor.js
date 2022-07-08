@@ -778,7 +778,7 @@ export const service_ckeditor = function() {
 								label 	: new_data_obj.label || current_label, // label
 								data	: new_data_obj.data || current_data // data
 							}
-							const new_tag	= self.caller.build_view_tag( data_tag, current_tag_id )
+							const new_tag	= self.caller.build_view_tag_obj( data_tag, current_tag_id )
 							const new_id	= new_tag.id
 							edit_attributes.set('src_id' , new_id)
 
