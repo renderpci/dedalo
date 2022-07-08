@@ -339,11 +339,12 @@ class component_text_area extends component_common {
 			if ($clean_text && !empty($dato_current)) {
 				foreach ($dato_current as $key => $current_value) {
 					if (!empty($current_value)) {
-						$dato_current[$key] = TR::limpiezaPOSTtr($current_value);
+						$dato_current[$key] = TR::comform_tr_data($current_value);
+						dump($dato_current, ' dato_current ++ '.to_string());
 					}
 				}
 			}
-
+		
 		// Set dato again (cleaned)
 			$this->dato = $dato_current;
 
@@ -2329,7 +2330,7 @@ class component_text_area extends component_common {
 
 					// update the <br> tag to <p> and </p>, the new editor, ckeditor, it doesn't use <br> as return. (<br> tags are deprecated)
 						$format_dato	= '<p>'.$dato.'</p>';
-						$dato			= preg_replace('/^(<\/?br>)|(<\/?br>)$/gmi', '</p><p>', $format_dato);
+						$dato	= preg_replace('/(<\/? ?br>)/i', '</p><p>', $format_dato);
 
 					// fix final dato with new format as array
 						$new_dato = [$dato];
