@@ -310,29 +310,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* CONVERT_TR_V3_V4
-	* @return string $dato_final
-	*/
-	public function convert_tr_v3_v4( $dato ) : string {
-
-		$dato_source = $dato;
-
-		#
-		# INDEX IN
-		$dato_final = preg_replace("/\[index_[0]*([0-9]+)_in\]/", "[index-n-$1]", $dato_source, -1 , $count_index_in);
-
-		#
-		# INDEX OUT
-		$dato_final = preg_replace("/\[out_index_[0]*([0-9]+)\]/", "[/index-n-$1]", $dato_final, -1 , $count_index_out);
-
-		debug_log(__METHOD__." Replaced index_in:$count_index_in and index_out:$count_index_out matches in dato".to_string(), logger::DEBUG);
-
-		return (string)$dato_final;
-	}//end convert_tr_v3_v4
-
-
-
-	/**
 	* SAVE
 	* Overwrite component_common method
 	* @param bool $update_all_langs_tags_state
