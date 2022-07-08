@@ -571,20 +571,19 @@ abstract class TR {
 
 
 
-
-	#
 	# Limpieza del POST del formulario de TR transcripción
 	# Temporalmente habilitamos la función de formateo de TC's para Gerard
 	#
-	public static function limpiezaPOSTtr(string $string) : string {
+	public static function comform_tr_data(string $value) : string {
 
-		# strip slashes (need for text received from tinyMCE)
-		$string	= trim(stripslashes($string));
+		// convert br to <p>
+		# $value	= preg_replace('/(<\/? ?br>)/i', '</p><p>', $value);
 
-		return $string;
+		# strip slashes (need for text received from editor)
+		$value	= trim(stripslashes($value));
+		return $value;
 
-		// No more regex here 17-03-2017
-	}//end limpiezaPOSTtr
+	}//end comform_tr_data
 
 
 	#Change the format for TC to TC with ms
