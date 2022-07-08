@@ -601,16 +601,21 @@
 			padding: 0;
 			margin: 0;
 
-			>* {
+			// >* {
+				// padding: 0.25rem;
+
+				// @media screen and (max-width: @width_break_point_0) {
+				// 	padding-left: 0.3rem;
+				// }
+			// }
+
+			span {
 				padding: 0.25rem;
+				display: inline-block;
 
 				@media screen and (max-width: @width_break_point_0) {
 					padding-left: 0.3rem;
 				}
-			}
-
-			>span {
-				display: inline-block;
 			}
 		}
 
