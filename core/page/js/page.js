@@ -114,7 +114,7 @@ page.prototype.init = async function(options) {
 					const node = self.node && self.node[0]
 						? self.node[0].querySelector('section') // .content_data.page
 						: null
-					if (node) { node.classList.add('loading') }
+						if (node) { node.classList.add('loading') }
 
 				try {
 
@@ -156,6 +156,19 @@ page.prototype.init = async function(options) {
 								return false
 							}
 
+						// spinner
+							// const spinner = ui.create_dom_element({
+							// 	element_type	: 'div',
+							// 	class_name		: 'spinner',
+							// 	parent			: self.node[0]
+							// })
+							// // self.events_tokens.push(
+							// 	event_manager.subscribe('render_'+new_page_element_instance.id , fn_render_target)
+							// // )
+							// function fn_render_target() {
+							// 	spinner.remove()
+							// }
+
 						// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
 							const base_models		= ['menu']
 							const elements_to_stay	= self.context.filter( item => base_models.includes(item.model))
@@ -173,7 +186,7 @@ page.prototype.init = async function(options) {
 						// refresh page. Force to load new context elements data from DDBB
 							const refresh_result = await self.refresh()
 
-						// url history track
+						// browser history track
 							if(refresh_result===true && event_in_history!==true) {
 
 								// page tile
@@ -206,6 +219,8 @@ page.prototype.init = async function(options) {
 				} catch (error) {
 					// loading css remove
 					if (node) { node.classList.remove('loading') }
+					// spinner.remove()
+					console.error('Error on user navigation. user_navigation_options:', user_navigation_options)
 					console.error(error)
 					return false
 				}

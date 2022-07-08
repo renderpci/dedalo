@@ -130,7 +130,8 @@ const get_content_data = async function(self) {
 				const current_ddo = self.context[i]
 
 				// menu case. Prevent to render again on refresh page
-					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_ddo.model)
+					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_ddo.model)
+					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_ddo.model && el.destroyable===false)
 					if (non_destroyable_instance) {
 						content_data.appendChild(non_destroyable_instance.node[0])
 						continue;
