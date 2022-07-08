@@ -312,49 +312,6 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 		const cloned_text = document.createElement('div')
 			  cloned_text.insertAdjacentHTML('afterbegin', html_value);
 
-	// section tags (struct)
-		// Iterate all section elements
-		// const section_elements 			= cloned_text.getElementsByTagName('section')
-		// const ar_section_id 			= []
-		// const ar_section_id_duplicates 	= []
-		// if (section_elements) {
-		// 	//console.log(section_elements)
-		// 	const section_elements_len = section_elements.length
-		// 	for (let i = section_elements_len - 1; i >= 0; i--) {
-		// 		// Convert section tags to dedalo internal labels
-		// 		// <section class="section_struct text_unselectable" id="section_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">..</section>
-		// 		// [struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]...[/struct-a-1-1-data:{'section_tipo':'rsc370','section_id':'3'}:data]
-		// 		const tag_id		= section_elements[i].dataset.tag_id
-		// 		const state			= section_elements[i].dataset.state
-		// 		const label			= section_elements[i].dataset.label
-		// 		const data			= section_elements[i].dataset.data
-		// 		// Compose Dédalo tags
-		// 		const tag_in		= self.build_data_tag('structIn', tag_id, state, label, data)
-		// 		const tag_out		= self.build_data_tag('structOut', tag_id, state, label, data)
-		// 		const final_string	= tag_in + section_elements[i].innerHTML + tag_out
-
-		// 		// Replaces tag content string with new created
-		// 		section_elements[i].innerHTML = final_string
-
-		// 		// Unwrap section tag node (removes tags and leaves only contents)
-		// 		unwrap_element(section_elements[i]);
-
-		// 		// Check if current tag already exists (duplicates)
-		// 		if(ar_section_id.indexOf(tag_id) !== -1) {
-		// 			// Duplication detected!
-		// 			ar_section_id_duplicates.push(tag_id)
-		// 		}
-
-		// 		ar_section_id.push(tag_id)
-		// 	}//end for (var i = len - 1; i >= 0; i--) {
-		// }//end section_elements
-		// //console.log("ar_section_id",ar_section_id);
-		// if (ar_section_id_duplicates.length>0) {
-		// 	if(SHOW_DEBUG===true) {
-		// 	console.log("DEBUG Warning: Duplicate structuration tags found! \nDuplicates: ",ar_section_id_duplicates)	//.join(',')+" \nThis may be because you have inadvertently copied labels more than once from the source text. Please contact your administrator to fix this inconsistency");
-		// 	}
-		// }
-
 	// reference tags
 		// Iterate all reference elements
 		const reference_elements = cloned_text.getElementsByTagName('reference')
@@ -629,7 +586,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 	const self = this
 
 	// check tag type
-		const valid_types = ["indexIn","indexOut","structIn","structOut","tc","tc2","svg","draw","geo","page","person","note","lang","referenceIn","referenceOut"]
+		const valid_types = ["indexIn","indexOut","tc","tc2","svg","draw","geo","page","person","note","lang","referenceIn","referenceOut"]
 		if (valid_types.includes(type)===false) {
 			console.warn("[component_text_area.build_data_tag] Invalid tag type:", type);
 			alert("[component_text_area.build_data_tag] Invalid tag type: " + type)
