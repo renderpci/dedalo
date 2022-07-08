@@ -193,7 +193,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 					// set_local_db_data updated rqo
 						// const rqo = self.rqo
-						// current_data_manager.set_local_db_data(rqo, 'rqo')
+						// current_data_manager.set_local_db_data(
+						// 	rqo,
+						// 	'rqo'
+						// )
 
 					// refresh
 						await self.refresh()

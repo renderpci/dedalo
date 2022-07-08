@@ -284,7 +284,10 @@ component_portal.prototype.build = async function(autoload=false) {
 
 					// set_local_db_data updated rqo
 						// const rqo = self.rqo
-						// current_data_manager.set_local_db_data(rqo, 'rqo')
+						// current_data_manager.set_local_db_data(
+						// 	rqo,
+						// 	'rqo'
+						// )
 				}
 
 			// paginator
@@ -566,7 +569,10 @@ component_portal.prototype.update_pagination_values = function(action) {
 	// set_local_db_data updated rqo
 		// const current_data_manager = new data_manager()
 		// const rqo = self.rqo
-		// current_data_manager.set_local_db_data(rqo, 'rqo')
+		// current_data_manager.set_local_db_data(
+		// 	rqo,
+		// 	'rqo'
+		// )
 
 
 	return true

@@ -384,12 +384,18 @@ section.prototype.build = async function(autoload=false) {
 
 					// set_local_db_data updated rqo
 						// const rqo = self.rqo
-						// current_data_manager.set_local_db_data(rqo, 'rqo')
+						// current_data_manager.set_local_db_data(
+						// 	rqo,
+						// 	'rqo'
+						// )
 				}
 
 			// set_local_db_data updated rqo
 				// const rqo = self.rqo
-				// current_data_manager.set_local_db_data(rqo, 'rqo')
+				// current_data_manager.set_local_db_data(
+				// 	rqo,
+				// 	'rqo'
+				// )
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -502,8 +508,11 @@ section.prototype.build = async function(autoload=false) {
 								self.rqo.sqo.offset = offset
 
 							// set_local_db_data updated rqo
-								const rqo = self.rqo
-								current_data_manager.set_local_db_data(rqo, 'rqo')
+								// const rqo = self.rqo
+								// current_data_manager.set_local_db_data(
+								// 	rqo,
+								// 	'rqo'
+								// )
 						},
 						true // bool navigation_history save
 					)

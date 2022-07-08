@@ -257,7 +257,10 @@ data_manager.prototype.get_local_db = async function() {
 * 		data : generic data like menu resolution
 * 		context : context cache data
 * Calling sample:
-* 	current_data_manager.set_local_db_data(rqo, 'rqo')
+* 	current_data_manager.set_local_db_data(
+* 		rqo, // mixed data
+* 		'rqo' // string table
+* 	)
 * @return promise
 */
 data_manager.prototype.set_local_db_data = async function(data, table) {

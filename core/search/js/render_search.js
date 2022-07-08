@@ -1008,10 +1008,14 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			search_global_container.classList.remove("hide")
 
-			data_manager.prototype.set_local_db_data({
+			const data = {
 				id		: status_id,
 				value	: true
-			}, status_table)
+			}
+			data_manager.prototype.set_local_db_data(
+				data,
+				status_table
+			)
 
 		}else{
 

@@ -415,7 +415,10 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 						id		: 'tool_export_config',
 						value	: tool_export_config
 					}
-					current_data_manager.set_local_db_data(cache_data, 'data')
+					current_data_manager.set_local_db_data(
+						cache_data,
+						'data'
+					)
 				}
 			})
 		})
@@ -458,7 +461,10 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 					id		: 'tool_export_config',
 					value	: tool_export_config
 				}
-				current_data_manager.set_local_db_data(cache_data, 'data')
+				current_data_manager.set_local_db_data(
+					cache_data,
+					'data'
+				)
 			}
 		})
 
