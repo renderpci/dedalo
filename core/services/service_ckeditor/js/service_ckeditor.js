@@ -669,7 +669,7 @@ export const service_ckeditor = function() {
 			const range = editor.model.createRangeIn( root );
 
 		// ar_tag_id, array with all id of the tags nodes
-			const ar_tag_id = []
+			const ar_tag_id = [0]
 		// Iterate over all items in this range:
 			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
 
