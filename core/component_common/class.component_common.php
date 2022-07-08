@@ -1600,7 +1600,10 @@ abstract class component_common extends common {
 					}else{
 						# use query select value
 						$dato_full_json = $current_row->{$related_tipo};
-						$current_label = self::get_value_with_fallback_from_dato_full( $dato_full_json, false );
+						$current_label = self::get_value_with_fallback_from_dato_full(
+							$dato_full_json,
+							true // bool decore_untranslated
+						);
 					}
 					if (!empty($current_label)) {
 						$ar_label[] = $current_label;
