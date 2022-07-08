@@ -404,7 +404,7 @@ abstract class TR {
 		# TC clear
 		if($options->deleteTC===true) {
 			$pattern = TR::get_mark_pattern('tc');
-			$string = preg_replace($pattern, '', $string);	# elliminar los TC
+			$string = preg_replace($pattern, '', $string);	// delete TC tag
 		}
 
 		# Index clear
@@ -568,32 +568,6 @@ abstract class TR {
 
 		return $value;
 	}//end tag2data
-
-
-
-
-	/**
-	* CREATE_TEXT_EDITOR_IMAGE_FROM_TAG
-	* Create a usable in text editor image from tag
-	* @return string
-	*/
-	public static function create_text_editor_image_from_tag(string $tag, string $type) : string {
-
-		switch ($type) {
-			case 'index':
-				$img = "<img id=\"$tag\" src=\"../../component_text_area/tag/?id=$tag\" class=\"index mceNonEditable\" data-mce-src=\"../../component_text_area/tag/?id=$tag\">";
-				break;
-			case 'tc':
-				$img = "<img id=\"$tag\" src=\"../../component_text_area/tag/?id=$tag\" class=\"tc\" data-mce-src=\"../../component_text_area/tag/?id=$tag\">";
-				break;
-			default:
-				$img = '';
-				debug_log(__METHOD__."  Type ($type) is not defined ".to_string(), logger::ERROR);
-				break;
-		}
-
-		return $img;
-	}//end create_text_editor_image_from_tag
 
 
 
