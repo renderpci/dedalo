@@ -489,24 +489,24 @@ render_list_section.render_column_id = function(options){
 								parent			: fragment
 							})
 							button_edit.addEventListener("click", function(){
+
+								// sqo. Note that sqo will be used as request_config.sqo on navigate
+									const sqo	= clone(self.rqo_config.sqo)
+									sqo.limit	= 1
+									sqo.offset	= offset
+
 								const user_navigation_rqo = {
 									caller_id	: self.id,
 									source		: {
 										action			: 'search',
-										model			: 'section',
+										model			: self.model, // 'section'
 										tipo			: section_tipo,
 										section_tipo	: section_tipo,
 										// section_id	: section_id, // (!) enabling affect local db stored rqo's
 										mode			: 'edit',
 										lang			: self.lang
 									},
-									sqo : {
-										section_tipo	: [{tipo : section_tipo}],
-										limit			: 1,
-										offset			: offset,
-										filter			: self.rqo.sqo.filter || null,
-										order			: self.rqo.sqo.order || null
-									}
+									sqo : sqo
 								}
 								event_manager.publish('user_navigation', user_navigation_rqo)
 							})

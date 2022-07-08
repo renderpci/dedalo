@@ -192,15 +192,15 @@ final class dd_core_api {
 									});
 									if (!empty($request_config)) {
 										// sqo
-											$sqo = new search_query_object();
-											$sqo->set_section_tipo([(object)[
-												'tipo'	=> $tipo,
-												'label'	=> ''
-											]]);
-											$sqo->set_filter_by_locators([(object)[
-												'section_tipo'	=> $tipo,
-												'section_id'	=> $section_id
-											]]);
+										$sqo = new search_query_object();
+										$sqo->set_section_tipo([(object)[
+											'tipo'	=> $tipo,
+											'label'	=> ''
+										]]);
+										$sqo->set_filter_by_locators([(object)[
+											'section_tipo'	=> $tipo,
+											'section_id'	=> $section_id
+										]]);
 
 										// overwrite default sqo
 										$request_config->sqo = $sqo;
@@ -1445,6 +1445,7 @@ final class dd_core_api {
 							// store sqo section
 								if ($model==='section' && ($mode==='edit' || $mode==='list')) {
 									$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+									debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
 								}
 
 						// }else if ($model==='area_thesaurus'){

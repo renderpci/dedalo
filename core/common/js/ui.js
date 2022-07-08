@@ -4,7 +4,7 @@
 
 
 // imports
-	import {strip_tags, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {strip_tags, clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -2600,12 +2600,14 @@ export const ui = {
 					}]
 					console.log("order:",order);
 
-				// update rqo
+				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
+				// note that navigate only refresh current instance content_data, not the whole page
 					self.navigate(
 						() => { // callback
-							self.rqo.sqo.order = order
+							self.rqo_config.sqo.order	= order
+							self.rqo.sqo.order			= order
 						},
-						false // bool navigation_history save
+						true // bool navigation_history save
 					)
 
 				// update current_direction
