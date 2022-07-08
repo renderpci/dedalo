@@ -149,10 +149,14 @@ const get_content_data_edit = async function(self) {
 						self.target_component = response
 					})
 
-					data_manager.prototype.set_local_db_data({
+					const data = {
 						id		: 'tool_lang_target_lang',
 						value	: lang
-					}, 'status')
+					}
+					data_manager.prototype.set_local_db_data(
+						data,
+						'status'
+					)
 				})
 				top_right.appendChild(target_select_lang)
 
@@ -381,7 +385,6 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 				inner_html		: engine.label,
 				parent			: self.translator_engine_select
 			})
-
 			if (self.target_translator===engine.name) {
 				option.selected = true
 			}

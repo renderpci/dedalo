@@ -1114,10 +1114,15 @@ search.prototype.track_show_panel = async function(options) {
 		}
 
 	// local_db_data save
-		current_data_manager.set_local_db_data({
+		const data = {
 			id		: self.id,
 			value	: value
-		}, 'context')
+		}
+		current_data_manager.set_local_db_data(
+			data,
+			'context'
+		)
+
 
 	return true
 }//end track_show_panel

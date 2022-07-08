@@ -1810,10 +1810,14 @@ export const ui = {
 					// close
 
 					// add record to local DB
-					data_manager.prototype.set_local_db_data({
-						id		: collapsed_id,
-						value	: true
-					}, collapsed_table)
+						const data = {
+							id		: collapsed_id,
+							value	: true
+						}
+						data_manager.prototype.set_local_db_data(
+							data,
+							collapsed_table
+						)
 
 					content_data.classList.add('hide')
 
@@ -1832,10 +1836,14 @@ export const ui = {
 					}else{
 						// when default is closed, we need to store the state as NOT collapsed
 						// to prevent an infinite loop
-						data_manager.prototype.set_local_db_data({
+						const data = {
 							id		: collapsed_id,
 							value	: false
-						}, collapsed_table)
+						}
+						data_manager.prototype.set_local_db_data(
+							data,
+							collapsed_table
+						)
 					}
 
 					content_data.classList.remove('hide')
@@ -2489,7 +2497,7 @@ export const ui = {
 		}//end for (let i = 0; i < columns_length; i++)
 
 		// header_wrapper pointers add
-			header_wrapper.sort_nodes	= sort_nodes
+			header_wrapper.sort_nodes = sort_nodes
 
 		// header_wrapper
 			const searchParams = new URLSearchParams(window.location.href);
@@ -2691,7 +2699,7 @@ export const ui = {
 			const item = list[i]
 
 			if (item.width) {
-				// defined width cases
+				// already defined width cases
 				ar_elements.push(item.width)
 			}else{
 				// non defined width cases, uses default grid measure like '1fr'
@@ -2701,6 +2709,7 @@ export const ui = {
 				ar_elements.push(unit+type) // like '1fr'
 			}
 		}
+
 		return ar_elements
 	},//end flat_column_items
 

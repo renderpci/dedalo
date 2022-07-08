@@ -92,10 +92,14 @@ render_section_tab.prototype.edit = async function(options) {
 							event_manager.publish('tab_active_'+tipo, child_node)
 
 						// status update
-							data_manager.prototype.set_local_db_data({
+							const data = {
 								id		: status_id,
 								value	: tipo
-							}, status_table)
+							}
+							data_manager.prototype.set_local_db_data(
+								data,
+								status_table
+							)
 
 						// active self
 							child_node.classList.add('active')

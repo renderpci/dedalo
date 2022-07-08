@@ -96,12 +96,12 @@ menu.prototype.build = async function(autoload=true){
 	if (autoload===true) {
 
 		const current_data_manager	= new data_manager()
-		const cache_data			= await current_data_manager.get_local_db_data(self.id, 'data')
+		const menu_cache_data			= await current_data_manager.get_local_db_data(self.id, 'data')
 
-		if(cache_data){
+		if(menu_cache_data){
 
 			// set the result to the datum
-				self.datum = cache_data.value
+				self.datum = menu_cache_data.value
 
 			console.log("__Time [menu.build] returned menu datum from local_db ", self.id, performance.now()-t0);
 
@@ -128,11 +128,14 @@ menu.prototype.build = async function(autoload=true){
 				self.datum = api_response.result
 
 			// cache
-				const cache_data = {
+				const menu_cache_data = {
 					id		: self.id,
 					value	: self.datum
 				}
-				current_data_manager.set_local_db_data(cache_data, 'data')
+				current_data_manager.set_local_db_data(
+					menu_cache_data,
+					'data'
+				)
 		}
 	}
 
@@ -152,5 +155,3 @@ menu.prototype.build = async function(autoload=true){
 
 	return true
 }//end build
-
-
