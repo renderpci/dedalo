@@ -41,7 +41,7 @@
 						top: -1.75rem;
 						left: 1rem;
 						width: auto;
-						height: 2.2em;
+						// height: 2.2em;
 						padding: 0.25rem;
 						z-index: 1;
 						// background-color: @color_grey_light;
@@ -50,18 +50,21 @@
 						outline: 1px solid #e6e6e6;
 
 						// version mini	(fit heigth)
-							// top: -1.35rem;
-							// height: 1.8em;
-							// padding: 0.05rem;
-							// width: calc(100% - 2rem);
+							top: -1.35rem;
+							height: auto;
+							padding: 0.05rem;
+							width: calc(100% - 2rem);
+
+						flex-wrap: wrap;
+						z-index: 2;
 
 						>.toolbar_button {
-							height: 100%;
+							height: 1.8em;
 							padding: 0.33rem;
 							padding-right: 0.5em;
 							padding-left: 0.5em;
 							cursor: pointer;
-							border-radius: 0.33em;
+							border-radius: 0.25em;
 
 							&:hover {
 								background-color: #dddddd;
@@ -93,6 +96,10 @@
 						height: calc(100% - 1.5rem);
 						margin-top: 0.5rem;
 						resize: vertical;
+
+						@media screen and (max-width: @width_break_point_0) {
+							padding-top: 1.5rem;
+						}
 
 						img {
 							cursor: pointer;

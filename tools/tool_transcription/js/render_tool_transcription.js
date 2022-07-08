@@ -505,26 +505,32 @@ const render_tanscription_options = async function(self, content_data) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return DOM node activity_info_body
 */
 const render_activity_info = function(self) {
-
-	const fragment = new DocumentFragment()
 
 	// activity alert
 		const activity_info_body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'activity_info_body',
-			parent			: fragment
+			class_name		: 'activity_info_body'
 		})
+
+	// event save
 		self.events_tokens.push(
 			event_manager.subscribe('save', fn_saved)
 		)
-		function fn_saved(options){
-			const node_info = render_node_info(options)
+		function fn_saved(options) {
+
+			// recived options contains an object with instance and api_response
+			const node_info_options = Object.assign(options,{
+				container : activity_info_body
+			})
+
+			// render notification node
+			const node_info = render_node_info(node_info_options)
 			activity_info_body.prepend(node_info)
 		}
 
 
-	return fragment
+	return activity_info_body
 }//end render_activity_info

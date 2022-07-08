@@ -15,26 +15,26 @@
 		flex-wrap: wrap;
 
 		>.tool_header {
-			padding: 1em;
+			// padding: 1em;
 			// moded outside. see bellow
 
 			// button close (only outside modal)
-			>.button.close {
-				position: absolute;
-				display: block;
-				right: 0.5rem;
-				top: 0.5rem;
-				cursor: pointer;
-				width: 1.4rem;
-				height: 1.4rem;
+			// >.button.close {
+			// 	position: absolute;
+			// 	display: block;
+			// 	right: 0.5rem;
+			// 	top: 0.5rem;
+			// 	cursor: pointer;
+			// 	width: 1.4rem;
+			// 	height: 1.4rem;
 
-				&:hover {
-					background-color: #000000 !important;
-				}
-				&:active {
-					background-color: #ffffff !important;
-				}
-			}
+			// 	&:hover {
+			// 		background-color: #000000 !important;
+			// 	}
+			// 	&:active {
+			// 		background-color: #ffffff !important;
+			// 	}
+			// }
 		}
 
 		>.content_data {
@@ -68,6 +68,10 @@
 		width: 100%;
 		display: flex;
 
+		>div {
+			padding: 1rem;
+		}
+
 		>.tool_name_container {
 			padding-right: 1rem;
 			>.label {
@@ -88,7 +92,78 @@
 
 		>.tool_buttons_container {
 			// background-color: #BAF1F6;
-			padding: 0;
+		}
+
+		>.activity_info_container {
+			// background-color: #f0f8ff78;
+			// flex: 1;
+			// position: relative;
+			// padding-top: 0;
+			z-index: 2;
+
+			>.activity_info_body {
+				position: absolute;
+				top: 0;
+				right: 0;
+
+				// bubble message info
+				>.node_info_save_msg {
+					background-color: @color_orange_dedalo;
+					position: relative;
+					font-size: 0.96rem;
+					box-shadow: 2px 2px 4px 0px rgb(0 0 0 / 50%);
+					padding: 0.75rem;
+					outline: 1px solid #e6e6e65e;
+					border-radius: 4px;
+					margin-top: 0.5rem;
+					margin-right: 0.5rem;
+					padding-right: 1.5rem;
+					user-select: none;
+
+					&.ok {
+						background-color: @color_success;
+					}
+					&.error, &.warning {
+						background-color: @color_danger;
+					}
+
+					&:after {
+						content: " x ";
+						width: 15px;
+						height: 15px;
+						display: block;
+						position: absolute;
+						right: 0px;
+						top: 3px;
+						font-family: Arial, sans-serif;
+						cursor: pointer;
+						color: white;
+						// font-weight: bold;
+						//background-image: url("../../themes/default/close.png");
+
+						&:hover {
+							color: black;
+						}
+					}
+				}
+			}
+		}
+
+		>.button.close {
+			position: absolute;
+			display: block;
+			right: 0.5rem;
+			top: 0.5rem;
+			cursor: pointer;
+			width: 1.4rem;
+			height: 1.4rem;
+
+			&:hover {
+				background-color: #000000 !important;
+			}
+			&:active {
+				background-color: #ffffff !important;
+			}
 		}
 
 		// inside modal case
