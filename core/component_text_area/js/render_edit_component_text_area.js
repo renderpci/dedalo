@@ -755,6 +755,8 @@ const get_custom_events = (self, i, text_editor) => {
 		custom_events.click = (evt, options) => {
 			// use the observe property into ontology of the components to subscribe to this events
 			// img : click on img
+			evt.preventDefault()
+			evt.stopPropagation()
 			if(options.node_name==='img' || options.node_name==='REFERENCE') {
 				const tag_obj = options
 				switch(tag_obj.type) {
@@ -815,7 +817,7 @@ const get_custom_events = (self, i, text_editor) => {
 						if(person) {
 
 							// save editor changes to prevent conflicts with modal components changes
-								text_editor.save()
+								// text_editor.save()
 
 							// modal. create new modal with the person full name
 								ui.attach_to_modal({
@@ -832,7 +834,7 @@ const get_custom_events = (self, i, text_editor) => {
 							event_manager.publish('click_tag_note_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 
 						// save editor changes to prevent conflicts with modal components changes
-							text_editor.save()
+							// text_editor.save()
 
 						// modal tag note info
 							render_note({
@@ -857,7 +859,7 @@ const get_custom_events = (self, i, text_editor) => {
 						const lang_obj 			= ar_project_langs.find(el => el.value===tag_data_lang) || {label: data_lang}
 
 						// save editor changes to prevent conflicts with modal components changes
-							text_editor.save()
+							// text_editor.save()
 
 						// modal tag lang info
 							ui.attach_to_modal({
@@ -891,6 +893,8 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
+			evt.preventDefault()
+			evt.stopPropagation()
 			// user text selection event
 			const selection = options.selection
 			event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
@@ -1312,7 +1316,7 @@ const render_note = async function(options) {
 				// view_tag.state	= tag.dataset.state
 				// Save the change, set the text_editor as dirty (has changes) and save it
 				text_editor.set_dirty(true)
-				text_editor.save()
+				// text_editor.save()
 			}
 		}
 
@@ -1387,7 +1391,7 @@ const render_note = async function(options) {
 
 						// text_area. Prepare the text_editor to save setting it in dirty mode and save the change
 							text_editor.set_dirty(true)
-							text_editor.save()
+							// text_editor.save()
 
 						// remove the modal
 							modal.remove()
@@ -1409,7 +1413,7 @@ const render_note = async function(options) {
 			})
 
 	// save editor changes to prevent conflicts with modal components changes
-		text_editor.save()
+		// text_editor.save()
 
 	// modal. Create a standard modal with the note information
 		const modal = ui.attach_to_modal({
@@ -1569,7 +1573,7 @@ const render_persons_list = function(self, text_editor, i) {
 			}//end for (let i = 0; i < value_length; i++)
 
 	// save editor changes to prevent conflicts with modal components changes
-		text_editor.save()
+		// text_editor.save()
 
 	// modal
 		ui.attach_to_modal({
@@ -1643,7 +1647,8 @@ const render_langs_list = function(self, text_editor, i) {
 					// set the new lang tag at caret position of the text_editor.
 					text_editor.set_content(tag)
 					// save value
-					text_editor.save()
+					text_editor.set_dirty(true)
+					// text_editor.save()
 					.then(function(){
 						// close current modal
 						modal.close()
@@ -1675,7 +1680,7 @@ const render_langs_list = function(self, text_editor, i) {
 			}//end for (let i = 0; i < value_length; i++)
 
 	// save editor changes to prevent conflicts with modal components changes
-		text_editor.save()
+		// text_editor.save()
 
 	// modal
 		const modal = ui.attach_to_modal({
