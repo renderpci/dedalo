@@ -5,8 +5,8 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
+	// import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -57,9 +57,11 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 	// render the columns
 		const columns_map_length = columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
+
 			const current_colum = columns_map[i]
-			// get the specific instances for the current column
-			const ar_instances = ar_columns_instances.filter(el => el.column_id === current_colum.id)
+
+			// instances.get the specific instances for the current column
+				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_colum.id)
 
 			// loop the instances for select the parent node
 				const ar_instances_length = ar_instances.length
@@ -75,7 +77,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 							resolve(true)
 						}else{
 							current_instance.render()
-							.then(function(current_instance_node){
+							.then(function(){
 								resolve(true)
 							}).catch((errorMsg) => {
 								console.error(errorMsg);
@@ -143,7 +145,6 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 				class_name		: 'column column_info',
 				text_node		: info_value // wrap into span the text
 			})
-			//wrapper.appendChild(info)
 			fragment.appendChild(info)
 		}
 
@@ -152,10 +153,10 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 		wrapper.appendChild(fragment)
 
 	// events
-		wrapper.addEventListener("click", (e) => {
+		wrapper.addEventListener('click', (e) => {
 			// e.stopPropagation()
-			if (!e.target.classList.contains("row_active")) {
-				e.target.classList.add("row_active")
+			if (!e.target.classList.contains('row_active')) {
+				e.target.classList.add('row_active')
 			}
 		})
 
@@ -190,7 +191,7 @@ const build_id_column = function(self) {
 					class_name		: 'button edit',
 					parent			: id_column
 				})
-				edit_button.addEventListener("click", function(e){
+				edit_button.addEventListener('click', function(){
 					// edit_record(this, self)
 
 					// rqo
@@ -277,5 +278,3 @@ const delete_record = (button, self) => {
 
 	return false
 }//end delete_record
-
-
