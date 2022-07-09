@@ -214,6 +214,7 @@ component_text_area.prototype.init = async function(options) {
 		self.service_text_editor	= service_ckeditor
 
 
+
 	return common_init
 }//end  init
 

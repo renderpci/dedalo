@@ -102,7 +102,7 @@ component_common.prototype.init = async function(options) {
 			function fn_active_component(actived_component) {
 				// call ui.component
 				const response = ui.component.active(self, actived_component) // response is bool value
-				if (response===true && typeof self.active==="function" ) {
+				if (response===true && typeof self.active==="function") {
 					self.active()
 				}
 			}
@@ -118,7 +118,7 @@ component_common.prototype.init = async function(options) {
 						(instance.data.value && instance.data.value.length>0) ||
 						(instance.data.q_operator && instance.data.q_operator.length>0)
 					)
-					setTimeout(function(){ // used timeout to allow css background tansition occurs
+					setTimeout(function(){ // used timeout to allow css background transition occurs
 						ui.hilite({
 							instance	: instance, // instance object
 							hilite		: hilite // bool

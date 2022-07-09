@@ -215,6 +215,7 @@ export const service_ckeditor = function() {
 
 		const self		= this
 		const editor	= self.editor
+
 		// the editor send a event when the data is changed and change the is_dirty state
 		editor.model.document.on( 'change:data', () => {
 			self.is_dirty = true;
@@ -273,6 +274,7 @@ export const service_ckeditor = function() {
 
 		// click event
 			editor.editing.view.document.on('click', function(evt, data ) {
+
 				// get the name of the node clicked, 'img' 'p' 'div', etc
 				const click_element = data.target.name
 
