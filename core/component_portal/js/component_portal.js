@@ -148,7 +148,7 @@ component_portal.prototype.init = async function(options) {
 					}
 
 				// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
-					const tag_id	= self.active_tag.tag.dataset.tag_id
+					const tag_id	= self.active_tag.tag.tag_id
 					locator.tag_id	= tag_id
 
 				// top_locator add
@@ -594,20 +594,22 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 	// options
 		// const caller			= options.caller // not used
 		// const text_editor	= options.text_editor // not used
-		const tag				= options.tag // DOM node selected
+		const tag				= options.tag // object
 
 	// Fix received options from event as 'active_tag'
 		self.active_tag = options
 
-	// tag_id from node dataset
-		const tag_id = tag.dataset.tag_id
+	// short vars
+		const tag_id = tag.tag_id
 
 	// get all data from datum because if the user select one tag the portal data is filtered by the tag_id,
 	// in the next tag selection by user the data doesn't have all locators and is necessary get the original data
 	// the full_data is clone to a new object because need to preserve the datum from these changes.
-		const full_data	= self.datum.data.find(el => el.tipo===self.tipo
-												  && el.section_tipo===self.section_tipo
-												  && el.section_id==self.section_id) || {}
+		const full_data	= self.datum.data.find(el =>
+				el.tipo===self.tipo
+			 && el.section_tipo===self.section_tipo
+			 && el.section_id==self.section_id
+		) || {}
 		self.data = clone(full_data)
 
 	// the portal will use the filtered data value to render it with the tag_id locators.

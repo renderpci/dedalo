@@ -9,6 +9,8 @@
 	// background-color: #ecf564;
 
 	&.edit, &.edit_in_list {
+		align-content: unset;
+
 		>.content_data {
 			// background-color: #c0f5b8;
 			display: grid;
@@ -50,7 +52,7 @@
 						outline: 1px solid #e6e6e6;
 
 						// version mini	(fit heigth)
-							top: -1.35rem;
+							top: -15px;
 							height: auto;
 							padding: 0.05rem;
 							width: calc(100% - 2rem);
@@ -95,7 +97,7 @@
 						margin: 1rem;
 						height: calc(100% - 1.5rem);
 						margin-top: 0.5rem;
-						resize: vertical;
+						// resize: vertical;
 
 						@media screen and (max-width: @width_break_point_0) {
 							padding-top: 1.5rem;

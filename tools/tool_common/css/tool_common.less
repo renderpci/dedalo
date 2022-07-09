@@ -13,8 +13,13 @@
 		padding: 0;
 		display: flex;
 		flex-wrap: wrap;
+		align-content: flex-start;
+		min-height: inherit;
+
+		@header_height: 5rem;
 
 		>.tool_header {
+			height: @header_height;
 			// padding: 1em;
 			// moded outside. see bellow
 
@@ -40,7 +45,8 @@
 		>.content_data {
 			// background-color: #B7F9BB;
 			width: 100%;
-			padding: 1em;
+			// padding: 1em;
+			min-height: calc(100vh - @header_height);
 
 			// >* {
 				//padding: 1em;

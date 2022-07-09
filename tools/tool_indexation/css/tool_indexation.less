@@ -35,36 +35,39 @@
 		>.tool_header {
 			background-color: @color_bg_tool;
 			position: relative;
+
+			select {
+				max-width: 20rem;
+			}
 		}
 
 		>.content_data {
 			// background-color: #f9eae0;
 			width: 100%;
-			height: 92vh;
-			display: grid;
-			grid-gap: 1rem;
-			grid-template-columns: 1fr 1fr;
-			// grid-template-rows: 80% 20%;
+			// height: 92vh;
+			// display: grid;
+			// grid-gap: 1rem;
+			// grid-template-columns: 1fr 1fr;
+			display: flex;
 
 			@media screen and (max-width: @width_break_point_0) {
-				display: flex;
+				// display: flex;
 				flex-wrap: wrap;
 			}
 
-			>* {
-				width: 100%;
-			}
-
-			// left block
-			>.thesaurus_container {
-				// background-color: #91dda4;
+			>.left_container, >.right_container {
+				padding: 1rem;
 				height: 100%;
 				min-height: 700px;
 				max-height: 100%;
-				overflow: auto;
-				// grid-row-start: 1;
-				// grid-row-end: 3;
+			}
 
+			// left block (thesaurus)
+			>.left_container {
+				width: 45%;
+				overflow: auto;
+
+				// thesaurus
 				>.area_thesaurus {
 					padding: 0;
 				}
@@ -72,12 +75,18 @@
 
 			// right block
 			>.right_container {
+				width: 55%;
+				display: grid;
+				grid-template-rows: 55vh 3.5rem auto;
 
 				// text area
-				>.component_container {
+				>.transcription_component_container {
 					// background-color: #d8de48;
 					margin-bottom: 0.5rem;
 					position: relative;
+					flex: 1 0 50%;
+					// max-height: 50%;
+					// overflow: hidden;
 
 					// lang selector
 					>select {
@@ -92,11 +101,21 @@
 						z-index: 2;
 						outline: none;
 					}
+
+					>.wrapper_component {
+						height: 100%;
+
+						>.content_data {
+							height: 100%;
+							// display: none;
+						}
+					}
 				}
 
 				// selected tag info line
 				>.info_container {
 					// background-color: #c4c4f9;
+					min-height: 3.5rem;
 
 					.tag_info_container {
 						display: flex;
@@ -147,7 +166,9 @@
 				}
 
 				// portal
-				.component_portal {
+				.component_indexing_container {
+					flex: 1;
+					grid-area: unset;
 					// background-color: #cdf64f !important;
 				}
 			}
@@ -160,6 +181,25 @@
 	// .tool_header.tool_indexation {
 	// 	background-color: @color_bg_tool;
 	// }
+
+
+
+// split
+	.gutter {
+		background-color: #eee;
+		background-repeat: no-repeat;
+		background-position: 50%;
+	}
+
+	.gutter.gutter-horizontal {
+		background-image: url('../img/grips/vertical.png');
+		cursor: col-resize;
+	}
+
+	.gutter.gutter-vertical {
+		background-image: url('../img/grips/horizontal.png');
+		cursor: row-resize;
+	}
 
 
 
@@ -176,17 +216,17 @@
 // components_container
 	.components_container {
 		display: grid;
-	    grid-template-columns: 1fr 1fr;
-	    grid-gap: 1em;
-	    //background-color: #D6F737;
+		grid-template-columns: 1fr 1fr;
+		grid-gap: 1em;
+		//background-color: #D6F737;
 
-	    >select {
+		>select {
 			.select_style;
-	    }
+		}
 
-	    >div {
+		>div {
 
-	    }
+		}
 	}
 
 
