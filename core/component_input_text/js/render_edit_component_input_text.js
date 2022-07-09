@@ -127,7 +127,7 @@ const add_events = function(self, wrapper) {
 						changed_data	: changed_data,
 						refresh			: false
 					})
-					.then((save_response)=>{
+					.then(()=>{
 						// event to update the dom elements of the instance
 						event_manager.publish('update_value_'+self.id, changed_data)
 					})
@@ -173,8 +173,6 @@ const add_events = function(self, wrapper) {
 						changed_data	: changed_data,
 						label			: current_value,
 						refresh			: true
-					})
-					.then(()=>{
 					})
 
 					return true

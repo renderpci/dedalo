@@ -640,13 +640,13 @@ export const ui = {
 
 		/**
 		* ACTIVE
-		* Set component state as active by callback event
+		* Set component state as active/inactive by subscription event
 		* @see util.events event_manage.publish
 		*
 		* @param object component
-		*	Full component instance
-		* @param string id
-		*	ID of clicked component
+		*	Full component instance. Each component that is subscribed
+		* @param object actived_component
+		*	Full component instance. Actual active component
 		* @return async promise
 		*	Note that this function return always a promise to allow the caller
 		*	continue applying another custom actions
@@ -696,8 +696,8 @@ export const ui = {
 							}
 						}
 
+					// set as active
 						ui.component.component_active = component
-
 
 					return true
 				}
@@ -717,7 +717,6 @@ export const ui = {
 
 			// inactive by function
 				ui.component.inactive(component)
-
 
 
 			return false

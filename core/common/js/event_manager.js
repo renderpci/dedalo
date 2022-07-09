@@ -34,7 +34,7 @@ const event_manager_class = function(){
 	* @param function callback
 	* 	Like: 'fn_active_component'
 	* @return string token
-	* 	custom string incrmental like: 'event_270'
+	* 	custom string incremental like: 'event_270'
 	*/
 	this.subscribe = function(event_name, callback) {
 
@@ -67,7 +67,7 @@ const event_manager_class = function(){
 	/**
 	* UNSUBSCRIBE
 	* @param string event_token
-	* 	custom string incrmental like: 'event_270'
+	* 	custom string incremental like: 'event_270'
 	* @return array new_events_list
 	* 	A new array without the removed event
 	*/
@@ -230,7 +230,7 @@ const event_manager_class = function(){
 
 	/**
 	* BEFOREUNLOADLISTENER
-	* Prevent to accidentally ser leaves the page with unsaved changes
+	* Prevent to accidentally user leaves the page with unsaved changes
 	* @param object event
 	*/
 	this.beforeUnloadListener = function(event) {
