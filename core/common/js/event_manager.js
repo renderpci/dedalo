@@ -163,7 +163,39 @@ const event_manager_class = function(){
 		observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
 
 		return observer
-	}//end  when_in_dom
+	}//end when_in_dom
+
+
+
+	/**
+	* WHEN_IN_VIEWPORT
+	* Exec a callback when node element is visible in document viewport
+	* @param DOM node 'node'
+	* @param function callback
+	* @param bool once
+	*
+	* @return mutation observer
+	*/
+	this.when_in_viewport = function(node, callback, once=true) {
+
+		// observer. Exec the callback when element is in viewport
+		const observer = new IntersectionObserver(function(entries) {
+			// if(entries[0].isIntersecting === true) {}
+			const entry = entries[1] || entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+
+				// default is true (executes the callback once)
+				if (once===true) {
+					observer.disconnect();
+				}
+
+				callback()
+			}
+		}, { threshold: [0] });
+		observer.observe(node);
+
+		return observer
+	}//end when_in_viewport
 
 
 
@@ -171,7 +203,7 @@ const event_manager_class = function(){
 	* SET_BEFORE_UNLOAD
 	* On true, attach a event listener to the window to prevent that user loose changed data on reload
 	* On false, the listener is removed to allow reload the page normally
-	* Note that this function is triggered af true when component input or editor data changes and
+	* Note that this function is triggered as true when component input or editor data changes and
 	* with false when the component saves the data
 	* @param bool value
 	* @return bool
