@@ -36,6 +36,7 @@ export const service_ckeditor = function() {
 	* Editor load the core and common commands and plugins from ckEditor but Dédalo will not use the ckEditor user interface
 	* the interface is created inside the toolbar_container with custom icons and functionalities
 	* @param object options
+	* @return promise js_promise
 	*/
 	this.init = async function(options) {
 
@@ -63,7 +64,8 @@ export const service_ckeditor = function() {
 			// ddEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
 			// ckEditor is initiated without user interface
-			ddEditor.create( value_container, {
+			const js_promise = ddEditor.create( value_container, {
+				// initialData: value
 			})
 			.then( editor => {
 
@@ -86,8 +88,15 @@ export const service_ckeditor = function() {
 				// the drop event doesn't has any effect in the final position of the drop,
 				// the final check position is fired in the clipboardInput event.
 				editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
-					//check the target name of the element
-					if(data.target.name === 'img'){
+
+					// target is undefined unless a existing element is focus on paste or drop
+					// In this cases, no more check area necessary. Stop here
+						if (!data.target) {
+							return
+						}
+
+					// check the target name of the element (expected a image)
+					if(data.target.name==='img'){
 						editor.editing.view.change((writer) => {
 							// create new position at start and end of the target
 							// use the target parent because the img is wrapped inside a span
@@ -142,6 +151,8 @@ export const service_ckeditor = function() {
 
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
+
+				value_container.remove()
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
@@ -149,7 +160,7 @@ export const service_ckeditor = function() {
 			});
 
 
-		return true
+		return js_promise
 	}//end init
 
 
@@ -718,9 +729,10 @@ export const service_ckeditor = function() {
 		// short vars
 			const self		= this
 			const editor	= self.editor
-			const ar_type	= Array.isArray(type)
+			const ar_type	= (type instanceof Array)
 				? type
 				: [type]
+			let changed = 0
 
 		// root. Whole editor document to traverse
 			const root = editor.model.document.getRoot();
@@ -785,8 +797,16 @@ export const service_ckeditor = function() {
 								writer.setAttribute( 'src', image_url, item );
 							});
 
+						// set dirty state
+							self.set_dirty(true)
+
+						// changed
+							changed++;
+
 						// if the tag was found break the loop
-							break;
+							if (ar_type.length===changed) {
+								break;
+							}
 					}
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
@@ -869,7 +889,7 @@ export const service_ckeditor = function() {
 				if(button_config.manager_editor === true){
 					self.factory_events_for_buttons(button_config)
 				}
-				toolbar_container.appendChild(button_node)		
+				toolbar_container.appendChild(button_node)
 
 				toolbar_container.addEventListener('mousedown', function(evt){
 					evt.preventDefault()
@@ -955,7 +975,7 @@ export const service_ckeditor = function() {
 
 		// Clicking the buttons should execute the editor command...
 			// button.onmousedown( evt => evt.preventDefault() );
-			button.addEventListener('click', function(){				
+			button.addEventListener('click', function(){
 				editor.execute( name )
 				editor.editing.view.focus();
 			})

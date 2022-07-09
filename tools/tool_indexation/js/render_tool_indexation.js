@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import Split from '../../../lib/split/dist/split.es.js'
 
 
 
@@ -43,24 +44,9 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 			content_data : content_data
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
-		// 	modal.on_close	= async () => {
-		// 		// tool destroy
-		// 			await self.destroy(true, true, true)
-		// 		// refresh source component text area
-		// 			if (self.caller) {
-		// 				self.caller.refresh()
-		// 			}
-		// 	}
-		// }
-
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
 		wrapper.tool_buttons_container.appendChild(related_list_node)
-
 
 	// get_tag_info. Fires build tag info panel nodes at begin
 		get_tag_info(self)
@@ -68,6 +54,121 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 	return wrapper
 }//end render_tool_indexation
+
+
+
+/**
+* GET_CONTENT_DATA_EDIT
+* @return DOM node content_data
+*/
+const get_content_data_edit = async function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// left_container. area thesaurus (left)
+		const left_container = ui.create_dom_element({
+			element_type	: 'div',
+			id				: 'left_container',
+			class_name		: 'left_container',
+			parent			: fragment
+		})
+		// const thesaurus = self.get_thesaurus()
+		// thesaurus.then(function(thesaurus_instance){
+		// 	thesaurus_instance.render().then(function(node){
+		// 		left_container.appendChild(node)
+		// 	})
+		// })
+		self.area_thesaurus.render()
+		.then(function(node){
+			left_container.appendChild(node)
+		})
+
+	// right_container
+		const right_container = ui.create_dom_element({
+			element_type	: 'div',
+			id				: 'right_container',
+			class_name		: 'right_container',
+			parent			: fragment
+		})
+
+		// transcription_component
+			const transcription_component_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'transcription_component_container',
+				parent			: right_container
+			})
+			// lang selector
+				const lang_selector = ui.build_select_lang({
+					id			: "index_lang_selector",
+					selected	: self.lang,
+					class_name	: 'dd_input',
+					action		: async function(e){
+						// create new one
+						const component = await self.get_component(e.target.value)
+
+						component.render().then(function(node){
+							// remove previous nodeS
+							while (transcription_component_container.lastChild && transcription_component_container.lastChild.id!==lang_selector.id) {
+								transcription_component_container.removeChild(transcription_component_container.lastChild)
+							}
+							// add the new one
+							transcription_component_container.appendChild(node)
+						})
+					}
+				})
+				transcription_component_container.appendChild(lang_selector)
+
+			// component. render another node of component caller and append to container
+				const transcription_component = self.transcription_component || await self.get_component(self.lang)
+				transcription_component.render()
+				.then(function(node){
+					transcription_component_container.appendChild(node)
+				})
+				// self.caller.render()
+				// .then(function(node){
+				// 	transcription_component_container.appendChild(node)
+				// })
+
+		// info container
+			const info_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_container',
+				parent			: right_container
+			})
+			// fix
+			self.info_container = info_container
+
+		// indexation component
+			const component_indexing_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'component_indexing_container',
+				parent			: right_container
+			})
+			self.indexing_component.render()
+			.then(function(indexing_component_node){
+				component_indexing_container.appendChild(indexing_component_node)
+			})
+
+	// content_data
+		const content_data = ui.tool.build_content_data(self)
+		content_data.appendChild(fragment)
+
+	// split
+	// @see https://github.com/nathancahill/split/tree/master/packages/splitjs
+		event_manager.when_in_viewport(
+			left_container, // node to observe
+			() => { // callback
+				Split(['#left_container', '#right_container'], {
+					sizes: [45, 55],
+					minSize: '40%'
+				});
+				console.log("activated Split:", Split);
+			}
+		)
+
+
+	return content_data
+}//end get_content_data_edit
 
 
 
@@ -93,7 +194,7 @@ const get_tag_info = function(self) {
 	// tag_info_container. line info about tag
 		const tag_info_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'tag_info_container',
+			class_name		: 'tag_info_container hide',
 			parent			: info_container
 		})
 		// fix node
@@ -107,7 +208,7 @@ const get_tag_info = function(self) {
 		})
 		const fragment_id_label = ui.create_dom_element({
 			element_type	: 'span',
-			inner_html		: "TAG " + tag_id,
+			inner_html		: 'TAG ' + tag_id,
 			parent			: fragment_id_info
 		})
 		const fragment_id_tag_id = ui.create_dom_element({
@@ -121,14 +222,14 @@ const get_tag_info = function(self) {
 			const wrap_tag_state_selector = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'wrap_tag_state_selector',
-				inner_html		: get_label.state || "State",
+				inner_html		: get_label.state || 'State',
 				parent			: tag_info_container
 			})
 		// state selector
 			const tag_state_selector = ui.create_dom_element({
 				element_type	: 'select',
 				class_name		: 'tag_state_selector',
-				inner_html		: get_label.state || "State",
+				inner_html		: get_label.state || 'State',
 				parent			: tag_info_container
 			})
 
@@ -140,7 +241,7 @@ const get_tag_info = function(self) {
 					parent			: tag_state_selector
 				})
 			}
-			tag_state_selector.addEventListener("change", function(e){
+			tag_state_selector.addEventListener('change', function(){
 				const value = this.value
 				event_manager.publish('change_tag_state_' + self.id, {
 					tag_id	: tag_id,
@@ -172,7 +273,7 @@ const get_tag_info = function(self) {
 				class_name		: 'button remove',
 				parent			: wrap_delete_tag
 			})
-			button_delete.addEventListener("click", function(e){
+			button_delete.addEventListener('click', function(e){
 				event_manager.publish('delete_tag_' + self.id, {
 					tag_id : tag_id
 				})
@@ -186,18 +287,19 @@ const get_tag_info = function(self) {
 
 
 	// active values
-		self.active_value("tag_id", function(value){
+		self.active_value('tag_id', function(value){
 
 			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
-			button_delete_label.textContent	= get_label.borrar + " " + value // update delete label
+			button_delete_label.textContent	= get_label.borrar + ' ' + value // update delete label
 
 			// show/hide info_container
-			if (self.info_container.classList.contains('hide')) {
-				self.info_container.classList.remove('hide')
-			}
+				const toggle_node = self.tag_info_container // self.info_container
+				if (toggle_node.classList.contains('hide')) {
+					toggle_node.classList.remove('hide')
+				}
 		})
-		self.active_value("state", function(value){
+		self.active_value('state', function(value){
 
 			// fix selector value
 				tag_state_selector.value = value
@@ -217,100 +319,6 @@ const get_tag_info = function(self) {
 
 	return true;
 }//end get_tag_info
-
-
-
-/**
-* GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
-*/
-const get_content_data_edit = async function(self) {
-
-	const fragment = new DocumentFragment()
-
-
-	// area thesaurus (left)
-		const thesaurus_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'thesaurus_container',
-			parent			: fragment
-		})
-		// const thesaurus = self.get_thesaurus()
-		// thesaurus.then(function(thesaurus_instance){
-		// 	thesaurus_instance.render().then(function(node){
-		// 		thesaurus_container.appendChild(node)
-		// 	})
-		// })
-		self.area_thesaurus.render()
-		.then(function(node){
-			thesaurus_container.appendChild(node)
-		})
-
-	// right_container
-		const right_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'right_container',
-			parent			: fragment
-		})
-
-		// component_text_area
-			const component_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'component_container',
-				parent			: right_container
-			})
-			// lang selector
-				const lang_selector = ui.build_select_lang({
-					id			: "index_lang_selector",
-					selected	: self.lang,
-					class_name	: 'dd_input',
-					action		: async function(e){
-						// create new one
-						const component = await self.get_component(e.target.value)
-
-						component.render().then(function(node){
-							// remove previous nodeS
-							while (component_container.lastChild && component_container.lastChild.id!==lang_selector.id) {
-								component_container.removeChild(component_container.lastChild)
-							}
-							// add the new one
-							component_container.appendChild(node)
-						})
-					}
-				})
-				component_container.appendChild(lang_selector)
-
-			// component. render another node of component caller and append to container
-				const component = self.transcription_component || await self.get_component(self.lang)
-				component.render()
-				.then(function(node){
-					component_container.appendChild(node)
-				})
-				// self.caller.render()
-				// .then(function(node){
-				// 	component_container.appendChild(node)
-				// })
-
-		// info container
-			const info_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'info_container hide',
-				parent			: right_container
-			})
-			// fix
-			self.info_container = info_container
-
-		// indexation component
-			const indexing_component_node = await self.indexing_component.render()
-			right_container.appendChild(indexing_component_node)
-
-	// content_data
-		const content_data = ui.tool.build_content_data(self)
-		content_data.appendChild(fragment)
-
-
-	return content_data
-}//end get_content_data_edit
 
 
 
@@ -409,11 +417,9 @@ const render_related_list = function(self){
 		}//end for
 
 	// event . Change
-		select.addEventListener("change", async function(e){
+		select.addEventListener('change', async function(e){
 			self.top_locator = this.options[this.selectedIndex].locator
 		})
 
 	return fragment
 }//end render_related_list
-
-

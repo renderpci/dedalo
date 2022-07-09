@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -103,6 +103,10 @@ tool_indexation.prototype.init = async function(options) {
 		}
 		const id_base = transcription_component_ddo.section_tipo +'_'+ transcription_component_ddo.section_id +'_'+ transcription_component_ddo.tipo
 
+	// load libs
+		// common.prototype.load_script(DEDALO_TOOLS_URL + '/tool_indexation/js/lib/split.min.js')
+
+
 	// events
 		// link_term. Observe thesaurus tree link index button click (REMOVED 04-05-2022 NOT USED ANYMORE)
 			// self.events_tokens.push(
@@ -117,7 +121,7 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('change_tag_state_' + self.id, fn_change_tag_state)
 			)
 			function fn_change_tag_state(options) {
-				console.warn("tag_state options:",options);
+				console.warn('tag_state options:', options);
 
 				// options
 					const tag_id	= options.tag_id
@@ -125,15 +129,14 @@ tool_indexation.prototype.init = async function(options) {
 
 				// update_tag
 					self.transcription_component.update_tag({
-						type	: 'indexIn',
-						tag_id	: tag_id,
-						dataset	: {
+						type			: 'indexIn', // will be split into ['indexIn','indexOut']
+						tag_id			: tag_id,
+						new_data_obj	: {
 							state : value
-						},
-						save	: true
+						}
 					})
 					.then(function(response){
-						console.log("++++ response:",response);
+						console.log('++++ fn_change_tag_state response:',response);
 						if (response===true) {
 
 							// update tag_info_container color matching tag state
@@ -177,8 +180,8 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
 			)
 			function fn_click_no_tag(options) {
-				if (!self.info_container.classList.contains('hide')) {
-					self.info_container.classList.add('hide')
+				if (!self.tag_info_container.classList.contains('hide')) {
+					self.tag_info_container.classList.add('hide')
 				}
 			}
 
@@ -192,21 +195,27 @@ tool_indexation.prototype.init = async function(options) {
 
 				// options
 					const caller			= options.caller // instance of component text area
-					const tag_element		= options.tag // DOM node selected
+					const tag				= options.tag // object
 					// const text_editor	= options.text_editor // not used
 
+				// short vars
+					const tag_id	= tag.tag_id
+					const state		= tag.state
+
 				// fix selected tag
-					self.active_tag_id = tag_element.dataset.tag_id
+					self.active_tag_id = tag_id
 
 				// force to update registered active values
-					self.update_active_values([{
-						name	: "tag_id",
-						value	: tag_element.dataset.tag_id
-					},
-					{
-						name	: "state",
-						value	: tag_element.dataset.state
-					}])
+					self.update_active_values([
+						{
+							name	: 'tag_id',
+							value	: tag_id
+						},
+						{
+							name	: 'state',
+							value	: state
+						}
+					])
 
 				return true
 			}//end fn_click_tag_index
@@ -756,5 +765,3 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 	// 	// 		})
 	// 	// 	})
 	// }//end change_tag_state
-
-
