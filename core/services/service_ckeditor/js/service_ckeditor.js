@@ -25,6 +25,8 @@ export const service_ckeditor = function() {
 		this.key
 		this.editor
 
+
+
 	/**
 	* INIT
 	* Get the options of the caller that do the initialization and set the instance
@@ -75,26 +77,6 @@ export const service_ckeditor = function() {
 
 				// build toolbar
 					self.build_toolbar(editor_config);
-
-				// toolbar toggle event
-					// show toolbar_container on user mousedown
-					// removes the toolbar_container when user click outside
-					const node = toolbar_container.parentNode
-					node.addEventListener("mousedown", function() {
-						// remove the hide class to show the toolbar
-						toolbar_container.classList.remove('hide')
-						document.body.addEventListener("mouseup", fn_remove)
-					})
-					function fn_remove(e) {
-						if (e.target!==node) {
-							const path	= e.composedPath()
-							const found	= path.find(el => el===node)
-							if (!found) {
-								toolbar_container.classList.add('hide')
-								document.body.removeEventListener("mouseup", fn_remove)
-							}
-						}
-					}
 
 				// setup_events
 					self.setup_events(editor_config);
@@ -259,7 +241,7 @@ export const service_ckeditor = function() {
 		// focus event
 			editor.editing.view.document.on('focus', function(evt, data ) {
 				if (custom_events.focus) {
-					custom_events.focus(evt, {})
+					custom_events.focus(data.domEvent, {})
 				}
 			});//end focus event
 
@@ -267,7 +249,7 @@ export const service_ckeditor = function() {
 		// blur event
 			editor.editing.view.document.on('blur', function(evt, data ) {
 				if (custom_events.blur) {
-					custom_events.blur(evt, {})
+					custom_events.blur(data.domEvent, {})
 				}
 			});//end blur event
 
@@ -285,28 +267,30 @@ export const service_ckeditor = function() {
 				// get the parent of the img, it will be a span with the data of the tag in attributes
 				const item = data.target.parent._attrs
 				const tag_obj = {
-					node_name : data.target.name,
+					node_name	: data.target.name,
 					// dataset
-					type	: item.get('data-type'),
-					tag_id	: item.get('data-tag_id'),
-					state	: item.get('data-state'),
-					label	: item.get('data-label'),
-					data	: item.get('data-data')
+					type		: item.get('data-type'),
+					tag_id		: item.get('data-tag_id'),
+					state		: item.get('data-state'),
+					label		: item.get('data-label'),
+					data		: item.get('data-data')
 
 				}
+
 				if (custom_events.click) {
-					custom_events.click(evt, tag_obj)
+					custom_events.click(data.domEvent, tag_obj)
 				}
+
 				// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
-				const options = (click_element !== 'img')
-					? {selection : self.get_selection()}
-					: {selection : ''}
+				const options = {
+					selection : click_element!=='img' ? self.get_selection() : ''
+				}
 
 				if (custom_events.MouseUp) {
-					custom_events.MouseUp(evt, options)
+					custom_events.MouseUp(data.domEvent, options)
 				}
-
 			});//end click event
+
 
 		// keyup event
 			editor.editing.view.document.on('keyup', function(evt, data ) {
@@ -328,7 +312,7 @@ export const service_ckeditor = function() {
 	* @param tag_obj
 	* Tag object with all parameters for create a view node in dom
 	*/
-	this.set_content = function(tag_obj){
+	this.set_content = function(tag_obj) {
 
 		const self = this
 		const editor = self.editor
@@ -355,6 +339,7 @@ export const service_ckeditor = function() {
 		const value = editor.getData();
 		// const value = self.editor.getBody()
 		self.caller.save_value(self.key, value)
+
 
 		return true
 	}//end set_content
@@ -416,7 +401,8 @@ export const service_ckeditor = function() {
 					}
 				}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
 		})
-	};//end delete_tag
+	}//end delete_tag
+
 
 
 	/**
@@ -428,18 +414,19 @@ export const service_ckeditor = function() {
 
 		const self = this
 
-		const editor = self.editor
+		// editor
+			const editor = self.editor
+			if (!editor) {
+				console.error("Error on get self.editor. Not available. self:", self);
+				return false
+			}
 
-		if (!editor) {
-			console.error("Error on get self.editor. Not available. self:", self);
-			return false
-		}
-		// get the domRoots map of the editor
-		const domRoots = editor.editing.view.domRoots;
-		const editor_content_data = domRoots.get('main') // Returns the root element of the editable area. For a non-inline iframe-based editor, returns the iframe's body element.
-		if (!editor_content_data) {
-			console.error("! INVALID editor_content_data (getBody) editor_content_data:", editor_content_data, " editor:", self.editor);
-		}
+		// editor_content_data. get the domRoots map of the editor
+			const domRoots				= editor.editing.view.domRoots;
+			const editor_content_data	= domRoots.get('main') // Returns the root element of the editable area. For a non-inline iframe-based editor, returns the iframe's body element.
+			if (!editor_content_data) {
+				console.error("! INVALID editor_content_data (getBody) editor_content_data:", editor_content_data, " editor:", self.editor);
+			}
 
 		return editor_content_data
 	}//end get_editor_content_data
@@ -457,17 +444,19 @@ export const service_ckeditor = function() {
 		const self = this
 
 		const editor = self.editor
-
-		if (!self.editor) {
+		if (!editor) {
 			return false
 		}
+
 		// get the user selection
 		const user_selection = editor.model.document.selection
 
 		// get the content of the selection, it get the html representation
 		const content = editor.model.getSelectedContent(user_selection)
+
 		// convert the ckeditor data to html in string format
-		const selection =  editor.data.stringify(content)
+		const selection = editor.data.stringify(content)
+
 
 		return selection
 	}//end get_selection
@@ -496,14 +485,14 @@ export const service_ckeditor = function() {
 			// get the in position of the selection
 			const in_position = editor.model.document.selection.getFirstPosition()
 
-			const model_tag_obj_in = writer.createElement( 'imageInline', tag_obj_in);
+			const model_tag_obj_in = writer.createElement( 'imageInline', tag_obj_in );
 
 			editor.model.insertContent( model_tag_obj_in, in_position );
 
 		});
-			editor.model.change( writer => {
 
-				// get the out position of the selection
+		editor.model.change( writer => {
+			// get the out position of the selection
 			const out_position = editor.model.document.selection.getLastPosition()
 
 			const model_tag_obj_out = writer.createElement( 'imageInline', tag_obj_out );
@@ -524,6 +513,7 @@ export const service_ckeditor = function() {
 	}//end wrap_selection_with_tags
 
 
+
 	/**
 	* SET_SELECTION_FROM_TAG
 	* @param tag_obj
@@ -531,9 +521,9 @@ export const service_ckeditor = function() {
 	* @return
 	*/
 	this.set_selection_from_tag = function (tag_obj) {
+
 		// short vars
-			const self		= this
-			const editor	= self.editor
+			const self = this
 
 		// Check the tag to be the type indexXX
 			if(tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut'){
@@ -541,10 +531,10 @@ export const service_ckeditor = function() {
 			}
 
 		// change the type to set it as indexIn and get the view tag in
-		tag_obj.type = 'indexIn'
+		tag_obj.type		= 'indexIn'
 		const tag_view_in	= self.get_view_tag(tag_obj)
 		// change the type to set it as indexOut and get the view tag out
-		tag_obj.type = 'indexOut'
+		tag_obj.type		= 'indexOut'
 		const tag_view_out	= self.get_view_tag(tag_obj)
 
 		if(tag_view_in && tag_view_out){
@@ -553,13 +543,14 @@ export const service_ckeditor = function() {
 	}//end set_selection_from_tag
 
 
+
 	/**
 	* GET_SELECTION_FROM_TAGS
 	* @param tag_view_in
 	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag in
 	* @param tag_view_out
 	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag out
-	* @return
+	* @return void
 	*/
 	this.set_selection_from_view_tags = function(tag_view_in, tag_view_out) {
 
@@ -579,8 +570,8 @@ export const service_ckeditor = function() {
 			const range = writer.createRange(start, end);
 			writer.setSelection( range );
 		});
+	}//end get_selection_from_tags
 
-	};//end get_selection_from_tags
 
 
 	/**
@@ -638,9 +629,9 @@ export const service_ckeditor = function() {
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
 
-			return false
+		return false
+	}//end get_pair_tag
 
-	};//end get_pair_tag
 
 
 	/**
@@ -656,7 +647,7 @@ export const service_ckeditor = function() {
 	this.get_last_tag_id = function(options) {
 
 		// if the tag_type is index change to indexIn, index type is not used in the dataset of the tag and it's not parse to the model.
-			const type			= options.tag_type==='index'
+			const type = options.tag_type==='index'
 				? 'indexIn'
 				: options.tag_type
 
@@ -699,8 +690,9 @@ export const service_ckeditor = function() {
 
 		const last_tag_id = Math.max(...ar_tag_id);
 
+
 		return last_tag_id
-	};//end get_last_tag_id
+	}//end get_last_tag_id
 
 
 
@@ -852,14 +844,14 @@ export const service_ckeditor = function() {
 
 		const self = this
 
+		const toolbar_container = self.toolbar_container
+
 		// editor config vars
 			// toolbar array with the order of the buttons like:
 			// ['bold','italic','underline','|','undo','redo']
 			const toolbar			= editor_config.toolbar
 			// custom_buttons array of the buttons objects with the own configuration
 			const custom_buttons	= editor_config.custom_buttons
-
-			const toolbar_node = self.toolbar_container
 
 			const toolbar_length = toolbar.length
 			for (let i = 0; i < toolbar_length; i++) {
@@ -877,11 +869,31 @@ export const service_ckeditor = function() {
 				if(button_config.manager_editor === true){
 					self.factory_events_for_buttons(button_config)
 				}
-				toolbar_node.appendChild(button_node)
+				toolbar_container.appendChild(button_node)
 			}
 
-		return toolbar_node
-	};//end this.build_toolbar
+		// toolbar toggle event
+			// show toolbar_container on user mousedown
+			// removes the toolbar_container when user click outside
+			const node = toolbar_container.parentNode
+			node.addEventListener("mousedown", function() {
+				// remove the hide class to show the toolbar
+				toolbar_container.classList.remove('hide')
+				document.body.addEventListener("mouseup", fn_remove)
+			})
+			function fn_remove(e) {
+				if (e.target!==node) {
+					const path	= e.composedPath()
+					const found	= path.find(el => el===node)
+					if (!found) {
+						toolbar_container.classList.add('hide')
+						document.body.removeEventListener("mouseup", fn_remove)
+					}
+				}
+			}
+
+		return toolbar_container
+	}//end this.build_toolbar
 
 
 
@@ -904,8 +916,7 @@ export const service_ckeditor = function() {
 	*		}
 	*	}
 	* }
-	*
-	* @return
+	* @return bool
 	*/
 	this.factory_events_for_buttons = function(button_obj) {
 
@@ -915,73 +926,69 @@ export const service_ckeditor = function() {
 		const name		= button_obj.name
 		const button	= button_obj.node
 
-		// Exception: editing the html_souece button doesn't has command, call it by the state of the plug-ing
-		if( name === 'html_source'){
+		// html_source case. Editing the html_souece button doesn't has command, call it by the state of the plug-ing
+			if(name==='html_source') {
+				// Clicking the buttons should execute the editor command...
+				button.addEventListener('click', function(){
+					const state = editor.plugins.get( 'SourceEditing' ).isSourceEditingMode
+					editor.plugins.get( 'SourceEditing' ).isSourceEditingMode = !state
+				})
+				return
+			}
 
-			// Clicking the buttons should execute the editor command...
-			button.addEventListener('click', function(){
-				const state = editor.plugins.get( 'SourceEditing' ).isSourceEditingMode
-				if(state === false){
-					editor.plugins.get( 'SourceEditing' ).isSourceEditingMode = true
+		// find_and_replace case
+			if(name==='find_and_replace') {
+				button.addEventListener('click', function(){
+					render_find_and_replace(editor)
+				})
+				return
+			}
+
+		// command. Retrieve the editor command corresponding with the ID of the button in the DOM.
+			const command = editor.commands.get( name );
+			// const button = this.view.toolbarButtons[ name ];
+
+		// Clicking the buttons should execute the editor command...
+			// button.onmousedown( evt => evt.preventDefault() );
+			button.addEventListener('click', function(evt){
+				// evt.preventDefault()
+				// evt.stopPropagation()
+				editor.execute( name )
+				editor.editing.view.focus();
+			})
+
+		// ...but it should not steal the focus so the editing is uninterrupted.
+			const onValueChange = () => {
+				if(command.value){
+					button.classList.add('active')
 				}else{
-					editor.plugins.get( 'SourceEditing' ).isSourceEditingMode = false
+					button.classList.remove('active')
+				}
+			};
+			editor.listenTo( command, 'change:value',(evt)=>{
+				if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
+					onValueChange();
 				}
 			})
 
-			return
-		}
-
-		if( name === 'find_and_replace'){
-
-			button.addEventListener('click', function(evt){
-				render_find_and_replace(editor)
-			})
-			return
-		}
-
-		 // Retrieve the editor command corresponding with the ID of the button in the DOM.
-		const command = editor.commands.get( name );
-		// const button = this.view.toolbarButtons[ name ];
-
-		// Clicking the buttons should execute the editor command...
-		// button.onmousedown( evt => evt.preventDefault() );
-		button.addEventListener('click', function(evt){
-			// evt.preventDefault()
-			// evt.stopPropagation()
-			editor.execute( name )
-			editor.editing.view.focus();
-		})
-
-		// ...but it should not steal the focus so the editing is uninterrupted.
-		const onValueChange = () => {
-
-			if(command.value){
-				button.classList.add('active')
-			}else{
-				button.classList.remove('active')
-			}
-		};
-		editor.listenTo( command, 'change:value',(evt)=>{
-			if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
-				onValueChange();
-			}
-		})
 		// change the state of the button if the command is not enable
-		const onIsEnabledChange = () => {
-			// button.attr( 'disabled', () => !command.isEnabled );
-			// button.setAttribute( 'disabled', !command.isEnabled );
-			if(!command.isEnabled){
-				button.classList.add('disable')
-			}else{
-				button.classList.remove('disable')
-			}
+			const onIsEnabledChange = () => {
+				// button.attr( 'disabled', () => !command.isEnabled );
+				// button.setAttribute( 'disabled', !command.isEnabled );
+				if(!command.isEnabled){
+					button.classList.add('disable')
+				}else{
+					button.classList.remove('disable')
+				}
 
-		};
-		editor.listenTo( command, 'change:isEnabled',(evt)=>{
-				onIsEnabledChange()
-		})
+			};
+			editor.listenTo( command, 'change:isEnabled',(evt)=>{
+					onIsEnabledChange()
+			})
 
 		return true
-	};//end factory_events_for_buttons
+	}//end factory_events_for_buttons
+
+
 
 }//end service_ckeditor
