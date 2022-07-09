@@ -869,7 +869,12 @@ export const service_ckeditor = function() {
 				if(button_config.manager_editor === true){
 					self.factory_events_for_buttons(button_config)
 				}
-				toolbar_container.appendChild(button_node)
+				toolbar_container.appendChild(button_node)		
+
+				toolbar_container.addEventListener('mousedown', function(evt){
+					evt.preventDefault()
+					evt.stopPropagation()
+				})
 			}
 
 		// toolbar toggle event
@@ -950,9 +955,7 @@ export const service_ckeditor = function() {
 
 		// Clicking the buttons should execute the editor command...
 			// button.onmousedown( evt => evt.preventDefault() );
-			button.addEventListener('click', function(evt){
-				// evt.preventDefault()
-				// evt.stopPropagation()
+			button.addEventListener('click', function(){				
 				editor.execute( name )
 				editor.editing.view.focus();
 			})
