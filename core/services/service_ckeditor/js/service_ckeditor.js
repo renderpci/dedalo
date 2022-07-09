@@ -295,7 +295,7 @@ export const service_ckeditor = function() {
 
 				}
 				if (custom_events.click) {
-					custom_events.click(evt, tag_obj)
+					custom_events.click(data.domEvent, tag_obj)
 				}
 				// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
 				const options = (click_element !== 'img')
@@ -303,7 +303,7 @@ export const service_ckeditor = function() {
 					: {selection : ''}
 
 				if (custom_events.MouseUp) {
-					custom_events.MouseUp(evt, options)
+					custom_events.MouseUp(data.domEvent, options)
 				}
 
 			});//end click event
@@ -878,6 +878,11 @@ export const service_ckeditor = function() {
 					self.factory_events_for_buttons(button_config)
 				}
 				toolbar_node.appendChild(button_node)
+
+				toolbar_node.addEventListener('mousedown', function(evt){
+					evt.preventDefault()
+					evt.stopPropagation()
+				})
 			}
 
 		return toolbar_node
@@ -919,7 +924,7 @@ export const service_ckeditor = function() {
 		if( name === 'html_source'){
 
 			// Clicking the buttons should execute the editor command...
-			button.addEventListener('click', function(){
+			button.addEventListener('mousedown', function(){
 				const state = editor.plugins.get( 'SourceEditing' ).isSourceEditingMode
 				if(state === false){
 					editor.plugins.get( 'SourceEditing' ).isSourceEditingMode = true
@@ -932,8 +937,7 @@ export const service_ckeditor = function() {
 		}
 
 		if( name === 'find_and_replace'){
-
-			button.addEventListener('click', function(evt){
+			button.addEventListener('mousedown', function(evt){
 				render_find_and_replace(editor)
 			})
 			return
@@ -946,8 +950,6 @@ export const service_ckeditor = function() {
 		// Clicking the buttons should execute the editor command...
 		// button.onmousedown( evt => evt.preventDefault() );
 		button.addEventListener('click', function(evt){
-			// evt.preventDefault()
-			// evt.stopPropagation()
 			editor.execute( name )
 			editor.editing.view.focus();
 		})
