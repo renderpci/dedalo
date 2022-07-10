@@ -194,15 +194,10 @@ export const build_content_data = function(self) {
 		fragment.appendChild(inputs_container)
 
 	// set node only when it is in DOM (to save browser resources)
-		const observer = new IntersectionObserver(function(entries) {
-			const entry = entries[1] || entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-				observer.disconnect();
-				build_values()
-			}
-		}, { threshold: [0] });
-		observer.observe(inputs_container);
-		// build_values()
+		event_manager.when_in_viewport(
+			inputs_container, // node
+			build_values // callback
+		)
 
 	// build references
 		// if(self.data.references && self.data.references.length > 0){

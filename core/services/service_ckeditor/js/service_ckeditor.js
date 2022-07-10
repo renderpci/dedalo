@@ -292,12 +292,11 @@ export const service_ckeditor = function() {
 					custom_events.click(data.domEvent, tag_obj)
 				}
 
-				// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
-				const options = {
-					selection : click_element!=='img' ? self.get_selection() : ''
-				}
-
 				if (custom_events.MouseUp) {
+					// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
+					const options = {
+						selection : click_element!=='img' ? self.get_selection() : ''
+					}
 					custom_events.MouseUp(data.domEvent, options)
 				}
 			});//end click event
