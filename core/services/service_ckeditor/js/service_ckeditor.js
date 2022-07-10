@@ -95,6 +95,8 @@ export const service_ckeditor = function() {
 							return
 						}
 
+					// if()
+
 					// check the target name of the element (expected a image)
 					if(data.target.name==='img'){
 						editor.editing.view.change((writer) => {
@@ -272,7 +274,7 @@ export const service_ckeditor = function() {
 				const click_element = data.target.name
 
 				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
-				if(click_element==='div' && !data.target.parent){
+				if(click_element==='div' && !data.target.parent && click_element!=='img'){
 					return
 				}
 				// get the parent of the img, it will be a span with the data of the tag in attributes
@@ -291,6 +293,23 @@ export const service_ckeditor = function() {
 				if (custom_events.click) {
 					custom_events.click(data.domEvent, tag_obj)
 				}
+			});//end click event
+
+
+			// click event
+			editor.editing.view.document.on('mouseup', function(evt, data ) {
+				
+				// get the name of the node clicked, 'img' 'p' 'div', etc
+				const click_element = data.target.name
+
+				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
+				if(click_element==='img'){
+					return
+				}
+
+
+					console.log("mouseup:");
+
 
 				// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
 				const options = {
