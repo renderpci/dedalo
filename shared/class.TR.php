@@ -620,10 +620,6 @@ abstract class TR {
 		return $string ;
 	}
 
-
-
-
-
 	/**
 	* trInfo
 	* Info de los TC e Indexaciones de un texto (transcripción)
