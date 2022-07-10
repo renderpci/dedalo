@@ -391,17 +391,12 @@ const get_input_element = (i, current_value, self) => {
 		// const text_editor = init_current_service_text_editor()
 
 	// observer. Init the editor when container node is in DOM
-		const observer = new IntersectionObserver(function(entries) {
-			// if(entries[0].isIntersecting === true) {}
-			const entry = entries[1] || entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-				observer.disconnect();
-				init_current_service_text_editor()
-				// observer.unobserve(entry.target);
-			}
-		}, { threshold: [0] });
-		observer.observe(li);
+		event_manager.when_in_viewport(
+			li, // node
+			init_current_service_text_editor // callback
+		)
 
+	// set value
 		// value_container.innerHTML = value
 
 	// add button create fragment (Only when caller is a tool_indexation instance)
@@ -783,7 +778,7 @@ const get_custom_events = (self, i, text_editor) => {
 					case 'draw' :
 						// Load draw editor
 						event_manager.publish('click_tag_draw_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-						
+
 						break;
 
 					case 'geo' :
@@ -893,8 +888,9 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
-			evt.preventDefault()
-			evt.stopPropagation()
+			// console.log("MouseUp options:",options);
+			// evt.preventDefault()
+			// evt.stopPropagation()
 			// user text selection event
 			const selection = options.selection
 			event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
