@@ -99,8 +99,8 @@ export const tr = {
 				break;
 
 			// OTHERS
-			case 'br' :
-				reg_ex = /\<br>/g;
+			case 'p' :
+				reg_ex = /(\<\/?p\>)/g;
 				break;
 
 			case 'strong' :
