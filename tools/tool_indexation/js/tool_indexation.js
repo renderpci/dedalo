@@ -108,80 +108,36 @@ tool_indexation.prototype.init = async function(options) {
 
 
 	// events
-		// link_term. Observe thesaurus tree link index button click (REMOVED 04-05-2022 NOT USED ANYMORE)
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('link_term', fn_create_indexation)
-			// )
-			// function fn_create_indexation(options) {
-			// 	self.create_indexation(options)
-			// }
-
-		// change_tag_state_. change tag state selector
-			self.events_tokens.push(
-				event_manager.subscribe('change_tag_state_' + self.id, fn_change_tag_state)
-			)
-			function fn_change_tag_state(options) {
-				console.warn('tag_state options:', options);
-
-				// options
-					const tag_id	= options.tag_id
-					const value		= options.value
-
-				// update_tag
-					self.transcription_component.update_tag({
-						type			: 'indexIn', // will be split into ['indexIn','indexOut']
-						tag_id			: tag_id,
-						new_data_obj	: {
-							state : value
-						}
-					})
-					.then(function(response){
-						console.log('++++ fn_change_tag_state response:',response);
-						if (response===true) {
-
-							// update tag_info_container color matching tag state
-								self.label_states.map((el)=>{
-									if (el.value==value) {
-										self.tag_info_container.classList.add(el.value)
-									}else{
-										if (self.tag_info_container.classList.contains(el.value)) {
-											self.tag_info_container.classList.remove(el.value)
-										}
-									}
-								})
-						}
-					})
-			}
-
 		// delete_tag_
-			self.events_tokens.push(
-				event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
-			)
-			function fn_delete_tag(options) {
+			// self.events_tokens.push(
+			// 	event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
+			// )
+			// function fn_delete_tag(options) {
 
-				// options
-				const tag_id = options.tag_id
+			// 	// options
+			// 	const tag_id = options.tag_id
 
-				self.delete_tag(tag_id)
-				.then(function(response){
-					if (response.result!==false) {
-						// indexing_component. Remember force clean full data and datum before refresh
-							self.indexing_component.data	= null
-							self.indexing_component.datum	= null
-							self.indexing_component.refresh()
-						// transcription_component (text_area)
-							self.transcription_component.refresh()
-					}
-				})
-			}
+			// 	self.delete_tag(tag_id)
+			// 	.then(function(response){
+			// 		if (response.result!==false) {
+			// 			// indexing_component. Remember force clean full data and datum before refresh
+			// 				self.indexing_component.data	= null
+			// 				self.indexing_component.datum	= null
+			// 				self.indexing_component.refresh()
+			// 			// transcription_component (text_area)
+			// 				self.transcription_component.refresh()
+			// 		}
+			// 	})
+			// }
 
 		// click_no_tag_
 			self.events_tokens.push(
 				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
 			)
-			function fn_click_no_tag(options) {
-				if (!self.tag_info_container.classList.contains('hide')) {
-					self.tag_info_container.classList.add('hide')
+			function fn_click_no_tag() {
+				const toggle_node = self.tag_info_container // self.info_container
+				if (!toggle_node.classList.contains('hide')) {
+					toggle_node.classList.add('hide')
 				}
 			}
 
@@ -640,7 +596,6 @@ tool_indexation.prototype.active_value = function(name, callback) {
 
 
 
-
 /**
 * UPDATE_ACTIVE_VALUES
 * Update all values registered as 'active_value' on fire event
@@ -680,10 +635,12 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 	const self = this
 
 	// Confirm action
-		if( !confirm( `${get_label.eliminar_etiqueta} \n ${tag_id} \n`) ) {
+		if( !confirm( `${self.get_tool_label('delete_tag') || 'Delete tag?'}\nID: ${tag_id}`) ) {
 			return Promise.resolve(false);
 		}
-		if( !confirm( `${get_label.atencion} !! \n ${get_label.borrara_la_etiqueta_seleccionada} \n` ) )  {
+		if( !confirm(
+			`${get_label.warning || 'Warning!'} !! ${self.get_tool_label('warning_delete_tag') || 'It will delete the selected tag in all languages and all the relationships and indexing associated with it'}`)
+			) {
 			return Promise.resolve(false);
 		}
 

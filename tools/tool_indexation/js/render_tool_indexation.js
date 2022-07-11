@@ -176,17 +176,17 @@ const get_content_data_edit = async function(self) {
 * GET_TAG_INFO
 * When user click on index tag, event if fired and recovered by this tool.
 * This event (click_tag_index) fires current function that build tag info panel nodes
+* @param object self
+* 	Instance of the tool
 */
 const get_tag_info = function(self) {
 
-	// tag dom node
-	// const tag	= options.tag || null
-	// const tag_id	= tag.dataset.tag_id || null
-	let tag_id	= ''
+	// tag_id. Set on every user tag item click
+		let tag_id	= ''
 
-	const info_container = self.info_container
-
-	// clean previous nodes
+	// info container
+		const info_container = self.info_container
+		// clean previous nodes
 		while (info_container.lastChild) {
 			info_container.removeChild(info_container.lastChild)
 		}
@@ -206,7 +206,8 @@ const get_tag_info = function(self) {
 			class_name		: 'fragment_id_info',
 			parent			: tag_info_container
 		})
-		const fragment_id_label = ui.create_dom_element({
+		// fragment_id_label
+		ui.create_dom_element({
 			element_type	: 'span',
 			inner_html		: 'TAG ' + tag_id,
 			parent			: fragment_id_info
@@ -242,21 +243,28 @@ const get_tag_info = function(self) {
 				})
 			}
 			tag_state_selector.addEventListener('change', function(){
-				const value = this.value
-				event_manager.publish('change_tag_state_' + self.id, {
-					tag_id	: tag_id,
-					value	: value
+
+				const state	= this.value
+
+				self.transcription_component.update_tag({
+					type			: 'indexIn', // will be split into ['indexIn','indexOut']
+					tag_id			: tag_id,
+					new_data_obj	: {
+						state : state
+					}
 				})
-				// update tag_info_container color matching tag state
-					// self.label_states.map((el)=>{
-					// 	if (el.value==value) {
-					// 		tag_info_container.classList.add(el.value)
-					// 	}else{
-					// 		if (tag_info_container.classList.contains(el.value)) {
-					// 			tag_info_container.classList.remove(el.value)
-					// 		}
-					// 	}
-					// })
+				.then(function(){
+					// update tag_info_container color matching tag state
+					self.label_states.map((el)=>{
+						if (el.value==state) {
+							tag_info_container.classList.add(el.value)
+						}else{
+							if (tag_info_container.classList.contains(el.value)) {
+								tag_info_container.classList.remove(el.value)
+							}
+						}
+					})
+				})
 			})
 
 
@@ -273,9 +281,24 @@ const get_tag_info = function(self) {
 				class_name		: 'button remove',
 				parent			: wrap_delete_tag
 			})
-			button_delete.addEventListener('click', function(e){
-				event_manager.publish('delete_tag_' + self.id, {
-					tag_id : tag_id
+			button_delete.addEventListener('click', function(){
+				// delete_tag
+				self.delete_tag(tag_id)
+				.then(function(response){
+					if (response.result!==false) {
+						// indexing_component. Remember force clean full data and datum before refresh
+							self.indexing_component.data	= null
+							self.indexing_component.datum	= null
+							self.indexing_component.refresh()
+						// transcription_component (text_area)
+							self.transcription_component.refresh()
+
+						// show/hide info_container
+							const toggle_node = self.tag_info_container // self.info_container
+							if (!toggle_node.classList.contains('hide')) {
+								toggle_node.classList.add('hide')
+							}
+					}
 				})
 			})
 		// label

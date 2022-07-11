@@ -44,42 +44,50 @@ class tool_indexation extends tool_common {
 	/**
 	* DELETE_TAG
 	* Deletes all tag relations (indexing_component) and finally removes
-	* the tag in all langs of main_component
+	* the tag in all langs of transcription_component
 	*
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function delete_tag( $request_options ) {
+	public static function delete_tag( object $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= [];
 
-
 		// options get and set
 			$options = new stdClass();
-				$options->section_tipo				= null;
-				$options->section_id				= null;
-				$options->main_component_tipo		= null; // component_text_area tipo
-				$options->main_component_lang		= null; // component_text_area lang
-				$options->indexing_component_tipo	= null; // component_relation_xxx used to store indexation locators
-				$options->tag_id					= null;
-
+				$options->section_tipo					= null;
+				$options->section_id					= null;
+				$options->transcription_component_tipo	= null; // component_text_area tipo
+				$options->transcription_component_lang	= null; // component_text_area lang
+				$options->indexing_component_tipo		= null; // component_relation_xxx used to store indexation locators
+				$options->tag_id						= null;
 				foreach ($request_options as $key => $value) {
 					if (property_exists($options, $key)) {
 						$options->$key = $value;
 					}
 				}
 
+		// short vars
+			$section_tipo					= $options->section_tipo;
+			$section_id						= $options->section_id;
+			$transcription_component_tipo	= $options->transcription_component_tipo;
+			$transcription_component_lang	= $options->transcription_component_lang;
+			$indexing_component_tipo		= $options->indexing_component_tipo;
+			$tag_id							= $options->tag_id;
+
 		// indexing_component. Remove locators with tag_id given
-			$model_name			= RecordObj_dd::get_modelo_name_by_tipo($options->indexing_component_tipo,true);
-			$indexing_lang		= common::get_element_lang($options->indexing_component_tipo, DEDALO_DATA_LANG);
-			$indexing_component	= component_common::get_instance($model_name,
-																 $options->indexing_component_tipo,
-																 $options->section_id,
-																 'list',
-																 $indexing_lang,
-																 $options->section_tipo);
+			$model_name			= RecordObj_dd::get_modelo_name_by_tipo($indexing_component_tipo,true);
+			$indexing_lang		= common::get_element_lang($indexing_component_tipo, DEDALO_DATA_LANG);
+			$indexing_component	= component_common::get_instance(
+				$model_name,
+				$indexing_component_tipo,
+				$section_id,
+				'list',
+				$indexing_lang,
+				$section_tipo
+			);
 			// stored locator sample
 				// {
 				// 	"type": "dd96",
@@ -93,34 +101,39 @@ class tool_indexation extends tool_common {
 				// }
 
 			$pseudo_locator = new stdClass();
-				$pseudo_locator->tag_id	= $options->tag_id;
+				$pseudo_locator->tag_id	= $tag_id;
 				$pseudo_locator->type	= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
 
 			$ar_properties = ['tag_id','type']; // properties to compare
 
 			$removed = $indexing_component->remove_locator_from_dato($pseudo_locator, $ar_properties);
 			$response->msg[] = $removed===true
-				? 'Removed locators with tag_id '.$options->tag_id
-				: 'No locators are removed with tag_id '.$options->tag_id;
+				? 'Removed locators with tag_id '.$tag_id
+				: 'No locators are removed with tag_id '.$tag_id;
 
 			if ($removed===true) {
 				$indexing_component->Save();
 			}
 
 		// component_text_area. Remove tag in all langs
-			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($options->main_component_tipo,true);
-			$component_text_area	= component_common::get_instance( $model_name,
-																	  $options->main_component_tipo,
-																	  $options->section_id,
-																	  'edit',
-																	  $options->main_component_lang,
-																	  $options->section_tipo);
+			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($transcription_component_tipo,true);
+			$component_text_area	= component_common::get_instance(
+				$model_name,
+				$transcription_component_tipo,
+				$section_id,
+				'list',
+				$transcription_component_lang,
+				$section_tipo
+			);
 
-			$ar_tag_deleted		= (array)$component_text_area->delete_tag_from_all_langs($options->tag_id, $tag_type='index'); // note that "tag" is complete in or out tag like [index-n-8]
+			$ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs(
+				$tag_id, // string tag_id
+				'index' // string tag_type
+			); // Note that "tag" is complete in or out tag like [index-n-8]
 			$n_deleted			= count($ar_tag_deleted) ?? 0;
 			$response->msg[]	= $n_deleted>0
-				? 'Deleted tag '.$options->tag_id.' in '.$n_deleted.' langs: '.to_string($ar_tag_deleted).' ('.$model_name.' - '.$options->main_component_tipo.')'
-				: 'No tags are deleted in '.$model_name.' tipo: '.$options->main_component_tipo.' with tag_id '.$options->tag_id;
+				? 'Deleted tag '.$tag_id.' in '.$n_deleted.' langs: '.to_string($ar_tag_deleted).' ('.$model_name.' - '.$transcription_component_tipo.')'
+				: 'No tags are deleted in '.$model_name.' tipo: '.$transcription_component_tipo.' with tag_id '.$tag_id;
 
 			debug_log(__METHOD__." AR_TAG_DELETED: ".to_string($ar_tag_deleted), logger::DEBUG);
 
@@ -185,7 +198,7 @@ class tool_indexation extends tool_common {
 
 		$response->result = true;
 
-		return (object)$response;
+		return $response;
 	}//end delete_tag
 
 
@@ -205,8 +218,8 @@ class tool_indexation extends tool_common {
 			$options = new stdClass();
 				$options->section_tipo			= null;
 				$options->section_id			= null;
-				$options->main_component_tipo	= null; // component_text_area tipo
-				$options->main_component_lang	= null; // component_text_area lang
+				$options->transcription_component_tipo	= null; // component_text_area tipo
+				$options->transcription_component_lang	= null; // component_text_area lang
 				$options->tag_id				= null;
 				$options->state					= null;
 
@@ -217,12 +230,12 @@ class tool_indexation extends tool_common {
 				}
 
 		// component_text_area
-			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($options->main_component_tipo,true);
+			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($options->transcription_component_tipo,true);
 			$component_text_area	= component_common::get_instance( $model_name,
-																	  $options->main_component_tipo,
+																	  $options->transcription_component_tipo,
 																	  $options->section_id,
 																	  'edit',
-																	  $options->main_component_lang,
+																	  $options->transcription_component_lang,
 																	  $options->section_tipo);
 			$tag_id		= $options->tag_id;
 			$state		= $options->state;

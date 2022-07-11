@@ -826,68 +826,91 @@ class component_text_area extends component_common {
 	/**
 	* DELETE_TAG_FROM_ALL_LANGS
 	* Search all component data langs and delete tag an update (save) dato on every lang
+	* @see trigger.tool_indexation mode 'delete_tag'
+	*
 	* @param string $tag like '[index-n-2]'
 	* @return array $ar_langs_changed (langs affected)
-	* @see trigger.tool_indexation mode 'delete_tag'
 	*/
 	public function delete_tag_from_all_langs(string $tag_id, string $tag_type) : array {
 
-		$modelo_name 		= get_class($this);
-		$component_ar_langs = (array)$this->get_component_ar_langs();
+		$modelo_name		= get_class($this);
+		$component_ar_langs	= (array)$this->get_component_ar_langs();
 
-		$ar_langs_changed=array();
+		$ar_langs_changed = array();
 		foreach ($component_ar_langs as $current_lang) {
 
-			$component_text_area 	= component_common::get_instance($modelo_name, # component_text_area
-																	 $this->tipo,
-																	 $this->parent,
-																	 $this->modo,
-																	 $current_lang,
-																	 $this->section_tipo,
-																	 false);
-			$text_raw 				= $component_text_area->get_dato()[0];
-			$delete_tag_from_text 	= self::delete_tag_from_text($tag_id, $tag_type, $text_raw, $current_lang);
-			$remove_count 			= (int)$delete_tag_from_text->remove_count;
-			if ($remove_count>0) {
-				$text_raw_updated 	= $delete_tag_from_text->result;
-				$component_text_area->set_dato($text_raw_updated);
+			$component_text_area = component_common::get_instance(
+				$modelo_name, // component_text_area
+				$this->tipo,
+				$this->parent,
+				$this->modo,
+				$current_lang,
+				$this->section_tipo,
+				false // bool cache
+			);
+			$dato = $component_text_area->get_dato();
+			if (empty($dato)) {
+				continue;
+			}
+
+			$to_save	= false;
+			$new_dato	= [];
+			foreach ($dato as $key => $text_raw) {
+
+				$delete_tag_from_text	= (object)self::delete_tag_from_text($tag_id, $tag_type, $text_raw);
+				$remove_count			= (int)$delete_tag_from_text->remove_count;
+				if ($remove_count>0) {
+					$to_save = true;
+				}
+				$text_raw_updated = $delete_tag_from_text->result;
+				$new_dato[] = $text_raw_updated;
+			}//end foreach ($dato as $key => $current_text_raw)
+
+			if ($to_save===true) {
+
+				$component_text_area->set_dato($new_dato);
+				// save
 				if (!$component_text_area->Save()) {
+					// Save returns int|null
 					throw new Exception("Error Processing Request. Error saving component_text_area lang ($current_lang)", 1);
 				}
 				$ar_langs_changed[] = $current_lang;
-				debug_log(__METHOD__." Deleted tag ($tag_id, $tag_type) in lang ".to_string($current_lang), logger::WARNING);
+				debug_log(__METHOD__." Deleted tag ($tag_id, $tag_type, $key) in lang ".to_string($current_lang), logger::WARNING);
 			}else{
-				debug_log(__METHOD__." Ignored (not matches found) deleted tag ($tag_id, $tag_type) in lang ".to_string($current_lang), logger::WARNING);
+				debug_log(__METHOD__." Ignored (not matches found) deleted tag ($tag_id, $tag_type, $key) in lang ".to_string($current_lang), logger::WARNING);
 			}
-		}
+		}//end foreach ($component_ar_langs as $current_lang)
 
-		return (array)$ar_langs_changed;
+
+		return $ar_langs_changed;
 	}//end delete_tag_from_all_langs
 
 
 
 	/**
 	* DELETE TAG FROM TEXT
-	* !!!!
-	* @param array $ar_tag (formated as tag in, like [index-n-1]. Can be string (will be converted to array))
+	* Removes the tag in the given text returning the modified text
+	*
+	* @param string $tag_id
+	* @param string $tag_type
 	* @param string $text_raw
+	*
 	* @return object $response
-	*	string $text_raw_updated
-	*	int $count
 	*/
-	public static function delete_tag_from_text(string $tag_id, string $tag_type, string $text_raw, string $lang) : object {
+	public static function delete_tag_from_text(string $tag_id, string $tag_type, string $text_raw) : object {
 
-		# Pattern for in and ot tags
-		$pattern = TR::get_mark_pattern($tag_type, $standalone=true, $tag_id, $data=false);
+		// Pattern for in and out tags
+			$pattern = TR::get_mark_pattern($tag_type, $standalone=true, $tag_id, $data=false);
 
-		# Will replace matched tags with a empty string
-		$replacement		= '';
-		$text_raw_updated	= preg_replace($pattern, $replacement, $text_raw, -1, $remove_count);
+		// Will replace matched tags with a empty string
+			$replacement		= '';
+			$text_raw_updated	= preg_replace($pattern, $replacement, $text_raw, -1, $remove_count);
 
-		$response = new stdClass();
-			$response->result		= $text_raw_updated;
-			$response->remove_count	= $remove_count;
-			$response->msg			= 'Ok. Request done';
+		// response
+			$response = new stdClass();
+				$response->result		= $text_raw_updated;
+				$response->remove_count	= $remove_count;
+				$response->msg			= 'OK. Request done';
 
 
 		return $response;
