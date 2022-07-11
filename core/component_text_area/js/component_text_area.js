@@ -216,7 +216,7 @@ component_text_area.prototype.init = async function(options) {
 
 
 	return common_init
-}//end  init
+}//end init
 
 
 
