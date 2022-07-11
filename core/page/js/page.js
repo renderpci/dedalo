@@ -96,7 +96,7 @@ page.prototype.init = async function(options) {
 
 				// unsaved_data check
 					if (window.unsaved_data===true) {
-						if (!confirm('Are you sure you want to exit with unsaved changes?')) {
+						if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
 							return false
 						}
 					}

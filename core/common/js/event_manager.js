@@ -236,7 +236,7 @@ const event_manager_class = function(){
 	this.beforeUnloadListener = function(event) {
 		event.preventDefault();
 
-		return event.returnValue = 'Are you sure you want to exit with unsaved changes?';
+		return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
 	}//end beforeUnloadListener
 
 
