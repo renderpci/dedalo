@@ -33,18 +33,6 @@ final class dd_core_api {
 
 
 	/**
-	* __CONSTRUCT
-	* @return bool
-	*//*
-	public function __construct() {
-
-		return true;
-	}//end __construct
-	*/
-
-
-
-	/**
 	* START
 	* Builds the start page minimun context.
 	* Normally is a menu and a section (based on url vars)
@@ -1809,9 +1797,9 @@ final class dd_core_api {
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo ?? null;
 			$modo			= $ddo_source->modo ?? 'edit'; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
-			$sqo  			= !empty($rqo->sqo) ? $rqo->sqo : null;
+			$sqo			= !empty($rqo->sqo) ? $rqo->sqo : null;
 
-		# RELATION_LIST
+		// relation_list
 			$relation_list 	= new relation_list($tipo, $section_id, $section_tipo, $modo);
 			$relation_list->set_sqo($sqo);
 
