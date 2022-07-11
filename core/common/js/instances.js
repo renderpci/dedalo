@@ -148,9 +148,9 @@ export const get_instance = async function(options){
 			return new Promise(async function(resolve){
 
 				// search. first we see if the instance is inside the instances cache
-				const found_instance = instances.filter(instance => instance.id===key)
+				const found_instance = instances.find(instance => instance.id===key)
 
-				if (found_instance.length===0) {
+				if (!found_instance) {
 					//console.log("---Creating instance of:", model, tipo, " - " + key)
 
 					// element file import path
@@ -209,7 +209,7 @@ export const get_instance = async function(options){
 				}else{
 						// console.warn("returned already resolved instance from cache:", found_instance[0]);
 					// resolve the promise with the cache instance found
-						resolve(found_instance[0])
+						resolve(found_instance)
 				}
 			})
 			.catch(err => { console.error(err) });
