@@ -888,12 +888,16 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
-			// console.log("MouseUp options:",options);
+			// console.log("MouseUp options:",options, evt);
 			// evt.preventDefault()
 			// evt.stopPropagation()
+
 			// user text selection event
-			const selection = options.selection
-			event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
+				const selection = options.selection
+				event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
+
+			// click_no_tag_ . Used by tool_indexation to de-select the active tag
+				event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
 		}//end MouseUp
 
 	// keyup
