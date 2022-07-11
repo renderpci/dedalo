@@ -340,11 +340,11 @@ class component_text_area extends component_common {
 				foreach ($dato_current as $key => $current_value) {
 					if (!empty($current_value)) {
 						$dato_current[$key] = TR::comform_tr_data($current_value);
-						dump($dato_current, ' dato_current ++ '.to_string());
+						// dump($dato_current, ' dato_current ++ '.to_string());
 					}
 				}
 			}
-		
+
 		// Set dato again (cleaned)
 			$this->dato = $dato_current;
 
@@ -1062,81 +1062,85 @@ class component_text_area extends component_common {
 
 
 
-	// /**
-	// * PLACE_BROKEN_TAG_IN_APPROXIMATE_POSITION
-	// * @return string $raw_text
-	// */
-	// public function place_broken_tag_in_approximate_position DEPRECATED(string $raw_text, string $tag_in, string $tag_out, string $tag_id, string $source_lang) : string {
+	/**
+	* PLACE_BROKEN_TAG_IN_APPROXIMATE_POSITION (DES)
+	* @return string $raw_text
+	*/
+		// public function place_broken_tag_in_approximate_position DEPRECATED(string $raw_text, string $tag_in, string $tag_out, string $tag_id, string $source_lang) : string {
 
-	// 	$blank_space = " ";
+		// 	$blank_space = " ";
 
-	// 	# Search existing tag in original lang
-	// 	# source_lang is user selected as source lang of current text in edit mode
-	// 	if ($this->lang===$source_lang) {
-	// 		// Lang is the original. No references exists..
-	// 		$raw_text = $tag_in ." Deleted tag $tag_id ". $tag_out . $blank_space . $raw_text;
+		// 	# Search existing tag in original lang
+		// 	# source_lang is user selected as source lang of current text in edit mode
+		// 	if ($this->lang===$source_lang) {
+		// 		// Lang is the original. No references exists..
+		// 		$raw_text = $tag_in ." Deleted tag $tag_id ". $tag_out . $blank_space . $raw_text;
 
-	// 	}else{
-	// 		// Lang is different. Check the source lang for additional data
-	// 		$component 		= component_common::get_instance(get_class($this),
-	// 														 $this->tipo,
-	// 														 $this->parent,
-	// 														 $this->modo,
-	// 														 $source_lang,
-	// 														 $this->section_tipo);
-	// 		$source_raw_text = $component->get_dato();
+		// 	}else{
+		// 		// Lang is different. Check the source lang for additional data
+		// 		$component 		= component_common::get_instance(get_class($this),
+		// 														 $this->tipo,
+		// 														 $this->parent,
+		// 														 $this->modo,
+		// 														 $source_lang,
+		// 														 $this->section_tipo);
+		// 		$source_raw_text = $component->get_dato();
 
-	// 		# INDEX IN
-	// 		$pattern = TR::get_mark_pattern('structIn',$standalone=false, $tag_id); //$mark, $standalone=true, $id=false, $data=false, $state=false
-	// 		preg_match($pattern,  $source_raw_text,  $matches_indexIn, PREG_OFFSET_CAPTURE);
-	// 		if (empty($matches_indexIn[0][0])) {
-	// 			// No. tag not found in original lan. Not exists the same tag in the original lang ...
-	// 			$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
+		// 		# INDEX IN
+		// 		$pattern = TR::get_mark_pattern('structIn',$standalone=false, $tag_id); //$mark, $standalone=true, $id=false, $data=false, $state=false
+		// 		preg_match($pattern,  $source_raw_text,  $matches_indexIn, PREG_OFFSET_CAPTURE);
+		// 		if (empty($matches_indexIn[0][0])) {
+		// 			// No. tag not found in original lan. Not exists the same tag in the original lang ...
+		// 			$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
 
-	// 		}else{
-	// 			// Yes. Founded current broken tag in the original lang. Lets go..
+		// 		}else{
+		// 			// Yes. Founded current broken tag in the original lang. Lets go..
 
-	// 			# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
-	// 			# Override tag_in and out calculated with real full data locator
-	// 			$tag_in_full = $matches_indexIn[0][0];
-	// 			preg_match("/data:(.*):data/", $tag_in_full, $output_array);
-	// 			$data_locator = $output_array[1];
-	// 			if (!empty($output_array[1])) {
-	// 				$tag_in  = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_in);
-	// 				$tag_out = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_out);
-	// 			}
+		// 			# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
+		// 			# Override tag_in and out calculated with real full data locator
+		// 			$tag_in_full = $matches_indexIn[0][0];
+		// 			preg_match("/data:(.*):data/", $tag_in_full, $output_array);
+		// 			$data_locator = $output_array[1];
+		// 			if (!empty($output_array[1])) {
+		// 				$tag_in  = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_in);
+		// 				$tag_out = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_out);
+		// 			}
 
-	// 			$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
-
-
-	// 		}//end if (empty($matches_indexIn[0][0]))
-
-	// 	}//end if ($this->lang===$source_lang)
+		// 			$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
 
 
-	// 	return $raw_text;
-	// }//end place_broken_tag_in_approximate_position
+		// 		}//end if (empty($matches_indexIn[0][0]))
+
+		// 	}//end if ($this->lang===$source_lang)
+
+
+		// 	return $raw_text;
+		// }//end place_broken_tag_in_approximate_position
 
 
 
 	/**
 	* GET_RELATED_COMPONENT_AV_TIPO
-	* @return string|null $current_elated_component_av
+	* Search in struct for related component_av tipo
+	* @return string|null $related_component_av_tipo
 	*/
 	public function get_related_component_av_tipo() : ?string {
 
-		$current_elated_component_av = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $modelo_name='component_av', $relation_type='termino_relacionado');
-		if (isset($current_elated_component_av[0])) {
-			return $current_elated_component_av[0];
-		}
+		$related_component_av = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$this->tipo,  // string tipo
+			'component_av', // string model
+			'termino_relacionado' // string relation_type
+		);
 
-		return null;
+		$related_component_av_tipo = $related_component_av[0] ?? null;
+
+		return $related_component_av_tipo;
 	}//end get_related_component_av_tipo
 
 
 
 	/**
-	* GET_COMPONENT_INDEXATIONS
+	* GET_COMPONENT_INDEXATIONS (DES)
 	* @return array $ar_indexations
 	*/
 		// public function get_component_indexations_DES( string $type ) {
@@ -1155,16 +1159,18 @@ class component_text_area extends component_common {
 		// }//end get_component_indexations
 
 
+
 	/**
 	* GET_COMPONENT_INDEXATIONS
 	* @return array $ar_indexations
+	* 	Array of locators (is the component index, usually a component_porta, dato)
 	*/
 	public function get_component_indexations() : array {
 
 		$properties	= $this->get_properties();
 		$tags_index	= $properties->tags_index ?? null;
 
-		if(!$tags_index){
+		if(empty($tags_index)) {
 			return null;
 		}
 
@@ -1173,19 +1179,20 @@ class component_text_area extends component_common {
 			$section_id		= $this->section_id;
 			$component_tipo	= $tags_index->tipo;
 
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$componet_index	= component_common::get_instance(
-			$model_name,
-			$component_tipo,
-			$section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			$section_tipo
-		);
+		// component index
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$componet_index	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 		$ar_indexations = $componet_index->get_dato();
 
-		return (array)$ar_indexations;
+		return $ar_indexations;
 	}//end get_component_indexations
 
 
@@ -1194,7 +1201,8 @@ class component_text_area extends component_common {
 	* GET_COMPONENT_INDEXATIONS_TERM_ID
 	* Used for diffusion global search (temporally??????)
 	* @see diffusion global search needs
-	* @return string json encoded $indexations_locators
+	* @return string $indexations_locators
+	* 	JSON encoded array
 	*/
 	public function get_component_indexations_term_id( string $type ) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 		/*
