@@ -580,8 +580,9 @@ final class dd_core_api {
 					$mode			= $context->mode;
 					$changed_data	= $data->changed_data;
 
-					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+						? $lang
+						: DEDALO_DATA_NOLAN;
 
 				// build the component
 					$component = component_common::get_instance(
@@ -686,9 +687,9 @@ final class dd_core_api {
 			$section_id		= $source->section_id;
 			$lang			= $source->lang;
 			$mode			= $source->mode;
-
-			$RecordObj_dd	= new RecordObj_dd($tipo);
-			$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+			$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+				? $lang
+				: DEDALO_DATA_NOLAN;
 
 		// build the component
 			$component = component_common::get_instance(
@@ -820,15 +821,18 @@ final class dd_core_api {
 
 				case strpos($model, 'component_')===0:
 
-					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+						? $lang
+						: DEDALO_DATA_NOLAN;
 
-					$element = component_common::get_instance($model,
-															  $tipo,
-															  null,
-															  $mode,
-															  $component_lang,
-															  $section_tipo);
+					$element = component_common::get_instance(
+						$model,
+						$tipo,
+						null, // string section_id
+						$mode,
+						$component_lang,
+						$section_tipo
+					);
 					break;
 
 				case strpos($model, 'tool_')===0:
@@ -1375,8 +1379,9 @@ final class dd_core_api {
 
 			// 			if(strpos($model, 'component')===0) {
 			// 				// component
-			// 					$RecordObj_dd	= new RecordObj_dd($tipo);
-			// 					$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
+			//					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+			//						? $lang
+			//						: DEDALO_DATA_NOLAN;
 			// 					$element		= component_common::get_instance($model,
 			// 																	 $tipo,
 			// 																	 $section_id,
@@ -1480,9 +1485,11 @@ final class dd_core_api {
 								debug_log(__METHOD__." WARNING data:get_data invalid section_id ", logger::WARNING);
 
 								// component
-									$RecordObj_dd	= new RecordObj_dd($tipo);
-									$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-									$element		= component_common::get_instance(
+									$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+										? $lang
+										: DEDALO_DATA_NOLAN;
+
+									$element = component_common::get_instance(
 										$model,
 										$tipo,
 										$section_id,
@@ -1558,14 +1565,17 @@ final class dd_core_api {
 						if (strpos($model, 'component')===0) {
 
 							// component
-								$RecordObj_dd	= new RecordObj_dd($tipo);
-								$component_lang	= $RecordObj_dd->get_traducible()==='si' ? $lang : DEDALO_DATA_NOLAN;
-								$element		= component_common::get_instance($model,
-																				 $tipo,
-																				 $section_id,
-																				 $mode,
-																				 $component_lang,
-																				 $section_tipo);
+								$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+									? $lang
+									: DEDALO_DATA_NOLAN;
+								$element = component_common::get_instance(
+									$model,
+									$tipo,
+									$section_id,
+									$mode,
+									$component_lang,
+									$section_tipo
+								);
 							// inject custom value to the component (usually an array of locators)
 								$value = $rqo->source->value ?? [];
 								$element->set_dato($value);
