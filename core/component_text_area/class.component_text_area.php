@@ -672,6 +672,11 @@ class component_text_area extends component_common {
 				return null;
 			}
 
+		// empty $raw-text case
+			if (empty($raw_text)) {
+				return null;
+			}
+
 		// tag build (based on tag_type)
 			switch ($tag_type) {
 				case 'index':
@@ -764,7 +769,7 @@ class component_text_area extends component_common {
 	* @see static component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $raw_text)
 	* Usado por section_records/rows/rows.php para mostrar el fragmento en los listados
 	*/
-	public static function get_fragment_text_from_rel_locator( object $rel_locator ) : ?array {
+	public static function get_fragment_text_from_rel_locator(object $rel_locator, int $key=0) : ?array {
 
 		#throw new Exception("SORRY. DEACTIVATED FUNCTION: get_fragment_text_from_rel_locator", 1); // 6-4-2015
 
@@ -808,15 +813,21 @@ class component_text_area extends component_common {
 				break;
 		}
 
-		$component_text_area = component_common::get_instance('component_text_area',
-															  $component_tipo,
-															  $section_id,
-															  $modo='edit',
-															  DEDALO_DATA_LANG,
-															  $section_tipo);
-		$raw_text = $component_text_area->get_dato()[0];
-
-		$fragment_text_from_tag = component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $raw_text);
+		$component_text_area = component_common::get_instance(
+			'component_text_area',
+			$component_tipo,
+			$section_id,
+			$modo	='edit',
+			DEDALO_DATA_LANG,
+			$section_tipo
+		);
+		$dato					= $component_text_area->get_dato();
+		$raw_text				= $dato[$key] ?? ''; // Note that key is zero by default
+		$fragment_text_from_tag	= component_text_area::get_fragment_text_from_tag(
+			$tag_id,
+			$tag_type,
+			$raw_text
+		);
 
 		return $fragment_text_from_tag;
 	}//end get_fragment_text_from_rel_locator
