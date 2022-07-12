@@ -40,10 +40,14 @@ include(DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_
 include(DEDALO_CORE_PATH . '/search/class.search.php');
 include(DEDALO_CORE_PATH . '/search/class.search_tm.php');
 include(DEDALO_CORE_PATH . '/search/class.search_related.php');
+// API
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_tools_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_ts_api.php');
+include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_text_area_api.php');
+include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_portal_api.php');
+
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
 include(DEDALO_CORE_PATH . '/lock_components/class.lock_components.php');
 # include the shared classes
