@@ -783,6 +783,38 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 }//end create_fragment
 
 
+
+/**
+* DELETE_TAG
+* @param string tag_id
+* 	e.g. '2'
+* @param string type
+* 	e.g. 'index'
+* @return promise
+* 	resolve object response
+*/
+component_text_area.prototype.delete_tag = function(tag_id, type) {
+
+	const self = this
+
+	return data_manager.prototype.request({
+		body : {
+			action	: "delete_tag",
+			dd_api	: 'dd_'+self.model+'_api', // component_text_area
+			source	: {
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				tipo			: self.tipo,
+				lang			: self.lang,
+				tag_id			: tag_id, // string current selected tag (passed as param)
+				type			: type // string current selected tag type (passed as param)
+			}
+		}
+	})
+}//end delete_tag
+
+
+
 /*	Persons
 ----------------------------------------------------------------------------------------- */
 

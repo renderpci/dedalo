@@ -719,6 +719,41 @@ component_portal.prototype.navigate = async function(callback) {
 
 
 /**
+* DELETE_LOCATOR
+* @param object locator
+* 	Locator complete or partial to match as
+* {
+*	tag_id	: tag_id,
+*	type	: DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96
+* }
+* @param array ar_properties
+* 	To compare locators as ['tag_id','type']
+* @return promise
+* 	resolve object response
+*/
+component_portal.prototype.delete_locator = function(locator, ar_properties) {
+
+	const self = this
+
+	return data_manager.prototype.request({
+		body : {
+			action	: "delete_locator",
+			dd_api	: 'dd_'+self.model+'_api', // component_portal
+			source	: {
+				section_tipo	: self.section_tipo, // current component_text_area section_tipo
+				section_id		: self.section_id, // component_text_area section_id
+				tipo			: self.tipo, // component_text_area tipo
+				lang			: self.lang, // component_text_area lang
+				locator			: locator,
+				ar_properties	: ar_properties
+			}
+		}
+	})
+}//end delete_locator
+
+
+
+/**
 * GET_LAST_OFFSET
 */
 	// component_portal.prototype.get_last_offset = function() {

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
+/*global get_label, page_globals, SHOW_DEBUG, DD_TIPOS */
 /*eslint no-undef: "error"*/
 
 
@@ -647,83 +647,45 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 	// call to the API, fetch data and get response
 	return new Promise(async function(resolve){
 
+		const all_promises = [];
+
 		// delete tag in all langs (component_text_area)
-			const api_response_delete_tag = await data_manager.prototype.request({
-				body : {
-					action	: "delete_tag",
-					dd_api	: 'dd_'+self.transcription_component.model+'_api', // component_text_area
-					source	: {
-						section_tipo	: self.transcription_component.section_tipo, // current component_text_area section_tipo
-						section_id		: self.transcription_component.section_id, // component_text_area section_id
-						tipo			: self.transcription_component.tipo, // component_text_area tipo
-						lang			: self.transcription_component.lang, // component_text_area lang
-						tag_id			: tag_id // current selected tag (passed as param)
-					}
-				}
-			})
-			console.log("api_response_delete_tag:", api_response_delete_tag);
+			const api_response_delete_tag = self.transcription_component.delete_tag(
+				tag_id,
+				'index'
+			)
+			all_promises.push(api_response_delete_tag)
 
 		// delete_locator (component_portal)
-			const api_response_delete_locator = await data_manager.prototype.request({
-				body : {
-					action	: "delete_locator",
-					dd_api	: 'dd_'+self.indexing_component.model+'_api', // component_portal
-					source	: {
-						section_tipo	: self.indexing_component.section_tipo, // current component_text_area section_tipo
-						section_id		: self.indexing_component.section_id, // component_text_area section_id
-						tipo			: self.indexing_component.tipo, // component_text_area tipo
-						lang			: self.indexing_component.lang, // component_text_area lang
-						ar_properties	: ['tag_id','type'],
-						locator			: {
-							tag_id	: tag_id,
-							type	: DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96
-						}
-					}
-				}
-			})
-			console.log("api_response_delete_locator:", api_response_delete_locator);
+			const api_response_delete_locator = self.indexing_component.delete_locator(
+				// object locator
+				{
+					tag_id	: tag_id,
+					type	: DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96
+				},
+				// array ar_properties
+				['tag_id','type']
+			)
+			all_promises.push(api_response_delete_locator)
 
 		// response
-			const response = {
-				delete_tag		: api_response_delete_tag,
-				delete_locator	: api_response_delete_locator
-			}
+			Promise.all(all_promises)
+			.then((values) => {
 
+				const response = {}
+				for (let i = 0; i < values.length; i++) {
+					const item = values[i]
+					response[item.action] = item
+				}
+				dd_console('tool_indexation delete_tag', 'WARNING', response)
 
-		resolve(response)
-	})
-
-
-	// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
-	// this generates a call as my_tool_name::my_function_name(arguments)
-		const source = create_source(self, 'delete_tag')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo					: self.transcription_component.section_tipo, // current component_text_area section_tipo
-			section_id						: self.transcription_component.section_id, // component_text_area section_id
-			transcription_component_tipo	: self.transcription_component.tipo, // component_text_area tipo
-			transcription_component_lang	: self.transcription_component.lang, // component_text_area lang
-			indexing_component_tipo			: self.indexing_component.tipo, // component_relation_xxx used to store indexation locators
-			tag_id							: tag_id // current selected tag (passed as param)
-		}
-
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source
-		}
-
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
-
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
-			.then(function(response){
-				console.warn("-> delete_tag API response:",response);
 				resolve(response)
 			})
-		})
+			.catch(error => {
+				console.error('ERROR: delete_tag found errors . Some promise fail')
+				console.error(error.message)
+			});
+	})
 }//end delete_tag
 
 

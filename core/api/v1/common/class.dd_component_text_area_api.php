@@ -45,6 +45,7 @@ final class dd_component_text_area_api {
 			$tipo			= $source->tipo;
 			$lang			= $source->lang; // string e.g. 'lg-spa'
 			$tag_id			= $source->tag_id; // string e.g. '2'
+			$type			= $source->type; // string e.g. 'index'
 
 		// component_text_area. Remove tag in all langs
 			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -59,12 +60,12 @@ final class dd_component_text_area_api {
 
 			$ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs(
 				$tag_id, // string tag_id
-				'index' // string tag_type
+				$type // string tag_type
 			);
 			$n_deleted			= count($ar_tag_deleted) ?? 0;
 			$response->msg[]	= $n_deleted>0
-				? "Deleted tag: $tag_id in $n_deleted langs: ".to_string($ar_tag_deleted)." ($model_name - $tipo)"
-				: 'No tags are deleted in '.$model_name.' tipo: '.$tipo.' with tag_id '.$tag_id;
+				? "Deleted tag: $tag_id ($type) in $n_deleted langs: ".to_string($ar_tag_deleted)." ($model_name - $tipo)"
+				: "No tags are deleted in $model_name tipo: '$tipo' tag_id: '$tag_id' type: '$type'";
 
 			debug_log(__METHOD__." AR_TAG_DELETED: ".to_string($ar_tag_deleted), logger::DEBUG);
 
