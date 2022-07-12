@@ -882,7 +882,7 @@ const get_custom_events = (self, i, text_editor) => {
 				}//end switch evt.target.className
 			}else{
 				// click_no_tag_
-				event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
+				// event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
 			}//end click on img
 		}//end click
 

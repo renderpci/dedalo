@@ -1542,7 +1542,7 @@ abstract class component_common extends common {
 			$query_select = [];
 			foreach ($ar_componets_related as $related_tipo) {
 
-			    // path . search::get_query_path($tipo, $section_tipo, $resolve_related=true)
+				// path . search::get_query_path($tipo, $section_tipo, $resolve_related=true)
 				$path = search::get_query_path($related_tipo, $target_section_tipo, $resolve_related=true);
 
 				// add selector lag 'all' to last element of path
@@ -1566,8 +1566,6 @@ abstract class component_common extends common {
 				}
 			$records_data		= $search->search();
 			$ar_current_dato	= $records_data->ar_records;
-				#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
-				#dump($ar_current_dato, ' ar_current_dato ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
 
 		$result = [];
@@ -1582,8 +1580,14 @@ abstract class component_common extends common {
 				$value->section_id		= $current_row->section_id;
 				$value->section_tipo	= $current_row->section_tipo;
 
-			# get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $divisor=', '
-			#$label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
+			// get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $divisor=', '
+			// $label = component_relation_common::get_locator_value(
+			// 	$value, // object locator
+			// 	$lang, // string lang
+			// 	false, // bool show_parents
+			// 	$ar_componets_related, // array|null ar_components_related
+			// 	', ' // string|null divisor = ', '
+			// );
 
 			// Build label
 				$ar_label = [];
@@ -1612,9 +1616,9 @@ abstract class component_common extends common {
 				$label = implode(' | ', $ar_label);
 
 			$item = new stdClass();
-				$item->value 	  = $value;
-				$item->label 	  = $label;
-				$item->section_id = $current_row->section_id;
+				$item->value		= $value;
+				$item->label		= $label;
+				$item->section_id	= $current_row->section_id;
 
 			$result[] = $item;
 		}

@@ -1,7 +1,7 @@
 <?php
 /**
 * DD_CORE_API
-* Manage API RESP data with Dédalo
+* Manage API REST data with Dédalo
 *
 */
 final class dd_core_api {
@@ -1773,8 +1773,8 @@ final class dd_core_api {
 
 	/**
 	* GET_RELATION_LIST
-	* @see class.request_query_object.php
-	* @return dd_grid object $result
+	* @param object $rqo
+	* @return object $response
 	*/
 	public static function get_relation_list(object $rqo) : object {
 

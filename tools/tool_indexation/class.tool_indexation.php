@@ -43,7 +43,7 @@ class tool_indexation extends tool_common {
 
 	/**
 	* DELETE_TAG
-	* Deletes all tag relations (indexing_component) and finally removes
+	* Delete all tag relations (indexing_component) and finally removes
 	* the tag in all langs of transcription_component
 	*
 	* @param object $request_options

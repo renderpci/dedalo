@@ -1,7 +1,7 @@
 <?php
 /**
 * DD_TS_API
-* Manage API RESP data of area_thesaurus and ts_object with Dédalo
+* Manage API REST data of area_thesaurus and ts_object with Dédalo
 *
 */
 final class dd_ts_api {
