@@ -2894,11 +2894,17 @@ abstract class common {
 	*/
 	public static function get_ddinfo_parents(object $locator, string $source_component_tipo) : object {
 
-		$section_id 	= $locator->section_id;
-		$section_tipo 	= $locator->section_tipo;
+		$section_id		= $locator->section_id;
+		$section_tipo	= $locator->section_tipo;
 
-		// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
-		$dd_info_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, true, false, null, false, false);
+		// dd_info_value array|null
+		$dd_info_value = component_relation_common::get_locator_value(
+			$locator, // object locator
+			DEDALO_DATA_LANG, // string lang
+			true, // bool show_parents
+			null, // array|null ar_components_related
+			false // bool include_self
+		);
 
 		$dd_info = new stdClass();
 			$dd_info->tipo			= 'ddinfo';

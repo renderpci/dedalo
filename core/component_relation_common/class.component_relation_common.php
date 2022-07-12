@@ -991,38 +991,59 @@ class component_relation_common extends component_common {
 	/**
 	* GET_LOCATOR_VALUE
 	* Resolve locator to string value to show in list etc.
-	* @return array|string|null $locator_value
+	*
+	* @param object $locator
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param bool $show_parents = false
+	* @param array|null $ar_components_related
+	* @param bool $include_self = true
+	*
+	* @return array|null $ar_value e.g. ['pepe','lope']
 	*/
-	public static function get_locator_value(object $locator, string $lang=DEDALO_DATA_LANG, bool $show_parents=false, $ar_components_related=false, ?string $divisor=', ', bool $include_self=true, bool $glue=true) {
-		if(SHOW_DEBUG===true) {
-			$start_time=start_time();
-			#dump($ar_components_related, ' ar_components_related ++ '.to_string());
-		}
+	public static function get_locator_value(
+		object $locator,
+		string $lang=DEDALO_DATA_LANG,
+		bool $show_parents=false,
+		?array $ar_components_related=null, // array|bool
+		bool $include_self=true
+		) : ?array {
 
-		if (empty($locator) || !is_object($locator)) {
-			return null;
-		}
-		$locator = new locator($locator);
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time=start_time();
+				#dump($ar_components_related, ' ar_components_related ++ '.to_string());
+			}
+
+		// locator
+			if (empty($locator) || !is_object($locator)) {
+				return null;
+			}
+			// parse as real locator class object
+			$locator = new locator($locator);
 
 		$ar_value = [];
-
 		if($ar_components_related!==false && !empty($ar_components_related)){
 
 			$value = array();
 			foreach ($ar_components_related as $component_tipo) {
 
-				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$current_component	= component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$locator->section_id,
+					'list',
+					$lang,
+					$locator->section_tipo
+				);
 
-				$current_component = component_common::get_instance($modelo_name,
-																	$component_tipo,
-																	$locator->section_id,
-																	'edit',
-																	$lang,
-																	$locator->section_tipo);
-
-
-				$current_value = component_common::extract_component_value_fallback($current_component, $lang, true);
-					#dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
+				$current_value = component_common::extract_component_value_fallback(
+					$current_component, // object component
+					$lang, // string lang
+					true, // bool mark
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+				// dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
 
 				$value[] = $current_value;
 			}//end foreach ($ar_components_related as $component_tipo)
@@ -1035,7 +1056,6 @@ class component_relation_common extends component_common {
 
 			// $locator_value = implode($divisor, $ar_values_clean);
 			$ar_value = array_merge($ar_value, $ar_values_clean);
-
 		}else{
 
 			if ($show_parents===true) {
@@ -1071,17 +1091,14 @@ class component_relation_common extends component_common {
 			}//end if ($show_parents===true)
 		}
 
-		if(SHOW_DEBUG===true) {
-			$total = exec_time_unit($start_time,'ms')." ms";
-			#debug_log(__METHOD__." Total time $total ".to_string(), logger::DEBUG);
-		}
-
-		$locator_value = ($glue===true)
-			? implode($divisor, $ar_value)
-			: $ar_value;
+		// debug
+			if(SHOW_DEBUG===true) {
+				$total = exec_time_unit($start_time,'ms')." ms";
+				#debug_log(__METHOD__." Total time $total ".to_string(), logger::DEBUG);
+			}
 
 
-		return $locator_value;
+		return $ar_value;
 	}//end get_locator_value
 
 

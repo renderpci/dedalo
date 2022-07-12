@@ -96,25 +96,32 @@ class component_relation_related extends component_relation_common {
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
 
-		$dato   	= $this->get_dato();
-		$properties = $this->get_properties();
-		$divisor 	= (isset($show->divisor)) ?  $show->divisor : ' | ';
+		$dato		= $this->get_dato();
+		$properties	= $this->get_properties();
+		$divisor	= (isset($show->divisor)) ?  $show->divisor : ' | ';
 		$ar_values	= array();
 
 		foreach ((array)$dato as $key => $current_locator) {
 
 			$current_locator_json = json_encode($current_locator);
 
-			$ar_values[$current_locator_json] = self::get_locator_value($current_locator, $lang, false, $ar_componets_related, $divisor);
-
+			// current_ar_value array|null
+			$current_ar_value = self::get_locator_value(
+				$current_locator, // object locator
+				$lang, // string lang
+				false, // bool show_parents
+				$ar_componets_related // array|null ar_components_related
+			);
+			$current_value = !empty($current_ar_value)
+				? implode($divisor, $current_ar_value)
+				: $current_ar_value; // null case
+			$ar_values[$current_locator_json] = $current_value;
 		}//end if (!empty($dato))
 
+		$valor = ($format==='array')
+			? $ar_values
+			: implode($divisor, $ar_values);
 
-		if ($format==='array') {
-			$valor = $ar_values;
-		}else{
-			$valor = implode($divisor, $ar_values);
-		}
 
 		return $valor;
 	}//end get_valor
@@ -227,17 +234,24 @@ class component_relation_related extends component_relation_common {
 
 		$references = array_map(function($locator) use($ar_componets_related, $divisor) {
 
+			$ar_current_label = self::get_locator_value(
+				$locator, // object locator
+				DEDALO_DATA_LANG, // string lang
+				false, // bool show_parents
+				$ar_componets_related, // array|null ar_components_related
+				true // bool include_self
+			);
+			$current_label = !empty($ar_current_label)
+				? implode($divisor, $ar_current_label)
+				: $ar_current_label; // null case
+
 			$item = new stdClass();
-				$item->value = $locator;
-				$item->label = self::get_locator_value($locator, DEDALO_DATA_LANG, false, $ar_componets_related, $divisor, $include_self=true, $glue=true);
+				$item->value	= $locator;
+				$item->label	= $current_label; // string|null
 
 			return $item;
 		}, $references);
 
-
-		if(SHOW_DEBUG===true) {
-			#dump($references, ' references ++ **** '.to_string());
-		}
 
 		return $references;
 	}//end get_calculated_references

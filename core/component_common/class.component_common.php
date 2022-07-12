@@ -1460,6 +1460,9 @@ abstract class component_common extends common {
 			$response->result	= [];
 			$response->msg		= __METHOD__ . ' Error. Request failed';
 
+		// short vars
+			$divisor = ', ';
+
 		// cases
 			switch (true) {
 
@@ -1586,7 +1589,6 @@ abstract class component_common extends common {
 			// 	$lang, // string lang
 			// 	false, // bool show_parents
 			// 	$ar_componets_related, // array|null ar_components_related
-			// 	', ' // string|null divisor = ', '
 			// );
 
 			// Build label
@@ -1596,15 +1598,24 @@ abstract class component_common extends common {
 					$model_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
 					// if ($model_name==='component_autocomplete_hi') {
 					if (in_array($model_name, component_relation_common::get_components_with_relations())) {
-						# resolve
-						// ($locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_components_related=false, $divisor=', ', $include_self=true, $glue=true)
-						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ', true, true);
+						// resolve
+						// ar_current_label array|null
+						$ar_current_label = component_relation_common::get_locator_value(
+							$value, // object locator
+							$lang, // string lang
+							false, // bool show_parents
+							$ar_componets_related,  // array|null ar_components_related
+							true // bool include_self
+						);
+						$current_label = !empty($ar_current_label)
+							? implode($divisor, $ar_current_label)
+							: $ar_current_label; // null case
 					}elseif ($model_name==='component_section_id') {
 						$current_label = $current_row->{$related_tipo};
 					}else{
-						# use query select value
-						$dato_full_json = $current_row->{$related_tipo};
-						$current_label = self::get_value_with_fallback_from_dato_full(
+						// use query select value
+						$dato_full_json	= $current_row->{$related_tipo};
+						$current_label	= self::get_value_with_fallback_from_dato_full(
 							$dato_full_json,
 							true // bool decore_untranslated
 						);
