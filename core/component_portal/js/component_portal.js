@@ -700,7 +700,8 @@ component_portal.prototype.navigate = async function(callback) {
 		}
 
 	// container
-		const container = self.node[0].querySelector('.list_body')
+		const container = self.node[0].querySelector('.list_body') // view_table
+					   || self.node[0].querySelector('.content_data') // view_line
 
 	// loading
 		container.classList.add('loading')
