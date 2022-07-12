@@ -43,8 +43,13 @@ class component_relation_model extends component_relation_common {
 			}
 
 		$ar_values = [];
-		foreach ($dato as $key => $value) {
-			$current_label = component_relation_common::get_locator_value($value, $lang, false);
+		foreach ($dato as $locator) {
+			// current_label array|null
+			$current_label = component_relation_common::get_locator_value(
+				$locator, // object locator
+				$lang, // string lang
+				false // bool show_parents
+			);
 			$ar_values[] = $current_label;
 		}
 		$valor = implode($separator, $ar_values);

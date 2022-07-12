@@ -28,18 +28,23 @@
 			}
 
 		// properties
-			$propiedades 	= $this->get_propiedades();
-			$show_parents 	= (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
+			$propiedades	= $this->get_propiedades();
+			$show_parents	= (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
 
 		// dato iterate	and resolve each locator
 			$ar_valor = array();
 			foreach ($dato as $key => $current_locator) {
 
-				// params: $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
-				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents);
+				// current_valor array|null
+				$current_valor = component_relation_common::get_locator_value(
+					$current_locator, // object locator
+					$lang, // string lang
+					$show_parents, // bool show_parents
+					null // array|null ar_components_related
+				);
 
-				$current_locator_string 			= json_encode($current_locator);
-				$ar_valor[$current_locator_string]  = $current_valor;
+				$current_locator_string				= json_encode($current_locator);
+				$ar_valor[$current_locator_string]	= $current_valor;
 			}//end foreach ($dato as $key => $current_locator)
 
 		// set value based on format
@@ -114,8 +119,14 @@
 						foreach ($dato as $current_locator) {
 
 							// self term plus parents.
-							// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
-								$ar_diffusion_value[] = component_relation_common::get_locator_value($current_locator, $lang, $show_parents, false);
+								// current_value array|null
+								$current_value = component_relation_common::get_locator_value(
+									$current_locator, // object locator
+									$lang, // string lang
+									$show_parents, // bool show_parents
+									null // array|null ar_components_related
+								);
+								$ar_diffusion_value[] = $current_value;
 
 							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
@@ -142,14 +153,21 @@
 						$locator_terms = [];
 
 						// self include. $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
-							$locator_terms[] = component_relation_common::get_locator_value($current_locator, $lang, false, false);
+							// current_value array|null
+							$current_value = component_relation_common::get_locator_value(
+								$current_locator, // object locator
+								$lang, // string lang
+								false, // bool show_parents
+								null // array|null ar_components_related
+							);
+							$locator_terms[] = $current_value;
 
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
 
 						// iterate parents
-							$stopped  = false;
-							$ar_terms = [];
+							$stopped	= false;
+							$ar_terms	= [];
 							foreach ($ar_parents as $parent_locator) {
 
 								// parent_end_by_term_id. Uses a term_id as last valid parent
@@ -164,12 +182,14 @@
 								// parent_end_by_model. Uses a model as last valid parent
 									if(isset($value->parent_end_by_model)){
 										$ar_tipo   = section::get_ar_children_tipo_by_modelo_name_in_section($parent_locator->section_tipo,['component_relation_model'],true, true, true, true);
-										$component = component_common::get_instance('component_relation_model',
-																					 $ar_tipo[0],
-																					 $parent_locator->section_id,
-																					 'list',
-																					 DEDALO_DATA_NOLAN,
-																					 $parent_locator->section_tipo);
+										$component = component_common::get_instance(
+											'component_relation_model',
+											$ar_tipo[0],
+											$parent_locator->section_id,
+											'list',
+											DEDALO_DATA_NOLAN,
+											$parent_locator->section_tipo
+										);
 										$component_dato = $component->get_dato();
 										if(isset($component_dato[0])){
 											$current_term_id = $component_dato[0]->section_tipo.'_'.$component_dato[0]->section_id;

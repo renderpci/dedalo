@@ -84,7 +84,12 @@ class component_relation_index extends component_relation_common {
 
 		$ar_valor = array();
 		foreach ((array)$dato as $key => $current_locator) {
-			$ar_valor[] = self::get_locator_value( $current_locator, $lang );
+			// get_locator_value returns array|null
+			$ar_valor[] = self::get_locator_value(
+				$current_locator, // object locator
+				$lang, // string lang
+				false // bool show_parents
+			);
 		}//end if (!empty($dato))
 
 		# Set component valor
