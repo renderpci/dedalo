@@ -2,6 +2,11 @@
 /*eslint no-undef: "error"*/
 
 
+
+/**
+* KEYBOARD_CODES
+* 	Object with all keys definition
+*/
 export const keyboard_codes = {
 	Backspace		: 'Backspace',
 	Tab				: 'Tab',
@@ -109,8 +114,9 @@ export const keyboard_codes = {
 }//end keyboard_codes
 
 
+
 /**
-* ACTIVATE_WINDOW_KEYDOWN
+* ACTIVATE_WINDOW_KEYDOWN_DES
 * @return bool
 */
 export const activate_window_keydown_DES = function() {
@@ -225,5 +231,3 @@ export const activate_window_keydown_DES = function() {
 
 	});//end window.addEventListener("keydown", function (e)
 }//end activate_window_keydown
-
-
