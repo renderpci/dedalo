@@ -150,67 +150,66 @@ export const get_instance = async function(options){
 				// search. first we see if the instance is inside the instances cache
 				const found_instance = instances.find(instance => instance.id===key)
 
-				if (!found_instance) {
+				// resolve the promise with the cache instance found
+					if (found_instance) {
+						// console.warn("returned already resolved instance from cache:", found_instance[0]);
+						resolve(found_instance)
+					}
+
 					//console.log("---Creating instance of:", model, tipo, " - " + key)
 
-					// element file import path
-						const base_path	= model.indexOf('tool_')!==-1
-							? '../../../tools/'
-							: model.indexOf('service_')!==-1
-								? '../../services/'
-								: '../../'
+				// element file import path
+					const base_path	= model.indexOf('tool_')!==-1
+						? '../../../tools/'
+						: model.indexOf('service_')!==-1
+							? '../../services/'
+							: '../../'
 
-						const path = direct_path
-							? direct_path
-							: base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
+					const path = direct_path
+						? direct_path
+						: base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
 
-					// import element mod file once (and wait until finish)
-						let current_element
-						try {
-							current_element = await import(path)
-						}catch(error){
-							console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
+				// import element mod file once (and wait until finish)
+					let current_element
+					try {
+						current_element = await import(path)
+					}catch(error){
+						console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
 
-							resolve(false)
-							return
-						}
+						resolve(false)
+						return
+					}
 
-					// check current_element
-						if (typeof current_element[model]!=="function") {
-							console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
-							resolve(false)
-							return
-						}
+				// check current_element
+					if (typeof current_element[model]!=="function") {
+						console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
+						resolve(false)
+						return
+					}
 
-					// instance the element
-						const instance_element = new current_element[model]()
+				// instance the element
+					const instance_element = new current_element[model]()
 
-					// serialize element id
-					// add the id for init the instance with the id
-						instance_element.id = key
-						//instance_element.id_base = key_instances_builder(options, false)
-						instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
-					// id_variant . Propagate a custom instance id to children
-						if (options.id_variant) {
-							instance_element.id_variant = options.id_variant
-						}
+				// serialize element id
+				// add the id for init the instance with the id
+					instance_element.id = key
+					//instance_element.id_base = key_instances_builder(options, false)
+					instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
+				// id_variant . Propagate a custom instance id to children
+					if (options.id_variant) {
+						instance_element.id_variant = options.id_variant
+					}
 
-					// init the element
-						await instance_element.init(options)
+				// init the element
+					await instance_element.init(options)
 
-					// add to the instances cache
-						instances.push(instance_element)
+				// add to the instances cache
+					instances.push(instance_element)
 
-						// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
+					// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
 
-					// return the new created instance
-						resolve(instance_element)
-
-				}else{
-						// console.warn("returned already resolved instance from cache:", found_instance[0]);
-					// resolve the promise with the cache instance found
-						resolve(found_instance)
-				}
+				// return the new created instance
+					resolve(instance_element)
 			})
 			.catch(err => { console.error(err) });
 		}//end load_instance
