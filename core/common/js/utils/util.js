@@ -6,6 +6,8 @@
 /**
 * CLONE
 * Exec a deep safe clone of object
+* @param mixed item
+* @return mixed item
 */
 export function clone(item) {
 
@@ -18,14 +20,18 @@ export function clone(item) {
 /**
 * DD_CONSOLE
 * Custom console log from Dédalo
+* @param string msg
+* @param string level
+* @param mixed items
+* @return void
 */
-export function dd_console(msg, level, items){
+export function dd_console(msg, level='WARNING', items){
 
 	const type = level==='ERROR'
 		? 'error'
-		:	(level==='WARNING'
-				? 'warn'
-				: 'warn')
+		: (level==='WARNING'
+			? 'warn'
+			: 'warn')
 
 	const style = 'background: #000000; color: violet; font-size: 1.2em; padding:2px; padding-left:4px; padding-right:4px;'
 
@@ -41,6 +47,8 @@ export function dd_console(msg, level, items){
 /**
 * JSON_parse_safely
 * Custom console log from Dédalo
+* @param string str
+* @param string error_value = null
 */
 export function JSON_parse_safely(str, error_value=null) {
 	try {
@@ -116,25 +124,25 @@ export async function observe_changes(element, config, once) {
 	return new Promise((resolve) => {
 		// Callback function to execute when mutations are observed
 		const callback = function(mutationsList, observer) {
-				// Use traditional 'for loops' for IE 11
-				for(let mutation of mutationsList) {
-						if (mutation.type === 'childList') {
-								console.log('A child node has been added or removed.');
+			// Use traditional 'for loops' for IE 11
+			for(let mutation of mutationsList) {
+					if (mutation.type==='childList') {
+						console.log('A child node has been added or removed.');
 
-								if (once===true) {
-						observer.disconnect();
-							}
-							resolve( mutation.type )
+						if (once===true) {
+							observer.disconnect();
 						}
-						else if (mutation.type === 'attributes') {
-								console.log('The ' + mutation.attributeName + ' attribute was modified.');
+						resolve( mutation.type )
+					}
+					else if (mutation.type==='attributes') {
+						console.log('The ' + mutation.attributeName + ' attribute was modified.');
 
-							if (once===true) {
-						observer.disconnect();
-							}
-							resolve( mutation.attributeName )
+						if (once===true) {
+							observer.disconnect();
 						}
-				}
+						resolve( mutation.attributeName )
+					}
+			}
 		};
 
 		// Create an observer instance linked to the callback function
@@ -305,5 +313,3 @@ export function strip_tags(value) {
 
 	return text_clean;
 }//end strip_tags
-
-
