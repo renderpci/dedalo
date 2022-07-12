@@ -76,17 +76,21 @@ final class dd_manager {
 			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
 			$dd_api			= new $dd_api_type();
 			if ( !method_exists($dd_api, $rqo->action) ) {
+				// error
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Error. Undefined $dd_api_type method (action) : ".$rqo->action;
 					$response->error	= 'Undefined method';
+					$response->action	= $rqo->action;
 			}else{
-				$response = $dd_api::{$rqo->action}( $rqo );
+				// success
+				$response			= $dd_api::{$rqo->action}( $rqo );
+				$response->action	= $rqo->action;
 			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total_time_api_exec = exec_time_unit($api_manager_start_time,'ms')." ms";
+				$total_time_api_exec = exec_time_unit($api_manager_start_time,'ms').' ms';
 				$api_debug = new stdClass();
 					$api_debug->api_exec_time	= $total_time_api_exec;
 					$api_debug->memory_usage	= dd_memory_usage();
