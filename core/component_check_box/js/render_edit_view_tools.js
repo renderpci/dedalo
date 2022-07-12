@@ -4,15 +4,14 @@
 
 
 // import
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {strip_tags} from '../../common/js/utils/index.js'
 	import {
 		get_buttons,
 		add_events
 	} from './render_edit_component_check_box.js'
-	import {
-		render_edit_view_default
-	} from './render_edit_view_default.js'
+	// import {render_edit_view_default} from './render_edit_view_default.js'
 
 
 /**
@@ -114,12 +113,15 @@ const get_content_data = function(self) {
 */
 const get_input_element = (i, current_value, self) => {
 
-	const value				= self.data.value || []
+
+	const data				= self.data || {}
+	const value				= data.value || []
 	const value_length		= value.length
 	const datalist_item		= current_value
 	const datalist_value	= datalist_item.value
-	const label				= datalist_item.label
+	const label				= datalist_item.label // string e.g. 'Tool posterframe | <mark>tool_posterframe</mark>'
 	const section_id		= datalist_item.section_id
+
 
 	// create li
 		const li = ui.create_dom_element({
@@ -148,7 +150,7 @@ const get_input_element = (i, current_value, self) => {
 	// label
 		const label_parts	= label.split(' | ')
 		const tool_label	= label_parts[0]
-		const tool_name		= label_parts[1]
+		const tool_name		= strip_tags(label_parts[1])
 		// const label_string	= (SHOW_DEBUG===true) ? tool_label + ` [${tool_name} - ${section_id}]` : tool_label
 		const option_label	= ui.create_dom_element({
 			element_type	: 'label',
@@ -175,8 +177,8 @@ const get_input_element = (i, current_value, self) => {
 			e.stopPropagation()
 			try {
 				// target_section
-					const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
-					const target_section_tipo = sqo.section_tipo[0].tipo
+					const sqo					= self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
+					const target_section_tipo	= sqo.section_tipo[0].tipo
 					console.log("+++ sqo:",sqo);
 				// navigation
 					const user_navigation_options = {
@@ -205,13 +207,14 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// tool_icon
-		const icon_url = DEDALO_TOOLS_URL + '/' + tool_name + '/img/icon.svg'
+		const icon_url	= DEDALO_TOOLS_URL + '/' + tool_name + '/img/icon.svg'
 		const tool_icon	= ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'tool_icon',
 			src				: icon_url
 		})
 		li.prepend(tool_icon)
+
 
 	return li
 }//end get_input_element
