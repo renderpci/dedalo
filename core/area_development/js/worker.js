@@ -27,7 +27,7 @@ self.onmessage = async function(e) {
 		const options	= e.data.options
 
 	// data_manager
-		const api_response = await data_manager.prototype.request({
+		const api_response = await data_manager.request({
 			url		: url,
 			body	: {
 				dd_api	: dd_api,

@@ -72,7 +72,9 @@ area_development.prototype.build = async function(autoload=true) {
 		self.status = 'building'
 
 	// rqo_config
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+		self.rqo_config	= self.context.request_config
+			? self.context.request_config.find(el => el.api_engine==='dedalo')
+			: {}
 
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
@@ -85,8 +87,7 @@ area_development.prototype.build = async function(autoload=true) {
 		if (autoload===true) {
 
 			// load data
-				const current_data_manager = new data_manager()
-				const api_response = await current_data_manager.request({body:self.rqo})
+				const api_response = await data_manager.request({body:self.rqo})
 
 			// set the result to the datum
 				self.datum	= api_response.result
@@ -198,7 +199,7 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 					: trigger.action
 
 				// data_manager
-				const api_response = await data_manager.prototype.request({
+				const api_response = await data_manager.request({
 					body : {
 						dd_api	: dd_api,
 						action	: action,
@@ -267,7 +268,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 				}
 
 				// data_manager
-				const api_response = await data_manager.prototype.request({
+				const api_response = await data_manager.request({
 					body : rqo
 				})
 				console.log("/// json_editor_api api_response:",api_response);

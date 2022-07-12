@@ -205,7 +205,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 									// resolve whole context from API (init event observer problem..)
 									// (!) This is mandatory now because some components (e.g. component_portal) need
 									// the rqo_config to generate rqo correctly
-									const api_response	= await data_manager.prototype.get_element_context(el)
+									const api_response = await data_manager.get_element_context(el)
 									// console.log("++++++++++++++++++ resolved context api_response:", el.tipo, api_response);
 									return api_response.result[0] || null
 									// return {}
@@ -296,9 +296,10 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 			// load data. Load section data from db of the current tool.
 			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
 			// The tool info was generated when it was imported / registered by admin
-				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:rqo})
-				self.context				= api_response.result
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				self.context = api_response.result
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -375,7 +376,7 @@ const load_default_ddo_map = async function() {
 							return caller_context
 						}
 						// resolve whole context from API (init event observer problem..)
-						// const api_response	= await current_data_manager.get_element_context(el)
+						// const api_response	= await data_manager.get_element_context(el)
 						// return api_response.result[0]
 						return {}
 					  })()

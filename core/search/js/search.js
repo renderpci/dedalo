@@ -187,15 +187,13 @@ search.prototype.build = async function(){
 	// status update
 		self.status = 'building'
 
-	const current_data_manager = new data_manager()
-
 	const ar_promises = []
 
 	// editing_preset
 		ar_promises.push( new Promise(async function(resolve){
 
 			// load editing preset data
-				const editing_preset = await current_data_manager.request({
+				const editing_preset = await data_manager.request({
 					body : {
 						action				: "filter_get_editing_preset",
 						target_section_tipo	: self.section_tipo
@@ -238,8 +236,7 @@ search.prototype.build = async function(){
 			}
 
 			// load data
-				//const current_data_manager 	= new data_manager()
-				const api_response 			= await current_data_manager.request({
+				const api_response = await data_manager.request({
 					//url  : self.url_trigger,
 					body : {
 						action 	 	 	: "get_section_elements_context",
@@ -261,7 +258,7 @@ search.prototype.build = async function(){
 	// user_presets. load user preset data
 		ar_promises.push( new Promise(async function(resolve){
 
-			const user_presets = await current_data_manager.request({
+			const user_presets = await data_manager.request({
 				body : {
 					action				: "filter_get_user_presets",
 					target_section_tipo	: self.section_tipo
@@ -373,8 +370,7 @@ search.prototype.build = async function(){
 	// 			}else{
 
 	// 				// load data
-	// 					const current_data_manager 	= new data_manager()
-	// 					const api_response 			= await current_data_manager.request({
+	// 					const api_response = await data_manager.request({
 	// 						body : {
 	// 							action			: "get_section_elements_context",
 	// 							context_type	: 'simple',
@@ -419,8 +415,7 @@ search.prototype.build = async function(){
 	// 			}else{
 
 	// 				// load data
-	// 					const current_data_manager 	= new data_manager()
-	// 					const api_response 			= await current_data_manager.request({
+	// 					const api_response = await data_manager.request({
 	// 						body : {
 	// 							action			: "get_section_components",
 	// 							ar_section_tipo	: [section_tipo]
@@ -954,12 +949,11 @@ search.prototype.get_search_group_operator = function(search_group) {
 		const filter_obj = await self.parse_dom_to_json_filter({}).filter
 
 		// save editing preset
-			const current_data_manager 	= new data_manager()
-			const api_response 			= await current_data_manager.request({
+			const api_response = await data_manager.request({
 				body : {
-					action 			: "filter_set_editing_preset",
-					section_tipo 	: self.section_tipo,
-					filter_obj 		: filter_obj
+					action			: "filter_set_editing_preset",
+					section_tipo	: self.section_tipo,
+					filter_obj		: filter_obj
 				}
 			})
 
@@ -1102,8 +1096,10 @@ search.prototype.track_show_panel = async function(options) {
 		const name		= options.name
 		const action	= options.action
 
-	const current_data_manager	= new data_manager();
-	const saved_search_state	= await current_data_manager.get_local_db_data(self.id, 'context')
+	const saved_search_state = await data_manager.get_local_db_data(
+		self.id,
+		'context'
+	)
 	const value = saved_search_state
 		? saved_search_state.value
 		: {}
@@ -1118,7 +1114,7 @@ search.prototype.track_show_panel = async function(options) {
 			id		: self.id,
 			value	: value
 		}
-		current_data_manager.set_local_db_data(
+		data_manager.set_local_db_data(
 			data,
 			'context'
 		)
@@ -1139,8 +1135,10 @@ search.prototype.get_panels_status = async function() {
 	const self = this
 
 	// local_db_data. get value if exists
-		const current_data_manager	= new data_manager();
-		const panels_status = await current_data_manager.get_local_db_data(self.id, 'context')
+		const panels_status = await data_manager.get_local_db_data(
+			self.id,
+			'context'
+		)
 
 	return panels_status
 }//end get_panels_status
@@ -1165,8 +1163,7 @@ search.prototype.get_panels_status = async function() {
 	// 	// const cookie_track 	= (cookie_obj[section_tipo]) ? cookie_obj[section_tipo][name] : false
 
 	// 	// local_db_data. get value if exists
-	// 		const current_data_manager	= new data_manager();
-	// 		const saved_search_state = await current_data_manager.get_local_db_data(self.id, 'context')
+	// 		const saved_search_state = await data_manager.get_local_db_data(self.id, 'context')
 
 	// 		const cookie_track = saved_search_state
 	// 			? ((saved_search_state.value[name] && saved_search_state.value[name].is_open) || false)

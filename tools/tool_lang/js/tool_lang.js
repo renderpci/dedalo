@@ -72,7 +72,10 @@ tool_lang.prototype.init = async function(options) {
 			self.target_lang	= null
 
 		// target translator. When user changes it, a local DB var is stored as 'translator_engine_select' in table 'status'
-			const translator_engine_select_object = await data_manager.prototype.get_local_db_data('translator_engine_select', 'status')
+			const translator_engine_select_object = await data_manager.get_local_db_data(
+				'translator_engine_select',
+				'status'
+			)
 			if (translator_engine_select_object) {
 				self.target_translator = translator_engine_select_object.value
 			}
@@ -108,7 +111,10 @@ tool_lang.prototype.build = async function(autoload=false) {
 			}
 
 		// target lang. When user changes it, a local DB var is stored as 'tool_lang_target_lang' in table 'status'
-			const tool_lang_target_lang_object = await data_manager.prototype.get_local_db_data('tool_lang_target_lang', 'status')
+			const tool_lang_target_lang_object = await data_manager.get_local_db_data(
+				'tool_lang_target_lang',
+				'status'
+			)
 			if (tool_lang_target_lang_object) {
 				self.target_lang = tool_lang_target_lang_object.value
 			}
@@ -199,8 +205,9 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> automatic_translation API response:",'DEBUG',response);
 

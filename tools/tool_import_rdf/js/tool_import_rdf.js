@@ -163,8 +163,9 @@ tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_value
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> get_rdf_data API response:",'DEBUG',response);
 

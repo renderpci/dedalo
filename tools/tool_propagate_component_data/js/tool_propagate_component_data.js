@@ -142,8 +142,9 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> propagate_component_data API response:",'DEBUG',response);
 

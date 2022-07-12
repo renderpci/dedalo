@@ -18,7 +18,7 @@ export const data_manager = function() {
 * @param object options
 * @return promise api_response
 */
-data_manager.prototype.request = async function(options) {
+data_manager.request = async function(options) {
 
 	this.url			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
 	this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
@@ -356,7 +356,7 @@ data_manager.prototype.get_local_db = async function() {
 /**
 * SET_LOCAL_DB_DATA
 */
-data_manager.prototype.set_local_db_data = async function(data, table) {
+data_manager.set_local_db_data = async function(data, table) {
 
 	const self = this
 
@@ -400,7 +400,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 /**
 * GET_LOCAL_DB_DATA
 */
-data_manager.prototype.get_local_db_data = async function(id, table) {
+data_manager.get_local_db_data = async function(id, table) {
 
 	const self = this
 
@@ -442,7 +442,7 @@ data_manager.prototype.get_local_db_data = async function(id, table) {
 /**
 * GET_LOCAL_DB_DATA
 */
-data_manager.prototype.delete_local_db_data = async function(id, table) {
+data_manager.delete_local_db_data = async function(id, table) {
 
 	const self = this
 
@@ -588,5 +588,3 @@ data_manager.prototype.component_load_context = async function(component) {
 	return context
 }//end component_load_context
 */
-
-

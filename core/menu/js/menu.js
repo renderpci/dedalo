@@ -95,8 +95,7 @@ menu.prototype.build = async function(autoload=true){
 
 	if (autoload===true) {
 
-		const current_data_manager	= new data_manager()
-		const menu_cache_data			= await current_data_manager.get_local_db_data(self.id, 'data')
+		const menu_cache_data = await data_manager.get_local_db_data(self.id, 'data')
 
 		if(menu_cache_data){
 
@@ -120,7 +119,7 @@ menu.prototype.build = async function(autoload=true){
 				}
 
 			// load data. get context and data
-				const api_response = await current_data_manager.request({
+				const api_response = await data_manager.request({
 					body : rqo
 				})
 
@@ -132,7 +131,7 @@ menu.prototype.build = async function(autoload=true){
 					id		: self.id,
 					value	: self.datum
 				}
-				current_data_manager.set_local_db_data(
+				data_manager.set_local_db_data(
 					menu_cache_data,
 					'data'
 				)

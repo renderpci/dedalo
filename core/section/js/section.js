@@ -157,8 +157,7 @@ section.prototype.init = async function(options) {
 					action			: 'create',
 					section_tipo	: self.section_tipo
 				}
-				const current_data_manager	= new data_manager()
-				const api_response			= await current_data_manager.request({body:rqo})
+				const api_response = await data_manager.request({body:rqo})
 				if (api_response.result && api_response.result>0) {
 
 					const section_id = api_response.result
@@ -235,7 +234,7 @@ section.prototype.init = async function(options) {
 				// open_search_panel. local DDBB table status
 					const status_id			= 'open_search_panel'
 					const collapsed_table	= 'status'
-					data_manager.prototype.get_local_db_data(status_id, collapsed_table, true)
+					data_manager.get_local_db_data(status_id, collapsed_table, true)
 					.then(async function(ui_status){
 						// (!) Note that ui_status only exists when element is open
 						const is_open = typeof ui_status==='undefined' || ui_status.value===false
@@ -288,10 +287,8 @@ section.prototype.build = async function(autoload=false) {
 			data	: [],
 			context	: []
 		}
-		self.data = self.data || {}
-		self.context = self.context || {}
-
-	const current_data_manager	= new data_manager()
+		self.data		= self.data || {}
+		self.context	= self.context || {}
 
 	// rqo
 		const generate_rqo = async function(){
@@ -328,7 +325,9 @@ section.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// get context and data
-				const api_response = await current_data_manager.request({body:self.rqo})
+				const api_response = await data_manager.request({
+					body : self.rqo
+				})
 				if(SHOW_DEVELOPER===true) {
 					if (!api_response || !api_response.result) {
 						console.error("section build autoload api_response:",api_response);
@@ -374,7 +373,9 @@ section.prototype.build = async function(autoload=false) {
 					}
 					self.total = function() {
 						return new Promise(function(resolve){
-							current_data_manager.request({body:rqo_count})
+							data_manager.request({
+								body : rqo_count
+							})
 							.then(function(api_count_response){
 								self.total = api_count_response.result.total
 								resolve(self.total)
@@ -384,7 +385,7 @@ section.prototype.build = async function(autoload=false) {
 
 					// set_local_db_data updated rqo
 						// const rqo = self.rqo
-						// current_data_manager.set_local_db_data(
+						// data_manager.set_local_db_data(
 						// 	rqo,
 						// 	'rqo'
 						// )
@@ -392,7 +393,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// set_local_db_data updated rqo
 				// const rqo = self.rqo
-				// current_data_manager.set_local_db_data(
+				// data_manager.set_local_db_data(
 				// 	rqo,
 				// 	'rqo'
 				// )
@@ -510,7 +511,7 @@ section.prototype.build = async function(autoload=false) {
 
 								// set_local_db_data updated rqo
 									// const rqo = self.rqo
-									// current_data_manager.set_local_db_data(
+									// data_manager.set_local_db_data(
 									// 	rqo,
 									// 	'rqo'
 									// )
@@ -771,12 +772,14 @@ section.prototype.delete_section = async function (options) {
 			sqo		: sqo
 		}
 
-		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.request({body:rqo})
+		const api_response = await data_manager.request({
+			body : rqo
+		})
 		if (api_response.result && api_response.result.length>0) {
 			// const ar_section_id = api_response.result
 			self.refresh()
 		}
+
 
 	return true
 }//end delete_section

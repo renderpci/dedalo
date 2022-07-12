@@ -198,8 +198,6 @@ component_common.prototype.build = async function(autoload=false){
 		}
 		self.data = self.data || {}
 
-	const current_data_manager = new data_manager()
-
 	// load data on auto-load true
 		if (autoload===true) {
 
@@ -210,7 +208,7 @@ component_common.prototype.build = async function(autoload=false){
 				}
 
 			// get context and data
-				const api_response = await current_data_manager.request({body : rqo})
+				const api_response = await data_manager.request({body : rqo})
 					// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
 					dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
 
@@ -290,8 +288,7 @@ component_common.prototype.build = async function(autoload=false){
 	// 				}
 
 	// 			// load data
-	// 				const current_data_manager	= new data_manager()
-	// 				const api_response			= await current_data_manager.request({body : rqo})
+	// 				const api_response			= await data_manager.request({body : rqo})
 
 	// 			// debug
 	// 				if(SHOW_DEBUG===true) {
@@ -488,8 +485,7 @@ component_common.prototype.save = async function(changed_data) {
 				const context = clone(self.context)
 
 				// data_manager
-					const current_data_manager	= new data_manager()
-					const api_response			= await current_data_manager.request({
+					const api_response = await data_manager.request({
 						body : {
 							action		: 'save',
 							context		: context,

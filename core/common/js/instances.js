@@ -59,8 +59,8 @@ export const get_instance = async function(options){
 		const mode				= options.mode  || 'list'
 		const lang				= options.lang  || page_globals.dedalo_data_lang
 		const model				= options.model || await ( async () => {
-			const current_data_manager		= new data_manager()
-			const element_context_response	= await current_data_manager.get_element_context({
+
+			const element_context_response	= await data_manager.get_element_context({
 				tipo			: tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id

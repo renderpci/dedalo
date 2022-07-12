@@ -200,10 +200,12 @@ tool_transcription.prototype.load_relation_list = async function() {
 	}
 
 	// get context and data
-		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.request({body:rqo})
+		const api_response = await data_manager.request({
+			body : rqo
+		})
 
 	const datum = api_response.result
+
 
 	return datum
 }//end load_relation_list
@@ -232,8 +234,9 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(api_response){
 				dd_console("[tool_transcription.get_user_tools] api_response:",'DEBUG',api_response);
 

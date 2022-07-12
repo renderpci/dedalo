@@ -199,8 +199,6 @@ component_portal.prototype.build = async function(autoload=false) {
 		}
 		self.data = self.data || {}
 
-	const current_data_manager = new data_manager()
-
 	// rqo
 		const generate_rqo = async function() {
 			// rqo_config. get the rqo_config from context
@@ -247,7 +245,7 @@ component_portal.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// get context and data
-				const api_response = await current_data_manager.request({body:self.rqo})
+				const api_response = await data_manager.request({body:self.rqo})
 					// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
 					dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
 
@@ -285,7 +283,7 @@ component_portal.prototype.build = async function(autoload=false) {
 
 					// set_local_db_data updated rqo
 						// const rqo = self.rqo
-						// current_data_manager.set_local_db_data(
+						// data_manager.set_local_db_data(
 						// 	rqo,
 						// 	'rqo'
 						// )
@@ -568,9 +566,8 @@ component_portal.prototype.update_pagination_values = function(action) {
 		}
 
 	// set_local_db_data updated rqo
-		// const current_data_manager = new data_manager()
 		// const rqo = self.rqo
-		// current_data_manager.set_local_db_data(
+		// data_manager.set_local_db_data(
 		// 	rqo,
 		// 	'rqo'
 		// )
@@ -735,7 +732,7 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
 	const self = this
 
-	return data_manager.prototype.request({
+	return data_manager.request({
 		body : {
 			action	: "delete_locator",
 			dd_api	: 'dd_'+self.model+'_api', // component_portal

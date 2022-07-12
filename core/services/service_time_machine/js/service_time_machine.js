@@ -114,8 +114,6 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		}
 		self.data = self.data || {}
 
-	const current_data_manager	= new data_manager()
-
 	// rqo
 		self.context = await self.build_context()
 		const generate_rqo = async function(){
@@ -136,9 +134,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// get context and data
-				const api_response = await current_data_manager.request({body:self.rqo})
+				const api_response = await data_manager.request({
+					body : self.rqo
+				})
 				if(SHOW_DEVELOPER===true) {
-
 					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']);
 				}
 
@@ -160,7 +159,9 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					}
 					self.total = function() {
 						return new Promise(function(resolve){
-							current_data_manager.request({body:rqo_count})
+							data_manager.request({
+								body : rqo_count
+							})
 							.then(function(api_count_response){
 								self.total = api_count_response.result.total
 								resolve(self.total)
@@ -193,7 +194,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 					// set_local_db_data updated rqo
 						// const rqo = self.rqo
-						// current_data_manager.set_local_db_data(
+						// data_manager.set_local_db_data(
 						// 	rqo,
 						// 	'rqo'
 						// )

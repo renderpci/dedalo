@@ -1012,7 +1012,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 				id		: status_id,
 				value	: true
 			}
-			data_manager.prototype.set_local_db_data(
+			data_manager.set_local_db_data(
 				data,
 				status_table
 			)
@@ -1023,7 +1023,10 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			search_global_container.classList.add("hide")
 
-			data_manager.prototype.delete_local_db_data(status_id, status_table)
+			data_manager.delete_local_db_data(
+				status_id,
+				status_table
+			)
 		}
 
 

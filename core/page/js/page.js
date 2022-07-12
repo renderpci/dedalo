@@ -500,8 +500,7 @@ export const instantiate_page_element = function(self, ddo) {
 */
 	// const user_navigation = async function(self, options) {
 
-	// 	const current_data_manager = new data_manager()
-	// 	const api_response = await current_data_manager.request({
+	// 	const api_response = await data_manager.request({
 	// 		body : {
 	// 			action 		: 'get_element',
 	// 			options 	: options

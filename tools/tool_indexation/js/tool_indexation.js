@@ -366,10 +366,12 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 	}
 
 	// get context and data
-		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.request({body:rqo})
+		const api_response = await data_manager.request({
+			body : rqo
+		})
 
 	const datum = api_response.result
+
 
 	return datum
 }//end load_related_sections_list
@@ -726,8 +728,7 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 	// 	// // call to the API, fetch data and get response
 	// 	// 	return new Promise(function(resolve){
 
-	// 	// 		const current_data_manager = new data_manager()
-	// 	// 		current_data_manager.request({body : rqo})
+	// 	// 		data_manager.request({body : rqo})
 	// 	// 		.then(function(response){
 	// 	// 			console.warn("-> change_tag_state API response:",response);
 	// 	// 			resolve(response)

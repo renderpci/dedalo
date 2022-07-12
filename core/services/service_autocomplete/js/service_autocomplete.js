@@ -1103,6 +1103,7 @@ export const service_autocomplete = function() {
 
 	/**
 	* DEDALO_ENGINE
+	* @param object options
 	* @return promise
 	*/
 	this.dedalo_engine = async function(options) {
@@ -1122,8 +1123,9 @@ export const service_autocomplete = function() {
 			source.mode		= "list"
 
 		// API read request
-			const current_data_manager		= new data_manager()
-			const load_section_data_promise	= current_data_manager.request({body:rqo})
+			const load_section_data_promise	= data_manager.request({
+				body : rqo
+			})
 
 		// render section on load data
 			const api_response = load_section_data_promise
@@ -1156,8 +1158,8 @@ export const service_autocomplete = function() {
 			// rqo build
 			// const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= true
-			const zenon_rqo = await self.caller.build_rqo_show(dd_request, 'get_data', add_show)
-			self.rqo_search = self.caller.build_rqo_search(zenon_rqo, 'search')
+			const zenon_rqo	= await self.caller.build_rqo_show(dd_request, 'get_data', add_show)
+			self.rqo_search	= self.caller.build_rqo_search(zenon_rqo, 'search')
 		}
 		generate_rqo()
 

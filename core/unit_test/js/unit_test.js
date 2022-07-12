@@ -555,8 +555,7 @@ import * as fn from './data.js'
 			it(`${JSON.stringify(property)} => Init ${elements.model}: ${expected}`, async function() {
 
 				// get and set element context
-					// const current_data_manager 	= new data_manager()
-					// const element_context = await current_data_manager.get_element_context({
+					// const element_context = await data_manager.get_element_context({
 					// 	tipo 			: elements.tipo,
 					// 	section_tipo 	: elements.section_tipo,
 					// 	section_id		: elements.section_id
@@ -714,8 +713,7 @@ import * as fn from './data.js'
 			it(test_title, async function() {
 
 				// get and set element context
-					// const current_data_manager = new data_manager()
-					// const element_context = await current_data_manager.get_element_context({
+					// const element_context = await data_manager.get_element_context({
 					// 	tipo			: elements.tipo,
 					// 	section_tipo	: elements.section_tipo,
 					// 	section_id		: elements.section_id

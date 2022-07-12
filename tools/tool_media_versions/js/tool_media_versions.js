@@ -150,8 +150,9 @@ tool_media_versions.prototype.get_files_info = async function() {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> get_files_info API response:",'DEBUG',response);
 
@@ -201,8 +202,9 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> delete_file API response:",'DEBUG',response);
 
@@ -252,8 +254,9 @@ tool_media_versions.prototype.build_version = async function(quality) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> build_version API response:",'DEBUG',response);
 
@@ -303,8 +306,9 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> conform_headers API response:",'DEBUG',response);
 
@@ -357,8 +361,9 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> rotate API response:",'DEBUG',response);
 

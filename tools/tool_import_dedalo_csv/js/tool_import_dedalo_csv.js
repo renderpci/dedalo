@@ -162,8 +162,9 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> load_csv_files_list API response:",'DEBUG',response);
 
@@ -214,8 +215,9 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> remove_file API response:",'DEBUG',response);
 
@@ -265,8 +267,9 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> import_files API response:",'DEBUG',response);
 
@@ -310,8 +313,9 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> get_section_components_list API response:",'DEBUG',response);
 
@@ -376,8 +380,9 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> process_uploaded_file API response:",'DEBUG', response);
 

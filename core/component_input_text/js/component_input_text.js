@@ -157,9 +157,8 @@ component_input_text.prototype.is_unique = async function(new_value){
 			// console.log("sqo:",sqo);
 
 	// load data
-		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.read(self.dd_request.search)
-		const data					= api_response.result.data
+		const api_response	= await data_manager.read(self.dd_request.search)
+		const data			= api_response.result.data
 
 	// record data results from search
 		const record = data.find(item => item.tipo===self.tipo)

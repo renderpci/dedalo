@@ -18,7 +18,7 @@ export const data_manager = function() {
 * @param object options
 * @return promise api_response
 */
-data_manager.prototype.request = async function(options) {
+data_manager.request = async function(options) {
 	// console.log("// request options:",options);
 
 	// options
@@ -118,7 +118,7 @@ data_manager.prototype.request = async function(options) {
 * @param object source
 * @return promise api_response
 */
-data_manager.prototype.get_element_context = async function(source) {
+data_manager.get_element_context = async function(source) {
 
 	// api request
 		// const api_response = await this.request({
@@ -170,7 +170,7 @@ data_manager.prototype.get_page_element = async function(options) {
 /**
 * GET_LOCAL_DB
 */
-data_manager.prototype.get_local_db = async function() {
+data_manager.get_local_db = async function() {
 
 	// db storage
 		// In the following line, you should include the prefixes of implementations you want to test.
@@ -263,7 +263,7 @@ data_manager.prototype.get_local_db = async function() {
 * 	)
 * @return promise
 */
-data_manager.prototype.set_local_db_data = async function(data, table) {
+data_manager.set_local_db_data = async function(data, table) {
 
 	const self = this
 
@@ -313,7 +313,7 @@ data_manager.prototype.set_local_db_data = async function(data, table) {
 * @return promise
 */
 const db_table = {}
-data_manager.prototype.get_local_db_data = async function(id, table, cache=false) {
+data_manager.get_local_db_data = async function(id, table, cache=false) {
 	// const t0 = performance.now()
 
 	const self = this
@@ -365,7 +365,7 @@ data_manager.prototype.get_local_db_data = async function(id, table, cache=false
 /**
 * GET_LOCAL_DB_DATA
 */
-data_manager.prototype.delete_local_db_data = async function(id, table) {
+data_manager.delete_local_db_data = async function(id, table) {
 
 	const self = this
 

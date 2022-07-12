@@ -350,8 +350,7 @@ const build_id_column_DES = function(self) {
 								// 		mode 			: 'edit',
 								// 		lang 			: page_globals.dedalo_data_lang
 								// 	}
-								// 	const current_data_manager	= new data_manager()
-								// 	const page_element_call 	= await current_data_manager.get_page_element(options)
+								// 	const page_element_call 	= await data_manager.get_page_element(options)
 								// 	const page_element 			= page_element_call.result
 
 								// 	// detail_section instance. Create target section page element and instance

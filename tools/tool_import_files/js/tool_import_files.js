@@ -107,7 +107,7 @@ tool_import_files.prototype.build = async function(autoload=false) {
 						// 	? el.context
 						// 	: await (async function(){
 						// 		// resolve whole context from API (init event observer problem..)
-						// 		const api_response	= await current_data_manager.get_element_context(el)
+						// 		const api_response	= await data_manager.get_element_context(el)
 						// 		return api_response.result[0]
 						// 	  })()
 						const context = {}

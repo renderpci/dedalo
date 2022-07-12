@@ -178,8 +178,6 @@ relation_list.prototype.build = async function(autoload=true){
 		}
 		self.data = self.data || {}
 
-	const current_data_manager = new data_manager()
-
 	// source
 		const source = {
 			section_tipo	: self.section_tipo,
@@ -211,7 +209,7 @@ relation_list.prototype.build = async function(autoload=true){
 	// load data if not yet received as an option
 		if (autoload===true) {
 
-			const api_response = await current_data_manager.request({body:self.rqo})
+			const api_response = await data_manager.request({body:self.rqo})
 				// console.log("RELATION_LIST api_response:", self.id, api_response);
 
 			// set the result to the datum
@@ -235,13 +233,15 @@ relation_list.prototype.build = async function(autoload=true){
 			}
 			//rqo, use the 'count' action of the API
 			const rqo_count = {
-					action	: 'count',
-					sqo		: sqo_count
+				action	: 'count',
+				sqo		: sqo_count
 			}
 
-			const current_data_manager_count = new data_manager()
 			// set the response to the self.total
-			self.total = await current_data_manager_count.request({body:rqo_count}).then(function(response){
+			self.total = await data_manager.request({
+				body : rqo_count
+			})
+			.then(function(response){
 				if(response.result !== false){
 					return response.result.total
 				}
@@ -253,5 +253,3 @@ relation_list.prototype.build = async function(autoload=true){
 
 	return true
 }//end build
-
-
