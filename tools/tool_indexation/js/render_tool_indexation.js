@@ -103,16 +103,28 @@ const get_content_data_edit = async function(self) {
 					selected	: self.lang,
 					class_name	: 'dd_input',
 					action		: async function(e){
+
+						// unsaved data confirm on true
+							if (self.transcription_component.is_data_changed===true) {
+								if (!confirm(get_label.discard_changes || 'Discard changes?')) {
+									// restore previous value lang and stop
+									this.value = self.transcription_component.lang
+									return
+								}
+							}
+
 						// create new one
 						const component = await self.get_component(e.target.value)
-
-						component.render().then(function(node){
-							// remove previous nodeS
+						component.render()
+						.then(function(node){
+							// remove previous node
 							while (transcription_component_container.lastChild && transcription_component_container.lastChild.id!==lang_selector.id) {
 								transcription_component_container.removeChild(transcription_component_container.lastChild)
 							}
-							// add the new one
+							// add the new component to the container
 							transcription_component_container.appendChild(node)
+
+							console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
 						})
 					}
 				})
@@ -256,7 +268,7 @@ const get_tag_info = function(self) {
 				.then(function(){
 					// update tag_info_container color matching tag state
 					self.label_states.map((el)=>{
-						if (el.value==state) {
+						if (el.value===state) {
 							tag_info_container.classList.add(el.value)
 						}else{
 							if (tag_info_container.classList.contains(el.value)) {
@@ -264,6 +276,8 @@ const get_tag_info = function(self) {
 							}
 						}
 					})
+					// self.transcription_component
+					window.unsaved_data = true
 				})
 			})
 
@@ -282,23 +296,44 @@ const get_tag_info = function(self) {
 				parent			: wrap_delete_tag
 			})
 			button_delete.addEventListener('click', function(){
+
 				// delete_tag
 				self.delete_tag(tag_id)
 				.then(function(response){
-					if (response.result!==false) {
-						// indexing_component. Remember force clean full data and datum before refresh
+
+					// transcription_component
+						if (response.delete_tag.result===false) {
+							// error case
+							const msg = response.delete_tag.msg
+								? response.delete_tag.msg.join('\n')
+								: 'Unknow error'
+							alert("Error on delete tag\n" + msg);
+						}else{
+							// transcription_component (text_area)
+							self.transcription_component.refresh()
+						}
+
+					// indexing_component
+						if (response.delete_locator.result===false) {
+							// error case
+							const msg = response.delete_locator.msg
+								? response.delete_locator.msg.join('\n')
+								: 'Unknow error'
+							alert("Error on delete locator\n" + msg);
+						}else{
+							// indexing_component. Remember force clean full data and datum before refresh
 							self.indexing_component.data	= null
 							self.indexing_component.datum	= null
 							self.indexing_component.refresh()
-						// transcription_component (text_area)
-							self.transcription_component.refresh()
+						}
 
-						// show/hide info_container
+					// show/hide tag_info
+						if (response.delete_tag.result!==false && response.delete_locator.result!==false) {
 							const toggle_node = self.tag_info_container // self.info_container
 							if (!toggle_node.classList.contains('hide')) {
 								toggle_node.classList.add('hide')
 							}
-					}
+						}
 				})
 			})
 		// label

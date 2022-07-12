@@ -636,13 +636,63 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 
 	// Confirm action
 		if( !confirm( `${self.get_tool_label('delete_tag') || 'Delete tag?'}\nID: ${tag_id}`) ) {
-			return Promise.resolve(false);
+			return Promise.resolve({result:false});
 		}
 		if( !confirm(
 			`${get_label.warning || 'Warning!'} !! ${self.get_tool_label('warning_delete_tag') || 'It will delete the selected tag in all languages and all the relationships and indexing associated with it'}`)
 			) {
-			return Promise.resolve(false);
+			return Promise.resolve({result:false});
 		}
+
+	// call to the API, fetch data and get response
+	return new Promise(async function(resolve){
+
+		// delete tag in all langs (component_text_area)
+			const api_response_delete_tag = await data_manager.prototype.request({
+				body : {
+					action	: "delete_tag",
+					dd_api	: 'dd_'+self.transcription_component.model+'_api', // component_text_area
+					source	: {
+						section_tipo	: self.transcription_component.section_tipo, // current component_text_area section_tipo
+						section_id		: self.transcription_component.section_id, // component_text_area section_id
+						tipo			: self.transcription_component.tipo, // component_text_area tipo
+						lang			: self.transcription_component.lang, // component_text_area lang
+						tag_id			: tag_id // current selected tag (passed as param)
+					}
+				}
+			})
+			console.log("api_response_delete_tag:", api_response_delete_tag);
+
+		// delete_locator (component_portal)
+			const api_response_delete_locator = await data_manager.prototype.request({
+				body : {
+					action	: "delete_locator",
+					dd_api	: 'dd_'+self.indexing_component.model+'_api', // component_portal
+					source	: {
+						section_tipo	: self.indexing_component.section_tipo, // current component_text_area section_tipo
+						section_id		: self.indexing_component.section_id, // component_text_area section_id
+						tipo			: self.indexing_component.tipo, // component_text_area tipo
+						lang			: self.indexing_component.lang, // component_text_area lang
+						ar_properties	: ['tag_id','type'],
+						locator			: {
+							tag_id	: tag_id,
+							type	: DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96
+						}
+					}
+				}
+			})
+			console.log("api_response_delete_locator:", api_response_delete_locator);
+
+		// response
+			const response = {
+				delete_tag		: api_response_delete_tag,
+				delete_locator	: api_response_delete_locator
+			}
+
+
+		resolve(response)
+	})
+
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
 	// this generates a call as my_tool_name::my_function_name(arguments)
