@@ -366,29 +366,38 @@ class tools_register {
 			$tool_object->description = $value;
 
 		// affected components (models)
-			$component_tipo = self::$tipo_affeted_models; // 'dd1330';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component_lang = RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 $component_lang,
-															 $section_tipo);
-			$value 			= $component->get_valor(DEDALO_DATA_LANG, 'array'); // array|null
-			$tool_object->affected_models = $value;
+			$component_tipo	= self::$tipo_affeted_models; // 'dd1330';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				$component_lang,
+				$section_tipo
+			);
+			$ar_value			= $component->get_valor(DEDALO_DATA_LANG, 'array'); // array|null
+			$affected_models	= (!empty($ar_value))
+				? array_map(function($el){
+					return strip_tags($el); // strip possible mark tags (e.g. <mark>section</mark>)
+				  }, $ar_value)
+				: $ar_value;
+			$tool_object->affected_models = $affected_models;
 
 		// affected tipos (components)
 			$component_tipo	= 'dd1350';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$dato			= (array)$component->get_dato();
-			$value			= $dato[0] ?? null;
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato	= (array)$component->get_dato();
+			$value	= $dato[0] ?? null;
 			// empty object case check
 			if (empty((array)$value)) {
 				$value = null;
@@ -731,25 +740,29 @@ class tools_register {
 
 			// name
 				$model		= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
-				$component	= component_common::get_instance($model,
-															 $name_tipo,
-															 $record->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $record->section_tipo);
+				$component	= component_common::get_instance(
+					$model,
+					$name_tipo,
+					$record->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$record->section_tipo
+				);
 				$dato	= $component->get_dato();
 				$name	= reset($dato);
 
 			// config
 				$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
-				$component	= component_common::get_instance($model,
-															 $config_tipo,
-															 $record->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $record->section_tipo);
-				$dato   = $component->get_dato();
-				$config = reset($dato);
+				$component	= component_common::get_instance(
+					$model,
+					$config_tipo,
+					$record->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$record->section_tipo
+				);
+				$dato	= $component->get_dato();
+				$config	= reset($dato);
 
 			$value = (object)[
 				'name'		=> $name,

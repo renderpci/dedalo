@@ -1,7 +1,7 @@
 <?php
 /**
 * DD_UTILS_API
-* Manage API RESP data with Dédalo
+* Manage API REST data with Dédalo
 *
 */
 final class dd_utils_api {

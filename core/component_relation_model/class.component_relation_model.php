@@ -20,7 +20,7 @@ class component_relation_model extends component_relation_common {
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
-	* @return string | null $valor
+	* @return string|null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $separator=', ') {
 

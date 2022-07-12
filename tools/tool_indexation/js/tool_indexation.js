@@ -35,7 +35,7 @@ export const tool_indexation = function () {
 	this.caller						= null // component text area base optional
 	this.transcription_component	= null // component text area where we are working into the tool
 	this.indexing_component			= null // component_relation_index used to store indexation locators
-	this.related_sections_list		= null // datum of related_sections_list (to obtaim list of top_section_tipo/id)
+	this.related_sections_list		= null // datum of related_sections_list (to obtain list of top_section_tipo/id)
 
 
 	return true

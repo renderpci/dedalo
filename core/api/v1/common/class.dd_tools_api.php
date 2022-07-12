@@ -1,7 +1,7 @@
 <?php
 /**
 * DD_UTILS_API
-* Manage API RESP data with Dédalo
+* Manage API REST data with Dédalo
 *
 */
 final class dd_tools_api {
@@ -122,5 +122,7 @@ final class dd_tools_api {
 
 		return $response;
 	}//end tool_request
+
+
 
 }//end dd_utils_api

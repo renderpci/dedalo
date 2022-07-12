@@ -267,6 +267,7 @@ component_portal.prototype.build = async function(autoload=false) {
 
 		}//end if (autoload===true)
 
+
 	// update instance properties from context
 		set_context_vars(self, self.context)
 

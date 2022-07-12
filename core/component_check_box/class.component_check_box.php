@@ -29,16 +29,16 @@ class component_check_box extends component_relation_common {
 			return null;
 		}
 
-		# Test dato format (b4 changed to object)
-		foreach ($dato as $key => $value) {
-			if (!is_object($value)) {
-				if(SHOW_DEBUG) {
-					dump($dato," dato");
+		// Test dato format (b4 changed to object)
+			foreach ($dato as $key => $locator) {
+				if (!is_object($locator)) {
+					if(SHOW_DEBUG) {
+						dump($dato," dato");
+					}
+					trigger_error(__METHOD__." Wrong dato format. OLD format dato in label:$this->label tipo:$this->tipo section_id:$this->section_id.Expected object locator, but received: ".gettype($locator) .' : '. print_r($locator,true) );
+					return null;
 				}
-				trigger_error(__METHOD__." Wrong dato format. OLD format dato in label:$this->label tipo:$this->tipo section_id:$this->section_id.Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
-				return null;
 			}
-		}
 
 		$ar_list_of_values = $this->get_ar_list_of_values($lang); # Importante: Buscamos el valor en el idioma actual
 		$ar_values = [];

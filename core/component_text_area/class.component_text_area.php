@@ -672,7 +672,7 @@ class component_text_area extends component_common {
 				return null;
 			}
 
-		// empty $raw-text case
+		// empty $raw_text case
 			if (empty($raw_text)) {
 				return null;
 			}
@@ -817,8 +817,8 @@ class component_text_area extends component_common {
 			'component_text_area',
 			$component_tipo,
 			$section_id,
-			$modo	='edit',
-			DEDALO_DATA_LANG,
+			'edit', // string modo
+			DEDALO_DATA_LANG, // string lang
 			$section_tipo
 		);
 		$dato					= $component_text_area->get_dato();
@@ -837,6 +837,7 @@ class component_text_area extends component_common {
 	/**
 	* DELETE_TAG_FROM_ALL_LANGS
 	* Search all component data langs and delete tag an update (save) dato on every lang
+	* (!) This method Save the result if data changes on each lang
 	* @see trigger.tool_indexation mode 'delete_tag'
 	*
 	* @param string $tag like '[index-n-2]'

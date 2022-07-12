@@ -314,7 +314,7 @@ const get_tag_info = function(self) {
 
 			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
-			button_delete_label.textContent	= get_label.borrar + ' ' + value // update delete label
+			button_delete_label.textContent	= get_label.borrar //  + ' ' + value // update delete label
 
 			// show/hide info_container
 				const toggle_node = self.tag_info_container // self.info_container

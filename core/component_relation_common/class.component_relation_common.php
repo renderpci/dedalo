@@ -827,6 +827,7 @@ class component_relation_common extends component_common {
 	/**
 	* REMOVE_LOCATOR_FROM_DATO
 	* Removes from dato one or more locators that accomplish given locator equality
+	* (!) Not save the result
 	* @param array $ar_properties
 	* @return bool
 	*/

@@ -1,7 +1,7 @@
 <?php
 /**
 * DD_MANAGER
-* Manage api web
+* Manage API web
 *
 */
 final class dd_manager {
