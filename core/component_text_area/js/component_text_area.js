@@ -292,7 +292,11 @@ component_text_area.prototype.save_value = function(key, value) {
 	.then((save_response)=>{
 		// event to update the dom elements of the instance
 		event_manager.publish('update_value_'+self.id, changed_data)
+
+		// reset is_data_changed state
+		self.is_data_changed = false
 	})
+
 
 	return js_promise
 }//end save_value
