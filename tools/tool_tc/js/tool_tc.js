@@ -165,8 +165,9 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> change_all_time_codes API response:",'DEBUG',response);
 

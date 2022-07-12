@@ -276,7 +276,7 @@ const build_automatic_translation = (options) => {
 			}
 		}
 		self.translator_engine_select.addEventListener('change', function(){
-			data_manager.prototype.set_local_db_data({
+			data_manager.set_local_db_data({
 				id		: 'translator_engine_select',
 				value	: self.translator_engine_select.value
 			}, 'status')

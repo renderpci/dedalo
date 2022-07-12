@@ -240,8 +240,9 @@ tool_time_machine.prototype.apply_value = function(options) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> apply_value API response:",'DEBUG',response);
 

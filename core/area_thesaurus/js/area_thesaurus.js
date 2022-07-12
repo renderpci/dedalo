@@ -106,7 +106,7 @@ area_thesaurus.prototype.init = async function(options) {
 			// open_search_panel. local DDBB table status
 				const status_id			= 'open_search_panel'
 				const collapsed_table	= 'status'
-				data_manager.prototype.get_local_db_data(status_id, collapsed_table, true)
+				data_manager.get_local_db_data(status_id, collapsed_table, true)
 				.then(async function(ui_status){
 					// (!) Note that ui_status only exists when element is open
 					const is_open = typeof ui_status==='undefined' || ui_status.value===false
@@ -156,8 +156,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 		self.data = self.data || []
 
-	const current_data_manager = new data_manager()
-
 	// // rqo_config
 	// 	self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
@@ -193,7 +191,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 	// load data if not yet received as an option
 		if (autoload===true) {
 			// get context and data
-				// const api_response = await current_data_manager.read(self.dd_request.show)
+				// const api_response = await data_manager.read(self.dd_request.show)
 
 				if(self.context.hierarchy_sections){
 					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
@@ -204,7 +202,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				if(self.context.thesaurus_mode){
 					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
 				}
-				const api_response = await current_data_manager.request({body:self.rqo})
+				const api_response = await data_manager.request({body:self.rqo})
 					// console.log("AREA_THESAURUS api_response:", self.id, api_response);
 
 			// set the result to the datum

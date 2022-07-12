@@ -45,7 +45,10 @@ render_section_group.prototype.edit = async function(options) {
 		}
 
 	// content data state. Needed to prevent blink components show on page load
-		const ui_status = await data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table)
+		const ui_status = await data_manager.get_local_db_data(
+			collapsed_id,
+			collapsed_table
+		)
 		if (!ui_status) {
 			content_data.classList.remove('hide')
 		}

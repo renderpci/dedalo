@@ -357,7 +357,7 @@ render_edit_view_line.render_column_id = function(options){
 
 
 	// 				// data_manager. create new record
-	// 				const api_response = await data_manager.prototype.request({
+	// 				const api_response = await data_manager.request({
 	// 					body : {
 	// 						action				: 'add_new_element',
 	// 						source				: create_source(self),

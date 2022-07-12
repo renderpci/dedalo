@@ -141,8 +141,9 @@ const get_system_info = async function() {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> get_system_info API response:",'DEBUG',response);
 
@@ -407,8 +408,7 @@ service_upload.prototype.upload_file = async function(options) {
 	// 	// call to the API, fetch data and get response
 	// 		return new Promise(function(resolve){
 
-	// 			const current_data_manager = new data_manager()
-	// 			current_data_manager.request({body : rqo})
+	// 			data_manager.request({body : rqo})
 	// 			.then(function(response){
 	// 				dd_console("-> process_uploaded_file API response:",'DEBUG', response);
 

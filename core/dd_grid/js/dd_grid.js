@@ -14,7 +14,6 @@
 
 
 
-
 export const dd_grid = function(){
 
 	// // element properties declare
@@ -56,6 +55,7 @@ export const dd_grid = function(){
 	// dd_grid.prototype.csv			= render_csv_dd_grid.prototype.table
 
 
+
 /**
 * BUILD
 * @return promise
@@ -68,8 +68,7 @@ dd_grid.prototype.build	= async function(autoload=true){
 	// status update
 		self.status = 'building'
 
-	const current_data_manager	= new data_manager()
-	const api_response			= await current_data_manager.request({body:self.rqo})
+	const api_response = await data_manager.request({body:self.rqo})
 
 	self.data = api_response.result || null
 	// status update
@@ -77,5 +76,3 @@ dd_grid.prototype.build	= async function(autoload=true){
 
 	return
 }//end build
-
-

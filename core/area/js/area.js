@@ -85,8 +85,7 @@ area.prototype.build = async function(autoload=true) {
 		if (autoload===true) {
 
 			// load data
-				const current_data_manager = new data_manager()
-				const api_response = await current_data_manager.request({body:self.rqo})
+				const api_response = await data_manager.request({body:self.rqo})
 
 			// set the result to the datum
 				self.datum	= api_response.result
@@ -198,7 +197,7 @@ area.prototype.init_json_editor = async function(widget_object) {
 					: trigger.action
 
 				// data_manager
-				const api_response = await data_manager.prototype.request({
+				const api_response = await data_manager.request({
 					body : {
 						dd_api	: dd_api,
 						action	: action,

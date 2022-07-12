@@ -78,8 +78,7 @@ request_conf_editor.get_properties = function() {
 
 	return new Promise(function(resolve){
 
-		const current_data_manager = new data_manager()
-		current_data_manager.request({
+		data_manager.request({
 			url		: self.trigger_url,
 			body	: {
 				mode	: 'get_properties',
@@ -108,8 +107,7 @@ request_conf_editor.save_properties = function(value) {
 
 	return new Promise(function(resolve){
 
-		const current_data_manager = new data_manager()
-		current_data_manager.request({
+		data_manager.request({
 			url		: self.trigger_url,
 			body	: {
 				mode		: 'save_properties',

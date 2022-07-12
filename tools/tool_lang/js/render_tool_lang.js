@@ -153,7 +153,7 @@ const get_content_data_edit = async function(self) {
 						id		: 'tool_lang_target_lang',
 						value	: lang
 					}
-					data_manager.prototype.set_local_db_data(
+					data_manager.set_local_db_data(
 						data,
 						'status'
 					)
@@ -390,7 +390,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			}
 		}
 		self.translator_engine_select.addEventListener('change', function(){
-			data_manager.prototype.set_local_db_data({
+			data_manager.set_local_db_data({
 				id		: 'translator_engine_select',
 				value	: self.translator_engine_select.value
 			}, 'status')

@@ -567,12 +567,12 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 				// delete_instance
 					const instance_options = {
 						id				: self.id,
-						model 			: self.model,
-						tipo 			: self.tipo,
-						section_tipo 	: self.section_tipo,
-						section_id 		: self.section_id,
-						mode 			: self.mode,
-						lang 			: self.lang
+						model			: self.model,
+						tipo			: self.tipo,
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						mode			: self.mode,
+						lang			: self.lang
 					}
 					// time machine case
 					if (self.matrix_id) {
@@ -1143,8 +1143,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 	// local_db_data. get value if exists.
 	// Allow, for example, to return to the last paginated list preserving the user's
 	// navigation offset
-		// const current_data_manager = new data_manager()
-		// const saved_rqo = await current_data_manager.get_local_db_data(self.id, 'rqo')
+		// const saved_rqo = await data_manager.get_local_db_data(self.id, 'rqo')
 		// if(saved_rqo){
 
 		// 	if (rqo_config.sqo) {
@@ -1170,7 +1169,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		// 		if (to_save===true) {
 		// 			// set_local_db_data updated rqo
 		// 				const rqo = saved_rqo
-		// 				current_data_manager.set_local_db_data(
+		// 				data_manager.set_local_db_data(
 		// 					rqo,
 		// 					'rqo'
 		// 				)
@@ -1272,7 +1271,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		}
 
 	// set_local_db_data updated rqo
-		// current_data_manager.set_local_db_data(
+		// data_manager.set_local_db_data(
 		// 	rqo,
 		// 	'rqo'
 		// )
@@ -2216,8 +2215,7 @@ common.prototype.get_section_elements_context = async function(options) {
 			}else{
 
 				// load data
-					const current_data_manager 	= new data_manager()
-					const api_response 			= await current_data_manager.request({
+					const api_response = await data_manager.request({
 						body : {
 							action			: "get_section_elements_context",
 							context_type	: 'simple',
@@ -2267,10 +2265,10 @@ common.prototype.calculate_component_path = function(component_context, path) {
 
 	// Add component path data
 	calculate_component_path.push({
-		section_tipo 	: component_context.section_tipo,
-		component_tipo 	: component_context.tipo,
-		modelo  		: component_context.model,
-		name  			: component_context.label.replace(/<[^>]+>/g, '')
+		section_tipo	: component_context.section_tipo,
+		component_tipo	: component_context.tipo,
+		modelo			: component_context.model,
+		name			: component_context.label.replace(/<[^>]+>/g, '')
 	})
 
 	return calculate_component_path

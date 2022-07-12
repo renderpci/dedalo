@@ -96,7 +96,7 @@ render_section_tab.prototype.edit = async function(options) {
 								id		: status_id,
 								value	: tipo
 							}
-							data_manager.prototype.set_local_db_data(
+							data_manager.set_local_db_data(
 								data,
 								status_table
 							)
@@ -106,7 +106,7 @@ render_section_tab.prototype.edit = async function(options) {
 					}
 
 				// status
-					const ui_status		= await data_manager.prototype.get_local_db_data(status_id, status_table)
+					const ui_status		= await data_manager.get_local_db_data(status_id, status_table)
 					const selected_tipo	= ui_status && ui_status.value
 						? ui_status.value
 						: children[0].tipo // fisrt tab tipo fallback

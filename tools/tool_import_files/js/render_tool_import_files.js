@@ -445,8 +445,9 @@ const get_content_data_edit = async function(self) {
 			// call to the API, fetch data and get response
 				return new Promise(function(resolve){
 
-					const current_data_manager = new data_manager()
-					current_data_manager.request({body : rqo})
+					data_manager.request({
+						body : rqo
+					})
 					.then(function(response){
 						console.warn("-> API response:",response);
 						if(response.result===true) {
@@ -861,8 +862,9 @@ const create_template = async function(self) {
 					}
 
 				// call to the API, fetch data and get response
-					const delete_data_manager = new data_manager()
-					const response = await delete_data_manager.request({body : rqo})
+					const response = await data_manager.request({
+						body : rqo
+					})
 			}
 		});
 
@@ -950,9 +952,7 @@ const create_template = async function(self) {
 		});
 
 	// get the images in the server (uploaded previously), and display into the dropzone
-		// const current_data_manager = new data_manager()
-
-		// const files = await current_data_manager.request({
+		// const files = await data_manager.request({
 		// 	url: DEDALO_ROOT_WEB + "/tools/tool_import_files/list_files.php",
 		// 	body:{key_dir: self.key_dir}
 		// })
@@ -973,8 +973,9 @@ const create_template = async function(self) {
 			}
 
 		// call to the API, fetch data and get response
-			const current_data_manager = new data_manager()
-			const response = await current_data_manager.request({body : rqo})
+			const response = await data_manager.request({
+				body : rqo
+			})
 			const files = response.result
 
 		// Access to the original image sizes on your server,

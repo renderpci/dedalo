@@ -184,7 +184,7 @@ const build_widget = (item, self) => {
 						body_response.prepend(spinner)
 
 						// data_manager
-							// const api_response = await data_manager.prototype.request({
+							// const api_response = await data_manager.request({
 							// 	body : {
 							// 		dd_api	: item.trigger.dd_api,
 							// 		action	: item.trigger.action,
@@ -383,7 +383,7 @@ export const build_form = function(widget_object) {
 						: values
 
 					// data_manager
-						// const api_response = await data_manager.prototype.request({
+						// const api_response = await data_manager.request({
 						// 	body : {
 						// 		dd_api	: widget_object.trigger.dd_api,
 						// 		action	: widget_object.trigger.action,

@@ -110,8 +110,7 @@ login.prototype.build = async function(autoload=true) {
 		// 	}
 
 		// // load data. get context and data
-		// 	const current_data_manager	= new data_manager()
-		// 	const api_response			= await current_data_manager.request({
+		// 	const api_response = await data_manager.request({
 		// 		body : rqo
 		// 	})
 
@@ -144,7 +143,7 @@ login.prototype.build = async function(autoload=true) {
 export const quit = async function() {
 
 	// data_manager API call
-		const api_response = await data_manager.prototype.request({
+		const api_response = await data_manager.request({
 			body : {
 				action	: 'quit',
 				dd_api	: 'dd_utils_api',

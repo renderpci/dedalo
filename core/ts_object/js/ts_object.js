@@ -115,7 +115,7 @@ export const ts_object = new function() {
 						tipo			: tipo
 					}
 				}
-				data_manager.prototype.request({
+				data_manager.request({
 					body : rqo
 				})
 				.then(async function(response) {
@@ -1170,7 +1170,7 @@ export const ts_object = new function() {
 					tipo					: tipo
 				}
 			}
-			const js_promise = data_manager.prototype.request({
+			const js_promise = data_manager.request({
 				body : rqo
 			})
 
@@ -1531,7 +1531,7 @@ export const ts_object = new function() {
 						tipo				: tipo
 					}
 				}
-				data_manager.prototype.request({
+				data_manager.request({
 					body : rqo
 				})
 				.then(function(response) {
@@ -1687,7 +1687,7 @@ export const ts_object = new function() {
 						node_type		: node_type
 					}
 				}
-				data_manager.prototype.request({
+				data_manager.request({
 					body : rqo
 				})
 				.then(function(response) {
@@ -2436,7 +2436,7 @@ export const ts_object = new function() {
 						ar_locators		: ar_locators
 					}
 				}
-				data_manager.prototype.request({
+				data_manager.request({
 					body : rqo
 				})
 				.then(function(response){

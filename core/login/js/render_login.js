@@ -101,7 +101,7 @@ const add_events = function(self, wrapper, content_data) {
 						preload.classList.remove("display_none")
 
 					// data_manager API call
-					const api_response = data_manager.prototype.request({
+					const api_response = data_manager.request({
 						body : {
 							action	: 'login',
 							dd_api	: 'dd_utils_api',
@@ -158,7 +158,7 @@ const get_content_data = function(self) {
 				const lang = e.target.value || null
 				if (lang) {
 					// data_manager api call
-					await data_manager.prototype.request({
+					await data_manager.request({
 						body : {
 							action	: 'change_lang',
 							dd_api	: 'dd_utils_api',

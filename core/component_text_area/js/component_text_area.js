@@ -797,7 +797,7 @@ component_text_area.prototype.delete_tag = function(tag_id, type) {
 
 	const self = this
 
-	return data_manager.prototype.request({
+	return data_manager.request({
 		body : {
 			action	: "delete_tag",
 			dd_api	: 'dd_'+self.model+'_api', // component_text_area
@@ -841,9 +841,8 @@ component_text_area.prototype.delete_tag = function(tag_id, type) {
 				action			: 'create',
 				section_tipo	: self.context.notes_section_tipo
 			}
-			const current_data_manager	= new data_manager()
-			const api_response			= await current_data_manager.request({body:rqo})
-			const note_section_id 		= api_response.result || null;
+			const api_response		= await data_manager.request({body:rqo})
+			const note_section_id	= api_response.result || null;
 
 		return note_section_id;
 	}//end create_new_note

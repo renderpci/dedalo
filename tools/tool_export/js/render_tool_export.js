@@ -119,9 +119,11 @@ const get_content_data_edit = async function(self) {
 			export_components_container.addEventListener('dragover',function(e){self.on_dragover(this,e)})
 			export_components_container.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
 		// read saved ddo in local DB and restore elements if found
-			const current_data_manager	= new data_manager()
-			const id					= 'tool_export_config'
-			current_data_manager.get_local_db_data(id, 'data')
+			const id = 'tool_export_config'
+			data_manager.get_local_db_data(
+				id,
+				'data'
+			)
 			.then(function(response){
 				const target_section_tipo = self.target_section_tipo[0]
 				if (response && response.value && response.value[target_section_tipo]) {
@@ -388,9 +390,11 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			const delete_ddo_index = self.ar_ddo_to_export.findIndex( el => el.id === ddo.id )
 			self.ar_ddo_to_export.splice(delete_ddo_index, 1)
 			// console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
-			const current_data_manager	= new data_manager()
-			const id					= 'tool_export_config'
-			current_data_manager.get_local_db_data(id, 'data')
+			const id = 'tool_export_config'
+			data_manager.get_local_db_data(
+				id,
+				'data'
+			)
 			.then(function(response){
 				// target_section_tipo. Used to create a object property key different for each section
 				const target_section_tipo	= self.target_section_tipo[0]
@@ -415,7 +419,7 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 						id		: 'tool_export_config',
 						value	: tool_export_config
 					}
-					current_data_manager.set_local_db_data(
+					data_manager.set_local_db_data(
 						cache_data,
 						'data'
 					)
@@ -436,9 +440,11 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 		parent_div.classList.remove("hide")
 
 	// store ddo in local DB
-		const current_data_manager	= new data_manager()
-		const id					= 'tool_export_config'
-		current_data_manager.get_local_db_data(id, 'data')
+		const id = 'tool_export_config'
+		data_manager.get_local_db_data(
+			id,
+			'data'
+		)
 		.then(function(response){
 			// target_section_tipo. Used to create a object property key different for each section
 			const target_section_tipo	= self.target_section_tipo[0]
@@ -461,7 +467,7 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 					id		: 'tool_export_config',
 					value	: tool_export_config
 				}
-				current_data_manager.set_local_db_data(
+				data_manager.set_local_db_data(
 					cache_data,
 					'data'
 				)

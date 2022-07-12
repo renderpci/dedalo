@@ -183,10 +183,12 @@ tool_tr_print.prototype.load_relation_list = async function() {
 	}
 
 	// get context and data
-		const current_data_manager	= new data_manager()
-		const api_response			= await current_data_manager.request({body:rqo})
+		const api_response = await data_manager.request({
+			body : rqo
+		})
 
 	const datum = api_response.result
+
 
 	return datum
 }//end load_relation_list

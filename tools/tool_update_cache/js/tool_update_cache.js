@@ -128,8 +128,9 @@ tool_update_cache.prototype.get_component_list = function() {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> get_component_list API response:",'DEBUG',response);
 
@@ -173,8 +174,9 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> update_cache API response:",'DEBUG',response);
 

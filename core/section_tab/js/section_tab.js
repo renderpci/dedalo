@@ -99,13 +99,10 @@ section_tab.prototype.get_panels_status = async function() {
 		// const uid = self.model + '_' + self.section_tipo + '_' +  self.tipo
 
 	// local_db_data. get value if exists
-		const current_data_manager	= new data_manager();
-		const panels_status = await current_data_manager.get_local_db_data('section_tab', 'context')
+		const panels_status = await data_manager.get_local_db_data('section_tab', 'context')
 			// console.log("----- section_tab panels_status:", uid, panels_status);
 
 		// UNDER CONSTRUCTION .... !!
 
 	return panels_status
 }//end get_panels_status
-
-

@@ -106,14 +106,14 @@ const add_events = (wrapper, self) => {
 					// const collapsed		= content_data.classList.contains('hide')
 					// if (!collapsed) {
 					// 	// add record to local DB
-					// 	data_manager.prototype.set_local_db_data({
+					// 	data_manager.set_local_db_data({
 					// 		id		: collapsed_id,
 					// 		value	: !collapsed
 					// 	}, collapsed_table)
 					// 	content_data.classList.add('hide')
 					// }else{
 					// 	// remove record from local DB
-					// 	data_manager.prototype.delete_local_db_data(collapsed_id, collapsed_table)
+					// 	data_manager.delete_local_db_data(collapsed_id, collapsed_table)
 					// 	content_data.classList.remove('hide')
 					// }
 				// }
@@ -261,7 +261,7 @@ const get_content_data = function(self) {
 					action	: 'read_raw',
 					source	: create_source(self.caller)
 				}
-				data_manager.prototype.request({
+				data_manager.request({
 					body : rqo
 				})
 				.then(function(api_response){
@@ -313,7 +313,7 @@ const get_content_data = function(self) {
 							action	: 'read_raw',
 							source	: create_source(self.caller)
 						}
-						data_manager.prototype.request({
+						data_manager.request({
 							body : rqo
 						})
 						.then(function(api_response){

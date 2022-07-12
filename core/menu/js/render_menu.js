@@ -49,12 +49,11 @@ render_menu.prototype.edit = async function() {
 		})
 		quit_button.addEventListener("click", () => {
 			// local_db_data remove in all langs
-				const current_data_manager = new data_manager()
 				for (let i = 0; i < self.data.langs_datalist.length; i++) {
 					const lang	= self.data.langs_datalist[i].value
 					const regex	= /lg-[a-z]{2,5}$/
 					const id	= self.id.replace(regex, lang)
-					current_data_manager.delete_local_db_data(id, 'data')
+					data_manager.delete_local_db_data(id, 'data')
 				}
 			// exec login quit sequence
 				quit()
@@ -670,7 +669,7 @@ const change_lang = async function(event) {
 
 	const current_lang = event.target.value
 
-	const api_response = await data_manager.prototype.request({
+	const api_response = await data_manager.request({
 		body : {
 			action	: 'change_lang',
 			dd_api	: 'dd_utils_api',

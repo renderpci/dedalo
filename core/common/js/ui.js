@@ -1757,7 +1757,7 @@ export const ui = {
 			const collapsed_table = 'status'
 
 		// content data state
-			data_manager.prototype.get_local_db_data(collapsed_id, collapsed_table, true)
+			data_manager.get_local_db_data(collapsed_id, collapsed_table, true)
 			.then(function(ui_status){
 
 				// (!) Note that ui_status only exists when element is collapsed
@@ -1813,7 +1813,7 @@ export const ui = {
 							id		: collapsed_id,
 							value	: true
 						}
-						data_manager.prototype.set_local_db_data(
+						data_manager.set_local_db_data(
 							data,
 							collapsed_table
 						)
@@ -1831,7 +1831,10 @@ export const ui = {
 					// remove record from local DB (or set value=false)
 					if (default_state==='opened') {
 						// default case for section_group, inspector_project, etc.
-						data_manager.prototype.delete_local_db_data(collapsed_id, collapsed_table)
+						data_manager.delete_local_db_data(
+							collapsed_id,
+							collapsed_table
+						)
 					}else{
 						// when default is closed, we need to store the state as NOT collapsed
 						// to prevent an infinite loop
@@ -1839,7 +1842,7 @@ export const ui = {
 							id		: collapsed_id,
 							value	: false
 						}
-						data_manager.prototype.set_local_db_data(
+						data_manager.set_local_db_data(
 							data,
 							collapsed_table
 						)

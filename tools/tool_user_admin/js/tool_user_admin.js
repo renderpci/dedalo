@@ -114,7 +114,7 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 			// }
 			// const rqo = await generate_rqo()
 			// console.log("rqo:",rqo);
-			// const api_response = await data_manager.prototype.request({body:rqo})
+			// const api_response = await data_manager.request({body:rqo})
 			// console.log("api_response:",api_response);
 			// self.section_data		= api_response.result.data
 			// self.section_context	= api_response.result.context

@@ -138,8 +138,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// 	// call to the API, fetch data and get response
 	// 		return new Promise(function(resolve){
 
-	// 			const current_data_manager = new data_manager()
-	// 			current_data_manager.request({body : rqo})
+	// 			data_manager.request({body : rqo})
 	// 			.then(function(response){
 	// 				dd_console("-> get_system_info API response:",'DEBUG',response);
 
@@ -401,8 +400,9 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
-			const current_data_manager = new data_manager()
-			current_data_manager.request({body : rqo})
+			data_manager.request({
+				body : rqo
+			})
 			.then(function(response){
 				dd_console("-> process_uploaded_file API response:",'DEBUG', response);
 
