@@ -74,6 +74,11 @@ final class dd_component_portal_api {
 
 		// original dato. Store to compare later
 			$original_dato = $component->get_dato();
+			if (empty($original_dato)) {
+				$response->msg[] = "No locators are removed ($model_name - $tipo). The component dato is empty";
+				$response->result = 0;
+				return $response;
+			}
 
 		// remove
 			$removed = $component->remove_locator_from_dato(
@@ -90,7 +95,7 @@ final class dd_component_portal_api {
 				$response->result = $total;
 			}else{
 				$response->msg[] = "No locators are removed ($model_name - $tipo)";
-				$response->result = false;
+				$response->result = 0;
 			}
 
 
