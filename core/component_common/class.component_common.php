@@ -1528,7 +1528,9 @@ abstract class component_common extends common {
 
 		// cache
 			static $ar_list_of_values_data = [];
-			$uid = isset($target_section_tipo) ? $target_section_tipo.'_'.$lang. $hash_id : $this->tipo.'_'.$lang. $hash_id;
+			$uid = isset($target_section_tipo)
+				? $target_section_tipo.'_'.$lang. $hash_id
+				: $this->tipo.'_'.$lang. $hash_id;
 			if (isset($ar_list_of_values_data[$uid])) {
 				#debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
 
@@ -1657,7 +1659,8 @@ abstract class component_common extends common {
 			$response->msg		= 'Ok';
 			if(SHOW_DEBUG===true) {
 				$response->search_query_object	= json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-				$response->debug				= 'Total time:' . exec_time_unit($start_time,'ms').' ms';
+				$response->debug				= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
+				// debug_log(__METHOD__." $response->debug +++++++++++++++++++++++++++++++++++ ".to_string(), logger::DEBUG);
 			}
 
 		// cache

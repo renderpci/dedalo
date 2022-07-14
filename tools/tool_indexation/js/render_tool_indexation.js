@@ -471,13 +471,13 @@ const render_related_list = function(self){
 					parent			: select
 				})
 				option.locator = current_locator
-
 		}//end for
 
 	// event . Change
 		select.addEventListener('change', async function(e){
 			self.top_locator = this.options[this.selectedIndex].locator
 		})
+
 
 	return fragment
 }//end render_related_list
