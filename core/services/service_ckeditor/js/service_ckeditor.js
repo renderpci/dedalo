@@ -38,7 +38,7 @@ export const service_ckeditor = function() {
 	* @param object options
 	* @return promise js_promise
 	*/
-	this.init = async function(options) {
+	this.init = function(options) {
 
 		const self = this
 
@@ -46,7 +46,7 @@ export const service_ckeditor = function() {
 			const caller			= options.caller // compnent_text_area that create the instance
 			const value_container	= options.value_container // dom node to be used as value container (empty when is set by the caller)
 			const toolbar_container	= options.toolbar_container // dom node for the toolbar
-			const value				= options.value // the html data to be incorporated to the editor
+			// const value			= options.value // the html data to be incorporated to the editor
 			const key				= options.key // array key of the value of the caller data
 			const editor_config		= options.editor_config // options for build custom buttons in the toolbar or custom events
 
@@ -58,13 +58,15 @@ export const service_ckeditor = function() {
 			self.key				= key
 
 		// add component_text_area value
-			value_container.innerHTML = value
+			// value_container.innerHTML = value
 
-		// editor.
+		return new Promise(function(resolve){
+
+			// editor.
 			// ddEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
 			// ckEditor is initiated without user interface
-			const js_promise = ddEditor.create( value_container, {
+			ddEditor.create( value_container, {
 				// initialData: value
 			})
 			.then( editor => {
@@ -87,46 +89,46 @@ export const service_ckeditor = function() {
 				// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
 				// the drop event doesn't has any effect in the final position of the drop,
 				// the final check position is fired in the clipboardInput event.
-				editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
+					editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
 
-					// target is undefined unless a existing element is focus on paste or drop
-					// In this cases, no more check area necessary. Stop here
-						if (!data.target) {
-							return
+						// target is undefined unless a existing element is focus on paste or drop
+						// In this cases, no more check area necessary. Stop here
+							if (!data.target) {
+								return
+							}
+
+						// if()
+
+						// check the target name of the element (expected a image)
+						if(data.target.name==='img'){
+							editor.editing.view.change((writer) => {
+								// create new position at start and end of the target
+								// use the target parent because the img is wrapped inside a span
+								// the parent span has other position of the image and it's necessary avoid the parent position
+								const start = writer.createPositionAt(
+									data.target.parent,
+									"after"
+								);
+								const end = writer.createPositionAt(
+									data.target.parent,
+									"after"
+								);
+								// create the range of the new position
+								const range = writer.createRange(start, end);
+
+								// it's not necessary change the range to model range
+								// comment this code
+									// writer.setSelection( range );
+									// transform to the model_range
+									// const model_range = editor.editing.mapper.toModelRange( range )
+									// editor.model.change( writer => writer.setSelection( model_range ) );
+									// data.targetRanges = [ editor.editing.mapper.toViewRange( model_range ) ];
+								// set new range to the targetRanges of the data
+								// it will use to calculate the drop position when will insertContect()
+								data.targetRanges = [ range ];
+							});
 						}
-
-					// if()
-
-					// check the target name of the element (expected a image)
-					if(data.target.name==='img'){
-						editor.editing.view.change((writer) => {
-							// create new position at start and end of the target
-							// use the target parent because the img is wrapped inside a span
-							// the parent span has other position of the image and it's necessary avoid the parent position
-							const start = writer.createPositionAt(
-								data.target.parent,
-								"after"
-							);
-							const end = writer.createPositionAt(
-								data.target.parent,
-								"after"
-							);
-							// create the range of the new position
-							const range = writer.createRange(start, end);
-
-							// it's not necessary change the range to model range
-							// comment this code
-								// writer.setSelection( range );
-								// transform to the model_range
-								// const model_range = editor.editing.mapper.toModelRange( range )
-								// editor.model.change( writer => writer.setSelection( model_range ) );
-								// data.targetRanges = [ editor.editing.mapper.toViewRange( model_range ) ];
-							// set new range to the targetRanges of the data
-							// it will use to calculate the drop position when will insertContect()
-							data.targetRanges = [ range ];
-						});
-					}
-				}, { priority: 'high' } );
+					}, { priority: 'high' } );
 
 				// Active this drop event listeners to change the visual effect, but any of them will change the result
 					// editor.editing.view.document.on( 'drop', ( evt, data ) => {
@@ -154,15 +156,45 @@ export const service_ckeditor = function() {
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
 
-				value_container.remove()
+				// remove original value container
+					value_container.remove()
+
+				// click event
+					self.click = function() {
+						self.toolbar_container.classList.remove('hide')
+						editor.editing.view.focus()
+						document.body.addEventListener('mouseup', fn_remove)
+						// value_container.remove()
+					}
+
+				// toolbar toggle event
+					// show toolbar_container on user mousedown
+					// removes the toolbar_container when user click outside
+					const node = self.toolbar_container.parentNode
+					node.addEventListener('mousedown', function() {
+						// remove the hide class to show the toolbar
+						toolbar_container.classList.remove('hide')
+						document.body.addEventListener('mouseup', fn_remove)
+					})
+					function fn_remove(e) {
+						if (e.target!==node) {
+							const path	= e.composedPath()
+							const found	= path.find(el => el===node)
+							if (!found) {
+								toolbar_container.classList.add('hide')
+								document.body.removeEventListener("mouseup", fn_remove)
+							}
+						}
+					}
+
+
+				resolve(self)
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
 				console.error( error );
 			});
-
-
-		return js_promise
+		})
 	}//end init
 
 

@@ -36,6 +36,8 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 
 	// render_level
 		const render_level = options.render_level || 'full'
+		// fix render_level
+		self.render_level = render_level
 
 	// fix non value scenarios
 		self.data.value = (self.data && self.data.value.length>0)
@@ -345,7 +347,7 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// init_current_service_text_editor
-		const init_current_service_text_editor = function() {
+		const init_current_service_text_editor = async function() {
 
 			// service_editor. Fixed on init
 				const current_service_text_editor = new self.service_text_editor()
@@ -371,7 +373,7 @@ const get_input_element = (i, current_value, self) => {
 				}
 
 			// init editor
-				current_service_text_editor.init({
+				await current_service_text_editor.init({
 					caller				: self,
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
@@ -379,25 +381,50 @@ const get_input_element = (i, current_value, self) => {
 					key					: i,
 					editor_config		: editor_config
 				})
-				.then(function(){
-					// fix current_service_text_editor when is ready
-					self.text_editor[i] = current_service_text_editor
-				})
+
+			// fix current_service_text_editor when is ready
+				self.text_editor[i] = current_service_text_editor
 
 			return current_service_text_editor
 		}//end init_current_service_text_editor
+
+	// set value
+		value_container.innerHTML = value
 
 	// direct. Init the editor now
 		// const text_editor = init_current_service_text_editor()
 
 	// observer. Init the editor when container node is in DOM
-		event_manager.when_in_viewport(
-			li, // node
-			init_current_service_text_editor // callback
-		)
+		// event_manager.when_in_viewport(
+		// 	li, // node
+		// 	init_current_service_text_editor // callback
+		// )
 
-	// set value
-		// value_container.innerHTML = value
+	// user click init
+		const auto_init_editor = self.auto_init_editor!==undefined
+			? self.auto_init_editor
+			: (self.render_level==='content') ? true : false
+		if (auto_init_editor===true) {
+			// activate now
+			init_current_service_text_editor()
+		}else{
+			// activate on user click
+			li.addEventListener('click', fn_click_init)
+			function fn_click_init(e) {
+				value_container.classList.add('loading')
+				// use timeout only to force real async execution
+				setTimeout(function(){
+					// init editor on user click
+					init_current_service_text_editor()
+					.then(function(service_editor){
+						// trigger service_editor click action (show toolbar and focus it)
+						service_editor.click(e)
+					})
+					// once only. Remove event to prevent duplicates
+					li.removeEventListener('click', fn_click_init)
+				}, 25)
+			}
+		}
 
 	// add button create fragment (Only when caller is a tool_indexation instance)
 		if (self.caller && self.caller.constructor.name==="tool_indexation") {
