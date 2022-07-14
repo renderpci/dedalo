@@ -1,0 +1,1 @@
+export * from './tool_lang_multi.js'
