@@ -2116,10 +2116,17 @@ abstract class common {
 			$tipo				= $this->get_tipo();
 			$section_tipo		= $this->get_section_tipo();
 			$section_id			= $this->get_section_id();
+			$user_id			= navigator::get_user_id();
 
 		// 1. From user preset
-			$user_preset = layout_map::search_user_preset_layout_map($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
-				// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:navigator::get_user_id(), mode:$mode ".to_string());
+			$user_preset = layout_map::search_user_preset_layout_map(
+				$tipo,
+				$section_tipo,
+				$user_id,
+				$mode,
+				null
+			);
+			// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:$user_id, mode:$mode ".to_string());
 			if (!empty($user_preset)) {
 
 				$request_config = $user_preset;
