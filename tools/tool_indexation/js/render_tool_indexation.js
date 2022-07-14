@@ -114,18 +114,19 @@ const get_content_data_edit = async function(self) {
 							}
 
 						// create new one
-						const component = await self.get_component(e.target.value)
-						component.render()
-						.then(function(node){
-							// remove previous node
-							while (transcription_component_container.lastChild && transcription_component_container.lastChild.id!==lang_selector.id) {
-								transcription_component_container.removeChild(transcription_component_container.lastChild)
-							}
-							// add the new component to the container
-							transcription_component_container.appendChild(node)
-
-							console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
-						})
+							const component = await self.get_component(e.target.value)
+							// set auto_init_editor for convenience
+							component.auto_init_editor = true
+							component.render()
+							.then(function(node){
+								// remove previous node
+								while (transcription_component_container.lastChild && transcription_component_container.lastChild.id!==lang_selector.id) {
+									transcription_component_container.removeChild(transcription_component_container.lastChild)
+								}
+								// add the new component to the container
+								transcription_component_container.appendChild(node)
+								// console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
+							})
 					}
 				})
 				transcription_component_container.appendChild(lang_selector)
