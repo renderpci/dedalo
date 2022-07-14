@@ -99,36 +99,37 @@ const get_content_data_edit = async function(self) {
 			})
 			// lang selector
 				const lang_selector = ui.build_select_lang({
-					id			: "index_lang_selector",
+					id			: "indexing_lang_selector",
 					selected	: self.lang,
-					class_name	: 'dd_input',
-					action		: async function(e){
-
-						// unsaved data confirm on true
-							if (self.transcription_component.is_data_changed===true) {
-								if (!confirm(get_label.discard_changes || 'Discard changes?')) {
-									// restore previous value lang and stop
-									this.value = self.transcription_component.lang
-									return
-								}
-							}
-
-						// create new one
-							const component = await self.get_component(e.target.value)
-							// set auto_init_editor for convenience
-							component.auto_init_editor = true
-							component.render()
-							.then(function(node){
-								// remove previous node
-								while (transcription_component_container.lastChild && transcription_component_container.lastChild.id!==lang_selector.id) {
-									transcription_component_container.removeChild(transcription_component_container.lastChild)
-								}
-								// add the new component to the container
-								transcription_component_container.appendChild(node)
-								// console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
-							})
-					}
+					class_name	: 'dd_input'
 				})
+				lang_selector.addEventListener('change', async function(e){
+
+					// unsaved data confirm on true
+						if (self.transcription_component.is_data_changed===true) {
+							if (!confirm(get_label.discard_changes || 'Discard changes?')) {
+								// restore previous value lang and stop
+								this.value = self.transcription_component.lang
+								return
+							}
+						}
+
+					// create new one
+						const component = await self.get_component(e.target.value)
+						// set auto_init_editor for convenience
+						component.auto_init_editor = true
+						component.render()
+						.then(function(node){
+							// remove previous node
+							while (transcription_component_container.lastChild && transcription_component_container.lastChild.id!==lang_selector.id) {
+								transcription_component_container.removeChild(transcription_component_container.lastChild)
+							}
+							// add the new component to the container
+							transcription_component_container.appendChild(node)
+							// console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
+						})
+				})
+
 				transcription_component_container.appendChild(lang_selector)
 
 			// component. render another node of component caller and append to container
