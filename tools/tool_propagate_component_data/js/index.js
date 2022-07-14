@@ -1,0 +1,1 @@
+export * from './tool_propagate_component_data.js'

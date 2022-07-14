@@ -165,9 +165,13 @@ export const get_instance = async function(options){
 							? '../../services/'
 							: '../../'
 
+					const name = model.indexOf('tool_')!==-1
+						? 'index'
+						: model
+
 					const path = direct_path
 						? direct_path
-						: base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
+						: base_path + model + '/js/' + name + '.js' // + '?v=' + page_globals.dedalo_version
 
 				// import element mod file once (and wait until finish)
 					let current_element
