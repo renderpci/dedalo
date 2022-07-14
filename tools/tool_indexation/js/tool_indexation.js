@@ -638,25 +638,36 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 
 	// Confirm action
 		if( !confirm( `${self.get_tool_label('delete_tag') || 'Delete tag?'}\nID: ${tag_id}`) ) {
-			return Promise.resolve({result:false});
+			return Promise.resolve(false)
 		}
 		if( !confirm(
 			`${get_label.warning || 'Warning!'} !! ${self.get_tool_label('warning_delete_tag') || 'It will delete the selected tag in all languages and all the relationships and indexing associated with it'}`)
 			) {
-			return Promise.resolve({result:false});
+			return Promise.resolve(false)
 		}
 
 	// call to the API, fetch data and get response
 	return new Promise(async function(resolve){
-
-		const all_promises = [];
 
 		// delete tag in all langs (component_text_area)
 			const api_response_delete_tag = self.transcription_component.delete_tag(
 				tag_id,
 				'index'
 			)
-			all_promises.push(api_response_delete_tag)
+			.catch(error => {
+				console.error('ERROR: delete_tag found errors')
+				console.error(error.message)
+			});
+			// transcription_component response
+			if (api_response_delete_tag.result===false) {
+				// error case
+				const msg = api_response_delete_tag.msg
+					? api_response_delete_tag.msg.join('\n')
+					: 'Unknown error'
+				alert(
+					(self.get_tool_label('error_delete_tag') || 'Error on delete tag') + '\n' + msg
+				)
+			}
 
 		// delete_locator (component_portal)
 			const api_response_delete_locator = self.indexing_component.delete_locator(
@@ -668,25 +679,33 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 				// array ar_properties
 				['tag_id','type']
 			)
-			all_promises.push(api_response_delete_locator)
-
-		// response
-			Promise.all(all_promises)
-			.then((values) => {
-
-				const response = {}
-				for (let i = 0; i < values.length; i++) {
-					const item = values[i]
-					response[item.action] = item
-				}
-				dd_console('tool_indexation delete_tag', 'WARNING', response)
-
-				resolve(response)
-			})
 			.catch(error => {
-				console.error('ERROR: delete_tag found errors . Some promise fail')
+				console.error('ERROR: delete_locator found errors')
 				console.error(error.message)
 			});
+			// indexing_component response
+			if (api_response_delete_locator.result===false) {
+				// error case
+				const msg = api_response_delete_locator.msg
+					? api_response_delete_locator.msg.join('\n')
+					: 'Unknown error'
+				alert(
+					(self.get_tool_label('error_delete_locator') || 'Error on delete locator') + '\n' + msg
+				)
+			}else{
+				// indexing_component. Remember force clean full data and datum before refresh
+				self.indexing_component.data	= null
+				self.indexing_component.datum	= null
+				self.indexing_component.refresh()
+			}
+
+		// response
+			const response = {
+				'delete_tag'		: api_response_delete_tag,
+				'delete_locator'	: api_response_delete_locator
+			}
+
+		resolve(response)
 	})
 }//end delete_tag
 

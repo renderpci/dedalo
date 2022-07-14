@@ -793,23 +793,39 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 * @return promise
 * 	resolve object response
 */
-component_text_area.prototype.delete_tag = function(tag_id, type) {
+component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 
 	const self = this
 
-	return data_manager.request({
-		body : {
-			action	: "delete_tag",
-			dd_api	: 'dd_'+self.model+'_api', // component_text_area
-			source	: {
-				section_tipo	: self.section_tipo,
-				section_id		: self.section_id,
-				tipo			: self.tipo,
-				lang			: self.lang,
-				tag_id			: tag_id, // string current selected tag (passed as param)
-				type			: type // string current selected tag type (passed as param)
+	return new Promise(function(resolve){
+
+		data_manager.request({
+			body : {
+				action	: "delete_tag",
+				dd_api	: 'dd_'+self.model+'_api', // component_text_area
+				source	: {
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					tipo			: self.tipo,
+					lang			: self.lang,
+					tag_id			: tag_id, // string current selected tag (passed as param)
+					type			: type // string current selected tag type (passed as param)
+				}
 			}
-		}
+		})
+		.then(async function(api_response){
+
+			if (api_response.result!==false) {
+
+				// delete editor tags
+				await self.text_editor[key].delete_tag({
+					type	: type==='index' ? ['indexIn','indexOut']: type,
+					tag_id	: tag_id
+				})
+			}
+
+			resolve(api_response)
+		})
 	})
 }//end delete_tag
 

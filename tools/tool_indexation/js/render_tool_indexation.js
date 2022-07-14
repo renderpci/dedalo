@@ -132,8 +132,11 @@ const get_content_data_edit = async function(self) {
 
 			// component. render another node of component caller and append to container
 				const transcription_component = self.transcription_component || await self.get_component(self.lang)
+				// set auto_init_editor = true to force init edidor instead use user click to activate it
+				transcription_component.auto_init_editor = true
 				transcription_component.render()
 				.then(function(node){
+
 					transcription_component_container.appendChild(node)
 				})
 				// self.caller.render()
@@ -301,42 +304,16 @@ const get_tag_info = function(self) {
 				self.delete_tag(tag_id)
 				.then(function(response){
 
-					// transcription_component
-						if (response.delete_tag.result===false) {
-							// error case
-							const msg = response.delete_tag.msg
-								? response.delete_tag.msg.join('\n')
-								: 'Unknow error'
-							alert("Error on delete tag\n" + msg);
-						}else{
-							// transcription_component (text_area)
-							self.transcription_component.refresh()
-						}
-
-					// indexing_component
-						if (response.delete_locator.result===false) {
-							// error case
-							const msg = response.delete_locator.msg
-								? response.delete_locator.msg.join('\n')
-								: 'Unknow error'
-							alert("Error on delete locator\n" + msg);
-						}else{
-							// indexing_component. Remember force clean full data and datum before refresh
-							self.indexing_component.data	= null
-							self.indexing_component.datum	= null
-							self.indexing_component.refresh()
-						}
-
 					// show/hide tag_info
-						if (response.delete_tag.result!==false && response.delete_locator.result!==false) {
-							const toggle_node = self.tag_info_container // self.info_container
-							if (!toggle_node.classList.contains('hide')) {
-								toggle_node.classList.add('hide')
-							}
+					if (response && response.delete_tag.result!==false && response.delete_locator.result!==false) {
+						const toggle_node = self.tag_info_container // self.info_container
+						if (!toggle_node.classList.contains('hide')) {
+							toggle_node.classList.add('hide')
 						}
+					}
 				})
 			})
-		// label
+		// label delete
 			const button_delete_label = ui.create_dom_element({
 				element_type	: 'label',
 				inner_html		: get_label.borrar,
@@ -429,13 +406,26 @@ const render_related_list = function(self){
 			class_name		: 'related_list_container',
 			parent			: fragment
 		})
+
+	// select -> options
+		// sections
+			const sections = data.find(el => el.typo==='sections')
+			if (!sections) {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error msg',
+					inner_html		: 'Empty top sections to index!',
+					parent			: related_list_container
+				})
+				console.error('Empty top sections to index!')
+				return fragment
+			}
+
 		const select = ui.create_dom_element({
 			element_type	: 'select',
 			parent			: related_list_container
 		})
 
-	// select -> options
-		const sections		= data.find(el => el.typo==='sections')
 		const value			= sections.value
 		const value_length	= value.length
 		for (let i = 0; i < value_length; i++) {
