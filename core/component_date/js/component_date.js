@@ -231,11 +231,11 @@ component_date.prototype.format_date = function (date_value) {
 			alert("Error[format_date]: Date format is invalid : "+current_input_date)
 			return false
 		}
-		// Add calculated absolute "time" to dd_date object
-			const time = self.convert_date_to_seconds(dd_date, "date")
-			if (time!==false) {
-				dd_date.time = time
-			}
+		// // Add calculated absolute "time" to dd_date object
+		// 	const time = self.convert_date_to_seconds(dd_date, "date")
+		// 	if (time!==false) {
+		// 		dd_date.time = time
+		// 	}
 
 	// res_formatted. Format dd_date to show in browser input string
 	let res_formatted = ''
@@ -268,88 +268,88 @@ component_date.prototype.format_date = function (date_value) {
 
 
 
-/**
-* CONVERT_DATE_TO_SECONDS
-* Calculate absolute "time" from dd_date object
-* This operation is not reversible and is only for reference pourposes
-* @param dd_date
-*	object
-* @param mode
-*	string optional
-*/
-component_date.prototype.convert_date_to_seconds = function(dd_date, mode) {
+// /**
+// * CONVERT_DATE_TO_SECONDS
+// * Calculate absolute "time" from dd_date object
+// * This operation is not reversible and is only for reference pourposes
+// * @param dd_date
+// *	object
+// * @param mode
+// *	string optional
+// */
+// component_date.prototype.convert_date_to_seconds = function(dd_date, mode) {
 
-	let time = 0;
+// 	let time = 0;
 
-	let year 	= parseInt(dd_date.year);
-	let month 	= parseInt(dd_date.month)
-	let day 	= parseInt(dd_date.day)
-	let hour 	= parseInt(dd_date.hour)
-	let minute	= parseInt(dd_date.minute)
-	let second 	= parseInt(dd_date.second)
-
-
-		if (mode==='period') {
-			// Nothing to do here
-		}else{
-			// Normal cases
-			if(month && month>0) {
-				month = month-1
-			}
-			if(day && day>0) {
-				day = day-1
-			}
-		}
+// 	let year 	= parseInt(dd_date.year);
+// 	let month 	= parseInt(dd_date.month)
+// 	let day 	= parseInt(dd_date.day)
+// 	let hour 	= parseInt(dd_date.hour)
+// 	let minute	= parseInt(dd_date.minute)
+// 	let second 	= parseInt(dd_date.second)
 
 
-		// Set to zero on no value (preserve negatives always)
-		if (isNaN(year)) {
-			year = 0;
-		}
-		if (isNaN(month)) {
-			month = 0;
-		}
-		if (isNaN(day)) {
-			day = 0;
-		}
-		if (isNaN(hour)) {
-			hour = 0;
-		}
-		if (isNaN(minute)) {
-			minute = 0;
-		}
-		if (isNaN(second)) {
-			second = 0;
-		}
+// 		if (mode==='period') {
+// 			// Nothing to do here
+// 		}else{
+// 			// Normal cases
+// 			if(month && month>0) {
+// 				month = month-1
+// 			}
+// 			if(day && day>0) {
+// 				day = day-1
+// 			}
+// 		}
 
 
-		// Add years (using virtual years of 372 days (31*12)
-		time += year*372*24*60*60
+// 		// Set to zero on no value (preserve negatives always)
+// 		if (isNaN(year)) {
+// 			year = 0;
+// 		}
+// 		if (isNaN(month)) {
+// 			month = 0;
+// 		}
+// 		if (isNaN(day)) {
+// 			day = 0;
+// 		}
+// 		if (isNaN(hour)) {
+// 			hour = 0;
+// 		}
+// 		if (isNaN(minute)) {
+// 			minute = 0;
+// 		}
+// 		if (isNaN(second)) {
+// 			second = 0;
+// 		}
 
-		// Add months (using virtual months of 31 days)
-		time += month*31*24*60*60
 
-		// Add days
-		time += day*24*60*60
+// 		// Add years (using virtual years of 372 days (31*12)
+// 		time += year*372*24*60*60
 
-		// Add hours
-		time += hour*60*60
+// 		// Add months (using virtual months of 31 days)
+// 		time += month*31*24*60*60
 
-		// Add minutes
-		time += minute*60
+// 		// Add days
+// 		time += day*24*60*60
 
-		// Add seconds
-		time += second
+// 		// Add hours
+// 		time += hour*60*60
+
+// 		// Add minutes
+// 		time += minute*60
+
+// 		// Add seconds
+// 		time += second
 
 
-		time = parseInt(time);
+// 		time = parseInt(time);
 
-		if (isNaN(time)) {
-			time = false;
-		}
+// 		if (isNaN(time)) {
+// 			time = false;
+// 		}
 
-	return time
-}//end convert_date_to_seconds
+// 	return time
+// }//end convert_date_to_seconds
 
 
 
@@ -383,7 +383,7 @@ component_date.prototype.get_dato_period = function(parentNode) {
 		if(parseInt(period_day.value)>0) 	dd_date.day   = parseInt(period_day.value)
 
 		// Add calculated absolute "time" to dd_date object
-		dd_date.time = self.convert_date_to_seconds(dd_date, 'period')
+		// dd_date.time = self.convert_date_to_seconds(dd_date, 'period')
 
 	// Final dato
 		const dato = (dd_date.year || dd_date.month || dd_date.day)
@@ -621,11 +621,11 @@ component_date.prototype.format_time = function(options) {
 		return false
 	}
 
-	// Add calculated absolute "time" to dd_date object
-	let time = this.convert_date_to_seconds( dd_date, null )
-		if (time!==false) {
-			dd_date.time = time
-		}
+	// // Add calculated absolute "time" to dd_date object
+	// let time = this.convert_date_to_seconds( dd_date, null )
+	// 	if (time!==false) {
+	// 		dd_date.time = time
+	// 	}
 
 	// res_formatted. Format dd_date to show in browser input string
 	let res_formatted = ''
