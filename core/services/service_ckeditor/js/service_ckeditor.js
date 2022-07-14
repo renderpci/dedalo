@@ -423,44 +423,62 @@ export const service_ckeditor = function() {
 		// short vars
 			const self		= this
 			const editor	= self.editor
+			const ar_type	= (type instanceof Array)
+				? type
+				: [type]
 
 		return new Promise(function(resolve) {
 
 			// root. Whole editor document to traverse
 				const root = editor.model.document.getRoot();
 
-			// range. Create a range spanning over the entire root content:
-				const range = editor.model.createRangeIn( root );
+			// iterate multiple types like case [indexIn, indexOut]
+			// note that it's necessary get the range in each iteration because
+			// when a element is deleted, the range changes
+			const ar_type_length = ar_type.length
+			for (let i = 0; i < ar_type_length; i++) {
 
-			// Iterate over all items in this range:
-				for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+				// type
+					const current_type = ar_type[i]
 
-					const item = value.item
+				// range. Create a range spanning over the entire root content:
+					const range = editor.model.createRangeIn( root );
 
-					// attributes. Get an object like:
-					// {
-					//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
-					//	 classes : ['index']
-					// }
-					// const htmlAttributes = item.getAttribute('htmlAttributes')
-					// const htmlAttributes = item.getAttributes()
-					const attributes = item._attrs
+				// Iterate over all items in this range:
+					for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
 
-					if(item._attrs && item._attrs.size > 0) {
+						const item = value.item
 
-						const current_type		= attributes.get('type')
-						const current_tag_id	= attributes.get('tag_id')
+						// attributes. Get an object like:
+						// {
+						//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+						//	 classes : ['index']
+						// }
+						const attributes = item._attrs
 
-						if(current_type===type && current_tag_id==tag_id) {
+						if(item._attrs && item._attrs.size > 0) {
 
-							editor.model.change( writer => {
-								writer.remove( item )
-							});
-							resolve(true)
-							break;
+							const current_att_type		= attributes.get('type')
+							const current_att_tag_id	= attributes.get('tag_id')
+
+							if(current_att_tag_id==tag_id && current_att_type===current_type) {
+
+								// remove
+									editor.model.change( writer => {
+										writer.remove( item )
+									});
+
+								// set dirty state
+									self.set_dirty(true)
+
+								// if the tag was found break the loop
+									break;
+							}
 						}
-					}
-				}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+					}//end for( const value of range.getWalker({ ignoreElementEnd: true }) )
+			}//end for (let i = 0; i < ar_type_length; i++)
+
+			resolve(true)
 		})
 	}//end delete_tag
 
@@ -767,7 +785,7 @@ export const service_ckeditor = function() {
 	* 	tag_id : 1,
 	* 	dataset : {	type : n }
 	* }
-	* @return bool
+	* @return promise bool
 	*/
 	this.update_tag = function(options) {
 
@@ -784,84 +802,87 @@ export const service_ckeditor = function() {
 				: [type]
 			let changed = 0
 
-		// root. Whole editor document to traverse
-			const root = editor.model.document.getRoot();
+		return new Promise(function(resolve) {
 
-		// range. Create a range spanning over the entire root content:
-			const range = editor.model.createRangeIn( root );
+			// root. Whole editor document to traverse
+				const root = editor.model.document.getRoot();
 
-		// Iterate over all items in this range:
-			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+			// range. Create a range spanning over the entire root content:
+				const range = editor.model.createRangeIn( root );
 
-				const item = value.item
+			// Iterate over all items in this range:
+				for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
 
-				// attributes. Get an object like:
-				// {
-				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
-				//	 classes : ['index']
-				// }
-				const attributes = item._attrs
+					const item = value.item
 
-				if(item._attrs && item._attrs.size > 0) {
+					// attributes. Get an object like:
+					// {
+					//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+					//	 classes : ['index']
+					// }
+					const attributes = item._attrs
 
-					const current_type		= attributes.get('type')
-					const current_tag_id	= attributes.get('tag_id')
+					if(item._attrs && item._attrs.size > 0) {
 
-					if(current_tag_id==tag_id && ar_type.includes(current_type)) {
+						const current_type		= attributes.get('type')
+						const current_tag_id	= attributes.get('tag_id')
 
-						// short vars
-							const current_state	= attributes.get('state')
-							const current_label	= attributes.get('label')
-							const current_data	= attributes.get('data')
-							const current_src	= item.getAttribute('src')
+						if(current_tag_id==tag_id && ar_type.includes(current_type)) {
 
-						// edit_attributes. Clone attributes to prevent unwanted events trigger
-							const edit_attributes = clone(attributes)
+							// short vars
+								const current_state	= attributes.get('state')
+								const current_label	= attributes.get('label')
+								const current_data	= attributes.get('data')
+								const current_src	= item.getAttribute('src')
 
-						// add/replace new_data_obj properties given
-							for (const name in new_data_obj) {
-								edit_attributes.set(name, new_data_obj[name])
-							}
+							// edit_attributes. Clone attributes to prevent unwanted events trigger
+								const edit_attributes = clone(attributes)
 
-							// console.log("-> 1 changed attributes:",attributes);
-							// console.log("-> 2 changed edit_attributes:",edit_attributes);
+							// add/replace new_data_obj properties given
+								for (const name in new_data_obj) {
+									edit_attributes.set(name, new_data_obj[name])
+								}
 
-						// id. Re-create the id like [/index-n-1-label in 1]
-							const data_tag = {
-								type	: current_type, // type
-								tag_id	: current_tag_id, // tag_id
-								state	: new_data_obj.state || current_state, // state
-								label 	: new_data_obj.label || current_label, // label
-								data	: new_data_obj.data || current_data // data
-							}
-							const new_tag	= self.caller.build_view_tag_obj( data_tag, current_tag_id )
-							const new_id	= new_tag.id
-							edit_attributes.set('src_id' , new_id)
+								// console.log("-> 1 changed attributes:",attributes);
+								// console.log("-> 2 changed edit_attributes:",edit_attributes);
 
-						// image_url. Replace url var id with updated id tag
-							const image_url = current_src.split('?')[0] + '?id=' + new_id
+							// id. Re-create the id like [/index-n-1-label in 1]
+								const data_tag = {
+									type	: current_type, // type
+									tag_id	: current_tag_id, // tag_id
+									state	: new_data_obj.state || current_state, // state
+									label 	: new_data_obj.label || current_label, // label
+									data	: new_data_obj.data || current_data // data
+								}
+								const new_tag	= self.caller.build_view_tag_obj( data_tag, current_tag_id )
+								const new_id	= new_tag.id
+								edit_attributes.set('src_id' , new_id)
 
-						// set to model
-							editor.model.change( writer => {
-								writer.setAttributes( edit_attributes, item );
-								writer.setAttribute( 'src', image_url, item );
-							});
+							// image_url. Replace url var id with updated id tag
+								const image_url = current_src.split('?')[0] + '?id=' + new_id
 
-						// set dirty state
-							self.set_dirty(true)
+							// set to model
+								editor.model.change( writer => {
+									writer.setAttributes( edit_attributes, item );
+									writer.setAttribute( 'src', image_url, item );
+								});
 
-						// changed
-							changed++;
+							// set dirty state
+								self.set_dirty(true)
 
-						// if the tag was found break the loop
-							if (ar_type.length===changed) {
-								break;
-							}
+							// changed
+								changed++;
+
+							// if the tag was found break the loop
+								if (ar_type.length===changed) {
+									break;
+								}
+						}
 					}
-				}
-			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+				}//end for( const value of range.getWalker({ ignoreElementEnd: true }) )
 
-		return true
+			resolve(true)
+		})
 	}//end update_tag
 
 
@@ -948,24 +969,24 @@ export const service_ckeditor = function() {
 			}
 
 		// toolbar toggle event
-			// show toolbar_container on user mousedown
-			// removes the toolbar_container when user click outside
-			const node = toolbar_container.parentNode
-			node.addEventListener("mousedown", function() {
-				// remove the hide class to show the toolbar
-				toolbar_container.classList.remove('hide')
-				document.body.addEventListener("mouseup", fn_remove)
-			})
-			function fn_remove(e) {
-				if (e.target!==node) {
-					const path	= e.composedPath()
-					const found	= path.find(el => el===node)
-					if (!found) {
-						toolbar_container.classList.add('hide')
-						document.body.removeEventListener("mouseup", fn_remove)
-					}
-				}
-			}
+			// // show toolbar_container on user mousedown
+			// // removes the toolbar_container when user click outside
+			// const node = toolbar_container.parentNode
+			// node.addEventListener("mousedown", function() {
+			// 	// remove the hide class to show the toolbar
+			// 	toolbar_container.classList.remove('hide')
+			// 	document.body.addEventListener("mouseup", fn_remove)
+			// })
+			// function fn_remove(e) {
+			// 	if (e.target!==node) {
+			// 		const path	= e.composedPath()
+			// 		const found	= path.find(el => el===node)
+			// 		if (!found) {
+			// 			toolbar_container.classList.add('hide')
+			// 			document.body.removeEventListener("mouseup", fn_remove)
+			// 		}
+			// 	}
+			// }
 
 		return toolbar_container
 	}//end this.build_toolbar
