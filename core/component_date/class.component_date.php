@@ -1,17 +1,39 @@
 <?php
 /*
 * CLASS COMPONENT DATE
- Encargado de guardar y gestionar las fechas de tipo absoluto, como por ejemplo '2012-11-07 17:33:49' that have a json format:
- {
-	*    "year": 2012,
-	*    "month": 11,
-	*    "day": 07,
-	*    "hour": 17,
-	*    "minute": 33,
-	*    "second": 49
-	 }
- Debe verificar el formato antes de guardar y a la hora de mostrarse, además de proporcionar la lógica de las búsquedas para localizar años, rangos, etc..
- Podría incorporar un calendario desplegable para seleccionar la fecha de forma normalizada..
+* used to manage dates, component_date use a object to represent dates, ISO dates as '2012-11-07 17:33:49' will be transform to object format as:
+* {
+*	"year": 2012,
+*	"month": 11,
+*	"day": 07,
+*	"hour": 17,
+*	"minute": 33,
+*	"second": 49
+* }
+* Dates are objects enclosed with start and/or end container
+* [{
+*	"start" : {
+*		"year": 2012,
+*		"month": 11,
+*		"day": 07,
+*		"hour": 17,
+*		"minute": 33,
+*		"second": 49
+* 		},
+*	"end" : {
+*		"year": 2012,
+*		"month": 12,
+*		"day": 08,
+*		"hour": 22,
+*		"minute": 15,
+*		"second": 35
+*		}
+* }]
+* The component has 4 different modes:
+* 	date: with start date only
+* 	range: with start date and end date
+* 	period: with year, moth, day, hour, minute, second, millisecond
+* 	time: with hour, minute, second, millisecond
 */
 class component_date extends component_common {
 
@@ -97,31 +119,11 @@ class component_date extends component_common {
 
 		$dato = parent::get_dato();
 
-		# Compatibility with version 4.0.14 to 4.6 dedalo instalations
-		if (is_object($dato) && !empty(get_object_vars($dato)) ) {
-			$safe_dato=array();
-
-			$safe_dato[] = $dato;
-
-			$dato = $safe_dato;
-			$this->set_dato($dato);
-			$this->Save();
-		}
-
 		if(SHOW_DEBUG===true) {
 			if ( !is_null($dato) && !is_array($dato)  ) {
 				#dump( $dato, "WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent");
 			}
 		}
-
-		# Compatibility old dedalo instalations before 4.014
-		# if (is_string($dato)) {
-		# 	$dd_date    = new dd_date();
-		# 	$this->dato = (object)$dd_date->get_date_from_timestamp( $dato );
-		# 	$this->Save();
-		# 	$dato = parent::get_dato();
-		# }
-		#dump( $dato, ' dato get_dato ++ '.to_string());
 
 		return (array)$dato;
 	}//end get_dato
@@ -147,19 +149,6 @@ class component_date extends component_common {
 			$dato 			= $safe_dato;
 		}
 
-		// # Remove empy objects
-		// $clean_dato = array();
-		// foreach ((array)$dato as $key => $value_obj) {
-		// 	$ar_vars = [];
-		// 	if (is_object($value_obj)) {
-		// 		$ar_vars = (array)get_object_vars($value_obj);
-		// 	}
-		// 		//dump($ar_vars, ' ar_vars ++ '.to_string());
-		// 	if(!empty($ar_vars)) {
-		// 		$clean_dato[] = $value_obj;
-		// 	}
-		// }
-
 		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
@@ -167,7 +156,7 @@ class component_date extends component_common {
 
 	/**
 	* GET_DATE_MODE
-	* Calculate date_mode from format of current 'dato'
+	* Get date_mode from ontology definition of the component
 	* @return string
 	*/
 	public function get_date_mode() {
@@ -180,25 +169,6 @@ class component_date extends component_common {
 			$date_mode = 'date'; // Default
 		}
 
-		/*
-		$dato 		 = $this->get_dato();
-		switch (true) {
-			#case isset($dato->start):
-			case is_object($dato) && property_exists($dato, 'start'):
-				$date_mode = 'range';
-				break;
-			#case isset($dato->period):
-			case is_object($dato) && property_exists($dato, 'period'):
-				$date_mode = 'period';
-				break;
-			default:
-				if (isset($properties->date_mode)) {
-					$date_mode = $properties->date_mode; // Default from structure if is defined
-				}else{
-					$date_mode = 'date'; // Default
-				}
-				break;
-		}*/
 		return $date_mode;
 	}//end get_date_mode
 
@@ -271,102 +241,6 @@ class component_date extends component_common {
 				}
 
 				$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
-
-				// DES
-					// switch ($date_mode) {
-
-					// 	case 'range':
-					// 		# Start
-					// 		$value_start = '';
-					// 		if(isset($current_dato->start)) {
-					// 			$dd_date = new dd_date($current_dato->start);
-
-					// 			if(isset($current_dato->start->day)) {
-					// 				$value_start = $dd_date->get_dd_timestamp("Y-m-d");
-					// 			}else{
-					// 				$value_start = $dd_date->get_dd_timestamp("Y-m");
-					// 				if(isset($current_dato->start->month)) {
-					// 				}else{
-					// 					$value_start = $dd_date->get_dd_timestamp("Y", $padding=false);
-					// 				}
-					// 			}
-
-					// 			$ar_values[$key] .= $value_start;
-					// 		}
-
-					// 		# End
-					// 		$value_end = '';
-					// 		if(isset($current_dato->end)) {
-					// 			$dd_date	= new dd_date($current_dato->end);
-					// 			/*
-					// 			$value_end 	= isset($properties->method->get_valor_local)
-					// 						? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
-					// 						: component_date::get_valor_local( $dd_date, false );
-					// 			*/
-
-					// 			if(isset($current_dato->end->day)) {
-					// 					$value_end = $dd_date->get_dd_timestamp("Y-m-d");
-					// 				}else{
-					// 					if(isset($current_dato->end->month)) {
-					// 						$value_end = $dd_date->get_dd_timestamp("Y-m");
-					// 					}else{
-					// 						$value_end = $dd_date->get_dd_timestamp("Y", $padding=false);
-					// 					}
-					// 				}
-					// 			$ar_values[$key] .= ' <> '. $value_end;
-					// 		}
-					// 		break;
-
-					// 	case 'period':
-					// 		if(!empty($current_dato->period)) {
-
-					// 			$ar_string_period = [];
-
-					// 			$dd_date = new dd_date($current_dato->period);
-					// 			# Year
-					// 			$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
-					// 			# Month
-					// 			$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
-					// 			# Day
-					// 			$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
-
-					// 			$ar_values[$key] = implode(' ', $ar_string_period);
-					// 		}
-					// 		break;
-
-					// 	case 'time':
-					// 		$dd_date = new dd_date($current_dato);
-					// 		$ar_values[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
-					// 		break;
-
-					// 	case 'date_time':
-					// 		if(isset($current_dato->start)) {
-					// 			$dd_date 		= new dd_date($current_dato->start);
-					// 			$ar_values[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
-					// 		}
-					// 		break;
-
-					// 	case 'date':
-					// 	default:
-					// 		# Start
-					// 		$value_start = '';
-					// 		if(isset($current_dato->start)) {
-					// 			$dd_date = new dd_date($current_dato->start);
-
-					// 			if(isset($current_dato->start->day)) {
-					// 				$value_start = $dd_date->get_dd_timestamp('Y-m-d');
-					// 			}else{
-					// 				$value_start = $dd_date->get_dd_timestamp('Y-m');
-					// 				if(isset($current_dato->start->month)) {
-					// 				}else{
-					// 					$value_start = $dd_date->get_dd_timestamp('Y', $padding=false);
-					// 				}
-					// 			}
-
-					// 			$ar_values[$key] .= $value_start;
-					// 		}
-					// 		break;
-					// }
 			}//end foreach ($data as $key => $current_dato)
 
 		// separator_fields
@@ -537,130 +411,6 @@ class component_date extends component_common {
 				}
 
 				$ar_valor[$key] = self::data_item_to_value($current_dato, $date_mode);
-
-				// DES
-					// switch ($date_mode) {
-
-					// 	case 'range':
-					// 		# Start
-					// 		$valor_start = '';
-					// 		if(isset($current_dato->start)) {
-					// 			$dd_date = new dd_date($current_dato->start);
-					// 			/*
-					// 			$valor_start= isset($properties->method->get_valor_local)
-					// 						? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
-					// 						: component_date::get_valor_local( $dd_date, false );
-					// 						*/
-					// 			if(isset($current_dato->start->day)) {
-					// 				$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
-					// 			}else{
-					// 				$valor_start = $dd_date->get_dd_timestamp("Y-m");
-					// 				if(isset($current_dato->start->month)) {
-					// 				}else{
-					// 					$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
-					// 				}
-					// 			}
-
-					// 			$ar_valor[$key] .= $valor_start;
-					// 		}
-
-					// 		# End
-					// 		$valor_end = '';
-					// 		if(isset($current_dato->end)) {
-					// 			$dd_date	= new dd_date($current_dato->end);
-					// 			/*
-					// 			$valor_end 	= isset($properties->method->get_valor_local)
-					// 						? component_date::get_valor_local( $dd_date, reset($properties->method->get_valor_local) )
-					// 						: component_date::get_valor_local( $dd_date, false );
-					// 			*/
-					// 			if(isset($current_dato->end->day)) {
-					// 					$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
-					// 				}else{
-					// 					if(isset($current_dato->end->month)) {
-					// 						$valor_end = $dd_date->get_dd_timestamp("Y-m");
-					// 					}else{
-					// 						$valor_end = $dd_date->get_dd_timestamp("Y", $padding=false);
-					// 					}
-					// 				}
-					// 			$ar_valor[$key] .= ' <> '. $valor_end;
-					// 		}
-					// 		#$valor .= $valor_start .' <> '. $valor_end;
-					// 		break;
-
-					// 	case 'period':
-					// 		if(!empty($current_dato->period)) {
-
-					// 			$ar_string_period = [];
-
-					// 			$dd_date = new dd_date($current_dato->period);
-					// 			# Year
-					// 			$ar_string_period[] = isset($dd_date->year) ? $dd_date->year .' '. label::get_label('anyos') : '';
-					// 			# Month
-					// 			$ar_string_period[] = isset($dd_date->month) ? $dd_date->month .' '. label::get_label('meses') : '';
-					// 			# Day
-					// 			$ar_string_period[] = isset($dd_date->day) ? $dd_date->day .' '. label::get_label('dias') : '';
-
-					// 			$ar_valor[$key] = implode(' ', $ar_string_period);
-					// 		}
-					// 		break;
-
-					// 	case 'time':
-					// 		$dd_date = new dd_date($current_dato);
-					// 		// $hour  	 = isset($dd_date->hour)	? sprintf("%02d", $dd_date->hour)   : '00';
-					// 		// $minute  = isset($dd_date->minute)	? sprintf("%02d", $dd_date->minute) : '00';
-					// 		// $second  = isset($dd_date->second)	? sprintf("%02d", $dd_date->second) : '00';
-					// 		// $separator_time = ':';
-					// 		// $ar_valor[$key] = $hour . $separator_time . $minute . $separator_time . $second;
-					// 		$ar_valor[$key] = $dd_date->get_dd_timestamp('H:i:s', true);
-					// 		break;
-
-					// 	case 'date_time':
-					// 		if(isset($current_dato->start)) {
-					// 			$dd_date 		= new dd_date($current_dato->start);
-					// 			$ar_valor[$key] = $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
-					// 		}
-					// 		break;
-
-					// 	case 'date':
-					// 	default:
-					// 		# Start
-					// 		$valor_start = '';
-					// 		if(isset($current_dato->start)) {
-					// 			$dd_date = new dd_date($current_dato->start);
-
-					// 			if(isset($current_dato->start->day)) {
-					// 				$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
-					// 			}else{
-					// 				$valor_start = $dd_date->get_dd_timestamp('Y-m');
-					// 				if(isset($current_dato->start->month)) {
-					// 				}else{
-					// 					$valor_start = $dd_date->get_dd_timestamp('Y', $padding=false);
-					// 				}
-					// 			}
-
-					// 			$ar_valor[$key] .= $valor_start;
-					// 		}
-					// 		/*
-					// 		* PREVIOUS TO 4.9.1
-					// 		if(!empty($current_dato)) {
-					// 			$dd_date		= new dd_date($current_dato);
-					// 			#$ar_valor[$key] = $dd_date->get_dd_timestamp("Y-m-d");
-
-					// 			if(isset($current_dato->day)) {
-					// 				$valor = $dd_date->get_dd_timestamp("Y-m-d");
-					// 			}else{
-					// 				$valor = $dd_date->get_dd_timestamp("Y-m");
-					// 				if(isset($current_dato->month)) {
-					// 				}else{
-					// 					$valor = $dd_date->get_dd_timestamp("Y", $padding=false);
-					// 				}
-					// 			}
-
-					// 			$ar_valor[$key] .= $valor;
-
-					// 		}*/
-					// 		break;
-					// }
 			}//end foreach ($ar_dato as $key => $current_dato)
 
 		// valor
@@ -724,24 +474,6 @@ class component_date extends component_common {
 
 		return (string)$valor;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET_DATO_AS_TIMESTAMP
-	* Get current component dato and create a standar timestamp string
-	* using dd_date class call
-	* DEPRECATED 22-08-2017
-	* @return string $timestamp
-	*//*
-	public function get_dato_as_timestamp_DEPRECATED() {
-		$dato 	 	= $this->get_dato();
-		$dd_date 	= new dd_date($dato);
-		$timestamp 	= $dd_date->get_dd_timestamp(); // $date_format="Y-m-d H:i:s"
-
-		return (string)$timestamp;
-	}//end get_dato_as_timestamp
-	*/
 
 
 
@@ -813,79 +545,6 @@ class component_date extends component_common {
 
 		return $date;
 	}//end timestamp_to_date
-
-
-	//
-	// /**
-	// * GET_EJEMPLO
-	// */
-	// protected function get_ejemplo() {
-	// 	/*
-	// 	if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
-	// 		# American format month/day/year
-	// 		$format = 'MM-DD-YYYY';
-	// 	}else{
-	// 		# European format day.month.year
-	// 		$format = 'DD-MM-YYYY';
-	// 	}
-	// 	*/
-	// 	$date_mode = $this->get_date_mode();
-	// 	if ($date_mode==='time') {
-	// 		$format = 'HH'.dd_date::$time_separator.'MM'.dd_date::$time_separator.'SS';
-	// 	}else{
-	// 		$format = 'DD'.dd_date::$separator.'MM'.dd_date::$separator.'YYYY';
-	// 	}
-	//
-	// 	return $format;
-	// }//end get_ejemplo
-
-
-
-	/**
-	* GET_STATS_VALUE_RESOLVED
-	* @return array $ar_final
-	*/
-	public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
-
-		$caller_component = get_called_class();
-
-		#dump($stats_properties,'stats_properties '.$caller_component);
-		#if($caller_component=='component_autocomplete_ts')
-		#dump($current_stats_value ,'$current_stats_value '.$tipo ." $caller_component");
-
-		$ar_values = [];
-		foreach ($current_stats_value as $current_dato => $value) {
-
-			# properties 'year_only' : Return only year as '1997'
-			if($stats_properties->context_name==='year_only') {
-				$current_dato = date("Y", strtotime($current_dato));
-			}
-
-			if( empty($current_dato) ) {
-
-				$current_dato = 'nd';
-				$ar_values[$current_dato] = $value;
-
-			}else if($current_dato==='nd') {
-
-				$ar_values[$current_dato] = $value;
-
-			}else{
-
-				$current_component = component_common::get_instance($caller_component,$tipo,NULL,'stats');
-				$current_component->set_dato($current_dato);
-
-				$valor = $current_component->get_valor();
-
-				$ar_values[$valor] = $value;
-			}
-		}//end foreach
-
-		$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true).':'.$stats_model;
-		$ar_final	= array($label => $ar_values);
-
-		return $ar_final;
-	}//end get_stats_value_resolved
 
 
 
@@ -1357,21 +1016,6 @@ class component_date extends component_common {
 			$dd_date->set_time( $time );
 			$current_dato->end = $dd_date;
 		}
-
-		// Default date mode
-		// PREVIOUS 4.9.1
-		/*
-		if( isset($current_dato->year) ) {
-
-			$dd_date = new dd_date($current_dato);
-			$time 	 = dd_date::convert_date_to_seconds($dd_date);
-			if (isset($current_dato->time) && $current_dato->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time. []", logger::WARNING);
-			}
-			$dd_date->set_time( $time );
-			$current_dato = $dd_date;
-		}
-		*/
 		// Time date mode
 		else if( isset($current_dato->hour) ) {
 			$dd_date = new dd_date($current_dato);
@@ -1416,147 +1060,8 @@ class component_date extends component_common {
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
-			/* EN PROCESO
-			case '4.9.2':
 
-				# Transform old dato in activity section
-				if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && !empty($dato_unchanged) && is_string($dato_unchanged)) {
-
-					$dd_date    = new dd_date();
-					$new_dato 	= (object)$dd_date->get_date_from_timestamp( $dato_unchanged );
-
-					$response = new stdClass();
-						$response->result =1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-
-				}else{
-					$response = new stdClass();
-						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-						return $response;
-				}
-				break;
-				*/
-
-			case '4.9.1':
-
-				if (!empty($dato_unchanged)) {
-
-					/* 	Change the dato to be compatible with the range format {"start":{...}}
-					*	From:
-					*	[{"time":64313740800,"year":2001}]
-					*	To:
-					*	[{"start":{"time":64313740800,"year":2001}}]
-					*/
-
-					if(!is_array($dato_unchanged)){
-						$dato_unchanged = (array)$dato_unchanged;
-					}
-					//Check the date format for update only the normal date format
-					switch (true) {
-						case isset($dato_unchanged[0]->start):
-						case isset($dato_unchanged[0]->period):
-
-							$response = new stdClass();
-								$response->result	= 2;
-								$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-							break;
-
-						default:
-							$conversion = new stdClass();
-							foreach ($dato_unchanged as $value) {
-								$conversion->start = $value;
-							}
-							$new_dato = [];
-
-							$new_dato[] = $conversion;
-
-							$response = new stdClass();
-								$response->result	= 1;
-								$response->new_dato	= $new_dato;
-								$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-							break;
-					}
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
-				break;
-
-			case '4.8.1':
-				if (!empty($dato_unchanged)) {
-
-					$new_dato = $dato_unchanged; // Only we need re-save the dato to recalculate time in seconds
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
-				break;
-
-			case '4.7.0':
-				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
-
-					$new_dato = [];
-					$new_dato = $dato_unchanged;
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
-				break;
-
-			case '4.0.14':
-				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
-
-					$new_dato = component_date::add_time($dato_unchanged);
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
-				break;
-
-			case '4.0.10':
-
-				# Compatibility old dedalo instalations
-				if (is_string($dato_unchanged) && !empty($dato_unchanged)) {
-						#dump($dato, ' dato '.to_string($this->parent).' '. to_string($this->section_tipo));
-					$dd_date    = new dd_date();
-					$new_dato 	= (object)$dd_date->get_date_from_timestamp( $dato_unchanged );
-
-					$response = new stdClass();
-						$response->result	=1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
+			case '6.0.0':
 				break;
 
 			default:
