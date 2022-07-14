@@ -2050,7 +2050,7 @@
 
 		.header {
 			display: flex;
-			padding: 1rem;
+			// padding: 1rem;
 			background-color: @color_orange_dedalo;
 			color: white;
 			font-weight: normal;
@@ -2102,6 +2102,7 @@
 					font-weight: normal;
 					line-height: 1.2rem;
 					padding: 0.5rem;
+					display: flex;
 				}
 				select, .description {
 					display: none;
@@ -2115,7 +2116,21 @@
 		.header_custom {
 			// background-color: #3070d8;
 			position: absolute;
-			width: 100%
+			width: 100%;
+			padding: 0.5rem;
+			display: flex;
+			align-items: center;
+
+			span.label {
+				padding-left: 0.5rem;
+				font-weight: 300;
+			}
+
+			select {
+				background-color: transparent;
+				outline: none;
+				color: white;
+			}
 		}
 
 		.body {
