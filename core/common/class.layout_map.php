@@ -367,9 +367,9 @@ class layout_map {
 	/**
 	* SEARCH_USER_PRESET_LAYOUT_MAP
 	* Get user layout map preset
-	* @return array | bool
+	* @return array $result
 	*/
-	public static function search_user_preset_layout_map($tipo, $section_tipo, $user_id, $modo, $view=null) {
+	public static function search_user_preset_layout_map(string $tipo, string $section_tipo, int $user_id, string $modo, string $view=null) : array {
 
 		// cache
 			$key_cache = implode('_', [$tipo, $section_tipo, $user_id, $modo, $view]);
@@ -481,7 +481,7 @@ class layout_map {
 		$ar_records = $rows_data->ar_records;
 		if (empty($ar_records)) {
 
-			$result = false;
+			$result = [];
 
 		}else{
 			$dato = reset($ar_records);
@@ -520,7 +520,7 @@ class layout_map {
 
 			}else{
 
-				$result = false;
+				$result = [];
 			}
 		}
 
