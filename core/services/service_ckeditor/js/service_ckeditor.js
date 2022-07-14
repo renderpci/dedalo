@@ -355,7 +355,7 @@ export const service_ckeditor = function() {
 			// get the end position of the selection
 			const position = editor.model.document.selection.getLastPosition()
 			// create the tag_node
-			const model_tag_node = writer.createElement( 'imageInline', tag_obj);
+			const model_tag_node = writer.createElement( 'imageInline', tag_obj) ;
 			// Insert the html in the current selection location.
 			editor.model.insertContent( model_tag_node, position );
 			// Put the selection on the inserted element.
@@ -419,7 +419,7 @@ export const service_ckeditor = function() {
 						const current_type		= attributes.get('type')
 						const current_tag_id	= attributes.get('tag_id')
 
-						if(current_type===type && current_tag_id === tag_id) {
+						if(current_type===type && current_tag_id==tag_id) {
 
 							editor.model.change( writer => {
 								writer.remove( item )

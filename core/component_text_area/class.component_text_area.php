@@ -1615,8 +1615,8 @@ class component_text_area extends component_common {
 
 		$tags_persons = array();
 
-		$section_id 		= $this->get_section_id();
-		$section_tipo		= $this->get_section_tipo();
+		$section_id		= $this->get_section_id();
+		$section_tipo	= $this->get_section_tipo();
 
 		$properties = $this->get_properties();
 		if (!isset($properties->tags_persons)) {
@@ -1642,20 +1642,20 @@ class component_text_area extends component_common {
 
 			if ($obj_value->section_tipo===$this->section_tipo) {
 
-				$obj_value->section_id			= $section_id; // inject current record section id (parent)
+				$obj_value->section_id = $section_id; // inject current record section id (parent)
 
-				# Add directly
+				// Add directly
 				$ar_objects[] = $obj_value;
-
 			}else{
+
 				if (empty($ar_references)) {
-					debug_log(__METHOD__." Error on calculate section_id from inverse locators $this->section_tipo - $this->parent ".to_string(), logger::ERROR);
+					debug_log(__METHOD__." Error (empty ar_references) on calculate section_id from inverse locators $this->section_tipo - $this->parent ".to_string(), logger::ERROR);
 					continue;
 				}
 				foreach ($ar_references as $reference_locator) {
 
 					$new_obj_value = clone $obj_value;
-						$new_obj_value->section_id			= $reference_locator->section_id;
+						$new_obj_value->section_id = $reference_locator->section_id;
 
 					# Add from reference
 					$ar_objects[] = $new_obj_value;
@@ -1666,19 +1666,21 @@ class component_text_area extends component_common {
 		$resolved = [];
 		foreach ($ar_objects as $key => $obj_value) {
 
-			$current_section_tipo 	= $obj_value->section_tipo;
-			$current_section_id 	= $obj_value->section_id;
-			$current_component_tipo = $obj_value->component_tipo;
-			$current_state 			= $obj_value->state;
-			$current_tag_id 		= !empty($obj_value->tag_id) ? $obj_value->tag_id : 1;
+			$current_section_tipo	= $obj_value->section_tipo;
+			$current_section_id		= $obj_value->section_id;
+			$current_component_tipo	= $obj_value->component_tipo;
+			$current_state			= $obj_value->state;
+			$current_tag_id			= !empty($obj_value->tag_id) ? $obj_value->tag_id : 1;
 
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
-															 $current_component_tipo,
-															 $current_section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $current_section_tipo);
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$current_component_tipo,
+				$current_section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$current_section_tipo
+			);
 			# TAG
 			$dato = $component->get_dato();
 			foreach ($dato as $key => $current_locator) {
@@ -1701,30 +1703,32 @@ class component_text_area extends component_common {
 
 				# Tag
 				$tag_person = self::build_tag_person(array(
-					'state'		=>$current_state,
-					'tag_id'	=>$current_tag_id,
-					'label'		=>$label->initials,
-					'data'		=>$data_locator
+					'state'		=> $current_state,
+					'tag_id'	=> $current_tag_id,
+					'label'		=> $label->initials,
+					'data'		=> $data_locator
 				));
 				$element = new stdClass();
 					$element->type			= 'person';
 					$element->section_tipo	= $obj_value->section_tipo;
 					$element->section_id	= $obj_value->section_id;
 					$element->tag			= $tag_person;
-					#$element->tag_image = TR::addTagImgOnTheFly($element->tag);
-					$element->role 		= $label->role;  // RecordObj_dd::get_termino_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
-					$element->full_name = $label->full_name;
+					#$element->tag_image	= TR::addTagImgOnTheFly($element->tag);
+					$element->role			= $label->role;  // RecordObj_dd::get_termino_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
+					$element->full_name		= $label->full_name;
 
-					$element->state 	= $current_state;
-					$element->tag_id 	= $current_tag_id;
-					$element->label 	= $label->initials;
-					$element->data 		= $data_locator;
+					$element->state			= $current_state;
+					$element->tag_id		= $current_tag_id;
+					$element->label			= $label->initials;
+					$element->data			= $data_locator;
 
 				$tags_persons[] = $element;
 
 				$resolved[] = $lkey;
 			}
 		}
+
+
 		return $tags_persons; // array
 	}//end get_tags_persons
 
