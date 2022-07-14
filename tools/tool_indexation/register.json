@@ -67,13 +67,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 11,
-              "hour": 22,
-              "time": 65005711743,
+              "day": 14,
+              "hour": 11,
+              "time": 65005932000,
               "year": 2022,
               "month": 7,
-              "minute": 9,
-              "second": 3
+              "minute": 20,
+              "second": 0
             }
           }
         ]
@@ -197,6 +197,46 @@
               "lang": "lg-spa",
               "name": "warning_delete_tag",
               "value": "Eliminará la etiqueta seleccionada en todos los idiomas y todas las relaciones e indexación asociadas a ella"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "error_delete_tag",
+              "value": "Failed to delete tag"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "error_delete_tag",
+              "value": "Error al borrar etiqueta"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "error_delete_tag",
+              "value": "Error al borrar etiqueta"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "error_delete_tag",
+              "value": "Σφάλμα εθιμοτυπίας"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "error_delete_locator",
+              "value": "Error al borrar localizador"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "error_delete_locator",
+              "value": "Error en esborrar locator"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "error_delete_locator",
+              "value": "Σφάλμα κατά τη διαγραφή του εντοπιστή"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "error_delete_locator",
+              "value": "Error deleting locator"
             }
           ]
         ]
@@ -206,7 +246,7 @@
   "section_id": 5,
   "created_date": "2020-01-23 18:29:29",
   "section_tipo": "dd1340",
-  "modified_date": "2022-07-11 22:09:03",
+  "modified_date": "2022-07-14 11:20:00",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
