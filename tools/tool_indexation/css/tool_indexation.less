@@ -32,6 +32,8 @@
 		// width: 100%;
 		// height: calc(100vh - 20%);
 
+		@header_height: 5rem;
+
 		>.tool_header {
 			background-color: @color_bg_tool;
 			position: relative;
@@ -44,7 +46,7 @@
 		>.content_data {
 			// background-color: #f9eae0;
 			width: 100%;
-			// height: 92vh;
+			min-height: calc(100vh - @header_height);
 			// display: grid;
 			// grid-gap: 1rem;
 			// grid-template-columns: 1fr 1fr;

@@ -16,10 +16,10 @@
 		align-content: flex-start;
 		min-height: inherit;
 
-		@header_height: 5rem;
+		// @header_height: 5rem;
 
 		>.tool_header {
-			height: @header_height;
+			// height: @header_height;
 			// padding: 1em;
 			// moded outside. see bellow
 
@@ -45,8 +45,8 @@
 		>.content_data {
 			// background-color: #B7F9BB;
 			width: 100%;
-			// padding: 1em;
-			min-height: calc(100vh - @header_height);
+			padding: 1rem;
+			// max-height: calc(100vh - @header_height);
 
 			// >* {
 				//padding: 1em;
@@ -77,6 +77,13 @@
 		>div {
 			padding: 1rem;
 		}
+
+		// error messages for example
+		.msg {
+			padding: 0.5rem;
+			border-radius: 0.25rem;
+		}
+
 
 		>.tool_name_container {
 			padding-right: 1rem;
