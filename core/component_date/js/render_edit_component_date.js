@@ -5,7 +5,6 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {common,create_source} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -163,48 +162,7 @@ const add_events = function(self, wrapper) {
 	// click event [click]
 		wrapper.addEventListener("click", e => {
 
-			// const all_buttons_remove =wrapper.querySelectorAll('.remove')
-
-			// console.log("all_buttons_remove:",all_buttons_remove);
-
-			// for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-			// 	all_buttons_remove[i].classList.add("display_none")
-			// }
-
-			// show current remove button
-			// const targetDate = e.target.parentNode
-			// console.log("e.target:",e.target);
-			// console.log("targetDate:",targetDate.parentNode);
-
-				// if (targetDate.matches('input[type="text"')) {
-				// 	// set the button_remove associated to the input selected to visible
-				// 		const button_remove = targetDate.parentNode.querySelector('.remove')
-				// 		if (button_remove) {
-				// 			button_remove.classList.remove("display_none")
-				// 		}
-				// }
-				// if (targetDate.matches('i')) {
-				// 		const button_email_send = targetDate.parentNode.querySelector('.calendar')
-				// 		if (button_email_send) {
-				// 			button_email_send.classList.remove("display_none")
-				// 		}
-				// }
-
-			//if (e.target.matches('input[type="text"]') && date_mode != 'period' && date_mode != 'time') {
 			if (e.target.matches('.calendar') && date_mode!=='period' && date_mode!=='time') {
-			//if (date_mode != 'period' && date_mode != 'time') {
-
-				//console.log("e.target.parentNode.parentNode:",e.target.parentNode.parentNode);
-
-				// // set the button_remove associated to the input selected to visible
-				// 	const button_remove = e.target.parentNode.parentNode.querySelector('.remove')
-				// 		console.log("button_remove:",button_remove);
-				// 	if (button_remove) {
-				// 		button_remove.classList.remove("display_none")
-				// 	}
-
-				//ui.component.show_button(e.target.parentNode.parentNode, '.remove')
-
 
 				const datePicker = flatpickr(e.target, {
 					onClose 	  : self.close_flatpickr,
@@ -419,8 +377,12 @@ const input_element_range = (i, current_value, inputs_container, self) => {
 
 	const date_mode = self.get_date_mode()
 
-	const input_value_start	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode)	: ''
-	const input_value_end	= (current_value && current_value.end) ? self.get_dd_timestamp(current_value.end, date_mode) 		: ''
+	const input_value_start	= (current_value && current_value.start)
+		? self.get_dd_timestamp(current_value.start, date_mode)
+		: ''
+	const input_value_end	= (current_value && current_value.end)
+		? self.get_dd_timestamp(current_value.end, date_mode)
+		: ''
 
 		input_element_flatpicker(i, 'range_start', input_value_start, inputs_container, self)
 
@@ -538,7 +500,9 @@ const input_element_time = (i, current_value, inputs_container, self) => {
 export const input_element_default = (i, current_value, inputs_container, self) => {
 
 	const date_mode		= self.get_date_mode()
-	const input_value	= (current_value && current_value.start) ? self.get_dd_timestamp(current_value.start, date_mode) : ''
+	const input_value	= (current_value && current_value.start)
+		? self.get_dd_timestamp(current_value.start, date_mode)
+		: ''
 
 	input_element_flatpicker(i, 'default', input_value, inputs_container, self)
 
