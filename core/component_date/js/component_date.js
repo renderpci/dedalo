@@ -34,7 +34,7 @@ export const component_date = function(){
 
 	this.tools			= null
 
-	this.separator		= '-'
+	this.separator		= '/'
 	this.separator_time	= ':'
 
 	return true
@@ -125,7 +125,7 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 	const second 	= (date.second) ? date.second : 0
 	const ms 		= (date.ms) ? date.ms : 0
 
- 	let datetime 	= new Date(year, month, day, hour, minute, second)
+ 	const datetime 	= new Date(year, month, day, hour, minute, second)
  	let options 	= ''
  	let dateString  = ''
 
@@ -141,33 +141,12 @@ component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=t
 		} else if(day === 0){
 			dateString 	= dateString.concat(month,self.separator,year)
 		} else {
-			dateString 	= (locale != 'us') ? dateString.concat(day,self.separator,month,self.separator,year) : dateString.concat(month,self.separator,day,self.separator,year)
+			dateString 	= (locale != 'us')
+			? dateString.concat(day,self.separator,month,self.separator,year)
+			: dateString.concat(month,self.separator,day,self.separator,year)
 		}
 
 	}
-
- 	//datetime.setMilliseconds(123);
-	//console.log("datetime:",datetime.getMilliseconds());
-	//let options_date = (year!=0) ? {year: 'numeric'}: null
-	//let options = (options_date) ? options_date.month = '2-digit' : null
-
-	//const options_time 	=
-
-	//const options = (date_mode === 'time') ? {hour: '2-digit', minute: '2-digit', second: '2-digit'} : {year: 'numeric', month: '2-digit', day: '2-digit'};
-
-	//padding=true --> 	'2-digit'
-	//padding=false --> 'numeric'
-
-	//"dd/MM/yyyy HH:mm:ss fff"
-
-	/* OLD WORLD no compatible with negative years, etc..
-	$time       	= mktime($hour,$minute,$second,$month,$day,$year);
-	$dd_timestamp   = date($date_format, $time);
-	*/
-
-	//const date_timestamp = str_replace( array('Y','m','d','H','i','s','u'),
-	//							 array($year,$month,$day,$hour,$minute,$second,$ms),
-	//							 $date_format);
 
 	if (dateString==='') {
 		dateString = (date_mode==='time')
@@ -201,11 +180,7 @@ component_date.prototype.get_locale_value = function () {
 			break;
 	}
 
-	// Format date using locale format
-		//const locale_value = get_locale_from_code(page_globals.dedalo_data_lang)
-		//result = result.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
-
-	return 'es-ES' //locale_value
+	return locale_value
 }//end get_locale_value
 
 
@@ -372,12 +347,6 @@ component_date.prototype.convert_date_to_seconds = function(dd_date, mode) {
 		if (isNaN(time)) {
 			time = false;
 		}
-
-
-	//if(SHOW_DEBUG===true) {
-	//	console.log("[component_date.convert_date_to_seconds] dd_date,mode:", dd_date, mode);
-	//	console.log("[component_date.convert_date_to_seconds] Result time: ",time);
-	//}
 
 	return time
 }//end convert_date_to_seconds
