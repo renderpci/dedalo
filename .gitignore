@@ -87,7 +87,7 @@ core/tools/tool_layout_print/print_pdf/*
 # Automatic created files
 cookie_auth.php
 core/common/css/structure.css
-core/common/js/lang/*
+# core/common/js/lang/*
 *.log
 
 # Ignore default text files
