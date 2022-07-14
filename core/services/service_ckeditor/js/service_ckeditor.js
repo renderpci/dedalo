@@ -330,18 +330,14 @@ export const service_ckeditor = function() {
 
 			// click event
 			editor.editing.view.document.on('mouseup', function(evt, data ) {
-				
+
 				// get the name of the node clicked, 'img' 'p' 'div', etc
-				const click_element = data.target.name
+					const click_element = data.target.name
 
 				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
-				if(click_element==='img'){
-					return
-				}
-
-
-					console.log("mouseup:");
-
+					if(click_element==='img'){
+						return
+					}
 
 				if (custom_events.MouseUp) {
 					// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
