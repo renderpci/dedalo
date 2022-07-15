@@ -27,13 +27,14 @@ class ontology {
 
 	/**
 	* EXPORT
-	* @return object $data
+	* @param string $tipo
+	* @return array $ar_data
 	*/
-	public static function export(string $tipo) {
+	public static function export(string $tipo) : array {
 
-		$data = ontology::parse($tipo);
+		$ar_data = ontology::parse($tipo);
 
-		return $data;
+		return $ar_data;
 	}//end export
 
 
