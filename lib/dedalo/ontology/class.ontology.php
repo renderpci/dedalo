@@ -42,6 +42,7 @@ class ontology {
 	/**
 	* PARSE
 	* Get and convert ontology term and children to JSON format
+	* @param string $tipo
 	* @return array $ar_data
 	*/
 	public static function parse(string $tipo) : array {
