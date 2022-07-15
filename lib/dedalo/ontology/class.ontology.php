@@ -68,6 +68,7 @@ class ontology {
 	* TIPO_TO_JSON_ITEM
 	* Resolve full ontology item data from tipo
 	* @param string $tipo
+	* @param array $request_options = [....]
 	* @return object $item
 	*/
 	public static function tipo_to_json_item(string $tipo, array $request_options=[
