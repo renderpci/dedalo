@@ -2714,6 +2714,9 @@
 		Updated swagger.json file in publication API server docu from 1.0.21 to 1.0.22
 		Fixed component_geolocation method get_diffusion_value_as_geojson check issue when value is empty
 		Fixed bug search_tipos when value is array (component_relation_children, component_relation_parent)
+		Fixed compare null values error on tool_ts_print
+		Fixed open_data_link inspector function issues with non Apache servers
+		Fixed ontology class wrong type definition
 
 
 	Queue build
@@ -2749,7 +2752,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-07-2022T13:02:25');
+	define('DEDALO_BUILD'	, '15-07-2022T11:17:10');
 
 
 	/*
