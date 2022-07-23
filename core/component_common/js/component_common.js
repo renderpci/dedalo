@@ -999,11 +999,12 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				context			: current_context,
 				// data			: current_data,
 				datum			: self.datum,
-				row_key 		: i,
+				row_key			: i,
 				paginated_key	: locator.paginated_key, // used by autocomplete / portal
 				caller			: self,
 				columns_map		: self.columns_map,
-				column_id		: self.column_id
+				column_id		: self.column_id,
+				locator			: locator
 			}
 
 			// id_variant . Propagate a custom instance id to children
