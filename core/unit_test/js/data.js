@@ -78,7 +78,7 @@ import {component_date} from '../../component_date/js/component_date.js'
 		let day		= random_number(30) || 1
 		let month	= random_number(12) || 1
 		let year	= random_number(2022) || 1
-		const time	= component_date.prototype.convert_date_to_seconds({
+		const time	= convert_date_to_seconds({
 			day		: day,
 			month	: month,
 			year	: year
@@ -86,14 +86,86 @@ import {component_date} from '../../component_date/js/component_date.js'
 
 		const value =  {
 			start : {
-				day		: day,
-				time	: time,
 				year	: year,
-				month	: month
+				month	: month,
+				day		: day,
+				time	: time
 			}
 		}
 		return value
 	}
+
+	function convert_date_to_seconds(dd_date, mode) {
+
+		let time = 0;
+
+		let year 	= parseInt(dd_date.year);
+		let month 	= parseInt(dd_date.month)
+		let day 	= parseInt(dd_date.day)
+		let hour 	= parseInt(dd_date.hour)
+		let minute	= parseInt(dd_date.minute)
+		let second 	= parseInt(dd_date.second)
+
+			if (mode==='period') {
+				// Nothing to do here
+			}else{
+				// Normal cases
+				if(month && month>0) {
+					month = month-1
+				}
+				if(day && day>0) {
+					day = day-1
+				}
+			}
+
+			// Set to zero on no value (preserve negatives always)
+			if (isNaN(year)) {
+				year = 0;
+			}
+			if (isNaN(month)) {
+				month = 0;
+			}
+			if (isNaN(day)) {
+				day = 0;
+			}
+			if (isNaN(hour)) {
+				hour = 0;
+			}
+			if (isNaN(minute)) {
+				minute = 0;
+			}
+			if (isNaN(second)) {
+				second = 0;
+			}
+
+
+			// Add years (using virtual years of 372 days (31*12)
+			time += year*372*24*60*60
+
+			// Add months (using virtual months of 31 days)
+			time += month*31*24*60*60
+
+			// Add days
+			time += day*24*60*60
+
+			// Add hours
+			time += hour*60*60
+
+			// Add minutes
+			time += minute*60
+
+			// Add seconds
+			time += second
+
+
+			time = parseInt(time);
+
+			if (isNaN(time)) {
+				time = false;
+			}
+
+		return time
+	}//end convert_date_to_seconds
 
 	export const random_email = function() {
 		let result				= ''
