@@ -78,10 +78,22 @@
 
 
 // time zone (for backups archive names)
-	define('DEDALO_TIMEZONE', 'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
+	define('DEDALO_TIMEZONE', 'Europe/Madrid');
+	date_default_timezone_set(DEDALO_TIMEZONE);
+
+
+
+// locale options
 	// set locale ('en_ES' Spanish for example) es_ES | en_EN | ...
 	// For Mac, use format as 'es_ES'. For Linux as 'es_ES.utf8'
-	setlocale(LC_ALL, 'es_ES');
+	define('DEDALO_LOCALE', 'es-ES');
+	setlocale(LC_ALL, DEDALO_LOCALE);
+	// date order, used to input and output dates in different order
+	// options:
+	// dmy = common way order day/moth/year
+	// mdy = USA way order moth/day/year
+	// ymd = China, Japan, Korean, Iran way year/month/day
+	define('DEDALO_DATE_ORDER', 'dmy');
 
 
 
