@@ -259,10 +259,10 @@ const rebuild_columns_map = async function(self) {
 render_list_section.render_column_id = function(options){
 
 	// options
-		const self					= options.caller
+		const self					= options.caller // object instance, usually section or portal
 		const section_id			= options.section_id
 		const section_tipo			= options.section_tipo
-		const offset				= options.offset
+		const offset				= options.offset // int . Current item offset in all result
 		// const matrix_id			= options.matrix_id
 		// const modification_date	= options.modification_date
 
@@ -277,6 +277,9 @@ render_list_section.render_column_id = function(options){
 			class_name		: 'section_id',
 			text_content	: section_id
 		})
+		if(SHOW_DEBUG===true) {
+			section_id_node.title = 'offset: ' + offset
+		}
 
 	// buttons
 		switch(true){
@@ -498,16 +501,10 @@ render_list_section.render_column_id = function(options){
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
-							button_edit.addEventListener("click", function(){
+							button_edit.addEventListener('click', function(){
 
-								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo	= clone(self.rqo_config.sqo)
-									sqo.limit	= 1
-									sqo.offset	= offset
-
-								const user_navigation_rqo = {
-									caller_id	: self.id,
-									source		: {
+								// source
+									const source = {
 										action			: 'search',
 										model			: self.model, // 'section'
 										tipo			: section_tipo,
@@ -515,10 +512,20 @@ render_list_section.render_column_id = function(options){
 										// section_id	: section_id, // (!) enabling affect local db stored rqo's
 										mode			: 'edit',
 										lang			: self.lang
-									},
-									sqo : sqo
-								}
-								event_manager.publish('user_navigation', user_navigation_rqo)
+									}
+
+								// sqo. Note that sqo will be used as request_config.sqo on navigate
+									const sqo	= clone(self.rqo_config.sqo)
+									sqo.limit	= 1
+									sqo.offset	= offset
+
+								// user_navigation
+									const user_navigation_rqo = {
+										caller_id	: self.id,
+										source		: source,
+										sqo			: sqo
+									}
+									event_manager.publish('user_navigation', user_navigation_rqo)
 							})
 							button_edit.appendChild(section_id_node)
 
@@ -542,19 +549,37 @@ render_list_section.render_column_id = function(options){
 								parent			: fragment
 							})
 							delete_button.addEventListener("click", function(){
-								event_manager.publish('delete_section_' + options.caller.id, {
-									section_tipo	: section_tipo,
-									section_id		: section_id,
-									caller			: options.caller, // section
-									sqo				: {
-										section_tipo		: [section_tipo],
-										filter_by_locators	: [{
-											section_tipo	: section_tipo,
-											section_id		: section_id
-										}],
-										limit				: 1
-									}
-								})
+
+								// DES
+									// event_manager.publish('delete_section_' + options.caller.id, {
+									// 	section_tipo	: section_tipo,
+									// 	section_id		: section_id,
+									// 	caller			: options.caller, // section
+									// 	sqo				: {
+									// 		section_tipo		: [section_tipo],
+									// 		filter_by_locators	: [{
+									// 			section_tipo	: section_tipo,
+									// 			section_id		: section_id
+									// 		}],
+									// 		limit				: 1
+									// 	}
+									// })
+
+
+								// delete_record
+									self.delete_record({
+										section			: self,
+										section_id		: section_id,
+										section_tipo	: section_tipo,
+										sqo				: {
+											section_tipo		: [section_tipo],
+											filter_by_locators	: [{
+												section_tipo	: section_tipo,
+												section_id		: section_id
+											}],
+											limit				: 1
+										}
+									})
 							})
 						// delete_icon
 							ui.create_dom_element({

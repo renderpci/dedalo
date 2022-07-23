@@ -137,9 +137,12 @@ section.prototype.init = async function(options) {
 		self.permissions		= options.permissions || null
 
 		// columns_map
-		self.columns_map 		= options.columns_map || []
+		self.columns_map		= options.columns_map || []
 
-		self.config 			= options.config || null
+		// config
+		self.config				= options.config || null
+
+
 
 	// event subscriptions
 		// new_section_ event
@@ -184,34 +187,35 @@ section.prototype.init = async function(options) {
 				}
 			}//end fn_create_new_section
 
-		// delete_section_ event
-			self.events_tokens.push(
-				event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
-			)
-			async function fn_delete_section(options) {
 
-				// options
-					const section_id	= options.section_id
-					const section_tipo	= options.section_tipo
-					const section		= options.caller
-					const sqo			= options.sqo ||
-						{
-							section_tipo		: [section_tipo],
-							filter_by_locators	: [{
-								section_tipo	: section_tipo,
-								section_id		: section_id
-							}],
-							limit				: 1
-						}
+		// delete_section_ event. (!) Moved to self button delete in render_section_list
+			// self.events_tokens.push(
+			// 	event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
+			// )
+			// async function fn_delete_section(options) {
+			// 	console.log("-> delete_section_ options:", self.id, options);
+			// 	// options
+			// 		const section_id	= options.section_id
+			// 		const section_tipo	= options.section_tipo
+			// 		const section		= options.caller
+			// 		const sqo			= options.sqo ||
+			// 			{
+			// 				section_tipo		: [section_tipo],
+			// 				filter_by_locators	: [{
+			// 					section_tipo	: section_tipo,
+			// 					section_id		: section_id
+			// 				}],
+			// 				limit				: 1
+			// 			}
 
-				// delete_record
-					self.delete_record({
-						section			: section,
-						section_id		: section_id,
-						section_tipo	: section_tipo,
-						sqo				: sqo
-					})
-			}//end fn_create_new_section
+			// 	// delete_record
+			// 		self.delete_record({
+			// 			section			: section,
+			// 			section_id		: section_id,
+			// 			section_tipo	: section_tipo,
+			// 			sqo				: sqo
+			// 		})
+			// }//end fn_create_new_section
 
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
 			self.events_tokens.push(
@@ -508,13 +512,14 @@ section.prototype.build = async function(autoload=false) {
 								// fix new offset value
 									self.rqo_config.sqo.offset	= offset
 									self.rqo.sqo.offset			= offset
-
 								// set_local_db_data updated rqo
-									// const rqo = self.rqo
-									// data_manager.set_local_db_data(
-									// 	rqo,
-									// 	'rqo'
-									// )
+									if (self.mode==='list') {
+										const rqo = self.rqo
+										data_manager.set_local_db_data(
+											rqo,
+											'rqo'
+										)
+									}
 							},
 							true // bool navigation_history save
 						)
@@ -780,7 +785,6 @@ section.prototype.delete_section = async function (options) {
 			self.refresh()
 		}
 
-
 	return true
 }//end delete_section
 
@@ -807,6 +811,7 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 	// callback execute
 		if (callback) {
 			await callback()
+
 			if(SHOW_DEBUG===true) {
 				// console.log("-> Executed section navigate received callback:", callback);
 			}
@@ -842,7 +847,6 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 					url		: url
 				})
 		}
-
 
 	return true
 }//end navigate
