@@ -1,6 +1,6 @@
 <?php
 	
-	# CONTROLLER	
+	# CONTROLLER
 	
 	$tipo					= $this->get_tipo();
 	$modo					= $this->get_modo();
