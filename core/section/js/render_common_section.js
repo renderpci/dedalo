@@ -36,13 +36,20 @@ render_common_section.prototype.delete_record = (options) => {
 		const section_tipo	= options.section_tipo
 		const sqo			= options.sqo
 
+	// short vars
+		const total	= section.total
+
 	// header
 		const header = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'header label',
-			text_content	: get_label.delete || 'Delete'
+			class_name		: 'header'
 		})
-
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+			parent			: header
+		})
 
 	// body
 		const body = ui.create_dom_element({
@@ -54,7 +61,11 @@ render_common_section.prototype.delete_record = (options) => {
 			if (section_id) {
 
 				// relation_list
-					const relation_list = render_relation_list(options)
+					const relation_list = render_relation_list({
+						section			: section,
+						section_id		: section_id,
+						section_tipo	: section_tipo
+					})
 					body.appendChild(relation_list)
 			}else{
 
@@ -66,7 +77,7 @@ render_common_section.prototype.delete_record = (options) => {
 						inner_html		:
 							(get_label.warning || 'Warning') + '. ' +
 							(get_label.delete_found_records || 'All records found will be deleted.') + ' ' +
-							(get_label.total || 'Total') + ': '  + section.total
+							(get_label.total || 'Total') + ': '  + total
 					})
 			}
 
@@ -124,9 +135,9 @@ render_common_section.prototype.delete_record = (options) => {
 			size	: 'small' // string size big|normal
 		})
 
+
 	return true
 }//end delete_record
-
 
 
 

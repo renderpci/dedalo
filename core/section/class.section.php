@@ -3417,7 +3417,6 @@ class section extends common {
 				? $current_query_object
 				: [$current_query_object];
 
-
 		return $ar_query_object;
 	}//end get_search_query
 
