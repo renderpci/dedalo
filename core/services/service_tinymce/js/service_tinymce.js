@@ -704,5 +704,4 @@ export const service_tinymce = function() {
 
 	return last_tag_id
 	};//end get_last_tag_id
-
 }//end service_tinymce
