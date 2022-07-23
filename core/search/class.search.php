@@ -1496,9 +1496,8 @@ class search {
 
 		// add NULLS LAST for convenience
 			if (!empty($sql_query_order)) {
-				$sql_query_order .= ' NULLS LAST';
+				$sql_query_order .= ' NULLS LAST, section_id ASC';
 			}
-
 		// debug
 			// if(SHOW_DEBUG===true) {
 			// 	debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
@@ -2101,9 +2100,10 @@ class search {
 	/**
 	* RESOLVE_ARRAY_elements
 	* Recursive
+	* @param object $array_elements {"$or":[{...}]}
 	* @return string $sql_where
 	*/
-	public static function resolve_array_elements( array $array_elements, string $component_tipo ) : string {
+	public static function resolve_array_elements( object $array_elements, string $component_tipo ) : string {
 
 		$sql_where = '';
 		#debug_log(__METHOD__." ****** array_elements ".to_string($array_elements), logger::DEBUG);
