@@ -1259,7 +1259,7 @@ final class dd_core_api {
 		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values
 			$sqo_id	= implode('_', [$model, $section_tipo]);
 			$sqo	= !empty($rqo->sqo)
-				? $rqo->sqo
+				? $rqo->sqo // use received sqo
 				: (($model==='section' && ($mode==='edit' || $mode==='list') && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]))
 					? $_SESSION['dedalo']['config']['sqo'][$sqo_id]
 					: (function() use($model, $tipo, $section_tipo, $section_id, $mode, $rqo, $sqo_id, $start_time) {
@@ -1272,9 +1272,9 @@ final class dd_core_api {
 									$user_preset = layout_map::search_user_preset_layout_map(
 										$tipo,
 										$section_tipo,
-										navigator::get_user_id(),
+										navigator::get_user_id(), // int $user_id
 										$mode,
-										$view=null
+										null // view
 									);
 									if (!empty($user_preset)) {
 										$user_preset_rqo = $user_preset->rqo;
