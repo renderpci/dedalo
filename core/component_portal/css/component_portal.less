@@ -26,24 +26,6 @@
 			overflow-x: auto;
 			min-height: @content_data_min_height;
 
-			.view_line& {
-				// background-color: #f0c2fe !important;
-				display: grid;
-
-				.section_record.list {
-					display: flex;
-					// @media screen and (max-width: @width_break_point_1) {
-					// 	flex-wrap: wrap;
-					// }
-
-					.column {
-						display: flex;
-						flex: 0 0 auto;
-						align-items: center;
-					}
-				}
-			}
-
 			ul {
 				// background-color: #55f550;
 				flex: 0 0 100%;
@@ -126,6 +108,52 @@
 
 				.wrapper_component.media {
 
+				}
+			}
+		}
+	}
+
+	&.view_line {
+		>.content_data {
+			// background-color: #f0c2fe !important;
+			display: grid;
+
+			.section_record.list {
+				display: flex;
+				// @media screen and (max-width: @width_break_point_1) {
+				// 	flex-wrap: wrap;
+				// }
+
+				.column {
+					display: flex;
+					flex: 0 0 auto;
+					align-items: center;
+				}
+			}
+		}
+	}
+
+	&.view_indexation {
+
+		>.content_data {
+			// background-color: #ffeccd !important;
+			display: grid;
+
+			.section_record.list {
+				display: flex;
+				// @media screen and (max-width: @width_break_point_1) {
+				// 	flex-wrap: wrap;
+				// }
+
+				.column {
+					display: flex;
+					flex: 0 0 auto;
+					align-items: center;
+
+					>.tags {
+						padding-left: 1rem;
+						padding-right: 1rem;
+					}
 				}
 			}
 		}
