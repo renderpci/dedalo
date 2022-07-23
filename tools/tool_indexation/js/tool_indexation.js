@@ -7,7 +7,7 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
+	import {common} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
@@ -36,6 +36,11 @@ export const tool_indexation = function () {
 	this.transcription_component	= null // component text area where we are working into the tool
 	this.indexing_component			= null // component_relation_index used to store indexation locators
 	this.related_sections_list		= null // datum of related_sections_list (to obtain list of top_section_tipo/id)
+
+	// indexation info notes
+	this.DEDALO_INDEXATION_SECTION_TIPO		= 'rsc377'
+	this.DEDALO_INDEXATION_TITLE_TIPO		= 'rsc379'
+	this.DEDALO_INDEXATION_DESCRIPTION_TIPO	= 'rsc380'
 
 
 	return true
@@ -135,10 +140,18 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
 			)
 			function fn_click_no_tag() {
-				const toggle_node = self.tag_info_container // self.info_container
-				if (!toggle_node.classList.contains('hide')) {
-					toggle_node.classList.add('hide')
-				}
+				// reset selection
+					self.active_tag_id = null
+
+				// tag_info_container . Hide
+					if (!self.tag_info_container.classList.contains('hide')) {
+						self.tag_info_container.classList.add('hide')
+					}
+
+				// indexation_note_container . Clean
+					while (self.indexation_note.lastChild) {
+						self.indexation_note.removeChild(self.indexation_note.lastChild)
+					}
 			}
 
 		// click_tag_index_. Observe user tag selection in text area.
@@ -147,7 +160,7 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('click_tag_index_'+ id_base, fn_click_tag_index)
 			)
 			function fn_click_tag_index(options) {
-				dd_console(`+++++++ click_tag_index '${options}'`, 'DEBUG', options)
+				dd_console(`+++++++ click_tag_index`, 'DEBUG', options)
 
 				// options
 					const caller			= options.caller // instance of component text area
@@ -157,6 +170,7 @@ tool_indexation.prototype.init = async function(options) {
 				// short vars
 					const tag_id	= tag.tag_id
 					const state		= tag.state
+					const data		= tag.data
 
 				// fix selected tag
 					self.active_tag_id = tag_id
@@ -172,6 +186,19 @@ tool_indexation.prototype.init = async function(options) {
 							value	: state
 						}
 					])
+
+				// indexation_note
+					self.render_indexation_note(tag)
+					.then(function(tag_note_node){
+						if (tag_note_node) {
+							// container. Get and clean
+							const container	= self.indexation_note
+							while (container.lastChild) {
+								container.removeChild(container.lastChild)
+							}
+							container.appendChild(tag_note_node)
+						}
+					})
 
 				return true
 			}//end fn_click_tag_index
@@ -569,6 +596,8 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 /**
 * ACTIVE_VALUE
 * Set value as 'active'. That's mean current value is frequently updated by events
+* @param string name
+* @param function callback
 * @return boolean
 */
 tool_indexation.prototype.active_value = function(name, callback) {
@@ -601,9 +630,20 @@ tool_indexation.prototype.active_value = function(name, callback) {
 /**
 * UPDATE_ACTIVE_VALUES
 * Update all values registered as 'active_value' on fire event
-* @return boolean
+* calling attached callback function
+* @param array values
+* 	Array of objects as
+* 	[
+* 	  {
+* 		name : 'tag_id',
+* 		value : '3'
+* 	  },
+* 	  ..
+* 	]
+* @return boolean true
 */
 tool_indexation.prototype.update_active_values = function(values) {
+
 
 	for (let i = 0; i < values.length; i++) {
 
@@ -618,7 +658,10 @@ tool_indexation.prototype.update_active_values = function(values) {
 			}
 		}
 	}
-	// console.log("Fired update_active_values self.active_elements list:", self.active_elements);
+
+	// debug
+		// console.log("Fired update_active_values self.active_elements list:", self.active_elements);
+
 
 	return true
 }//end update_active_values
@@ -708,49 +751,3 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 		resolve(response)
 	})
 }//end delete_tag
-
-
-
-/**
-* CHANGE_TAG_STATE
-* @return promise
-*/
-	// tool_indexation.prototype.change_tag_state = async function(tag_id, value) {
-
-	// 	const self = this
-
-	// 	// text area update tag
-
-
-	// 	return
-
-	// 	// // source. Note that second argument is the name of the function to manage the tool request like 'change_tag_state'
-	// 	// // this generates a call as my_tool_name::my_function_name(arguments)
-	// 	// 	const source = create_source(self, 'change_tag_state')
-	// 	// 	// add the necessary arguments used in the given function
-	// 	// 	source.arguments = {
-	// 	// 		section_tipo			: self.transcription_component.section_tipo, // current component_text_area section_tipo
-	// 	// 		section_id				: self.transcription_component.section_id, // component_text_area section_id
-	// 	// 		transcription_component_tipo		: self.transcription_component.tipo, // component_text_area tipo
-	// 	// 		transcription_component_lang		: self.transcription_component.lang, // component_text_area lang
-	// 	// 		tag_id					: tag_id, // current selected tag (passed as param)
-	// 	// 		state					: value // string like 'r'
-	// 	// 	}
-
-	// 	// // rqo
-	// 	// 	const rqo = {
-	// 	// 		dd_api	: 'dd_tools_api',
-	// 	// 		action	: 'tool_request',
-	// 	// 		source	: source
-	// 	// 	}
-
-	// 	// // call to the API, fetch data and get response
-	// 	// 	return new Promise(function(resolve){
-
-	// 	// 		data_manager.request({body : rqo})
-	// 	// 		.then(function(response){
-	// 	// 			console.warn("-> change_tag_state API response:",response);
-	// 	// 			resolve(response)
-	// 	// 		})
-	// 	// 	})
-	// }//end change_tag_state

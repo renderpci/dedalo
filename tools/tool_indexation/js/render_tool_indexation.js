@@ -4,7 +4,8 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {when_in_viewport} from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import Split from '../../../lib/split/dist/split.es.js'
 
@@ -59,31 +60,28 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 /**
 * GET_CONTENT_DATA_EDIT
+* Render tool content_data
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// left_container. area thesaurus (left)
+	// left_container (area thesaurus)
 		const left_container = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'left_container',
 			class_name		: 'left_container',
 			parent			: fragment
 		})
-		// const thesaurus = self.get_thesaurus()
-		// thesaurus.then(function(thesaurus_instance){
-		// 	thesaurus_instance.render().then(function(node){
-		// 		left_container.appendChild(node)
-		// 	})
-		// })
-		self.area_thesaurus.render()
-		.then(function(node){
-			left_container.appendChild(node)
-		})
 
-	// right_container
+		// thesaurus render
+			self.area_thesaurus.render()
+			.then(function(node){
+				left_container.appendChild(node)
+			})
+
+	// right_container (component_text_area && component_portal)
 		const right_container = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'right_container',
@@ -91,7 +89,7 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-		// transcription_component
+		// transcription_component (component_text_area)
 			const transcription_component_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'transcription_component_container',
@@ -132,13 +130,12 @@ const get_content_data_edit = async function(self) {
 
 				transcription_component_container.appendChild(lang_selector)
 
-			// component. render another node of component caller and append to container
+			// transcription_component. render another node of component caller and append to container
 				const transcription_component = self.transcription_component || await self.get_component(self.lang)
 				// set auto_init_editor = true to force init edidor instead use user click to activate it
 				transcription_component.auto_init_editor = true
 				transcription_component.render()
 				.then(function(node){
-
 					transcription_component_container.appendChild(node)
 				})
 				// self.caller.render()
@@ -155,33 +152,112 @@ const get_content_data_edit = async function(self) {
 			// fix
 			self.info_container = info_container
 
-		// indexation component
-			const component_indexing_container = ui.create_dom_element({
+		// tag_info
+			const tag_info = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'component_indexing_container',
-				parent			: right_container
-			})
-			self.indexing_component.render()
-			.then(function(indexing_component_node){
-				component_indexing_container.appendChild(indexing_component_node)
+				class_name		: 'tag_info',
+				parent			: info_container
 			})
 
-	// content_data
-		const content_data = ui.tool.build_content_data(self)
-		content_data.appendChild(fragment)
+		// tag_info_container. line info about tag
+			const tag_info_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tag_info_container hide',
+				parent			: tag_info
+			})
+			// fix node
+			self.tag_info_container = tag_info_container
+
+			// tabs label Indexation
+				const tab_indexation = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tab_label active',
+					inner_html		: 'Indexation',
+					parent			: info_container
+				})
+				tab_indexation.addEventListener('click', function(e){
+					e.stopPropagation()
+					component_indexing_container.classList.add('active')
+					if (indexation_note.classList.contains('active')) {
+						indexation_note.classList.remove('active')
+					}
+					this.classList.add('active')
+					if (tab_info.classList.contains('active')) {
+						tab_info.classList.remove('active')
+					}
+				})
+			// tabs label Info
+				const tab_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tab_label',
+					inner_html		: 'Info',
+					parent			: info_container
+				})
+				tab_info.addEventListener('click', function(e){
+					e.stopPropagation()
+					indexation_note.classList.add('active')
+					if (component_indexing_container.classList.contains('active')) {
+						component_indexing_container.classList.remove('active')
+					}
+					this.classList.add('active')
+					if (tab_indexation.classList.contains('active')) {
+						tab_indexation.classList.remove('active')
+					}
+				})
+
+		// indexation_container
+			const indexation_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'indexation_container',
+				parent			: right_container
+			})
+
+			// indexing_component (component_portal)
+				const component_indexing_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'component_indexing_container tab active',
+					parent			: indexation_container
+				})
+				// self.indexing_component.context.view	= 'indexation' // set indexation as render view
+				// self.indexing_component.autocomplete	= false // prevent load autocomplete service
+				self.indexing_component.render()
+				.then(function(indexing_component_node){
+					component_indexing_container.appendChild(indexing_component_node)
+				})
+
+			// info (indexation note)
+				const indexation_note = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'indexation_note tab',
+					parent			: indexation_container
+				})
+				// fix
+				self.indexation_note = indexation_note
+				// self.indexing_component.render()
+				// .then(function(indexing_component_node){
+				// 	component_indexing_container.appendChild(indexing_component_node)
+				// })
 
 	// split
 	// @see https://github.com/nathancahill/split/tree/master/packages/splitjs
-		event_manager.when_in_viewport(
+		when_in_viewport(
 			left_container, // node to observe
 			() => { // callback
+				// don't add on small windows
+				if (window.innerWidth<800) {
+					return
+				}
 				Split(['#left_container', '#right_container'], {
 					sizes: [45, 55],
 					minSize: '40%'
 				});
-				console.log("activated Split:", Split);
+				// console.log("activated Split:", Split);
 			}
 		)
+
+	// content_data
+		const content_data = ui.tool.build_content_data(self)
+		content_data.appendChild(fragment)
 
 
 	return content_data
@@ -201,21 +277,24 @@ const get_tag_info = function(self) {
 	// tag_id. Set on every user tag item click
 		let tag_id	= ''
 
+	// short vars
+		const tag_info_container = self.tag_info_container
+
 	// info container
-		const info_container = self.info_container
+		// const info_container = self.info_container
 		// clean previous nodes
-		while (info_container.lastChild) {
-			info_container.removeChild(info_container.lastChild)
-		}
+		// while (info_container.lastChild) {
+		// 	info_container.removeChild(info_container.lastChild)
+		// }
 
 	// tag_info_container. line info about tag
-		const tag_info_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'tag_info_container hide',
-			parent			: info_container
-		})
-		// fix node
-		self.tag_info_container = tag_info_container
+		// const tag_info_container = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'tag_info_container hide',
+		// 	parent			: info_container
+		// })
+		// // fix node
+		// self.tag_info_container = tag_info_container
 
 	// tag id info
 		const fragment_id_info = ui.create_dom_element({
@@ -237,7 +316,7 @@ const get_tag_info = function(self) {
 
 	// state
 		// wrap_tag_state_selector selector
-			const wrap_tag_state_selector = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'wrap_tag_state_selector',
 				inner_html		: get_label.state || 'State',
@@ -286,7 +365,6 @@ const get_tag_info = function(self) {
 				})
 			})
 
-
 	// delete_tag
 		// wrap_delete_tag
 		const wrap_delete_tag = ui.create_dom_element({
@@ -322,7 +400,6 @@ const get_tag_info = function(self) {
 				parent			: wrap_delete_tag
 			})
 
-
 	// active values
 		self.active_value('tag_id', function(value){
 
@@ -331,9 +408,9 @@ const get_tag_info = function(self) {
 			button_delete_label.textContent	= get_label.borrar //  + ' ' + value // update delete label
 
 			// show/hide info_container
-				const toggle_node = self.tag_info_container // self.info_container
-				if (toggle_node.classList.contains('hide')) {
-					toggle_node.classList.remove('hide')
+				if (self.tag_info_container.classList.contains('hide')) {
+					self.tag_info_container.classList.remove('hide')
+
 				}
 		})
 		self.active_value('state', function(value){
@@ -362,31 +439,31 @@ const get_tag_info = function(self) {
 /**
 * ADD_COMPONENT
 */
-export const add_component = async (self, component_container, value) => {
+	// export const add_component = async (self, component_container, value) => {
 
-	// user select blank value case
-		if (!value) {
-			while (component_container.firstChild) {
-				// remove node from dom (not component instance)
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
-		}
+	// 	// user select blank value case
+	// 		if (!value) {
+	// 			while (component_container.firstChild) {
+	// 				// remove node from dom (not component instance)
+	// 				component_container.removeChild(component_container.firstChild)
+	// 			}
+	// 			return false
+	// 		}
 
-	const component	= await self.load_component(value)
-	const node		= await component.render()
+	// 	const component	= await self.load_component(value)
+	// 	const node		= await component.render()
 
-	// clean container
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
-		}
+	// 	// clean container
+	// 		while (component_container.firstChild) {
+	// 			component_container.removeChild(component_container.firstChild)
+	// 		}
 
-	// append node
-		component_container.appendChild(node)
+	// 	// append node
+	// 		component_container.appendChild(node)
 
 
-	return true
-}//end add_component
+	// 	return true
+	// }//end add_component
 
 
 
