@@ -207,18 +207,21 @@ class dd_elements {
 
 
 	/**
-	* RENDERBTNADDINDEXACION. crea el botón de añadir indexación en modo index o el de relacionar los términos en modo ts edit
+	* RENDERBTNADDINDEXACION.
+	* Crea el botón de añadir indexación en modo index o el de relacionar los términos en modo ts edit
+	* @param string $terminoID
+	* @param string $termino
+	* @return string $node
 	*/
 	protected static function renderBtnAddIndexacion(string $terminoID, string $termino) : string {
 		global $anyadir_title, $asociar_descriptor_title;
 
-		$obj = '';
+		$node = '';
+		$node .= " <div class=\"add_index_btn \" data-termino_id=\"$terminoID\" data-termino=\"$termino\" title=\"$asociar_descriptor_title $terminoID\" ";
+		$node .= "onmousedown=\"dd.add_index_common(this)\" ";
+		$node .= '></div>';
 
-		$obj .= " <div class=\"add_index_btn \" data-termino_id=\"$terminoID\" data-termino=\"$termino\" title=\"$asociar_descriptor_title $terminoID\" ";
-		$obj .= "onmousedown=\"dd.add_index_common(this)\" ";
-		$obj .= '></div>';
-
-		return $obj ;
+		return $node;
 	}//end renderBtnAddIndexacion
 
 
