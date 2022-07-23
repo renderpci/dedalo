@@ -257,38 +257,60 @@ render_menu.prototype.edit = async function() {
 					current_instance = instance
 				}
 			}
-			section_label.addEventListener("click", e => {
+			section_label.addEventListener('click', async (e) => {
 				e.stopPropagation();
 
 				// navigate browser from edit to list
-				if (current_instance.mode==='edit'){
+				// Note that internal navigation (based on injected browser history) uses the stored local database
+				// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
+				// preserve offset and order
+				if (current_instance.mode==='edit') {
 
-					// event_manager.publish('user_navigation', {
-					// 	source : {
-					// 		tipo	: current_instance.tipo,
-					// 		model	: current_instance.model,
-					// 		mode	: 'list'
-					// 	}
-					// })
-
-					const user_navigation_rqo = {
-						caller_id	: self.id,
-						source		: {
-							action			: 'search',
-							model			: current_instance.model, // section
-							tipo			: current_instance.tipo,
-							section_tipo	: current_instance.section_tipo,
-							mode			: 'list',
-							lang			: current_instance.lang
-						},
-						sqo			: { // new sqo to use in list mode
-							section_tipo	: current_instance.rqo_config.sqo.section_tipo,
-							filter			: current_instance.rqo_config.sqo.filter,
-							offset			: 0,
-							order			: current_instance.rqo.sqo.order || null
+					// local_db_data. On section paginate, local_db_data is saved. Recover saved rqo here to
+					// go to list mode in the same position (offset) that the user saw
+						const list_id_expected	= current_instance.id.replace('_edit_','_list_')
+						const saved_rqo			= await data_manager.get_local_db_data(
+							list_id_expected,
+							'rqo'
+						)
+						if(SHOW_DEBUG===true) {
+							// console.log('-------------- saved_rqo:', list_id_expected, saved_rqo);
 						}
-					}
-					event_manager.publish('user_navigation', user_navigation_rqo)
+
+					// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
+					// The list offset will be get from server session if exists
+						const sqo = saved_rqo && saved_rqo.sqo
+							? saved_rqo.sqo
+							: {
+								filter	: current_instance.rqo.sqo.filter,
+								order	: current_instance.rqo.sqo.order || null,
+								offset	: current_instance.offset_list
+							 }
+						sqo.section_tipo = current_instance.rqo_config.sqo.section_tipo // always use rqo_config format
+						if(SHOW_DEBUG===true) {
+							// console.log("---- fn_update_section_label sqo:", sqo.offset, sqo);
+							// console.log("---- fn_update_section_label current_instance:", current_instance);
+						}
+
+					// source
+						const source = saved_rqo && saved_rqo.source
+							? saved_rqo.source
+							: {
+								action			: 'search',
+								model			: current_instance.model, // section
+								tipo			: current_instance.tipo,
+								section_tipo	: current_instance.section_tipo,
+								mode			: 'list',
+								lang			: current_instance.lang
+							 }
+
+					// navigation
+						const user_navigation_rqo = {
+							caller_id	: self.id,
+							source		: source,
+							sqo			: sqo  // new sqo to use in list mode
+						}
+						event_manager.publish('user_navigation', user_navigation_rqo)
 				}
 				self.menu_active = false
 			})
