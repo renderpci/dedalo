@@ -160,7 +160,7 @@ component_text_area.prototype.init = async function(options) {
 				const inputs_container		= self.node[key].querySelector('.inputs_container'); // (first ul)
 				const component_container	= inputs_container.querySelector('li'); // li (first li)
 				const button				= component_container.querySelector(".create_fragment") // could exists or not
-
+					// console.log("selection.length:",selection.length);
 				if (selection.length<1) {
 					if (button) {
 						button.remove()
@@ -212,8 +212,6 @@ component_text_area.prototype.init = async function(options) {
 	// service_text_editor
 		// self.service_text_editor	= service_tinymce
 		self.service_text_editor	= service_ckeditor
-
-
 
 	return common_init
 }//end init
@@ -300,6 +298,28 @@ component_text_area.prototype.save_value = function(key, value) {
 
 	return js_promise
 }//end save_value
+
+
+
+/**
+* SAVE_EDITOR
+* Order text_editor[key] to save (only if state is dirty)
+* @return bool result
+*/
+component_text_area.prototype.save_editor = function(key=0) {
+
+	const self = this
+
+	const text_editor = self.service_text_editor_instance[key]
+	if (!text_editor) {
+		console.error('Error on get text_editor from self.service_text_editor_instance: '.self.service_text_editor_instance)
+		return false
+	}
+
+	const result = text_editor.save() // return bool
+
+	return result
+}//end save_editor
 
 
 
@@ -489,7 +509,7 @@ const unwrap_element = function(el) {
 * This method has been unified to allow to use different services in the same way
 * @param object options
 * @return promise
-* 	resolve bool
+* 	resolve bool (Unified component_text_area change-tag method. This method has been unified to allow to use different services in the same way (service_ckeditor, service_tinymce))
 */
 component_text_area.prototype.update_tag = async function(options) {
 
@@ -508,7 +528,7 @@ component_text_area.prototype.update_tag = async function(options) {
 		const tag_id		= options.tag_id
 		const new_data_obj	= options.new_data_obj
 		const key			= options.key || 0
-		// const save		= options.save || false
+		// const save		= options.save || false  (Unified component_text_area change-tag method. This method has been unified to allow to use different services in the same way (service_ckeditor, service_tinymce))
 
 	// ar_type. Could be one like ['tc'] or a pair like ['indeIn','indexOut']
 		const ar_type = (type.indexOf('In')!==-1 || type.indexOf('Out')!==-1)
@@ -590,6 +610,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 
 
 
+
 /**
 * BUILD_VIEW_TAG_OBJ
 * Create a view object from tag info (type, state, label, data, id)
@@ -599,15 +620,19 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 */
 component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 
+	const self = this
+
 	const type			= data_tag.type
 	const state			= data_tag.state
 	const label			= data_tag.label
 	// convert the data_tag to string to be used it in html
-	const data_string	= JSON.stringify(data_tag.data)
+	// const data_string	= JSON.stringify(data_tag.data)
 	// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
 	// json use " but it's not compatible with the data-data storage in html5
-	const data			= data_string.replace(/"/g, '\'')
-
+	// const data			= data_string.replace(/"/g, '\'')
+	const data = data_tag.data
+		? self.tag_data_object_to_string(data_tag.data)
+		: null
 
 	const images_factory_url = "../component_text_area/tag/?id="
 
@@ -654,6 +679,28 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 	return view_tag_obj
 }//end build_view_tag_obj
 
+
+
+/**
+* TAG_DATA_OBJECT_TO_STRING
+* @return string data_string
+*/
+component_text_area.prototype.tag_data_object_to_string = function(data) {
+
+	// check valid object
+		if (typeof data!=='object') {
+			console.log('Error. data must be type object. Current type:', typeof data);
+			return null
+		}
+
+	// convert the data_tag to string to be used it in html
+	// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
+	// json use " but it's not compatible with the data-data storage in html5
+		const data_string = JSON.stringify(data).replace(/"/g, '\'')
+
+
+	return data_string
+}//end tag_data_object_to_string
 
 
 

@@ -932,142 +932,130 @@ class component_text_area extends component_common {
 
 	/**
 	* FIX_BROKEN_INDEX_TAGS
+	* Add missing tags to given raw_text
+	* @see component_text_area.json
+	* @param string $raw_text
 	* @return object $response
+	* {
+	* 	result : string $raw_text,
+	* 	msg : string $msg . Sample: 'Please review position of blue tags'
+	* 	total : string $total . Total time in ms
+	* }
 	*/
-	public function fix_broken_index_tags( bool $save=false ) : object {
+	public function fix_broken_index_tags(string $raw_text) : object {
 		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result = false;
 			$response->msg 	  = null;
 
-		$changed_tags = 0;
+		// short vars
+			$index_tag_id	= 3;
+			$changed_tags	= 0;
 
-		$raw_text = $this->get_dato();
+		// matches_indexIn. index in
+			$pattern = TR::get_mark_pattern(
+				'indexIn', // string mark
+				false // bool standalone
+			);
+			preg_match_all($pattern, $raw_text, $matches_indexIn, PREG_PATTERN_ORDER);
 
-		# INDEX IN
-		$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
-		preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
+		// matches_indexOut. index out
+			$pattern = TR::get_mark_pattern(
+				'indexOut', // string mark
+				false // bool standalone
+			);
+			preg_match_all($pattern,  $raw_text,  $matches_indexOut, PREG_PATTERN_ORDER);
 
-		# INDEX OUT
-		$pattern = TR::get_mark_pattern($mark='indexOut',$standalone=false);
-		preg_match_all($pattern,  $raw_text,  $matches_indexOut, PREG_PATTERN_ORDER);
-
-		$index_tag_id = 3;
-
-		# INDEX IN MISSING
-		$ar_missing_indexIn=array();
-		foreach ($matches_indexOut[$index_tag_id] as $key => $value) {
-			if (!in_array($value, $matches_indexIn[$index_tag_id])) {
-				$tag_out = $matches_indexOut[0][$key];
-				$tag_in  = str_replace('[/', '[', $tag_out);
-				$ar_missing_indexIn[] = $tag_in;
-
-				# Add deleted tag
-				$tag_in   = self::change_tag_state( $tag_in, $state='d', $tag_in );	// Change state to 'd'
-				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
-				$raw_text = str_replace($tag_out, $pair, $raw_text);
-				$changed_tags++;
-			}
-		}
-
-		# INDEX MISSING OUT
-		$ar_missing_indexOut=array();
-		foreach ($matches_indexIn[$index_tag_id] as $key => $value) {
-			if (!in_array($value, $matches_indexOut[$index_tag_id])) {
-				$tag_in  = $matches_indexIn[0][$key];	// As we only have the in tag, we create out tag
-				$tag_out = str_replace('[', '[/', $tag_in);
-				$ar_missing_indexOut[] = $tag_out;
-
-				# Add deleted tag
-				$tag_out   = self::change_tag_state( $tag_out, $state='d', $tag_out );	// Change state to 'd'
-				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
-				$raw_text = str_replace($tag_in, $pair, $raw_text);
-				$changed_tags++;
-			}
-		}
-
-
-		# TESAURUS INDEXATIONS INTEGRITY VERIFY
-		$ar_indexations = $this->get_component_indexations(DEDALO_RELATION_TYPE_INDEX_TIPO); // DEDALO_RELATION_TYPE_STRUCT_TIPO - DEDALO_RELATION_TYPE_INDEX_TIPO
-		$ar_indexations_tag_id = array();
-		foreach ($ar_indexations as $locator) {
-			if(!property_exists($locator,'tag_id')) continue;
-
-			if ($locator->section_tipo===$this->section_tipo &&
-				$locator->section_id==$this->parent &&
-				$locator->component_tipo===$this->tipo &&
-				$locator->type===DEDALO_RELATION_TYPE_INDEX_TIPO
-				) {
-
-				# Add tag_id
-				$ar_indexations_tag_id[] = $locator->tag_id;
-			}
-		}
-		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
-
-
-		# PORTALS POINTERS
-		$ar_portal_pointers = component_portal::get_component_pointers($this->tipo, $this->section_tipo, $this->parent, $tag_id=null);
-		$ar_portal_tag_id = array();
-		foreach ($ar_portal_pointers as $key => $portal_locator) {
-			if (isset($portal_locator->tag_id)) {
-				$ar_portal_tag_id[] = $portal_locator->tag_id;
-			}
-		}
-		#sort($ar_indexations_tag_id);
-
-		# Add portal tags to index tags array
-		$ar_indexations_tag_id = array_merge($ar_indexations_tag_id, $ar_portal_tag_id );
-		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
-
-
-		$added_tags = 0;
-		if (!empty($ar_indexations_tag_id)) {
-
-			$all_text_tags = array_unique(array_merge($matches_indexIn[$index_tag_id], $matches_indexOut[$index_tag_id]));
-
-			foreach ($ar_indexations_tag_id as $current_tag_id) {
-				if (!in_array($current_tag_id, $all_text_tags)) {
-					#$new_pair = "[index-d-{$current_tag_id}][/index-d-{$current_tag_id}] ";
-
-					$tag_in   = TR::build_tag('indexIn',  'd', $current_tag_id, '', '');
-					$tag_out  = TR::build_tag('indexOut', 'd', $current_tag_id, '', '');
-					$new_pair = $tag_in . $tag_out;
-
-					$raw_text = $new_pair . $raw_text;
-					$added_tags++;
+		// index in missing
+			$ar_missing_indexIn=array();
+			foreach ($matches_indexOut[$index_tag_id] as $key => $value) {
+				if (!in_array($value, $matches_indexIn[$index_tag_id])) {
+					$tag_out				= $matches_indexOut[0][$key];
+					$tag_in					= str_replace('[/', '[', $tag_out);
+					$ar_missing_indexIn[]	= $tag_in;
+					// Add deleted tag
+					$tag_in					= self::change_tag_state( $tag_in, $state='d', $tag_in );	// Change state to 'd'
+					$pair					= $tag_in.''.$tag_out;	// concatenate in-out
+					$raw_text				= str_replace($tag_out, $pair, $raw_text);
+					$changed_tags++;
 				}
 			}
-		}//end if (!empty($ar_indexations_tag_id)) {
 
-
-		if ($added_tags>0 || $changed_tags>0) {
-
-			$response->result = true;
-			$response->msg 	  = strtoupper(label::get_label('atencion')).": ";	// WARNING
-
-			if($added_tags>0)
-			$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_borradas'),$added_tags);	// deleted index tags was created at beginning of text.
-
-			if($changed_tags>0)
-			$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_fijadas'),$changed_tags); // broken index tags was fixed.
-
-			$response->msg .= " ".label::get_label('etiquetas_revisar');	// Please review position of blue tags
-
-			# UPDATE MAIN DATO
-			$this->set_dato($raw_text);
-
-			# SAVE
-			if($save===true) {
-				$this->Save();
-				#$response->msg .= ". Text repaired, has been saved.";
-			}else{
-				$response->msg .= " ".label::get_label('etiqueta_salvar_texto'); // and saved text
+		// index out missing
+			$ar_missing_indexOut=array();
+			foreach ($matches_indexIn[$index_tag_id] as $key => $value) {
+				if (!in_array($value, $matches_indexOut[$index_tag_id])) {
+					$tag_in					= $matches_indexIn[0][$key];	// As we only have the in tag, we create out tag
+					$tag_out				= str_replace('[', '[/', $tag_in);
+					$ar_missing_indexOut[]	= $tag_out;
+					# Add deleted tag
+					$tag_out				= self::change_tag_state( $tag_out, $state='d', $tag_out );	// Change state to 'd'
+					$pair					= $tag_in.''.$tag_out;	// concatenate in-out
+					$raw_text				= str_replace($tag_in, $pair, $raw_text);
+					$changed_tags++;
+				}
 			}
 
-			$response->total = round(start_time()-$start_time,4)*1000 ." ms";
-		}
+		// thesaurus indexations integrity verify
+			$ar_indexations				= $this->get_component_indexations();
+			$ar_indexations_tag_id_raw	= array();
+			foreach ($ar_indexations as $locator) {
+				if(!property_exists($locator,'tag_id')) continue;
+				// add tag_id
+				$ar_indexations_tag_id_raw[] = $locator->tag_id;
+			}
+
+		// clean duplicates
+			$ar_indexations_tag_id = array_values(
+				array_unique($ar_indexations_tag_id_raw)
+			);
+
+		// add tags
+			$added_tags = 0;
+			if (!empty($ar_indexations_tag_id)) {
+
+				$all_text_tags = array_unique(
+					array_merge($matches_indexIn[$index_tag_id], $matches_indexOut[$index_tag_id])
+				);
+
+				foreach ($ar_indexations_tag_id as $current_tag_id) {
+					if (!in_array($current_tag_id, $all_text_tags)) {
+						#$new_pair = "[index-d-{$current_tag_id}][/index-d-{$current_tag_id}] ";
+
+						$tag_in		= TR::build_tag('indexIn',  'd', $current_tag_id, '', '');
+						$tag_out	= TR::build_tag('indexOut', 'd', $current_tag_id, '', '');
+						$new_pair	= $tag_in . $tag_out;
+
+						$raw_text	= $new_pair . $raw_text;
+						$added_tags++;
+					}
+				}
+			}//end if (!empty($ar_indexations_tag_id)) {
+
+		// response result
+			$response->result = $raw_text;
+
+		// response messages
+			if ($added_tags>0 || $changed_tags>0) {
+
+				$response->msg 	  = strtoupper(label::get_label('atencion')).": ";	// WARNING
+
+				if($added_tags>0) {
+					// deleted index tags was created at beginning of text.
+					$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_borradas'),$added_tags);
+				}
+
+				if($changed_tags>0) {
+					// broken index tags was fixed.
+					$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_fijadas'),$changed_tags);
+				}
+
+				$response->msg .= ' '.label::get_label('etiquetas_revisar'); // Please review position of blue tags
+
+				$response->total = round(start_time()-$start_time,4)*1000 .' ms';
+			}
+
 
 		return $response;
 	}//end fix_broken_index_tags
@@ -1107,7 +1095,6 @@ class component_text_area extends component_common {
 
 		// 		}else{
 		// 			// Yes. Founded current broken tag in the original lang. Lets go..
-
 		// 			# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
 		// 			# Override tag_in and out calculated with real full data locator
 		// 			$tag_in_full = $matches_indexIn[0][0];
@@ -1152,46 +1139,36 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_COMPONENT_INDEXATIONS (DES)
-	* @return array $ar_indexations
-	*/
-		// public function get_component_indexations_DES( string $type ) {
-
-		// 	# Search relation index in hierarchy tables
-		// 	$options = new stdClass();
-		// 		$options->fields = new stdClass();
-		// 			$options->fields->section_tipo		= $this->section_tipo;
-		// 			$options->fields->section_id		= $this->parent;
-		// 			$options->fields->component_tipo	= $this->tipo;
-		// 			$options->fields->type				= $type;
-
-		// 	$ar_indexations = component_relation_index::get_indexations_search( $options );
-
-		// 	return (array)$ar_indexations;
-		// }//end get_component_indexations
-
-
-
-	/**
 	* GET_COMPONENT_INDEXATIONS
+	* Indexations in v6 are direct data from portal configured in
+	* component_text_area properties 'tags_index'
+	* Defined in Ontology as (sample from rsc36):
+	* {
+	*	"tags_index": {
+	*		"tipo": "rsc860",		// target component_portal tipo
+	*		"section_id": "self",	// auto-solved current section_id
+	*		"section_tipo": "self"	// auto-solved current section_tipo
+	*	}
+	* }
 	* @return array $ar_indexations
-	* 	Array of locators (is the component index, usually a component_porta, dato)
+	* 	Array of component_portal dato locators
 	*/
 	public function get_component_indexations() : array {
 
 		$properties	= $this->get_properties();
-		$tags_index	= $properties->tags_index ?? null;
 
-		if(empty($tags_index)) {
-			return null;
-		}
+		// tags_index
+			$tags_index	= $properties->tags_index ?? null;
+			if(empty($tags_index)) {
+				return [];
+			}
 
-		// relation index
+		// short vars
 			$section_tipo	= $this->section_tipo;
 			$section_id		= $this->section_id;
 			$component_tipo	= $tags_index->tipo;
 
-		// component index
+		// component portal where the indexations are stored (v6 are direct instead v5 reverse pointers)
 			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$componet_index	= component_common::get_instance(
 				$model_name,
@@ -1202,7 +1179,7 @@ class component_text_area extends component_common {
 				$section_tipo
 			);
 
-		$ar_indexations = $componet_index->get_dato();
+		$ar_indexations = $componet_index->get_dato() ?? [];
 
 		return $ar_indexations;
 	}//end get_component_indexations
@@ -1216,7 +1193,7 @@ class component_text_area extends component_common {
 	* @return string $indexations_locators
 	* 	JSON encoded array
 	*/
-	public function get_component_indexations_term_id( string $type ) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
+	public function get_component_indexations_term_id(string $type) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 		/*
 		# Search relation index in hierarchy tables
 		$options = new stdClass();
@@ -1230,7 +1207,7 @@ class component_text_area extends component_common {
 		$result = component_relation_index::get_indexations_search( $options );
 			#dump($result, ' result ++ '.to_string());
 		*/
-		$result = $this->get_component_indexations( $type );
+		$result = $this->get_component_indexations();
 
 		$ar_indexations = array();
 		foreach ($result as $key => $row) {
@@ -2422,7 +2399,5 @@ class component_text_area extends component_common {
 
 		return $this->get_list_value_large_text($options);
 	}//end get_list_value
-
-
 
 }//end class component_text_area
