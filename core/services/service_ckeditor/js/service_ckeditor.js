@@ -8,7 +8,7 @@
 	// import {ui} from '../../../common/js/ui.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
-
+	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
 
 
 /**
@@ -47,6 +47,7 @@ export const service_ckeditor = function() {
 			const value_container	= options.value_container // dom node to be used as value container (empty when is set by the caller)
 			const toolbar_container	= options.toolbar_container // dom node for the toolbar
 			// const value			= options.value // the html data to be incorporated to the editor
+
 			const key				= options.key // array key of the value of the caller data
 			const editor_config		= options.editor_config // options for build custom buttons in the toolbar or custom events
 
@@ -68,6 +69,7 @@ export const service_ckeditor = function() {
 			// ckEditor is initiated without user interface
 			ddEditor.create( value_container, {
 				// initialData: value
+
 			})
 			.then( editor => {
 
@@ -319,32 +321,46 @@ export const service_ckeditor = function() {
 					state		: item.get('data-state'),
 					label		: item.get('data-label'),
 					data		: item.get('data-data')
-
 				}
 
 				if (custom_events.click) {
 					custom_events.click(data.domEvent, tag_obj)
 				}
+				if (custom_events.MouseUp && click_element==='img') {
+					// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
+					const options = {
+						selection : ''
+					}
+					custom_events.MouseUp(data.domEvent, options)
+				}
 			});//end click event
 
 
-			// click event
-			editor.editing.view.document.on('mouseup', function(evt, data ) {
+			// editor.editing.view.document.on('mouseup', async function(evt, data ){
+			// 	// get the name of the node clicked, 'img' 'p' 'div', etc
+			// 	const click_element = data.target.name
 
-				// get the name of the node clicked, 'img' 'p' 'div', etc
-					const click_element = data.target.name
-
-				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
-					if(click_element==='img'){
-						return
-					}
+			// 	if (custom_events.MouseUp && click_element==='img') {
+			// 		// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
+			// 		const options = {
+			// 			selection : ''
+			// 		}
+			// 			// console.log("click_element:",click_element);
+			// 			// console.log("options:",options);
+			// 		custom_events.MouseUp(data.domEvent, options)
+			// 	}
+			// })
+			editor.editing.view.document.on('selectionChangeDone', function(evt, data) {
 
 				if (custom_events.MouseUp) {
 					// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
 					const options = {
-						selection : click_element!=='img' ? self.get_selection() : ''
+						selection : self.get_selection()
 					}
-					custom_events.MouseUp(data.domEvent, options)
+					custom_events.MouseUp(
+						null, // event (no DOM event in this case)
+						options // object with selection info
+					)
 				}
 			});//end click event
 
@@ -384,6 +400,7 @@ export const service_ckeditor = function() {
 			const position = editor.model.document.selection.getLastPosition()
 			// create the tag_node
 			const model_tag_node = writer.createElement( 'imageInline', tag_obj) ;
+
 			// Insert the html in the current selection location.
 			editor.model.insertContent( model_tag_node, position );
 			// Put the selection on the inserted element.
@@ -480,6 +497,7 @@ export const service_ckeditor = function() {
 
 
 
+
 	/**
 	* GET_EDITOR_CONTENT_DATA
 	* get the full data of the editor in html format to be saved
@@ -524,7 +542,7 @@ export const service_ckeditor = function() {
 		}
 
 		// get the user selection
-		const user_selection = editor.model.document.selection
+		const user_selection =  editor.model.document.selection
 
 		// get the content of the selection, it get the html representation
 		const content = editor.model.getSelectedContent(user_selection)
@@ -532,8 +550,9 @@ export const service_ckeditor = function() {
 		// convert the ckeditor data to html in string format
 		const selection = editor.data.stringify(content)
 
-
+		// const collapse = editor.model.document.selection.isCollapsed
 		return selection
+
 	}//end get_selection
 
 
@@ -610,6 +629,7 @@ export const service_ckeditor = function() {
 		const tag_view_in	= self.get_view_tag(tag_obj)
 		// change the type to set it as indexOut and get the view tag out
 		tag_obj.type		= 'indexOut'
+
 		const tag_view_out	= self.get_view_tag(tag_obj)
 
 		if(tag_view_in && tag_view_out){
@@ -779,7 +799,7 @@ export const service_ckeditor = function() {
 	* {
 	* 	type : [indexIn,indexOut]
 	* 	tag_id : 1,
-	* 	dataset : {	type : n }
+	* 	new_data_obj : { type : n } (former dataset)
 	* }
 	* @return promise bool
 	*/
@@ -836,7 +856,12 @@ export const service_ckeditor = function() {
 
 							// add/replace new_data_obj properties given
 								for (const name in new_data_obj) {
-									edit_attributes.set(name, new_data_obj[name])
+
+									const current_value = name==='data'
+										? self.caller.tag_data_object_to_string(new_data_obj[name])
+										: new_data_obj[name]
+
+									edit_attributes.set(name, current_value)
 								}
 
 								// console.log("-> 1 changed attributes:",attributes);
@@ -1078,7 +1103,5 @@ export const service_ckeditor = function() {
 
 		return true
 	}//end factory_events_for_buttons
-
-
 
 }//end service_ckeditor
