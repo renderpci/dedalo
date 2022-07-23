@@ -13,6 +13,7 @@ class component_geolocation extends component_common {
 	*/
 	function __construct(string $tipo, $section_id=null, string $modo='list', string $lang=null, string $section_tipo=null) {
 
+
 		# Force always DEDALO_DATA_NOLAN
 		$lang = DEDALO_DATA_NOLAN;
 
