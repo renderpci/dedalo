@@ -432,7 +432,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		// replace obsolete models on the fly
 			if ($model==='component_input_text_large') {
-				$model='component_input_text';
+				$model='component_text_area';
 			}
 			elseif ($model==='component_autocomplete' || $model==='component_autocomplete_hi') {
 				$model='component_portal';
