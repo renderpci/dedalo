@@ -122,18 +122,23 @@ class dd_elements {
 	}//end makeTSline
 
 
+
 	/**
 	* RENDERBTNMAS. crea el botón Mas (añádir termino hijo)
+	* @param string $terminoID
+	* @param string|null $hijosD
+	* @param string $parent
+	* @return string $node
 	*/
 	protected static function renderBtnMas(string $terminoID, ?string $hijosD, $parent) : string {
 		global $anyadir_hijo_al_descriptor_title;
 
-		$obj  = '';
-		$obj .= ' <div class="bullet_mas" title="'.$anyadir_hijo_al_descriptor_title.'" ';
-		$obj .= 'onmousedown="dd.insertTS(\''.$terminoID.'\',\''.$hijosD.'\',\''.$parent.'\')" ';
-		$obj .= '></div>';
+		$node  = '';
+		$node .= ' <div class="bullet_mas" title="'.$anyadir_hijo_al_descriptor_title.'" ';
+		$node .= 'onmousedown="dd.insertTS(\''.$terminoID.'\',\''.$hijosD.'\',\''.$parent.'\')" ';
+		$node .= '></div>';
 
-		return $obj ;
+		return $node;
 	}//end renderBtnMas
 
 
