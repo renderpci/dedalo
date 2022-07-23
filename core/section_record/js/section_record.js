@@ -108,11 +108,13 @@ section_record.prototype.init = async function(options) {
 	self.caller				= options.caller || null
 
 	self.matrix_id			= options.matrix_id || null
-	self.column_id 			= options.column_id
+	self.column_id			= options.column_id
 
 	self.modification_date	= options.modification_date || null
 
 	self.offset				= options.offset
+
+	self.locator			= options.locator
 
 	// events subscription
 		// event active (when user focus in dom)
