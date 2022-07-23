@@ -38,7 +38,6 @@
 	// data
 		switch ($format_columns) {
 			case 'pdf':
-
 				// section_id
 					$cell_id = new dd_grid_cell_object();
 						$cell_id->set_type('column');
@@ -64,7 +63,6 @@
 
 			case 'av':
 			default:
-
 				// tc
 					$tag_in_pos		= $fragment_info[1] ?? 0;
 					$tag_out_pos	= $fragment_info[2] ?? 0;
@@ -78,7 +76,6 @@
 
 					$section_top_tipo	= $locator->section_top_tipo ?? null;
 					$section_top_id		= $locator->section_top_id ?? null;
-
 				// columns
 					// section_id
 						$cell_id = new dd_grid_cell_object();
@@ -209,5 +206,3 @@
 
 
 	return $data;
-
-

@@ -128,10 +128,22 @@
 						}
 
 					$value = $this->get_dato();
+
+					// fix broken tags
+						if (isset($properties->tags_index) && !empty($value)) {
+							$value = array_map(function($raw_text){
+								if (!empty($raw_text)) {
+									$response = $this->fix_broken_index_tags($raw_text);
+									return $response->result;
+								}
+								return $raw_text;
+							}, (array)$value);
+						}
+
 					// fallback_value. Is used to create a placeholder to display a reference data to the user
-					$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
-						? $this->get_fallback_list_value((object)['max_chars'=>700])
-						: null;
+						$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
+							? $this->get_fallback_list_value((object)['max_chars'=>700])
+							: null;
 					break;
 			}
 
@@ -154,7 +166,6 @@
 				if(isset($properties->tags_notes) && $modo==='edit') {
 					$item->tags_notes = $tags_notes;
 				}
-
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

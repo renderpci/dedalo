@@ -394,12 +394,6 @@ const get_input_element = (i, current_value, self) => {
 	// direct. Init the editor now
 		// const text_editor = init_current_service_text_editor()
 
-	// observer. Init the editor when container node is in DOM
-		// event_manager.when_in_viewport(
-		// 	li, // node
-		// 	init_current_service_text_editor // callback
-		// )
-
 	// user click init
 		const auto_init_editor = self.auto_init_editor!==undefined
 			? self.auto_init_editor
@@ -809,7 +803,6 @@ const get_custom_events = (self, i, text_editor) => {
 					case 'draw' :
 						// Load draw editor
 						event_manager.publish('click_tag_draw_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-
 						break;
 
 					case 'geo' :
@@ -919,16 +912,16 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
-			// console.log("MouseUp options:",options, evt);
-			// evt.preventDefault()
-			// evt.stopPropagation()
+			// console.log("MouseUp options:", options, evt);
 
 			// user text selection event
 				const selection = options.selection
 				event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
 
 			// click_no_tag_ . Used by tool_indexation to de-select the active tag
-				event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
+				if (!evt) {
+					event_manager.publish('click_no_tag_'+ self.id_base, {caller: self})
+				}
 		}//end MouseUp
 
 	// keyup
@@ -937,12 +930,12 @@ const get_custom_events = (self, i, text_editor) => {
 			switch(true) {
 
 				// 'Escape'
-				case  evt.code === self.context.av_player.av_play_pause_code:
+				case self.context.av_player && evt.code===self.context.av_player.av_play_pause_code:
 					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.av_player.av_rewind_seconds)
 					break;
 
 				// 'F2'
-				case evt.code === self.context.av_player.av_insert_tc_code:
+				case self.context.av_player && evt.code===self.context.av_player.av_insert_tc_code:
 					// publish event and receive susbscriptors responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -1427,7 +1420,6 @@ const render_note = async function(options) {
 						// remove the modal
 							modal.remove()
 					})
-
 				}
 			})
 
