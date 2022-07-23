@@ -615,8 +615,20 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 /**
 * CREATE_SOURCE
-* @param object options
+* @param object self
+* 	Element intance (component, section, etc.)
 * @return object source
+* 	sample
+* {
+* 	typo			: 'source',
+* 	action			: 'read',
+* 	model			: 'component_text_area',
+* 	tipo			: 'rsc17',
+* 	section_tipo	: 'rs167',
+* 	section_id		: '5',
+* 	mode			: 'edit',
+* 	lang			: 'lg-eng'
+* }
 */
 export const create_source = function (self, action) {
 
@@ -1145,27 +1157,21 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 	// navigation offset
 		// const saved_rqo = await data_manager.get_local_db_data(self.id, 'rqo')
 		// if(saved_rqo){
-
 		// 	if (rqo_config.sqo) {
-
 		// 		let to_save = false
-
 		// 		saved_rqo.sqo = saved_rqo.sqo || {}
-
 		// 		// update saved offset if is different from received config
 		// 			if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
 		// 				saved_rqo.sqo.filter = rqo_config.sqo.filter
 		// 				to_save = true
 		// 				console.warn("updated filter in saved_rqo:", saved_rqo);
 		// 			}
-
 		// 		// update saved offset if is different from received config
 		// 			if (typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {
 		// 				saved_rqo.sqo.offset = rqo_config.sqo.offset
 		// 				to_save = true
 		// 				console.warn("updated offset in saved_rqo:", saved_rqo);
 		// 			}
-
 		// 		if (to_save===true) {
 		// 			// set_local_db_data updated rqo
 		// 				const rqo = saved_rqo
@@ -2363,3 +2369,4 @@ export const push_browser_history = function(options) {
 
 	return true
 }//end push_browser_history
+
