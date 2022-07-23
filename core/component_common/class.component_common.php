@@ -3288,7 +3288,8 @@ abstract class component_common extends common {
 			return null;
 		}
 
-		$max_chars = 200;
+		// options
+			$max_chars = $options->max_chars ?? 130;
 
 		$list_value = [];
 		foreach ($dato as $current_value) {
@@ -3348,7 +3349,6 @@ abstract class component_common extends common {
 
 		return $list_value;
 	}//end get_fallback_list_value
-
 
 
 
