@@ -1029,24 +1029,26 @@ abstract class diffusion  {
 
 		// options parse from request_options
 			$options = new stdClass();
-				$options->component_tipo 		 = null;
-				$options->section_tipo 	 		 = null;
-				$options->section_id 	 		 = null;
-				$options->lang 			 		 = null;
-				$options->model 		 		 = null;
-				$options->diffusion_element_tipo = null;
+				$options->component_tipo			= null;
+				$options->section_tipo				= null;
+				$options->section_id				= null;
+				$options->lang						= null;
+				$options->model						= null;
+				$options->diffusion_element_tipo	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		switch ($options->model) {
 			case 'component_text_area':
 				// Check component index tags
-				$component 	= component_common::get_instance($options->model,
-															 $options->component_tipo,
-															 $options->section_id,
-															 'list',
-															 $options->lang,
-															 $options->section_tipo);
-				$ar_indexations = $component->get_component_indexations(DEDALO_RELATION_TYPE_INDEX_TIPO); # dd96
+				$component 	= component_common::get_instance(
+					$options->model,
+					$options->component_tipo,
+					$options->section_id,
+					'list',
+					$options->lang,
+					$options->section_tipo
+				);
+				$ar_indexations = $component->get_component_indexations(); # DEDALO_RELATION_TYPE_INDEX_TIPO dd96
 					#dump($ar_indexations, ' ar_indexations ++ '." section_id: $options->section_id - lang: $options->lang - dato:".$component->get_dato());
 
 				if (!empty($ar_indexations)) {
