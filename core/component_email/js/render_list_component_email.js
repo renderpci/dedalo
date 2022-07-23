@@ -40,6 +40,5 @@ render_list_component_email.prototype.list = async function() {
 			value_string	: value_string
 		})
 
-
 	return wrapper
 }//end list
