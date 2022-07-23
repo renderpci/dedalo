@@ -52,7 +52,6 @@
 		// $svg_item = new stdClass();
 		// 	$svg_item->url = $this->get_url(false, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 		// 	$svg_item->quality = DEDALO_SVG_QUALITY_DEFAULT;
-
 		// value
 			switch ($modo) {
 				case 'list':

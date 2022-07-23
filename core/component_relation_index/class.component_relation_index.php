@@ -191,7 +191,6 @@ class component_relation_index extends component_relation_common {
 	* @return array $ar_indexations
 	*/
 		// public static function get_indexations_from_tag_DES($component_tipo, $section_tipo, $section_id, $tag_id, $lang=DEDALO_DATA_LANG, $type=DEDALO_RELATION_TYPE_INDEX_TIPO) {
-
 		// 	# Search relation index in hierarchy tables
 		// 	$options = new stdClass();
 		// 		$options->fields = new stdClass();
