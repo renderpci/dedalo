@@ -421,6 +421,8 @@ export const add_component = async (self, component_container, lang) => {
 
 	// render component
 		const component	= await self.load_component(lang)
+		// set auto_init_editor for convenience
+		component.auto_init_editor = true
 		const node		= await component.render()
 
 	// source lang lock
