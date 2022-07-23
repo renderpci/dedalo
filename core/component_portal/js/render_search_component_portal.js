@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
@@ -194,7 +195,7 @@ export const build_content_data = function(self) {
 		fragment.appendChild(inputs_container)
 
 	// set node only when it is in DOM (to save browser resources)
-		event_manager.when_in_viewport(
+		when_in_viewport(
 			inputs_container, // node
 			build_values // callback
 		)

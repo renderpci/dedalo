@@ -141,18 +141,22 @@ component_portal.prototype.init = async function(options) {
 			)
 			function fn_link_term(locator) {
 
-				// check active tag is already set
-					if (!self.active_tag) {
-						alert("Error. No active_tag exists");
-						return
-					}
-
+				// empty tag_id is allowed too
 				// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
-					const tag_id	= self.active_tag.tag.tag_id
-					locator.tag_id	= tag_id
+					const tag_id = self.active_tag && self.active_tag.tag
+						? self.active_tag.tag.tag_id || null
+						: null
+					if (tag_id) {
+						locator.tag_id	= tag_id
+					}
 
 				// top_locator add
 					const top_locator = self.caller.top_locator // property from tool_indexation
+					// check active tag is already set
+					if (!top_locator) {
+						alert("Error. No top_locator exists");
+						return
+					}
 					Object.assign(locator, top_locator)
 
 				// debug
@@ -634,6 +638,9 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 component_portal.prototype.reset_filter_data = function() {
 
 	const self = this
+
+	// reset self.active_tag (important)
+		self.active_tag = null
 
 	// refresh the data with the full data from datum and render portal.
 		self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}

@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
+	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
@@ -14,7 +15,8 @@
 	import {render_edit_view_line} from './render_edit_view_line.js'
 	import {render_edit_view_tree} from './render_edit_view_tree.js'
 	import {render_edit_view_mosaic} from './render_edit_view_mosaic.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {render_edit_view_indexation} from './render_edit_view_indexation.js'
+
 
 
 
@@ -63,6 +65,10 @@ render_edit_component_portal.prototype.edit = async function(options) {
 
 			case 'mosaic':
 				wrapper = render_edit_view_mosaic.render(self, options)
+				break;
+
+			case 'indexation':
+				wrapper = render_edit_view_indexation.render(self, options)
 				break;
 
 			case 'table':
@@ -274,6 +280,7 @@ export const render_column_remove = function(options) {
 					// check if the caller has active a tag_id
 						if(self.active_tag){
 							// filter component data by tag_id and re-render content
+							console.log('++++++++++++++++++++++++++++++++++++++ self.active_tag:', self.active_tag);
 							self.filter_data_by_tag_id(self.active_tag)
 						}
 
@@ -297,7 +304,7 @@ export const render_column_remove = function(options) {
 
 
 	return fragment
-}// end render_column_remove()
+}//end render_column_remove()
 
 
 
@@ -310,7 +317,7 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool		= self.is_inside_tool
+		const is_inside_tool		= (self.caller && self.caller.type==='tool')
 		const target_section		= self.target_section
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant
@@ -616,7 +623,7 @@ export const add_events = function(self, wrapper) {
 				// }//end if (e.target.matches('.button.remove')) {
 
 			// activate service autocomplete. Enable the service_autocomplete when the user do click
-				if(self.autocomplete_active!==undefined && self.autocomplete_active===false){
+				if(self.autocomplete!==false && self.autocomplete_active!==undefined && self.autocomplete_active===false){
 
 					// set rqo
 						self.rqo_search		= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
