@@ -149,6 +149,7 @@ const build_widget = (item, self) => {
 		function expose() {
 			label.classList.add('up')
 		}
+
 		when_in_viewport(label, ()=>{
 			ui.collapse_toggle_track({
 				header				: label,
