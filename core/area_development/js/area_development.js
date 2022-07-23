@@ -1,10 +1,10 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, import */
+/*global get_label, JSONEditor, SHOW_DEBUG, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {common,load_data_debug} from '../../common/js/common.js'
+	import {common} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -164,13 +164,14 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 	}
 
 	// load dependences js/css
-	const js_promise = load_json_editor_files().then(()=>{
+	load_json_editor_files()
+	.then(()=>{
 
 		const editor_text_area = document.getElementById(editor_id)
 			  // Hide real data container
-			  editor_text_area.style.display = "none"
+			  editor_text_area.style.display = 'none'
 
-		const result_div = document.getElementById("convert_search_object_to_sql_query_response")
+		// const result_div = document.getElementById('convert_search_object_to_sql_query_response')
 
 		// create the editor
 		const container	= document.getElementById(editor_id + '_container')
@@ -190,11 +191,11 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 						window.localStorage.setItem('json_editor_sqo', editor_text);
 					}
 
-				const dd_api = trigger.dd_api.indexOf("get_input_value:")!==-1
+				const dd_api = trigger.dd_api.indexOf('get_input_value:')!==-1
 					? get_input_value( trigger.dd_api.replace('get_input_value:', '') )
 					: trigger.dd_api
 
-				const action = trigger.action.indexOf("get_input_value:")!==-1
+				const action = trigger.action.indexOf('get_input_value:')!==-1
 					? get_input_value( trigger.action.replace('get_input_value:', '') )
 					: trigger.action
 
@@ -206,7 +207,7 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 						options	: editor_text
 					}
 				})
-				console.log("api_response:",api_response);
+				console.log('api_response:',api_response);
 
 				print_response(body_response, api_response)
 
@@ -336,9 +337,10 @@ const load_json_editor_files = function() {
 	const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
 	load_promises.push( load_promise )
 
-	const load_all = Promise.all(load_promises).then(async function(response){
+	const load_all = Promise.all(load_promises)
+	// .then(async function(response){
 		//console.log("JSONEditor:",response);
-	})
+	// })
 
 	return load_all
 }//end load_json_editor_files
