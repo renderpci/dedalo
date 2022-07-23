@@ -91,88 +91,90 @@ const add_events = function(self, wrapper) {
 		//}
 
 	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', (e) => {
-			// e.stopPropagation()
+		// wrapper.addEventListener('change', (e) => {
+		// 	// e.stopPropagation()
 
-			// input_value. The standard input for the value of the component
-			if (e.target.matches('input[type="number"].input_value')) {
+		// 	// input_value. The standard input for the value of the component
+		// 	if (e.target.matches('input[type="number"].input_value')) {
 
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: (e.target.value.length>0) ? self.fix_number_format(e.target.value) : null,
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
+		// 		const changed_data = Object.freeze({
+		// 			action	: 'update',
+		// 			key		: JSON.parse(e.target.dataset.key),
+		// 			value	: (e.target.value.length>0) ? self.fix_number_format(e.target.value) : null,
+		// 		})
+		// 		self.change_value({
+		// 			changed_data : changed_data,
+		// 			refresh 	 : false
+		// 		})
+		// 		.then((save_response)=>{
+		// 			// event to update the dom elements of the instance
+		// 			event_manager.publish('update_value_'+self.id, changed_data)
+		// 		})
 
-				return true
-			}
-		})
+		// 		return true
+		// 	}
+		// })
 
 	// click event [mousedown]
-		wrapper.addEventListener("click", e => {
-			// insert
-			if (e.target.matches('.button.add')) {
+		// wrapper.addEventListener("click", e => {
+		// 	// insert
+		// 	if (e.target.matches('.button.add')) {
 
-				const changed_data = Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
-					value	: null
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('add_element_'+self.id, changed_data)
-				})
+		// 		const changed_data = Object.freeze({
+		// 			action	: 'insert',
+		// 			key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
+		// 			value	: null
+		// 		})
+		// 		self.change_value({
+		// 			changed_data : changed_data,
+		// 			refresh 	 : false
+		// 		})
+		// 		.then((save_response)=>{
+		// 			// event to update the dom elements of the instance
+		// 			event_manager.publish('add_element_'+self.id, changed_data)
+		// 		})
 
-				return true
-			}
+		// 		return true
+		// 	}
 
-			// remove
-			if (e.target.matches('.button.remove')) {
+		// 	// remove
+		// 	if (e.target.matches('.button.remove')) {
 
-				// force possible input change before remove
-				document.activeElement.blur()
+		// 		// force possible input change before remove
+		// 		document.activeElement.blur()
 
-				const changed_data = Object.freeze({
-					action	: 'remove',
-					key		: e.target.dataset.key,
-					value	: null,
-					refresh : true
-				})
-				self.change_value({
-					changed_data : changed_data,
-					label 		 : e.target.previousElementSibling.value,
-					refresh 	 : true
-				})
-				.then(()=>{
-				})
+		// 		const changed_data = Object.freeze({
+		// 			action	: 'remove',
+		// 			key		: e.target.dataset.key,
+		// 			value	: null,
+		// 			refresh : true
+		// 		})
+		// 		self.change_value({
+		// 			changed_data : changed_data,
+		// 			label 		 : e.target.previousElementSibling.value,
+		// 			refresh 	 : true
+		// 		})
+		// 		.then(()=>{
+		// 		})
 
-				return true
-			}
+		// 		return true
+		// 	}
 
-		})
+		// })
 
 	// keyup event
 		wrapper.addEventListener("keyup", async (e) => {
 
 			// page unload event
 				if (e.key!=='Enter') {
+					console.log("aqui:-----------------------------");
 					const key				= e.target.dataset.key
 					const original_value	= self.db_data.value[key]
 					const new_value			= e.target.value
 					if (new_value!=original_value) {
 						// set_before_unload (bool) add
 						event_manager.set_before_unload(true)
+
 					}else{
 						// set_before_unload (bool) remove
 						event_manager.set_before_unload(false)
@@ -242,6 +244,24 @@ const get_buttons = (self) => {
 				class_name 		: 'button add',
 				parent 			: fragment
 			})
+
+			button_add_input.addEventListener('mouseup', function(evt){
+
+				const changed_data = Object.freeze({
+					action	: 'insert',
+					key		: self.data.value.length,
+					value	: null
+				})
+				self.change_value({
+					changed_data : changed_data,
+					refresh 	 : true
+				})
+				.then((save_response)=>{
+					// event to update the dom elements of the instance
+					event_manager.publish('add_element_'+self.id, changed_data)
+				})
+
+			})
 		}
 
 	// buttons tools
@@ -290,6 +310,21 @@ const get_input_element_edit = (i, current_value, self) => {
 			value			: current_value,
 			parent			: li
 		})
+		input.addEventListener('change',function(evt) {
+			const changed_data = Object.freeze({
+				action	: 'update',
+				key		: i,
+				value	: (input.value.length>0) ? self.fix_number_format(input.value) : null,
+			})
+			self.change_value({
+				changed_data : changed_data,
+				refresh 	 : true
+			})
+			.then((save_response)=>{
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, changed_data)
+			})
+		})
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
@@ -298,6 +333,25 @@ const get_input_element_edit = (i, current_value, self) => {
 				class_name		: 'button remove hidden_button',
 				dataset			: { key : i },
 				parent			: li
+			})
+
+			button_remove.addEventListener('mouseup', function(evt) {
+				// force possible input change before remove
+				document.activeElement.blur()
+
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: i,
+					value	: null,
+					refresh : true
+				})
+				self.change_value({
+					changed_data : changed_data,
+					label 		 : input.value || null,
+					refresh 	 : true
+				})
+				.then(()=>{
+				})
 			})
 		}
 
