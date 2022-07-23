@@ -344,5 +344,4 @@ class component_select_lang extends component_relation_common {
 	}//end get_ar_list_of_values
 
 
-
 }//end class component_select_lang
