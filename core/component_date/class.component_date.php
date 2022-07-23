@@ -270,7 +270,6 @@ class component_date extends component_common {
 				$value->set_separator_rows($separator_rows);
 				$value->set_value($ar_values);
 
-
 		return $value;
 	}//end get_value
 
@@ -336,6 +335,7 @@ class component_date extends component_common {
 					$ar_string_period = [];
 
 					$dd_date = new dd_date($data_item->period);
+
 					// year
 					$ar_string_period[] = isset($dd_date->year)
 						? $dd_date->year .' '. label::get_label('anyos')
@@ -431,7 +431,7 @@ class component_date extends component_common {
 	public static function get_valor_local(object $dd_date, bool $full=false) : string {
 
 		$valor_local	= '';
-		$separator		= dd_date::$separator;
+		$separator		= '-'; //dd_date::$separator; timestamp use - but the dd separator is /
 
 		switch (true) {
 			case ( empty($dd_date->month) && empty($dd_date->day) ):
@@ -1370,13 +1370,13 @@ class component_date extends component_common {
 
 		$list_value = [];
 		foreach ($dato as $data_item) {
-			$list_value[] = self::data_item_to_value($data_item, $date_mode);
+			$list_value[] = !empty($data_item)
+				? self::data_item_to_value($data_item, $date_mode)
+				: null;
 		}
 
 
 		return $list_value;
 	}//end get_list_value
-
-
 
 }//end class component_date

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/* global get_label, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -6,7 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_input_element_edit, input_element_default, input_element_flatpicker} from '../../component_date/js/render_edit_component_date.js'
+	import {get_input_element_edit} from '../../component_date/js/render_edit_component_date.js'
 
 
 
@@ -33,7 +33,7 @@ render_search_component_date.prototype.search = async function() {
 	const content_data = get_content_data_search(self)
 
 	// load editor files (calendar)
-		// await self.load_editor()
+		await self.load_editor()
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
@@ -83,63 +83,63 @@ const add_events = function(self, wrapper) {
 			// 	event_manager.publish('change_search_element', self)
 			// 	return true
 			// }
-			if (e.target.matches('input[type="text"]')) {
+			// if (e.target.matches('input[type="text"]')) {
 
-				let value
+			// 	let value
 
-				const date_mode = self.context.properties.date_mode || 'date'
+			// 	const date_mode = self.context.properties.date_mode || 'date'
 
-				// build date
-				switch(date_mode) {
+			// 	// build date
+			// 	switch(date_mode) {
 
-					case 'range':
-						const dato_range = self.get_dato_range(e.target, e.target.dataset.role)
+			// 		case 'range':
+			// 			const dato_range = self.get_dato_range(e.target, e.target.dataset.role)
 
-						if (e.target.dataset.role==='range_start') {
-							(dato_range.start === false) ? value = false : value = dato_range
-						}
+			// 			if (e.target.dataset.role==='range_start') {
+			// 				(dato_range.start === false) ? value = false : value = dato_range
+			// 			}
 
-						if (e.target.dataset.role==='range_end') {
-							(dato_range.end === false) ? value = false : value = dato_range
-						}
-						break;
+			// 			if (e.target.dataset.role==='range_end') {
+			// 				(dato_range.end === false) ? value = false : value = dato_range
+			// 			}
+			// 			break;
 
-					case 'period':
-						value = self.get_dato_period(e.target.parentNode)
-						break;
+			// 		case 'period':
+			// 			value = self.get_dato_period(e.target.parentNode)
+			// 			break;
 
-					case 'time':
-						const dato = (e.target.value.length>0) ? self.get_dato_time(e.target.value) : ''
-						if (dato) {
-							e.target.value = dato.res_formatted
-							value = dato.dd_date
-						}
-						break;
+			// 		case 'time':
+			// 			const dato = (e.target.value.length>0) ? self.get_dato_time(e.target.value) : ''
+			// 			if (dato) {
+			// 				e.target.value = dato.res_formatted
+			// 				value = dato.dd_date
+			// 			}
+			// 			break;
 
-					case 'date':
-					default:
-						value = (e.target.value.length>0) ? self.get_dato_date(e.target.value) : ''
-						break;
-				}
+			// 		case 'date':
+			// 		default:
+			// 			value = (e.target.value.length>0) ? self.get_dato_date(e.target.value) : ''
+			// 			break;
+			// 	}
 
-				const validated = (value || value==='') ? true : false
-				ui.component.error(!validated, e.target)
+			// 	const validated = (value || value==='') ? true : false
+			// 	ui.component.error(!validated, e.target)
 
-				if (validated) {
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: value
-					})
-					// update the data in the instance previous to save
-					self.update_data_value(changed_data)
-					// set the change_data to the instance
-					self.data.changed_data = changed_data
-					// event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-				}
-				return true
-			}
+			// 	if (validated) {
+			// 		const changed_data = Object.freeze({
+			// 			action	: 'update',
+			// 			key		: JSON.parse(e.target.dataset.key),
+			// 			value	: value
+			// 		})
+			// 		// update the data in the instance previous to save
+			// 		self.update_data_value(changed_data)
+			// 		// set the change_data to the instance
+			// 		self.data.changed_data = changed_data
+			// 		// event to update the dom elements of the instance
+			// 		event_manager.publish('change_search_element', self)
+			// 	}
+			// 	return true
+			// }
 
 
 		// q_operator. get the input value of the q_operator
@@ -421,5 +421,3 @@ const get_content_data_search = function(self) {
 
 	// 	return input
 	// }//end get_input_element_search
-
-

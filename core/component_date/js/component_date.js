@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
@@ -6,7 +6,7 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
 	import {render_search_component_date} from '../../component_date/js/render_search_component_date.js'
 	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
@@ -37,6 +37,7 @@ export const component_date = function(){
 	this.separator		= '/'
 	this.separator_time	= ':'
 
+
 	return true
 }//end component_date
 
@@ -46,6 +47,8 @@ export const component_date = function(){
 * COMMON FUNCTIONS
 * extend component functions from component common
 */
+
+
 
 // prototypes assign
 	// lifecycle
@@ -104,624 +107,307 @@ component_date.prototype.load_editor = async function() {
 
 
 /**
-* GET_DD_TIMESTAMP
-* Format default 'Y-m-d H:i:s'
-* When any value if empty, default values are used, like 01 for month
-* @return string $dd_timestamp
+* DATE_TO_STRING
+* @param object date
+*  dd_date as date in Dédalo format:
+* {
+* 	"day": 25,
+* 	"month" 4,
+* 	"year": 2022
+* }
+* this method convert specific date to string format
+* the "start" or "end" object is not accepted here.
+* @return string string_date 25/04/2022
 */
-component_date.prototype.get_dd_timestamp = function (date, date_mode, padding=true) {
+component_date.prototype.date_to_string = function (date) {
 
-	const self 		= this
+	const self	= this
 
-	const locale 	= self.get_locale_value()
+	const date_order = page_globals.DEDALO_DATE_ORDER || 'dmy'
 
-	const year 		= (date.year) ? date.year : 0
-	//Be aware that month should be monthIndex, an integer value representing the month, beginning with 0 for January to 11 for December
-	const month 	= (date.month && date.month>0) ? date.month : 0
-	const day 		= (date.day && date.day>0) ? date.day : 0
+	// day. check if the date has defined the day and pad the start with 0 when the day has only 1 digit
+		const day	= (date.day && date.day>0)
+			? `${date.day}`.padStart(2, '0')
+			: null
+	// month. check if the date has defined the month and pad the start with 0 when the month has only 1 digit
+		const month	= (date.month && date.month>0)
+			? `${date.month}`.padStart(2, '0')
+			: null
+	// year. check if the date has defined the year
+		const year	= (date.year)
+			? date.year
+			: null
 
-	const hour 		= (date.hour) ? date.hour : 0
-	const minute 	= (date.minute) ? date.minute : 0
-	const second 	= (date.second) ? date.second : 0
-	const ms 		= (date.ms) ? date.ms : 0
+	// use to store the order date, it will be joined with the separator
+	const ar_date = []
 
- 	const datetime 	= new Date(year, month, day, hour, minute, second)
- 	let options 	= ''
- 	let dateString  = ''
-
-	if (date_mode==='time') {
-
-		options = {hour: '2-digit', minute: '2-digit', second: '2-digit'}
-		options.ms = '2-digit'
-
-	} else {
-
-		if (month === 0 && day === 0) {
-			dateString 	= year
-		} else if(day === 0){
-			dateString 	= dateString.concat(month,self.separator,year)
-		} else {
-			dateString 	= (locale != 'us')
-			? dateString.concat(day,self.separator,month,self.separator,year)
-			: dateString.concat(month,self.separator,day,self.separator,year)
+	// only year, common to all dates order : 2022
+	if(!day && !month && year){
+		ar_date.push(year)
+	}else{
+		switch (date_order) {
+			case 'mdy':
+				// month and year : 04/2022
+				if(!day && month && year){
+					ar_date.push(month)
+					ar_date.push(year)
+				}else
+				// moth, day, year (USA dates) : 04/25/2022
+				if(day && month && year){
+					ar_date.push(month)
+					ar_date.push(day)
+					ar_date.push(year)
+				}
+				break;
+			case 'ymd':
+				// year and month  : 2022/04
+				if(!day && month && year){
+					ar_date.push(year)
+					ar_date.push(month)
+				}else
+				// year, month, date (China, Korean, Japan, Iran dates) : 2022/04/25
+				if(day && month && year){
+					ar_date.push(year)
+					ar_date.push(month)
+					ar_date.push(day)
+				}
+				break;
+			case 'dmy':
+			default:
+				// month and year : 04/2022
+				if(!day && month && year){
+					ar_date.push(month)
+					ar_date.push(year)
+				}else
+				// day, moth, year (other countries dates) : 25/04/2022
+				if(day && month && year){
+					ar_date.push(day)
+					ar_date.push(month)
+					ar_date.push(year)
+				}
+				break;
 		}
-
 	}
 
-	if (dateString==='') {
-		dateString = (date_mode==='time')
-			? datetime.toLocaleTimeString(locale, options)
-			: datetime.toLocaleDateString(locale, options)
-		//dateFormat(datetime, 'dd-MM-yyyy')
-		//datetime.format("dd/MM/yyyy HH:mm:ss sss")
-	}
+	// join the order array of date with the separator '/'
+	const string_date = ar_date.join(self.separator)
 
-	return dateString
-}//end get_dd_timestamp
+
+	return string_date
+}//end date_to_string
 
 
 
 /**
-* GET VALOR LOCALE
-* Convert internal dato formatted as timestamp '2012-11-07 17:33:49' to current lang data format like '07-11-2012 17:33:49'
+* PARSE_STRING_DATE
+* @param string string_date
+* 	sample: '25/04/2022'
+* @return object dd_date
 */
-component_date.prototype.get_locale_value = function () {
+component_date.prototype.parse_string_date = function(string_date) {
 
-	let locale_value
-	switch (page_globals.dedalo_data_lang) {
+	const self	= this
 
-		case 'lg-eng':	locale_value='en-US'; 	break;
-		case 'lg-spa':	locale_value='es-ES'; 	break;
-		case 'lg-cat':	locale_value='ca'; 		break;
+	const date_order		= page_globals.DEDALO_DATE_ORDER || 'dmy'
+	const ar_date_values	= string_date.split(self.separator)
 
-		default:
-			const lang_code = page_globals.dedalo_data_lang
-			locale_value = lang_code.substring(3) + "-" + lang_code.substring(3).toUpperCase()
-			break;
+	if(ar_date_values.length === 1){
+		const check_regex = /[-.]/g;
+		const split_option1 = string_date.split(check_regex)
+		if(split_option1.length > 1 && split_option1[0] !== ''){
+			// replace the other input separators accepted .-
+			const regex = /[-.]/g;
+			const first_replace = string_date.replace(regex, '/')
+			// replace the // with the /- for negative years
+			const regex2 = /\/\//g;
+			const second_replace = first_replace.replace(regex2, '/-')
+			// split as normal separator
+			const optional_ar_date_values	= second_replace.split(self.separator)
+			// empty the ar_date_values and push the new values
+			ar_date_values.splice(0, ar_date_values.length)
+			ar_date_values.push(...optional_ar_date_values)
+		}
 	}
-
-	return locale_value
-}//end get_locale_value
-
-
-
-/**
-* FORMAT_DATE
-* @param string date_value
-* @return object result
-*/
-component_date.prototype.format_date = function (date_value) {
-
-	const self = this
-
-	const current_input_date = date_value // Raw string from input field
-
-	// Note: Added operators in regex for allow search (9-2-2018)
-	const regex_full 		= /^(>=|<=|>|<)?(0?[0-9]|[12][0-9]|3[01])[-\/.](0?[0-9]|1[012])[-\/.](-?[0-9]+)$/
-	const regex_year_month 	= /^(>=|<=|>|<)?(0?[0-9]|1[012])[-\/.](-?[0-9]+)$/
-	const regex_year 		= /^(>=|<=|>|<)?(-?[0-9]+)$/
 
 	// dd_date object
-	const dd_date = {}
-		if(regex_full.test(current_input_date)) {
-
-			const res = regex_full.exec(current_input_date)
-
-			dd_date.op 		= res[1] || null
-			dd_date.day 	= parseInt(res[2])
-			dd_date.month 	= parseInt(res[3])
-			dd_date.year 	= parseInt(res[4])
-
-		}else if(regex_year_month.test(current_input_date)){
-
-			const res = regex_year_month.exec(current_input_date)
-
-			dd_date.op 		= res[1] || null
-			dd_date.month 	= parseInt(res[2])
-			dd_date.year 	= parseInt(res[3])
-
-		}else if(regex_year.test(current_input_date)){
-
-			const res = regex_year.exec(current_input_date)
-
-			dd_date.op 		= res[1] || null
-			dd_date.year 	= parseInt(res[2])
-
-		}else if(current_input_date.length > 1){
-			alert("Error[format_date]: Date format is invalid : "+current_input_date)
-			return false
+	const date_obj = {}
+	// only year, common to all date order
+	if(ar_date_values.length === 1){
+		 date_obj.year = (ar_date_values[0])
+			 ? parseInt(ar_date_values[0])
+			 : null
+	}else{
+		switch (date_order) {
+			case 'mdy':
+				// month and year : 04/2022
+				if(ar_date_values.length === 2){
+					date_obj.month	= parseInt(ar_date_values[0])
+					date_obj.year	= parseInt(ar_date_values[1])
+				}else
+				// moth, day, year (USA dates) : 04/25/2022
+				if(ar_date_values.length === 3){
+					date_obj.month	= parseInt(ar_date_values[0])
+					date_obj.day	= parseInt(ar_date_values[1])
+					date_obj.year	= parseInt(ar_date_values[2])
+				}
+				break;
+			case 'ymd':
+				// year and month  : 2022/04
+				if(ar_date_values.length === 2){
+					date_obj.year	= parseInt(ar_date_values[0])
+					date_obj.month	= parseInt(ar_date_values[1])
+				}else
+				// year, month, date (China, Korean, Japan, Iran dates) : 2022/04/25
+				if(ar_date_values.length === 3){
+					date_obj.year	= parseInt(ar_date_values[0])
+					date_obj.month	= parseInt(ar_date_values[1])
+					date_obj.day	= parseInt(ar_date_values[2])
+				}
+				break;
+			case 'dmy':
+			default:
+				// month and year : 04/2022
+				if(ar_date_values.length === 2){
+					date_obj.month	= parseInt(ar_date_values[0])
+					date_obj.year	= parseInt(ar_date_values[1])
+				}else
+				// day, moth, year (other countries dates) : 25/04/2022
+				if(ar_date_values.length === 3){
+					date_obj.day	= parseInt(ar_date_values[0])
+					date_obj.month	= parseInt(ar_date_values[1])
+					date_obj.year	= parseInt(ar_date_values[2])
+				}
+				break;
 		}
-		// // Add calculated absolute "time" to dd_date object
-		// 	const time = self.convert_date_to_seconds(dd_date, "date")
-		// 	if (time!==false) {
-		// 		dd_date.time = time
-		// 	}
-
-	// res_formatted. Format dd_date to show in browser input string
-	let res_formatted = ''
-
-		// Day format
-		if(dd_date.day){
-			res_formatted += self.pad(dd_date.day,2) + self.separator
-		}
-
-		// Month format
-		if(dd_date.month){
-			res_formatted += self.pad(dd_date.month,2) + self.separator
-		}
-
-		// Year format
-		if(dd_date && typeof dd_date.year!=="undefined"){
-			if (dd_date.year!=='') {
-				res_formatted += dd_date.year
-			}
-		}
-
-	const result = {
-		res_formatted	: res_formatted,	// Viewed value (input text)
-		dd_date			: dd_date			// Object
 	}
 
+	//date checks
 
-	return result
-}//end format_date
+	// check id the day is in valid range 1 <> 31, or 1 <>30 checking the months
+	// check if the day in February are 28 or 29 in leap years
+		const day_ok = date_obj.day
+			? self.check_day(date_obj.day, date_obj.month, date_obj.year)
+			: null
 
+		const month_ok = date_obj.month
+			? date_obj.month && date_obj.month > 0 && date_obj.month <= 12
+				? true
+				: false
+			: null
 
-
-// /**
-// * CONVERT_DATE_TO_SECONDS
-// * Calculate absolute "time" from dd_date object
-// * This operation is not reversible and is only for reference pourposes
-// * @param dd_date
-// *	object
-// * @param mode
-// *	string optional
-// */
-// component_date.prototype.convert_date_to_seconds = function(dd_date, mode) {
-
-// 	let time = 0;
-
-// 	let year 	= parseInt(dd_date.year);
-// 	let month 	= parseInt(dd_date.month)
-// 	let day 	= parseInt(dd_date.day)
-// 	let hour 	= parseInt(dd_date.hour)
-// 	let minute	= parseInt(dd_date.minute)
-// 	let second 	= parseInt(dd_date.second)
-
-
-// 		if (mode==='period') {
-// 			// Nothing to do here
-// 		}else{
-// 			// Normal cases
-// 			if(month && month>0) {
-// 				month = month-1
-// 			}
-// 			if(day && day>0) {
-// 				day = day-1
-// 			}
-// 		}
-
-
-// 		// Set to zero on no value (preserve negatives always)
-// 		if (isNaN(year)) {
-// 			year = 0;
-// 		}
-// 		if (isNaN(month)) {
-// 			month = 0;
-// 		}
-// 		if (isNaN(day)) {
-// 			day = 0;
-// 		}
-// 		if (isNaN(hour)) {
-// 			hour = 0;
-// 		}
-// 		if (isNaN(minute)) {
-// 			minute = 0;
-// 		}
-// 		if (isNaN(second)) {
-// 			second = 0;
-// 		}
-
-
-// 		// Add years (using virtual years of 372 days (31*12)
-// 		time += year*372*24*60*60
-
-// 		// Add months (using virtual months of 31 days)
-// 		time += month*31*24*60*60
-
-// 		// Add days
-// 		time += day*24*60*60
-
-// 		// Add hours
-// 		time += hour*60*60
-
-// 		// Add minutes
-// 		time += minute*60
-
-// 		// Add seconds
-// 		time += second
-
-
-// 		time = parseInt(time);
-
-// 		if (isNaN(time)) {
-// 			time = false;
-// 		}
-
-// 	return time
-// }//end convert_date_to_seconds
-
-
-
-/**
-* PAD
-* @return string
-*/
-component_date.prototype.pad = function(n, size) {
-	let s = "00" + n;
-	return s.substr(s.length-size);
-}//end pad
-
-
-
-/**
-* GET_DATO_PERIOD
-* Test data inside input text, verify format and send to parent Save
-*/
-component_date.prototype.get_dato_period = function(parentNode) {
-
-	const self = this
-
-	const period_year	= parentNode.querySelector('input[data-role=period_year]')
-	const period_month	= parentNode.querySelector('input[data-role=period_month]')
-	const period_day	= parentNode.querySelector('input[data-role=period_day]')
-
-	// dd_date
+	// final dd_date
 		const dd_date = {}
-		if(parseInt(period_year.value)>0) 	dd_date.year  = parseInt(period_year.value)
-		if(parseInt(period_month.value)>0) 	dd_date.month = parseInt(period_month.value)
-		if(parseInt(period_day.value)>0) 	dd_date.day   = parseInt(period_day.value)
+		dd_date.year = date_obj.year
 
-		// Add calculated absolute "time" to dd_date object
-		// dd_date.time = self.convert_date_to_seconds(dd_date, 'period')
+		if(date_obj.month){
+			dd_date.month = month_ok ? date_obj.month : month_ok
+		}
+		if(date_obj.day){
+			dd_date.day = day_ok ? date_obj.day : day_ok
+		}
 
-	// Final dato
-		const dato = (dd_date.year || dd_date.month || dd_date.day)
-			? { period : dd_date }
-			: ''
+	// errors
+		const error = []
+		// when the user intro other things than dates
+		if(string_date.length >1 && !date_obj.year){
+			const error_msg		= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+				error.push({
+					msg		: error_msg +'. '+ string_date +': '+ date_obj.day,
+					type	: 'full'
+				})
+		}
+		// if the user introduce days out of valid range (>29, >30, >31 etc)
+		if(day_ok === false){
+			const error_msg		= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+			const error_msg_day	= get_label.day || 'day'
+			error.push({
+				msg		: error_msg +'. '+ error_msg_day +': '+ date_obj.day,
+				type	: 'day'
+			})
+		}
 
-	return dato
-}//end get_dato_period
+		if(month_ok === false){
+			const error_msg		= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+			const error_msg_month	= get_label.month || 'month'
+			error.push({
+				msg		: error_msg +'. '+ error_msg_month +': '+ date_obj.month,
+				type	: 'month'
+			})
+		}
+
+	// response
+		const response = {
+			result	: dd_date
+		}
+		if (error.length>0) {
+			response.error = error
+		}
+
+
+	return response
+}//end parse_string_date
 
 
 
 /**
-* GET_DATO_RANGE
-* Test data inside input text, verify format and send to parent Save
+* CHECK_DAY
+* @param int day 25
+* @param int month 2
+* @return bool day_ok
 */
-component_date.prototype.get_dato_range = function(parentNode, nodeRole) {
+component_date.prototype.check_day = function(day, month, year){
 
-	const self = this
-
-	let dato =  {}
-
-	// wrapper div that contains both divs for start and end date
-	const wrapper_node = parentNode.parentNode.parentNode
-
-	const input_range_start = wrapper_node.querySelector('input[data-role=range_start]')
-	const input_range_end	= wrapper_node.querySelector('input[data-role=range_end]')
-
-	// START
-		// Review and format input value
-		const value_formatted_start = self.format_date(input_range_start.value)
-
-		if (value_formatted_start===false) {
-
-			// Nothing to do
-			if (nodeRole==='range_start') {
-				console.warn("Invalid date value: ",input_range_start.value)
-				dato.start = false
-			}
-
-		}else{
-
-			// Replaces input value
-			input_range_start.value = value_formatted_start.res_formatted
-
-			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
-				dato.start = value_formatted_start.dd_date
-
-			}
-		}
-
-	// END
-		// Review and format input value
-		const value_formatted_end = self.format_date(input_range_end.value)
-
-		if (value_formatted_end===false) {
-
-			// Nothing to do
-			if (nodeRole==='range_end') {
-				console.warn("Invalid date value: ",input_range_end.value)
-				dato.end = false
-			}
-
-		}else{
-
-			// Replaces input value
-			input_range_end.value = value_formatted_end.res_formatted
-
-			if (value_formatted_end.dd_date && value_formatted_end.dd_date.time) {
-				dato.end = value_formatted_end.dd_date
-
-					console.log("dato.end:",dato.end)
-
-			}
-		}
-
-	return (dato.start || dato.end) ? dato : ''
-}//end get_dato_range
-
-
-
-/**
-* GET_DATO_DATE
-* Test data inside input text, verify format and send to parent Save
-* @return array ar_dato
-*/
-component_date.prototype.get_dato_date = function(value) {
-
-	const self = this
-
-	const dato = {}
-
-	// START
-		const value_formatted_start = self.format_date(value)
-
-		if (value_formatted_start===false) {
-
-			// Nothing to do
-			console.warn("Invalid date value: ",value)
-			return false
-
-		}else{
-
-			// Replaces input value
-			value = value_formatted_start.res_formatted
-
-			// Final dato
-			if (value_formatted_start.dd_date && value_formatted_start.dd_date.time) {
-				dato.start = value_formatted_start.dd_date
-			}
-		}
-
-	return dato
-}//end get_dato_date
-
-
-
-/**
-* GET_DATO_TIME
-* @return
-*/
-component_date.prototype.get_dato_time = function(value) {
-
-	const self = this
-	const mode = self.mode
-
-	let dato = {}
-
-	// Verify and format current value before save
-	let value_formatted = self.format_time({
-		value : value,
-		modo  : mode
-	})
-
-	if (value_formatted===false) {
-
-		// Nothing to do
-		console.warn("Invalid input_date value: ",value )
-		//return false
-
-		//}else{
-		//	// Replaces input value
-		//	if (mode!=="search") {
-		//		value = value_formatted.res_formatted
-		//	}
-		//
-		//	//	// Final dato
-		//	//	dato = value_formatted.dd_date
-			//	value = value_formatted.res_formatted
-	}
-
-
-	return value_formatted
-}//end get_dato_time
-
-
-
-/**
-* FORMAT_TIME
-* @param string date_value
-* @return object result
-*/
-component_date.prototype.format_time = function(options) {
-
-	const self = this
-
-	// options
-		const modo	= options.modo
-		const value	= options.value
-
-	// current_input_date
-		let current_input_date = value // Raw string from input field
-
-	// PATTERN_REPLACE. Separator fix replace no standar separator
-		/*let pattern_replace
-		if (options.modo==="edit") {
-			pattern_replace = /\D/g; // notice "g" here now!
-			current_input_date = current_input_date.replace( pattern_replace, component_date.separator_time)
-		}else{
-			// Allow operators like >=
-			pattern_replace = /([0-9]+)(\D)/g; // notice "g" here now!
-			current_input_date = current_input_date.replace( pattern_replace, "$1"+component_date.separator_time)
-		}*/
-
-	// REGEX_FULL . Note: Added operators in regex for allow search
-		const regex_full = (modo==="edit")
-			? /^(0?[0-9]{1,2})\D?(0?[0-9]{1,2})?\D?(0?[0-9]{0,2})?$/
-			: /^(>=|<=|>|<)?(0?[0-9]{1,2})\D?(0?[0-9]{1,2})?\D?(0?[0-9]{0,2})?$/ 	// Allow search operators like >=
-
-	// Matches keys
-		let key_op, key_hour, key_minute, key_second
-		if (modo==="edit") {
-			key_hour 	= 1
-			key_minute 	= 2
-			key_second 	= 3
-		}else{
-			key_op 		= 1
-			key_hour 	= 2
-			key_minute 	= 3
-			key_second 	= 4
-		}
-
-	// dd_date object
-	let dd_date = {}
-
-	if(regex_full.test(current_input_date)) {
-		let res = regex_full.exec(current_input_date)
-
-		if (modo==="search") {
-			dd_date.op = res[key_op] || null
-		}
-
-		if (res[key_hour]) {
-			dd_date.hour = parseInt(res[key_hour])
-			if (dd_date.hour>23) {
-				alert("Error[format_time]: Date hours is invalid : " + dd_date.hour)
-				return false
-			}
-		}
-		if (res[key_minute]) {
-			dd_date.minute = parseInt(res[key_minute])
-			if (dd_date.minute>59) {
-				alert("Error[format_time]: Date minutes is invalid : " + dd_date.minute)
-				return false
-			}
-		}
-		if (res[key_second]) {
-			dd_date.second = parseInt(res[key_second])
-			if (dd_date.second>59) {
-				alert("Error[format_time]: Date seconds is invalid : " + dd_date.second)
-				return false
-			}
-		}
-	}else if(current_input_date.length >1 ){
-		alert("Error[format_time]: Date format is invalid : "+current_input_date)
+	const self	= this
+	// id the day is 0 or negative value the value is a error and return
+	if(day <= 0){
 		return false
 	}
-
-	// // Add calculated absolute "time" to dd_date object
-	// let time = this.convert_date_to_seconds( dd_date, null )
-	// 	if (time!==false) {
-	// 		dd_date.time = time
-	// 	}
-
-	// res_formatted. Format dd_date to show in browser input string
-	let res_formatted = ''
-
-		// Operator if exists
-		if (dd_date.op) {
-			res_formatted += dd_date.op
+	// get months with 31 days to be checked
+	const months_with_31_days = [1,3,5,7,8,10,12]
+	let day_ok = false
+	if(month===2){
+		// check if the year is leap, February will be of 29 days instead 28
+		const leap = self.is_leap_year(year)
+		if(leap){
+			day_ok = day > 29
+				? false
+				: true
+		}else{
+			day_ok = day > 28
+				? false
+				: true
 		}
 
-		// hour format
-		if(dd_date.hour){
-			res_formatted += this.pad(dd_date.hour,2)
-		}
-		// minute format
-		if(dd_date.minute){
-			res_formatted += self.separator_time + this.pad(dd_date.minute,2)
-		}
-		// second format
-		if(dd_date.second){
-			res_formatted += self.separator_time + this.pad(dd_date.second,2)
-		}
-
-	const result = {
-		res_formatted : res_formatted,	// Viewed value (input text)
-		dd_date 	  : dd_date			// Object
-	}
-
-	if(SHOW_DEBUG===true) {
-		//console.log("value_formatted result",result);;
-	}
-
-	return result
-}//end format_time
-
-
-
-/**
-* SET_DEFAULT_DATE
-*/
-component_date.prototype.set_default_date = function(dateStr) {
-
-	const self = this
-
-	let value
-
-	const ar_date = (dateStr) ? dateStr.split(self.separator) : []
-
-	switch(ar_date.length) {
-
-		case 3:
-			value = new Date(ar_date[2], ar_date[1] - 1 , ar_date[0])
-			break;
-		case 2:
-			value = new Date(ar_date[1], ar_date[0] - 1 , 1)
-			break;
-		case 1:
-			value = new Date(ar_date[0], 0, 1)
-			break;
-		default:
-			value = new Date()
-			break;
-
-	}
-
-	return value
-}//end set_default_date
-
-
-
-/**
-* GET_PLACEHOLDER_VALUE
-*/
-component_date.prototype.get_placeholder_value = function() {
-
-	const self = this
-
-	/*
-	if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
-		# American format month/day/year
-		$format = 'MM-DD-YYYY';
+	}else
+	// check if the moth has 31 days, if not the month will be 30 days
+	if( months_with_31_days.indexOf(month) !== -1){
+		day_ok = day > 31
+			? false
+			: true
 	}else{
-		# European format day.month.year
-		$format = 'DD-MM-YYYY';
+		day_ok = day > 30
+			? false
+			: true
 	}
-	*/
 
-	const date_mode = self.get_date_mode()
-
-	// placeholder_value
-		const placeholder_value = (date_mode==='time')
-			? ''.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
-			: ''.concat('DD',self.separator,'MM',self.separator,'YYYY')
+	return day_ok
+}//end check_day
 
 
-	return placeholder_value
-}//end get_placeholder_value
+
+/**
+* IS_LEAP_YEAR
+* @param int year
+* @return bool
+*/
+component_date.prototype.is_leap_year = function(year) {
+
+	const is_div_by_4	= year % 4 === 0;
+	const is_div_by_100	= year % 100 === 0;
+	const is_div_by_400	= year % 400 === 0;
+
+	return is_div_by_4 && (!is_div_by_100 || is_div_by_400);
+}//end is_leap_year
 
 
 
@@ -743,62 +429,241 @@ component_date.prototype.get_date_mode = function() {
 
 
 /**
-* CLOSE_FLATPICKR
+* GET_PLACEHOLDER_VALUE
+* @return string placeholder_value
+* sample: 'DD/MM/YYYY'
 */
-component_date.prototype.close_flatpickr = function(selectedDates, dateStr, instance) {
+component_date.prototype.get_placeholder_value = function() {
 
-	instance.destroy()
+	const self = this
 
-}//end close_flatpickr
+	const date_mode			= self.get_date_mode()
+	const dd_date_format	= page_globals.DEDALO_DATE_ORDER  || 'dmy'
+
+	// placeholder_value
+	// set the order of the placeholder by the date_format
+		const placeholder_value = (date_mode==='time')
+			? ''.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
+			: (dd_date_format === 'dmy')
+				? ''.concat('DD',self.separator,'MM',self.separator,'YYYY')
+				: (dd_date_format === 'ymd')
+					? ''.concat('YYYY',self.separator,'MM',self.separator,'DD')
+					: (dd_date_format === 'mdy')
+						? ''.concat('MM',self.separator,'DD',self.separator,'YYYY')
+						: ''
+
+	return placeholder_value
+}//end get_placeholder_value
 
 
 
 /**
-* UPDATE_VALUE_FLATPICKR
+* TIME_TO_STRING
+* @return string string_time
+*	 sample: '25/02/1988'
 */
-component_date.prototype.update_value_flatpickr = function(selectedDates, dateStr, instance, component_instance, target) {
+component_date.prototype.time_to_string = function(time) {
 
-	const self = component_instance
-	const role = target.dataset.role
+	const self	= this
 
-	var new_date = ''
-	var new_value
+	const hour 		= (time.hour)
+		? `${time.hour}`.padStart(2, '0')
+		: '00'
+	const minute 	= (time.minute)
+		? `${time.minute}`.padStart(2, '0')
+		: '00'
+	const second 	= (time.second)
+		? `${time.second}`.padStart(2, '0')
+		: '00'
+	const ms 		= (time.ms)
+		? `${time.second}`.padStart(3, '0')
+		: '000'
 
-	new_date = new_date.concat(selectedDates[0].getDate(), self.separator, selectedDates[0].getMonth() + 1, self.separator, selectedDates[0].getFullYear())
-	target.parentNode.previousSibling.value = new_date
+	const ar_time		= [hour, minute, second]
+	const string_time	= ar_time.join(self.separator_time)
 
-	if ((role==='range_start') || (role==='range_end')) {
 
-		const dato_range = self.get_dato_range(target.parentNode, role)
+	return string_time
+}//end time_to_string
 
-		if (role==='range_start') {
-			(dato_range.start === false) ? new_value = false : new_value = dato_range
-		}
 
-		if (role==='range_end') {
-			(dato_range.end === false) ? new_value = false : new_value = dato_range
-		}
 
-	}
+/**
+* PARSE_STRING_TIME
+* @param string string_time
+* @return object response
+*/
+component_date.prototype.parse_string_time = function(string_time) {
 
-	if (role==='default') {
-		new_value = (target.value.length>0) ? self.get_dato_date(new_date) : ''
-	}
+	const self	= this
 
-	const changed_data = Object.freeze({
-			action	: 'update',
-			key		: JSON.parse(target.dataset.key),
-			value	: new_value,
+	const ar_time_values	= string_time.split(self.separator_time)
+
+	const hour = (ar_time_values[0])
+		 ? parseInt(ar_time_values[0])
+		 : null
+
+	const minute = (ar_time_values[1])
+		 ? parseInt(ar_time_values[1])
+		 : null
+
+	const second = (ar_time_values[2])
+		 ? parseInt(ar_time_values[2])
+		 : null
+
+	// final dd_date
+		const dd_date = {}
+
+	// errors
+		const error = []
+
+	// check if the user input other things than times
+	if(string_time.length >1 && (hour===null && minute===null && second===null)){
+		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+		error.push({
+			msg		: error_msg +'. '+ string_time,
+			type	: 'full'
 		})
-	self.change_value({
-		changed_data : changed_data,
-		refresh 	 : false
-	})
-	.then((save_response)=>{
-		// event to update the dom elements of the instance
-		event_manager.publish('update_value_'+self.id, changed_data)
-	})
+	}
+	// if all values are null, the user want delete the date, so return with all values with null to be delete
+	if(hour===null && minute===null && second===null){
+		dd_date.hour	= null
+		dd_date.minute	= null
+		dd_date.second	= null
+		// response
+		const response = {
+			result : dd_date
+		}
+		return response
+	}
+
+	if(hour!==null && hour>=0 && hour<=23){
+		dd_date.hour = hour
+	}else{
+		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+		const error_msg_hour	= get_label.hour || 'hour'
+		error.push({
+			msg		: error_msg +'. '+ error_msg_hour +': '+ hour,
+			type	: 'hour'
+		})
+		dd_date.hour = null
+	}
+
+	if(minute!==null && minute>=0 && minute<=59){
+		dd_date.minute = minute
+	}else{
+		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+		const error_msg_minute	= get_label.minute || 'minute'
+		error.push({
+			msg		: error_msg +'. '+ error_msg_minute +': '+ minute,
+			type	: 'minute'
+		})
+		dd_date.minute = null
+	}
+
+	if(second!==null && second>=0 && second<=59){
+		dd_date.second = second
+	}else{
+		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+		const error_msg_second	= get_label.second || 'second'
+		error.push({
+			msg		: error_msg +'. '+ error_msg_second +': '+ second,
+			type	: 'second'
+		})
+		dd_date.second = null
+	}
+
+	// response
+		const response = {
+			result : dd_date
+		}
+		if (error.length>0) {
+			response.error = error
+		}
 
 
-	return true
-}//end update_value_flatpickr
+	return response
+}//end parse_string_time
+
+
+
+/**
+* FORMAT_DATE (DES)
+* @param string date_value
+* @return object result
+*/
+	// component_date.prototype.format_date = function (date_value) {
+
+	// 	const self = this
+
+	// 	const current_input_date = date_value // Raw string from input field
+
+	// 	// Note: Added operators in regex for allow search (9-2-2018)
+	// 	const regex_full 		= /^(>=|<=|>|<)?(0?[0-9]|[12][0-9]|3[01])[-\/.](0?[0-9]|1[012])[-\/.](-?[0-9]+)$/
+	// 	const regex_year_month 	= /^(>=|<=|>|<)?(0?[0-9]|1[012])[-\/.](-?[0-9]+)$/
+	// 	const regex_year 		= /^(>=|<=|>|<)?(-?[0-9]+)$/
+
+	// 	// dd_date object
+	// 	const dd_date = {}
+	// 		if(regex_full.test(current_input_date)) {
+
+	// 			const res = regex_full.exec(current_input_date)
+
+	// 			dd_date.op 		= res[1] || null
+	// 			dd_date.day 	= parseInt(res[2])
+	// 			dd_date.month 	= parseInt(res[3])
+	// 			dd_date.year 	= parseInt(res[4])
+
+	// 		}else if(regex_year_month.test(current_input_date)){
+
+	// 			const res = regex_year_month.exec(current_input_date)
+
+	// 			dd_date.op 		= res[1] || null
+	// 			dd_date.month 	= parseInt(res[2])
+	// 			dd_date.year 	= parseInt(res[3])
+
+	// 		}else if(regex_year.test(current_input_date)){
+
+	// 			const res = regex_year.exec(current_input_date)
+
+	// 			dd_date.op 		= res[1] || null
+	// 			dd_date.year 	= parseInt(res[2])
+
+	// 		}else if(current_input_date.length > 1){
+	// 			alert("Error[format_date]: Date format is invalid : "+current_input_date)
+	// 			return false
+	// 		}
+	// 		// // Add calculated absolute "time" to dd_date object
+	// 		// 	const time = self.convert_date_to_seconds(dd_date, "date")
+	// 		// 	if (time!==false) {
+	// 		// 		dd_date.time = time
+	// 		// 	}
+
+	// 	// res_formatted. Format dd_date to show in browser input string
+	// 	let res_formatted = ''
+
+	// 		// Day format
+	// 		if(dd_date.day){
+	// 			res_formatted += self.pad(dd_date.day,2) + self.separator
+	// 		}
+
+	// 		// Month format
+	// 		if(dd_date.month){
+	// 			res_formatted += self.pad(dd_date.month,2) + self.separator
+	// 		}
+
+	// 		// Year format
+	// 		if(dd_date && typeof dd_date.year!=="undefined"){
+	// 			if (dd_date.year!=='') {
+	// 				res_formatted += dd_date.year
+	// 			}
+	// 		}
+
+	// 	const result = {
+	// 		res_formatted	: res_formatted,	// Viewed value (input text)
+	// 		dd_date			: dd_date			// Object
+	// 	}
+
+
+	// 	return result
+	// }//end format_date
