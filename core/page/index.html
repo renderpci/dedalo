@@ -31,8 +31,7 @@
 	<script defer="defer" rel="preload" src="../common/js/environment.js.php" as="script"></script>
 	<link rel="stylesheet" type="text/css" href="../page/css/main.css">
 	<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
-	<script rel="preload" src="../../lib/ckeditor/build/ckeditor.js"></script>
-
+	<script defer="defer" src="../../lib/ckeditor/build/ckeditor.js"></script>
 </head>
 <body>
 	<div id="main" class="hide"></div>
@@ -73,6 +72,7 @@
 					prevent_lock	: true
 				}
 
+				// request page context (usually menu and section context)
 				const api_response = await data_manager.request({
 					body : rqo
 				})
@@ -90,10 +90,10 @@
 					return
 				}
 
-			// page instance
+			// page instance init
 				const page = await get_instance({
 					model	: 'page',
-					context	: api_response.result
+					context	: api_response.result // array page context items (usually menu, section )
 				});
 
 			// page instance build and render
@@ -102,7 +102,7 @@
 
 			// main. Add node and restore class
 				main.appendChild(wrapper_page)
-				main.classList.remove("loading","hide")
+				main.classList.remove('loading','hide')
 
 			// page title update
 				const section_info = api_response.result.find(el => el.model==='section' || el.model.indexOf('area')===0)
