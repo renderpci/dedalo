@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -33,15 +33,16 @@ export const instances = []
 * Get the instance, first use the storage of the instances cache, if the instance is not init will be create and stored for use.
 * for create the instance is necessary acces to every init code of every component, do it take time,
 * and this method crete one promise to wait for the creation instance of every component,
-*
-*	options = {
-*				"model"			: "component_input_text",
-*				"tipo"			: "oh15",
-*				"section_tipo"	: "oh1",
-*				"section_id"	: "2",
-*				"mode"			: "edit",
-*				"lang"			: "lg-eng"
-*			  }
+* @param object options
+* Sample:
+*	{
+*		"model"			: "component_input_text",
+*		"tipo"			: "oh15",
+*		"section_tipo"	: "oh1",
+*		"section_id"	: "2",
+*		"mode"			: "edit",
+*		"lang"			: "lg-eng"
+*	}
 * @return promise
 */
 export const get_instance = async function(options){
@@ -80,7 +81,6 @@ export const get_instance = async function(options){
 			options.model	= model
 			options.mode	= mode
 			options.lang	= lang
-
 
 	// key. build the key locator of the instance
 		const key = options.key || key_instances_builder(options, true)
@@ -220,6 +220,7 @@ export const get_instance = async function(options){
 
 	const instance = load_instance()
 
+
 	return instance
 }//end get_instance
 
@@ -227,7 +228,8 @@ export const get_instance = async function(options){
 
 /**
 * GET_ALL_INSTANCES
-* Get all the instances from memory
+* Get all created instances from memory
+* @return array instances
 */
 export const get_all_instances = function() {
 
@@ -239,6 +241,8 @@ export const get_all_instances = function() {
 /**
 * DELETE_INSTANCE
 * Delete the found instance/s from memory
+* @param object options
+* @return int deleted
 */
 export const delete_instance = async function(options) {
 
@@ -307,7 +311,7 @@ export const delete_instance = async function(options) {
 
 	// debug
 		if (deleted<1) {
-			// console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
+			console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
 		}
 		// console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
 		// console.log(" ++++++++ instances:",instances, deleted)
@@ -319,6 +323,9 @@ export const delete_instance = async function(options) {
 
 /**
 * KEY_INSTANCES_BUILDER
+* Creates string normalized key from valious parameters
+* @param object options
+* @return string key
 */
 export const key_instances_builder = function(options){
 
@@ -338,5 +345,3 @@ export const key_instances_builder = function(options){
 
 	return key
 }//end key_instances_builder
-
-
