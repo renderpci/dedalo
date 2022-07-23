@@ -4,8 +4,9 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
+	import {when_in_viewport} from '../../common/js/events.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -45,7 +46,7 @@ render_area_development.prototype.edit = async function(options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
 			content_data : content_data,
-			//buttons 	 : current_buttons
+			// buttons 	 : current_buttons
 		})
 
 
@@ -59,7 +60,7 @@ render_area_development.prototype.edit = async function(options) {
 * Alias of edit
 * @return DOM node
 */
-render_area_development.prototype.list = async function(options={render_level:'full'}) {
+render_area_development.prototype.list = async function(options) {
 
 	return this.edit(options)
 }//end list
@@ -123,13 +124,13 @@ const build_widget = (item, self) => {
 		id				: item.id,
 		element_type	: 'div',
 		dataset			: {},
-		class_name		: "widget_container " + (item.class || '')
+		class_name		: 'widget_container ' + (item.class || '')
 	})
 
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "widget_label icon_arrow",
+			class_name		: 'widget_label icon_arrow',
 			parent			: container,
 			inner_html		: item.label || ''
 		})
@@ -137,30 +138,33 @@ const build_widget = (item, self) => {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "widget_body hide",
+			class_name		: 'widget_body hide',
 			parent			: container
 		})
 
 	// collapse_toggle_track
-		ui.collapse_toggle_track({
-			header				: label,
-			content_data		: body,
-			collapsed_id		: 'collapsed_' + item.id,
-			collapse_callback	: collapse,
-			expose_callback		: expose
-		})
 		function collapse() {
 			label.classList.remove('up')
 		}
 		function expose() {
 			label.classList.add('up')
 		}
+		when_in_viewport(label, ()=>{
+			ui.collapse_toggle_track({
+				header				: label,
+				content_data		: body,
+				collapsed_id		: 'collapsed_' + item.id,
+				collapse_callback	: collapse,
+				expose_callback		: expose
+			})
+		})
+
 
 		// item info
 			if (item.info) {
 				const widget_info = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: "link",
+					class_name		: 'link',
 					inner_html		: item.info || '',
 					parent			: body
 				})
@@ -174,12 +178,12 @@ const build_widget = (item, self) => {
 								return false
 							}
 
-						widget_info.classList.add("lock")
+						widget_info.classList.add('lock')
 
 						// spinner
 						const spinner = ui.create_dom_element({
 							element_type	: 'div',
-							class_name		: "spinner"
+							class_name		: 'spinner'
 						})
 						body_response.prepend(spinner)
 
@@ -248,7 +252,8 @@ const build_widget = (item, self) => {
 				const func			= item.run[i].fn
 				const func_options	= item.run[i].options
 
-				const js_promise = self[func].apply(self, [{
+				// promise
+				self[func].apply(self, [{
 					...item,
 					...func_options,
 					body_info		: body_info,
@@ -333,7 +338,7 @@ export const build_form = function(widget_object) {
 	const self = this
 
 	// widget_object
-		const trigger			= widget_object.trigger
+		// const trigger		= widget_object.trigger
 		const body_info			= widget_object.body_info
 		const body_response		= widget_object.body_response
 		const print_response	= widget_object.print_response
@@ -342,31 +347,31 @@ export const build_form = function(widget_object) {
 
 	// create the form
 		const form_container = ui.create_dom_element({
-			element_type	: "form",
-			class_name		: "form_container",
+			element_type	: 'form',
+			class_name		: 'form_container',
 			parent			: body_info
 		})
-		form_container.addEventListener("submit", async function(e){
+		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
 
-			if ( confirm( (confirm_text || get_label.seguro || "Sure?") ) ) {
+			if ( confirm( (confirm_text || get_label.seguro || 'Sure?') ) ) {
 
 				// check mandatory values
 					for (let i = 0; i < input_nodes.length; i++) {
-						if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
+						if(input_nodes[i].classList.contains('mandatory') && input_nodes[i].value.length<1) {
 							input_nodes[i].focus()
-							input_nodes[i].classList.add("empty")
+							input_nodes[i].classList.add('empty')
 							return
 						}
 					}
 
 				// submit data
-					form_container.classList.add("lock")
+					form_container.classList.add('lock')
 
 					// spinner
 					const spinner = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: "spinner"
+						class_name		: 'spinner'
 					})
 					body_response.prepend(spinner)
 
@@ -409,7 +414,7 @@ export const build_form = function(widget_object) {
 
 							print_response(body_response, api_response)
 
-							form_container.classList.remove("lock")
+							form_container.classList.remove('lock')
 							spinner.remove()
 
 							current_worker.terminate()
@@ -424,11 +429,11 @@ export const build_form = function(widget_object) {
 			const input = inputs[i]
 
 			const class_name = input.mandatory
-				? "mandatory"
-				: ""
+				? 'mandatory'
+				: ''
 
 			const input_node = ui.create_dom_element({
-				element_type	: "input",
+				element_type	: 'input',
 				type			: input.type,
 				name			: input.name,
 				placeholder		: input.label,
@@ -438,9 +443,9 @@ export const build_form = function(widget_object) {
 			if (input.value) {
 				input_node.value = input.value
 			}
-			input_node.addEventListener("keyup", function(){
+			input_node.addEventListener('keyup', function(){
 				if (this.value.length>0) {
-					this.classList.remove("empty")
+					this.classList.remove('empty')
 				}
 			})
 
@@ -449,12 +454,12 @@ export const build_form = function(widget_object) {
 
 	// button submit
 		const button_submit = ui.create_dom_element({
-			element_type	: "button",
-			class_name		: "light",
-			text_content	: "OK",
+			element_type	: 'button',
+			class_name		: 'light',
+			text_content	: 'OK',
 			parent			: form_container
 		})
-		button_submit.addEventListener("click", function(){
+		button_submit.addEventListener('click', function(){
 			// if (confirm( (get_label["seguro"] || "Sure?") )) {
 
 			// 	for (let i = 0; i < input_nodes.length; i++) {
@@ -470,5 +475,3 @@ export const build_form = function(widget_object) {
 
 	return form_container
 }//end build_form
-
-

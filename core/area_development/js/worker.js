@@ -44,7 +44,3 @@ self.onmessage = async function(e) {
 
 	self.postMessage(response);
 }//end onmessage
-
-
-
-
