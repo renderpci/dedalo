@@ -619,7 +619,7 @@ const render_default = function(self) {
 
 		// BR
 		// break into fragments with br tag
-		const pattern_br = tr.get_mark_pattern('br');
+		const pattern_br = tr.get_mark_pattern('p');
 		const ar_fragment_data = raw_data.split(pattern_br);
 		const ar_fragment_data_len = ar_fragment_data.length
 
