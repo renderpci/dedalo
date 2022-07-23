@@ -45,7 +45,6 @@
 					break;
 			}
 
-
 		// data item
 			$item = $this->get_data_item($value);
 
