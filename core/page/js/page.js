@@ -130,6 +130,7 @@ page.prototype.init = async function(options) {
 									sqo			: sqo
 								}]
 							}
+							const context = source
 
 						// destroy previous page instances
 							// await self.ar_instances.map(async function(el){
@@ -144,16 +145,26 @@ page.prototype.init = async function(options) {
 							// })
 
 						// new_page_element_instance. Like 'section'
-							const new_page_element_instance = await instantiate_page_element(self, source)
+							const new_page_element_instance = await instantiate_page_element(
+								self, // object page instance
+								context // object source is used as context
+							)
 
-						// check only if new source of page element is actually valid for instantiation
+						// check valid element. Only checks if new source of page element is actually valid for instantiation
 						// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
 							if (!new_page_element_instance) {
 								console.error("error on get new_page_element_instance:", new_page_element_instance);
 								// loading css remove
-								if (node) {setTimeout(()=> node.classList.remove('loading'), 150 )}
+								if (node) {setTimeout(()=> node.classList.remove('loading'), 150)}
 								console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
 								return false
+							}else{
+								// remove instance from cache to prevent to use old request_config
+								await new_page_element_instance.destroy(
+									true, // delete_self
+									true, // delete_dependencies
+									true // remove_dom
+								)
 							}
 
 						// spinner
@@ -170,21 +181,24 @@ page.prototype.init = async function(options) {
 							// }
 
 						// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
-							const base_models		= ['menu']
-							const elements_to_stay	= self.context.filter( item => base_models.includes(item.model))
+							const base_models				= ['menu']
+							const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
 							// add current source from options
-								elements_to_stay.push(source)
-							// fix new page context
-								self.context = elements_to_stay
+								context_elements_to_stay.push(context)
+							// fix new page clean context
+								self.context = context_elements_to_stay
 
-						// instances. Set property 'destroyable' as false for own instances to prevent remove. Refresh page
+						// instances. Set property 'destroyable' as false for own instances to prevent to be remove on refresh page
 							const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
 							for (let i = instances_to_stay.length - 1; i >= 0; i--) {
 								instances_to_stay[i].destroyable = false
 							}
 
 						// refresh page. Force to load new context elements data from DDBB
-							const refresh_result = await self.refresh()
+							const refresh_result = await self.refresh({
+								build_autoload	: true,
+								render_level	: 'content'
+							})
 
 						// browser history track
 							if(refresh_result===true && event_in_history!==true) {
@@ -450,20 +464,21 @@ page.prototype.add_events = function() {
 
 /**
 * INSTANTIATE_PAGE_ELEMENT
+* Creates the instance of current element, ussually a section or menu
+* calling instace.get_instance(...). This, only load and init the instance file
 * @param object self (instance)
-* @param object ddo (source)
-* @return promise current_instance_promise
+* @param object context
+* @return promise current_instance init promise
 */
-export const instantiate_page_element = function(self, ddo) {
+export const instantiate_page_element = function(self, context) {
 
-	const context		= ddo
-	const tipo			= ddo.tipo
-	const section_tipo	= ddo.section_tipo || tipo
-	const model			= ddo.model
-	const section_id	= ddo.section_id || null
-	const mode			= ddo.mode
-	const lang			= ddo.lang
-	const config		= ddo.config || null
+	const tipo			= context.tipo
+	const section_tipo	= context.section_tipo || tipo
+	const model			= context.model
+	const section_id	= context.section_id || null
+	const mode			= context.mode
+	const lang			= context.lang
+	const config		= context.config || null
 
 	// instance options
 		const instance_options = {
@@ -489,6 +504,7 @@ export const instantiate_page_element = function(self, ddo) {
 
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
+
 
 	return instance_promise
 }//end instantiate_page_element

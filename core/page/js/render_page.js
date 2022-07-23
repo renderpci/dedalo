@@ -127,11 +127,11 @@ const get_content_data = async function(self) {
 			const context_length = self.context.length
 			for (let i = 0; i < context_length; i++) {
 
-				const current_ddo = self.context[i]
+				const current_context = self.context[i]
 
 				// menu case. Prevent to render again on refresh page
-					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_ddo.model)
-					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_ddo.model && el.destroyable===false)
+					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model)
+					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model && el.destroyable===false)
 					if (non_destroyable_instance) {
 						content_data.appendChild(non_destroyable_instance.node[0])
 						continue;
@@ -140,13 +140,12 @@ const get_content_data = async function(self) {
 				// container
 					const container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'container ' + current_ddo.model,
-						// inner_html	: 'Loading '+ current_ddo.model,
+						class_name		: 'container ' + current_context.model,
+						// inner_html	: 'Loading '+ current_context.model,
 						parent			: content_data
 					})
 
-				instantiate_page_element(self, current_ddo)
-				.then(function(current_instance) {
+				const current_instance = await instantiate_page_element(self, current_context)
 
 					self.ar_instances.push(current_instance)
 
@@ -160,7 +159,6 @@ const get_content_data = async function(self) {
 							container.replaceWith(node);
 						})
 					})
-				})
 			}//end for (let i = 0; i < elements_length; i++)
 
 	// event page rendered (used by menu..)
