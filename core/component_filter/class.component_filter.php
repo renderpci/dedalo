@@ -931,7 +931,6 @@ class component_filter extends component_relation_common {
 	}//end get_order_path
 
 
-
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
