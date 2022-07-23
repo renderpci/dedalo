@@ -66,7 +66,8 @@ render_list_section_record.prototype.list = async function(options={}) {
 							offset				: self.offset,
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
-							modification_date	: self.modification_date || null // tm var
+							modification_date	: self.modification_date || null, // tm var
+							locator				: self.locator
 						})
 						if (content_node) {
 							column_node.appendChild(content_node)

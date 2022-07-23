@@ -81,18 +81,22 @@ const get_content_data_edit = async function(self, ar_instances) {
 		const ar_promises = []
 		for (let i = 0; i < ar_instances_length; i++) {
 			const current_promise = new Promise(function(resolve){
+
 				const current_instance = ar_instances[i]
 
 				// already rendered case
 				if (current_instance.status==='rendered' && typeof current_instance.node[0]!=='undefined') {
 					resolve(true)
 				}else{
+
 					current_instance.render()
-					.then(function(current_instance){
+					.then(function(){
 						// current_instance.instance_order_key = i
 						resolve(true)
-					}).catch((errorMsg) => {
+					})
+					.catch((errorMsg) => {
 						console.error(errorMsg);
+						resolve(false)
 					})
 				}
 			})
@@ -172,5 +176,3 @@ const get_content_data_edit = async function(self, ar_instances) {
 
 	return content_data
 }//end get_content_data_edit
-
-
