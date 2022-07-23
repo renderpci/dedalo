@@ -317,157 +317,159 @@ const render_content_data = function(self) {
 /**
 * BUILD_WIDGET
 */
-const build_widget = (item, self) => {
+	// const build_widget = (item, self) => {
 
-	const container = ui.create_dom_element({
-		id				: item.id,
-		element_type	: 'div',
-		dataset			: {},
-		class_name		: "widget_container"
-	})
+	// 	const container = ui.create_dom_element({
+	// 		id				: item.id,
+	// 		element_type	: 'div',
+	// 		dataset			: {},
+	// 		class_name		: "widget_container"
+	// 	})
 
-	// label
-		const label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: "widget_label",
-			parent			: container,
-			inner_html		: item.label || ''
-		})
-		label.addEventListener("dblclick", function(e){
-			const body = e.target.nextElementSibling
-			body.classList.contains("display_none") ? body.classList.remove("display_none") : body.classList.add("display_none")
-		})
+	// 	// label
+	// 		const label = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: "widget_label",
+	// 			parent			: container,
+	// 			inner_html		: item.label || ''
+	// 		})
+	// 		label.addEventListener("dblclick", function(e){
+	// 			const body = e.target.nextElementSibling
+	// 			body.classList.contains("display_none") ? body.classList.remove("display_none") : body.classList.add("display_none")
+	// 		})
 
-	// body
-		const body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: "widget_body",
-			parent			: container
-		})
+	// 	// body
+	// 		const body = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: "widget_body",
+	// 			parent			: container
+	// 		})
 
-		// item info
-		if (item.info) {
-			const widget_info = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: "link",
-				parent			: body,
-				inner_html		: item.info || ''
-			})
+	// 		// item info
+	// 		if (item.info) {
+	// 			const widget_info = ui.create_dom_element({
+	// 				element_type	: 'div',
+	// 				class_name		: "link",
+	// 				parent			: body,
+	// 				inner_html		: item.info || ''
+	// 			})
 
-			// action
-				widget_info.addEventListener('mouseup',  async function(e){
-					e.stopPropagation()
+	// 			// action
+	// 				widget_info.addEventListener('mouseup',  async function(e){
+	// 					e.stopPropagation()
 
-					// confirm optional
-						if (item.confirm && !confirm(item.confirm)) {
-							return false
-						}
+	// 					// confirm optional
+	// 						if (item.confirm && !confirm(item.confirm)) {
+	// 							return false
+	// 						}
 
-					widget_info.classList.add("lock")
-					body_response.classList.add("preload")
+	// 					widget_info.classList.add("lock")
+	// 					body_response.classList.add("preload")
 
-					// data_manager
-					const api_response = await data_manager.request({
-						body : {
-							dd_api	: item.trigger.dd_api,
-							action	: item.trigger.action,
-							options	: item.trigger.options
-						}
-					})
-					// console.log("api_response:",api_response);
+	// 					// data_manager
+	// 					const api_response = await data_manager.request({
+	// 						body : {
+	// 							dd_api	: item.trigger.dd_api,
+	// 							action	: item.trigger.action,
+	// 							options	: item.trigger.options
+	// 						}
+	// 					})
+	// 					// console.log("api_response:",api_response);
 
-					print_response(body_response, api_response)
+	// 					print_response(body_response, api_response)
 
-					widget_info.classList.remove("lock")
-					body_response.classList.remove("preload")
-				})
-		}//end if (item.info) {
+	// 					widget_info.classList.remove("lock")
+	// 					body_response.classList.remove("preload")
+	// 				})
+	// 		}//end if (item.info) {
 
-		// body info
-			const body_info = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: "body_info",
-				parent			: body,
-				inner_html		: item.body || ''
-			})
-		// body response
-			const body_response = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: "body_response",
-				parent			: body
-			})
+	// 		// body info
+	// 			const body_info = ui.create_dom_element({
+	// 				element_type	: 'div',
+	// 				class_name		: "body_info",
+	// 				parent			: body,
+	// 				inner_html		: item.body || ''
+	// 			})
+	// 		// body response
+	// 			const body_response = ui.create_dom_element({
+	// 				element_type	: 'div',
+	// 				class_name		: "body_response",
+	// 				parent			: body
+	// 			})
 
-	// run widget scripts
-		if(item.run) {
-			for (let i = 0; i < item.run.length; i++) {
+	// 	// run widget scripts
+	// 		if(item.run) {
+	// 			for (let i = 0; i < item.run.length; i++) {
 
-				const func			= item.run[i].fn
-				const func_options	= item.run[i].options
+	// 				const func			= item.run[i].fn
+	// 				const func_options	= item.run[i].options
 
-				const js_promise = self[func].apply(self, [{
-					...item,
-					...func_options,
-					body_response  : body_response,
-					print_response : print_response
-				}])
-			}
-		}
+	// 				const js_promise = self[func].apply(self, [{
+	// 					...item,
+	// 					...func_options,
+	// 					body_response  : body_response,
+	// 					print_response : print_response
+	// 				}])
+	// 			}
+	// 		}
 
 
-	return container
-}//end  build_widget
+	// 	return container
+	// }//end  build_widget
 
 
 
 /**
 * PRINT_RESPONSE
 */
-const print_response = (container, api_response) => {
+	// const print_response = (container, api_response) => {
 
-	// clean container
-		while (container.firstChild) {
-			container.removeChild(container.firstChild);
-		}
+	// 	// clean container
+	// 		while (container.firstChild) {
+	// 			container.removeChild(container.firstChild);
+	// 		}
 
-	// clean (eraser)
-		const eraser = ui.create_dom_element({
-			element_type : 'span',
-			class_name 	 : "clean",
-			parent 		 : container
-		})
-		eraser.addEventListener("mouseup", function(e){
-			e.stopPropagation();
+	// 	// clean (eraser)
+	// 		const eraser = ui.create_dom_element({
+	// 			element_type : 'span',
+	// 			class_name 	 : "clean",
+	// 			parent 		 : container
+	// 		})
+	// 		eraser.addEventListener("mouseup", function(e){
+	// 			e.stopPropagation();
 
-			while (container.firstChild) {
-				container.removeChild(container.firstChild);
-			}
-		})
+	// 			while (container.firstChild) {
+	// 				container.removeChild(container.firstChild);
+	// 			}
+	// 		})
 
-	// msg
-		const msg = ui.create_dom_element({
-			element_type : 'div',
-			class_name 	 : "",
-			parent 		 : container,
-			inner_html 	 : api_response.msg
-		})
+	// 	// msg
+	// 		const msg = ui.create_dom_element({
+	// 			element_type : 'div',
+	// 			class_name 	 : "",
+	// 			parent 		 : container,
+	// 			inner_html 	 : api_response.msg
+	// 		})
 
-	// json response result
-		const result = ui.create_dom_element({
-			element_type : 'pre',
-			class_name 	 : "",
-			parent 		 : container,
-			inner_html 	 : JSON.stringify(api_response, null, " ").replace(/\\n/g, "<br>")
-		})
+	// 	// json response result
+	// 		const result = ui.create_dom_element({
+	// 			element_type : 'pre',
+	// 			class_name 	 : "",
+	// 			parent 		 : container,
+	// 			inner_html 	 : JSON.stringify(api_response, null, " ").replace(/\\n/g, "<br>")
+	// 		})
 
-	container.classList.remove("preload")
+	// 	container.classList.remove("preload")
 
-	return container
-}//end print_response
+	// 	return container
+	// }//end print_response
 
 
 
 /**
 * GET_BUTTONS
+* @param object self
+* 	area instance
 * @return DOM node fragment
 */
 const get_buttons = function(self) {
@@ -525,10 +527,10 @@ const get_buttons = function(self) {
 							event_manager.publish('new_section_' + self.id)
 							break;
 						case 'button_import':
-							tool_common.open_tool({
-								tool_context	: current_button.tools[0],
-								caller			: self
-							})
+							// tool_common.open_tool({
+							// 	tool_context	: current_button.tools[0],
+							// 	caller			: self
+							// })
 							break;
 						default:
 							event_manager.publish('click_' + current_button.model)
@@ -542,5 +544,3 @@ const get_buttons = function(self) {
 
 	return fragment
 }//end get_buttons
-
-
