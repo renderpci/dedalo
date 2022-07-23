@@ -9,7 +9,7 @@ class dd_date {
 	// Errors Optional
 	#public $errors;
 	// Separator when format output
-	static $separator = '-';
+	static $separator = '/';
 	// Separator when format output
 	static $time_separator = ':';
 	// Virtual year days
