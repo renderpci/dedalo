@@ -83,11 +83,11 @@ export const set_before_unload = function(value) {
 
 	if (value===true) {
 		// window dialog will be shown when user leaves the page
-		addEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
+		addEventListener('beforeunload', beforeUnloadListener, {capture: true});
 		window.unsaved_data = true
 	}else{
 		// restore the normal page exit status
-		removeEventListener('beforeunload', this.beforeUnloadListener, {capture: true});
+		removeEventListener('beforeunload', beforeUnloadListener, {capture: true});
 		window.unsaved_data = false
 	}
 
