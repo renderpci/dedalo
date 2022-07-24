@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -173,11 +174,11 @@ const add_events = function(self, wrapper) {
 					const new_value			= e.target.value
 					if (new_value!=original_value) {
 						// set_before_unload (bool) add
-						event_manager.set_before_unload(true)
+						set_before_unload(true)
 
 					}else{
 						// set_before_unload (bool) remove
-						event_manager.set_before_unload(false)
+						set_before_unload(false)
 					}
 				}
 		})//end keyup
