@@ -16,7 +16,13 @@
 	import {render_edit_view_tree} from './render_edit_view_tree.js'
 	import {render_edit_view_mosaic} from './render_edit_view_mosaic.js'
 	import {render_edit_view_indexation} from './render_edit_view_indexation.js'
-
+	import {
+		on_dragstart,
+		on_dragover,
+		on_dragleave,
+		on_dragend,
+		on_drop
+	} from './drag_and_drop.js'
 
 
 
@@ -92,6 +98,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 export const render_column_id = function(options){
 
 	// options
+		const locator 		= options.locator
 		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
@@ -146,6 +153,31 @@ export const render_column_id = function(options){
 			class_name		: 'button edit icon',
 			parent			: edit_button
 		})
+
+	// drag and drop
+		const drag_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button drag icon',
+			parent			: fragment
+		})
+		drag_node.draggable = true
+		drag_node.locator 	= locator
+		// drag_id
+			const drag_id = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'drag section_id',
+				text_content	: section_id,
+				parent			: drag_node
+			})
+
+		drag_node.addEventListener('dragstart',function(e){on_dragstart(this,e)})
+
+		const drop_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'drop hide',
+			parent			: fragment
+		})
+
 
 
 	return fragment
