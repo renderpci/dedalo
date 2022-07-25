@@ -16,7 +16,13 @@
 	import {render_edit_view_tree} from './render_edit_view_tree.js'
 	import {render_edit_view_mosaic} from './render_edit_view_mosaic.js'
 	import {render_edit_view_indexation} from './render_edit_view_indexation.js'
-
+	import {
+		on_dragstart,
+		on_dragover,
+		on_dragleave,
+		on_dragend,
+		on_drop
+	} from './drag_and_drop.js'
 
 
 
@@ -92,6 +98,8 @@ render_edit_component_portal.prototype.edit = async function(options) {
 export const render_column_id = function(options){
 
 	// options
+		const paginated_key	= options.paginated_key
+		const locator		= options.locator
 		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
@@ -147,6 +155,33 @@ export const render_column_id = function(options){
 			parent			: edit_button
 		})
 
+	// drag and drop
+		const drag_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'drag icon',
+			parent			: fragment
+		})
+
+		// drag_id
+			const drag_id = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'drag_section_id hide',
+				text_content	: section_id,
+				parent			: drag_node
+			})
+		// drop
+		const drop_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'drop hide',
+			parent			: fragment
+		})
+		drag_node.draggable		= true
+
+		drag_node.addEventListener('dragstart',function(e){on_dragstart(options, this, e)})
+		drop_node.addEventListener('dragover',function(e){on_dragover(this, e)})
+		drop_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
+		drag_node.addEventListener('dragend',function(e){on_dragend(this, e)})
+		drop_node.addEventListener('drop',function(e){on_drop(options, this, e)})
 
 	return fragment
 }//end render_column_id
