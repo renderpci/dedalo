@@ -40,6 +40,7 @@
 		const t0 = performance.now()
 
 		// page instance
+		import {events_init} from '../common/js/events.js'
 		import {data_manager} from '../common/js/data_manager.js'
 		import {get_instance} from '../common/js/instances.js'
 		import {dd_console, url_vars_to_object, JSON_parse_safely} from '../common/js/utils/index.js'
@@ -48,6 +49,8 @@
 		import {page} from '../page/js/page.js'
 		import {login} from '../login/js/login.js'
 		( async () => {
+			// main events init
+				events_init()
 
 			// main CSS add loading
 				const main = document.getElementById('main')

@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -383,7 +384,7 @@ export const on_change = function(self, editor) {
 				button_save.classList.add("warning")
 
 				// set_before_unload (bool) add
-					event_manager.set_before_unload(true)
+					set_before_unload(true)
 			}else{
 
 				if (editor_wrapper.classList.contains("isDirty")) {
@@ -392,7 +393,7 @@ export const on_change = function(self, editor) {
 				}
 
 				// set_before_unload (bool) remove
-					event_manager.set_before_unload(false)
+					set_before_unload(false)
 			}
 		}
 

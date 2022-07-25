@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 
@@ -692,7 +693,7 @@ const get_buttons = (self) => {
 
 			// page unload event
 				// set_before_unload (bool) add
-				event_manager.set_before_unload(true)
+				set_before_unload(true)
 		}
 
 
