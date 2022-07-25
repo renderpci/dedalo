@@ -2991,6 +2991,7 @@ abstract class component_common extends common {
 
 		switch ($changed_data->action) {
 
+			// updates given value selected by key in dato
 			case 'insert':
 			case 'update':
 				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
@@ -3013,6 +3014,7 @@ abstract class component_common extends common {
 					: $dato;
 				break;
 
+			// remove a item value from the component data
 			case 'remove':
 				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = (get_called_class()==='component_relation_related')
@@ -3065,7 +3067,7 @@ abstract class component_common extends common {
 				}
 				break;
 
-			// set the all data sent by the client without check the array key, bulk insert or update
+			// set the whole data sent by the client without check the array key, bulk insert or update
 			case 'set_data':
 
 				$this->set_dato($changed_data->value);
@@ -3073,6 +3075,35 @@ abstract class component_common extends common {
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
 					: $changed_data->value;
+
+				break;
+
+			// re-organize the whole component data bassed on target key given. Used by portals to sort rows
+			case 'sort_data':
+
+				// current DB array of value
+					$dato = $this->get_dato();
+
+				// check selected value for mistakes
+					if (!isset($dato[$source_key])) {
+						debug_log(__METHOD__.' Error on sort_data. Source value key ['.$source_key.'] do not exists! ', logger::ERROR);
+						return false;
+					}elseif($dato[$source_key]!=$value) {
+						debug_log(__METHOD__.' Error on sort_data. Source value if different from DB value:'.PHP_EOL.'given value:'.$value.PHP_EOL.'DB value:'. $dato[$source_key], logger::ERROR);
+						return false;
+					}
+
+				$new_dato = [];
+				// remove old key value
+				foreach ($dato as $key => $value) {
+					if ($key==$source_key) {
+						continue;
+					}
+					$new_dato[] = $value;
+				}
+				// add
+					dump($new_dato, ' new_dato ++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
+
 
 				break;
 
