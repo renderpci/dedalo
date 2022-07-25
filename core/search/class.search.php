@@ -334,7 +334,7 @@ class search {
 
 		// debug
 			if(SHOW_DEVELOPER===true) {
-				$exec_time = round(start_time()-$start_time, 3);
+				$exec_time = (start_time()-$start_time)/1000000;
 				$records_data->generated_time['parsed_time'] = $parsed_time;
 				# Info about required time to exec the search
 				$records_data->generated_time['get_records_data'] = $exec_time;
@@ -358,7 +358,7 @@ class search {
 				// debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 				// debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
 				// error_log("sql_query: \n" . to_string($sql_query));
-				dd_core_api::$sql_query_searchs[] = '-- TIME sec: '. $exec_time . PHP_EOL . $sql_query;
+				dd_core_api::$sql_query_searchs[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
 			}
 
 
