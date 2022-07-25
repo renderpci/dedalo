@@ -57,9 +57,11 @@ $start_time = hrtime(true);
 
 
 // prevent_lock from session
+	$session_closed = false;
 	if (isset($rqo->prevent_lock) && $rqo->prevent_lock===true) {
 		// close current session and set as only read
 		session_write_close();
+		$session_closed = true;
 	}
 
 
@@ -71,13 +73,15 @@ $start_time = hrtime(true);
 		$result		= $dd_manager->manage_request( $rqo );
 
 		// close current session and set as only read
-		session_write_close();
+			if ($session_closed===false) {
+				session_write_close();
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				// real_execution_time add
 				$result->debug = $result->debug ?? new stdClass();
-				$result->debug->real_execution_time = exec_time_unit($start_time);
+				$result->debug->real_execution_time = exec_time_unit($start_time,'ms').' ms';
 			}
 
 	// } catch (Throwable $e) { // For PHP 7
@@ -115,25 +119,25 @@ $start_time = hrtime(true);
 
 
 // output_string_and_close_connection
-	function output_string_and_close_connection($string_to_output) {
-		// set_time_limit(0);
-		ignore_user_abort(true);
-		// buffer all upcoming output - make sure we care about compression:
-		if(!ob_start("ob_gzhandler"))
-		    ob_start();
-		echo $string_to_output;
-		// get the size of the output
-		$size = ob_get_length();
-		// send headers to tell the browser to close the connection
-		header("Content-Length: $size");
-		header('Connection: close');
-		// flush all output
-		ob_end_flush();
-		// ob_flush();
-		flush();
-		// close current session
-		// if (session_id()) session_write_close();
-	}
+	// function output_string_and_close_connection($string_to_output) {
+	// 	// set_time_limit(0);
+	// 	ignore_user_abort(true);
+	// 	// buffer all upcoming output - make sure we care about compression:
+	// 	if(!ob_start("ob_gzhandler"))
+	// 	    ob_start();
+	// 	echo $string_to_output;
+	// 	// get the size of the output
+	// 	$size = ob_get_length();
+	// 	// send headers to tell the browser to close the connection
+	// 	header("Content-Length: $size");
+	// 	header('Connection: close');
+	// 	// flush all output
+	// 	ob_end_flush();
+	// 	// ob_flush();
+	// 	flush();
+	// 	// close current session
+	// 	// if (session_id()) session_write_close();
+	// }
 
 
 
