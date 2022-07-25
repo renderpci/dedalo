@@ -98,7 +98,8 @@ render_edit_component_portal.prototype.edit = async function(options) {
 export const render_column_id = function(options){
 
 	// options
-		const locator 		= options.locator
+		const paginated_key	= options.paginated_key
+		const locator		= options.locator
 		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
@@ -157,28 +158,30 @@ export const render_column_id = function(options){
 	// drag and drop
 		const drag_node = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button drag icon',
+			class_name		: 'drag icon',
 			parent			: fragment
 		})
-		drag_node.draggable = true
-		drag_node.locator 	= locator
+
 		// drag_id
 			const drag_id = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'drag section_id',
+				class_name		: 'drag_section_id hide',
 				text_content	: section_id,
 				parent			: drag_node
 			})
-
-		drag_node.addEventListener('dragstart',function(e){on_dragstart(this,e)})
-
+		// drop
 		const drop_node = ui.create_dom_element({
-			element_type	: 'span',
+			element_type	: 'div',
 			class_name		: 'drop hide',
 			parent			: fragment
 		})
+		drag_node.draggable		= true
 
-
+		drag_node.addEventListener('dragstart',function(e){on_dragstart(options, this, e)})
+		drop_node.addEventListener('dragover',function(e){on_dragover(this, e)})
+		drop_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
+		drag_node.addEventListener('dragend',function(e){on_dragend(this, e)})
+		drop_node.addEventListener('drop',function(e){on_drop(options, this, e)})
 
 	return fragment
 }//end render_column_id

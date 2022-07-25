@@ -758,6 +758,25 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
 
 /**
+* ORDER_DATA
+* @return
+*/
+component_portal.prototype.sort_data = function(options) {
+
+	const self = this
+
+	// ddo_source
+		const rqo = {}
+
+	// source vars
+		section_tipo	= self.section_tipo
+		section_id		= self.section_id
+		tipo			= self.tipo
+		value			= self.value
+
+};//end order_data
+
+/**
 * GET_LAST_OFFSET
 */
 	// component_portal.prototype.get_last_offset = function() {
