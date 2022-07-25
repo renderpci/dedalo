@@ -1,7 +1,7 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
-	
+
 
 // import
 
@@ -10,33 +10,87 @@ import {event_manager} from './event_manager.js'
 
 
 /**
-* INIT
+* unsaved_data set default
+*/
+if (typeof window.unsaved_data==='undefined') {
+	window.unsaved_data = false
+}
+
+
+
+/**
+* INIT  (!) WORK IN PROGRESS
 * set the main events to the document
 * event as visibilityState or beforeunload are init at load of the page
 * this events are global and use to control the unsaved data of the page
 * see the main page initialization in /page/index.html
 */
 export const events_init = function(){
-	// add visibility change to control if the user change the tab without save
-	document.addEventListener("visibilitychange", visibility_change);
 
+	// add visibility change to control if the user change the tab without save
+		document.addEventListener('visibilitychange', visibility_change);
+		async function visibility_change(){
+
+			if (document.visibilityState==='hidden' && window.unsaved_data===true) {
+
+				await saving
+				// setTimeout(function(){
+				// 	console.log("saved:", saved);
+				// },100)
+			}
+		}
 
 	const saving = event_manager.subscribe('save', function(result){
-			saved = true
+		console.log('save result:', result);
+		// saved = true
 	})
 
-	async function visibility_change(){
+	return true
+}//end events_init
 
-		if (document.visibilityState === 'hidden' && window.unsaved_data === true) {
 
-					await saving
-					// setTimeout(function(){
-					// 	console.log("saved:", saved);
-					// },100)
-		}
+
+/**
+* SET_BEFORE_UNLOAD
+* On true, attach a event listener to the window to prevent that user loose changed data on reload
+* On false, the listener is removed to allow reload the page normally
+* Note that this function is triggered as true when component input or editor data changes and
+* with false when the component saves the data
+* @param bool value
+* @return bool
+*/
+export const set_before_unload = function(value) {
+	if(SHOW_DEBUG===true) {
+		console.log("///////////////////// set_before_unload value:",value);
+	}
+	if (value===true) {
+		// window dialog will be shown when user leaves the page
+		addEventListener('beforeunload', before_unload_listener, {capture: true});
+		window.unsaved_data = true
+	}else{
+		// restore the normal page exit status
+		removeEventListener('beforeunload', before_unload_listener, {capture: true});
+		window.unsaved_data = false
 	}
 
-}
+	return true
+}//end set_before_unload
+
+
+
+/**
+* BEFOREUNLOADLISTENER
+* Prevent to accidentally user leaves the page with unsaved changes
+* @param object event
+*/
+const before_unload_listener = function(event) {
+
+	event.preventDefault();
+	document.activeElement.blur()
+
+	// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
+}//end before_unload_listener
+
 
 
 
@@ -100,57 +154,3 @@ export const when_in_viewport = function(node, callback, once=true) {
 
 	return observer
 }//end when_in_viewport
-
-
-
-/**
-* SET_BEFORE_UNLOAD
-* On true, attach a event listener to the window to prevent that user loose changed data on reload
-* On false, the listener is removed to allow reload the page normally
-* Note that this function is triggered as true when component input or editor data changes and
-* with false when the component saves the data
-* @param bool value
-* @return bool
-*/
-export const set_before_unload = function(value) {
-	if(SHOW_DEBUG===true) {
-		console.log("///////////////////// set_before_unload value:",value);
-	}
-	if (value===true) {
-		// window dialog will be shown when user leaves the page
-		addEventListener('beforeunload', before_unload_listener, {capture: true});
-		window.unsaved_data = true
-	}else{
-		// restore the normal page exit status
-		removeEventListener('beforeunload', before_unload_listener, {capture: true});
-		window.unsaved_data = false
-	}
-
-	return true
-}//end set_before_unload
-
-
-
-
-
-/**
-* BEFOREUNLOADLISTENER
-* Prevent to accidentally user leaves the page with unsaved changes
-* @param object event
-*/
-const before_unload_listener = function(event) {
-
-	event.preventDefault();
-	document.activeElement.blur()
-
-	// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
-}//end before_unload_listener
-
-
-
-/**
-* unsaved_data set default
-*/
-if (typeof window.unsaved_data==='undefined') {
-	window.unsaved_data = false
-}
