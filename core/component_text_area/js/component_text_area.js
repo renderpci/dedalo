@@ -67,7 +67,7 @@ export const component_text_area = function(){
 	component_text_area.prototype.destroy			= common.prototype.destroy
 
 	// change data
-	component_text_area.prototype.save				= component_common.prototype.save
+	// component_text_area.prototype.save			= component_common.prototype.save
 	component_text_area.prototype.change_value		= component_common.prototype.change_value
 	component_text_area.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_text_area.prototype.update_datum		= component_common.prototype.update_datum
@@ -155,12 +155,14 @@ component_text_area.prototype.init = async function(options) {
 					const selection	= options.selection
 					const caller	= options.caller
 
-				const key					= 0; // key (only one editor is available but component could support multiple)
-				const current_text_editor		= self.text_editor[key]
-				const inputs_container		= self.node[key].querySelector('.inputs_container'); // (first ul)
-				const component_container	= inputs_container.querySelector('li'); // li (first li)
-				const button				= component_container.querySelector(".create_fragment") // could exists or not
+				// short vars
+					const key					= 0; // key (only one editor is available but component could support multiple)
+					const current_text_editor	= self.text_editor[key]
+					const inputs_container		= self.node[key].querySelector('.inputs_container'); // (first ul)
+					const component_container	= inputs_container.querySelector('li'); // li (first li)
+					const button				= component_container.querySelector(".create_fragment") // could exists or not
 					// console.log("selection.length:",selection.length);
+
 				if (selection.length<1) {
 					if (button) {
 						button.remove()
@@ -320,6 +322,28 @@ component_text_area.prototype.save_editor = function(key=0) {
 
 	return result
 }//end save_editor
+
+
+
+/**
+* SAVE
+* 	Alias of component_common.prototype.save with component specific added actions
+* @param object changed_data
+* 	{
+* 		action : "update",
+* 		key : 0,
+* 		value : "XXX"
+* 	}
+* @return promise save_promise
+*/
+component_text_area.prototype.save = async function(changed_data) {
+
+	// call the generic common tool init
+		const save_promise = component_common.prototype.save.call(this, changed_data);
+
+
+	return save_promise
+}//end save
 
 
 

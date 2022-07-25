@@ -194,22 +194,23 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 						// context. If it's not given, get from caller or request to the API
 							const context = el.context
 								? el.context
-								: await (async function(){
-									// caller context
-									const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
-									if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
-										// get context from available caller
-										return caller_context
-									}
+								: {}
+								 //  await (async function(){
+									// // caller context
+									// const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
+									// if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
+									// 	// get context from available caller
+									// 	return caller_context
+									// }
 
-									// resolve whole context from API (init event observer problem..)
-									// (!) This is mandatory now because some components (e.g. component_portal) need
-									// the rqo_config to generate rqo correctly
-									const api_response = await data_manager.get_element_context(el)
-									// console.log("++++++++++++++++++ resolved context api_response:", el.tipo, api_response);
-									return api_response.result[0] || null
-									// return {}
-								  })()
+									// // resolve whole context from API (init event observer problem..)
+									// // (!) This is mandatory now because some components (e.g. component_portal) need
+									// // the rqo_config to generate rqo correctly
+									// const api_response = await data_manager.get_element_context(el)
+									// // console.log("++++++++++++++++++ resolved context api_response:", el.tipo, api_response);
+									// return api_response.result[0] || null
+									// // return {}
+								 //  })()
 
 						// generic try
 							// const element_instance = load_component_generic({
@@ -231,6 +232,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							id_variant		: self.model,  // id_variant prevents id conflicts
 							caller			: self // set tool as caller of the component :-)
 						}
+
 						// init and build instance
 							get_instance(element_options) // load and init
 							.then(function(element_instance){

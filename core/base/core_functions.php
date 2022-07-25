@@ -761,6 +761,21 @@ function array_flatten(array $array) : array {
 
 
 /**
+* REARRANGE_ARRAY
+* Rearrange the array to your desired output
+*/
+function rearrange_array($array, $key) {
+    while ($key > 0) {
+        $temp = array_shift($array);
+        $array[] = $temp;
+        $key--;
+    }
+    return $array;
+}//end rearrange_array
+
+
+
+/**
 * IS_ASSOCIATIVE
 * Checks if an array is associative. Return value of 'False' indicates a sequential array.
 * @param array $inpt_arr
