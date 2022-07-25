@@ -94,6 +94,7 @@ final class dd_manager {
 				$api_debug = new stdClass();
 					$api_debug->api_exec_time	= $total_time_api_exec;
 					$api_debug->memory_usage	= dd_memory_usage();
+					$api_debug->rqo_object		= $rqo;
 					$api_debug->rqo				= is_object($rqo)
 						? json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
 						: $rqo;
