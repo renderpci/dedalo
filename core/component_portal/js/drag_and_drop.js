@@ -8,68 +8,42 @@
 	* Get element dataset path as event.dataTransfer from selected component
 	* @return bool true
 	*/
-	export const on_dragstart = function(obj, event) {
+	export const on_dragstart = function(options, drag_node, event) {
 
 		event.stopPropagation();
-
-		const data = JSON.stringify(obj.locator)
-
-		obj.classList.remove('hide')
+		const transfer_data = {
+			locator			: options.locator,
+			paginated_key	: options.paginated_key
+		}
+		const data = JSON.stringify(transfer_data)
 
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', data);
 
-		const content_data			= obj.parentNode.parentNode.parentNode
+		drag_node.classList.add('draging')
+		drag_node.firstChild.classList.remove('hide')
 
-		const content_data_children = content_data.children
+		const content_data		= drag_node.parentNode.parentNode.parentNode
+		const ar_section_record	= content_data.childNodes
 
-		for (let i = content_data_children.length - 1; i >= 0; i--) {
+		const list_body_rect		= content_data.parentNode.getBoundingClientRect()
 
-			const section_record_node = content_data_children[i]
-				console.log("section_record_node:",i, section_record_node);
-			const section_record_rect	= section_record_node.getBoundingClientRect();
-console.log("section_record_rect:",section_record_rect);
-			const style = {
-				'left'		: parseFloat(section_record_rect.x) + 'px',
-				'top'		: parseFloat(section_record_rect.y + window.pageYOffset) + 'px',
-				'height'	: parseFloat(section_record_rect.height) + 'px',
-				'width'		: parseFloat(section_record_rect.width) + 'px'
-			}
-			// drop_row
-				const drop_row = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'drop_row',
-					style			: style,
-					parent 			: content_data
-				})
+		for (let i = ar_section_record.length - 1; i >= 0; i--) {
 
+			const section_record_node	= ar_section_record[i]
+			const current_drop			= section_record_node.querySelector('.drop')
 
+			const last_node				= section_record_node.lastChild
+			const rect_last_node		= last_node.getBoundingClientRect();
 
+			const height = parseFloat(rect_last_node.height) + 'px'
+			const width	 = parseFloat(list_body_rect.width - list_body_rect.x - list_body_rect.x ) + 'px'
+
+			current_drop.style.height = height
+			current_drop.style.width = width
+			// current_drop.style.left = '100px'
+			current_drop.classList.remove('hide')
 		}
-
-
-
-		const section_record			= obj.parentNode.parentNode
-		// const list_body				= section_record.parentNode.parentNode
-		// const styles					= window.getComputedStyle(list_body)
-		// const css_grid_template_columns	= styles.getPropertyValue('grid-template-columns')
-
-		// const cloned_sr = section_record.cloneNode(true)
-		// cloned_sr.style.display = 'grid'
-		// cloned_sr.style.gridTemplateColumns = css_grid_template_columns
-
-		// const drag_node = document.createElement("div");
-
-		// drag_node.innerHTML = cloned_sr.outerHTML
-
-		// document.body.appendChild(drag_node)
-
-		// console.log("drag_node:",drag_node);
-
-		// console.log("cloned_sr:",cloned_sr);
-
-		// event.dataTransfer.setDragImage(drag_node, 25, 25);
-		// cloned_sr.remove()
 
 		return true
 	}//end ondrag_start
@@ -78,10 +52,12 @@ console.log("section_record_rect:",section_record_rect);
 	/**
 	* ON_DRAGOVER
 	*/
-	export const on_dragover = function(obj, event) {
+	export const on_dragover = function(drop_node, event) {
 
 		event.preventDefault();
 		event.stopPropagation();
+
+		drop_node.classList.add('dragover')
 		//console.log("dragover");
 		//event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
 
@@ -94,21 +70,36 @@ console.log("section_record_rect:",section_record_rect);
 	/**
 	* ON_DRAGLEAVE
 	*/
-	export const on_dragleave = function(obj, event) {
+	export const on_dragleave = function(drop_node, event) {
+		console.log("on_dragleave:",on_dragleave);
 
-		//console.log("dragleave");
-		//obj.classList.remove('drag_over')
+		drop_node.classList.remove('dragover')
+
 	}//end on_dragleave
-
 
 
 
 	/**
 	* ON_DRAGEND
 	*/
-	export const on_dragend = function(obj, event) {
+	export const on_dragend = function(drag_node, event) {
 
-		console.log("dragleave", event);
+		event.preventDefault();
+		event.stopPropagation();
+
+		const content_data		= drag_node.parentNode.parentNode.parentNode
+		const ar_section_record	= content_data.childNodes
+
+		for (let i = ar_section_record.length - 1; i >= 0; i--) {
+
+			const section_record_node	= ar_section_record[i]
+			const current_drop			= section_record_node.querySelector('.drop')
+
+			current_drop.style.height = 0
+			current_drop.style.width = 0
+			current_drop.classList.add('hide')
+		}
+
 		//obj.classList.remove('drag_over')
 	}//end on_dragend
 
@@ -118,29 +109,29 @@ console.log("section_record_rect:",section_record_rect);
 	* Get data path from event.dataTransfer and call to build required component html
 	* @return bool true
 	*/
-	export const on_drop = function(obj, event) {
+	export const on_drop = function(options, drop_node, event) {
 
 		event.preventDefault() // Necessary. Allows us to drop.
 		event.stopPropagation()
 
-		const self = this
+		const self	= options.caller
+		const data	= event.dataTransfer.getData('text/plain');// element that's move
 
-		//console.log("on_drop:",obj);
-		//console.log("on_drop event:", event.dataTransfer.getData('text/plain'));
-		const data 		  = event.dataTransfer.getData('text/plain');// element thats move
-		const wrap_target = obj 	 // element on user leaves source wrap
+		drop_node.classList.remove('dragover')
+		drop_node.classList.add('hide')
+
 
 		const data_parse = JSON.parse(data)
 		const path = data_parse.path
 
-		const section_id = data_parse.section_id
+		const sort_data = {
+			value		: data_parse.locator,
+			source_key	: data_parse.paginated_key,
+			target_key	: options.paginated_key
+		}
 
-		// Build component html
-		self.build_search_component(wrap_target, path, null, null, section_id).then(()=>{
-			//Update the state and save
-			self.update_state({state:'changed'})
+		self.sort_data(sort_data)
 
-		});
 
 		return true
 	}//end on_drop
