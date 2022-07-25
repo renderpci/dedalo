@@ -7,6 +7,7 @@
 	// import * as dd from '../../common/js/dd.common.funtions.js'
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {set_before_unload} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {set_context_vars, create_source} from '../../common/js/common.js'
@@ -456,7 +457,7 @@ component_common.prototype.save = async function(changed_data) {
 
 				// page unload event
 					// set_before_unload (bool)
-					event_manager.set_before_unload(false)
+					set_before_unload(false)
 
 				return false
 			}
@@ -564,7 +565,7 @@ component_common.prototype.save = async function(changed_data) {
 
 				// page unload event
 					// set_before_unload (bool)
-					event_manager.set_before_unload(false)
+					set_before_unload(false)
 
 				// updates db_data
 					self.db_data = self.db_data || {

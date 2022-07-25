@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
+	import {set_before_unload} from '../../../common/js/events.js';
 	// import {ui} from '../../../common/js/ui.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
@@ -932,7 +933,7 @@ export const service_ckeditor = function() {
 
 		// page unload event
 			// set_before_unload (bool)
-			event_manager.set_before_unload(value)
+			set_before_unload(value)
 
 
 		return true

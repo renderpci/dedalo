@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
+	import {set_before_unload} from '../../../common/js/events.js'
 	import {ui} from '../../../common/js/ui.js'
 	// import {observe_changes} from '../../../common/js/utils.js'
 	// import {clone, observe_changes} from '../../../common/js/utils/index.js'
@@ -523,7 +524,7 @@ export const service_tinymce = function() {
 
 		// page unload event
 			// set_before_unload (bool)
-			event_manager.set_before_unload(value)
+			set_before_unload(value)
 
 
 		return true
