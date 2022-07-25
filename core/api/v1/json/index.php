@@ -1,17 +1,21 @@
 <?php
-$start_time = hrtime(true);
+$global_start_time = hrtime(true);
 
 // Turn off output buffering
 	ini_set('output_buffering', 'off');
 // Turn off PHP output compression
 	// ini_set('zlib.output_compression', false);
 // Flush (send) the output buffer and turn off output buffering
-	//ob_end_flush();
+	// ob_end_flush();
 	// while (@ob_end_flush());
 
 	// Implicitly flush the buffer(s)
 	// ini_set('implicit_flush', true);
 	// ob_implicit_flush(true);
+
+	// debug
+		// $current = (hrtime(true) - $global_start_time) / 1000000;
+		// error_log('--------------------------------------- current 0 ms: '.$current);
 
 
 
@@ -29,6 +33,9 @@ $start_time = hrtime(true);
 		// define('PREVENT_SESSION_LOCK', ($rqo->prevent_lock ?? false));
 	}
 
+	// debug
+		// $current = (hrtime(true) - $global_start_time) / 1000000;
+		// error_log('--------------------------------------- current 1 (after file_get_contents) ms: '.$current);
 
 
 // received files case
@@ -72,7 +79,11 @@ $start_time = hrtime(true);
 		$dd_manager	= new dd_manager();
 		$result		= $dd_manager->manage_request( $rqo );
 
-		// close current session and set as only read
+		// debug
+			// $current = (hrtime(true) - $global_start_time) / 1000000;
+			// error_log('--------------------------------------- current 2 ms: '.$current);
+
+		// close current session and set as read only
 			if ($session_closed===false) {
 				session_write_close();
 			}
@@ -80,8 +91,8 @@ $start_time = hrtime(true);
 		// debug
 			if(SHOW_DEBUG===true) {
 				// real_execution_time add
-				$result->debug = $result->debug ?? new stdClass();
-				$result->debug->real_execution_time = exec_time_unit($start_time,'ms').' ms';
+				$result->debug						= $result->debug ?? new stdClass();
+				$result->debug->real_execution_time	= exec_time_unit($global_start_time,'ms').' ms';
 			}
 
 	// } catch (Throwable $e) { // For PHP 7
@@ -116,6 +127,11 @@ $start_time = hrtime(true);
 // output the result json string
 	$output_string = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+	// debug (browser Server-Timing)
+		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
+		// $current = (hrtime(true) - $global_start_time) / 1000000;
+		// header('Server-Timing: API;dur='.$current);
+
 
 
 // output_string_and_close_connection
@@ -139,7 +155,14 @@ $start_time = hrtime(true);
 	// 	// if (session_id()) session_write_close();
 	// }
 
+	// debug
+		// $current = (hrtime(true) - $global_start_time) / 1000000;
+		// error_log('--------------------------------------- current 3 (before echo) ms: '.$current);
 
 
 // output_string_and_close_connection($output_string);
 	echo $output_string;
+
+	// debug
+		// $current = (hrtime(true) - $global_start_time) / 1000000;
+		// error_log('--------------------------------------- current FINAL (after echo) ms: '.$current);
