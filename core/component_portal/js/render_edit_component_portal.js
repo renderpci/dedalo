@@ -103,6 +103,8 @@ export const render_column_id = function(options){
 		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
+		const total_records = self.total
+
 
 	const fragment = new DocumentFragment()
 
@@ -169,6 +171,7 @@ export const render_column_id = function(options){
 				text_content	: section_id,
 				parent			: drag_node
 			})
+
 		// drop
 		const drop_node = ui.create_dom_element({
 			element_type	: 'div',
@@ -182,6 +185,97 @@ export const render_column_id = function(options){
 		drop_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
 		drag_node.addEventListener('dragend',function(e){on_dragend(this, e)})
 		drop_node.addEventListener('drop',function(e){on_drop(options, this, e)})
+
+		drag_node.addEventListener('dblclick',function(e){
+
+			// header
+				const header = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'header'
+				})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					text_node		: get_label.change_order_for || 'Change order for '+ section_id +' :',
+					parent			: header
+				})
+
+			// body
+			const body = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'sort_order content body'
+			})
+				const target_key_input = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'number',
+					value			: options.paginated_key + 1,
+					class_name		: 'target_key',
+					parent			: body
+				})
+
+				const button_ok = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'button_sort_order success',
+					text_content 	: 'Ok',
+					parent			: body
+				})
+
+			// modal
+			const modal = ui.attach_to_modal({
+				header	: header,
+				body	: body,
+				footer	: null,
+				size	: 'small' // string size big|normal|small
+			})
+			// set the input field active
+			target_key_input.focus()
+			// add events to modal options
+			target_key_input.addEventListener('keyup',function(evt){
+				switch(true) {
+					// Enter
+					case evt.code === 'Enter' || evt.code === 'NumpadEnter':
+						change_order_modal()
+					break;
+				}
+			})
+			// user click in the buton
+			button_ok.addEventListener('click',function(evt){
+				change_order_modal()
+			})
+			// CHANGE_ORDER_MODAL
+			// get the user data and check it to be correct before sort data
+			// sort data if the new position is ok.
+			const change_order_modal = function() {
+				// user input data has not the array data order, the user will introduce the natural order 1,2,3,etc
+				// it's necessary subtract one position to get the array position 0,1,2,etc
+				const user_target_key = parseInt(target_key_input.value) -1
+				// fix enter values with data boundaries,
+				// the new position has to be between 0 (first array key of the data) and the last section_records (last key)
+				const last_key = total_records - 1
+				// check the position entered to be correct in boundaries
+				const target_key = user_target_key < 0
+					? 0
+					: (user_target_key > last_key)
+						? last_key
+						: user_target_key
+				// if the user enter the same position didn't nothing and close
+				if(paginated_key === target_key){
+					modal.close()
+					return false
+				}
+				// change the order by the normal way
+				const sort_data = {
+					value		: locator,
+					source_key	: paginated_key,
+					target_key	: target_key
+				}
+
+				self.sort_data(sort_data)
+
+				modal.close()
+			}
+		})
+
 
 	return fragment
 }//end render_column_id
