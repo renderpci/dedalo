@@ -139,23 +139,26 @@ class component_portal extends component_relation_common {
 	* ADD_NEW_ELEMENT
 	* Creates a new record in target section and propagates filter data
 	* Add the new record section id to current component data (as locator) and save it
+	* @param object $request_options
 	* @return object $response
 	*/
 	public function add_new_element( object $request_options ) : object {
 
-		$options = new stdClass();
-			$options->target_section_tipo 	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$options = new stdClass();
+				$options->target_section_tipo = null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
 
-
-		if(empty($options->target_section_tipo)){
-			$response->msg .= ' Is mandatory to specify target_section_tipo';
-			return $response;
-		}
+		// target_section_tipo check
+			if(empty($options->target_section_tipo)){
+				$response->msg .= ' Is mandatory to specify target_section_tipo';
+				return $response;
+			}
 
 		#
 		# 1 PROJECTS GET. Obtenemos los datos del filtro (proyectos) de la sección actual para heredarlos en el registro del portal
@@ -212,14 +215,15 @@ class component_portal extends component_relation_common {
 			}
 
 
-		# Save current component updated data
-		$this->Save();
+		// Save current component updated data
+			// $this->Save();
 
+		// response ok
+			$response->result			= true;
+			$response->section_id		= $new_section_id;
+			$response->added_locator	= $locator;
+			$response->msg				= 'Ok. Request done '.__METHOD__;
 
-		$response->result 		= true;
-		$response->section_id 	= $new_section_id;
-		$response->added_locator= $locator;
-		$response->msg 			= 'Ok. Request done '.__METHOD__;
 
 		return $response;
 	}//end add_new_element

@@ -156,6 +156,8 @@ class tool_posterframe extends tool_common {
 					$response->msg .= ' Error. Unable to create portal record';
 					return $response;
 				}
+				// save portal if all is all ok
+				$component_portal->Save();
 
 				$new_section_id = $new_element_response->section_id;
 				$added_locator 	= $new_element_response->added_locator;

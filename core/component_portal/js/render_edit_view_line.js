@@ -350,28 +350,6 @@ render_edit_view_line.render_column_id = function(options){
 	// 		})
 	// 		button_add.addEventListener("click", async function(e){
 
-	// 			//TO ADD SECTION SELECTOR
-	// 				const section_tipo = target_section_lenght >1
-	// 					? false
-	// 					: target_section[0].tipo
-
-
-	// 				// data_manager. create new record
-	// 				const api_response = await data_manager.request({
-	// 					body : {
-	// 						action				: 'add_new_element',
-	// 						source				: create_source(self),
-	// 						target_section_tipo	: section_tipo
-	// 					}
-	// 				})
-	// 				// add value to current data
-	// 				if (api_response.result) {
-	// 					self.refresh()
-	// 				}else{
-	// 					console.error("Error on api_response on try to create new row:", api_response);
-	// 				}
-	// 		})
-
 	// 	// button_link
 	// 		const button_link = ui.create_dom_element({
 	// 			element_type	: 'span',

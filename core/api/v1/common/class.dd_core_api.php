@@ -728,10 +728,15 @@ final class dd_core_api {
 				}else{
 
 					// update the dato with the changed data sent by the client
-						$component->update_data_value($changed_data);
+						$update_result = (bool)$component->update_data_value($changed_data);
 
 					// save the new data to the component
-						$component->Save();
+						if ($update_result===true) {
+							$component->Save();
+						}else{
+							$response->error	 = 1;
+							$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
+						}
 
 					// force recalculate dato
 						$dato = $component->get_dato();
@@ -769,99 +774,14 @@ final class dd_core_api {
 		}//end switch ($type)
 
 		// result. if the process is correct, we return the $result to the client
-			$response->result	= $result;
-			$response->msg		= 'OK. Request done';
+			$response->result = $result;
+			if (empty($response->error)) {
+				$response->msg = 'OK. Request save done successfully';
+			}
 
 
 		return $response;
 	}//end save
-
-
-
-	/**
-	* ADD_NEW_ELEMENT
-	* Used by component_portal to add created target section to current component
-	* with project values inheritance
-	* @param object $rqo
-	* sample:
-	* {
-	*    "action": "add_new_element",
-	*    "source": {
-	*        "typo": "source",
-	*        "model": "component_portal",
-	*        "tipo": "oh25",
-	*        "section_tipo": "oh1",
-	*        "section_id": "124",
-	*        "mode": "edit",
-	*        "lang": "lg-nolan"
-	*    },
-	*    "target_section_tipo": "rsc167"
-	* }
-	* @return object $response
-	*/
-	public static function add_new_element(object $rqo) : object {
-
-		// create the default response
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		// rqo vars
-			$source					= $rqo->source;
-			$target_section_tipo	= $rqo->target_section_tipo;
-
-		// short vars
-			$model			= $source->model;
-			$tipo			= $source->tipo;
-			$section_tipo	= $source->section_tipo;
-			$section_id		= $source->section_id;
-			$lang			= $source->lang;
-			$mode			= $source->mode;
-			$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-				? $lang
-				: DEDALO_DATA_NOLAN;
-
-		// build the component
-			$component = component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				$mode,
-				$component_lang,
-				$section_tipo
-			);
-		// get the component permissions
-			$permissions = $component->get_component_permissions();
-		// check if the user can update the component
-			if($permissions < 2) return $response;
-
-		// component add_new_element
-			$component->add_new_element((object)[
-				'target_section_tipo' => $target_section_tipo
-			]);
-
-		// element json
-			// 	$get_json_options = new stdClass();
-			// 		$get_json_options->get_context 	= true;
-			// 		$get_json_options->get_data 	= true;
-			// 	$element_json = $component->get_json($get_json_options);
-
-			// // observers_data
-			// 	if (isset($component->observers_data)) {
-			// 		$element_json->data = array_merge($element_json->data, $component->observers_data);
-			// 	}
-
-			// // context and data as result
-			// 	$result = $element_json;
-
-		// result. if the process is correct, we return the $result to the client
-			$response->result 	= true;
-			$response->msg 	  	= 'OK. Request done';
-
-
-		return $response;
-	}//end add_new_element
 
 
 

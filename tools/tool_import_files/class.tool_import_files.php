@@ -613,15 +613,17 @@ class tool_import_files extends tool_common {
 					$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
 
 				// section. Create a new section for each file from current portal
-					$request_options = new stdClass();
-						$request_options->target_section_tipo = $target_section_tipo;
-
-					$portal_response = (object)$component_portal->add_new_element( $request_options );
+					$portal_response = (object)$component_portal->add_new_element((object)[
+						'target_section_tipo' => $target_section_tipo
+					]);
 					if ($portal_response->result===false) {
 						$response->result 	= false;
 						$response->msg 		= "Error on create portal children: ".$portal_response->msg;
 						return $response;
 					}
+					// save portal if all is all ok
+					$component_portal->Save();
+
 					// Fix new section created as current_section_id
 					$target_section_id = $portal_response->section_id;
 

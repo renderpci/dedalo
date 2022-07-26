@@ -2975,9 +2975,15 @@ abstract class component_common extends common {
 	/**
 	* UPDATE_DATA_VALUE
 	* Used to maintain component data when dd_core_api saves component
-	* @param object $data
-	* @return bool true
-	* @see dd_core_api update
+	* * @see dd_core_api update
+	* @param object $changed_data
+	* sample:
+	* {
+    *  	"action": "add_new_element",
+    *	"key": null,
+    *	"value": "rsc167"
+    * }
+	* @return bool
 	*/
 	public function update_data_value(object $changed_data) : bool {
 
@@ -3115,9 +3121,25 @@ abstract class component_common extends common {
 					$this->set_dato($new_dato);
 				break;
 
+			// used by component_portal to add created target section to current component with project values inheritance
+			case 'add_new_element':
+
+				$target_section_tipo = $changed_data->value;
+
+				// component add_new_element. Returns object $response
+					$response = $this->add_new_element((object)[
+						'target_section_tipo' => $target_section_tipo
+					]);
+					if ($response->result!==true) {
+						debug_log(__METHOD__." Error on add_new_element (section_tipo:'$target_section_tipo'). Response:".PHP_EOL.to_string($response), logger::ERROR);
+						return false;
+					}
+				break;
+
 			default:
 				// error
-				debug_log(__METHOD__." Error on update_data_value. changed_data->action is not valid! ".to_string($changed_data->action), logger::DEBUG);
+				debug_log(__METHOD__." Error on update_data_value. changed_data->action is not valid! ".to_string($changed_data->action), logger::ERROR);
+				return false;
 				break;
 		}
 
