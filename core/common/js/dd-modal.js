@@ -42,7 +42,8 @@ class DDModal extends HTMLElement {
 					margin-top: 3.5vh;
 					padding: 0;
 					width: 80%;
-					min-width: 390px;
+					/*min-width: 390px;*/
+					max-height: 95vh;
 					box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
 					font-size: inherit;
 					/* border: 1px solid #888; */
@@ -55,7 +56,6 @@ class DDModal extends HTMLElement {
 					animation-name: animatetop;
 					animation-duration: 0.4s;
 					*/
-					max-height: 95vh;
 				}
 				.dragging {
 					cursor: move;
@@ -117,9 +117,11 @@ class DDModal extends HTMLElement {
 
 			/* modal body */
 				.modal-body {
-					/*padding: 2px 16px;
+					/*
+					padding: 2px 16px;
 					margin: 20px 2px;
-					overflow: auto;*/
+					overflow: auto;
+					*/
 				}
 
 			/* modal_big version */
@@ -155,7 +157,8 @@ class DDModal extends HTMLElement {
 					z-index: 9999;
 				}
 				.modal_small > .modal-content {
-					width: auto;
+					width: fit-content;
+					min-width: 15rem;
 					max-width: 32vw;
 					height: auto;
 					margin-top: 20vh;
