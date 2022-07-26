@@ -483,7 +483,7 @@ component_common.prototype.save = async function(changed_data) {
 					data.changed_data = changed_data
 
 				// source
-					const source = create_source(self, 'read')
+					const source = create_source(self, null)
 
 				// rqo
 					const rqo = {

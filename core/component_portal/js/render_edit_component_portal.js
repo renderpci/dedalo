@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone} from '../../common/js/utils/index.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
@@ -367,27 +367,44 @@ export const get_buttons = (self) => {
 			class_name		: 'button add',
 			parent			: fragment
 		})
-		button_add.addEventListener("click", async function(){
+		button_add.addEventListener('click', async function(){
 
-			//TO ADD SECTION SELECTOR
-				const section_tipo = target_section_lenght >1
+			// target_section_tipo. to add section selector
+				const target_section_tipo = target_section_lenght > 1
 					? false
 					: target_section[0].tipo
+				if (!target_section_tipo) {
+					alert("Error. Empty target_section");
+					return
+				}
 
+			// source
+				const source = create_source(self, null)
 
-				// data_manager. create new record
+			// data
+				const data = clone(self.data)
+				data.changed_data = {
+					action	: 'add_new_element',
+					key		: null,
+					value	: target_section_tipo
+				}
+
+			// rqo
+				const rqo = {
+					action	: 'save',
+					source	: source,
+					data	: data
+				}
+
+			// data_manager. create new record
 				const api_response = await data_manager.request({
-					body : {
-						action				: 'add_new_element',
-						source				: create_source(self),
-						target_section_tipo	: section_tipo
-					}
+					body : rqo
 				})
 				// add value to current data
 				if (api_response.result) {
 					self.refresh()
 				}else{
-					console.error("Error on api_response on try to create new row:", api_response);
+					console.error('Error on api_response on try to create new row:', api_response);
 				}
 		})
 

@@ -2,10 +2,10 @@
 
 /**
 * CROP_50
-* @return 
+* @return
 */
 function crop_50($request_options, $custom_arguments) {
-	
+
 	$options = new stdClass();
 		$options->section_tipo 		= null;
 		$options->section_id 		= null;
@@ -57,15 +57,16 @@ function crop_50($request_options, $custom_arguments) {
 		$properties 		 = $component_portal->get_properties();
 		$tool_properties 	 = $properties->ar_tools_name->tool_import_files;
 
-		$request_options = new stdClass();
-			$request_options->section_target_tipo 	= $target_section_tipo;
-
-		$portal_response = (object)$component_portal->add_new_element( $request_options );
+		$portal_response = (object)$component_portal->add_new_element((object)[
+			'target_section_tipo' => $target_section_tipo
+		]);
 		if ($portal_response->result===false) {
 			$response->result 	= false;
 			$response->msg 		= "Error on create portal children: ".$portal_response->msg;
 			return $response;
 		}
+		// save portal if all is all ok
+		$component_portal->Save();
 
 		$current_section_id = $portal_response->section_id;
 
