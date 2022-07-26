@@ -178,6 +178,8 @@
 		>.content_data {
 			// background-color: #ffeccd !important;
 			display: grid;
+			grid-column-gap: 1rem;
+			grid-template-columns: 1fr 1fr;
 
 			.section_record.list {
 				display: flex;
@@ -185,9 +187,14 @@
 				border-bottom: 1px solid #eeeeee;
 				width: 100%;
 				margin-bottom: 1px;
+				overflow: hidden;
 				// @media screen and (max-width: @width_break_point_1) {
 				// 	flex-wrap: wrap;
 				// }
+
+				&:hover {
+					background-color: @color_grey_untralight;
+				}
 
 				.column {
 					display: flex;
@@ -198,6 +205,7 @@
 
 					&.column_remove, &.column_section_id {
 						background-color: unset;
+						padding-right: 0.25rem;
 						>.icon {
 							height: 1.25rem;
 						}

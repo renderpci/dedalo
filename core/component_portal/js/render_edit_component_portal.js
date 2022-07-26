@@ -343,7 +343,12 @@ export const render_column_remove = function(options) {
 			e.stopPropagation()
 
 			// label
-				const children = this.parentNode.parentNode.parentNode.children
+				let el = button_remove
+				while((el = el.parentElement) && !el.classList.contains('section_record')) {
+					// finding parent section_record
+				}
+				const children = el.children
+
 				const ar_label = []
 				for (let i = 0; i < children.length; i++) {
 					if(children[i].textContent.length>0) {
