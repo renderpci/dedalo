@@ -148,6 +148,16 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_edit_view_indexation.render_column_id
 		})
 
+	// button_remove
+		if (self.permissions>1) {
+			columns_map.push({
+				id			: 'remove',
+				label		: '', // get_label.delete || 'Delete',
+				width 		: 'auto',
+				callback	: render_column_remove
+			})
+		}
+
 	const base_columns_map = await self.columns_map
 
 	columns_map.push(...base_columns_map)
@@ -167,7 +177,7 @@ const rebuild_columns_map = async function(self) {
 				// tag_id
 					const tag_id = locator.tag_id ?? null
 					const tag_label = tag_id
-						? 'Tag: ' + tag_id
+						? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
 						: ''
 
 				return ui.create_dom_element({
@@ -187,15 +197,7 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
-	// button_remove
-		if (self.permissions>1) {
-			columns_map.push({
-				id			: 'remove',
-				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
-				callback	: render_column_remove
-			})
-		}
+
 
 	return columns_map
 }//end rebuild_columns_map
@@ -220,30 +222,41 @@ render_edit_view_indexation.render_column_id = function(options){
 		const edit_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'edit_button',
+			title_label		: get_label.abrir || 'Open',
 			parent			: fragment
 		})
-		edit_button.addEventListener("click", function(){
-			const user_navigation_rqo = {
-				caller_id	: self.id,
-				source		: {
-					action			: 'search',
-					model			: 'section',
-					tipo			: section_tipo,
-					section_tipo	: section_tipo,
-					mode			: 'edit',
-					lang			: self.lang
-				},
-				sqo : {
-					section_tipo		: [{tipo : section_tipo}],
-					filter				: null,
-					limit				: 1,
-					filter_by_locators	: [{
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-					}]
-				}
-			}
-			event_manager.publish('user_navigation', user_navigation_rqo)
+		edit_button.addEventListener('click', function(){
+
+			// open in new window
+			const url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=false'
+			window.open(
+				url,
+				'edit_window',
+				'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes'
+			)
+
+			// DES navigation
+				// const user_navigation_rqo = {
+				// 	caller_id	: self.id,
+				// 	source		: {
+				// 		action			: 'search',
+				// 		model			: 'section',
+				// 		tipo			: section_tipo,
+				// 		section_tipo	: section_tipo,
+				// 		mode			: 'edit',
+				// 		lang			: self.lang
+				// 	},
+				// 	sqo : {
+				// 		section_tipo		: [{tipo : section_tipo}],
+				// 		filter				: null,
+				// 		limit				: 1,
+				// 		filter_by_locators	: [{
+				// 			section_tipo	: section_tipo,
+				// 			section_id		: section_id,
+				// 		}]
+				// 	}
+				// }
+				// event_manager.publish('user_navigation', user_navigation_rqo)
 		})
 
 	// edit icon
