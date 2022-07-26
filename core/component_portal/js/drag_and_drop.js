@@ -120,9 +120,13 @@
 		drop_node.classList.remove('dragover')
 		drop_node.classList.add('hide')
 
-
 		const data_parse = JSON.parse(data)
 		const path = data_parse.path
+
+
+		if(options.paginated_key === data_parse.paginated_key){
+			return false
+		}
 
 		const sort_data = {
 			value		: data_parse.locator,

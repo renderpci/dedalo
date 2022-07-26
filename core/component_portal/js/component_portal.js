@@ -765,14 +765,29 @@ component_portal.prototype.sort_data = function(options) {
 
 	const self = this
 
-	// ddo_source
-		const rqo = {}
+	const value			= options.value
+	const source_key	= options.source_key
+	const target_key	= options.target_key
 
-	// source vars
-		section_tipo	= self.section_tipo
-		section_id		= self.section_id
-		tipo			= self.tipo
-		value			= self.value
+	// sort_data
+		const changed_data = Object.freeze({
+			action		: 'sort_data',
+			source_key	: source_key,
+			target_key	: target_key,
+			value		: value
+		})
+
+		self.change_value({
+			changed_data	: changed_data,
+			refresh			: true,
+		})
+		.then(async (response)=>{
+
+			// the user has selected cancel from delete dialog
+				if (response===false) {
+					return
+				}
+		})
 
 };//end order_data
 
