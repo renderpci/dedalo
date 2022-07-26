@@ -621,6 +621,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 * 	sample
 * {
 * 	typo			: 'source',
+* 	type			: 'component',
 * 	action			: 'read',
 * 	model			: 'component_text_area',
 * 	tipo			: 'rsc17',
@@ -634,6 +635,7 @@ export const create_source = function (self, action) {
 
 	const source = { // source object
 		typo			: "source",
+		type			: self.type,
 		action			: action,
 		model			: self.model,
 		tipo			: self.tipo,
