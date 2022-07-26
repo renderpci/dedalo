@@ -13,7 +13,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 		// public static function get_menu($request_options=null) {
-		// 	global $start_time;
+		// 	$start_time = start_time();
 
 		// 	// session_write_close();
 
@@ -35,7 +35,7 @@ final class dd_utils_api {
 		// 	// Debug
 		// 		if(SHOW_DEBUG===true) {
 		// 			$debug = new stdClass();
-		// 				$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+		// 				$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 		// 				$debug->request_options	= $request_options;
 		// 			$response->debug = $debug;
 		// 		}
@@ -50,7 +50,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 		// public static function get_login($request_options=null) {
-		// 	global $start_time;
+		// 	$start_time = start_time();
 
 		// 	$response = new stdClass();
 		// 		$response->result 	= false;
@@ -70,7 +70,7 @@ final class dd_utils_api {
 		// 	// Debug
 		// 		if(SHOW_DEBUG===true) {
 		// 			$debug = new stdClass();
-		// 				$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+		// 				$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 		// 				$debug->request_options	= $request_options;
 		// 			$response->debug = $debug;
 		// 		}
@@ -85,7 +85,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function dedalo_version(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		session_write_close();
 
@@ -103,7 +103,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
@@ -118,7 +118,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function database_info(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		session_write_close();
 
@@ -135,7 +135,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
@@ -213,7 +213,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function make_backup(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// ssession_write_close();
 
@@ -228,7 +228,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options = $request_options;
 				$response->debug = $debug;
 			}
@@ -243,7 +243,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function update_structure(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// session_write_close();
 
@@ -272,7 +272,7 @@ final class dd_utils_api {
 			$remote_server_response = (object)backup::check_remote_server();
 
 			if(SHOW_DEBUG===true) {
-				$check_status_exec_time = exec_time_unit($start_time,'ms')." ms";
+				$check_status_exec_time = exec_time_unit($start_time,'ms').' ms';
 				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_response), logger::DEBUG);
 			}
 
@@ -297,7 +297,7 @@ final class dd_utils_api {
 				# Append msg
 				$response->msg	.= $res_export_structure->msg;
 				# Exec time
-				$export_exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$export_exec_time	= exec_time_unit($start_time,'ms').' ms';
 				$prev_time			= start_time();
 			}
 
@@ -310,7 +310,7 @@ final class dd_utils_api {
 			}else{
 				$response->msg	.= $res_import_structure->msg;
 				# Exec time
-				$import_exec_time = exec_time_unit($prev_time,'ms')." ms";
+				$import_exec_time = exec_time_unit($prev_time,'ms').' ms';
 			}
 
 		// optimize tables
@@ -359,7 +359,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options = $request_options;
 				$response->debug = $debug;
 			}
@@ -375,7 +375,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function structure_to_json(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// session_write_close();
 
@@ -416,7 +416,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options = $request_options;
 				$response->debug = $debug;
 			}
@@ -432,7 +432,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function import_structure_from_json(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// session_write_close();
 
@@ -464,7 +464,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options = $request_options;
 				$response->debug = $debug;
 			}
@@ -480,7 +480,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function register_tools(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -493,7 +493,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
@@ -508,7 +508,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function build_structure_css(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// session_write_close();
 
@@ -523,7 +523,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
@@ -538,7 +538,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function update_version(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// session_write_close();
 
@@ -555,7 +555,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
@@ -570,7 +570,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function convert_search_object_to_sql_query(object $request_options=null) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// session_write_close();
 
@@ -611,7 +611,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
@@ -626,7 +626,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function change_lang(object $request_options) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= true;
@@ -657,7 +657,7 @@ final class dd_utils_api {
 
 		// Debug
 			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 				$debug->options		= $options;
 			$response->debug = $debug;
 
@@ -674,7 +674,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function login(object $request_options) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		$options = new stdClass();
 			$options->username	= $request_options->options->username;
@@ -690,7 +690,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 
 				$response->debug = $debug;
 			}
@@ -705,7 +705,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function quit(object $request_options) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= true;
@@ -732,7 +732,7 @@ final class dd_utils_api {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 
 				$response->debug = $debug;
 			}
@@ -762,7 +762,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function regenerate_relations(object $request_options) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= true;
@@ -786,7 +786,7 @@ final class dd_utils_api {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
@@ -815,7 +815,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function upload(object $request_options) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		// response
 			$response = new stdClass();
@@ -975,7 +975,7 @@ final class dd_utils_api {
 				if(SHOW_DEBUG===true) {
 
 					$debug = new stdClass();
-						$debug->exec_time		= exec_time_unit($start_time,'ms')." ms";
+						$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 						$debug->request_options	= $request_options;
 
 					$response->debug = $debug;
