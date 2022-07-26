@@ -37,7 +37,8 @@ final class dd_core_api {
 	* Builds the start page minimun context.
 	* Normally is a menu and a section (based on url vars)
 	* This function tells to page what must to be request based on url vars
-	* Sample expected $json_data:
+	* @param object $options
+	* sample:
 	* {
 	*	"action": "start",
 	*	"search_obj": {
@@ -280,16 +281,45 @@ final class dd_core_api {
 	/**
 	* READ
 	* Get context and data from given source
-	* Different modes are available
+	* Different modes are available using source->action value:
+	* @see dd_core_api::build_json_rows()
+	* 	search			// Used by section and service autocomplete
+	* 	related_search	// Used to get the related sections that call to the source section
+	* 	get_data		// Used by components and areas to get basic context and data
+	* 	resolve_data	// Used by components in search mode like portals to resolve locators data
 	* @see self::build_json_rows
 	*
 	* @param object $rqo
-	*	array $json_data->context
+	* sample:
+	* {
+	*    "id": "section_rsc167_rsc167_edit_lg-eng",
+	*    "action": "read",
+	*    "source": {
+	*        "typo": "source",
+	*        "action": "search",
+	*        "model": "section",
+	*        "tipo": "rsc167",
+	*        "section_tipo": "rsc167",
+	*        "section_id": null,
+	*        "mode": "edit",
+	*        "lang": "lg-eng"
+	*    },
+	*    "sqo": {
+	*        "section_tipo": [
+	*            "rsc167"
+	*        ],
+	*        "offset": 0,
+	*        "select": [],
+	*        "full_count": false,
+	*        "limit": 1
+	*    }
+	* }
 	* @return object $response
-	* 	$response->result = {
-	* 		array context
-	* 		array data
-	* 	}
+	* sample:
+	*  $response->result = {
+	* 		context : array
+	* 		data : array
+	*  }
 	*/
 	public static function read(object $rqo) : object {
 
@@ -327,9 +357,21 @@ final class dd_core_api {
 
 	/**
 	* READ_RAW
-	* Get full record data
+	* Get full record data of section
 	* @param object $rqo
-	*	array $json_data->context
+	* sample:
+	* {
+	*    "action": "read_raw",
+	*    "source": {
+	*        "typo": "source",
+	*        "model": "section",
+	*        "tipo": "rsc167",
+	*        "section_tipo": "rsc167",
+	*        "section_id": "1",
+	*        "mode": "edit",
+	*        "lang": "lg-eng"
+	*    }
+	* }
 	* @return object $response
 	*/
 	public static function read_raw(object $rqo) : object {
@@ -365,18 +407,30 @@ final class dd_core_api {
 
 	/**
 	* CREATE
+	* Creates a new database record of given section tipo
+	* and returns the new section_id assigned by the counter
 	* @param object $json_data
+	* sample:
+	* {
+	*    "action": "create",
+	*    "source": {
+	*        "section_tipo": "oh1"
+	*    }
+	* }
 	* @return array $result
 	*/
-	public static function create(object $json_data) : object {
+	public static function create(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
+		// short vars
+			$source			= $rqo->source;
+			$section_tipo	= $source->section_tipo;
+
 		// section_tipo
-			$section_tipo = $json_data->section_tipo;
 			if (empty($section_tipo)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
 				return $response;
@@ -408,12 +462,38 @@ final class dd_core_api {
 
 	/**
 	* DELETE
-	* Remove one or more section records from database
-	* If sqo is received, it will be used to search target sections
-	* Else a new sqo will be createds based on current section_ti, section_id
+	* Removes one or more section records from database
+	* If sqo is received, it will be used to search target sections,
+	* else a new sqo will be created based on current section_tipo, section_id
 	* Note that 'delete_mode' must be declared (delete_data|delete_record)
 	* @param object $rqo
-	* @return array $result
+	* sample:
+	* {
+	*    "action": "delete",
+	*    "source": {	*
+	*        "action": "delete",
+	*        "model": "section",
+	*        "tipo": "oh1",
+	*        "section_tipo": "oh1",
+	*        "section_id": null,
+	*        "mode": "list",
+	*        "lang": "lg-eng",
+	*        "delete_mode": "delete_record"
+	*    },
+	*    "sqo": {
+	*        "section_tipo": [
+	*            "oh1"
+	*        ],
+	*        "filter_by_locators": [
+	*            {
+	*                "section_tipo": "oh1",
+	*                "section_id": "127"
+	*            }
+	*        ],
+	*        "limit": 1
+	*    }
+	* }
+	* @return object $response
 	*/
 	public static function delete(object $rqo) : object {
 
@@ -537,144 +617,81 @@ final class dd_core_api {
 
 
 	/**
-	* SORT_DATA
-	* Changes the element data array items order
-	* Used by portals to sort rows after user drag and drop
-	* @param object $rqo
-	* @return array $result
-	*/
-		// public static function sort_data(object $rqo) : object {
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed. '.__METHOD__;
-		// 		$response->error	= null;
-
-		// 	// ddo_source
-		// 		$ddo_source = $rqo->source;
-
-		// 	// source vars
-		// 		$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-		// 		$section_id		= $ddo_source->section_id;
-		// 		$tipo			= $ddo_source->tipo;
-		// 		$changed_data	= $ddo_source->changed_data;
-		// 		$context_type	= $ddo_source->context_type;
-		// 		$data			= $ddo_source->data;
-
-		// 	// switch the type (component, section)
-		// 	switch ($context_type) {
-		// 		case 'component':
-
-		// 			// get the component information
-		// 				$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		// 				$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-		// 					? $lang
-		// 					: DEDALO_DATA_NOLAN;
-
-		// 			// build the component
-		// 				$component = component_common::get_instance(
-		// 					$model,
-		// 					$tipo,
-		// 					$section_id,
-		// 					$mode,
-		// 					$component_lang,
-		// 					$section_tipo
-		// 				);
-
-		// 			// permissions. Get the component permissions and check if the user can update the component
-		// 				$permissions = $component->get_component_permissions();
-		// 				if($permissions < 2) {
-		// 					$response->error = 2;
-		// 					$response->msg .= 'Invalid permissions!';
-		// 					return $response;
-		// 				}
-
-		// 			// update the dato with the changed data sent by the client
-		// 				$component->sort_data_value($changed_data);
-
-		// 			// save the new data to the component
-		// 				$component->Save();
-
-		// 			// force recalculate dato
-		// 				$dato = $component->get_dato();
-
-		// 			// pagination. Update offset based on save request (portals)
-		// 				$pagination = $data->pagination ?? null;
-		// 				if (isset($pagination) && isset($pagination->offset)) {
-		// 					$component->pagination->offset = $pagination->offset;
-		// 				}
-
-		// 			// datalist. if is received, inject to the component for recycle
-		// 				if (isset($data->datalist)) {
-		// 					$component->datalist = $data->datalist;
-		// 				}
-
-		// 			// element JSON
-		// 				$get_json_options = new stdClass();
-		// 					$get_json_options->get_context	= true;
-		// 					$get_json_options->get_data		= true;
-		// 				$element_json = $component->get_json($get_json_options);
-
-		// 			// observers_data
-		// 				if (isset($component->observers_data)) {
-		// 					$element_json->data = array_merge($element_json->data, $component->observers_data);
-		// 				}
-
-		// 			// data add
-		// 				$result = $element_json;
-
-		// 			break;
-
-		// 		default:
-		// 			# code...
-		// 			break;
-		// 	}//end switch ($context_type)
-
-
-
-		// 	// response OK
-		// 		$response->result		= $ar_delete_section_id;
-		// 		$response->error		= !empty($errors) ? $errors : null;
-		// 		$response->delete_mode	= $delete_mode;
-		// 		$response->msg			= !empty($errors)
-		// 			? 'Some errors occurred when sort_data.'
-		// 			: 'OK. Request done successfully.';
-
-
-		// 	return $response;
-		// }//end sort_data
-
-
-
-	/**
 	* SAVE
+	* Saves the given value to the component data into the database.
+	* @see $component_common->update_data_value
+	* save actions:
+	* 	insert		// add given value in dato
+	* 	update		// updates given value selected by key in dato
+	* 	remove		// removes a item value from the component data array
+	* 	set_data	// set the whole data sent by the client without check the array key (bulk insert or update)
+	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
 	* @param object $json_data
+	* sample:
+	* {
+	*    "action": "save",
+	*    "source": {
+	*        "typo": "source",
+	*        "type": "component",
+	*        "action": null,
+	*        "model": "component_input_text",
+	*        "tipo": "oh16",
+	*        "section_tipo": "oh1",
+	*        "section_id": "124",
+	*        "mode": "edit",
+	*        "lang": "lg-eng"
+	*    },
+	*    "data": {
+	*        "section_id": "124",
+	*        "section_tipo": "oh1",
+	*        "tipo": "oh16",
+	*        "lang": "lg-eng",
+	*        "from_component_tipo": "oh16",
+	*        "value": [
+	*            "title2"
+	*        ],
+	*        "parent_tipo": "oh1",
+	*        "parent_section_id": "124",
+	*        "fallback_value": [
+	*            "title"
+	*        ],
+	*        "debug_model": "component_input_text",
+	*        "debug_label": "Title",
+	*        "debug_mode": "edit",
+	*        "row_section_id": "124",
+	*        "changed_data": {
+	*            "action": "update",
+	*            "key": 0,
+	*            "value": "title2"
+	*        }
+	*    }
+	* }
 	* @return object $response
 	*/
-	public static function save(object $json_data) : object {
+	public static function save(object $rqo) : object {
 
-		// create the default save response
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// response. Create the default save response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
-		// json_data. get the context and data sent
-			$context	= $json_data->context;
-			$data		= $json_data->data;
-			$section_id	= $json_data->section_id;
+		// rqo vars
+			$source			= $rqo->source;
+			$data			= $rqo->data ?? new stdClass();
 
 		// short vars
-			$model			= $context->model;
-			$tipo			= $context->tipo;
-			$section_tipo	= $context->section_tipo;
-			$mode			= $context->mode;
-			$lang			= $context->lang;
-			$context_type	= $context->type; // the type of the dd_object that is calling to update
-			$changed_data	= $data->changed_data;
+			$model			= $source->model;
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+			$mode			= $source->mode;
+			$lang			= $source->lang;
+			$type			= $source->type; // the type of the dd_object that is calling to update like 'component'
+			$changed_data	= $data->changed_data ?? null;
 
-		// switch the type (component, section)
-		switch ($context_type) {
+		// switch by the element context type (component, section)
+		switch ($type) {
 			case 'component':
 
 				// get the component information
@@ -705,7 +722,8 @@ final class dd_core_api {
 				if ($mode==='search') {
 
 					// force same changed_data (whole dato)
-						$component->set_dato([$changed_data->value]);
+						$value = $changed_data->value || null;
+						$component->set_dato([$value]);
 
 				}else{
 
@@ -720,9 +738,8 @@ final class dd_core_api {
 				}
 
 				// pagination. Update offset based on save request (portals)
-					$pagination = $data->pagination ?? null;
-					if (isset($pagination) && isset($pagination->offset)) {
-						$component->pagination->offset = $pagination->offset;
+					if (isset($data->pagination) && isset($data->pagination->offset)) {
+						$component->pagination->offset = $data->pagination->offset;
 					}
 
 				// datalist. if is received, inject to the component for recycle
@@ -741,7 +758,7 @@ final class dd_core_api {
 						$element_json->data = array_merge($element_json->data, $component->observers_data);
 					}
 
-				// data add
+				// context and data set
 					$result = $element_json;
 
 				break;
@@ -749,7 +766,7 @@ final class dd_core_api {
 			default:
 				# code...
 				break;
-		}//end switch ($context_type)
+		}//end switch ($type)
 
 		// result. if the process is correct, we return the $result to the client
 			$response->result	= $result;
@@ -763,7 +780,23 @@ final class dd_core_api {
 
 	/**
 	* ADD_NEW_ELEMENT
-	* Used by component_portal to add created target section to current component with project values inheritance
+	* Used by component_portal to add created target section to current component
+	* with project values inheritance
+	* @param object $rqo
+	* sample:
+	* {
+	*    "action": "add_new_element",
+	*    "source": {
+	*        "typo": "source",
+	*        "model": "component_portal",
+	*        "tipo": "oh25",
+	*        "section_tipo": "oh1",
+	*        "section_id": "124",
+	*        "mode": "edit",
+	*        "lang": "lg-nolan"
+	*    },
+	*    "target_section_tipo": "rsc167"
+	* }
 	* @return object $response
 	*/
 	public static function add_new_element(object $rqo) : object {
@@ -774,11 +807,11 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		// rqo. get the context and data sent
+		// rqo vars
 			$source					= $rqo->source;
 			$target_section_tipo	= $rqo->target_section_tipo;
 
-		// get the component information
+		// short vars
 			$model			= $source->model;
 			$tipo			= $source->tipo;
 			$section_tipo	= $source->section_tipo;
@@ -808,7 +841,7 @@ final class dd_core_api {
 				'target_section_tipo' => $target_section_tipo
 			]);
 
-		// // element json
+		// element json
 			// 	$get_json_options = new stdClass();
 			// 		$get_json_options->get_context 	= true;
 			// 		$get_json_options->get_data 	= true;
