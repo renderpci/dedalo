@@ -3081,6 +3081,12 @@ abstract class component_common extends common {
 			// re-organize the whole component data bassed on target key given. Used by portals to sort rows
 			case 'sort_data':
 
+				// vars
+					$value		= $changed_data->value;
+					unset($value->paginated_key);
+					$source_key	= $changed_data->source_key;
+					$target_key	= $changed_data->target_key;
+
 				// current DB array of value
 					$dato = $this->get_dato();
 
@@ -3088,23 +3094,26 @@ abstract class component_common extends common {
 					if (!isset($dato[$source_key])) {
 						debug_log(__METHOD__.' Error on sort_data. Source value key ['.$source_key.'] do not exists! ', logger::ERROR);
 						return false;
-					}elseif($dato[$source_key]!=$value) {
+					}elseif(!locator::compare_locators($dato[$source_key], $value, ['section_id','section_tipo','from_component_tipo','tag_id'])) {
 						debug_log(__METHOD__.' Error on sort_data. Source value if different from DB value:'.PHP_EOL.'given value:'.$value.PHP_EOL.'DB value:'. $dato[$source_key], logger::ERROR);
 						return false;
 					}
 
 				$new_dato = [];
 				// remove old key value
-				foreach ($dato as $key => $value) {
+				foreach ($dato as $key => $current_value) {
 					if ($key==$source_key) {
 						continue;
 					}
-					$new_dato[] = $value;
+					if($key ===$target_key){
+						$new_dato[] = $value;
+					}
+					$new_dato[] = $current_value;
 				}
 				// add
 					dump($new_dato, ' new_dato ++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
 
-
+					$this->set_dato($new_dato);
 				break;
 
 			default:
