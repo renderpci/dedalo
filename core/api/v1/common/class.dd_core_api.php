@@ -543,106 +543,106 @@ final class dd_core_api {
 	* @param object $rqo
 	* @return array $result
 	*/
-	public static function sort_data(object $rqo) : object {
+		// public static function sort_data(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed. '.__METHOD__;
-			$response->error	= null;
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed. '.__METHOD__;
+		// 		$response->error	= null;
 
-		// ddo_source
-			$ddo_source = $rqo->source;
+		// 	// ddo_source
+		// 		$ddo_source = $rqo->source;
 
-		// source vars
-			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-			$section_id		= $ddo_source->section_id;
-			$tipo			= $ddo_source->tipo;
-			$changed_data	= $ddo_source->changed_data;
-			$context_type	= $ddo_source->context_type;
-			$data			= $ddo_source->data;
+		// 	// source vars
+		// 		$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
+		// 		$section_id		= $ddo_source->section_id;
+		// 		$tipo			= $ddo_source->tipo;
+		// 		$changed_data	= $ddo_source->changed_data;
+		// 		$context_type	= $ddo_source->context_type;
+		// 		$data			= $ddo_source->data;
 
-		// switch the type (component, section)
-		switch ($context_type) {
-			case 'component':
+		// 	// switch the type (component, section)
+		// 	switch ($context_type) {
+		// 		case 'component':
 
-				// get the component information
-					$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-						? $lang
-						: DEDALO_DATA_NOLAN;
+		// 			// get the component information
+		// 				$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 				$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+		// 					? $lang
+		// 					: DEDALO_DATA_NOLAN;
 
-				// build the component
-					$component = component_common::get_instance(
-						$model,
-						$tipo,
-						$section_id,
-						$mode,
-						$component_lang,
-						$section_tipo
-					);
+		// 			// build the component
+		// 				$component = component_common::get_instance(
+		// 					$model,
+		// 					$tipo,
+		// 					$section_id,
+		// 					$mode,
+		// 					$component_lang,
+		// 					$section_tipo
+		// 				);
 
-				// permissions. Get the component permissions and check if the user can update the component
-					$permissions = $component->get_component_permissions();
-					if($permissions < 2) {
-						$response->error = 2;
-						$response->msg .= 'Invalid permissions!';
-						return $response;
-					}
+		// 			// permissions. Get the component permissions and check if the user can update the component
+		// 				$permissions = $component->get_component_permissions();
+		// 				if($permissions < 2) {
+		// 					$response->error = 2;
+		// 					$response->msg .= 'Invalid permissions!';
+		// 					return $response;
+		// 				}
 
-				// update the dato with the changed data sent by the client
-					$component->sort_data_value($changed_data);
+		// 			// update the dato with the changed data sent by the client
+		// 				$component->sort_data_value($changed_data);
 
-				// save the new data to the component
-					$component->Save();
+		// 			// save the new data to the component
+		// 				$component->Save();
 
-				// force recalculate dato
-					$dato = $component->get_dato();
+		// 			// force recalculate dato
+		// 				$dato = $component->get_dato();
 
-				// pagination. Update offset based on save request (portals)
-					$pagination = $data->pagination ?? null;
-					if (isset($pagination) && isset($pagination->offset)) {
-						$component->pagination->offset = $pagination->offset;
-					}
+		// 			// pagination. Update offset based on save request (portals)
+		// 				$pagination = $data->pagination ?? null;
+		// 				if (isset($pagination) && isset($pagination->offset)) {
+		// 					$component->pagination->offset = $pagination->offset;
+		// 				}
 
-				// datalist. if is received, inject to the component for recycle
-					if (isset($data->datalist)) {
-						$component->datalist = $data->datalist;
-					}
+		// 			// datalist. if is received, inject to the component for recycle
+		// 				if (isset($data->datalist)) {
+		// 					$component->datalist = $data->datalist;
+		// 				}
 
-				// element JSON
-					$get_json_options = new stdClass();
-						$get_json_options->get_context	= true;
-						$get_json_options->get_data		= true;
-					$element_json = $component->get_json($get_json_options);
+		// 			// element JSON
+		// 				$get_json_options = new stdClass();
+		// 					$get_json_options->get_context	= true;
+		// 					$get_json_options->get_data		= true;
+		// 				$element_json = $component->get_json($get_json_options);
 
-				// observers_data
-					if (isset($component->observers_data)) {
-						$element_json->data = array_merge($element_json->data, $component->observers_data);
-					}
+		// 			// observers_data
+		// 				if (isset($component->observers_data)) {
+		// 					$element_json->data = array_merge($element_json->data, $component->observers_data);
+		// 				}
 
-				// data add
-					$result = $element_json;
+		// 			// data add
+		// 				$result = $element_json;
 
-				break;
+		// 			break;
 
-			default:
-				# code...
-				break;
-		}//end switch ($context_type)
-
-
-
-		// response OK
-			$response->result		= $ar_delete_section_id;
-			$response->error		= !empty($errors) ? $errors : null;
-			$response->delete_mode	= $delete_mode;
-			$response->msg			= !empty($errors)
-				? 'Some errors occurred when sort_data.'
-				: 'OK. Request done successfully.';
+		// 		default:
+		// 			# code...
+		// 			break;
+		// 	}//end switch ($context_type)
 
 
-		return $response;
-	}//end sort_data
+
+		// 	// response OK
+		// 		$response->result		= $ar_delete_section_id;
+		// 		$response->error		= !empty($errors) ? $errors : null;
+		// 		$response->delete_mode	= $delete_mode;
+		// 		$response->msg			= !empty($errors)
+		// 			? 'Some errors occurred when sort_data.'
+		// 			: 'OK. Request done successfully.';
+
+
+		// 	return $response;
+		// }//end sort_data
 
 
 
@@ -659,7 +659,7 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		// json_data. get the context and data sended
+		// json_data. get the context and data sent
 			$context	= $json_data->context;
 			$data		= $json_data->data;
 			$section_id	= $json_data->section_id;
