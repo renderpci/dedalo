@@ -3014,7 +3014,7 @@ abstract class component_common extends common {
 					: $dato;
 				break;
 
-			// remove a item value from the component data
+			// remove a item value from the component data array
 			case 'remove':
 				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = (get_called_class()==='component_relation_related')
@@ -3078,7 +3078,7 @@ abstract class component_common extends common {
 
 				break;
 
-			// re-organize the whole component data bassed on target key given. Used by portals to sort rows
+			// re-organize the whole component data based on target key given. Used by portals to sort rows
 			case 'sort_data':
 
 				// vars
@@ -3099,20 +3099,19 @@ abstract class component_common extends common {
 						return false;
 					}
 
-				$new_dato = [];
-				// remove old key value
-				foreach ($dato as $key => $current_value) {
-					if ($key==$source_key) {
-						continue;
+				// remove old key value ans add value at $target_key position
+					$new_dato = [];
+					foreach ($dato as $key => $current_value) {
+						if ($key==$source_key) {
+							continue;
+						}
+						if($key==$target_key){
+							$new_dato[] = $value;
+						}
+						$new_dato[] = $current_value;
 					}
-					if($key ===$target_key){
-						$new_dato[] = $value;
-					}
-					$new_dato[] = $current_value;
-				}
-				// add
-					dump($new_dato, ' new_dato ++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
 
+				// new dato set
 					$this->set_dato($new_dato);
 				break;
 
