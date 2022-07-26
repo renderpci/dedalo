@@ -3108,13 +3108,21 @@ abstract class component_common extends common {
 				// remove old key value ans add value at $target_key position
 					$new_dato = [];
 					foreach ($dato as $key => $current_value) {
-						if ($key==$source_key) {
+						if ($key===$source_key) {
 							continue;
 						}
-						if($key==$target_key){
+						if($key===$target_key && $target_key < $source_key){
 							$new_dato[] = $value;
+							$new_dato[] = $current_value;
+							continue;
+						}else if($key===$target_key && $target_key > $source_key){
+							$new_dato[] = $current_value;
+							$new_dato[] = $value;
+							continue;
 						}
+
 						$new_dato[] = $current_value;
+
 					}
 
 				// new dato set
