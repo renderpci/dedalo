@@ -47,11 +47,14 @@
 			// background-color: #f9eae0;
 			width: 100%;
 			// min-height: calc(100vh - @header_height);
-			min-height: calc(100vh - @header_height + 0.5rem);
+			// min-height: calc(100vh - @header_height + 0.5rem);
+			height: calc(100vh - 4.8rem);
+			overflow: hidden;
 			// display: grid;
 			// grid-gap: 1rem;
 			// grid-template-columns: 1fr 1fr;
 			display: flex;
+			padding: 0;
 
 			@media screen and (max-width: @width_break_point_0) {
 				// display: flex;
@@ -60,9 +63,12 @@
 
 			>.left_container, >.right_container {
 				padding: 1rem;
+				padding-bottom: 0;
 				height: 100%;
 				min-height: 700px;
-				max-height: 100%;
+				// max-height: 100%;
+				// max-height: calc(100vh - 6.5rem);
+				overflow: auto;
 			}
 
 			// left block (thesaurus)
@@ -231,7 +237,13 @@
 					>.indexation_note {
 						// background-color: #fd9c8c;
 
-						.empty_note {
+						>.wrapper_component.component_text_area {
+							>.content_data {
+								min-height: 15rem;
+							}
+						}
+
+						>.empty_note {
 							height: 100%;
 							padding: 1.5rem;
 							border: 1px solid #dddddd;
