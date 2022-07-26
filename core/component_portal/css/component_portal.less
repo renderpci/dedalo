@@ -181,6 +181,10 @@
 
 			.section_record.list {
 				display: flex;
+				align-items: stretch;
+				border-bottom: 1px solid #eeeeee;
+				width: 100%;
+				margin-bottom: 1px;
 				// @media screen and (max-width: @width_break_point_1) {
 				// 	flex-wrap: wrap;
 				// }
@@ -188,11 +192,46 @@
 				.column {
 					display: flex;
 					flex: 0 0 auto;
+					outline: none;
+					width: auto;
 					align-items: center;
 
+					&.column_remove, &.column_section_id {
+						background-color: unset;
+						>.icon {
+							height: 1.25rem;
+						}
+					}
+
+					&.column_section_id {
+					    padding-right: 0.5rem;
+					}
+
+					>button {
+						padding: 0;
+						width: 1.25rem;
+						height: 1.25rem;
+						border-radius: 2px;
+						justify-content: center;
+
+						&.edit_button {
+							>.icon {
+								// height: 1.25rem;
+								margin-right: 1px;
+							}
+						}
+
+						&.button_remove {
+							>.icon {
+								// height: 1.25rem;
+							}
+						}
+					}
+
 					>.tags {
-						padding-left: 1rem;
-						padding-right: 1rem;
+						padding-left: 0.5rem;
+						padding-right: 0.75rem;
+						opacity: 0.6;
 					}
 				}
 			}
