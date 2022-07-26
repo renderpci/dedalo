@@ -14,7 +14,10 @@
 			(it will create the search and choose, when these objects are not sended)
 		search	: layout_map and sqo_config
 			(it modify the show and it will create the choose, when these object is not sended)
-		choose	: layout_map 			(it modify search)
+		choose	: layout_map
+			(it modify search) List of elements for choose (service_autocomplete)
+		data	: object
+			(object used like pre-calculated container (datalist, pagination, etc.) to minimize cpu usage on calls to 'save')
 
 		// info about
 			Mandatory	: dd_api, action, source
@@ -178,14 +181,22 @@ class request_query_object {
 	* VARS
 	*/
 		// mandatory
+			// string dd_api. name of the API manager ()
 			public $dd_api;
 			public $action;
 			public $source;
-		// optional (disable to prevent null values)
-			// public $sqo;
-			// public $show;
-			// public $search;
-			// public $choose;
+
+		// optional (disabled to prevent null values)
+			// object sqo
+				// public $sqo;
+			// object show
+				// public $show;
+			// object search
+				// public $search;
+			// object choose
+				// public $choose;
+			// object data
+				// public $data;
 
 
 

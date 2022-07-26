@@ -479,20 +479,22 @@ component_common.prototype.save = async function(changed_data) {
 			try {
 
 				// data. isolated cloned var
-				const data = clone(self.data)
-				data.changed_data = changed_data
+					const data = clone(self.data)
+					data.changed_data = changed_data
 
-				// context. isolated cloned var
-				const context = clone(self.context)
+				// source
+					const source = create_source(self, 'read')
+
+				// rqo
+					const rqo = {
+						action	: 'save',
+						source	: source,
+						data	: data
+					}
 
 				// data_manager
 					const api_response = await data_manager.request({
-						body : {
-							action		: 'save',
-							context		: context,
-							data		: data,
-							section_id	: self.section_id
-						}
+						body : rqo
 					})
 					dd_console(`component_common save api_response`, 'DEBUG', api_response)
 
