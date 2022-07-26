@@ -222,8 +222,10 @@ const new_tag_note = async function(tag, section_tipo) {
 
 	// create record
 		const rqo = {
-			action			: 'create',
-			section_tipo	: section_tipo
+			action	: 'create',
+			source	: {
+				section_tipo : section_tipo
+			}
 		}
 		const api_response = await data_manager.request({
 			body : rqo

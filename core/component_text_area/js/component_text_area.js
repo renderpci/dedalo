@@ -861,25 +861,35 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 ----------------------------------------------------------------------------------------- */
 
 
+
 	/**
 	* CREATE_NEW_NOTE
 	* Build a new annotation when user clicks on text editor button
-	*
-	* @return
+	* @param object options
+	* @return string|null note_section_id
 	*/
 	component_text_area.prototype.create_note_tag = async function(options) {
 
 		const self = this
-		// get the text_editor sent by the event (button_note event)
-		const text_editor	= options.text_editor
+
+		// options
+			const text_editor = options.text_editor // get the text_editor sent by the event (button_note event)
+
+		// short vars
+			const notes_section_tipo = self.context.notes_section_tipo
 
 		// Create the new note in the server, it will send the section_id created in the database
 			const rqo = {
-				action			: 'create',
-				section_tipo	: self.context.notes_section_tipo
+				action	: 'create',
+				source	: {
+					section_tipo : notes_section_tipo
+				}
 			}
-			const api_response		= await data_manager.request({body:rqo})
-			const note_section_id	= api_response.result || null;
+			const api_response = await data_manager.request({
+				body:rqo
+			})
+			const note_section_id = api_response.result || null;
+
 
 		return note_section_id;
 	}//end create_new_note
