@@ -157,10 +157,14 @@ section.prototype.init = async function(options) {
 
 				// data_manager. create
 				const rqo = {
-					action			: 'create',
-					section_tipo	: self.section_tipo
+					action	: 'create',
+					source	: {
+						section_tipo : self.section_tipo
+					}
 				}
-				const api_response = await data_manager.request({body:rqo})
+				const api_response = await data_manager.request({
+					body:rqo
+				})
 				if (api_response.result && api_response.result>0) {
 
 					const section_id = api_response.result
