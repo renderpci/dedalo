@@ -44,8 +44,10 @@ render_player_component_av.prototype.player = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data	: current_content_data,
+			label			: null
 		})
+		console.log('wrapper:', wrapper);
 
 	// av_control_buttons
 		if (self.video) {

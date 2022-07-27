@@ -34,9 +34,9 @@ final class dd_core_api {
 
 	/**
 	* START
-	* Builds the start page minimun context.
+	* Builds the start page minimum context.
 	* Normally is a menu and a section (based on url vars)
-	* This function tells to page what must to be request based on url vars
+	* This function tells to page what must to be request, based on given url vars
 	* @param object $options
 	* sample:
 	* {
@@ -48,7 +48,7 @@ final class dd_core_api {
 	*	"menu": true,
 	*	"prevent_lock": true
 	* }
-	* @return object $reponse
+	* @return object $response
 	*/
 	public static function start(object $options) : object {
 
@@ -80,9 +80,11 @@ final class dd_core_api {
 			}else{
 
 				// default case
-				$tipo		= $search_obj->t	?? $search_obj->tipo		?? $default_section_tipo; // MAIN_FALLBACK_SECTION;
-				$section_id	= $search_obj->id	?? $search_obj->section_id	?? null;
-				$mode		= $search_obj->m	?? $search_obj->mode		?? 'list';
+				$tipo			= $search_obj->t	?? $search_obj->tipo			?? $default_section_tipo; // MAIN_FALLBACK_SECTION;
+				$section_tipo	= $search_obj->st	?? $search_obj->section_tipo	?? $tipo;
+				$section_id		= $search_obj->id	?? $search_obj->section_id		?? null;
+				$mode			= $search_obj->m	?? $search_obj->mode			?? 'list';
+				$lang			= $search_obj->lang	?? $search_obj->lang			?? DEDALO_DATA_LANG;
 			}
 
 		// context
@@ -256,10 +258,36 @@ final class dd_core_api {
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
 
-							$current_context =$area->get_structure_context(1, true);
+							$current_context = $area->get_structure_context(1, true);
 
 							// add to page context
 								$context[] = $current_context;
+							break;
+
+						case (strpos($model, 'component_')===0):
+
+							// component
+								$element = component_common::get_instance(
+									$model,
+									$tipo,
+									$section_id,
+									$mode,
+									$lang,
+									$section_tipo
+								);
+
+							// element JSON
+								$get_json_options = new stdClass();
+									$get_json_options->get_context	= true;
+									$get_json_options->get_data		= false;
+								$element_json = $element->get_json($get_json_options);
+
+							// component_context
+								$component_context = $element_json->context[0];
+								$component_context->section_id = $section_id;
+
+							// context add
+								$context[] = $component_context;
 							break;
 
 						default:
@@ -269,8 +297,9 @@ final class dd_core_api {
 			}//end if (login::is_logged()!==true)
 
 
-		$response->result	= $context;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		// response OK
+			$response->result	= $context;
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 
 		return $response;
