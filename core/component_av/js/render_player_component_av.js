@@ -47,7 +47,6 @@ render_player_component_av.prototype.player = async function(options) {
 			content_data	: current_content_data,
 			label			: null
 		})
-		console.log('wrapper:', wrapper);
 
 	// av_control_buttons
 		if (self.video) {
@@ -73,13 +72,20 @@ const get_content_data_player = function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// short vars
+		const context	= self.context || {}
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+		const quality	= self.quality || context.quality
+
+		console.log('self:', self);
+		console.log('datalist:', datalist);
+
 	// urls
 		// posterframe
-			const posterframe_url = self.data.posterframe_url
+			const posterframe_url = data.posterframe_url
 		// media
 			// const video_url = self.data.video_url
-			const quality	= self.quality || self.context.quality
-			const datalist	= self.data.datalist
 			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 			const video_url	= file_info
 				? file_info.url
