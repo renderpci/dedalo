@@ -227,7 +227,9 @@ abstract class TR {
 				$options->noteEditable		= false;
 				$options->tag_url			= '../../component_text_area/tag';
 				$options->force_tr_tags_cdn	= false;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+				if(!empty($request_options)) {
+					foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+				}
 
 		// hilite
 			$codeHiliteIn = ($options->hilite===true)

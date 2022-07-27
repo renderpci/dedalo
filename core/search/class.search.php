@@ -718,7 +718,9 @@ class search {
 				// order
 					$sql_query .= PHP_EOL . $sql_filter_by_locators_order;
 				// limit
-					$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+					if (!empty($sql_limit)) {
+						$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+					}
 				// offset
 					$sql_query .= !empty($this->search_query_object->offset)
 						? ' OFFSET ' . $sql_offset
