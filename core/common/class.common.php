@@ -2176,7 +2176,10 @@ abstract class common {
 								}
 								$dedalo_request_config->sqo->{$key} = $value;
 							}
-							// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
+							if(SHOW_DEBUG===true) {
+								// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
+								// dump($dedalo_request_config->sqo, ' dedalo_request_config->sqo ++ '.to_string());
+							}
 						}
 				}
 
