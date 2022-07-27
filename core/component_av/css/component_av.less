@@ -6,6 +6,16 @@
 .component_av {
 
 	&.edit, &.player {
+
+		&.player {
+			display: block;
+			box-shadow: none;
+
+			.label {
+				display: none;
+			}
+		}
+
 		>.content_data {
 			justify-content: center;
 			max-height: @media_max_height;
@@ -85,6 +95,7 @@
 		align-items: center;
 		justify-content: center;
 		padding-bottom: 0.75rem;
+		padding-top: 0.75rem;
 
 		>button {
 			height: 2rem;

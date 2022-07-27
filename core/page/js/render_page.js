@@ -129,6 +129,8 @@ const get_content_data = async function(self) {
 
 				const current_context = self.context[i]
 
+				console.log('++++++++++++++++++ current_context:', current_context);
+
 				// menu case. Prevent to render again on refresh page
 					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model)
 					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model && el.destroyable===false)
@@ -145,7 +147,8 @@ const get_content_data = async function(self) {
 						parent			: content_data
 					})
 
-				const current_instance = await instantiate_page_element(self, current_context)
+				// instance
+					const current_instance = await instantiate_page_element(self, current_context)
 
 					self.ar_instances.push(current_instance)
 
@@ -153,7 +156,7 @@ const get_content_data = async function(self) {
 					const autoload = true // current_instance.status==="initiated" // avoid reload menu data
 					current_instance.build(autoload)
 					.then(function(){
-						// resolve(current_instance)
+						// render instance
 						current_instance.render()
 						.then(function(node){
 							container.replaceWith(node);
