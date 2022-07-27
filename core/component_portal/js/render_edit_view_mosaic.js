@@ -20,7 +20,13 @@
 		add_events,
 		render_references
 	} from './render_edit_component_portal.js'
-
+	import {
+		on_dragstart_mosaic,
+		on_dragover,
+		on_dragleave,
+		on_dragend,
+		on_drop
+	} from './drag_and_drop.js'
 
 
 /**
@@ -106,10 +112,10 @@ render_edit_view_mosaic.render = async function(self, options) {
 
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
-			const base_columns_map	= self.columns_map.filter(el => el.mosaic===true)
+			const base_columns_map	= untouched_columns_map.filter(el => el.mosaic===true)
 			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
 			self.columns_map		= columns_map // overwrite instance columns_map
-
+				console.log("columns_map:-----------",columns_map);
 		// content_data
 			// self.id_variant = self.id_variant
 			// 	? self.id_variant + 'alt'
@@ -117,6 +123,7 @@ render_edit_view_mosaic.render = async function(self, options) {
 			const ar_section_record	= await self.get_ar_instances({mode:'list'})
 			// store to allow destroy later
 			self.ar_instances.push(...ar_section_record)
+
 			const content_data		= await get_content_data(self, ar_section_record)
 
 		// alt_list_body . Prepend hidden node into content_data to allow refresh on render_level 'content'
@@ -220,6 +227,13 @@ const get_content_data = async function(self, ar_section_record) {
 						const section_record		= ar_section_record[i]
 						const section_record_node	= await section_record.render()
 
+						drag_and_drop({
+							section_record_node	: section_record_node,
+							paginated_key		: i,
+							total_records		: self.total,
+							locator 			: section_record.locator,
+							caller 				: self
+						})
 					// button alt view (table)
 						const button_alt = ui.create_dom_element({
 							element_type	: 'span',
@@ -262,6 +276,30 @@ const get_content_data = async function(self, ar_section_record) {
 	return content_data
 }//end get_content_data
 
+
+
+/**
+* DRAG_AND_DROP
+* @return
+*/
+const drag_and_drop = function(options) {
+
+	const drag_node		= options.section_record_node
+	// const source_key	= options.i
+	// const locator		= options.locator
+	// const section_id	= locator.section_id
+	// const section_tipo	= locator.section_tipo
+	// const total_records = options.total_records
+
+	drag_node.draggable = true
+	drag_node.classList.add('draggable')
+	drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(options, this, e)})
+	drag_node.addEventListener('dragover',function(e){on_dragover(this, e)})
+	drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
+	drag_node.addEventListener('drop',function(e){on_drop(options, this, e)})
+
+
+};//end drag_and_drop
 
 
 /**
