@@ -305,7 +305,7 @@ const get_tag_info = function(self) {
 		// fragment_id_label
 		ui.create_dom_element({
 			element_type	: 'span',
-			inner_html		: 'TAG ' + tag_id,
+			inner_html		: get_label.etiqueta || 'Tag',
 			parent			: fragment_id_info
 		})
 		const fragment_id_tag_id = ui.create_dom_element({
@@ -319,14 +319,13 @@ const get_tag_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'wrap_tag_state_selector',
-				inner_html		: get_label.state || 'State',
+				inner_html		: get_label.estado || 'State',
 				parent			: tag_info_container
 			})
 		// state selector
 			const tag_state_selector = ui.create_dom_element({
 				element_type	: 'select',
 				class_name		: 'tag_state_selector',
-				inner_html		: get_label.state || 'State',
 				parent			: tag_info_container
 			})
 
@@ -396,7 +395,7 @@ const get_tag_info = function(self) {
 		// label delete
 			const button_delete_label = ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.borrar,
+				inner_html		: get_label.borrar || 'Delete',
 				parent			: wrap_delete_tag
 			})
 

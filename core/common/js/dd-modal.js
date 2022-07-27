@@ -43,6 +43,7 @@ class DDModal extends HTMLElement {
 					padding: 0;
 					width: 80%;
 					/*min-width: 390px;*/
+					min-width: 15rem;
 					max-height: 95vh;
 					box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
 					font-size: inherit;
@@ -158,7 +159,6 @@ class DDModal extends HTMLElement {
 				}
 				.modal_small > .modal-content {
 					width: fit-content;
-					min-width: 15rem;
 					max-width: 32vw;
 					height: auto;
 					margin-top: 20vh;
