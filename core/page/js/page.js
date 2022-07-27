@@ -465,20 +465,21 @@ page.prototype.add_events = function() {
 /**
 * INSTANTIATE_PAGE_ELEMENT
 * Creates the instance of current element, ussually a section or menu
-* calling instace.get_instance(...). This, only load and init the instance file
+* calling instace.get_instance(...). This function only load and init the instance file
 * @param object self (instance)
 * @param object context
 * @return promise current_instance init promise
 */
 export const instantiate_page_element = function(self, context) {
 
-	const tipo			= context.tipo
-	const section_tipo	= context.section_tipo || tipo
-	const model			= context.model
-	const section_id	= context.section_id || null
-	const mode			= context.mode
-	const lang			= context.lang
-	const config		= context.config || null
+	// short vars
+		const tipo			= context.tipo
+		const section_tipo	= context.section_tipo || tipo
+		const model			= context.model
+		const section_id	= context.section_id || null
+		const mode			= context.mode
+		const lang			= context.lang
+		const config		= context.config || null
 
 	// instance options
 		const instance_options = {
@@ -488,7 +489,7 @@ export const instantiate_page_element = function(self, context) {
 			section_id		: section_id ,
 			mode			: mode,
 			lang			: lang,
-			context			: context
+			context			: context // note that context is injected here because start API function returns the full context (login case, for example)
 		}
 
 		// id_variant . Propagate a custom instance id to children
