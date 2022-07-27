@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {get_instance} from '../../common/js/instances.js'
+	// import {when_in_dom} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
@@ -585,7 +585,7 @@ const render_column_node = function(component_instance, self, ar_instances){
 		}
 	}
 
-	// console.log("component.model:",component.model, component.tipo, column_node);
+	// console.log("+++ column_node model:",model, component_instance.tipo, column_node);
 
 	return column_node
 }//end render_column_node
