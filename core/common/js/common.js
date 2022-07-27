@@ -784,7 +784,6 @@ export const get_columns_map = function(context, datum_context) {
 		const source_columns_map = (context.columns_map)
 			? context.columns_map
 			: false
-
 	// view
 		const view = context.view
 
@@ -808,7 +807,7 @@ export const get_columns_map = function(context, datum_context) {
 				const dd_object = ar_first_level_ddo[j]
 
 				// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
-				if (dd_object.column_id && source_columns_map){
+				if (dd_object.column_id && source_columns_map.length >0){
 
 					// column_exists. If the column has stored by previous ddo, don't touch the array, it's necessary maintain the order of the columns_map
 						const column_exists = columns_map.find(el => el.id === dd_object.column_id)
