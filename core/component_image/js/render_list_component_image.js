@@ -53,6 +53,7 @@ render_list_component_image.prototype.list = function() {
 			class_name		: 'hidden', // loading
 			parent			: wrapper
 		})
+		image.draggable = false
 		// image.loading = 'lazy'
 		// image.setAttribute('crossOrigin', 'Anonymous');
 		ui.component.add_image_fallback(image)
