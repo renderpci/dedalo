@@ -374,10 +374,12 @@ section.prototype.build = async function(autoload=false) {
 					delete count_sqo.select
 					delete count_sqo.order
 					delete count_sqo.generated_time
-					const rqo_count = {
+					const source	= create_source(self, null)
+					const rqo_count	= {
 						action			: 'count',
 						sqo				: count_sqo,
-						prevent_lock	: true
+						prevent_lock	: true,
+						source			: source
 					}
 					self.total = function() {
 						return new Promise(function(resolve){
@@ -833,12 +835,7 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 	// navigation history. When user paginates, store navigation history to allow browser navigation too
 		if (navigation_history===true) {
 
-			const source	= {
-				mode			: self.mode,
-				model			: self.model,
-				tipo			: self.tipo,
-				section_tipo	: self.tipo
-			}
+			const source	= create_source(self, null)
 			const sqo		= self.rqo_config.sqo
 			const title		= self.id
 			const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode

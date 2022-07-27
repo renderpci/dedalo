@@ -8,7 +8,7 @@
 	// import {get_instance} from '../../../../core/common/js/instances.js'
 	import {clone, dd_console} from '../../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../../core/common/js/data_manager.js'
-	import {common, get_columns_map} from '../../../../core/common/js/common.js'
+	import {common, get_columns_map, create_source} from '../../../../core/common/js/common.js'
 	import {paginator} from '../../../paginator/js/paginator.js'
 
 
@@ -152,10 +152,12 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					delete count_sqo.offset
 					delete count_sqo.select
 					delete count_sqo.generated_time
+					const source	= create_source(self, null)
 					const rqo_count = {
 						action			: 'count',
 						sqo				: count_sqo,
-						prevent_lock	: true
+						prevent_lock	: true,
+						source			: source
 					}
 					self.total = function() {
 						return new Promise(function(resolve){
