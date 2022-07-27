@@ -65,13 +65,21 @@ class indexation_grid {
 				$section_grid_row->set_value([$section_grid]);
 
 			// get the term in the section that has the indexation_list information
-				$indexation_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, 'indexation_list', 'children');
-				if(SHOW_DEBUG===true) {
-					// dump($indexation_list, ' indexation_list ++ '.to_string($current_section_tipo));
-				}
-				// if (empty($indexation_list)) {
-					// continue;
-				// }
+				$indexation_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$current_section_tipo,
+					'indexation_list',
+					'children'
+				);
+				// debug
+					if(SHOW_DEBUG===true) {
+						// dump($indexation_list, ' indexation_list ++ '.to_string($current_section_tipo));
+					}
+
+				// check empty cases (misconfigured Ontology indexation_list children)
+					if (empty($indexation_list)) {
+						debug_log(__METHOD__." Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ".to_string($current_section_tipo), logger::ERROR);
+						continue;
+					}
 
 				if (!isset($indexation_list[0])) {
 					$msg  = "Error Processing Request build_indexation_grid:  section indexation_list is empty. Please configure structure for ($current_section_tipo) ";
