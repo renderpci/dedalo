@@ -117,6 +117,7 @@ final class dd_core_api {
 
 						// add to page context
 							$context[] = $menu->get_structure_context();
+								// dump($context, ' MENU $context ++ '.to_string());
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
@@ -266,13 +267,17 @@ final class dd_core_api {
 
 						case (strpos($model, 'component_')===0):
 
+							$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+								? $lang
+								: DEDALO_DATA_NOLAN;
+
 							// component
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
 									$section_id,
 									$mode,
-									$lang,
+									$component_lang,
 									$section_tipo
 								);
 
@@ -284,7 +289,18 @@ final class dd_core_api {
 
 							// component_context
 								$component_context = $element_json->context[0];
-								$component_context->section_id = $section_id;
+								$component_context->section_id = $section_id; // section_
+
+							// test minimal context
+								// $component_context = (object)[
+								// 	'typo'			=> 'source',
+								// 	'model'			=> $model,
+								// 	'tipo'			=> $tipo,
+								// 	'section_tipo'	=> $section_tipo,
+								// 	'section_id'	=> $section_id,
+								// 	'mode'			=> $mode,
+								// 	'lang'			=> $component_lang
+								// ];
 
 							// context add
 								$context[] = $component_context;
@@ -362,6 +378,9 @@ final class dd_core_api {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
 				return $response;
 			}
+
+		// ignore_user_abort
+			// ignore_user_abort(true);
 
 		// build rows (context & data)
 			$json_rows = self::build_json_rows($rqo);
@@ -1439,6 +1458,10 @@ final class dd_core_api {
 						return $sqo;
 					  })());
 
+				// when sqo limit is false, apply the default limit
+					// if (property_exists($sqo, 'limit') && $sqo->limit===false) {
+					// 	$sqo->limit = 0;
+					// }
 
 		// CONTEXT
 			// $context = [];
@@ -1558,12 +1581,12 @@ final class dd_core_api {
 
 					case 'get_data': // Used by components and areas
 
-						if (strpos($model, 'component')===0) {
+						if (strpos($model, 'component_')===0) {
 
-							if ($section_id>=1) {
+							if ($section_id<1) {
 								// invalid call
-								debug_log(__METHOD__." WARNING data:get_data invalid section_id ", logger::WARNING);
-
+								debug_log(__METHOD__." WARNING data:get_data invalid section_id: ".to_string($section_id), logger::WARNING);
+							}else{
 								// component
 									$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
 										? $lang
