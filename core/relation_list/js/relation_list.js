@@ -232,14 +232,16 @@ relation_list.prototype.build = async function(autoload=true){
 				}]
 			}
 			//rqo, use the 'count' action of the API
-			const rqo_count = {
-				action	: 'count',
-				sqo		: sqo_count
+			const rqo = {
+				action			: 'count',
+				sqo				: sqo_count,
+				prevent_lock	: true,
+				source			: source
 			}
 
 			// set the response to the self.total
 			self.total = await data_manager.request({
-				body : rqo_count
+				body : rqo
 			})
 			.then(function(response){
 				if(response.result !== false){

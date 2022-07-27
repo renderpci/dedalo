@@ -835,19 +835,37 @@ final class dd_core_api {
 
 	/**
 	* COUNT
+	* Exec a SQL records count of given SQO
 	* @param object $json_data
+	* sample:
+	* {
+	*    "action": "count",
+	*    "sqo": {
+	*        "id": "tmp",
+	*        "mode": "tm",
+	*        "section_tipo": [
+	*            "oh1"
+	*        ]
+	*    },
+	*    "prevent_lock": true,
+	*    "source": {
+	*        "typo": "source",
+	*        "type": "tm",
+	*        "action": null,
+	*        "model": "service_time_machine",
+	*        ..
+	*    }
+	* }
 	* @return object $response
 	*/
-	public static function count(object $json_data) : object {
-
-		session_write_close();
+	public static function count(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$search_query_object = $json_data->sqo;
+		$search_query_object = $rqo->sqo;
 
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
 			$ar_section_tipo = $search_query_object->section_tipo;
@@ -868,7 +886,9 @@ final class dd_core_api {
 
 		// response ok
 			$response->result	= $result;
-			$response->msg		= 'Ok. Request done';
+			$response->msg		= empty($response->error)
+				? 'OK. Request done successfully'
+				: $response->msg;
 
 
 		return $response;

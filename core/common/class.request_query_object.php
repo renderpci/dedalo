@@ -18,6 +18,8 @@
 			(it modify search) List of elements for choose (service_autocomplete)
 		data	: object
 			(object used like pre-calculated container (datalist, pagination, etc.) to minimize cpu usage on calls to 'save')
+		prevent_lock : bool
+			(prevent PHP lock the session while the request is working. For example in 'count' calls)
 
 		// info about
 			Mandatory	: dd_api, action, source
@@ -197,6 +199,8 @@ class request_query_object {
 				// public $choose;
 			// object data
 				// public $data;
+			// bool prevent_lock
+				// public $prevent_lock;
 
 
 
