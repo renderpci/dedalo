@@ -158,7 +158,8 @@
 		top: 50%;
 		width: @diameter;
 		border: @border_size transparent solid; // rgba(0, 0, 0, 0.25)
-		border-top: @border_size @border_color solid;
+		// border-top: @border_size @border_color solid;
+		border-top: 1px @border_color solid;
 		border-right: @border_size @border_color solid;
 		border-bottom: @border_size @border_color solid;
 		border-radius: 50%;
@@ -539,6 +540,24 @@
 		font-size: 75%;
 		opacity: 0.65;
 		vertical-align: bottom;
+	}
+
+// container_placeholder. Used lo show message 'Loading ...' until element rendered node is ready
+	.container_placeholder {
+		padding: 1rem;
+		position: relative;
+		padding-left: 3.5rem !important;
+
+		>.spinner {
+			height: 2rem;
+			width: 2rem;
+			top: 0.5rem;
+			left: 0.5rem;
+			z-index: 2;
+			margin: 0;
+			border-top: 1px @color_orange_dedalo solid;
+			min-height: unset;
+		}
 	}
 
 
