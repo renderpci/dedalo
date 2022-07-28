@@ -129,8 +129,6 @@ const get_content_data = async function(self) {
 
 				const current_context = self.context[i]
 
-				console.log('++++++++++++++++++ current_context:', current_context);
-
 				// menu case. Prevent to render again on refresh page
 					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model)
 					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model && el.destroyable===false)
@@ -143,7 +141,7 @@ const get_content_data = async function(self) {
 					const container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'container ' + current_context.model,
-						// inner_html	: 'Loading '+ current_context.model,
+						inner_html		: 'Loading '+ current_context.model +' '+ current_context.tipo,
 						parent			: content_data
 					})
 

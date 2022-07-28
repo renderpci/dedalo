@@ -37,6 +37,7 @@ final class dd_core_api {
 	* Builds the start page minimum context.
 	* Normally is a menu and a section (based on url vars)
 	* This function tells to page what must to be request, based on given url vars
+	* Note that a full context is calculate for each element
 	* @param object $options
 	* sample:
 	* {
@@ -117,6 +118,7 @@ final class dd_core_api {
 
 						// add to page context
 							$context[] = $menu->get_structure_context();
+								// dump($context, ' MENU $context ++ '.to_string());
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
@@ -266,13 +268,17 @@ final class dd_core_api {
 
 						case (strpos($model, 'component_')===0):
 
+							$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+								? $lang
+								: DEDALO_DATA_NOLAN;
+
 							// component
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
 									$section_id,
 									$mode,
-									$lang,
+									$component_lang,
 									$section_tipo
 								);
 
@@ -284,7 +290,18 @@ final class dd_core_api {
 
 							// component_context
 								$component_context = $element_json->context[0];
-								$component_context->section_id = $section_id;
+								$component_context->section_id = $section_id; // section_
+
+							// test minimal context
+								// $component_context = (object)[
+								// 	'typo'			=> 'source',
+								// 	'model'			=> $model,
+								// 	'tipo'			=> $tipo,
+								// 	'section_tipo'	=> $section_tipo,
+								// 	'section_id'	=> $section_id,
+								// 	'mode'			=> $mode,
+								// 	'lang'			=> $component_lang
+								// ];
 
 							// context add
 								$context[] = $component_context;
@@ -362,6 +379,9 @@ final class dd_core_api {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
 				return $response;
 			}
+
+		// ignore_user_abort
+			// ignore_user_abort(true);
 
 		// build rows (context & data)
 			$json_rows = self::build_json_rows($rqo);
@@ -816,19 +836,37 @@ final class dd_core_api {
 
 	/**
 	* COUNT
+	* Exec a SQL records count of given SQO
 	* @param object $json_data
+	* sample:
+	* {
+	*    "action": "count",
+	*    "sqo": {
+	*        "id": "tmp",
+	*        "mode": "tm",
+	*        "section_tipo": [
+	*            "oh1"
+	*        ]
+	*    },
+	*    "prevent_lock": true,
+	*    "source": {
+	*        "typo": "source",
+	*        "type": "tm",
+	*        "action": null,
+	*        "model": "service_time_machine",
+	*        ..
+	*    }
+	* }
 	* @return object $response
 	*/
-	public static function count(object $json_data) : object {
-
-		session_write_close();
+	public static function count(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$search_query_object = $json_data->sqo;
+		$search_query_object = $rqo->sqo;
 
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
 			$ar_section_tipo = $search_query_object->section_tipo;
@@ -849,7 +887,9 @@ final class dd_core_api {
 
 		// response ok
 			$response->result	= $result;
-			$response->msg		= 'Ok. Request done';
+			$response->msg		= empty($response->error)
+				? 'OK. Request done successfully'
+				: $response->msg;
 
 
 		return $response;
@@ -1272,7 +1312,7 @@ final class dd_core_api {
 
 	/**
 	* ONTOLOGY_GET_CHILDREN_RECURSIVE
-	*
+	* Calculate recursively the children of given term
 	* @param object $json_data
 	* @return object $response
 	*/
@@ -1305,7 +1345,9 @@ final class dd_core_api {
 
 	/**
 	* BUILD_JSON_ROWS
+	* Gets context and data from given element (section, component, area)
 	* @see class.request_query_object.php
+	* @param object $rqo
 	* @return object $result
 	*/
 	private static function build_json_rows(object $rqo) : object {
@@ -1439,6 +1481,10 @@ final class dd_core_api {
 						return $sqo;
 					  })());
 
+				// when sqo limit is false, apply the default limit
+					// if (property_exists($sqo, 'limit') && $sqo->limit===false) {
+					// 	$sqo->limit = 0;
+					// }
 
 		// CONTEXT
 			// $context = [];
@@ -1558,12 +1604,12 @@ final class dd_core_api {
 
 					case 'get_data': // Used by components and areas
 
-						if (strpos($model, 'component')===0) {
+						if (strpos($model, 'component_')===0) {
 
-							if ($section_id>=1) {
+							if ($section_id<1) {
 								// invalid call
-								debug_log(__METHOD__." WARNING data:get_data invalid section_id ", logger::WARNING);
-
+								debug_log(__METHOD__." WARNING data:get_data invalid section_id: ".to_string($section_id), logger::WARNING);
+							}else{
 								// component
 									$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
 										? $lang
@@ -1724,9 +1770,9 @@ final class dd_core_api {
 				// dump($context, ' context ++ '.to_string());
 				// dump($data, ' data ++ '.to_string());
 
-		// Set result object
-			$result->context = $context;
-			$result->data 	 = $data;
+		// result. Set result object
+			$result->context	= $context;
+			$result->data		= $data;
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -1738,8 +1784,8 @@ final class dd_core_api {
 					$debug->exec_time				= exec_time_unit($start_time,'ms').' ms';
 					$debug->memory_usage			= dd_memory_usage();
 				$result->debug = $debug;
-				#dump($debug, ' debug ++ '.to_string());
 			}
+
 
 		return $result;
 	}//end build_json_rows
@@ -1784,7 +1830,7 @@ final class dd_core_api {
 
 
 	/**
-	* SMART_REMOVE_context_DUPLICATES
+	* SMART_REMOVE_CONTEXT_DUPLICATES
 	* @param array $data
 	* @return array $clean_data
 	*/
@@ -1818,14 +1864,15 @@ final class dd_core_api {
 
 
 
-	// en private methods ///////////////////////////////////
+	// end private methods ///////////////////////////////////
 
 
 
 	/**
 	* GET_INDEXATION_GRID
 	* @see class.request_query_object.php
-	* @return dd_grid object $result
+	* @param object $rqo
+	* @return object $response
 	*/
 	public static function get_indexation_grid(object $rqo) : object {
 
@@ -1836,7 +1883,8 @@ final class dd_core_api {
 
 		// validate input data
 			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
+				$response->msg .= ' Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
+				$response->error = 1;
 				return $response;
 			}
 
@@ -1853,8 +1901,8 @@ final class dd_core_api {
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
 			$index_grid			= $indexation_grid->build_indexation_grid();
 
-		// reponse ok
-			$response->msg		= 'OK. Request done';
+		// response OK
+			$response->msg		= 'OK. Request done successfully';
 			$response->result	= $index_grid;
 
 
@@ -1897,9 +1945,9 @@ final class dd_core_api {
 
 			$relation_list_json = $relation_list->get_json();
 
-		// response ok
+		// response OK
 			$response->result	= $relation_list_json;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			$response->msg		= 'OK. Request done successful ['.__FUNCTION__.']';
 
 
 		return $response;
@@ -1928,7 +1976,12 @@ final class dd_core_api {
 	*		tc_out_secs: 35
 	*   }}
 	* }
-	* @return object response { result: mixed, msg: string }
+	* @return object $response
+	* {
+	* 	result : mixed,
+	* 	msg : string,
+	* 	error : int|null
+	* }
 	*/
 	public static function service_request(object $rqo) : object {
 
@@ -1978,7 +2031,6 @@ final class dd_core_api {
 
 		return $response;
 	}//end service_request
-
 
 
 
