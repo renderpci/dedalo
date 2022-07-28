@@ -31,7 +31,7 @@ abstract class component_common extends common {
 
 		# STRUCTURE DATA
 		public $RecordObj_dd;				# obj ts
-		protected $model;
+		protected $model;					// fixed on common->load_structure_data
 		protected $norden;
 		protected $label;					# component label in current lang like 'Transcription'
 

@@ -1003,7 +1003,7 @@ class component_pdf extends component_media_common {
 	*/
 	public function get_extension() : string {
 
-		return DEDALO_PDF_EXTENSION;
+		return $this->extension ?? DEDALO_PDF_EXTENSION;
 	}//end get_extension
 
 

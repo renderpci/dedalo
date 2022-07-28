@@ -241,7 +241,7 @@ abstract class common {
 			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
 
 			# Fix vars
-			$this->modelo	= $this->RecordObj_dd->get_modelo();
+			$this->model	= $this->RecordObj_dd->get_modelo();
 			$this->norden	= $this->RecordObj_dd->get_norden();
 			$this->required	= $this->RecordObj_dd->get_usableIndex();
 

@@ -515,7 +515,7 @@ class component_svg extends component_media_common {
 	*/
 	public function get_extension() : string {
 
-		return DEDALO_SVG_EXTENSION;
+		return $this->extension ?? DEDALO_SVG_EXTENSION;
 	}//end get_extension
 
 

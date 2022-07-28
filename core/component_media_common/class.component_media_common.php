@@ -233,9 +233,7 @@ class component_media_common extends component_common {
 			$files_info = [];
 			foreach ($ar_quality as $quality) {
 
-				$path = ($quality==='original')
-					? $this->get_original_file_path($quality)
-					: $this->get_path($quality);
+				$path = $this->get_path($quality);
 
 				// file_exist
 					$file_exist	= !empty($path)
@@ -260,13 +258,66 @@ class component_media_common extends component_common {
 						? $this->get_url($quality)
 						: null;
 
+				// original case
+					$quality_name = $quality;
+					if ($quality==='original') {
+						$raw_path = $this->get_original_file_path($quality);
+						if ($raw_path!==$path) {
+							$quality_name = 'original_viewable';
+						}
+					}
+
 				// item
 					$files_info[] = (object)[
-						'quality'		=> $quality,
+						'quality'		=> $quality_name,
 						'file_exist'	=> $file_exist,
 						'file_size'		=> $file_size,
 						'url'			=> $file_url
 					];
+
+				// original case
+					if ($quality==='original' && $raw_path!==$path) {
+
+						$path = $raw_path;
+
+						// file_exist
+							$file_exist	= !empty($path)
+								? file_exists($path)
+								: false;
+								// $this->file_exist($quality);
+
+						// file_size
+							$file_size	= ($file_exist===true)
+								? (function() use($path) {
+									try {
+										$size = @filesize($path);
+									} catch (Exception $e) {
+										trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
+									}
+									return $size ?? null; // in bytes
+								  })()
+								: null;
+
+						// inject extension temporally
+							$default_extension		= $this->get_extension();
+							$raw_original_extension	= pathinfo($path)['extension'];
+							$this->extension		= $raw_original_extension;
+
+						// file_url
+							$file_url = ($file_exist===true)
+								? $this->get_url($quality)
+								: null;
+
+						// restore default extension
+							$this->extension = $default_extension;
+
+						$files_info[] = (object)[
+							'quality'		=> $quality,
+							'file_exist'	=> $file_exist,
+							'file_size'		=> $file_size,
+							'url'			=> $file_url
+						];
+					}
 			}
 
 		return $files_info;
