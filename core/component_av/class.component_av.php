@@ -1187,7 +1187,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_extension() : string {
 
-		return DEDALO_AV_EXTENSION;
+		return $this->extension ?? DEDALO_AV_EXTENSION;
 	}//end get_extension
 
 

@@ -495,7 +495,7 @@ class component_image extends component_media_common {
 			$ImageObj->set_quality($quality);
 
 		// url
-			$image_url = $ImageObj->get_media_path() .'/'. $image_id .'.'. $ImageObj->get_extension();
+			$image_url = $ImageObj->get_media_path() .'/'. $image_id .'.'. $this->get_extension();
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
@@ -1901,7 +1901,7 @@ class component_image extends component_media_common {
 	*/
 	public function get_extension() : string {
 
-		return DEDALO_IMAGE_EXTENSION;
+		return $this->extension ?? DEDALO_IMAGE_EXTENSION;
 	}//end get_extension
 
 
