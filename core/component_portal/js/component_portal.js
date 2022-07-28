@@ -249,9 +249,11 @@ component_portal.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// get context and data
-				const api_response = await data_manager.request({body:self.rqo})
-					// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
-					dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
+				const api_response = await data_manager.request({
+					body : self.rqo
+				})
+				// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
+				dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
 
 			// set context and data to current instance
 				await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)

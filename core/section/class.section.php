@@ -170,7 +170,7 @@ class section extends common {
 
 
 		// active_section_section_id : Set global var
-			if($modo==='edit'
+			if(	   $modo==='edit'
 				&& (isset($this->section_id) && ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
 				&& !isset(section::$active_section_id) ) {
 

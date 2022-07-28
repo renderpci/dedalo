@@ -89,43 +89,47 @@ login.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = true
 * @return promise
 *	bool true
 */
 login.prototype.build = async function(autoload=true) {
-	const t0 = performance.now()
 
 	const self = this
 
 	// status update
 		self.status = 'building'
 
-	if (autoload===true) {
+	// (!) Note that login only needs the context to operate and is injected from page
+	// @see page.instantiate_page_element()
 
-		// // rqo build
-		// 	const rqo = {
-		// 		action : 'get_login',
-		// 		dd_api : 'dd_utils_api',
-		// 		source : create_source(self, null)
-		// 	}
+	// OLD WORLD (it's not necessary lo load nothing)
+		// if (autoload===true) {
 
-		// // load data. get context and data
-		// 	const api_response = await data_manager.request({
-		// 		body : rqo
-		// 	})
+		// 	// rqo build
+		// 		const rqo = {
+		// 			action : 'get_login',
+		// 			dd_api : 'dd_utils_api',
+		// 			source : create_source(self, null)
+		// 		}
 
-		// // set the result to the datum
-		// 	self.datum = api_response.result
+		// 	// load data. get context and data
+		// 		const api_response = await data_manager.request({
+		// 			body : rqo
+		// 		})
 
-		// set context and data to current instance
-			// self.context	= self.datum.context.find(element => element.tipo===self.tipo);
-			// self.data		= self.datum.data.find(element => element.tipo===self.tipo);
-	}
+		// 	// set the result to the datum
+		// 		self.datum = api_response.result
+
+		// 	// set context and data to current instance
+		// 		self.context	= self.datum.context.find(element => element.tipo===self.tipo);
+		// 		self.data		= self.datum.data.find(element => element.tipo===self.tipo);
+		// }
 
 	// debug
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
+			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
 		}
 
 	// status update
@@ -139,6 +143,7 @@ login.prototype.build = async function(autoload=true) {
 
 /**
 * QUIT
+* @return object api_response
 */
 export const quit = async function() {
 
@@ -172,5 +177,3 @@ export const quit = async function() {
 
 	return api_response
 }//end quit
-
-
