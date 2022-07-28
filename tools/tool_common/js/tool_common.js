@@ -179,6 +179,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 				const ddo_map_length	= ddo_map.length
 				for (let i = 0; i < ddo_map_length; i++) {
 
+					// el. components / sections / areas used by the tool defained in tool_config.ddo_map
 					const el = ddo_map[i]
 
 					// lang. If is defined in properties, parse and use it, else use the tool lang
@@ -191,26 +192,30 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 					ar_promises.push( new Promise(async (resolve) => {
 
-						// context. If it's not given, get from caller or request to the API
+						// context. If not provided, it is obtained from the caller or requested from the API
 							const context = el.context
 								? el.context
-								: {}
-								 //  await (async function(){
-									// // caller context
-									// const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
-									// if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
-									// 	// get context from available caller
-									// 	return caller_context
-									// }
+								: await (async function(){
 
-									// // resolve whole context from API (init event observer problem..)
-									// // (!) This is mandatory now because some components (e.g. component_portal) need
-									// // the rqo_config to generate rqo correctly
-									// const api_response = await data_manager.get_element_context(el)
-									// // console.log("++++++++++++++++++ resolved context api_response:", el.tipo, api_response);
-									// return api_response.result[0] || null
-									// // return {}
-								 //  })()
+									// only component_portal needs to calculate the context (for proper pagination limit resolution)
+										if (el.model!=='component_portal') {
+											return {}
+										}
+
+									// caller context
+										const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
+										if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
+											// get context from available caller
+											return caller_context
+										}
+
+									// resolve whole context from API (init event observer problem..)
+									// (!) This is mandatory now because some components (e.g. component_portal) need
+									// the rqo_config to generate rqo correctly
+										const api_response = await data_manager.get_element_context(el)
+
+									return api_response.result[0] || null
+								 })()
 
 						// generic try
 							// const element_instance = load_component_generic({
