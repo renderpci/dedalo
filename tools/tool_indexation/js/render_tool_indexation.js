@@ -45,9 +45,16 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 			content_data : content_data
 		})
 
+		// fix pointers
+		wrapper.content_data = content_data
+
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
 		wrapper.tool_buttons_container.appendChild(related_list_node)
+
+	// viewer_selector. (thesaurus/audiovisual)
+		const viewer_selector_node = render_viewer_selector(self, wrapper)
+		wrapper.tool_buttons_container.appendChild(viewer_selector_node)
 
 	// get_tag_info. Fires build tag info panel nodes at begin
 		get_tag_info(self)
@@ -79,6 +86,8 @@ const get_content_data_edit = async function(self) {
 			self.area_thesaurus.render()
 			.then(function(node){
 				left_container.appendChild(node)
+				// fix pointer
+				left_container.area_thesaurus_node = node
 			})
 
 	// right_container (component_text_area && component_portal)
@@ -258,6 +267,9 @@ const get_content_data_edit = async function(self) {
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
+
+		// fix pointers
+		content_data.left_container = left_container
 
 
 	return content_data
@@ -469,6 +481,9 @@ const get_tag_info = function(self) {
 /**
 * RENDER_RELATED_LIST
 * This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
+* @param object self
+* 	tool instance
+* @return DocumentFragment
 */
 const render_related_list = function(self){
 
@@ -482,6 +497,7 @@ const render_related_list = function(self){
 		const related_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'related_list_container',
+			inner_html		: (get_label.enfoque || 'Aproch') + ': &nbsp;',
 			parent			: fragment
 		})
 
@@ -549,3 +565,179 @@ const render_related_list = function(self){
 
 	return fragment
 }//end render_related_list
+
+
+
+/**
+* RENDER_VIEWER_SELECTOR
+* Let user select left side viewer from options (tesaurus/audiovisual)
+* @param object self
+* 	tool instance
+* @return DocumentFragment
+*/
+const render_viewer_selector = function(self, wrapper){
+
+	// short vars
+		const media_component	= self.media_component
+		const area_thesaurus	= self.area_thesaurus
+		const items = [
+			{
+				label : area_thesaurus.label,
+				value : 'area_thesaurus'
+			},
+			{
+				label : media_component.label,
+				value : 'media_component'
+			}
+		]
+
+	// fix initial viewer name
+		self.viewer = items[0].value
+
+	const fragment = new DocumentFragment();
+
+	// viewer_selector_container
+		const viewer_selector_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'viewer_selector_container',
+			// inner_html		: (get_label.viewer || 'Viewer') + ': &nbsp;',
+			parent			: fragment
+		})
+
+	// select
+		const select = ui.create_dom_element({
+			element_type	: 'select',
+			parent			: viewer_selector_container
+		})
+		// change event
+		select.addEventListener('change', async function(e){
+
+			// fix the new viewer name
+			self.viewer = e.target.value
+			// console.log('Fixed new self.viewer:', self.viewer);
+
+			const left_container		= wrapper.content_data.left_container
+			const area_thesaurus_node	= left_container.area_thesaurus_node
+			const media_component_node	= left_container.media_component_node || null
+
+			if (self.viewer==='media_component') {
+
+				// hide area_thesaurus_node
+					area_thesaurus_node.classList.add('hide')
+
+				// show media_component_node
+					if (media_component_node) {
+						media_component_node.classList.remove('hide')
+					}else{
+						// first call, do not exists
+						self.media_component.render()
+						.then(function(node){
+							left_container.appendChild(node)
+							// fix pointer
+							left_container.media_component_node = node
+						})
+					}
+			}else
+			if (self.viewer==='area_thesaurus'){
+
+				// hide media_component_node
+					if (media_component_node) {
+						media_component_node.classList.add('hide')
+					}
+
+				// show area_thesaurus_node
+					area_thesaurus_node.classList.remove('hide')
+			}
+		})
+
+
+	// option label
+		const option_blank = ui.create_dom_element({
+			element_type	: 'option',
+			inner_html		: (get_label.viewer || 'Viewer') + ': &nbsp;',
+			value			: null,
+			parent			: select
+		})
+		option_blank.disabled = true
+
+	// options
+		const items_length = items.length
+		for (let i = 0; i < items_length; i++) {
+
+			const item = items[i]
+
+			// option
+			const option = ui.create_dom_element({
+				element_type	: 'option',
+				inner_html		: item.label,
+				value			: item.value,
+				parent			: select
+			})
+			// option.selected = i==0
+		}
+
+	return fragment
+
+
+
+	// // select -> options
+	// 	// sections
+	// 		const sections = data.find(el => el.typo==='sections')
+	// 		if (!sections) {
+	// 			ui.create_dom_element({
+	// 				element_type	: 'div',
+	// 				class_name		: 'error msg',
+	// 				inner_html		: 'Empty top sections to index!',
+	// 				parent			: related_list_container
+	// 			})
+	// 			console.error('Empty top sections to index!')
+	// 			return fragment
+	// 		}
+
+	// 	const select = ui.create_dom_element({
+	// 		element_type	: 'select',
+	// 		parent			: related_list_container
+	// 	})
+
+	// 	const value			= sections.value
+	// 	const value_length	= value.length
+	// 	for (let i = 0; i < value_length; i++) {
+
+	// 		const current_locator = {
+	// 			section_top_tipo	: value[i].section_tipo,
+	// 			section_top_id		: value[i].section_id
+	// 		}
+	// 		// fix the first locator when tool is loaded (without user interaction)
+	// 			if(i===0){
+	// 				self.top_locator = current_locator
+	// 			}
+
+	// 		const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
+	// 		const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+
+	// 		// ar_component_value
+	// 			const ar_component_value = []
+	// 			for (let j = 0; j < ar_component_data.length; j++) {
+	// 				const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
+	// 				ar_component_value.push(current_value)
+	// 			}
+
+	// 		// label
+	// 			const label = 	section_label + ' | ' +
+	// 							current_locator.section_top_id +' | ' +
+	// 							ar_component_value.join(' | ')
+
+	// 		// option DOM element
+	// 			const option = ui.create_dom_element({
+	// 				element_type	: 'option',
+	// 				inner_html		: label,
+	// 				parent			: select
+	// 			})
+	// 			option.locator = current_locator
+	// 	}//end for
+
+
+
+
+	return fragment
+}//end render_viewer_selector

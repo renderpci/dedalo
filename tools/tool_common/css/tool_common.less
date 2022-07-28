@@ -70,6 +70,7 @@
 // (!) Note that is defined outside wrapper_tool to be compatible with modal and new tab window
 	.tool_header {
 		background-color: @color_orange_dedalo;
+		position: relative;
 		color: #ffffff;
 		width: 100%;
 		display: flex;
@@ -78,14 +79,18 @@
 			padding: 1rem;
 		}
 
+		select {
+			max-width: 20rem;
+		}
+
 		// error messages for example
 		.msg {
 			padding: 0.5rem;
 			border-radius: 0.25rem;
 		}
 
-
 		>.tool_name_container {
+			margin-right : 1em;
 			padding-right: 1rem;
 			>.label {
 				font-size: 1.5rem;
@@ -104,7 +109,8 @@
 		}
 
 		>.tool_buttons_container {
-			// background-color: #BAF1F6;
+			display: flex;
+			align-items: center;
 		}
 
 		>.activity_info_container {
