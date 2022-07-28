@@ -115,7 +115,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 			const base_columns_map	= untouched_columns_map.filter(el => el.mosaic===true)
 			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
 			self.columns_map		= columns_map // overwrite instance columns_map
-				console.log("columns_map:-----------",columns_map);
 		// content_data
 			// self.id_variant = self.id_variant
 			// 	? self.id_variant + 'alt'

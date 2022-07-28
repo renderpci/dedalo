@@ -12,7 +12,7 @@
 	import {render_edit_component_image} from '../../component_image/js/render_edit_component_image.js'
 	import {render_list_component_image} from '../../component_image/js/render_list_component_image.js'
 	import {render_mini_component_image} from '../../component_image/js/render_mini_component_image.js'
-
+	import {render_viewer_component_image} from '../../component_image/js/render_viewer_component_image.js'
 
 
 export const component_image = function(){
@@ -68,6 +68,7 @@ export const component_image = function(){
 	component_image.prototype.mini				= render_mini_component_image.prototype.mini
 	component_image.prototype.list				= render_list_component_image.prototype.list
 	component_image.prototype.edit				= render_edit_component_image.prototype.edit
+	component_image.prototype.viewer			= render_viewer_component_image.prototype.viewer
 	component_image.prototype.search			= render_edit_component_image.prototype.search
 
 
