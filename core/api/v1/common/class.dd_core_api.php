@@ -37,6 +37,7 @@ final class dd_core_api {
 	* Builds the start page minimum context.
 	* Normally is a menu and a section (based on url vars)
 	* This function tells to page what must to be request, based on given url vars
+	* Note that a full context is calculate for each element
 	* @param object $options
 	* sample:
 	* {
@@ -1311,7 +1312,7 @@ final class dd_core_api {
 
 	/**
 	* ONTOLOGY_GET_CHILDREN_RECURSIVE
-	*
+	* Calculate recursively the children of given term
 	* @param object $json_data
 	* @return object $response
 	*/
@@ -1344,7 +1345,9 @@ final class dd_core_api {
 
 	/**
 	* BUILD_JSON_ROWS
+	* Gets context and data from given element (section, component, area)
 	* @see class.request_query_object.php
+	* @param object $rqo
 	* @return object $result
 	*/
 	private static function build_json_rows(object $rqo) : object {
@@ -1767,9 +1770,9 @@ final class dd_core_api {
 				// dump($context, ' context ++ '.to_string());
 				// dump($data, ' data ++ '.to_string());
 
-		// Set result object
-			$result->context = $context;
-			$result->data 	 = $data;
+		// result. Set result object
+			$result->context	= $context;
+			$result->data		= $data;
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -1781,8 +1784,8 @@ final class dd_core_api {
 					$debug->exec_time				= exec_time_unit($start_time,'ms').' ms';
 					$debug->memory_usage			= dd_memory_usage();
 				$result->debug = $debug;
-				#dump($debug, ' debug ++ '.to_string());
 			}
+
 
 		return $result;
 	}//end build_json_rows
@@ -1827,7 +1830,7 @@ final class dd_core_api {
 
 
 	/**
-	* SMART_REMOVE_context_DUPLICATES
+	* SMART_REMOVE_CONTEXT_DUPLICATES
 	* @param array $data
 	* @return array $clean_data
 	*/
@@ -1861,14 +1864,15 @@ final class dd_core_api {
 
 
 
-	// en private methods ///////////////////////////////////
+	// end private methods ///////////////////////////////////
 
 
 
 	/**
 	* GET_INDEXATION_GRID
 	* @see class.request_query_object.php
-	* @return dd_grid object $result
+	* @param object $rqo
+	* @return object $response
 	*/
 	public static function get_indexation_grid(object $rqo) : object {
 
@@ -1879,7 +1883,8 @@ final class dd_core_api {
 
 		// validate input data
 			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
+				$response->msg .= ' Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
+				$response->error = 1;
 				return $response;
 			}
 
@@ -1896,8 +1901,8 @@ final class dd_core_api {
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
 			$index_grid			= $indexation_grid->build_indexation_grid();
 
-		// reponse ok
-			$response->msg		= 'OK. Request done';
+		// response OK
+			$response->msg		= 'OK. Request done successfully';
 			$response->result	= $index_grid;
 
 
@@ -1940,9 +1945,9 @@ final class dd_core_api {
 
 			$relation_list_json = $relation_list->get_json();
 
-		// response ok
+		// response OK
 			$response->result	= $relation_list_json;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			$response->msg		= 'OK. Request done successful ['.__FUNCTION__.']';
 
 
 		return $response;
@@ -1971,7 +1976,12 @@ final class dd_core_api {
 	*		tc_out_secs: 35
 	*   }}
 	* }
-	* @return object response { result: mixed, msg: string }
+	* @return object $response
+	* {
+	* 	result : mixed,
+	* 	msg : string,
+	* 	error : int|null
+	* }
 	*/
 	public static function service_request(object $rqo) : object {
 
@@ -2021,7 +2031,6 @@ final class dd_core_api {
 
 		return $response;
 	}//end service_request
-
 
 
 
