@@ -137,12 +137,19 @@ const get_content_data = async function(self) {
 						continue;
 					}
 
-				// container
-					const container = ui.create_dom_element({
+				// container placeholder until page element is builded and rendered
+					const label = current_context.label || current_context.model
+					const container_placeholder = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'container ' + current_context.model,
-						inner_html		: 'Loading '+ current_context.model +' '+ current_context.tipo,
+						class_name		: 'container container_placeholder ' + current_context.model,
+						inner_html		: 'Loading '+ label +' ['+ current_context.tipo+']',
 						parent			: content_data
+					})
+					// spinner
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner',
+						parent			: container_placeholder
 					})
 
 				// instance
@@ -157,7 +164,7 @@ const get_content_data = async function(self) {
 						// render instance
 						current_instance.render()
 						.then(function(node){
-							container.replaceWith(node);
+							container_placeholder.replaceWith(node);
 						})
 					})
 			}//end for (let i = 0; i < elements_length; i++)
