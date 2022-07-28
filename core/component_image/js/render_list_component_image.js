@@ -69,6 +69,13 @@ render_list_component_image.prototype.list = function() {
 	// set src
 		image.src = url
 
+	// open viewer
+		image.addEventListener('click', function (evt) {
+
+			const url = DEDALO_CORE_URL + `/page/?tipo=${self.tipo}&section_tipo=${self.section_tipo}&id=${self.section_id}&mode=viewer&menu=false`
+			const current_window = window.open(url,"image_viewer","width=10,height=10")
+			current_window.focus()
+		})
 
 
 	return wrapper
