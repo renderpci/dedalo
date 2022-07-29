@@ -95,16 +95,30 @@
 
 	}//end .edit
 
+	&.list{
+
+	}//end .list
+
 	&.viewer {
 		button{
-			position:fixed;
-			right: 10px;
-			bottom: 10px;
-			z-index: 2;
-			width: 3em;
-			height: 3em;
+			&.download{
+				position:fixed;
+				right: 10px;
+				bottom: 10px;
+				z-index: 2;
+				width: 3em;
+				height: 3em;
+				padding: unset;
+				margin : unset;
+
+				&:before{
+					height: 1.5em;
+					width: 1.5em;
+					margin : unset;
+				}
+			}
 		}
-	}
+	}//end .viewer
 }//end .component_image
 
 
