@@ -83,8 +83,9 @@ session_write_close();
 				return $lang_obj;
 			}, DEDALO_PROJECTS_DEFAULT_LANGS);
 
-			$obj->dedalo_image_quality_default = DEDALO_IMAGE_QUALITY_DEFAULT;
-
+			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
+			$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
+			$obj->dedalo_image_thumb_default	= DEDALO_IMAGE_THUMB_DEFAULT;
 			# parent
 			#$obj->_parent						= isset($parent) ? (int)$parent : '';
 			# tipos
