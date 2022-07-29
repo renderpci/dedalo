@@ -6,6 +6,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -41,8 +42,8 @@ render_list_component_image.prototype.list = function() {
 
 	// url
 		// const value		= data.value
-		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
-		const url_object	= datalist.filter(item => item.quality===quality)[0]
+		const quality		= page_globals.dedalo_image_thumb_default // '1.5MB'
+		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= (typeof url_object==="undefined")
 			? DEDALO_CORE_URL + "/themes/default/0.jpg"
 			: url_object.url
@@ -56,7 +57,7 @@ render_list_component_image.prototype.list = function() {
 		image.draggable = false
 		// image.loading = 'lazy'
 		// image.setAttribute('crossOrigin', 'Anonymous');
-		ui.component.add_image_fallback(image)
+		// ui.component.add_image_fallback(image)
 
 	// image background color
 		image.addEventListener('load', set_bg_color, false)
@@ -70,11 +71,27 @@ render_list_component_image.prototype.list = function() {
 		image.src = url
 
 	// open viewer
-		image.addEventListener('click', function (evt) {
+		image.addEventListener('mouseup', function (evt) {
 
-			const url = DEDALO_CORE_URL + `/page/?tipo=${self.tipo}&section_tipo=${self.section_tipo}&id=${self.section_id}&mode=viewer&menu=false`
-			const current_window = window.open(url,"image_viewer","width=10,height=10")
-			current_window.focus()
+			const file_exist = data.datalist.find(item => item.file_exist === true)
+				console.log("data:",data);
+			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
+			// else open the player to show the image
+			if(!file_exist){
+				evt.stopPropagation();
+				// get the upload tool to be fired
+				const tool_upload = self.tools.find(el => el.model === 'tool_upload')
+
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
+			}else{
+				const url = DEDALO_CORE_URL + `/page/?tipo=${self.tipo}&section_tipo=${self.section_tipo}&id=${self.section_id}&mode=viewer&menu=false`
+				const current_window = window.open(url,"image_viewer","width=10,height=10")
+				current_window.focus()
+			}
 		})
 
 

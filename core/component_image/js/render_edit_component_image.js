@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -119,8 +120,23 @@ const get_content_data_edit = function(self) {
 			parent			: li
 		})
 		object_node.type = "image/svg+xml"
-		if (self.data.base_svg_url) {
+			console.log("self.data.base_svg_url:",self.data);
+
+		if (self.data.base_svg_url && url) {
 			object_node.data = self.data.base_svg_url
+		}else{
+			object_node.data = DEDALO_CORE_URL + '/themes/default/0.svg'
+			li.addEventListener('mouseup',function(evt){
+				evt.stopPropagation();
+				// get the tool context to be opened
+				const tool_upload = self.tools.find(el => el.model === 'tool_upload')
+
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
+			})
 		}
 		self.object_node = object_node
 
