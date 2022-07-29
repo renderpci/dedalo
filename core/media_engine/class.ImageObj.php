@@ -192,6 +192,7 @@ class ImageObj extends MediaObj {
 
 	/**
 	* GET_IMAGE_DIMENSIONS
+	* @return array|false
 	*/
 	public function get_image_dimensions() {
 
@@ -209,12 +210,14 @@ class ImageObj extends MediaObj {
 		}
 
 		if ( !file_exists( $filename )) {
+			debug_log(__METHOD__." Error. Image file not found ".to_string($filename), logger::ERROR);
 			return false ;
 		}
 
 		try {
 			$ar_info = @getimagesize($filename);
 			if(!$ar_info) {
+				debug_log(__METHOD__." Error. Image getimagesize error 1 ".to_string($filename), logger::ERROR);
 				throw new Exception('Unknow image width!');
 			}
 
@@ -225,6 +228,7 @@ class ImageObj extends MediaObj {
 			return $ar_info;
 
 		} catch (Exception $e) {
+			debug_log(__METHOD__." Error. Image getimagesize error 2 ".to_string($filename), logger::ERROR);
 			return false;
 		}
 	}//end get_image_dimensions
