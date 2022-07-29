@@ -640,8 +640,11 @@ class component_av extends component_media_common {
 
 			# Current file
 			$filename = $this->get_original_file_path($current_quality);
+			$file_exists = empty($filename)
+				? false
+				: file_exists($filename);
 
-			if ($current_quality!==$target_quality && file_exists($filename)) {
+			if ($current_quality!==$target_quality && $file_exists) {
 				return $current_quality;
 			}
 		}#end foreach($ar_quality as $quality)
