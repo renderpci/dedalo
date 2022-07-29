@@ -163,7 +163,10 @@ export const service_ckeditor = function() {
 					value_container.remove()
 
 				// click event
-					self.click = function() {
+					self.click = function(e) {
+						e.stopPropagation()
+						e.preventDefault()
+
 						self.toolbar_container.classList.remove('hide')
 						editor.editing.view.focus()
 						document.body.addEventListener('mouseup', fn_remove)
