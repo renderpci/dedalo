@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_viewport} from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import Split from '../../../lib/split/dist/split.es.js'
@@ -515,8 +515,10 @@ const render_related_list = function(self){
 				return fragment
 			}
 
+	// select node
 		const select = ui.create_dom_element({
 			element_type	: 'select',
+			class_name		: 'hidden',
 			parent			: related_list_container
 		})
 
@@ -549,17 +551,48 @@ const render_related_list = function(self){
 								ar_component_value.join(' | ')
 
 			// option DOM element
+				const current_value = current_locator.section_top_tipo + '_' + current_locator.section_top_id
 				const option = ui.create_dom_element({
 					element_type	: 'option',
 					inner_html		: label,
+					value			: current_value,
 					parent			: select
 				})
 				option.locator = current_locator
 		}//end for
 
-	// event . Change
+	// local_db
+		const status_id			= 'tool_indexation_approach'
+		const local_db_table	= 'status'
+
+	// change event
 		select.addEventListener('change', async function(e){
+
 			self.top_locator = this.options[this.selectedIndex].locator
+
+			// fix value in local DDBB table status
+				const data = {
+					id		: status_id,
+					value	: e.target.value
+				}
+				data_manager.set_local_db_data(
+					data,
+					local_db_table
+				)
+		})
+
+	// select initial value. local DDBB table status
+		data_manager.get_local_db_data(
+			status_id,
+			local_db_table,
+			true
+		)
+		.then(async function(db_data){
+			if (db_data) {
+				select.value = db_data.value
+				// select.dispatchEvent(new Event('change'))
+			}
+			select.classList.remove('hidden')
 		})
 
 
