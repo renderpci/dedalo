@@ -175,10 +175,10 @@ const rebuild_columns_map = async function(self) {
 					const locator = options.locator
 
 				// tag_id
-					const tag_id = locator.tag_id ?? null
-					const tag_label = tag_id
-						? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
-						: ''
+					const tag_id	= locator.tag_id ?? null
+					const tag_label	= tag_id
+						// ? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
+						// : ''
 
 				return ui.create_dom_element({
 					element_type    : 'div',

@@ -213,14 +213,14 @@
 
 					&.column_remove, &.column_section_id {
 						background-color: unset;
-						padding-right: 0.25rem;
+						// padding-right: 0.25rem;
 						>.icon {
 							height: 1.25rem;
 						}
 					}
 
 					&.column_section_id {
-					    padding-right: 0.5rem;
+					    padding-right: 0.25rem;
 					}
 
 					>button {
@@ -244,10 +244,24 @@
 						}
 					}
 
-					>.tags {
-						padding-left: 0.5rem;
-						padding-right: 0.75rem;
-						opacity: 0.6;
+					&.column_tag {
+						padding: 1px;
+
+						>.tags {
+							// padding-left: 0.5rem;
+							// padding-right: 0.75rem;
+							// opacity: 0.6;
+							// background-color: @color_orange_dedalo;
+							background-image: radial-gradient(25% 50% ellipse at 109% 50%, #ffffff 22px, transparent 10px, #ffab01 23px);
+							color: #ffffff;
+							border-top-left-radius: 5px;
+							border-bottom-left-radius: 5px;
+							// padding: 1px;
+							padding-left: 5px;
+							padding-right: 23px;
+							font-size: 80%;
+							text-align: center;
+						}
 					}
 				}
 			}
