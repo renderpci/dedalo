@@ -9,13 +9,13 @@
 	// background-color: #ecf564;
 
 	&.edit, &.edit_in_list {
-
 		align-content: unset;
 
 		>.content_data {
 			// background-color: #c0f5b8;
-			display: grid;
+			display: block;
 			min-height: @media_min_height;
+			// min-height: fit-content;
 			// max-height: @media_min_height;
 			// margin-bottom: 1.33rem;
 			// padding-bottom: 0;
@@ -24,8 +24,9 @@
 
 			// ul
 			>.inputs_container {
+				display: contents;
 				height: inherit;
-				min-height: 100%;
+				// min-height: 100%;
 				// min-height: @media_min_height;
 				// max-height: @media_max_height;
 				// height: calc(100% - @component_label_height);
@@ -33,10 +34,11 @@
 				// display: none;
 
 				>li {
+					display: contents;
+					height: inherit;
 					z-index: inherit;
 					// padding-bottom: 2rem;
 					position: relative;
-					height: inherit;
 
 					>.toolbar_container {
 						display: flex;
@@ -56,7 +58,7 @@
 						box-shadow: 0px 2px 1px 0px @color_hilite;
 
 						// version mini	(fit heigth)
-							top: -15px;
+							top: 5px;
 							height: auto;
 							padding: 0.05rem;
 							width: calc(100% - 2rem);
@@ -97,12 +99,11 @@
 					>.value_container, >.ck-content {
 						// background-color: #d9fdaf;
 						outline: 1px solid #e6e6e6;
-						width: 100%;
-						overflow: auto;
 						margin: 1rem;
-						height: calc(100% - 1.5rem);
 						margin-top: 0.5rem;
-
+						// width: 100%;
+						height: calc(100% - 1.5rem);
+						overflow: auto;
 						// resize: vertical;
 
 						@media screen and (max-width: @width_break_point_0) {
@@ -186,7 +187,6 @@
 							overflow: auto;
 						}
 					}
-
 
 					// create_fragment button bellow
 					.create_fragment {
