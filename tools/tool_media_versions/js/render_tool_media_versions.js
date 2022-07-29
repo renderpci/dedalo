@@ -648,24 +648,31 @@ const get_line_build_version = function(ar_quality, self) {
 						inner_html		: get_label.procesando || 'Processing',
 						parent			: file_info_node
 					})
-					function check_file() {
-						setTimeout(async function(){
-							const files_info = await self.get_files_info()
-							const found = files_info.find(el => el.quality===quality)
-							if (found && found.url) {
-								// processing_label.remove()
-								// button_build_version.classList.remove('hide')
-								self.main_element_quality = quality
-								self.refresh({
-									build_autoload : false
-								})
-							}else{
-								// check again after 5 sec
-								check_file()
-							}
-						}, 5000)
+
+					if(self.caller.model==='component_av') {
+						async function check_file() {
+							setTimeout(async function(){
+								const files_info = await self.get_files_info()
+								const found = files_info.find(el => el.quality===quality)
+								if (found && found.url) {
+									// processing_label.remove()
+									// button_build_version.classList.remove('hide')
+									self.main_element_quality = quality
+									self.refresh({
+										build_autoload : false
+									})
+								}else{
+									// check again after 5 sec
+									check_file()
+								}
+							}, 1000)
+						}
+						check_file()
+					}else{
+						self.refresh({
+							build_autoload : false
+						})
 					}
-					check_file()
 				}
 				self.node[0].classList.remove('loading')
 			})
