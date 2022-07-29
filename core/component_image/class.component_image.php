@@ -670,10 +670,26 @@ class component_image extends component_media_common {
 			$aditional_path		= $this->get_aditional_path();
 			$initial_media_path	= $this->get_initial_media_path();
 
+		// original_file check (normalized Dédalo original viewable). If not exist, create it
+			$original_file = $this->get_local_full_path(); //  $this->get_original_file_path('original');
+			if ($original_file===false) {
+
+				# source data (default quality is source)
+				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+				$original_image_path = $source_ImageObj->get_local_full_path();
+
+				$path = pathinfo($original_image_path);
+				$original_image_extension = $this->get_original( DEDALO_IMAGE_QUALITY_ORIGINAL, $exclude_converted=true );
+				$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
+
+				Imagemagick::convert($original_image_path_real, $original_image_path);
+			}
+
 		// Image source
 			$source_ImageObj		= new ImageObj($image_id, $source_quality, $aditional_path, $initial_media_path);
 			$source_image			= $source_ImageObj->get_local_full_path();
 			$image_dimensions		= $source_ImageObj->get_image_dimensions();
+
 			$source_pixels_width	= $image_dimensions[0] ?? null;
 			$source_pixels_height	= $image_dimensions[1] ?? null;
 			// $source_pixels_width	= $source_ImageObj->get_image_width();
