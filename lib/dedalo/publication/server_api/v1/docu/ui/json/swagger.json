@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.22",
-    "title" : "Dédalo Publication Server REST API 1.0.22",
+    "version" : "1.0.23",
+    "title" : "Dédalo Publication Server REST API 1.0.23",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -279,14 +279,14 @@
         }, {
           "name" : "map",
           "in" : "query",
-          "description" : "json representation of array of objects like<br>[{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}]",
+          "description" : " Deprecated. <br>Use \"process_result\" instead Call using json representation of array of objects like<br>[{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}] <br> Already defined functions: <br> resolve_geolocation",
           "required" : false,
           "type" : "string",
           "format" : "string"
         }, {
           "name" : "process_result",
           "in" : "query",
-          "description" : "json object like <br>{\"fn\":\"process_result::add_parents_and_children_recursive\",\"columns\": [{\"name\":\"parents\"}]} <br>Used in numisdata catalog tree to create the records hierarchy in server side <br>{\"fn\":\"process_result::break_down_totals\",\"base_column\":\"term_id\",\"total_column\":\"total\"} <br>Used for example to split interview informants place of birth when more than one informant or place exists <br>{\"fn\":\"process_result::resolve_indexation_fragments\",\"column\":\"indexation\",\"fragment_terms\":false} <br>Used for example to autoresolve indexation column values of \"exhibitions\" table in qdp ",
+          "description" : "Used to manage very specific scenarios where get_records call its not enough <br>Call using a json object like <br>{\"fn\":\"process_result::add_parents_and_children_recursive\",\"columns\": [{\"name\":\"parents\"}]} <br>Used in numisdata catalog tree to create the records hierarchy in server side <br>{\"fn\":\"process_result::break_down_totals\",\"base_column\":\"term_id\",\"total_column\":\"total\"} <br>Used for example to split interview informants place of birth when more than one informant or place exists <br>{\"fn\":\"process_result::resolve_indexation_fragments\",\"column\":\"indexation\",\"fragment_terms\":false} <br>Used to autoresolve indexation column values of \"exhibitions\" table in qdp <br>Already defined functions <br>(@see ../dedalo/lib/dedalo/publication/server_api/v1/common/class.process_result.php): <br>add_parents_and_children_recursive <br>add_parents_or_children <br>break_down_totals <br>sum_totals <br>resolve_indexation_fragments ",
           "required" : false,
           "default" : "",
           "type" : "string",
