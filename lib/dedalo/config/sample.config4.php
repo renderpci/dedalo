@@ -45,8 +45,9 @@
 # DEDALO 4 ENTITY
 	# Entity ASCII lowercase code. Use 16 chars MAX like 'mupreva' without spaces.
 	# (!) Note that this entity code will be used to create session and folder names. Must be be system safe!
-	# (!) DO NOT USE NON ASCII CODES LIKE: "Museu de la plaça de l'espart/teixits". Use instead something like: "mupespart"
+	# (!) DO NOT USE NON ASCII CODES LIKE: "Museu de la plaça de l'espart/teixits". Use instead, something like: "mupespart"
 	# We recommend not using the camel-case notation, but underscores between words and without spaces
+	# (!) Please note that this name is used for the encryption task and should NOT be changed after installation
 	define('DEDALO_ENTITY',			'entity_codename');
 	# DEDALO_ENTITY_LABEL . (Showed title of html pages. Yes you are free here!)
 	define('DEDALO_ENTITY_LABEL',	'My entity label');
