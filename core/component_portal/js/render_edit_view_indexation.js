@@ -139,15 +139,15 @@ const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
 
-	// column section_id add
+	// section_id column add
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
 			width		: 'auto',
-			callback	: render_edit_view_indexation.render_column_id
+			callback	: render_column_id
 		})
 
-	// button_remove add
+	// button_remove column add
 		if (self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
@@ -166,25 +166,7 @@ const rebuild_columns_map = async function(self) {
 			id			: 'tag',
 			label		: 'Tag',
 			width 		: 'auto',
-			callback	: (options)=>{
-				// console.log('+++++ options:', options);
-				// console.log('+++++ self.data.value:', self.data.value);
-
-				// options
-					const locator = options.locator
-
-				// tag_id
-					const tag_id	= locator.tag_id ?? null
-					const tag_label	= tag_id
-						// ? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
-						// : ''
-
-				return ui.create_dom_element({
-					element_type    : 'div',
-					class_name		: 'tags',
-					inner_html		: tag_label
-				})
-			}
+			callback	: render_tag_column
 		})
 
 	// component_info column add
@@ -208,7 +190,7 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DOM DocumentFragment
 */
-render_edit_view_indexation.render_column_id = function(options){
+const render_column_id = function(options){
 
 	// options
 		const self 			= options.caller
@@ -268,3 +250,29 @@ render_edit_view_indexation.render_column_id = function(options){
 
 	return fragment
 }//end render_column_id
+
+
+/**
+* RENDER_TAG_COLUMN
+* @param object options
+* @return DOM node tag_node
+*/
+const render_tag_column = function(options){
+
+	// options
+		const locator = options.locator
+
+	// tag_id
+		const tag_id	= locator.tag_id ?? null
+		const tag_label	= tag_id
+			// ? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
+			// : ''
+
+	const tag_node = ui.create_dom_element({
+		element_type    : 'div',
+		class_name		: 'tags',
+		inner_html		: tag_label
+	})
+
+	return tag_node
+}//end render_tag_column
