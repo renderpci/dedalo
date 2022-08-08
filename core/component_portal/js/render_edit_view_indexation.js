@@ -5,7 +5,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
@@ -15,7 +15,6 @@
 		render_column_component_info,
 		render_column_remove,
 		add_events,
-		get_buttons,
 		render_references
 	} from './render_edit_component_portal.js'
 
@@ -140,7 +139,7 @@ const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
 
-	// column section_id check
+	// column section_id add
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
@@ -148,7 +147,7 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_edit_view_indexation.render_column_id
 		})
 
-	// button_remove
+	// button_remove add
 		if (self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
@@ -158,11 +157,11 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
-	const base_columns_map = await self.columns_map
+	// regular columns add
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
 
-	columns_map.push(...base_columns_map)
-
-	// tag column
+	// tag column add
 		columns_map.push({
 			id			: 'tag',
 			label		: 'Tag',
@@ -188,7 +187,7 @@ const rebuild_columns_map = async function(self) {
 			}
 		})
 
-	// column component_info check
+	// component_info column add
 		if (self.add_component_info===true) {
 			columns_map.push({
 				id			: 'ddinfo',
