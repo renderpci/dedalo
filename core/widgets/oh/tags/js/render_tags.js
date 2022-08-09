@@ -97,7 +97,7 @@ const get_value_element = (i, data, values_container, self) => {
 	// li, for every ipo will create a li node
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class			: 'get_archive_weights',
+			class			: '',
 			parent			: values_container
 		})
 
@@ -105,52 +105,88 @@ const get_value_element = (i, data, values_container, self) => {
 		const reactive_items = []
 
 	// total_tc
-		const total_tc = item_value_factory('total_tc', 'TC', data)
+		const total_tc = item_value_factory(
+			'total_tc',
+			'TC',
+			data
+		)
 		li.appendChild(total_tc)
 		reactive_items.push(total_tc)
 
 	// ar_tc_wrong
-		const ar_tc_wrong = item_value_factory('ar_tc_wrong', get_label.etiqueta_revisar, data)
-		li.appendChild(ar_tc_wrong)
-		reactive_items.push(ar_tc_wrong)
+		// const ar_tc_wrong = item_value_factory('ar_tc_wrong', get_label.etiqueta_revisar, data)
+		// li.appendChild(ar_tc_wrong)
+		// reactive_items.push(ar_tc_wrong)
 
 	// total_index
-		const total_index = item_value_factory('total_index', 'INDEX', data)
+		const total_index = item_value_factory(
+			'total_index',
+			'INDEX',
+			data
+		)
 		li.appendChild(total_index)
 		reactive_items.push(total_index)
 
 	// total_missing_tags
-		const total_missing_tags = item_value_factory('total_missing_tags', (get_label.etiquetas_borradas || 'Removed tags'), data)
-		li.appendChild(total_missing_tags)
-		reactive_items.push(total_missing_tags)
+		const total_missing_tags_node = item_value_factory(
+			'total_missing_tags',
+			(get_label.etiquetas_borradas || 'Removed tags'),
+			data
+		)
+		li.appendChild(total_missing_tags_node)
+		reactive_items.push(total_missing_tags_node)
 
 	// total_to_review_tags
-		const total_to_review_tags = item_value_factory('total_to_review_tags', get_label.etiqueta_revisar, data)
-		li.appendChild(total_to_review_tags)
-		reactive_items.push(total_to_review_tags)
+		const total_to_review_tags_node = item_value_factory(
+			'total_to_review_tags',
+			get_label.etiqueta_revisar,
+			data
+		)
+		li.appendChild(total_to_review_tags_node)
+		reactive_items.push(total_to_review_tags_node)
 
 	// total_private_notes
-		const total_private_notes = item_value_factory('total_private_notes', 'Work NOTES', data)
+		const total_private_notes = item_value_factory(
+			'total_private_notes',
+			'Work NOTES',
+			data
+		)
 		li.appendChild(total_private_notes)
 		reactive_items.push(total_private_notes)
 
 	// total_public_notes
-		const total_public_notes = item_value_factory('total_public_notes', 'Public NOTES', data)
+		const total_public_notes = item_value_factory(
+			'total_public_notes',
+			'Public NOTES',
+			data
+		)
 		li.appendChild(total_public_notes)
 		reactive_items.push(total_public_notes)
 
 	// total_chars
-		const total_chars = item_value_factory('total_chars', 'CHARS', data)
+		const total_chars = item_value_factory(
+			'total_chars',
+			'CHARS',
+			data
+		)
 		li.appendChild(total_chars)
 		reactive_items.push(total_chars)
 
 	// total_chars_no_spaces
-		const total_chars_no_spaces = item_value_factory('total_chars_no_spaces', 'NO SPACES', data)
+		const total_chars_no_spaces = item_value_factory(
+			'total_chars_no_spaces',
+			'NO SPACES',
+			data
+		)
 		li.appendChild(total_chars_no_spaces)
 		reactive_items.push(total_chars_no_spaces)
 
 	// total_real_chars
-		const total_real_chars = item_value_factory('total_real_chars', 'CHARS REAL', data)
+		const total_real_chars = item_value_factory(
+			'total_real_chars',
+			'CHARS REAL',
+			data
+		)
 		li.appendChild(total_real_chars)
 		reactive_items.push(total_real_chars)
 
@@ -176,7 +212,6 @@ const get_value_element = (i, data, values_container, self) => {
 		}
 
 
-
 	return li
 }//end get_value_element
 
@@ -197,13 +232,15 @@ const item_value_factory = function(id, label, data) {
 		element_type	: 'div',
 		class_name		: id
 	})
+
 	// label
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: label + ' :',
+			inner_html		: label + ':',
 			parent			: wrapper
 		})
+
 	// value
 		const found			= data.find(item => item.id===id)
 		const current_value	= found
@@ -213,15 +250,14 @@ const item_value_factory = function(id, label, data) {
 		const value_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: current_value,
+			text_content	: current_value+'', // prevent zero values hide
 			parent			: wrapper
 		})
 
-	wrapper.value	= value_node
-	wrapper.id		= id
+	// wrapper add values and pointers
+		wrapper.value	= value_node
+		wrapper.id		= id
 
 
 	return wrapper
 }//end item_value_factory
-
-

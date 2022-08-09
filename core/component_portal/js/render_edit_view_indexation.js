@@ -5,7 +5,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
@@ -15,7 +15,6 @@
 		render_column_component_info,
 		render_column_remove,
 		add_events,
-		get_buttons,
 		render_references
 	} from './render_edit_component_portal.js'
 
@@ -140,15 +139,15 @@ const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
 
-	// column section_id check
+	// section_id column add
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
 			width		: 'auto',
-			callback	: render_edit_view_indexation.render_column_id
+			callback	: render_column_id
 		})
 
-	// button_remove
+	// button_remove column add
 		if (self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
@@ -158,37 +157,19 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
-	const base_columns_map = await self.columns_map
+	// regular columns add
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
 
-	columns_map.push(...base_columns_map)
-
-	// tag column
+	// tag column add
 		columns_map.push({
 			id			: 'tag',
 			label		: 'Tag',
 			width 		: 'auto',
-			callback	: (options)=>{
-				// console.log('+++++ options:', options);
-				// console.log('+++++ self.data.value:', self.data.value);
-
-				// options
-					const locator = options.locator
-
-				// tag_id
-					const tag_id	= locator.tag_id ?? null
-					const tag_label	= tag_id
-						// ? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
-						// : ''
-
-				return ui.create_dom_element({
-					element_type    : 'div',
-					class_name		: 'tags',
-					inner_html		: tag_label
-				})
-			}
+			callback	: render_tag_column
 		})
 
-	// column component_info check
+	// component_info column add
 		if (self.add_component_info===true) {
 			columns_map.push({
 				id			: 'ddinfo',
@@ -197,6 +178,12 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
+	// component_info column add
+		columns_map.push({
+			id			: 'info',
+			label		: 'Info',
+			callback	: render_info_column
+		})
 
 
 	return columns_map
@@ -209,7 +196,7 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DOM DocumentFragment
 */
-render_edit_view_indexation.render_column_id = function(options){
+const render_column_id = function(options){
 
 	// options
 		const self 			= options.caller
@@ -269,3 +256,67 @@ render_edit_view_indexation.render_column_id = function(options){
 
 	return fragment
 }//end render_column_id
+
+
+
+/**
+* RENDER_TAG_COLUMN
+* @param object options
+* @return DOM node tag_node
+*/
+const render_tag_column = function(options){
+
+	// options
+		const locator = options.locator
+
+	// tag_id
+		const tag_id	= locator.tag_id ?? null
+		const tag_label	= tag_id
+			// ? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
+			// : ''
+
+	const tag_node = ui.create_dom_element({
+		element_type    : 'div',
+		class_name		: 'tags',
+		inner_html		: tag_label
+	})
+
+	return tag_node
+}//end render_tag_column
+
+
+
+/**
+* RENDER_INFO_COLUMN
+* @param object options
+* @return DOM node info_node|null
+*/
+const render_info_column = function(options){
+	console.log('options:', options);
+
+	// options
+		const locator	= options.locator
+		const self		= options.caller
+
+	// short vars
+		const section_tipo		= locator.section_tipo
+		const target_section	= self.target_section
+
+	// check vars
+		if (!section_tipo || !target_section) {
+			return null
+		}
+
+		const found			= target_section.find(el => el.tipo===section_tipo)
+		const section_label	= found
+			? found.label
+			: ''
+
+		const info_node = ui.create_dom_element({
+			element_type    : 'div',
+			class_name		: 'note italic',
+			inner_html		: '[' + section_label + ']'
+		})
+
+	return info_node
+}//end render_info_column
