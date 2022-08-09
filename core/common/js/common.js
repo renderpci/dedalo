@@ -867,15 +867,16 @@ export const get_columns_map = function(context, datum_context) {
 								dd_object.column_id = column.id
 							}
 							break;
-						// in the mosaic case add the mosaic: true or false to create the mosaic and the alternative table with all ddo
+						// in the mosaic case add the in_mosaic: true or false to create the mosaic and the alternative table with all ddo
 						case 'mosaic':
 							columns_map.push(
 								{
-									id		: dd_object.tipo,
-									label	: dd_object.tipo,
-									mosaic	: dd_object.mosaic
+									id			: dd_object.tipo,
+									label		: dd_object.tipo,
+									in_mosaic	: dd_object.in_mosaic
 										? true
-										: false
+										: false,
+									view		: dd_object.view
 								}
 							)
 							dd_object.column_id = dd_object.tipo

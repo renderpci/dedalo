@@ -1767,6 +1767,7 @@ abstract class common {
 						$mode					= $dd_object->mode ?? $this->get_modo();
 						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$label					= $dd_object->label ?? '';
+						// $view					= $dd_object->view ?? null;
 
 					// ar_subcontext_calculated
 						// $cid = $current_section_tipo . '_' . $section_id . '_' . $current_tipo;
@@ -1854,6 +1855,10 @@ abstract class common {
 										$related_element->set_parent_section_tipo($this->section_tipo);
 										$related_element->set_parent_section_id($this->section_id);
 									}
+								// inject view
+									// if(isset($view)){
+									// 	$related_element->view = $view;
+									// }
 								break;
 
 							// grouper case
@@ -3713,6 +3718,11 @@ abstract class common {
 	* @return string $view
 	*/
 	public function get_view() : string {
+
+		// When view is injected by ddo_map
+			if(isset($this->view)){
+				return $this->view;
+			}
 
 		// properties defined case
 			$properties = $this->get_properties();
