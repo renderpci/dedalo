@@ -7,71 +7,75 @@
 
 	>.content_data {
 
+		// ul
 		>.inputs_container {
+			display: contents;
 
 			>li {
 
-				>.wrapper_widget {
-					font-size: 0.86rem;
+			}
+		}//end .inputs_container
 
-					li {
-						padding: 0;
+		// generic wrapper_widget base style. Override on each widget if need
+		.wrapper_widget {
+			font-size: 0.86rem;
 
-						>div {
-							padding: 0.20rem;
-							// background-color: #f0f0f0;
-							// border-right: 1px solid #c0c0c0;
-							flex: 1 1 100%;
+			li {
+				padding: 0;
 
-							&:last-of-type {
-							  border: none;
-							}
+				>div {
+					padding: 0.20rem;
+					// background-color: #f0f0f0;
+					// border-right: 1px solid #c0c0c0;
+					flex: 1 1 100%;
 
-							>.label, >.value {
-								padding: 0.25em;
-							}
-
-							>.label {
-								// font-weight: 400;
-								white-space: nowrap;
-								overflow: hidden;
-								text-overflow: ellipsis;
-							}
-							>.value {
-								padding-left: 0;
-							}
-						}
+					&:last-of-type {
+					  border: none;
 					}
 
-					.values_container > li {
-
-						label {
-							// &.before
-							padding-right: 0.5em;
-						}
-						.value {
-
-						}
+					>.label, >.value {
+						padding: 0.25em;
 					}
 
-					&.state {
-						li.state {
-							display: grid;
-							grid-template-columns: 1fr 1fr 1fr;
+					>.label {
+						// font-weight: 400;
+						white-space: nowrap;
+						overflow: hidden;
+						text-overflow: ellipsis;
+					}
+					>.value {
+						padding-left: 0;
+					}
+				}
+			}
 
-							>div {
-								display: contents;
+			.values_container > li {
 
-								.detail {
-									display: none;
-								}
-							}
+				label {
+					// &.before
+					padding-right: 0.5em;
+				}
+				.value {
+
+				}
+			}
+
+			&.state {
+				li.state {
+					display: grid;
+					grid-template-columns: 1fr 1fr 1fr;
+
+					>div {
+						display: contents;
+
+						.detail {
+							display: none;
 						}
 					}
 				}
 			}
-		}//end .inputs_container
+		}//end .wrapper_widget
 
 	}//end >.content_data
 
-}
+}//end .component_info
