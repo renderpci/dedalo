@@ -5,84 +5,92 @@
 */
 
 // layout general
-	@import './layout/vars.less';
-	@import './layout/functions.less';
-	@import './layout/reset.less';
-	@import './layout/fonts.less';
-	@import './layout/general.less';
-	@import './layout/progress_bar.less';
-	@import './layout/buttons.less';
-	@import './layout/layout.less';
-	@import './layout/page.less';
-	@import './layout/list.less';
+	@import './layout/vars';
+	@import './layout/functions';
+	@import './layout/reset';
+	@import './layout/fonts';
+	@import './layout/general';
+	@import './layout/progress_bar';
+	@import './layout/buttons';
+	@import './layout/layout';
+	@import './layout/page';
+	@import './layout/list';
 
 // services and commons
-	@import '../../inspector/css/inspector.less';
-	@import '../../paginator/css/paginator.less';
-	@import '../../search/css/search.less';
-	@import '../../menu/css/menu.less';
-	@import '../../dd_grid/css/dd_grid.less';
-	@import '../../../tools/tool_common/css/tool_common.less';
-	@import '../../services/service_autocomplete/css/service_autocomplete.less';
-	@import '../../services/service_upload/css/service_upload.less';
-	@import '../../services/service_ckeditor/css/service_ckeditor.less';
-	@import '../../services/service_tinymce/css/service_tinymce.less';
+	@import '../../inspector/css/inspector';
+	@import '../../paginator/css/paginator';
+	@import '../../search/css/search';
+	@import '../../menu/css/menu';
+	@import '../../dd_grid/css/dd_grid';
+	@import '../../../tools/tool_common/css/tool_common';
+	@import '../../services/service_autocomplete/css/service_autocomplete';
+	@import '../../services/service_upload/css/service_upload';
+	@import '../../services/service_ckeditor/css/service_ckeditor';
+	@import '../../services/service_tinymce/css/service_tinymce';
+
+// widgets
+	@import '../../widgets/numisdata/get_archive_weights/css/get_archive_weights';
+	@import '../../widgets/oh/av_duration/css/av_duration';
+	@import '../../widgets/oh/descriptors/css/descriptors';
+	@import '../../widgets/oh/media_icons/css/media_icons';
+	@import '../../widgets/oh/tags/css/tags';
+	@import '../../widgets/state/css/state';
 
 // login
-	@import '../../login/css/login.less';
+	@import '../../login/css/login';
 
 // relation_list
-	@import '../../relation_list/css/relation_list.less';
+	@import '../../relation_list/css/relation_list';
 
 // areas
-	@import '../../area/css/area.less';
-	@import '../../area_development/css/area_development.less';
-	@import '../../area_thesaurus/css/area_thesaurus.less';
+	@import '../../area/css/area';
+	@import '../../area_development/css/area_development';
+	@import '../../area_thesaurus/css/area_thesaurus';
 
 // section
-	@import '../../section/css/section.less';
-	@import '../../section_record/css/section_record.less';
+	@import '../../section/css/section';
+	@import '../../section_record/css/section_record';
 
 // ts_object
-	@import '../../ts_object/css/ts_object.less';
+	@import '../../ts_object/css/ts_object';
 
 // section_group/tab
-	@import '../../section_group/css/section_group.less';
-	@import '../../section_tab/css/section_tab.less';
+	@import '../../section_group/css/section_group';
+	@import '../../section_tab/css/section_tab';
 
 // components
-	@import '../../component_av/css/component_av.less';
-	@import '../../component_check_box/css/component_check_box.less';
-	@import '../../component_date/css/component_date.less';
-	@import '../../component_email/css/component_email.less';
-	@import '../../component_filter/css/component_filter.less';
-	@import '../../component_filter_master/css/component_filter_master.less';
-	@import '../../component_filter_records/css/component_filter_records.less';
-	@import '../../component_geolocation/css/component_geolocation.less';
-	// @import '../../component_html_file/css/component_html_file.less';
-	@import '../../component_html_text/css/component_html_text.less';
-	@import '../../component_image/css/component_image.less';
-	@import '../../component_info/css/component_info.less';
-	@import '../../component_input_text/css/component_input_text.less';
-	@import '../../component_inverse/css/component_inverse.less';
-	@import '../../component_ip/css/component_ip.less';
-	@import '../../component_iri/css/component_iri.less';
-	@import '../../component_json/css/component_json.less';
-	@import '../../component_number/css/component_number.less';
-	@import '../../component_password/css/component_password.less';
-	@import '../../component_pdf/css/component_pdf.less';
-	@import '../../component_portal/css/component_portal.less';
-	@import '../../component_publication/css/component_publication.less';
-	@import '../../component_radio_button/css/component_radio_button.less';
-	@import '../../component_relation_children/css/component_relation_children.less';
-	@import '../../component_relation_index/css/component_relation_index.less';
-	@import '../../component_relation_model/css/component_relation_model.less';
-	@import '../../component_relation_parent/css/component_relation_parent.less';
-	@import '../../component_relation_related/css/component_relation_related.less';
-	@import '../../component_section_id/css/component_section_id.less';
-	@import '../../component_security_access/css/component_security_access.less';
-	@import '../../component_select/css/component_select.less';
-	@import '../../component_select_lang/css/component_select_lang.less';
-	@import '../../component_semantic_node/css/component_semantic_node.less';
-	@import '../../component_svg/css/component_svg.less';
-	@import '../../component_text_area/css/component_text_area.less';
+	@import '../../component_av/css/component_av';
+	@import '../../component_check_box/css/component_check_box';
+	@import '../../component_date/css/component_date';
+	@import '../../component_email/css/component_email';
+	@import '../../component_filter/css/component_filter';
+	@import '../../component_filter_master/css/component_filter_master';
+	@import '../../component_filter_records/css/component_filter_records';
+	@import '../../component_geolocation/css/component_geolocation';
+	// @import '../../component_html_file/css/component_html_file';
+	@import '../../component_html_text/css/component_html_text';
+	@import '../../component_image/css/component_image';
+	@import '../../component_info/css/component_info';
+	@import '../../component_input_text/css/component_input_text';
+	@import '../../component_inverse/css/component_inverse';
+	@import '../../component_ip/css/component_ip';
+	@import '../../component_iri/css/component_iri';
+	@import '../../component_json/css/component_json';
+	@import '../../component_number/css/component_number';
+	@import '../../component_password/css/component_password';
+	@import '../../component_pdf/css/component_pdf';
+	@import '../../component_portal/css/component_portal';
+	@import '../../component_publication/css/component_publication';
+	@import '../../component_radio_button/css/component_radio_button';
+	@import '../../component_relation_children/css/component_relation_children';
+	@import '../../component_relation_index/css/component_relation_index';
+	@import '../../component_relation_model/css/component_relation_model';
+	@import '../../component_relation_parent/css/component_relation_parent';
+	@import '../../component_relation_related/css/component_relation_related';
+	@import '../../component_section_id/css/component_section_id';
+	@import '../../component_security_access/css/component_security_access';
+	@import '../../component_select/css/component_select';
+	@import '../../component_select_lang/css/component_select_lang';
+	@import '../../component_semantic_node/css/component_semantic_node';
+	@import '../../component_svg/css/component_svg';
+	@import '../../component_text_area/css/component_text_area';
