@@ -178,6 +178,12 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
+	// component_info column add
+		columns_map.push({
+			id			: 'info',
+			label		: 'Info',
+			callback	: render_info_column
+		})
 
 
 	return columns_map
@@ -252,6 +258,7 @@ const render_column_id = function(options){
 }//end render_column_id
 
 
+
 /**
 * RENDER_TAG_COLUMN
 * @param object options
@@ -276,3 +283,40 @@ const render_tag_column = function(options){
 
 	return tag_node
 }//end render_tag_column
+
+
+
+/**
+* RENDER_INFO_COLUMN
+* @param object options
+* @return DOM node info_node|null
+*/
+const render_info_column = function(options){
+	console.log('options:', options);
+
+	// options
+		const locator	= options.locator
+		const self		= options.caller
+
+	// short vars
+		const section_tipo		= locator.section_tipo
+		const target_section	= self.target_section
+
+	// check vars
+		if (!section_tipo || !target_section) {
+			return null
+		}
+
+		const found			= target_section.find(el => el.tipo===section_tipo)
+		const section_label	= found
+			? found.label
+			: ''
+
+		const info_node = ui.create_dom_element({
+			element_type    : 'div',
+			class_name		: 'note italic',
+			inner_html		: '[' + section_label + ']'
+		})
+
+	return info_node
+}//end render_info_column
