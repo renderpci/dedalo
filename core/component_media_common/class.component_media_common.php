@@ -300,7 +300,8 @@ class component_media_common extends component_common {
 
 						// inject extension temporally
 							$default_extension		= $this->get_extension();
-							$raw_original_extension	= !empty($path)
+
+							$raw_original_extension	= ($file_exist===true)
 								? pathinfo($path)['extension']
 								: null;
 							$this->extension		= $raw_original_extension;

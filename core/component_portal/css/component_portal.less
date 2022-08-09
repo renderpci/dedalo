@@ -223,6 +223,13 @@
 					    padding-right: 0.25rem;
 					}
 
+					&.column_info {
+						color: #8c8c8c;
+						text-align: right;
+						flex: 2 1 auto;
+						display: block;
+					}
+
 					>button {
 						padding: 0;
 						width: 1.25rem;
@@ -252,6 +259,8 @@
 							// padding-right: 0.75rem;
 							// opacity: 0.6;
 							// background-color: @color_orange_dedalo;
+
+							/*
 							background-image: radial-gradient(30% 50% ellipse at 109% 50%, #ffffff 22px, transparent 10px, #ffab01 23px);
 							color: #ffffff;
 							border-top-left-radius: 5px;
@@ -261,6 +270,9 @@
 							padding-right: 23px;
 							font-size: 80%;
 							text-align: center;
+							*/
+							.fn_build_tag_indexation(@color_tag_indexation_normal, #ffffff);
+							// padding-right: 8px;
 						}
 					}
 				}
@@ -269,9 +281,12 @@
 	}
 }//end &.component_portal, &.portal
 
-button.button_sort_order{
+
+
+button.button_sort_order {
 	margin-top: 1em;
 }
-.sort_order{
+
+.sort_order {
 	text-align: center;
 }

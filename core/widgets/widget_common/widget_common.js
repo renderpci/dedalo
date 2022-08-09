@@ -63,8 +63,8 @@ widget_common.prototype.build = async function(autoload=false) {
 		self.status = 'building'
 
 	// load self style
-		const tool_css_url = DEDALO_CORE_URL + '/widgets' + self.properties.path + "/css/" + self.name + ".css"
-		common.prototype.load_style(tool_css_url) // returns promise
+		// const tool_css_url = DEDALO_CORE_URL + '/widgets' + self.properties.path + "/css/" + self.name + ".css"
+		// common.prototype.load_style(tool_css_url) // returns promise
 
 	// autoload
 		if (autoload===true) {
