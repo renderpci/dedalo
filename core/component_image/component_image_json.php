@@ -49,10 +49,15 @@
 
 					// datalist
 						// files_info. For fast list we add directly the default image
-						$data_item = new stdClass();
-							$data_item->url		= $this->get_url(DEDALO_IMAGE_THUMB_DEFAULT, false, false, false);
-							$data_item->quality	= DEDALO_IMAGE_THUMB_DEFAULT;
-						$datalist = [$data_item];
+						$thumb_data_item = new stdClass();
+							$thumb_data_item->url		= $this->get_url(DEDALO_IMAGE_THUMB_DEFAULT, false, false, false);
+							$thumb_data_item->quality	= DEDALO_IMAGE_THUMB_DEFAULT;
+
+						$default_data_item = new stdClass();
+							$default_data_item->url		= $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT, false, false, false);
+							$default_data_item->quality	= DEDALO_IMAGE_QUALITY_DEFAULT;
+
+						$datalist = [$thumb_data_item, $default_data_item ];
 					break;
 
 				case 'edit':
