@@ -5,8 +5,10 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-
+	// import {ui} from '../../common/js/ui.js'
+	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {render_list_view_default} from './render_list_view_default.js'
+	import {render_list_view_mosaic} from './render_list_view_mosaic.js'
 
 
 /**
@@ -25,58 +27,30 @@ export const render_list_component_image = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_image.prototype.list = function() {
+render_list_component_image.prototype.list = function(options) {
 
 	const self = this
 
-	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+	// options
+		// const render_level = options.render_level
+
+	// view
+		const view	= self.context.view || 'table'
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
-		})
-		wrapper.classList.add('media')
+		let wrapper
+		switch(view) {
 
-	// url
-		// const value		= data.value
-		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
-		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= (typeof url_object==="undefined")
-			? DEDALO_CORE_URL + "/themes/default/0.jpg"
-			: url_object.url
+			case 'mosaic':
+				wrapper = render_list_view_mosaic.render(self, options)
+				break;
 
-	// image
-		const image = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'hidden', // loading
-			parent			: wrapper
-		})
-		image.draggable = false
-		// image.loading = 'lazy'
-		// image.setAttribute('crossOrigin', 'Anonymous');
-		ui.component.add_image_fallback(image)
 
-	// image background color
-		image.addEventListener('load', set_bg_color, false)
-		function set_bg_color() {
-			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, wrapper)
-			image.classList.remove('hidden')
+			case 'default':
+			default:
+				wrapper = render_list_view_default.render(self, options)
+				break;
 		}
-
-	// set src
-		image.src = url
-
-	// open viewer
-		image.addEventListener('click', function (evt) {
-
-			const url = DEDALO_CORE_URL + `/page/?tipo=${self.tipo}&section_tipo=${self.section_tipo}&id=${self.section_id}&mode=viewer&menu=false`
-			const current_window = window.open(url,"image_viewer","width=10,height=10")
-			current_window.focus()
-		})
-
 
 	return wrapper
 }//end list

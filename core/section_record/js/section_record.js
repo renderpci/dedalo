@@ -373,6 +373,11 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								if(current_ddo.fixed_mode){
 									new_context.fixed_mode = current_ddo.fixed_mode
 								}
+								// set the view of the column when is defined in ddo, view could be defined in properties of the portals
+								// sometimes it need to be changed to adapt ddo view of the parent (mosaic case for images)
+								if(current_ddo.view){
+									new_context.view = current_ddo.view
+								}
 
 							// instance create and set
 								const current_instance = await add_instance(self, new_context, section_id, current_data, current_column.id)
