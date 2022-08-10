@@ -292,7 +292,6 @@ const render_tag_column = function(options){
 * @return DOM node info_node|null
 */
 const render_info_column = function(options){
-	console.log('options:', options);
 
 	// options
 		const locator	= options.locator
@@ -317,6 +316,7 @@ const render_info_column = function(options){
 			class_name		: 'note italic',
 			inner_html		: '[' + section_label + ']'
 		})
+
 
 	return info_node
 }//end render_info_column

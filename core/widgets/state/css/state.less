@@ -1,27 +1,37 @@
-
-
+/**
+* widget state
+*
+* Included from main.less file
+*/
 .wrapper_widget.state {
-	.state_icon{
-		mask-size: contain;
-		-webkit-mask-size: contain;
-		mask-repeat: no-repeat;
+
+	.state_icon {
 		-webkit-mask-repeat: no-repeat;
-		mask-position: center;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: contain;
+		mask-size: contain;
 		-webkit-mask-position: center;
+		mask-position: center;
+
 		background-color: #c9c9c9;
 		width: 1.2em;
 		height: 1.2em;
-		&.digitization{
-			-webkit-mask-image: url("../img/di.svg");
+
+		&.digitization {
+			-webkit-mask-image: url('../img/di.svg');
 		}
-		&.transcription{
-			-webkit-mask-image: url("../img/tr.svg");
+
+		&.transcription {
+			-webkit-mask-image: url('../img/tr.svg');
 		}
-		&.indexation{
-			-webkit-mask-image: url("../img/in.svg");
+
+		&.indexation {
+			-webkit-mask-image: url('../img/in.svg');
 		}
-		&.translation{
-			-webkit-mask-image: url("../img/tl.svg");
+
+		&.translation {
+			-webkit-mask-image: url('../img/tl.svg');
 		}
-	}
-}
+	}//end .state_icon
+
+}//end .wrapper_widget.state

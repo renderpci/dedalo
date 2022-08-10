@@ -684,9 +684,8 @@ const view_window = async function(options) {
 	// options
 		const tool_context		= options.tool_context
 		const caller			= options.caller
-		const open_as			= options.open_as
+		// const open_as		= options.open_as
 		const windowFeatures	= options.windowFeatures || null
-
 		// windowFeatures sample:
 			// {
 			// 	left	: 'return screen.width -760',
@@ -694,7 +693,7 @@ const view_window = async function(options) {
 			// 	width	: 760,
 			// 	height	: 500
 			// }
-console.log("options:",options);
+
 	// short vars
 		const name = tool_context.name
 

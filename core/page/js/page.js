@@ -474,6 +474,7 @@ page.prototype.add_events = function() {
 * @return promise current_instance init promise
 */
 export const instantiate_page_element = function(self, context) {
+	// console.log('context:', context);
 
 	// short vars
 		const tipo			= context.tipo

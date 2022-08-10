@@ -1344,7 +1344,7 @@ class component_text_area extends component_common {
 							: false;
 					}
 
-					$note_obj->$note_type	= $dato;
+					$note_obj->$note_type = $dato;
 				}
 
 				$ar_annotations[] = $note_obj;
