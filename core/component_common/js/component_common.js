@@ -957,7 +957,9 @@ component_common.prototype.get_ar_instances = async function(options={}){
 	const self = this
 
 	// options
-		const mode = options.mode || self.mode || 'list'
+		const mode			= options.mode || self.mode || 'list'
+		const columns_map	= options.columns_map || self.columns_map
+		const id_variant	= options.id_variant || self.id_variant || null
 
 	// self data verification
 		// 	if (typeof self.data==="undefined") {
@@ -1005,14 +1007,14 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				row_key			: i,
 				paginated_key	: locator.paginated_key, // used by autocomplete / portal
 				caller			: self,
-				columns_map		: self.columns_map,
+				columns_map		: columns_map,
 				column_id		: self.column_id,
 				locator			: locator
 			}
 
 			// id_variant . Propagate a custom instance id to children
-				if (self.id_variant) {
-					instance_options.id_variant = self.id_variant
+				if (id_variant) {
+					instance_options.id_variant = id_variant
 				}
 				// locator tag_id modifies id_variant when is present
 				if (locator.tag_id) {
