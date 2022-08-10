@@ -78,9 +78,6 @@ const get_content_data_player = function(self) {
 		const datalist	= data.datalist || []
 		const quality	= self.quality || context.quality
 
-		console.log('self:', self);
-		console.log('datalist:', datalist);
-
 	// urls
 		// posterframe
 			const posterframe_url = data.posterframe_url
@@ -489,5 +486,3 @@ const get_av_control_buttons =  (self) =>{
 
 	// 	return video
 	// }//end  build_video_html5
-
-
