@@ -438,11 +438,15 @@ export const ui = {
 			// event dblclick change component mode
 				if(edit_in_list) {
 
-					wrapper.addEventListener("dblclick", function(e){
+					wrapper.addEventListener('dblclick', function(e){
 						e.stopPropagation()
 
 						// change mode (from 'list' to 'edit_in_list')
-						instance.change_mode('edit_in_list', autoload)
+						if (instance.change_mode) {
+							instance.change_mode('edit_in_list', autoload)
+						}else{
+							console.warn('WARNING: change_mode method its not available for instance: ', instance)
+						}
 					})
 				}
 
