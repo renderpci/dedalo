@@ -39,6 +39,7 @@ widget_common.prototype.init = async function(options) {
 		self.ipo			= options.ipo
 		self.name			= options.name
 		self.properties		= options.properties
+		self.caller			= options.caller
 
 	// status update
 		self.status = 'initiated'
