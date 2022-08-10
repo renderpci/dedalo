@@ -208,3 +208,12 @@ component_info.prototype.update_data = async function(){
 }//end update_data
 
 
+
+/**
+* CHANGE_MODE
+* Catch method only. Nothing to do here
+*/
+component_info.prototype.change_mode = async function() {
+
+	return true
+}//end change_mode
