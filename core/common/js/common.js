@@ -805,6 +805,8 @@ export const get_columns_map = function(context, datum_context) {
 			for (let j = 0; j < ar_first_level_ddo_len; j++) {
 
 				const dd_object = ar_first_level_ddo[j]
+				// set the view if it is defined in ontology set it else get the parent view
+				dd_object.view 		= dd_object.view || view
 
 				// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
 				if (dd_object.column_id && source_columns_map.length >0){
@@ -869,20 +871,23 @@ export const get_columns_map = function(context, datum_context) {
 							break;
 						// in the mosaic case add the in_mosaic: true or false to create the mosaic and the alternative table with all ddo
 						case 'mosaic':
+							dd_object.in_mosaic = dd_object.in_mosaic
+								? true
+								: false
+							dd_object.hover 	= dd_object.hover
+								? true
+								: false
+
 							columns_map.push(
 								{
 									id			: dd_object.tipo,
 									label		: dd_object.tipo,
-									view		: dd_object.view,
-									in_mosaic	: dd_object.in_mosaic
-										? true
-										: false,
+									in_mosaic	: dd_object.in_mosaic,
 									hover		: dd_object.hover
-										? true
-										: false
 								}
 							)
-							dd_object.column_id = dd_object.tipo
+							dd_object.column_id	= dd_object.tipo
+
 							break;
 						// by default every component will create the own column if the column is not defined, this behavior is used by sections.
 						default:

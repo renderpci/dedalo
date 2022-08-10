@@ -45,7 +45,6 @@ export const render_edit_view_mosaic = function() {
 * Manages the component's logic and appearance in client side
 */
 render_edit_view_mosaic.render = async function(self, options) {
-
 	// options
 		const render_level 	= options.render_level || 'full'
 
