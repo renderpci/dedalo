@@ -97,7 +97,7 @@ const get_content_data_edit = async function(self) {
 		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data = self.value.filter(item => item.key === i)
+			const data = self.value.filter(item => item.key===i)
 			get_value_element(i, data , values_container, self)
 		}
 
@@ -119,48 +119,67 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, values_container, self) => {
 
+	const indexation	= data.find(el => el.id==='indexation')
+	const value			= indexation.value
+
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class			: 'media_icons',
+			class_name		: 'widget_item descriptors',
 			parent			: values_container
 		})
 
-	//column_id
-		const column_id = ui.create_dom_element({
-			element_type	: 'div',
+		if (value<1) {
+			return li
+		}
+
+	// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: 'Terms:',
 			parent			: li
 		})
-		// value
-		const indexation = data.find(item => item.id === 'indexation')
+
+	// value
 		const column_id_value = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: indexation.value,
-			parent			: column_id
+			class_name		: 'value link',
+			inner_html		: value+'',
+			parent			: li
 		})
-
-		column_id_value.addEventListener("click", async (e) => {
+		column_id_value.addEventListener('click', async (e) => {
 			e.stopPropagation();
 
-			const dd_grid = await instances.get_instance({
-				model			: 'dd_grid',
-				section_tipo	: self.section_tipo,
-				section_id		: self.section_id,
-				tipo			: self.section_tipo,
-				mode			: 'list',
-				lang			: page_globals.dedalo_data_lang,
-			})
+			// toggle visiblity when is already loaded
+				if (descriptors_list_container.hasChildNodes()) {
+					descriptors_list_container.classList.toggle('hide')
+					return
+				}
 
-			dd_grid.data = [data.find(item => item.id==='terms').value]
+			// dd_grid build
+				const dd_grid = await instances.get_instance({
+					model			: 'dd_grid',
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					tipo			: self.section_tipo,
+					mode			: 'list',
+					lang			: page_globals.dedalo_data_lang,
+				})
+				// set data
+				dd_grid.data = [data.find(el => el.id==='terms').value]
 
-			const node = await dd_grid.render()
+				const node = await dd_grid.render()
+				descriptors_list_container.appendChild(node)
+		})
 
-			column_id_value.appendChild(node)
+	// descriptors_list_container
+		const descriptors_list_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'descriptors_list_container',
+			parent			: li
 		})
 
 
 	return li
 }//end get_value_element
-
-

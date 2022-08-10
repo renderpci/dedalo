@@ -1,11 +1,72 @@
+// widget media_icons
+
+
+
+.wrapper_widget.descriptors {
+	// background-color: #fcefe6;
+
+	>.content_data {
+
+		// ul
+		>.values_container {
+			display: contents;
+
+			// li
+			>.widget_item.descriptors {
+				// background-color: #fcefe6;
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				padding: 0.25rem;
+				padding-left: 0rem;
+				padding-right: 0rem;
+				// color: @color_grey_dark;
+				opacity: 0.6;
+
+				>.value {
+					// background-color: #c4dbfd;
+					margin-right: 2px;
+					padding: 0px;
+					padding-left: 2px;
+					padding-right: 2px;
+					line-height: 1rem;
+
+					&.link:hover {
+						opacity: 1 !important;
+						cursor: pointer;
+						background-color: @color_orange_dedalo;
+						color: white;
+					}
+				}
+
+				>.descriptors_list_container {
+					// background-color: #c7c8fe;
+					margin: 0px;
+					padding: 0px;
+					width: 100%;
+					// z-index: 999;
+					// overflow: auto;
+					>.wrapper_dd_grid {
+						padding: 0.25rem;
+						padding-bottom: 0;
+					}
+				}
+			}
+		}//end .values_container
+
+	}//end .content_data
+
+}//end .wrapper_widget.media_icons
+
+
 
 
 /* WIDGET_DESCRIPTORS LIST
 ------------------------------------------------ */
-.descriptors_list {
+.DES_descriptors_list {
 	//background-color: #B0FE93;
-	
-	}	
+
+	}
 	.descriptors_button {
     	padding: 3px;
     	padding-top: 5px;
@@ -21,7 +82,7 @@
 
 /* WIDGET_DESCRIPTORS EDIT
 ------------------------------------------------ */
-.widget_descriptors {
+.DES_widget_descriptors {
 	margin-top: 2px;
 	-webkit-user-select: none;
 			user-select: none;
@@ -29,7 +90,7 @@
 	width: 100%;
 	float: left;
 	}
-	.widget_descriptors li {		
+	.widget_descriptors li {
 		display: table;
 		font-size: 92%;
 		width: 100%;
@@ -49,7 +110,7 @@
 			min-width: 28px;
 			width: 10%;
 		}
-		.widget_descriptors li .label_second {		
+		.widget_descriptors li .label_second {
 			//white-space: initial;
 			//width: 164%;
 			//display: list-item;
@@ -57,7 +118,7 @@
 		.widget_descriptors li .header {
 			border-top: 1px solid #ECECEC;
 			font-weight: normal;
-			text-transform: capitalize;			
+			text-transform: capitalize;
 		}
 		.widget_descriptors li .label_second.header {
 			cursor: pointer;
@@ -71,5 +132,5 @@
 		ul.widget_descriptors .tab_content {
 			display: none;
 		}
-		
-		
+
+

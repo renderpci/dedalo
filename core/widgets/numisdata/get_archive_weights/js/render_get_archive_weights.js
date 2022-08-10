@@ -93,8 +93,8 @@ const get_value_element = (i, data, values_container, self) => {
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class 			: 'get_archive_weights',
-			parent 			: values_container
+			class_name		: 'widget_item get_archive_weights',
+			parent			: values_container
 		})
 
 	//weights
