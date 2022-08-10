@@ -200,6 +200,9 @@ page.prototype.init = async function(options) {
 								render_level	: 'content'
 							})
 
+						// reset page scroll
+							window.scrollTo(0, 0);
+
 						// browser history track
 							if(refresh_result===true && event_in_history!==true) {
 
