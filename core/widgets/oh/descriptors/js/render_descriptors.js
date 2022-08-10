@@ -150,6 +150,7 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 		column_id_value.addEventListener('click', async (e) => {
 			e.stopPropagation();
+			e.preventDefault();
 
 			// toggle visiblity when is already loaded
 				if (descriptors_list_container.hasChildNodes()) {
