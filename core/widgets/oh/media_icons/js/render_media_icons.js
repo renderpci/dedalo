@@ -7,6 +7,8 @@
 	import {ui} from '../../../../common/js/ui.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {open_tool} from '../../../../../tools/tool_common/js/tool_common.js'
+	import {object_to_url_vars} from '../../../../common/js/utils/index.js'
+
 
 
 /**
@@ -96,8 +98,9 @@ const get_content_data_edit = async function(self) {
 		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data = self.value.filter(item => item.key===i)
-			get_value_element(i, data , values_container, self)
+			const current_ipo	= ipo[i]
+			const data			= self.value.filter(item => item.key===i)
+			get_value_element(i, data , values_container, self, current_ipo)
 		}
 
 	// content_data
@@ -116,7 +119,7 @@ const get_content_data_edit = async function(self) {
 * GET_VALUE_ELEMENT
 * @return DOM node li
 */
-const get_value_element = (i, data, values_container, self) => {
+const get_value_element = (i, data, values_container, self, current_ipo) => {
 
 	// li
 		const li = ui.create_dom_element({
@@ -165,15 +168,23 @@ const get_value_element = (i, data, values_container, self) => {
 		icon_media_node.addEventListener('click', e => {
 			e.stopPropagation();
 
-			alert('hello icon media')
+			const ipo_input_paths	= current_ipo.input.paths[0][0];
+			const id_el				= data.find(el => el.id==='id')
+
+			// open a new window
+				const url_vars = {
+					tipo			: ipo_input_paths.component_tipo,
+					section_tipo	: ipo_input_paths.section_tipo,
+					id				: id_el.value,
+					mode			: 'viewer',
+					menu			: false
+				}
+				const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+				const current_window	= window.open(url, 'av_viewer', 'width=1024,height=720')
+				current_window.focus()
 		})
 
 	// transcription
-		// const transcription = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	parent			: li
-		// })
-		// value
 		const data_transcription = data.find(item => item.id==='transcription')
 		const transcription_value = ui.create_dom_element({
 			element_type	: 'div',
@@ -184,24 +195,18 @@ const get_value_element = (i, data, values_container, self) => {
 		if(data_transcription.tool_context){
 			transcription_value.addEventListener('click', e => {
 				e.stopPropagation();
-				// event_manager
-					event_manager.publish('user_navigation', {
-						source : {
-							tipo		: data_transcription.tool_context.section_tipo,
-							section_id	: data_transcription.tool_context.section_id,
-							model		: 'section',
-							mode		: 'edit'
-						}
-					})
+
+				const tool_context = data_transcription.tool_context
+
+				// open_tool (tool_common)
+				open_tool({
+					tool_context	: tool_context,
+					caller			: self.caller.caller.caller // section
+				})
 			})
 		}
 
 	// indexation
-		// const indexation = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	parent			: li
-		// })
-		// value
 		const data_indexation = data.find(item => item.id==='indexation')
 		const indexation_value = ui.create_dom_element({
 			element_type	: 'div',
@@ -209,24 +214,21 @@ const get_value_element = (i, data, values_container, self) => {
 			inner_html		: 'IN ',
 			parent			: li
 		})
-		indexation_value.addEventListener('click', e => {
-			e.stopPropagation();
+		if(data_indexation.tool_context){
+			indexation_value.addEventListener('click', e => {
+				e.stopPropagation();
 
-			const tool_context = data_indexation.tool_context
+				const tool_context = data_indexation.tool_context
 
-			// open_tool (tool_common)
+				// open_tool (tool_common)
 				open_tool({
 					tool_context	: tool_context,
-					caller			: self
+					caller			: self.caller.caller.caller // section
 				})
-		})
+			})
+		}
 
 	// translation
-		// const translation = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	parent			: li
-		// })
-		// value
 		const data_translation = data.find(item => item.id==='translation')
 		const translation_value = ui.create_dom_element({
 			element_type	: 'div',
@@ -234,18 +236,19 @@ const get_value_element = (i, data, values_container, self) => {
 			inner_html		: 'TL ',
 			parent			: li
 		})
+		if(data_translation.tool_context){
+			translation_value.addEventListener('click', e => {
+				e.stopPropagation();
 
-		translation_value.addEventListener('click', e => {
-			e.stopPropagation();
+				const tool_context = data_translation.tool_context
 
-			const tool_context = data_translation.tool_context
-
-			// open_tool (tool_common)
+				// open_tool (tool_common)
 				open_tool({
 					tool_context	: tool_context,
-					caller			: self
+					caller			: self.caller.caller.caller // section
 				})
-		})
+			})
+		}
 
 	// time code
 		// const column_tc = ui.create_dom_element({
