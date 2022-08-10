@@ -9,7 +9,14 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {clone, dd_console, printf, object_to_url_vars} from '../../../core/common/js/utils/index.js'
+	import {
+		clone,
+		dd_console,
+		printf,
+		object_to_url_vars,
+		url_vars_to_object,
+		JSON_parse_safely
+		} from '../../../core/common/js/utils/index.js'
 	import {render_error} from './render_tool_common.js'
 
 
@@ -82,6 +89,13 @@ tool_common.prototype.init = async function(options) {
 		// tool_config. Contains the needed ddo_map
 			self.tool_config = options.tool_config
 			// tool_config fallback. Check caller config o create a new one on the fly
+			if (!self.tool_config) {
+				const url_vars =  url_vars_to_object(window.location.search)
+				if (url_vars.tool_config) {
+					self.tool_config = JSON_parse_safely(url_vars.tool_config)
+				}
+				// console.log('self.tool_config:', self.tool_config);
+			}
 			if (!self.tool_config && self.caller) {
 
 				if (self.caller.config && self.caller.config.tool_context) {
@@ -705,7 +719,10 @@ const view_window = async function(options) {
 		const url_search = object_to_url_vars({
 			tool		: name,
 			menu		: false,
-			caller_id	: caller.id
+			caller_id	: caller.id,
+			tool_config	: tool_context.tool_config
+				? JSON.stringify(tool_context.tool_config)
+				: null
 		})
 		const url = DEDALO_CORE_URL + '/page/?' + url_search
 
