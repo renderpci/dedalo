@@ -378,6 +378,11 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								if(current_ddo.view){
 									new_context.view = current_ddo.view
 								}
+								// set the hover of the column when is defined in ddo, hover could be defined in properties of the portals
+								// hover define the instance not be render as normal only when the mouse will hover of normal nodes (information hover mosaic views)
+								if(current_ddo.hover){
+									new_context.hover = current_ddo.hover
+								}
 
 							// instance create and set
 								const current_instance = await add_instance(self, new_context, section_id, current_data, current_column.id)
