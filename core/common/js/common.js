@@ -873,10 +873,13 @@ export const get_columns_map = function(context, datum_context) {
 								{
 									id			: dd_object.tipo,
 									label		: dd_object.tipo,
+									view		: dd_object.view,
 									in_mosaic	: dd_object.in_mosaic
 										? true
 										: false,
-									view		: dd_object.view
+									hover		: dd_object.hover
+										? true
+										: false
 								}
 							)
 							dd_object.column_id = dd_object.tipo
