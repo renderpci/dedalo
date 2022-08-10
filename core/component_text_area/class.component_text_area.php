@@ -1309,15 +1309,23 @@ class component_text_area extends component_common {
 			}
 			// the $mach[7] get the data of the tag, it has the locator of the note
 			foreach ($matches[7] as $current_note) {
+
+				// empty note case (current_note must be a locator stringnified and replaced double quotes by single)
+				if (empty($current_note)) {
+					debug_log(__METHOD__." Ignored empty note data ".to_string($current_note), logger::ERROR);
+					continue;
+				}
+
 				// replace the ' for the standard " to be JSON compatible
 				$locator_string = str_replace('\'','"',$current_note);
+
 				// decode de string to object
-				$locator		= json_decode($locator_string);
-				$section_tipo	= $locator->section_tipo;
-				$ar_notes_section_ddo_map = $tags_notes->$section_tipo;
+				$locator					= json_decode($locator_string);
+				$section_tipo				= $locator->section_tipo;
+				$ar_notes_section_ddo_map	= $tags_notes->$section_tipo;
 
 				$note_obj = new stdClass();
-					$note_obj->data		= $locator;
+					$note_obj->data	= $locator;
 				foreach ($ar_notes_section_ddo_map as $current_ddo) {
 
 					$note_component_tipo	= $current_ddo->component_tipo;
