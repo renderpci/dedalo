@@ -663,6 +663,7 @@ const render_viewer_selector = function(self, wrapper){
 						media_component_node.classList.remove('hide')
 					}else{
 						// first call, do not exists
+						// self.media_component.mode = 'player'
 						self.media_component.render()
 						.then(function(node){
 							left_container.appendChild(node)
