@@ -806,7 +806,7 @@ export const ui = {
 		* ADD_IMAGE_FALLBACK
 		* Unified fallback image adds event listener error and changes the image src when event error is triggered
 		*/
-		add_image_fallback : (img_node) => {
+		add_image_fallback : (img_node, callback) => {
 
 			img_node.addEventListener("error", change_src, true)
 
@@ -817,6 +817,10 @@ export const ui = {
 
 				// set fallback src to the image
 				item.target.src = page_globals.fallback_image
+
+				if(typeof callback==='function'){
+					callback()
+				}
 
 				return true
 			}

@@ -6,6 +6,8 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+
 
 
 
@@ -194,12 +196,24 @@ const get_content_data_edit = function(self) {
 			observer.observe(video_container);
 		}else{
 			// image default logo
-			ui.create_dom_element({
+			const posterframe = ui.create_dom_element({
 				element_type	: 'img',
 				class_name		: 'posterframe',
 				src				: posterframe_url,
 				parent			: video_container
 			})
+			posterframe.addEventListener('mouseup',function(evt) {
+				evt.stopPropagation();
+
+				const tool_upload = self.tools.find(el => el.model === 'tool_upload')
+
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
+			})
+
 		}
 
 	// quality_selector

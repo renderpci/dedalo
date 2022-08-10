@@ -112,7 +112,7 @@ render_edit_view_mosaic.render = async function(self, options) {
 
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
-			const base_columns_map	= untouched_columns_map.filter(el => el.mosaic===true)
+			const base_columns_map	= untouched_columns_map.filter(el => el.in_mosaic===true)
 			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
 			self.columns_map		= columns_map // overwrite instance columns_map
 

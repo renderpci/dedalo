@@ -130,4 +130,27 @@
 			text-shadow: 1px 2px 2px #b9b9b9;
 		}
 	}//end .av_control_buttons
+
+	&.viewer {
+		button{
+			&.download{
+				position:fixed;
+				right: 10px;
+				bottom: 10px;
+				z-index: 2;
+				width: 3em;
+				height: 3em;
+				padding: unset;
+				margin : unset;
+
+				&:before{
+					height: 1.5em;
+					width: 1.5em;
+					margin : unset;
+				}
+			}
+		}
+
+	}
+
 }
