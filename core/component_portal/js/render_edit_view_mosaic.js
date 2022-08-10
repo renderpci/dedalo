@@ -49,10 +49,6 @@ render_edit_view_mosaic.render = async function(self, options) {
 	// options
 		const render_level 	= options.render_level || 'full'
 
-	// untouched vars
-		const untouched_columns_map	= clone(self.columns_map)
-		const untouched_id_variant	= self.id_variant
-
 	// alt_list_body. Alternative table view node with all ddo in table mode
 		const alt_list_body = await (async ()=>{
 
@@ -78,16 +74,14 @@ render_edit_view_mosaic.render = async function(self, options) {
 				})
 
 			// columns
-				const alt_columns_map	= rebuild_columns_map(untouched_columns_map, self, false)
-				self.columns_map		= alt_columns_map // overwrite instance columns_map temporally (!)
+				const alt_columns_map	= rebuild_columns_map(self.columns_map, self, false)
 
 			// header. Build using common ui builder
 				const list_header_node = ui.render_list_header(alt_columns_map, self)
 				alt_list_body.appendChild(list_header_node)
 
 			// alternative_table_view (body)
-				self.id_variant					= 'table';
-				const alt_ar_section_record		= await self.get_ar_instances({mode:'list'})
+				const alt_ar_section_record		= await self.get_ar_instances({mode:'list', columns_map:alt_columns_map, id_variant: 'table'})
 				// store to allow destroy later
 				self.ar_instances.push(...alt_ar_section_record)
 				const alternative_table_view	= await render_alternative_table_view(self, alt_ar_section_record, alt_list_body)
@@ -103,24 +97,47 @@ render_edit_view_mosaic.render = async function(self, options) {
 					}
 				)
 
-			// restore some temporal changed vars (!)
-				self.columns_map	= untouched_columns_map
-				self.id_variant		= untouched_id_variant
-
 			return alt_list_body
+		})()
+
+	// hover_body. Alternative section_record with selected ddo to show when user hover the mosaic
+		const hover_body = await (async ()=>{
+
+			// hover_body
+				const hover_body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'hover_body display_none'
+				})
+
+			// inside tool_time_machine case. Do not create the hover_body columns
+				if (self.caller && self.caller.model==='tool_time_machine') {
+					return hover_body
+				}
+
+			// columns
+				const hover_columns	= self.columns_map.filter(el => el.hover===true)
+				const hover_columns_map	= rebuild_columns_map(hover_columns, self, false)
+
+			// hover_view (body)
+				const hover_ar_section_record		= await self.get_ar_instances({mode:'list', columns_map:hover_columns_map, id_variant: 'hover'})
+				// store to allow destroy later
+				self.ar_instances.push(...hover_ar_section_record)
+				const hover_view	= await render_hover_view(self, hover_ar_section_record, hover_body)
+				hover_body.appendChild(hover_view)
+
+			return hover_body
 		})()
 
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
-			const base_columns_map	= untouched_columns_map.filter(el => el.in_mosaic===true)
+			const base_columns_map	= self.columns_map.filter(el => el.in_mosaic===true)
 			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
-			self.columns_map		= columns_map // overwrite instance columns_map
 
 		// content_data
 			// self.id_variant = self.id_variant
 			// 	? self.id_variant + 'alt'
 			// 	: 'alt' // temporal change of id_variant to modify section records id
-			const ar_section_record	= await self.get_ar_instances({mode:'list'})
+			const ar_section_record	= await self.get_ar_instances({mode:'list', columns_map:columns_map})
 			// store to allow destroy later
 			self.ar_instances.push(...ar_section_record)
 
@@ -128,6 +145,9 @@ render_edit_view_mosaic.render = async function(self, options) {
 
 		// alt_list_body . Prepend hidden node into content_data to allow refresh on render_level 'content'
 			content_data.prepend( alt_list_body )
+		// hover_body. add hover node to the content_data
+			content_data.prepend( hover_body )
+
 
 		// render_level
 			if (render_level==='content') {
@@ -234,19 +254,16 @@ const get_content_data = async function(self, ar_section_record) {
 							locator 			: section_record.locator,
 							caller 				: self
 						})
-					// button alt view (table)
-						const button_alt = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button info with_bg',
-							parent			: section_record_node
-						})
-						// event publish
-						// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
-						button_alt.addEventListener('mouseup', function(e){
+
+						section_record_node.addEventListener('mouseover',function(e){
 							e.stopPropagation()
-							// const event_id = 'mosaic_show_' + section_record_node.id + '_table'
-							const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							// console.log("publish event_id:",event_id);
+							const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							event_manager.publish(event_id, this)
+						})
+
+						section_record_node.addEventListener('mouseleave',function(e){
+							e.stopPropagation()
+							const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 							event_manager.publish(event_id, this)
 						})
 
@@ -396,6 +413,96 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 
 	return fragment
 }//end render_alternative_table_view
+
+
+
+/**
+* RENDER_HOVER_VIEW
+* Render all received section records and place it into a DocumentFragment
+*
+* @param instance self
+* @param array ar_section_record
+* @param DOM node alt_list_body
+*
+* @return DocumentFragment
+*/
+const render_hover_view = async function(self, ar_section_record, hover_body) {
+
+	// build_values
+		const fragment = new DocumentFragment()
+
+	// add all section_record rendered nodes
+		const ar_section_record_length = ar_section_record.length
+		if (ar_section_record_length>0) {
+
+			for (let i = 0; i < ar_section_record_length; i++) {
+
+				// section_record
+					const section_record		= ar_section_record[i]
+					const section_record_node	= await section_record.render()
+						  section_record_node.classList.add('sr_mosaic_hover')
+
+				// button alt view (table)
+					const button_alt = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button info with_bg',
+						parent			: section_record_node
+					})
+					// event publish
+					// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
+					button_alt.addEventListener('mouseup', function(e){
+						e.stopPropagation()
+						const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+						event_manager.publish(event_id, this)
+					})
+
+				// event subscribe
+				// On user hover mosaic a event that we subscribe here to show the
+				// proper hover record and hide the others
+					const event_id_hover = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+					const found_hover = event_manager.events.find(el => el.event_name===event_id_hover)
+					if (!found_hover) {
+						const token = event_manager.subscribe(event_id_hover, fn_mosaic_hover)
+						self.events_tokens.push(token)
+					}
+					function fn_mosaic_hover(caller_node) {
+						// hide all
+							const ar_children_nodes	= hover_body.children;
+							const len			= ar_children_nodes.length
+							for (let i = len - 1; i >= 0; i--) {
+								const node = ar_children_nodes[i]
+								node.classList.add('display_none')
+							}
+
+						//move to the section record
+							caller_node.appendChild(section_record_node)
+							section_record_node.classList.remove('display_none')
+					}
+					const event_id_mouseleave = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+					const found_mouseleave = event_manager.events.find(el => el.event_name===event_id_mouseleave)
+					if (!found_mouseleave) {
+						const token = event_manager.subscribe(event_id_mouseleave, fn_mosaic_mouseleave)
+						self.events_tokens.push(token)
+					}
+					function fn_mosaic_mouseleave() {
+						hover_body.appendChild(section_record_node)
+						// hide all
+							const ar_children_nodes	= hover_body.children;
+							const len				= ar_children_nodes.length
+							for (let i = len - 1; i >= 0; i--) {
+								const node = ar_children_nodes[i]
+								node.classList.add('display_none')
+							}
+
+					}
+
+				// section record append
+					fragment.appendChild(section_record_node)
+			}
+		}//end if (ar_section_record_length===0)
+
+	return fragment
+}//end render_hover_view
 
 
 
