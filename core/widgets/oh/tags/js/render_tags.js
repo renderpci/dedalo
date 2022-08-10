@@ -97,7 +97,7 @@ const get_value_element = (i, data, values_container, self) => {
 	// li, for every ipo will create a li node
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class			: '',
+			class_name		: 'widget_item tags',
 			parent			: values_container
 		})
 

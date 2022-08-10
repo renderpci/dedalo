@@ -40,29 +40,7 @@ export const descriptors = function(){
 	descriptors.prototype.init		= widget_common.prototype.init
 	descriptors.prototype.build		= widget_common.prototype.build
 	descriptors.prototype.destroy	= widget_common.prototype.destroy
+	descriptors.prototype.render	= widget_common.prototype.render
 	// render
 	descriptors.prototype.edit		= render_descriptors.prototype.edit
 	descriptors.prototype.list		= render_descriptors.prototype.list
-
-
-
-/**
-* RENDER
-*/
-descriptors.prototype.render = async function(options={render_level:'full'}) {
-
-	const self = this
-
-	const render_level	= options.render_level || 'full'
-	const render_mode	= self.mode || 'edit'
-
-	const node = await self[render_mode]({
-		render_level : render_level
-	})
-
-	self.node.push(node)
-
-	return node
-}//end render
-
-

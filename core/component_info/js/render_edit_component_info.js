@@ -131,7 +131,8 @@ const get_input_element_edit = (i, current_widget) => {
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li'
+			element_type	: 'li',
+			class_name		: 'widget_item_' + current_widget.name,
 		})
 
 	// widget

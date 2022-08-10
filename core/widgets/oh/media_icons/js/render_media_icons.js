@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -96,7 +96,7 @@ const get_content_data_edit = async function(self) {
 		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data = self.value.filter(item => item.key === i)
+			const data = self.value.filter(item => item.key===i)
 			get_value_element(i, data , values_container, self)
 		}
 
@@ -121,26 +121,24 @@ const get_value_element = (i, data, values_container, self) => {
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class			: 'media_icons',
+			class_name		: 'widget_item media_icons',
 			parent			: values_container
 		})
 
 	// column_id
-		const column_id = ui.create_dom_element({
+		// const column_id = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	parent			: li
+		// })
+		// value
+		const data_id = data.find(item => item.id==='id')
+		const column_id_value = ui.create_dom_element({
 			element_type	: 'div',
+			class_name		: 'value link',
+			inner_html		: data_id.value,
 			parent			: li
 		})
-		// value
-		const data_id = data.find(item => item.id === 'id')
-
-		const column_id_value = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: data_id.value,
-			parent			: column_id
-		})
-
-		column_id_value.addEventListener("click", e => {
+		column_id_value.addEventListener('click', e => {
 			e.stopPropagation();
 			// event_manager
 				event_manager.publish('user_navigation', {
@@ -153,21 +151,38 @@ const get_value_element = (i, data, values_container, self) => {
 				})
 		})
 
-	// transcription
-		const transcription = ui.create_dom_element({
+	// icon media
+		const icon_media_node = ui.create_dom_element({
 			element_type	: 'div',
+			class_name		: 'value link',
 			parent			: li
 		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button file_av icon',
+			parent			: icon_media_node
+		})
+		icon_media_node.addEventListener('click', e => {
+			e.stopPropagation();
+
+			alert('hello icon media')
+		})
+
+	// transcription
+		// const transcription = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	parent			: li
+		// })
 		// value
 		const data_transcription = data.find(item => item.id==='transcription')
 		const transcription_value = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
+			element_type	: 'div',
+			class_name		: 'value link',
 			inner_html		: 'TR ',
-			parent			: transcription
+			parent			: li
 		})
 		if(data_transcription.tool_context){
-			transcription_value.addEventListener("click", e => {
+			transcription_value.addEventListener('click', e => {
 				e.stopPropagation();
 				// event_manager
 					event_manager.publish('user_navigation', {
@@ -182,20 +197,19 @@ const get_value_element = (i, data, values_container, self) => {
 		}
 
 	// indexation
-		const indexation = ui.create_dom_element({
+		// const indexation = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	parent			: li
+		// })
+		// value
+		const data_indexation = data.find(item => item.id==='indexation')
+		const indexation_value = ui.create_dom_element({
 			element_type	: 'div',
+			class_name		: 'value link',
+			inner_html		: 'IN ',
 			parent			: li
 		})
-		// value
-		const data_indexation = data.find(item => item.id === 'indexation')
-		const indexation_value = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: 'IN ',
-			parent			: indexation
-		})
-
-		indexation_value.addEventListener("click", e => {
+		indexation_value.addEventListener('click', e => {
 			e.stopPropagation();
 
 			const tool_context = data_indexation.tool_context
@@ -208,20 +222,20 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 	// translation
-		const translation = ui.create_dom_element({
+		// const translation = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	parent			: li
+		// })
+		// value
+		const data_translation = data.find(item => item.id==='translation')
+		const translation_value = ui.create_dom_element({
 			element_type	: 'div',
+			class_name		: 'value link',
+			inner_html		: 'TL ',
 			parent			: li
 		})
-		// value
-		const data_translation = data.find(item => item.id === 'translation')
-		const translation_value = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: 'TL ',
-			parent			: translation
-		})
 
-		translation_value.addEventListener("click", e => {
+		translation_value.addEventListener('click', e => {
 			e.stopPropagation();
 
 			const tool_context = data_translation.tool_context
@@ -234,33 +248,30 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 	// time code
-		const column_tc = ui.create_dom_element({
-			element_type	: 'div',
-			parent			: li
-		})
+		// const column_tc = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	parent			: li
+		// })
 		// value
-		const data_tc = data.find(item => item.id === 'tc')
+		const data_tc = data.find(item => item.id==='tc')
 		ui.create_dom_element({
-			element_type	: 'span',
+			element_type	: 'div',
 			class_name		: 'value',
 			inner_html		: data_tc.value,
-			parent			: column_tc
+			parent			: li
 		})
 
-
+	// DES
 		// even manager model to use in other widgets_properties
 		// this widget don't use it, because the info is not in the same section
 		// than the components that changed our value
 		// the user don't see the info and the imput componets at same time
 		// self.events_tokens.push(
 		// 	event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
-
-		// 		media_weight_value.innerHTML 	= changed_data.find(item => item.id === 'media_weight').value
-
+		// 		media_weight_value.innerHTML 	= changed_data.find(item => item.id==='media_weight').value
 		// 	})
 		// )
 
+
 	return li
 }//end get_value_element
-
-

@@ -104,8 +104,9 @@ const get_value_element = (i, data, inputs_container, self) => {
 
 	// li
 		const li = ui.create_dom_element({
-			element_type : 'li',
-			parent 		 : inputs_container
+			element_type	: 'li',
+			class_name		: 'widget_item calculation',
+			parent			: inputs_container
 		})
 
 	for (let j = 0; j < output.length; j++) {
