@@ -982,7 +982,12 @@ search.prototype.get_search_group_operator = function(search_group) {
 				mode : "search"
 			}).filter
 
-		const js_promise = update_section(section, filter_obj, self)
+		const js_promise = update_section(
+			section,
+			filter_obj,
+			null, // filter_by_locator
+			self
+		)
 
 		return js_promise
 	}//end exec_search
@@ -1006,8 +1011,11 @@ search.prototype.get_search_group_operator = function(search_group) {
 		// filter reset
 			const filter_obj = null
 
+		// filter_by_locators reset
+			const filter_by_locators = null
+
 		// update_section
-			const js_promise = update_section(section, filter_obj, self)
+			const js_promise = update_section(section, filter_obj, filter_by_locators, self)
 
 		return js_promise
 	}//end show_all
@@ -1018,7 +1026,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	* UPDATE_SECTION
 	* @return promise
 	*/
-	const update_section = async function(section_instance, filter_obj, self) {
+	const update_section = async function(section_instance, filter_obj, filter_by_locators, self) {
 
 		const section_node = section_instance.node[0]
 
@@ -1026,13 +1034,16 @@ search.prototype.get_search_group_operator = function(search_group) {
 			section_node.classList.add('loading')
 
 		// limit
-			const limit = self.limit && self.limit>0 ? self.limit : 10
+			const limit = self.limit && self.limit>0
+				? self.limit
+				: 10
 
 		// pagination
-			section_instance.total			= null
-			section_instance.rqo.sqo.limit	= limit
-			section_instance.rqo.sqo.offset	= 0
-			section_instance.rqo.sqo.filter	= filter_obj
+			section_instance.total						= null
+			section_instance.rqo.sqo.limit				= limit
+			section_instance.rqo.sqo.offset				= 0
+			section_instance.rqo.sqo.filter				= filter_obj
+			section_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 
 		// paginator_node (could exist or not --area_thesaurus case--)
 			const paginator_node = section_instance?.paginator?.node?.[0] || null
