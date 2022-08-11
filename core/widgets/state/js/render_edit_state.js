@@ -96,30 +96,33 @@ const get_value_element = (i, data, values_container, self) => {
 			class_name		: 'widget_item state',
 			parent			: values_container
 		})
-		// first row with the header labels
+
+	// header. First row with the header labels
 		const header = ui.create_dom_element({
-				element_type	: 'div',
+			element_type	: 'div',
+			class_name		: 'li_item header',
+			inner_html		: '',
+			parent			: li
+		})
+		// group_name_column
+			const group_name_column = ui.create_dom_element({
+				element_type	: 'label',
 				inner_html		: '',
-				parent			: li
+				parent			: header
 			})
-			// group_name_column
-				const group_name_column = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: '',
-					parent			: header
-				})
-			// label_situation
-				const label_situation = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: get_label['situation'] || 'situation',
-					parent			: header
-				})
-			// label_state
-				const label_state = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: get_label['state'] || 'state',
-					parent			: header
-				})
+		// label_situation
+			const label_situation = ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: get_label['situation'] || 'situation',
+				parent			: header
+			})
+		// label_state
+			const label_state = ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: get_label['state'] || 'state',
+				parent			: header
+			})
+
 		// important!, data don't has all info
 		// is neccesary get the langs for create the all lang nodes
 		// when the component is traslatable, data can't has all languages, in the data will only has the langs that has value
@@ -136,9 +139,9 @@ const get_value_element = (i, data, values_container, self) => {
 		for (let o = 0; o < output.length; o++) {
 			const output_item = output[o]
 			// row container
-			const container = ui.create_dom_element({
+				const container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: '',
+					class_name		: 'li_item container',
 					parent			: li
 				})
 
