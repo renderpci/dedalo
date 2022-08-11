@@ -178,8 +178,7 @@ class media_icons extends widget_common {
 					}
 
 					// set the final data to the widget
-						$dato[] = $object_value;
-
+					$dato[] = $object_value;
 				}
 			}//end foreach ($ar_paths as $path)
 		}//foreach $ipo
