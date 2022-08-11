@@ -442,10 +442,15 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 						  section_record_node.classList.add('sr_mosaic_hover')
 
 				// button alt view (table)
+					const button_alt_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'button_alt_container',
+						parent			: section_record_node
+					})
 					const button_alt = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button info with_bg',
-						parent			: section_record_node
+						parent			: button_alt_container
 					})
 					// event publish
 					// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
@@ -473,17 +478,18 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 								node.classList.add('display_none')
 							}
 
-						//move to the section record
+						// move to the section record
 							caller_node.appendChild(section_record_node)
 							section_record_node.classList.remove('display_none')
 					}
-					const event_id_mouseleave = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_mouseleave = event_manager.events.find(el => el.event_name===event_id_mouseleave)
+					const event_id_mouseleave	= `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+					const found_mouseleave		= event_manager.events.find(el => el.event_name===event_id_mouseleave)
 					if (!found_mouseleave) {
 						const token = event_manager.subscribe(event_id_mouseleave, fn_mosaic_mouseleave)
 						self.events_tokens.push(token)
 					}
 					function fn_mosaic_mouseleave() {
+						// return
 						hover_body.appendChild(section_record_node)
 						// hide all
 							const ar_children_nodes	= hover_body.children;
@@ -492,7 +498,6 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 								const node = ar_children_nodes[i]
 								node.classList.add('display_none')
 							}
-
 					}
 
 				// section record append
