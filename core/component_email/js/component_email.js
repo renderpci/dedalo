@@ -170,8 +170,8 @@ component_email.prototype.get_ar_emails = async function() {
 	// set some vars
 		const separator = ';';
 		const emails = []
-		const is_windows = /(Win)/i.test(navigator.platform); //(Mac|iPhone|iPod|iPad)
-		const max_characters = 19 ; //1900 max characters, in win are 2000
+		const is_windows = /(Mac)/i.test(navigator.platform); //(Mac|iPhone|iPod|iPad)
+		const max_characters = 30 ; //1900 max characters, in win are 2000
 
 		for (let i = len - 1; i >= 0; i--) {
 			const current_data = data[i].value
@@ -188,16 +188,22 @@ component_email.prototype.get_ar_emails = async function() {
 			const ar_emails = []
 
 			if(emails.length > max_characters){
+
 				const truncate_postion = emails.indexOf(separator, max_characters);
-				const part_one = emails.slice(0, truncate_postion);
-				const part_two = emails.slice(truncate_postion + 1);
-				ar_emails.push(part_one)
-				if(part_two.length > max_characters){
-					const result = get_ar_emails(part_two)
-					ar_emails.push(...result)
+				if(truncate_postion === -1){
+					ar_emails.push(emails)
 				}else{
-					ar_emails.push(part_two)
+					const part_one = emails.slice(0, truncate_postion);
+					const part_two = emails.slice(truncate_postion + 1);
+					ar_emails.push(part_one)
+					if(part_two.length > max_characters){
+						const result = get_ar_emails(part_two)
+						ar_emails.push(...result)
+					}else{
+						ar_emails.push(part_two)
+					}
 				}
+
 			}
 			return ar_emails
 		}

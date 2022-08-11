@@ -276,7 +276,7 @@ const get_buttons = (self) => {
 			// button_add_input
 			const send_multiple_email = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'button add',
+				class_name		: 'button email_multiple',
 				parent			: fragment
 			})
 			send_multiple_email.addEventListener('mouseup', async function (e) {
@@ -287,11 +287,6 @@ const get_buttons = (self) => {
 				// every item of the array will be opened by the user to create the email
 				if(ar_emails.length > 1){
 
-					const header = ui.create_dom_element({
-						element_type	: 'div',
-						text_node		: get_label.select_page_of_the_doc
-					})
-
 					const body = ui.create_dom_element({
 						element_type	: 'span',
 						class_name 		: 'body'
@@ -300,31 +295,35 @@ const get_buttons = (self) => {
 					const body_title = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'body_title',
-						text_node		: 'the email selection is more large than your system can supported, click in the buttons bellow to create the emails with the max emails supported',
+						text_node		: get_label.email_limit_explanation,
 						parent			: body
 					})
 					// create the button to open the email app and create the mail with the addresses
 					for (let i = 0; i < ar_emails.length; i++) {
 
 						const current_emails = ar_emails[i]
-
+						const regex = /;/g;
+						const search_number_of_email =  current_emails.match(regex) || []
+						const number_of_email = search_number_of_email.length > 0
+							? search_number_of_email.length +1
+							: 1
 						const buton_option = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'user_option',
-							inner_html		: get_label.email || 'email' + ': ' + i+1,
+							inner_html		: (get_label.email || 'email') + ': ' + number_of_email,
 							parent			: body
 						})
 
 						buton_option.addEventListener('mouseup', function (e) {
 							// when the user click in the button remove the option and open the email with the addresses
 							buton_option.remove()
-							window.location.href = mailto_prefix + ar_emails[i]
+							window.location.href = mailto_prefix + current_emails
 						})
 					}
 
 					// modal. create new modal with the email buttons
 						ui.attach_to_modal({
-							header	: 'emails limitation',
+							header	: get_label.alert_limit_of_emails || 'emails limitation',
 							body	: body,
 							footer	: null,
 							size	: 'small'
