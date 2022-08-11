@@ -20,7 +20,7 @@ class component_info extends component_common {
 
 		$properties = $this->get_properties();
 		// get the widgets defined in the ontology
-		$widgets = isset($properties->widgets) ? $properties->widgets : null;
+		$widgets = $properties->widgets ?? null;
 		if (empty($widgets) || !is_array($widgets)) {
 			debug_log(__METHOD__." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
 			return null;
@@ -43,7 +43,6 @@ class component_info extends component_common {
 
 			// Widget data
 			$widget_value = $widget->get_dato();
-
 			if (!empty($widget_value)) {
 				$dato = array_merge($dato, $widget_value);
 			}

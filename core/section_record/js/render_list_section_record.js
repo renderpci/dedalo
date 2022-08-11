@@ -196,7 +196,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 
 				// remove_hilite (if is set)
 					const remove_hilite = (e) => {
-						e.stopPropagation()
+						// e.stopPropagation()
 						if (hilite_row) {
 							hilite_row.remove()
 							hilite_row = null

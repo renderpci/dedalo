@@ -11,9 +11,9 @@
 	import * as instances from '../../common/js/instances.js'
 	import {
 		render_search,
-		toggle_fields,
-		toggle_search_panel,
-		toggle_presets,
+		// toggle_fields,
+		// toggle_search_panel,
+		// toggle_presets,
 		// render_thesaurus_sections_checkboxes
 	} from './render_search.js'
 	import {
@@ -30,11 +30,11 @@
 		delete_preset,
 		edit_preset
 	} from './search_user_presets.js'
-	import {
-		create_cookie,
-		read_cookie,
-		erase_cookie
-	} from '../../common/js/utils/cookie.js'
+	// import {
+		// create_cookie,
+		// read_cookie,
+		// erase_cookie
+	// } from '../../common/js/utils/cookie.js'
 
 
 
@@ -1028,10 +1028,10 @@ search.prototype.get_search_group_operator = function(search_group) {
 	*/
 	const update_section = async function(section_instance, filter_obj, filter_by_locators, self) {
 
-		const section_node = section_instance.node[0]
+		// const section_node = section_instance.node[0]
 
 		// loading css add
-			section_node.classList.add('loading')
+			// section_node.classList.add('loading')
 
 		// limit
 			const limit = self.limit && self.limit>0
@@ -1051,12 +1051,14 @@ search.prototype.get_search_group_operator = function(search_group) {
 				paginator_node.classList.add('hide')
 			}
 
-		// section
-			const js_promise = section_instance.refresh()
-
+		// section. refresh current section and set history navigation
+			const js_promise = section_instance.navigate(
+				null, // callback
+				true // navigation_history
+			)
 			js_promise.then(()=>{
 				// loading css remove
-					section_node.classList.remove('loading')
+					// section_node.classList.remove('loading')
 				// refresh section paginator
 					if (paginator_node) {
 						section_instance.paginator.refresh()
