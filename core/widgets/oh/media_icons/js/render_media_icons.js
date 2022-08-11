@@ -146,14 +146,27 @@ const get_value_element = (i, data, self, current_ipo) => {
 		column_id_value.addEventListener('click', e => {
 			e.stopPropagation();
 			// event_manager
-				event_manager.publish('user_navigation', {
-					source : {
-						tipo		: data_id.locator.section_tipo,
-						section_id	: data_id.locator.section_id,
-						model		: 'section',
-						mode		: 'edit'
-					}
-				})
+				// event_manager.publish('user_navigation', {
+				// 	source : {
+				// 		tipo		: data_id.locator.section_tipo,
+				// 		section_id	: data_id.locator.section_id,
+				// 		model		: 'section',
+				// 		mode		: 'edit'
+				// 	}
+				// })
+			// open a new window
+				const url_vars = {
+					tipo			: data_id.locator.section_tipo,
+					section_tipo	: data_id.locator.section_id,
+					id				: data_id.locator.section_id,
+					mode			: 'edit',
+					menu			: false
+				}
+				const width				= window.screen.width < 1350 ? window.screen.width : 1350;
+				const height			= window.screen.height < 1024 ? window.screen.height : 1024;
+				const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+				const current_window	= window.open(url, 'record_viewer', `width=${width},height=${height}`)
+				current_window.focus()
 		})
 
 	// icon media
