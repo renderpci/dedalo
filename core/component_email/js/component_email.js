@@ -112,14 +112,13 @@ component_email.prototype.verify_email = function(email_value) {
 /**
 * SEND E-MAIL
 */
-component_email.prototype.send_email = function(component_obj) {
+component_email.prototype.send_email = function(value) {
 
-	const email = component_obj.parentNode.querySelector('input').value
+	const email = value
 
 	if(email.length<=0){
 		return false
 	}
-	//window.open(iri, '_blank')
 	//window.open('mailto:'+email, '_blank');
 	window.location.href = 'mailto:' + email
 
@@ -131,7 +130,35 @@ component_email.prototype.send_email = function(component_obj) {
 /**
 * SEND MULTIPLE EMAIL CALCULATION
 */
-component_email.prototype.send_multiple_email_calculation = function(component_obj) {
+component_email.prototype.get_multiple_mails = function(component_obj) {
+
+	const self = this
+
+	// builder should be section or portal, the self.caller normally will be a section_record, and his caller should be the builder
+	const builder = self.caller.caller
+	// check if the builder is a section or portal. Sometimes it could be a tool, or widget,...
+	if(builder.model !== 'section' && builder.model !== 'component_portal'){
+		return false
+	}
+
+	const rqo_original = builder.rqo
+
+		console.log("rqo_original:",rqo_original);
+
+	return
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/** TODO
 	*   Not working currently. Adapt to version 6 and call it where/when it is needed.
 	*/
@@ -146,6 +173,6 @@ component_email.prototype.send_multiple_email_calculation = function(component_o
 		//let mail_body = document.createElement( 'html' );
 		window.location.href = "mailto:?bcc=" + emails ; //+ "&body=" +mail_body
 	});
-}//end send_multiple_email_calculation
+}//end get_multiple_mails
 
 
