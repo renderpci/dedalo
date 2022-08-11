@@ -253,16 +253,11 @@ const get_value_element = (i, data, self, current_ipo) => {
 		}
 
 	// time code
-		// const column_tc = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	parent			: li
-		// })
-		// value
 		const data_tc = data.tc //find(item => item.id==='tc')
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value tc',
-			inner_html		: data_tc.value,
+			inner_html		: data_tc.value || '',
 			parent			: li
 		})
 
