@@ -3,22 +3,26 @@
 
 
 // column_section_id
-	.column_section_id {
+	.column.column_section_id {
+		background-color: #f6f6f6;
 		display: flex;
 		flex-direction: column;
-		justify-content: flex-start;
-		background-color: #f6f6f6;
-		padding: 0;
+		align-items: center;
+		// justify-content: flex-start; // vertical
+		// align-items: flex-end; // horizontal
+		// padding: 0px;
 
-		>button {
+		// button (could be button_edit, button_delete)
+		>button.button_edit, >button.button_delete {
 			display: flex;
 			width: 100%;
-			margin: 0;
+			margin: 0px;
 			padding: 0.5em;
-			border-radius: 0;
+			border-radius: 0px;
 
 			// justify-content
 			justify-content: flex-end;
+
 			&.button_edit {
 				justify-content: space-between;
 				// justify-content: flex-end;
@@ -26,19 +30,9 @@
 					justify-content: flex-start;
 				}
 			}
+
 			&.button_delete {
 				// justify-content: flex-end;
-			}
-
-			>.section_id {
-				font-size: 1.25rem;
-				padding-right: 3px;
-				padding-left: 2px;
-			}
-			>.icon {
-				height: 1.4rem;
-				width: 1.3rem;
-				margin-right: -2px;
 			}
 
 			&:hover {
@@ -60,36 +54,55 @@
 					background-color: #ffffff;
 				}
 			}
-		}
+
+			>.section_id {
+				font-size: 1.25rem;
+				padding-right: 3px;
+				padding-left: 2px;
+			}
+
+			>.icon {
+				height: 1.4rem;
+				width: 1.3rem;
+				margin-right: -2px;
+			}
+		}//end >button
+
+		// drag and drop button
+		>.drag {
+
+			// @see component_portal.less for specific styles
+		}//end >.drag.icon
+
 	}//end .column_section_id
 
 
 
 // column_remove
-	.column_remove {
+	.column.column_remove {
 		display: flex;
 		flex-direction: column;
 		justify-content: flex-start;
 		background-color: #f6f6f6;
-		padding: 0;
+		padding: 0px;
 
-		>button {
+		>button.button_remove {
 			display: flex;
 			width: 100%;
-			margin: 0;
+			margin: 0px;
 			padding: 0.5em;
 			padding-top: 0.75rem;
 			padding-bottom: 0.75rem;
-			border-radius: 0;
+			border-radius: 0px;
 			justify-content: flex-end;
 
-			&.button_remove {
+			// &.button_remove {
 				justify-content: space-between;
 				// justify-content: flex-end;
 				@media screen and (max-width: @width_break_point_0) {
 					justify-content: flex-start;
 				}
-			}
+			// }
 
 			>.icon {
 				height: 1.4rem;
@@ -136,9 +149,9 @@
 			// 	>button {
 			// 		display: flex;
 			// 		width: 100%;
-			// 		margin: 0;
+			// 		margin: 0px;
 			// 		padding: 0.5em;
-			// 		border-radius: 0;
+			// 		border-radius: 0px;
 
 			// 		// justify-content
 			// 		justify-content: flex-end;
@@ -196,7 +209,7 @@
 	// direct list_body from component in edit mode
 	.wrapper_component.edit >.list_body {
 		padding: 1rem;
-		padding-top: 0;
+		padding-top: 0px;
 	}
 
 	// portal alt_list_body
@@ -214,8 +227,8 @@
 		// width: 100%;
 
 		// position: absolute;
-		// // top: 0;
-		// left: 0;
+		// // top: 0px;
+		// left: 0px;
 
 		display: grid;
 		width: 100%;
@@ -233,7 +246,7 @@
 		}
 		.close_alt_list_body {
 			position:absolute;
-			right: 0;
+			right: 0px;
 			top: 4px;
 		}
 	}
@@ -258,8 +271,8 @@
 		// 		width: calc(100vw - 2rem);
 		// 		background-color: #7d7d7d;
 		// 		position: absolute;
-		// 		left: 0;
-		// 		top: 0;
+		// 		left: 0px;
+		// 		top: 0px;
 		// 		z-index: 2;
 		// 		height: 1px;
 		// 		// box-shadow: inset 0px 2px 0px 0 @line_color;
@@ -325,7 +338,7 @@
 					&.column_section_id {
 						position: -webkit-sticky;
 						position: sticky;
-						top: 0;
+						top: 0px;
 						z-index: 1;
 						// border-bottom: 1px solid #cfcfcf;
 						box-shadow: 0 4px 2px 0px #afafaf;
@@ -376,27 +389,32 @@
 			top: 3.9em;
 		}
 		&.with_initiator {
-			top: 0;
+			top: 0px;
 		}
 
 		// head_column
 		.head_column {
 			display: flex;
-			padding: 0;
+			padding: 0px;
 			background-color: #2c2c2e;
 			border-right: 1px solid @color_grey_medium;
 			border-top: 1px solid @color_grey_medium;
 			overflow: hidden;
 
+			&.section_id {
+				border-top-left-radius: 5px;
+			}
+
 			&:last-of-type {
 				border-right: none;
+				border-top-right-radius: 5px;
 			}
 
 			&.with_sub_header {
 				display: block;
-				padding-left: 0;
-				padding-right: 0;
-				padding-bottom: 0;
+				padding-left: 0px;
+				padding-right: 0px;
+				padding-bottom: 0px;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
@@ -433,7 +451,7 @@
 
 				>.head_column {
 					// border-right: 1px solid @color_grey_medium;
-					padding: 0;
+					padding: 0px;
 					height: 100%;
 					flex: 1;
 
@@ -445,7 +463,7 @@
 
 			>.name, >.order {
 				display: block;
-				padding: 0;
+				padding: 0px;
 				margin: 0.33rem;
 				margin-top: 0.4rem;
 				margin-bottom: 0.5rem;
@@ -462,7 +480,7 @@
 				width: 13px;
 				min-width: 13px;
 				height: 15px;
-				margin-left: 0;
+				margin-left: 0px;
 				vertical-align: text-bottom;
 				cursor: pointer;
 				background-image: url('../../themes/default/icons/sort_all.svg');
@@ -496,13 +514,13 @@
 		// header column labels
 			// >.head_column {
 			// 	display: flex;
-			// 	padding: 0;
+			// 	padding: 0px;
 
 			// 	&.with_sub_header {
 			// 		display: block;
-			// 		padding-left: 0;
-			// 		padding-right: 0;
-			// 		padding-bottom: 0;
+			// 		padding-left: 0px;
+			// 		padding-right: 0px;
+			// 		padding-bottom: 0px;
 			// 		span {
 			// 			opacity: 0.7;
 			// 			padding-left: 0.5em;
@@ -586,7 +604,7 @@
 		// }
 
 		>.media, >.portal, >.edit_button {
-			margin: 0;
+			margin: 0px;
 		}
 
 		>.section_id {
@@ -598,8 +616,8 @@
 			flex: 1 1;
 			// outline: 1px solid #000000 !important;
 			display: block; // ?????
-			padding: 0;
-			margin: 0;
+			padding: 0px;
+			margin: 0px;
 
 			// >* {
 				// padding: 0.25rem;
@@ -656,14 +674,14 @@
 
 		>button {
 			padding: 1px;
-			padding-right: 0;
-			padding-left: 0;
+			padding-right: 0px;
+			padding-left: 0px;
 			height: 1rem;
 
 			>.icon {
 				height: 1rem;
 				width: 1rem;
-				margin: 0;
+				margin: 0px;
 			}
 		}
 	}
@@ -719,9 +737,9 @@
 				display: inline-block;
 				// font-size: @height_line + 0.02;
 				font-size: @height_line - 0.1;
-				padding: 0;
+				padding: 0px;
 				//height: @height_line;
-				margin-top: 0;
+				margin-top: 0px;
 				margin-left: 0.25em;
 				// margin-bottom: 0.2em;
 				// margin-left: 0.2em;

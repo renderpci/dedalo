@@ -391,10 +391,10 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 							// }
 
 						// user click edit button action close the modal box
-							const token = event_manager.subscribe('edit_button_click', fn_edit_button_click)
+							const token = event_manager.subscribe('button_edit_click', fn_button_edit_click)
 							self.events_tokens.push(token)
-							function fn_edit_button_click() {
-								event_manager.unsubscribe('edit_button_click')
+							function fn_button_edit_click() {
+								event_manager.unsubscribe('button_edit_click')
 								modal.close()
 							}
 					}
@@ -575,38 +575,5 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 	// 			text_content	: section_id,
 	// 			parent			: fragment
 	// 		})
-
-	// 	// edit_button
-	// 		const edit_button = ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'button edit',
-	// 			parent			: fragment
-	// 		})
-	// 		edit_button.addEventListener("click", function(){
-	// 			const user_navigation_rqo = {
-	// 				caller_id	: self.id,
-	// 				source		: {
-	// 					action			: 'search',
-	// 					model			: 'section',
-	// 					tipo			: section_tipo,
-	// 					section_tipo	: section_tipo,
-	// 					mode			: 'edit',
-	// 					lang			: self.lang
-	// 				},
-	// 				sqo : {
-	// 					section_tipo		: [{tipo : section_tipo}],
-	// 					filter				: null,
-	// 					limit				: 1,
-	// 					filter_by_locators	: [{
-	// 						section_tipo	: section_tipo,
-	// 						section_id		: section_id,
-	// 					}]
-	// 				}
-	// 			}
-	// 			event_manager.publish('user_navigation', user_navigation_rqo)
-	// 		})
-
-	// 	return fragment
-	// }// end render_column_id()
 
 
