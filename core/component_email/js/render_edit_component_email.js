@@ -48,6 +48,10 @@ render_edit_component_email.prototype.edit = async function(options={render_leve
 			buttons			: buttons
 		})
 
+	// set pointer
+		wrapper.content_data = content_data
+		self.wrapper = wrapper
+
 	// add events
 		add_events(self, wrapper)
 
@@ -71,26 +75,16 @@ const add_events = function(self, wrapper) {
 			changed_node.value = changed_data.value
 		}
 
-	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
-		)
-		function add_element(changed_data) {
-			// change the value of the current dom element
-			const inputs_container 	= wrapper.querySelector('.inputs_container')
-			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
-		}
-
 	// remove element, subscription to the events
-		//		self.events_tokens.push(
-		//			event_manager.subscribe('remove_element_'+self.id, remove_element)
-		//		)
-		//		async function remove_element(component) {
-		//			// change all elements inside of content_data
-		//			const new_content_data = await render_content_data(component)
-		//			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
-		//			wrapper.childNodes[2].replaceWith(new_content_data)
-		//		}
+				// self.events_tokens.push(
+				// 	event_manager.subscribe('remove_element_'+self.id, remove_element)
+				// )
+				// async function remove_element(component) {
+				// 	// change all elements inside of content_data
+				// 	const new_content_data = await render_content_data(component)
+				// 	// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
+				// 	wrapper.childNodes[2].replaceWith(new_content_data)
+				// }
 
 	// change event, for every change the value in the imputs of the component
 		wrapper.addEventListener('change', (e) => {
@@ -127,48 +121,48 @@ const add_events = function(self, wrapper) {
 	// click event [click]
 		wrapper.addEventListener("click", e => {
 
-			// insert
-			if (e.target.matches('.button.add')) {
+			// // insert
+			// if (e.target.matches('.button.add')) {
 
-				const changed_data = Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
-					value	: null
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('add_element_'+self.id, changed_data)
-				})
+			// 	const changed_data = Object.freeze({
+			// 		action	: 'insert',
+			// 		key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
+			// 		value	: null
+			// 	})
+			// 	self.change_value({
+			// 		changed_data : changed_data,
+			// 		refresh 	 : false
+			// 	})
+			// 	.then((save_response)=>{
+			// 		// event to update the dom elements of the instance
+			// 		event_manager.publish('add_element_'+self.id, changed_data)
+			// 	})
 
-				return true
-			}
+			// 	return true
+			// }
 
 			// remove
-			if (e.target.matches('.button.remove')) {
+			// if (e.target.matches('.button.remove')) {
 
-				// force possible input change before remove
-				document.activeElement.blur()
+			// 	// force possible input change before remove
+			// 	document.activeElement.blur()
 
-				const changed_data = Object.freeze({
-					action	: 'remove',
-					key		: e.target.dataset.key,
-					value	: null,
-					refresh : true
-				})
-				self.change_value({
-					changed_data : changed_data,
-					label 		 : e.target.previousElementSibling.value,
-					refresh 	 : true
-				})
-				.then(()=>{
-				})
+			// 	const changed_data = Object.freeze({
+			// 		action	: 'remove',
+			// 		key		: e.target.dataset.key,
+			// 		value	: null,
+			// 		refresh : true
+			// 	})
+			// 	self.change_value({
+			// 		changed_data : changed_data,
+			// 		label 		 : e.target.previousElementSibling.value,
+			// 		refresh 	 : true
+			// 	})
+			// 	.then(()=>{
+			// 	})
 
-				return true
-			}
+			// 	return true
+			// }
 
 			if (e.target.matches('.button.email')) {
 
@@ -234,6 +228,8 @@ const get_content_data_edit = function(self) {
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
+	// set pointer
+		content_data.inputs_container = inputs_container
 
 	return content_data
 }//end render_content_data
@@ -255,10 +251,36 @@ const get_buttons = (self) => {
 	// button add input
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
 			// button_add_input
-			ui.create_dom_element({
+			const add_button = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
 				parent			: fragment
+			})
+			add_button.addEventListener('mouseup',function(e) {
+				const changed_data = Object.freeze({
+					action	: 'insert',
+					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
+					value	: null
+				})
+				self.change_value({
+					changed_data : changed_data,
+					refresh 	 : true
+				})
+				.then((save_response)=>{
+					const inputs_container = self.wrapper.content_data.inputs_container
+					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
+					inputs_container.appendChild(new_input)
+				})
+			})
+
+			// button_add_input
+			const send_multiple_email = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button add',
+				parent			: fragment
+			})
+			send_multiple_email.addEventListener('mouseup', function (e) {
+				self.get_multiple_mails()
 			})
 		}
 
@@ -303,19 +325,39 @@ const get_input_element_edit = (i, current_value, self) => {
 
 	// button remove
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
-			ui.create_dom_element({
+			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
-				dataset			: { key : i },
 				parent			: li
+			})
+			button_remove.addEventListener('mouseup',function(e){
+				// force possible input change before remove
+				document.activeElement.blur()
+
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: i,
+					value	: null,
+					refresh : true
+				})
+				self.change_value({
+					changed_data : changed_data,
+					label 		 : current_value || ' ',
+					refresh 	 : true
+				})
+				.then(()=>{
+				})
 			})
 
 			// button email
-			ui.create_dom_element({
+			const button_email = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button email hidden_button',
 				dataset			: { key : i },
 				parent			: li
+			})
+			button_email.addEventListener('mouseup',function(e) {
+				self.send_email(current_value)
 			})
 		}
 
