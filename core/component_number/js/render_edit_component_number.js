@@ -168,7 +168,6 @@ const add_events = function(self, wrapper) {
 
 			// page unload event
 				if (e.key!=='Enter') {
-					console.log("aqui:-----------------------------");
 					const key				= e.target.dataset.key
 					const original_value	= self.db_data.value[key]
 					const new_value			= e.target.value

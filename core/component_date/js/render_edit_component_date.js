@@ -53,10 +53,12 @@ render_edit_component_date.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-		wrapper.classList.add(date_mode)
-
+	// set pointer
+		wrapper.content_data = content_data
 		self.wrapper = wrapper
+
+	// set the mode as class to be adapted to specific css
+		wrapper.classList.add(date_mode)
 
 	// add events
 		// add_events(self, wrapper)
@@ -68,110 +70,21 @@ render_edit_component_date.prototype.edit = async function(options) {
 
 
 /**
-* ADD_EVENTS (DES)
+* ADD_EVENTS
 */
-	// const add_events = function(self, wrapper) {
+const add_events = function(self, wrapper) {
 
-	// 	const date_mode = self.get_date_mode()
+	const date_mode = self.get_date_mode()
 
-	// 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-	// 		self.events_tokens.push(
-	// 			event_manager.subscribe('update_value_'+self.id, fn_update_value)
-	// 		)
-	// 		function fn_update_value (changed_data) {
-	// 			console.log("changed_data:",changed_data);
-	// 		}
+	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+		self.events_tokens.push(
+			event_manager.subscribe('update_value_'+self.id, fn_update_value)
+		)
+		function fn_update_value (changed_data) {
+			console.log("changed_data:",changed_data);
+		}
 
-	// 	// add element, subscription to the events
-	// 		self.events_tokens.push(
-	// 			event_manager.subscribe('add_element_'+self.id, fn_add_element)
-	// 		)
-	// 		function fn_add_element(changed_data) {
-	// 			const inputs_container = wrapper.querySelector('.inputs_container')
-	// 			// add new dom input element
-	// 			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
-	// 		}
-
-	// 	// click event [click]
-	// 		// wrapper.addEventListener("click", e => {
-
-	// 			// if (e.target.matches('.calendar') && date_mode!=='period' && date_mode!=='time') {
-
-	// 			// 	const datePicker = flatpickr(e.target, {
-	// 			// 		onClose 	  : self.close_flatpickr,
-	// 			// 		onValueUpdate : function(selectedDates, dateStr, instance){
-	// 			// 							ui.component.error(false, e.target.parentNode.previousSibling)
-	// 			// 							self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
-	// 			// 						}
-	// 			// 	})
-	// 			// 	datePicker.open()
-
-	// 			// 	return true
-	// 			// //} else {
-	// 			// 	//ui.component.show_button(e.target.parentNode, '.remove')
-	// 			// }
-
-	// 			// // insert
-	// 			// 	if (e.target.matches('.button.add')) {
-
-	// 			// 		const changed_data = Object.freeze({
-	// 			// 			action	: 'insert',
-	// 			// 			key		: self.data.value.length,
-	// 			// 			value	: null
-	// 			// 		})
-	// 			// 		self.change_value({
-	// 			// 			changed_data : changed_data,
-	// 			// 			refresh 	 : false
-	// 			// 		})
-	// 			// 		.then((save_response)=>{
-	// 			// 			// event to update the dom elements of the instance
-	// 			// 			event_manager.publish('add_element_'+self.id, changed_data)
-	// 			// 		})
-
-	// 			// 		return true
-	// 			// 	}
-
-	// 			// // remove
-	// 			// 	if (e.target.matches('.button.remove')) {					// e.stopPropagation()
-
-	// 			// 		// force possible input change before remove
-	// 			// 		document.activeElement.blur()
-
-	// 			// 		const current_input = e.target.parentNode.querySelector('input')
-	// 			// 		const current_value = current_input ? current_input.value : null
-
-	// 			// 		const changed_data = Object.freeze({
-	// 			// 			action	: 'remove',
-	// 			// 			key		: e.target.dataset.key,
-	// 			// 			value	: null,
-	// 			// 			refresh : true
-	// 			// 		})
-	// 			// 		self.change_value({
-	// 			// 			changed_data : changed_data,
-	// 			// 			label 		 : current_value,
-	// 			// 			refresh 	 : true
-	// 			// 		})
-	// 			// 		.then(()=>{
-	// 			// 		})
-
-	// 			// 		return true
-	// 			// 	}
-	// 		// })//end click
-
-	// 	// keyup event
-	// 		wrapper.addEventListener("keyup", async (e) => {
-
-	// 			// set_before_unload (bool) add.
-	// 			// (!) Because is so hard to compare dates here, on user keyup always set the beforeunload event as true.
-	// 			// When more easily compare date its allowed, change it (see component_input_text)
-	// 				if (e.key!=='Enter') {
-	// 					event_manager.set_before_unload(true)
-	// 				}
-	// 		})//end keyup
-
-
-	// 	return true
-	// }//end add_events
+}//end add_events
 
 
 
@@ -204,11 +117,12 @@ const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
-			autoload : true
+			autoload			: true
 		})
-		content_data.inputs_container = inputs_container
 		content_data.appendChild(fragment)
 
+	// set pointer
+		content_data.inputs_container = inputs_container
 
 	return content_data
 }//end get_content_data_edit
