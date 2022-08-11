@@ -279,8 +279,60 @@ const get_buttons = (self) => {
 				class_name		: 'button add',
 				parent			: fragment
 			})
-			send_multiple_email.addEventListener('mouseup', function (e) {
-				self.get_multiple_mails()
+			send_multiple_email.addEventListener('mouseup', async function (e) {
+				const ar_emails = await self.get_ar_emails()
+				const mailto_prefix = 'mailto:?bcc=';
+				// ar_mails could be an array with 1 string item with all addresses or more than 1 string when the length is more than length supported by the SO (in Windows 2000 charts)
+				// if the maximum chars is surpassed the string it was spliced in sorted strings and passed as string items of the array
+				// every item of the array will be opened by the user to create the email
+				if(ar_emails.length > 1){
+
+					const header = ui.create_dom_element({
+						element_type	: 'div',
+						text_node		: get_label.select_page_of_the_doc
+					})
+
+					const body = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'body'
+					})
+
+					const body_title = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'body_title',
+						text_node		: 'the email selection is more large than your system can supported, click in the buttons bellow to create the emails with the max emails supported',
+						parent			: body
+					})
+					// create the button to open the email app and create the mail with the addresses
+					for (let i = 0; i < ar_emails.length; i++) {
+
+						const current_emails = ar_emails[i]
+
+						const buton_option = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'user_option',
+							inner_html		: get_label.email || 'email' + ': ' + i+1,
+							parent			: body
+						})
+
+						buton_option.addEventListener('mouseup', function (e) {
+							// when the user click in the button remove the option and open the email with the addresses
+							buton_option.remove()
+							window.location.href = mailto_prefix + ar_emails[i]
+						})
+					}
+
+					// modal. create new modal with the email buttons
+						ui.attach_to_modal({
+							header	: 'emails limitation',
+							body	: body,
+							footer	: null,
+							size	: 'small'
+						})
+
+				}else{
+					window.location.href = mailto_prefix + ar_emails[0]
+				}
 			})
 		}
 

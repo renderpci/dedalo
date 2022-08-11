@@ -5,6 +5,7 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_email} from '../../component_email/js/render_edit_component_email.js'
 	import {render_list_component_email} from '../../component_email/js/render_list_component_email.js'
@@ -128,9 +129,9 @@ component_email.prototype.send_email = function(value) {
 
 
 /**
-* SEND MULTIPLE EMAIL CALCULATION
+* GET_AR_EMAILS
 */
-component_email.prototype.get_multiple_mails = function(component_obj) {
+component_email.prototype.get_ar_emails = async function() {
 
 	const self = this
 
@@ -140,39 +141,72 @@ component_email.prototype.get_multiple_mails = function(component_obj) {
 	if(builder.model !== 'section' && builder.model !== 'component_portal'){
 		return false
 	}
+	// get the rqo of the builder, it will use to redo the search but only for the email
+	const rqo = structuredClone(builder.rqo)
 
-	const rqo_original = builder.rqo
+	// set the show with email component_data, and reset the limit to get all records searched
+		rqo.show = {}
+		rqo.show.ddo_map =[{
+			tipo: self.tipo,
+			parent: 'self',
+			section_tipo: self.section_tipo
+		}]
 
-		console.log("rqo_original:",rqo_original);
+		rqo.sqo.limit = 0
 
-	return
+	// load data
+		const api_response = await data_manager.request({body:rqo})
 
+	// get the result of the datum
+		const search_datum	= api_response.result
+		const data = search_datum.data.filter(el => el.tipo === self.tipo)
 
+	// check if the data is empty
+		const len = data.length
 
+		if(len <= 0){
+			return false
+		}
+	// set some vars
+		const separator = ';';
+		const emails = []
+		const is_windows = /(Win)/i.test(navigator.platform); //(Mac|iPhone|iPod|iPad)
+		const max_characters = 19 ; //1900 max characters, in win are 2000
 
+		for (let i = len - 1; i >= 0; i--) {
+			const current_data = data[i].value
+			if(current_data.length<=0) {
+				continue
+			}
+			const current_emails = current_data.join(separator)
+			emails.push(current_emails)
+		}
 
+		const full_emails = emails.join(separator)
 
+		function get_ar_emails(emails) {
+			const ar_emails = []
 
+			if(emails.length > max_characters){
+				const truncate_postion = emails.indexOf(separator, max_characters);
+				const part_one = emails.slice(0, truncate_postion);
+				const part_two = emails.slice(truncate_postion + 1);
+				ar_emails.push(part_one)
+				if(part_two.length > max_characters){
+					const result = get_ar_emails(part_two)
+					ar_emails.push(...result)
+				}else{
+					ar_emails.push(part_two)
+				}
+			}
+			return ar_emails
+		}
 
+		const ar_emails = is_windows
+			? get_ar_emails(full_emails)
+			: [full_emails]
 
-
-
-
-
-	/** TODO
-	*   Not working currently. Adapt to version 6 and call it where/when it is needed.
-	*/
-	let multiple_data_tipo 	= component_obj.dataset.multiple_data_tipo
-	let wrap_calculation 	= document.querySelector(".wrap_component[data-tipo="+multiple_data_tipo+"]")
-
-	// refresh_dato promise
-	component_calculation.refresh_dato(wrap_calculation).then(function(response){
-
-		const emails = response.toString()
-
-		//let mail_body = document.createElement( 'html' );
-		window.location.href = "mailto:?bcc=" + emails ; //+ "&body=" +mail_body
-	});
-}//end get_multiple_mails
+	return ar_emails
+}//end get_ar_emails
 
 
