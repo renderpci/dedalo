@@ -298,10 +298,11 @@ const get_buttons = (self) => {
 						text_node		: get_label.email_limit_explanation,
 						parent			: body
 					})
-					// create the button to open the email app and create the mail with the addresses
+					// create the mail with the addresses and create the buttons to open the email app
 					for (let i = 0; i < ar_emails.length; i++) {
 
 						const current_emails = ar_emails[i]
+						// find the separator to count the total of emails for every chunk of emails.
 						const regex = /;/g;
 						const search_number_of_email =  current_emails.match(regex) || []
 						const number_of_email = search_number_of_email.length > 0
@@ -309,7 +310,7 @@ const get_buttons = (self) => {
 							: 1
 						const buton_option = ui.create_dom_element({
 							element_type	: 'button',
-							class_name		: 'user_option',
+							class_name		: 'warning',
 							inner_html		: (get_label.email || 'email') + ': ' + number_of_email,
 							parent			: body
 						})

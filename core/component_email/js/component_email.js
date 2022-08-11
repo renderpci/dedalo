@@ -172,42 +172,52 @@ component_email.prototype.get_ar_emails = async function() {
 		const emails = []
 		const is_windows = /(Mac)/i.test(navigator.platform); //(Mac|iPhone|iPod|iPad)
 		const max_characters = 30 ; //1900 max characters, in win are 2000
-
+		// check the data and remove the empty values
 		for (let i = len - 1; i >= 0; i--) {
 			const current_data = data[i].value
 			if(current_data.length<=0) {
 				continue
 			}
+			// join the emails with the separator to create a string with all values
+			// every value can handle more than 1 email, here join only the values of 1 record and add to emails array
 			const current_emails = current_data.join(separator)
 			emails.push(current_emails)
 		}
-
+		// join all emails with the separator to create a full string with all emails
 		const full_emails = emails.join(separator)
 
+		// truncate the full email string into arrays strings with the limit of characters
 		function get_ar_emails(emails) {
 			const ar_emails = []
-
+			// id the length is longer than the max_character proceed else add the string to the array.
 			if(emails.length > max_characters){
-
 				const truncate_postion = emails.indexOf(separator, max_characters);
+				// final strings could be a bit longer the max_characters and indexOf can not find the separator, in these cases the string will be correct.
 				if(truncate_postion === -1){
 					ar_emails.push(emails)
 				}else{
+					// create the part_one and the part_two of the emails breaking by the separator more close to the max_characters
+					// the part_one will be correct, but the part_two could be longer than the max_characters and need to be processed again.
 					const part_one = emails.slice(0, truncate_postion);
 					const part_two = emails.slice(truncate_postion + 1);
 					ar_emails.push(part_one)
+					// check if the part_two is longer to be processed, else the part two will be the final string
 					if(part_two.length > max_characters){
+						// recursion
 						const result = get_ar_emails(part_two)
 						ar_emails.push(...result)
 					}else{
 						ar_emails.push(part_two)
-					}
-				}
+					}// end if(part_two.length > max_characters)
+				}//end if(truncate_postion === -1)
 
-			}
+			}else{
+				ar_emails.push(emails)
+			}//end if(emails.length > max_characters)
 			return ar_emails
-		}
+		}// end get_ar_emails
 
+		// build the final array checking if the client SO is windows (it has a limitation of characters), else pass the full string.
 		const ar_emails = is_windows
 			? get_ar_emails(full_emails)
 			: [full_emails]
