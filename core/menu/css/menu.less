@@ -38,6 +38,20 @@
 	line-height: 1.2em;
 	z-index: 3;
 
+	&.container_placeholder {
+		// height: 29.313px;
+		// &.is_global_admin, &.is_root {
+			height: 56.625px;
+		// }
+		display: flex;
+		align-items: center;
+
+		>.spinner {
+			top: 21%;
+			left: 0.75rem;
+		}
+	}
+
 	&:before {
 		content : ' ';
 		position: absolute;

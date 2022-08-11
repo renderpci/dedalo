@@ -6,77 +6,66 @@
 .component_info {
 
 	>.content_data {
+		display: contents;
 
 		// ul
 		>.inputs_container {
 			display: contents;
 
-			>li {
+			// >li {
 
-			}
+			// }
 		}//end .inputs_container
 
-		// generic wrapper_widget base style. Override on each widget if need
-		.wrapper_widget {
-			font-size: 0.86rem;
-
-			// li
-			.widget_item {
-				padding: 0;
-
-				>div {
-					padding: 0.20rem;
-					// background-color: #f0f0f0;
-					// border-right: 1px solid #c0c0c0;
-					flex: 1 1 100%;
-
-					&:last-of-type {
-					  border: none;
-					}
-
-					>.label, >.value {
-						padding: 0.25em;
-					}
-
-					>.label {
-						// font-weight: 400;
-						white-space: nowrap;
-						overflow: hidden;
-						text-overflow: ellipsis;
-					}
-					>.value {
-						padding-left: 0;
-					}
-				}
-			}
-
-			.values_container > .widget_item {
-
-				label {
-					// &.before
-					padding-right: 0.5em;
-				}
-				.value {
-
-				}
-			}
-
-			&.state {
-				li.state {
-					display: grid;
-					grid-template-columns: 1fr 1fr 1fr;
-
-					>div {
-						display: contents;
-
-						.detail {
-							display: none;
-						}
-					}
-				}
-			}
-		}//end .wrapper_widget
-
 	}//end >.content_data
+
+	// generic wrapper_widget base style. Override on each widget if need
+	// (!) Don't place inside .content_data to prevent overwrite specific widget styles
+	.wrapper_widget {
+		font-size: 0.86rem;
+		width: 100%;
+
+		// li
+		.widget_item {
+			padding: 0;
+
+			>div {
+				padding: 0.20rem;
+				// background-color: #f0f0f0;
+				// border-right: 1px solid #c0c0c0;
+				flex: 1 1 100%;
+
+				&:last-of-type {
+				  border: none;
+				}
+
+				>.label, >.value {
+					padding: 0.25em;
+				}
+
+				>.label {
+					// font-weight: 400;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+				>.value {
+					padding-left: 0;
+				}
+			}
+		}
+
+		.values_container > .widget_item {
+
+			label {
+				// &.before
+				padding-right: 0.5em;
+			}
+			.value {
+
+			}
+		}
+
+	}//end .wrapper_widget
 
 }//end .component_info
