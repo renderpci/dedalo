@@ -360,13 +360,14 @@ page.prototype.build = async function() {
 
 /**
 * ADD_EVENTS
+* Set page common events like 'keydown'
 */
 page.prototype.add_events = function() {
 
 	const self = this
 
 	// keydown events
-		document.addEventListener("keydown", function(evt){
+		document.addEventListener('keydown', function(evt){
 			// console.log("paget keydown evt:", evt.key, evt);
 
 			switch(true) {
@@ -416,6 +417,7 @@ page.prototype.add_events = function() {
 					break;
 			}//end switch
 		})//end keydown event
+
 
 	return true
 }//end add_events
