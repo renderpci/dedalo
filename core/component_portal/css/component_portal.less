@@ -10,44 +10,60 @@
 		// background-color: #8ef9e5;
 
 		>.paginator_container {
-			right: 0;
-			top: 0;
-			width: auto;
 			position: absolute;
+			right: 0px;
+			top: 0px;
+			width: auto;
 			padding-right: 0.5rem;
 		}
 
 		>.list_body {
 			min-height: @content_data_min_height;
 
-			.drag{
-				z-index: 2;
-				width: 100%;
-				height: 30%;
-				background-image: url(../../themes/default/icons/drag.svg);
-				background-repeat: no-repeat;
-				background-position: center;
-				opacity: 0.1;
+			// icon drag
+			.drag {
 
-				&:hover{
-					opacity: 0.3;
-				}
+				&.icon {
+					// @see list.less for generic style
+					display: flex;
+					width: 100%;
+					margin: 0px;
+					padding: 0.5em;
+					background-image: url('../../themes/default/icons/drag.svg');
+					background-position: 85%; // right 0.36rem top 0px;
+					background-repeat: no-repeat;
+					background-size: 22px 22px;
+					height: auto;
+					min-height: 2rem;
+					min-width: 2rem;
+					opacity: 0.1;
+					// width: 1.5rem;
+					cursor: move;
+					z-index: 2;
 
-				&.draging{
-					background-position: left;
+					&:hover {
+						opacity: 0.3;
+					}
+
+					// &.draging {
+						// background-position: left;
+					// }
 				}
 
 			}
-			.drag_section_id{
+
+			.drag_section_id {
+				// position: absolute;
+				// height: 25px;
 				width: 100%;
-				position: absolute;
-				height: 25px;
 				text-align: left;
 				color: black;
-				font-size: 1.4em;
-				margin-left: 1.2em;
+				font-size: 1.3em;
+				padding-left: 2px;
+				// margin-left: 1.2em;
 			}
-			.drop{
+
+			.drop {
 				z-index: 1;
 				display: block;
 				position: absolute;
@@ -55,13 +71,14 @@
 				// width: 100%;
 				// height: 100%;
 				// left: 100px;
-				&.dragover{
+				&.dragover {
 					background-color: #ffffff8c;
 					border-top: 2px dotted #ff8a00;
 				}
 			}
-			.draggable{
-				&.dragover{
+
+			.draggable {
+				&.dragover {
 					background-color: #ffffff;
 					border-top: 2px dotted #ff8a00;
 					opacity: 0.5;
@@ -71,8 +88,9 @@
 
 		>.content_data {
 			// flex-wrap: wrap !important;
-			overflow-x: auto;
 			min-height: @content_data_min_height;
+			overflow-x: auto;
+
 
 			ul {
 				// background-color: #55f550;
@@ -87,15 +105,20 @@
 					align-items: center;
 				}
 			}
-			ul.references {
+
+			// ul
+			.references {
 				// background-color: #83e1ee;
 				margin-top: 0.75em;
+
 				>* {
 					width: 100%;
 				}
+
 				>div {
 					margin-bottom: 0.5em;
 				}
+
 				>li {
 					padding-left: 2em;
 				}

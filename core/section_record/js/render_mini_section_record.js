@@ -186,12 +186,12 @@ const build_id_column = function(self) {
 
 		// button edit (pen)
 			if (permissions>0) {
-				const edit_button = ui.create_dom_element({
+				const button_edit = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button edit',
 					parent			: id_column
 				})
-				edit_button.addEventListener('click', function(){
+				button_edit.addEventListener('click', function(){
 					// edit_record(this, self)
 
 					// rqo

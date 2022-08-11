@@ -108,13 +108,13 @@ export const render_column_id = function(options){
 
 	const fragment = new DocumentFragment()
 
-	// button link. component portal caller (link)
-		const edit_button = ui.create_dom_element({
+	// button_edit. component portal caller (link)
+		const button_edit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'edit_button',
+			class_name		: 'button_edit',
 			parent			: fragment
 		})
-		edit_button.addEventListener("click", function(){
+		button_edit.addEventListener('click', function(){
 			// user_navigation event
 				const user_navigation_rqo = {
 					caller_id	: self.id,
@@ -138,39 +138,47 @@ export const render_column_id = function(options){
 				}
 				event_manager.publish('user_navigation', user_navigation_rqo)
 
-			// edit_button_click event. Subscribed to close current modal if exists (mosaic view case)
-				event_manager.publish('edit_button_click', this)
+			// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
+				event_manager.publish('button_edit_click', this)
 		})
 
-	// section_id
+		// section_id
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'section_id',
 			text_content	: section_id,
-			parent			: edit_button
+			parent			: button_edit
 		})
-
-	// edit icon
+		// edit icon
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button edit icon',
-			parent			: edit_button
+			parent			: button_edit
 		})
+
+
 
 	// drag and drop
 		const drag_node = ui.create_dom_element({
-			element_type	: 'span',
+			element_type	: 'div',
 			class_name		: 'drag icon',
 			parent			: fragment
 		})
 
 		// drag_id
-			const drag_id = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'drag_section_id hide',
-				text_content	: section_id,
-				parent			: drag_node
-			})
+		const drag_id = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'drag_section_id hide',
+			text_content	: section_id,
+			parent			: drag_node
+		})
+
+		// drag_icon
+		// const drag_icon = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'drag_icon',
+		// 	parent			: drag_node
+		// })
 
 		// drop
 		const drop_node = ui.create_dom_element({
@@ -178,14 +186,13 @@ export const render_column_id = function(options){
 			class_name		: 'drop hide',
 			parent			: fragment
 		})
-		drag_node.draggable		= true
 
+		drag_node.draggable	= true
 		drag_node.addEventListener('dragstart',function(e){on_dragstart(options, this, e)})
 		drop_node.addEventListener('dragover',function(e){on_dragover(this, e)})
 		drop_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
 		drag_node.addEventListener('dragend',function(e){on_dragend(this, e)})
 		drop_node.addEventListener('drop',function(e){on_drop(options, this, e)})
-
 		drag_node.addEventListener('dblclick',function(e){
 
 			// header
@@ -201,10 +208,10 @@ export const render_column_id = function(options){
 				})
 
 			// body
-			const body = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'sort_order content body'
-			})
+				const body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'sort_order content body'
+				})
 				const target_key_input = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'number',
@@ -212,34 +219,34 @@ export const render_column_id = function(options){
 					class_name		: 'target_key',
 					parent			: body
 				})
-
 				const button_ok = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'button_sort_order success',
-					text_content 	: 'Ok',
+					text_content 	: 'OK',
 					parent			: body
 				})
 
 			// modal
-			const modal = ui.attach_to_modal({
-				header	: header,
-				body	: body,
-				footer	: null,
-				size	: 'small' // string size big|normal|small
-			})
-			// set the input field active
-			target_key_input.focus()
-			// add events to modal options
-			target_key_input.addEventListener('keyup',function(evt){
-				switch(true) {
-					// Enter
-					case evt.code === 'Enter' || evt.code === 'NumpadEnter':
-						change_order_modal()
-					break;
-				}
-			})
-			// user click in the buton
-			button_ok.addEventListener('click',function(evt){
+				const modal = ui.attach_to_modal({
+					header	: header,
+					body	: body,
+					footer	: null,
+					size	: 'small' // string size big|normal|small
+				})
+				// set the input field active
+				target_key_input.focus()
+				// add events to modal options
+				target_key_input.addEventListener('keyup',function(evt){
+					switch(true) {
+						// Enter
+						case evt.code === 'Enter' || evt.code === 'NumpadEnter':
+							change_order_modal()
+						break;
+					}
+				})
+
+			// button_ok. user click in the button
+			button_ok.addEventListener('click',function(){
 				change_order_modal()
 			})
 			// CHANGE_ORDER_MODAL
