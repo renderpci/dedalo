@@ -2433,8 +2433,8 @@ export const ui = {
 				const id			= column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
 				const header_item	= ui.create_dom_element({
 					element_type	: 'div',
-					id				: id,
-					class_name		: 'head_column'
+					// id			: id,
+					class_name		: 'head_column ' + id
 				})
 				// item_text
 				ui.create_dom_element({
@@ -2473,8 +2473,8 @@ export const ui = {
 						const id				= current_column.id //component.tipo + '_' + component.section_tipo +  '_'+ component.parent
 						const sub_header_item	= ui.create_dom_element({
 							element_type	: 'div',
-							id				: id,
-							class_name		: 'head_column',
+							// id			: id,
+							class_name		: 'head_column '+id,
 							parent			: sub_header
 						})
 						// item_text
