@@ -18,13 +18,18 @@
 			>.widget_item.media_icons {
 				// background-color: #fcefe6;
 				display: flex;
-				align-items: stretch;
 				flex-wrap: nowrap;
+				align-items: stretch;
 				padding: 0.25rem;
-				padding-left: 0rem;
-				padding-right: 0rem;
+				// padding-left: 0rem;
+				// padding-right: 0rem;
 				// color: @color_grey_dark;
 				opacity: 0.6;
+
+				// display: grid;
+				// grid-template-columns: repeat(6, 1fr);
+				// grid-gap: 0.25rem;
+
 
 				>.value {
 					// background-color: #c4dbfd;
@@ -33,6 +38,22 @@
 					padding-left: 2px;
 					padding-right: 2px;
 					line-height: 1rem;
+					flex: 0;
+
+					&.id {
+						flex: 0 0 1.8rem;
+						text-align: end;
+					}
+
+					&.av {
+						padding: 0px;
+						.file_av {
+							position: relative;
+							top: -1px;
+							margin: 0px;
+							padding: 0px;
+						}
+					}
 
 					&.link:hover {
 						opacity: 1 !important;
@@ -41,10 +62,7 @@
 						color: white;
 					}
 
-					.file_av {
-						margin: 0px;
-						padding: 0px;
-					}
+
 				}
 			}
 		}//end .values_container
