@@ -282,13 +282,13 @@ render_edit_view_line.render_column_id = function(options){
 
 	const fragment = new DocumentFragment()
 
-	// edit_button
-		const edit_button = ui.create_dom_element({
+	// button_edit
+		const button_edit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'edit_button',
+			class_name		: 'button_edit',
 			parent			: fragment
 		})
-		edit_button.addEventListener("click", function(){
+		button_edit.addEventListener("click", function(){
 			const user_navigation_rqo = {
 				caller_id	: self.id,
 				source		: {
@@ -316,7 +316,7 @@ render_edit_view_line.render_column_id = function(options){
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button edit icon',
-			parent			: edit_button
+			parent			: button_edit
 		})
 
 
