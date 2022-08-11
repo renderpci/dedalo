@@ -13,27 +13,26 @@
 		-webkit-mask-position: center;
 		mask-position: center;
 
-		background-color: #c9c9c9;
-		width: 1.2em;
-		height: 1.2em;
+		background-color: lighten(@color_grey_dark, 10%);
+		width: 1.5rem;
+		height: 1.5rem;
+		margin: 0.25rem;
+		margin-right: 0;
+		cursor: help;
 
 		&.digitization {
-			// -webkit-mask-image: url('../img/di.svg');
 			-webkit-mask-image: url('../../widgets/state/img/di.svg');
 		}
 
 		&.transcription {
-			// -webkit-mask-image: url('../img/tr.svg');
 			-webkit-mask-image: url('../../widgets/state/img/tr.svg');
 		}
 
 		&.indexation {
-			// -webkit-mask-image: url('../img/in.svg');
 			-webkit-mask-image: url('../../widgets/state/img/in.svg');
 		}
 
 		&.translation {
-			// -webkit-mask-image: url('../img/tl.svg');
 			-webkit-mask-image: url('../../widgets/state/img/tl.svg');
 		}
 	}//end .state_icon
