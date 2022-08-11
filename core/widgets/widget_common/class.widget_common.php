@@ -43,14 +43,14 @@ class widget_common {
 	*		path			: string, with the path to the class of the widget,
 	*		ipo				: Input-Process-Output; array with objects with the config defined in the ontology
 	*		section_tipo 	: string, $tipo
-	*		section_id 		: int in string format || null (for list mode)
+	*		section_id 		: int in string format || null (for list mode)
 	* 		lang			: string
 	* }
 	*/
 	public static function get_instance(object $options) : object {
 
-		$widget_name = $options->widget_name;
-		$path = $options->path;
+		$widget_name	= $options->widget_name;
+		$path			= $options->path;
 
 		include_once( DEDALO_WIDGETS_PATH . $path .'/class.'. $widget_name.'.php');
 
@@ -62,5 +62,3 @@ class widget_common {
 
 
 }//end class widget_common
-
-
