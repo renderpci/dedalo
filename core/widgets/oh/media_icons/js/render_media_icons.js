@@ -96,11 +96,19 @@ const get_content_data_edit = async function(self) {
 	// values
 		const ipo			= self.ipo
 		const ipo_length	= ipo.length
+		const value			= self.value
+		const value_length	= value.length
+		for (let i = 0; i < value_length; i++) {
 
-		for (let i = 0; i < ipo_length; i++) {
-			const current_ipo	= ipo[i]
-			const data			= self.value.filter(item => item.key===i)
-			get_value_element(i, data , values_container, self, current_ipo)
+			const data_item = value[i]
+
+			for (let i = 0; i < ipo_length; i++) {
+
+				const current_ipo = ipo[i]
+
+				const value_element_node = get_value_element(i, data_item, self, current_ipo)
+				values_container.appendChild(value_element_node)
+			}
 		}
 
 	// content_data
@@ -119,25 +127,19 @@ const get_content_data_edit = async function(self) {
 * GET_VALUE_ELEMENT
 * @return DOM node li
 */
-const get_value_element = (i, data, values_container, self, current_ipo) => {
+const get_value_element = (i, data, self, current_ipo) => {
 
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'widget_item media_icons',
-			parent			: values_container
+			class_name		: 'widget_item media_icons'
 		})
 
 	// column_id
-		// const column_id = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	parent			: li
-		// })
-		// value
-		const data_id = data.find(item => item.id==='id')
+		const data_id = data.id // find(item => item.id==='id')
 		const column_id_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value link',
+			class_name		: 'value id link',
 			inner_html		: data_id.value,
 			parent			: li
 		})
@@ -157,7 +159,7 @@ const get_value_element = (i, data, values_container, self, current_ipo) => {
 	// icon media
 		const icon_media_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value link',
+			class_name		: 'value av link',
 			parent			: li
 		})
 		ui.create_dom_element({
@@ -169,7 +171,7 @@ const get_value_element = (i, data, values_container, self, current_ipo) => {
 			e.stopPropagation();
 
 			const ipo_input_paths	= current_ipo.input.paths[0][0];
-			const id_el				= data.find(el => el.id==='id')
+			const id_el				= data.id // find(el => el.id==='id')
 
 			// open a new window
 				const url_vars = {
@@ -185,10 +187,10 @@ const get_value_element = (i, data, values_container, self, current_ipo) => {
 		})
 
 	// transcription
-		const data_transcription = data.find(item => item.id==='transcription')
+		const data_transcription = data.transcription // find(item => item.id==='transcription')
 		const transcription_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value link',
+			class_name		: 'value tr link',
 			inner_html		: 'TR ',
 			parent			: li
 		})
@@ -207,10 +209,10 @@ const get_value_element = (i, data, values_container, self, current_ipo) => {
 		}
 
 	// indexation
-		const data_indexation = data.find(item => item.id==='indexation')
+		const data_indexation = data.indexation // find(item => item.id==='indexation')
 		const indexation_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value link',
+			class_name		: 'value in link',
 			inner_html		: 'IN ',
 			parent			: li
 		})
@@ -229,10 +231,10 @@ const get_value_element = (i, data, values_container, self, current_ipo) => {
 		}
 
 	// translation
-		const data_translation = data.find(item => item.id==='translation')
+		const data_translation = data.translation // find(item => item.id==='translation')
 		const translation_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value link',
+			class_name		: 'value tl link',
 			inner_html		: 'TL ',
 			parent			: li
 		})
@@ -256,10 +258,10 @@ const get_value_element = (i, data, values_container, self, current_ipo) => {
 		// 	parent			: li
 		// })
 		// value
-		const data_tc = data.find(item => item.id==='tc')
+		const data_tc = data.tc //find(item => item.id==='tc')
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value',
+			class_name		: 'value tc',
 			inner_html		: data_tc.value,
 			parent			: li
 		})
