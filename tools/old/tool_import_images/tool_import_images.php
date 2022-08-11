@@ -131,7 +131,7 @@
 						# FORM : Carga el script em modo preview
 						case 'form':
 							$body_html='';
-							$context_label = label::get_label('preview_de_importacion');
+							$context_label = label::get_label('import_preview');
 
 							js::$ar_url[] = DEDALO_CORE_URL.'/tools/tool_import_images/js/tool_import_images.js';
 

@@ -278,8 +278,6 @@ export const ui = {
 					// 	const ar_css = ["content_data", type, ...content_data_structure_css]
 					// 	content_data.classList.add(...ar_css)
 					wrapper.appendChild(items.content_data)
-					// set pointer
-					wrapper.content_data = items.content_data
 				}
 
 			// tooltip
