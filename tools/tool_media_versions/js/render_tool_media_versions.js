@@ -287,11 +287,11 @@ const get_line_file_exists = function(ar_quality, self) {
 						parent			: file_info_node
 					})
 					button_file_av.addEventListener('click', async function() {
-						self.node[0].classList.add('loading')
+						self.node.classList.add('loading')
 						// change component av quality and refresh
 						self.main_element.quality = quality
 						await self.main_element.refresh()
-						self.node[0].classList.remove('loading')
+						self.node.classList.remove('loading')
 					})
 				}else{
 					// const extension = file_info.url.split(".").pop();
@@ -567,14 +567,14 @@ const get_line_file_delete = function(ar_quality, self) {
 					parent			: file_info_node
 				})
 				button_file_download.addEventListener('click', async function(){
-					self.node[0].classList.add('loading')
+					self.node.classList.add('loading')
 					// exec delete_file
 					const response = await self.delete_file(quality)
 					if (response===true) {
 						// self.main_element_quality = quality
 						self.refresh()
 					}
-					self.node[0].classList.remove('loading')
+					self.node.classList.remove('loading')
 				})
 			}
 		}
@@ -634,7 +634,7 @@ const get_line_build_version = function(ar_quality, self) {
 			})
 			button_build_version.addEventListener('click', async function() {
 
-				self.node[0].classList.add('loading')
+				self.node.classList.add('loading')
 				// exec build_version
 				const result = await self.build_version(quality)
 				if (result===true) {
@@ -674,7 +674,7 @@ const get_line_build_version = function(ar_quality, self) {
 						})
 					}
 				}
-				self.node[0].classList.remove('loading')
+				self.node.classList.remove('loading')
 			})
 		}//end for (let i = 0; i < ar_quality_length; i++)
 
@@ -728,14 +728,14 @@ const get_line_conform_headers = function(ar_quality, self) {
 					parent			: file_info_node
 				})
 				button_build_version.addEventListener('click', async function(){
-					self.node[0].classList.add('loading')
+					self.node.classList.add('loading')
 					// exec conform_headers
 					const result = await self.conform_headers(quality)
 					if (result===true) {
 						self.main_element_quality = quality
 						self.refresh()
 					}
-					self.node[0].classList.remove('loading')
+					self.node.classList.remove('loading')
 				})
 			}
 		}//end for (let i = 0; i < ar_quality_length; i++)
@@ -791,14 +791,14 @@ const get_line_rotate = function(ar_quality, self) {
 					parent			: file_info_node
 				})
 				button_rotate_left.addEventListener('click', async function(){
-					self.node[0].classList.add('loading')
+					self.node.classList.add('loading')
 					// exec rotate
 					const result = await self.rotate(quality, -90)
 					if (result===true) {
 						self.main_element.quality = quality
 						self.main_element.refresh()
 					}
-					self.node[0].classList.remove('loading')
+					self.node.classList.remove('loading')
 				})
 
 				// right rotate
@@ -808,14 +808,14 @@ const get_line_rotate = function(ar_quality, self) {
 					parent			: file_info_node
 				})
 				button_rotate_right.addEventListener('click', async function(){
-					self.node[0].classList.add('loading')
+					self.node.classList.add('loading')
 					// exec rotate
 					const result = await self.rotate(quality, 90)
 					if (result===true) {
 						self.main_element.quality = quality
 						self.main_element.refresh()
 					}
-					self.node[0].classList.remove('loading')
+					self.node.classList.remove('loading')
 				})
 			}
 		}//end for (let i = 0; i < ar_quality_length; i++)

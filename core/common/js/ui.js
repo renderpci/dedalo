@@ -664,8 +664,8 @@ export const ui = {
 				if (component.id===actived_component.id) {
 
 					// match . Add wrapper css active
-						component.node.map(function(item_node) {
-							item_node.classList.add("active")
+						// component.node.map(function(item_node) {
+							component.node.classList.add("active")
 
 							// event mouse out add to component wrapper
 								// const wrapper = item_node
@@ -676,10 +676,10 @@ export const ui = {
 								// 	// blur the active element by forcing the component to save the modified values and to deactivate it
 								// 	document.activeElement.blur()
 								// }
-						})
+						// })
 
 					// fix nearby inspector overlapping
-						const el = component.node[0]
+						const el = component.node
 						if (el) {
 							const el_rect	= el.getBoundingClientRect();
 							const inspector	= document.getElementById('inspector')
@@ -742,9 +742,8 @@ export const ui = {
 		inactive : (component) => {
 
 			// not match cases. Remove wrapper css active if exists
-				component.node.map(function(item_node) {
-					item_node.classList.remove("active")
-				})
+				component.node.classList.remove("active")
+
 
 			// service autocomplete remove if active
 				if(component.autocomplete_active===true){
@@ -843,32 +842,29 @@ export const ui = {
 			return new Promise(function(resolve){
 
 				// remove previous save_success classes
-					self.node.map(item => {
-						if (item.classList.contains("save_success")) {
-							item.classList.remove("save_success")
-						}
-					})
+					if (self.node.classList.contains("save_success")) {
+						self.node.classList.remove("save_success")
+					}
+
 
 				setTimeout(()=>{
 
 					// success. add save_success class to component wrappers (green line animation)
-						self.node.map(item => {
-							item.classList.add("save_success")
-						})
+						self.node.classList.add("save_success")
+
 
 					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
 						setTimeout(()=>{
-							self.node.map(item => {
-								// item.classList.remove("save_success")
-								// allow restart animation. Not set state pause before animation ends (2 secs)
-								item.style.animationPlayState = "paused";
-								item.style.webkitAnimationPlayState = "paused";
 
-								// remove animation style
-								if (item.classList.contains("save_success")) {
-									item.classList.remove("save_success")
-								}
-							})
+							// item.classList.remove("save_success")
+							// allow restart animation. Not set state pause before animation ends (2 secs)
+							self.node.style.animationPlayState = "paused";
+							self.node.style.webkitAnimationPlayState = "paused";
+
+							// remove animation style
+							if (self.node.classList.contains("save_success")) {
+								self.node.classList.remove("save_success")
+							}
 
 							resolve(true)
 						}, 2000)
@@ -1581,30 +1577,6 @@ export const ui = {
 	},//end create_dom_element
 
 
-
-	/**
-	* UPDATE_DOM_NODES
-	*/
-	update_dom_nodes : function(ar_nodes, new_node) {
-
-		const ar_nodes_length = ar_nodes.length
-		// replace content data node in each element dom node
-		for (let i = 0, l = ar_nodes_length; i < l; i++) {
-
-			const current_dom_node = ar_nodes[i]
-
-			// move node on first appearance and move a clone in next
-			const current_new_node = (i===0) ? new_node : new_node.cloneNode(true)
-
-			// replace the node with the new render
-			current_dom_node.parentNode.replaceChild(current_new_node, current_dom_node)
-		}
-
-		return true
-	},//end update_dom_nodes
-
-
-
 	/**
 	* INSIDE_TOOL
 	* Check if instance is inside tool
@@ -1675,15 +1647,15 @@ export const ui = {
 
 		if (target_instance.status==="rendered") {
 
-			if (typeof target_instance.node[0]==="undefined") {
+			if (target_instance.node===null) {
 				console.error("Error. Instance node not found:", target_instance);
 			}
 
 			// instance node already exists case
-			const node_length = target_instance.node.length;
-			for (let i = 0; i < node_length; i++) {
+			// const node_length = target_instance.node.length;
+			// for (let i = 0; i < node_length; i++) {
 
-				const target_container	= target_instance.node[i].querySelector(container_selector)
+				const target_container	= target_instance.node.querySelector(container_selector)
 				const target_node		= target_container.querySelector(target_selector)
 				if (!target_node) {
 					// first set inside container. Append
@@ -1696,7 +1668,7 @@ export const ui = {
 						target_node.parentNode.replaceChild(source_node, target_node)
 					}
 				}
-			}
+			// }
 		}else{
 
 			// target_instance node not ready case
@@ -2868,21 +2840,18 @@ export const ui = {
 			const instance	= options.instance // object instance
 
 		// add/remove wrapper class
-			const nodes_length = instance.node.length
-			for (let i = 0; i < nodes_length; i++) {
+			const wrapper_node = instance.node
 
-				const wrapper_node = instance.node[i]
-
-				if (hilite===true) {
-					if (!wrapper_node.classList.contains('hilite_element')) {
-						wrapper_node.classList.add('hilite_element')
-					}
-				}else{
-					if (wrapper_node.classList.contains('hilite_element')) {
-						wrapper_node.classList.remove('hilite_element')
-					}
+			if (hilite===true) {
+				if (!wrapper_node.classList.contains('hilite_element')) {
+					wrapper_node.classList.add('hilite_element')
+				}
+			}else{
+				if (wrapper_node.classList.contains('hilite_element')) {
+					wrapper_node.classList.remove('hilite_element')
 				}
 			}
+
 
 		return true
 	}//end hilite

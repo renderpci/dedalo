@@ -1813,7 +1813,7 @@ export const ts_object = new function() {
 			if (self.editing_component_instance && self.editing_component_instance.tipo===tipo && self.editing_component_instance.section_id===section_id) {
 
 				current_component	= self.editing_component_instance
-				component_node		= current_component.node[0]
+				component_node		= current_component.node
 
 			}else{
 

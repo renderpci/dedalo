@@ -21,7 +21,7 @@ export const state = function(){
 
 	this.value
 
-	this.node = []
+	this.node = null
 
 	this.status
 
@@ -60,7 +60,7 @@ state.prototype.render = async function(options={render_level:'full'}) {
 		render_level : render_level
 	})
 
-	self.node.push(node)
+	self.node = node
 
 	return node
 }//end render

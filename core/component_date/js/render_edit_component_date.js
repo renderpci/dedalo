@@ -53,7 +53,7 @@ render_edit_component_date.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-	// set pointer
+	// set pointer to content_data
 		wrapper.content_data = content_data
 		self.wrapper = wrapper
 
@@ -113,6 +113,7 @@ const get_content_data_edit = function(self) {
 		for (let i = 0; i < value_length; i++) {
 			const input_element_edit = get_input_element_edit(i, inputs_value[i], self)
 			inputs_container.appendChild(input_element_edit)
+			inputs_container[i] = input_element_edit
 		}
 
 	// content_data

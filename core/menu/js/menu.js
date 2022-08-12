@@ -61,7 +61,7 @@ menu.prototype.init = function(options) {
 
 	self.tipo			= options.tipo
 	self.model			= options.model
-	self.node			= []
+	self.node			= null
 	self.li_nodes		= []
 	self.ul_nodes		= []
 	self.ar_instances	= []

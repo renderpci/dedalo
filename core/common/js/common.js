@@ -53,7 +53,7 @@ common.prototype.init = async function(options) {
 		self.rqo			= options.rqo
 
 	// DOM
-		self.node			= [] // array of component nodes places in light DOM
+		self.node			= null // component node place in light DOM
 
 		self.events_tokens	= [] // array of events of current component
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
@@ -168,13 +168,13 @@ common.prototype.render = async function (options={}) {
 			case 'rendered':
 				// if render mode is equal than current already rendered node, return node 0
 				if (self.render_level===render_level) {
-					if (self.node[0]) {
+					if (self.node) {
 						console.warn(`Render unexpected status. Returning already rendered node 0. Expected status is 'builded' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
-						return self.node[0]
+						return self.node
 					}else{
 						console.warn(`Render unexpected status. Node already rendered node not found but status is rendered:`, self.node, self.id);
 					}
-					// return self.node[0]
+					// return self.node
 				}
 				break;
 
@@ -233,12 +233,11 @@ common.prototype.render = async function (options={}) {
 						// const dom_select_list_body	= await [...wrapper_children].find(el => el.classList.contains('list_body'))
 						// console.log("---- dom_select_list_body:",dom_select_list_body);
 
-					// replace each instance node
-						const nodes_length = self.node.length
-						for (let i = nodes_length - 1; i >= 0; i--) {
-						// for (let i = 0; i < nodes_length; i++) {
+					// replace instance node
+						// const nodes_length = self.node.length
+						// for (let i = nodes_length - 1; i >= 0; i--) {
 
-							const wrapper = self.node[i]
+							const wrapper = self.node
 							// console.log("result_node wrapper:", i, wrapper, wrapper);
 
 							const wrapper_children		= wrapper ? wrapper.children : [];
@@ -260,7 +259,7 @@ common.prototype.render = async function (options={}) {
 								// const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true) (!) Removed 25-03-2020
 								// Note : In some context like dd-tiny, it is necessary to generate a fresh DOM node for each
 								// component node like text_area in a time machine refresh scenario
-								const new_content_data_node = (i===0)
+								const new_content_data_node = node
 									? node // use already calculated node
 									: await self[render_mode]({render_level : render_level}); // content
 
@@ -281,16 +280,16 @@ common.prototype.render = async function (options={}) {
 									// ok found case
 									base_container.replaceChild(new_content_data_node, old_content_data_node)
 								}
-						}//end for (let i = nodes_length - 1; i >= 0; i--)
+						// }//end for (let i = nodes_length - 1; i >= 0; i--)
 
 					// return the first edited node
-					result = self.node[0]
+					result = self.node
 					break;
 
 				case 'full':
 				default:
 					// set
-						self.node.push(node)
+						self.node = node
 
 					// return the new created node
 					result = node
@@ -426,7 +425,6 @@ common.prototype.refresh = async function(options={}) {
 common.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
 	const self = this
-
 	const result = {}
 
 	// destroy all instances associated
@@ -553,15 +551,18 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 				// remove_dom optional
 					if (remove_dom===true) {
-						const remove_nodes = async () => {
-							const node_length = self.node.length
-							//for (let i = 0, l = node_length; i < l; i++) {
-							for (let i = node_length - 1; i >= 0; i--) {
-								const current_node = self.node[i]
-								current_node.remove()
+						const remove_node = async () => {
+							if(self.node){
+								self.node.remove()
 							}
+							
+							// const node_length = self.node.length
+							// for (let i = node_length - 1; i >= 0; i--) {
+							// 	const current_node = self.node[i]
+							// 	current_node.remove()
+							// }
 						}
-						await remove_nodes()
+						await remove_node()
 					}
 
 				// delete_instance
@@ -590,18 +591,25 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 	// remove_dom optional
 		if (remove_dom===true && delete_self===false) {
-			const remove_nodes = async () => {
-				const node_length = self.node.length
-				//for (let i = 0, l = node_length; i < l; i++) {
-				for (let i = node_length - 1; i >= 0; i--) {
-					const current_node = self.node[i]
-					while (current_node.firstChild) {
-						current_node.removeChild(current_node.firstChild);
+			const remove_node = async () => {
+
+				const node = self.node
+					while (node.firstChild) {
+						node.removeChild(node.firstChild);
 					}
-       				current_node.remove()
-				}
+       			node.remove()
+
+				// const node_length = self.node.length
+				// //for (let i = 0, l = node_length; i < l; i++) {
+				// for (let i = node_length - 1; i >= 0; i--) {
+				// 	const current_node = self.node[i]
+				// 	while (current_node.firstChild) {
+				// 		current_node.removeChild(current_node.firstChild);
+				// 	}
+				//		current_node.remove()
+				// }
 			}
-			await remove_nodes()
+			await remove_node()
 		}
 
 	// status update

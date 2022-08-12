@@ -133,7 +133,7 @@ const get_content_data = async function(self) {
 					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model)
 					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model && el.destroyable===false)
 					if (non_destroyable_instance) {
-						content_data.appendChild(non_destroyable_instance.node[0])
+						content_data.appendChild(non_destroyable_instance.node)
 						continue;
 					}
 

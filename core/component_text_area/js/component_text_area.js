@@ -158,7 +158,7 @@ component_text_area.prototype.init = async function(options) {
 				// short vars
 					const key					= 0; // key (only one editor is available but component could support multiple)
 					const current_text_editor	= self.text_editor[key]
-					const inputs_container		= self.node[key].querySelector('.inputs_container'); // (first ul)
+					const inputs_container		= self.node.querySelector('.inputs_container'); // (first ul)
 					const component_container	= inputs_container.querySelector('li'); // li (first li)
 					const button				= component_container.querySelector(".create_fragment") // could exists or not
 					// console.log("selection.length:",selection.length);

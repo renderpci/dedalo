@@ -58,7 +58,7 @@ area_common.prototype.init = async function(options) {
 	self.lang 				= options.lang
 
 	// DOM
-	self.node 				= []
+	self.node 				= null
 
 	self.parent 			= options.parent
 

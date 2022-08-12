@@ -485,9 +485,8 @@ component_portal.prototype.add_value = async function(value) {
 			case 'search' :
 				// publish change. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
-				self.node.map(function(item_node) {
-					item_node.classList.remove("active")
-				})
+				self.node.classList.remove("active")
+
 				break;
 			default:
 
@@ -706,8 +705,8 @@ component_portal.prototype.navigate = async function(callback) {
 		}
 
 	// container
-		const container = self.node[0].querySelector('.list_body') // view_table
-					   || self.node[0].querySelector('.content_data') // view_line
+		const container = self.node.querySelector('.list_body') // view_table
+					   || self.node.querySelector('.content_data') // view_line
 
 	// loading
 		container.classList.add('loading')

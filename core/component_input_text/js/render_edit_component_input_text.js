@@ -50,8 +50,6 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 
 	// events
 		add_events(self, wrapper)
-
-
 	return wrapper
 }//end edit
 
@@ -378,7 +376,7 @@ const get_buttons = (self) => {
 					// event_manager.publish('add_element_'+self.id, changed_data)
 					self.refresh()
 					.then(()=>{
-						const input_text = self.node[0].querySelector(`input[data-key="${changed_data.key}"]`)
+						const input_text = self.node.querySelector(`input[data-key="${changed_data.key}"]`)
 						if (input_text) {
 							input_text.focus()
 						}

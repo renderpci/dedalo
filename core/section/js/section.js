@@ -108,7 +108,7 @@ section.prototype.init = async function(options) {
 		self.lang				= options.lang
 
 		// DOM
-		self.node				= []
+		self.node				= null
 
 		self.section_lang		= options.section_lang
 		self.parent				= options.parent
@@ -610,6 +610,8 @@ section.prototype.render = async function(options={}) {
 	// event publish
 		event_manager.publish('render_instance', self)
 
+	// add node to instance
+		self.node = result_node
 
 	return result_node
 }//end render

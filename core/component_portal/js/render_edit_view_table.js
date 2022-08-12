@@ -61,9 +61,7 @@ render_edit_view_table.render = async function(self, options) {
 		if (render_level==='content') {
 			// show header_wrapper_list if is hidden
 				if (ar_section_record.length>0) {
-					self.node.map(el => {
-						el.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
-					})
+					self.node.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
 				}
 			return content_data
 		}
@@ -174,7 +172,6 @@ const get_content_data = async function(self, ar_section_record) {
 						// 	parent			: row_wrapper
 						// })
 						const section_record_node = await section_record.render()
-
 
 					// button_remove
 						// if (self.permissions>1) {

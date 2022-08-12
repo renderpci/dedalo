@@ -58,7 +58,7 @@ component_common.prototype.init = async function(options) {
 		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 
 		// DOM
-		self.node			= [] // array of component nodes places in light DOM
+		self.node			= null // node place in light DOM
 
 		self.events_tokens	= [] // array of events of current component
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
@@ -464,15 +464,14 @@ component_common.prototype.save = async function(changed_data) {
 		}
 
 	// remove previous success/error css class if exists
-		self.node.map(item => {
-			if (item.classList.contains("error")) {
-				item.classList.remove("error")
-			}
-			if (item.classList.contains("save_success")) {
-				item.classList.remove("save_success")
-			}
-			// item.classList.add('loading')
-		})
+		if (self.node.classList.contains("error")) {
+			self.node.classList.remove("error")
+		}
+		if (self.node.classList.contains("save_success")) {
+			self.node.classList.remove("save_success")
+		}
+
+
 
 	// send_data
 		const send_data = async () => {
@@ -540,10 +539,7 @@ component_common.prototype.save = async function(changed_data) {
 			if (result===false) {
 
 				// error case
-
-				self.node.map(item => {
-					item.classList.add("error")
-				})
+				self.node.classList.add("error")
 
 				if (response.error) {
 					console.error(response.error)
@@ -1077,7 +1073,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 	const current_datum			= self.datum
 	const current_section_id	= self.section_id
 	const section_lang			= self.section_lang
-	const ar_node				= self.node
+	const old_node				= self.node
 
 	// new_mode check. When new_mode is undefined, fallback to 'list'. From 'list', change to 'edit_in_list'
 		if(typeof new_mode==='undefined'){
@@ -1111,12 +1107,12 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		await new_instance.build(autoload)
 
 	// render
-		const node = await new_instance.render({
+		const new_node = await new_instance.render({
 			render_level : 'full'
 		})
 
-	// clean and replace old DOM nodes
-		ui.update_dom_nodes(ar_node, node)
+	// replace the node with the new render
+		old_node.parentNode.replaceChild(new_node, old_node)
 
 	// active component at end
 		if (new_mode.indexOf('edit')!==-1) {

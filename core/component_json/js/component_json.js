@@ -154,9 +154,8 @@ component_json.prototype.save_sequence = async function(editor) {
 
 			if (!v) {
 				// styles as error
-					self.node.map(item => {
-						item.classList.add("error")
-					})
+					self.node.classList.add("error")
+
 				alert("Error: component_json. Trying so save non validated json value!");
 				return false
 			}

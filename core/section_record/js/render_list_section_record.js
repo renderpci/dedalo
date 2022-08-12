@@ -99,7 +99,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 						const current_instance = ar_instances[k]
 
 						// already rendered case
-						if (typeof current_instance.node[0]!=='undefined') {
+						if (current_instance.node!==null) {
 							resolve(true)
 						}else{
 							current_instance.render()
@@ -148,7 +148,7 @@ render_list_section_record.prototype.list = async function(options={}) {
 									return new_column_node
 								  })()
 
-							const current_instance_node	= current_instance.node[0]
+							const current_instance_node	= current_instance.node
 							// console.log("// current_instance_node:", i, j, current_instance_node);
 							column_node.appendChild(current_instance_node)
 

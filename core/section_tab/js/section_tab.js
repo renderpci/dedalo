@@ -76,7 +76,7 @@ section_tab.prototype.init = function(options) {
 	self.events_tokens	= []
 	self.ar_instances	= []
 
-	self.node			= []
+	self.node			= null
 
 	self.label			= self.context.label
 

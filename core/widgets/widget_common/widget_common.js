@@ -123,7 +123,7 @@ widget_common.prototype.render = async function(options={}) {
 		render_level : render_level
 	})
 
-	self.node.push(node)
+	self.node = node
 
 	return node
 }//end render
