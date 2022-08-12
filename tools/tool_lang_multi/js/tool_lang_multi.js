@@ -273,7 +273,7 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 	// 				//}
 
 	// 			// reload target lang
-	// 				const target_component_container = self.node[0].querySelector('.target_component_container')
+	// 				const target_component_container = self.node.querySelector('.target_component_container')
 	// 				add_component(self, target_component_container, target_lang)
 
 	// 			// debug

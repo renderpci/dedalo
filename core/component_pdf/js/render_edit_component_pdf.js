@@ -333,8 +333,8 @@ const get_buttons = (self) => {
 		// 	parent			: fragment
 		// })
 		// button_full_screen.addEventListener("mouseup", () =>{
-		// 	self.node[0].classList.toggle('fullscreen')
-		// 	const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
+		// 	self.node.classList.toggle('fullscreen')
+		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
 		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		// })
 

@@ -52,7 +52,7 @@ inspector.prototype.init = async function(options) {
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
 	self.mode			= 'edit'
-	self.node			= []
+	self.node			= null
 	self.caller			= options.caller
 
 	self.events_tokens	= []

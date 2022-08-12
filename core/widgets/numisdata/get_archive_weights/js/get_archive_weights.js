@@ -20,7 +20,7 @@ export const get_archive_weights = function(){
 
 	this.value
 
-	this.node = []
+	this.node = null
 
 	this.events_tokens = []
 
@@ -59,7 +59,7 @@ get_archive_weights.prototype.render = async function(options={render_level:'ful
 		render_level : render_level
 	})
 
-	self.node.push(node)
+	self.node = node
 
 	return node
 }//end render

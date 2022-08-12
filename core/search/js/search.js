@@ -128,7 +128,7 @@ search.prototype.init = async function(options) {
 		self.search_container_selection_presets	= undefined
 		self.wrapper_sections_selector			= undefined
 
-		self.node = []
+		self.node = null
 
 		self.id			= 'search'
 		self.section_id	= 0
@@ -1046,7 +1046,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 			section_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 
 		// paginator_node (could exist or not --area_thesaurus case--)
-			const paginator_node = section_instance?.paginator?.node?.[0] || null
+			const paginator_node = section_instance?.paginator?.node || null
 			if (paginator_node) {
 				paginator_node.classList.add('hide')
 			}

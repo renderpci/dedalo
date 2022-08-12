@@ -73,7 +73,7 @@ service_time_machine.prototype.init = function(options) {
 	self.data			= options.data || {}
 
 	self.type			= 'tm'
-	self.node			= []
+	self.node			= null
 
 	// columns_map
 	self.columns_map	= options.columns_map || []
@@ -186,8 +186,8 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				const fn_paginator_goto = async function(offset) {
 					// loading
 						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
-						const node		= self.node && self.node[0]
-							? self.node[0].querySelector(selector)
+						const node		= self.node
+							? self.node.querySelector(selector)
 							: null
 						if (node) node.classList.add('loading')
 

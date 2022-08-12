@@ -43,7 +43,7 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 		default:
 			return render_edit_view_default.render(self, options)
 	}
-
+	
 	return null
 }//end edit
 

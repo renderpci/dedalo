@@ -151,7 +151,7 @@ tool_common.prototype.init = async function(options) {
 				}
 
 	// set some common vars
-		self.node			= []
+		self.node			= null
 		self.type			= 'tool'
 		self.ar_instances	= []
 		self.events_tokens	= []

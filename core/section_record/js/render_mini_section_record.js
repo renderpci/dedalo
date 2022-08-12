@@ -73,7 +73,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 						const current_instance = ar_instances[k]
 
 						// already rendered case
-						if (typeof current_instance.node[0]!=='undefined') {
+						if (current_instance.node!==null) {
 							resolve(true)
 						}else{
 							current_instance.render()
@@ -118,7 +118,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 									return new_column_node
 								  })()
 
-							const current_instance_node	= current_instance.node[0]
+							const current_instance_node	= current_instance.node
 							column_node.appendChild(current_instance_node)
 
 							if(j === ar_instances_length-1) continue

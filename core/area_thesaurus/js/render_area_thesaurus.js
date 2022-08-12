@@ -68,7 +68,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 				self.ts_object.parse_search_result(data.ts_search.result, null, false)
 				// prevent to recreate content_data again
-				const content_data = self.node[0].querySelector('.content_data.area')
+				const content_data = self.node.querySelector('.content_data.area')
 				return content_data
 
 			}else{

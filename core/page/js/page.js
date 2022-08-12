@@ -68,7 +68,7 @@ page.prototype.init = async function(options) {
 	self.model			= 'page'
 	self.type			= 'page'
 	self.mode			= 'edit' // options.mode 	  // mode like 'section', 'tool', 'thesaurus'...
-	self.node			= []
+	self.node			= null
 	self.ar_instances	= []
 	self.context		= options.context // mixed items types like 'sections', 'tools'..
 	// self.dd_request	= self.context ? self.context.dd_request : []
@@ -113,8 +113,8 @@ page.prototype.init = async function(options) {
 					self.status = 'rendered'
 
 				// loading css add
-					const node = self.node && self.node[0]
-						? self.node[0].querySelector('section') // .content_data.page
+					const node = self.node
+						? self.node.querySelector('section') // .content_data.page
 						: null
 						if (node) { node.classList.add('loading') }
 
@@ -151,7 +151,6 @@ page.prototype.init = async function(options) {
 								self, // object page instance
 								context // object source is used as context
 							)
-
 						// check valid element. Only checks if new source of page element is actually valid for instantiation
 						// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
 							if (!new_page_element_instance) {
@@ -471,8 +470,8 @@ page.prototype.add_events = function() {
 
 /**
 * INSTANTIATE_PAGE_ELEMENT
-* Creates the instance of current element, ussually a section or menu
-* calling instace.get_instance(...). This function only load and init the instance file
+* Creates the instance of current element, usually a section or menu
+* calling instance.get_instance(...). This function only load and init the instance file
 * @param object self (instance)
 * @param object context
 * @return promise current_instance init promise

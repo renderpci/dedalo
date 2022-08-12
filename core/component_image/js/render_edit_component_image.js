@@ -216,8 +216,8 @@ const get_buttons = (self) => {
 			parent			: fragment
 		})
 		button_full_screen.addEventListener("mouseup", () =>{
-			self.node[0].classList.toggle('fullscreen')
-			const fullscreen_state = self.node[0].classList.contains('fullscreen') ? true : false
+			self.node.classList.toggle('fullscreen')
+			const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		})
 
@@ -237,7 +237,7 @@ const get_buttons = (self) => {
 				self.load_vector_editor({load:'full'})
 			}
 			// set wrapper as wide mode (100%)
-				// self.node[0].classList.add('wide')
+				// self.node.classList.add('wide')
 		})
 
 	// svg editor tools

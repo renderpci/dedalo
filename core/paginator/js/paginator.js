@@ -81,7 +81,7 @@ paginator.prototype.init = function(options) {
 		self.mode			= options.mode || options.caller.mode
 		self.caller			= options.caller
 		self.events_tokens	= []
-		self.node			= []
+		self.node			= null
 
 	// serialize the paginator.Create the unique token
 		self.id = 'paginator_'+self.caller.id

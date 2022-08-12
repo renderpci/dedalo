@@ -85,7 +85,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 				const current_instance = ar_instances[i]
 
 				// already rendered case
-				if (current_instance.status==='rendered' && typeof current_instance.node[0]!=='undefined') {
+				if (current_instance.status==='rendered' && current_instance.node!==null) {
 					resolve(true)
 				}else{
 
@@ -115,7 +115,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 			}
 
 			const current_instance		= ar_instances[i]
-			const current_instance_node	= current_instance.node[0] || await current_instance.render()
+			const current_instance_node	= current_instance.node || await current_instance.render()
 
 			// component_filter case . Send to inspector
 				if (current_instance.model==='component_filter') {
@@ -144,7 +144,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 				// if parent_istance exist, go to append the current instance to it.
 				if(typeof parent_instance!=='undefined') {
 
-					const parent_node = parent_instance.node[0] || await parent_instance.render()
+					const parent_node = parent_instance.node || await parent_instance.render()
 					// move the node to his father
 					if (parent_instance.type==='grouper') { //  && self.mode!=='list'
 						// check valid parameters

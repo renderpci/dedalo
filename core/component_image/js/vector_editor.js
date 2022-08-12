@@ -813,7 +813,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				})
 				zoom.addEventListener("dblclick", (e) =>{
 
-					const ratio = self.node[0].classList.contains('fullscreen')
+					const ratio = self.node.classList.contains('fullscreen')
 						? (self.canvas_node.clientHeight  / self.canvas_height) * 0.8
 						: 1
 							console.log("ratio:",ratio);
@@ -854,7 +854,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					parent 			: buttons_container
 				})
 				save.addEventListener("mouseup", (e) =>{
-					self.node[0].classList.remove('fullscreen')
+					self.node.classList.remove('fullscreen')
 					event_manager.publish('full_screen_'+self.id, false)
 					// update the instance with the new layer information, prepared to save
 					self.update_draw_data()

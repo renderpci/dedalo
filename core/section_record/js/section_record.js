@@ -90,7 +90,7 @@ section_record.prototype.init = async function(options) {
 	self.section_id			= options.section_id
 	self.mode				= options.mode
 	self.lang				= options.lang
-	self.node				= []
+	self.node				= null
 	self.columns_map		= options.columns_map
 
 	self.datum				= options.datum

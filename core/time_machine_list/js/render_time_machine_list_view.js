@@ -86,9 +86,6 @@ export const render_time_machine_list_view = async function(self, options) {
 		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.edit`
 		set_element_css(selector, css_object)
 
-		// fix last list_body (for pagination selection)
-		// self.node_body = list_body
-
 	// list_header_node. Create and append if ar_instances is not empty
 		if (ar_section_record.length>0) {
 			const list_header_node = ui.render_list_header(columns_map, self)

@@ -670,7 +670,7 @@ const get_buttons = (self) => {
 			e.stopPropagation()
 			await self.save_changes()
 			button_save.classList.add('hide')
-			const warning_label_text = self.node[0].querySelector('.warning_label_text')
+			const warning_label_text = self.node.querySelector('.warning_label_text')
 			if (warning_label_text) {
 				warning_label_text.remove()
 			}
@@ -680,7 +680,7 @@ const get_buttons = (self) => {
 		)
 		function fn_show_save_button() {
 			button_save.classList.remove('hide')
-			const label = self.node[0].querySelector('.label')
+			const label = self.node.querySelector('.label')
 			if (label && !label.querySelector('.warning_label_text')) {
 				// warning_label_text
 				ui.create_dom_element({
