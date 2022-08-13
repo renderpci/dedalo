@@ -771,6 +771,7 @@ export const ui = {
 		error : (error, component) => {
 
 			if (error) {
+					console.log("ERRROR IN component:------////////-----------------",component);
 				component.classList.add("error")
 
 			}else{

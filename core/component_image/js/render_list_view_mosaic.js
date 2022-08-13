@@ -78,7 +78,6 @@ render_list_view_mosaic.render = function(self, options) {
 
 	// open viewer
 		image.addEventListener('mouseup', function (evt) {
-
 			const file_no_exist = data.datalist.find(item => item.file_exist === false)
 			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
 			// else open the player to show the image

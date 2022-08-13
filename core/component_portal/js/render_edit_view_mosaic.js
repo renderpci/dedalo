@@ -454,7 +454,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 					})
 					// event publish
 					// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
-					button_alt.addEventListener('mouseup', function(e){
+					button_alt_container.addEventListener('mouseup', function(e){
 						e.stopPropagation()
 						const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 						event_manager.publish(event_id, this)
@@ -479,7 +479,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 							}
 
 						// move to the section record
-							caller_node.appendChild(section_record_node)
+							caller_node.prepend(section_record_node)
 							section_record_node.classList.remove('display_none')
 					}
 					const event_id_mouseleave	= `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
