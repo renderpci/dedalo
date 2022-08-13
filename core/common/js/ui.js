@@ -742,8 +742,9 @@ export const ui = {
 		inactive : (component) => {
 
 			// not match cases. Remove wrapper css active if exists
+			if(component.node){
 				component.node.classList.remove("active")
-
+			}
 
 			// service autocomplete remove if active
 				if(component.autocomplete_active===true){
