@@ -196,6 +196,7 @@
 					@bg_color_buttons: rgb(255 255 255 / 70%);
 
 					>.column {
+						z-index: 2;
 						outline: none;
 						padding: 0px;
 						margin: 0px;
@@ -217,14 +218,6 @@
 							background-color: transparent;
 						}
 					}
-
-					// >.column_rsc20 {
-					// 	grid-column-start: 3;
-					// 	// grid-column-end: 4;
-					// 	grid-row-start: 1;
-					// 	// grid-row-end: 3;
-
-					// }
 
 					>.column_section_id {
 						grid-column-start: 1;
@@ -259,6 +252,8 @@
 					}
 
 					>.button_alt_container {
+						cursor: pointer;
+						z-index: 2;
 						grid-column-start: 3;
 						grid-column-end: 4;
 						grid-row-start: 3;
