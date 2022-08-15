@@ -135,7 +135,7 @@ export const ui = {
 			// wrapper
 				const wrapper = ui.create_dom_element({
 					element_type	: 'div',
-					// parent			: fragment
+					// parent		: fragment
 				})
 				// CSS
 					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
@@ -211,6 +211,8 @@ export const ui = {
 				}else if(items.label) {
 					// add custom label
 					wrapper.appendChild(items.label)
+					// set pointer
+					wrapper.label = items.label
 				}else{
 					// default
 					const component_label = ui.create_dom_element({
@@ -218,6 +220,8 @@ export const ui = {
 						inner_html		: label // + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
 					})
 					wrapper.appendChild(component_label)
+					// set pointer
+					wrapper.label = component_label
 					// css
 						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
