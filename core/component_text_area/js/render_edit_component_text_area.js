@@ -11,6 +11,7 @@
 	// import {tr} from '../../common/js/tr.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import * as instances from '../../common/js/instances.js'
+	import {when_in_dom} from '../../common/js/events.js'
 
 
 
@@ -58,8 +59,15 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-		// fix element
-		self.wrapper = wrapper
+		// set pointers
+		wrapper.content_data = content_data
+
+	// fix editor height. This guarantees that content_data grow to the maximum possible height
+		when_in_dom(wrapper, ()=> {
+			const wrapper_height	= wrapper.offsetHeight
+			const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
+			wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
+		})
 
 	// add events
 		add_events(self, wrapper)
@@ -950,22 +958,26 @@ const get_custom_events = (self, i, text_editor) => {
 
 					// iterate susbscriptors responses
 						for (let i = 0; i < susbscriptors_responses_length; i++) {
-							const data_tag 	= susbscriptors_responses[i]
-							const tag_id 	= (!data_tag.tag_id)
+							const data_tag	= susbscriptors_responses[i]
+							const tag_id	= (!data_tag.tag_id)
 								? self.get_last_tag_id(data_tag.type, text_editor) + 1
 								: data_tag.tag_id;
 
 							switch(data_tag.type) {
 								case ('draw'):
 								case ('geo'):
-									render_layer_selector(self, data_tag, tag_id, text_editor)
+									const layer_selector = render_layer_selector(self, data_tag, tag_id, text_editor)
+									// append layer selector to wrapper
+									self.node.appendChild(layer_selector)
 									break;
 								case ('page'):
+									// modal selector
 									render_page_selector(self, data_tag, tag_id, text_editor)
 									break;
 								default:
 									const tag = self.build_view_tag_obj(data_tag, tag_id)
 									text_editor.set_content(tag)
+									break;
 							}// end switch
 						}
 					break;
@@ -1060,7 +1072,7 @@ export const build_node_tag = function(view_data) {
 /**
 * RENDER_LAYER_SELECTOR
 * Used from component_image
-* @return DOM node fragment
+* @return DOM node layer_selector
 */
 const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 
@@ -1068,36 +1080,39 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 
 	const fragment = new DocumentFragment()
 
-	const add_layer = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'button add',
-		parent			: fragment
-	})
-	add_layer.addEventListener("click", (e) =>{
-		e.preventDefault()
+	// add_layer button
+		const add_layer = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button add',
+			parent			: fragment
+		})
+		add_layer.addEventListener("click", (e) =>{
+			e.preventDefault()
 
-		data_tag.data = "["+data_tag.last_layer_id+"]"
-		const tag 	= self.build_view_tag_obj(data_tag, tag_id)
-		text_editor.set_content(tag)
-		layer_selector.remove()
-	})
+			data_tag.data = "["+data_tag.last_layer_id+"]"
+			const tag 	= self.build_view_tag_obj(data_tag, tag_id)
+			text_editor.set_content(tag)
+			layer_selector.remove()
+		})
 
-	const layer_icon = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'layer_icon',
-		parent			: fragment,
-		text_node		: data_tag.type
-	})
+	// layer_icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'layer_icon',
+			parent			: fragment,
+			text_node		: data_tag.type
+		})
 
-	const close = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'button close',
-		parent			: fragment
-	})
-	close.addEventListener("click", (e) =>{
-		e.preventDefault()
-		layer_selector.remove()
-	})
+	// close button
+		const close = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button close',
+			parent			: fragment
+		})
+		close.addEventListener("click", (e) =>{
+			e.preventDefault()
+			layer_selector.remove()
+		})
 
 	// inputs container
 		const layer_ul = ui.create_dom_element({
@@ -1157,76 +1172,79 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 	})
 	layer_selector.appendChild(fragment)
 
-	self.wrapper.appendChild(layer_selector)
 
-	return fragment
+	return layer_selector
 }//end render_layer_selector
 
 
 
 /**
 * RENDER_PAGE_SELECTOR
-* @return
+* Creates a modal dialog with page_selector options
+* @return bool true
 */
-const render_page_selector = function(self, data_tag, tag_id, text_editor){
+const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 
-	const total_pages	= data_tag.total_pages
-	const offset		= data_tag.offset
-	const page_in		= offset
-	const page_out		= (offset -1) + total_pages
-
-
-	const header = ui.create_dom_element({
-		element_type	: 'div',
-		text_node		: get_label.select_page_of_the_doc
-	})
-
-	const body = ui.create_dom_element({
-		element_type	: 'span',
-		class_name 		: 'body',
-	})
-
-	const label = eval('`'+get_label.choose_page_between+'`')
-
-	const body_title = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'body_title',
-		text_node		: label,
-		parent			: body
-	})
-
-	const body_input = ui.create_dom_element({
-		element_type	: 'input',
-		type			: 'text',
-		class_name		: 'body_title',
-		parent			: body
-	})
-
-	const error_input = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'body_title',
-		text_node		: '',
-		parent			: body
-	})
+	// short vars
+		const total_pages	= data_tag.total_pages
+		const offset		= data_tag.offset
+		const page_in		= offset
+		const page_out		= (offset -1) + total_pages
 
 
-	const footer = ui.create_dom_element({
-		element_type	: 'span'
-	})
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			text_node		: get_label.select_page_of_the_doc
+		})
 
-	const user_option_cancelar = ui.create_dom_element({
-		element_type	: 'button',
-		class_name		: 'user_option ',
-		inner_html		: get_label.cancelar || 'Cancel',
-		parent			: footer
-	})
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'span',
+			class_name 		: 'body',
+		})
 
-	const user_option_ok = ui.create_dom_element({
-		element_type	: 'button',
-		class_name		: 'user_option',
-		inner_html		: get_label.insertar_etiqueta || 'Insert label',
-		parent			: footer
-	})
+		const label = eval('`'+get_label.choose_page_between+'`')
+		const body_title = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: label,
+			parent			: body
+		})
+
+		const body_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'body_title',
+			parent			: body
+		})
+
+		const error_input = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: '',
+			parent			: body
+		})
+
+
+	// footer
+		const footer = ui.create_dom_element({
+			element_type	: 'span'
+		})
+
+		const user_option_cancel = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'user_option ',
+			inner_html		: get_label.cancelar || 'Cancel',
+			parent			: footer
+		})
+
+		const user_option_ok = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'user_option',
+			inner_html		: get_label.insertar_etiqueta || 'Insert label',
+			parent			: footer
+		})
 
 	// save editor changes to prevent conflicts with modal components changes
 		text_editor.save()
@@ -1239,7 +1257,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 			size	: 'normal'
 		})
 
-	user_option_ok.addEventListener("click", (e) =>{
+	user_option_ok.addEventListener('click', (e) =>{
 		e.preventDefault()
 		const user_value = body_input.value
 		if(user_value === null) {
@@ -1251,13 +1269,13 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor){
 		}
 		const data		= body_input.value - (offset -1)
 		data_tag.label	= body_input.value
-		data_tag.data	= "["+data+"]"
+		data_tag.data	= '[' + data + ']'
 		const tag		= self.build_view_tag_obj(data_tag, tag_id)
 		text_editor.set_content(tag)
 		modal.remove()
 	})
 
-	user_option_cancelar.addEventListener("click", (e) =>{
+	user_option_cancel.addEventListener('click', () =>{
 		modal.remove()
 	})
 

@@ -424,9 +424,8 @@ const render_tanscription_options = async function(self, content_data) {
 		})
 		// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
 		const lang_selector = ui.build_select_lang({
-			id			: "index_lang_selector",
 			selected	: self.lang,
-			class_name	: 'dd_input',
+			class_name	: 'dd_input selector',
 			action		: async function(e){
 				// create new one
 				const component = await self.get_component(e.target.value)

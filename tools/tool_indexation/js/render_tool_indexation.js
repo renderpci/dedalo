@@ -106,9 +106,8 @@ const get_content_data_edit = async function(self) {
 			})
 			// lang selector
 				const lang_selector = ui.build_select_lang({
-					id			: "indexing_lang_selector",
 					selected	: self.lang,
-					class_name	: 'dd_input'
+					class_name	: 'dd_input selector'
 				})
 				lang_selector.addEventListener('change', async function(e){
 
@@ -337,7 +336,7 @@ const get_tag_info = function(self) {
 		// state selector
 			const tag_state_selector = ui.create_dom_element({
 				element_type	: 'select',
-				class_name		: 'tag_state_selector',
+				class_name		: 'selector tag_state_selector',
 				parent			: tag_info_container
 			})
 
@@ -518,7 +517,7 @@ const render_related_list = function(self){
 	// select node
 		const select = ui.create_dom_element({
 			element_type	: 'select',
-			class_name		: 'hidden',
+			class_name		: 'hidden selector',
 			parent			: related_list_container
 		})
 
@@ -637,9 +636,10 @@ const render_viewer_selector = function(self, wrapper){
 			parent			: fragment
 		})
 
-	// select
+	// select viewer
 		const select = ui.create_dom_element({
 			element_type	: 'select',
+			class_name		: 'selector viewer_selector',
 			parent			: viewer_selector_container
 		})
 		// change event
