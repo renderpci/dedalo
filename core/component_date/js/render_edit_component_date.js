@@ -547,7 +547,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 	// create div end
 		const input_wrap = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'input-group',
+			class_name		: 'input-group'
 		})
 
 	// input field
