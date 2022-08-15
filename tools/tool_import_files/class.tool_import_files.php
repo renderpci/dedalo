@@ -14,16 +14,11 @@ class tool_import_files extends tool_common {
 
 	/**
 	* __CONSTRUCT
+	* @return bool true
 	*/
-		// public function __construct(object $component_obj=null, string $modo='button') {
+		// public function __construct() {
 
-		// 	# Fix modo
-		// 	$this->modo = $modo;
-
-		// 	# Fix current component/section
-		// 	// $this->component_obj = $component_obj;
-
-		// 	// $this->set_up();
+		// 	return true;
 		// }//end __construct
 
 
@@ -133,7 +128,7 @@ class tool_import_files extends tool_common {
 	* SET_COMPONENT
 	* @return bool
 	*/
-	public function set_component(object $component_obj) {
+	public function set_component(object $component_obj) : bool{
 		# Fix current component/section
 		$this->component_obj = $component_obj;
 
@@ -447,11 +442,10 @@ class tool_import_files extends tool_common {
 	* Process previously uploaded images
 	*/
 	public static function import_files(object $request_options) : object {
-		global $start_time;
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
 			$options = new stdClass();
@@ -481,7 +475,10 @@ class tool_import_files extends tool_common {
 			$tool_config				= $options->tool_config;
 
 		// tool_import_files setup
-			$tool_import_files = new tool_import_files();
+			$tool_import_files = new tool_import_files(
+				$section_id,
+				$section_tipo
+			);
 			$tool_import_files->set_up($key_dir);
 
 		// import_mode
@@ -794,13 +791,6 @@ class tool_import_files extends tool_common {
 			$response->msg		= 'Import files done successfully. Total: '.$total ." of " .count($files_data);
 
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-				$response->debug = $debug;
-			}
-
 		return (object)$response;
 	}//end if ($mode=='import_files')
 
@@ -831,14 +821,18 @@ class tool_import_files extends tool_common {
 
 		// options
 			$options = new stdClass();
-				$options->key_dir = null;
+				$options->key_dir		= null;
+				$options->section_tipo	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// short vars
 			$key_dir = $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
 
 		// tool_import_files
-			$tool_import_files = new tool_import_files();
+			$tool_import_files = new tool_import_files(
+				null,
+				$options->section_tipo
+			);
 			$tool_import_files->set_up($key_dir);
 
 			// dir
@@ -893,8 +887,9 @@ class tool_import_files extends tool_common {
 
 		// options
 			$options = new stdClass();
-				$options->file_name	= null;
-				$options->key_dir	= null;
+				$options->file_name		= null;
+				$options->key_dir		= null;
+				$options->section_tipo	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// short vars
@@ -902,7 +897,10 @@ class tool_import_files extends tool_common {
 			$key_dir	= $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
 
 		// tool_import_files
-			$tool_import_files = new tool_import_files();
+			$tool_import_files = new tool_import_files(
+				null,
+				$options->section_tipo
+			);
 			$tool_import_files->set_up($key_dir);
 
 		// dir

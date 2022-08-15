@@ -171,7 +171,7 @@ const get_content_data_edit = async function(self) {
 
 	// file name control
 		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
-			const class_name_configuration = (self.tool_config.import_mode && self.tool_config.import_mode === 'section')
+			const class_name_configuration = (self.tool_config.import_mode && self.tool_config.import_mode==='section')
 				? ''
 				: ' hide'
 
@@ -227,20 +227,20 @@ const get_content_data_edit = async function(self) {
 
 
 
-			//name_control_to_section_id
+			// name_control_to_section_id
 				const name_control_section_id = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'name_control_section_id',
-					parent 			: tool_configuration_options
+					class_name		: 'name_control_section_id',
+					parent			: tool_configuration_options
 				})
 
-				//check_box
+				// check_box
 					const control_section_id_check_box = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'checkbox',
-							class_name 		: 'ios-toggle',
-							parent 			: name_control_section_id
-						})
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'ios-toggle',
+						parent			: name_control_section_id
+					})
 
 					control_section_id_check_box.addEventListener('change', function(e) {
 						if(same_name_check_box.checked){
@@ -249,15 +249,15 @@ const get_content_data_edit = async function(self) {
 					})
 
 					const label_section_id_check_box = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'checkbox-label',
-							inner_html		: get_label.name_to_record_id || 'Name indicates id',
-							parent			: name_control_section_id
-						})
+						element_type	: 'span',
+						class_name		: 'checkbox-label',
+						inner_html		: get_label.name_to_record_id || 'Name indicates id',
+						parent			: name_control_section_id
+					})
 
 
 
-			//same_name_same_section
+			// same_name_same_section
 				const same_name_same_section = ui.create_dom_element({
 					element_type	: 'div',
 					class_name 		: 'same_name_same_section',
@@ -266,11 +266,11 @@ const get_content_data_edit = async function(self) {
 
 				//check_box
 					const same_name_check_box = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'checkbox',
-							class_name 		: 'ios-toggle',
-							parent 			: same_name_same_section
-						})
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'ios-toggle',
+						parent			: same_name_same_section
+					})
 
 					same_name_check_box.addEventListener('change', function(e) {
 						if(control_section_id_check_box.checked){
@@ -279,11 +279,11 @@ const get_content_data_edit = async function(self) {
 					})
 
 					const label_same_name_check_box = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'checkbox-label',
-							inner_html		: get_label.same_name_same_record || 'Same name same record',
-							parent			: same_name_same_section
-						})
+						element_type	: 'span',
+						class_name		: 'checkbox-label',
+						inner_html		: get_label.same_name_same_record || 'Same name same record',
+						parent			: same_name_same_section
+					})
 
 
 	// components container
@@ -295,95 +295,94 @@ const get_content_data_edit = async function(self) {
 
 
 	// template_container
-
 		const template_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'template_container',
-			parent 			: fragment
+			class_name		: 'template_container',
+			parent			: fragment
 		})
 
 		const template = await create_template(self)
 		template_container.appendChild(template)
 
+		// DES
+			// const template_container = ui.create_dom_element({
+			// 	element_type	: 'div',
+			// 	class_name 		: 'template_container',
+			// 	inner_html 		: `
 
-		// const template_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name 		: 'template_container',
-		// 	inner_html 		: `
-
-		// 		<div id="actions" class="row">
+			// 		<div id="actions" class="row">
 
 
-		// 	      <div class="col-lg-7">
-		// 	        <!-- The fileinput-button span is used to style the file input field as button -->
-		// 	        <span class="btn btn-success fileinput-button dz-clickable">
-		// 	            <i class="glyphicon glyphicon-plus"></i>
-		// 	            <span>Add files...</span>
-		// 	        </span>
-		// 	        <button type="submit" class="btn btn-primary start">
-		// 	            <i class="glyphicon glyphicon-upload"></i>
-		// 	            <span>Start upload</span>
-		// 	        </button>
-		// 	        <button type="reset" class="btn btn-warning cancel">
-		// 	            <i class="glyphicon glyphicon-ban-circle"></i>
-		// 	            <span>Cancel upload</span>
-		// 	        </button>
-		// 	      </div>
+			// 	      <div class="col-lg-7">
+			// 	        <!-- The fileinput-button span is used to style the file input field as button -->
+			// 	        <span class="btn btn-success fileinput-button dz-clickable">
+			// 	            <i class="glyphicon glyphicon-plus"></i>
+			// 	            <span>Add files...</span>
+			// 	        </span>
+			// 	        <button type="submit" class="btn btn-primary start">
+			// 	            <i class="glyphicon glyphicon-upload"></i>
+			// 	            <span>Start upload</span>
+			// 	        </button>
+			// 	        <button type="reset" class="btn btn-warning cancel">
+			// 	            <i class="glyphicon glyphicon-ban-circle"></i>
+			// 	            <span>Cancel upload</span>
+			// 	        </button>
+			// 	      </div>
 
-		// 	      <div class="col-lg-5">
-		// 	        <!-- The global file processing state -->
-		// 	        <span class="fileupload-process">
-		// 	          <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-		// 	            <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
-		// 	          </div>
-		// 	        </span>
-		// 	      </div>
+			// 	      <div class="col-lg-5">
+			// 	        <!-- The global file processing state -->
+			// 	        <span class="fileupload-process">
+			// 	          <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+			// 	            <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
+			// 	          </div>
+			// 	        </span>
+			// 	      </div>
 
-		// 	    </div>
+			// 	    </div>
 
-		// 		<div class="table table-striped" class="files" id="previews">
+			// 		<div class="table table-striped" class="files" id="previews">
 
-		// 		  <div id="template" class="file-row">
-		// 		    <div>
-		// 		        <span class="preview"><img data-dz-thumbnail /></span>
-		// 		    </div>
-		// 		    <div>
-		// 		        <p class="name" data-dz-name></p>
-		// 		        <strong class="error text-danger" data-dz-errormessage></strong>
-		// 		    </div>
-		// 		    <div>
-		// 		        <p class="size" data-dz-size></p>
-		// 		        <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-		// 		          <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
-		// 		        </div>
-		// 		    </div>
-		// 		    <div>
-		// 		      <button class="btn btn-primary start">
-		// 		          <i class="glyphicon glyphicon-upload"></i>
-		// 		          <span>Start</span>
-		// 		      </button>
-		// 		      <button data-dz-remove class="btn btn-warning cancel">
-		// 		          <i class="glyphicon glyphicon-ban-circle"></i>
-		// 		          <span>Cancel</span>
-		// 		      </button>
-		// 		      <button data-dz-remove class="btn btn-danger delete">
-		// 		        <i class="glyphicon glyphicon-trash"></i>
-		// 		        <span>Delete</span>
-		// 		      </button>
-		// 		    </div>
-		// 		  </div>
+			// 		  <div id="template" class="file-row">
+			// 		    <div>
+			// 		        <span class="preview"><img data-dz-thumbnail /></span>
+			// 		    </div>
+			// 		    <div>
+			// 		        <p class="name" data-dz-name></p>
+			// 		        <strong class="error text-danger" data-dz-errormessage></strong>
+			// 		    </div>
+			// 		    <div>
+			// 		        <p class="size" data-dz-size></p>
+			// 		        <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+			// 		          <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+			// 		        </div>
+			// 		    </div>
+			// 		    <div>
+			// 		      <button class="btn btn-primary start">
+			// 		          <i class="glyphicon glyphicon-upload"></i>
+			// 		          <span>Start</span>
+			// 		      </button>
+			// 		      <button data-dz-remove class="btn btn-warning cancel">
+			// 		          <i class="glyphicon glyphicon-ban-circle"></i>
+			// 		          <span>Cancel</span>
+			// 		      </button>
+			// 		      <button data-dz-remove class="btn btn-danger delete">
+			// 		        <i class="glyphicon glyphicon-trash"></i>
+			// 		        <span>Delete</span>
+			// 		      </button>
+			// 		    </div>
+			// 		  </div>
 
-		// 		</div>
-		// `,
-		// 	parent 			: fragment
-		// })
+			// 		</div>
+			// `,
+			// 	parent 			: fragment
+			// })
 
 
 	// inputs components container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
+			class_name		: 'inputs_container',
+			parent			: fragment
 		})
 
 		const inputs_nodes = await get_temp_sections(self)
@@ -473,12 +472,16 @@ const get_content_data_edit = async function(self) {
 
 /**
 * CREATE_TEMPLATE
+*
+* @param object self
+* 	Instance of current tool
+* @return DOM fragment
 */
 const create_template = async function(self) {
 
 	const fragment = new DocumentFragment();
 
-	// actions
+	// actions row
 		const actions = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'actions',
@@ -489,77 +492,77 @@ const create_template = async function(self) {
 	// column_left
 		const column_left = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'col-lg-7',
+			class_name		: 'col-lg-7 column_left',
 			parent			: actions
 		})
 
-	// button_add_files
-		const button_add_files = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'success add dz-clickable',
-			inner_html		: get_label.add_file || 'Add files',
-			parent			: column_left
-		})
+		// button_add_files
+			const button_add_files = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'success add dz-clickable',
+				inner_html		: get_label.add_file || 'Add files',
+				parent			: column_left
+			})
 
-	// button_submit_files
-		const button_submit_files = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'primary upload start',
-			inner_html		: get_label.submit || 'Start upload',
-			parent			: column_left
-		})
+		// button_submit_files
+			const button_submit_files = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'primary upload start',
+				inner_html		: get_label.submit || 'Start upload',
+				parent			: column_left
+			})
 
-	// button_cancel_upload
-		const button_cancel_upload = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'warning cancel',
-			inner_html		: get_label.cancel_upload || 'Cancel upload',
-			parent			: column_left
-		})
+		// button_cancel_upload
+			const button_cancel_upload = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning cancel',
+				inner_html		: get_label.cancel_upload || 'Cancel upload',
+				parent			: column_left
+			})
 
-	// button_delete
-		const button_delete = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'danger delete',
-			inner_html		: get_label.delete_file || 'Delete file',
-			dataset 		: {dzRemove : ""},
-			parent			: column_left
-		})
+		// button_delete
+			const button_delete = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'danger delete',
+				inner_html		: get_label.delete_file || 'Delete file',
+				dataset 		: {dzRemove : ""},
+				parent			: column_left
+			})
 
-	// delete_check_box
-		const delete_check_box = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			class_name 		: 'all_delete_checkbox',
-			parent 			: column_left
-		})
-		delete_check_box.addEventListener('change',function(e){
-			const delete_check_nodes = document.querySelectorAll(".delete_checkbox")
-			const len = delete_check_nodes.length
-			for (let i = len - 1; i >= 0; i--) {
-				delete_check_nodes[i].checked = delete_check_box.checked
-			}
-		})
+		// delete_check_box
+			const delete_check_box = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name 		: 'all_delete_checkbox',
+				parent 			: column_left
+			})
+			delete_check_box.addEventListener('change',function(e){
+				const delete_check_nodes = document.querySelectorAll(".delete_checkbox")
+				const len = delete_check_nodes.length
+				for (let i = len - 1; i >= 0; i--) {
+					delete_check_nodes[i].checked = delete_check_box.checked
+				}
+			})
 
-	// column_rigth
-		const column_rigth = ui.create_dom_element({
+	// column_right
+		const column_right = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'col-lg-5',
+			class_name		: 'col-lg-5 column_right',
 			parent			: actions
-		})
-
-	// The global file processing state
-		const fileupload_process = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'fileupload-process',
-			parent			: column_rigth
 		})
 		// The global file processing state
-			const global_progress = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'progress progress-striped active',
-				parent			: fileupload_process
+			const fileupload_process = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'fileupload-process',
+				parent			: column_right
 			})
+			// The global file processing state
+				const global_progress = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'progress progress-striped active',
+					parent			: fileupload_process
+				})
+				global_progress.style.opacity = "0";
 			// global_progress_bar
 				const global_progress_bar = ui.create_dom_element({
 					element_type	: 'div',
@@ -756,7 +759,7 @@ const create_template = async function(self) {
 
 	// dropzone init
 		const current_dropzone = self.active_dropzone || new Dropzone(document.body, { // Make the whole body a dropzone
-			url					: DEDALO_ROOT_WEB + "/tools/tool_import_files/handle_files.php", // Set the url
+			url					: DEDALO_ROOT_WEB + "/tools/tool_import_files/handle_files.php", // Set the 'trigger' manager url
 			// thumbnailWidth	: 192,
 			thumbnailHeight		: 96,
 			thumbnailMethod		: 'contain',
@@ -766,23 +769,26 @@ const create_template = async function(self) {
 			previewsContainer	: previews_container, // Define the container to display the previews
 			clickable			: button_add_files, // Define the element that should be used as click trigger to select files.
 			addRemoveLinks 		: false,
-			params				: {key_dir : self.key_dir},
+			params				: {
+				key_dir			: self.key_dir,
+				section_tipo	: self.section_tipo
+			},
 			renameFile			: function (file){
-									const files = self.files_data;
-									const { name } = file;
+				const files = self.files_data;
+				const { name } = file;
 
-									if (files.some(file => file.name === name)) {
+				if (files.some(file => file.name === name)) {
 
-										const last_dot = name.lastIndexOf('.');
-										// const base_name = name.slice((name.lastIndexOf(".") - 1 >>> 0) + 2);
-										const file_name = name.substring(0, last_dot);
-										const file_extension = name.substring(last_dot + 1);
+					const last_dot = name.lastIndexOf('.');
+					// const base_name = name.slice((name.lastIndexOf(".") - 1 >>> 0) + 2);
+					const file_name = name.substring(0, last_dot);
+					const file_extension = name.substring(last_dot + 1);
 
-										return file_name +' ('+ files.length +').'+file_extension;
-									}
+					return file_name +' ('+ files.length +').'+file_extension;
+				}
 
-									return name;
-								}
+				return name;
+			}
 		});
 		self.active_dropzone = current_dropzone
 
@@ -819,7 +825,9 @@ const create_template = async function(self) {
 			const current_name = (file.upload && file.upload.filename) ? file.upload.filename : file.name
 
 			// Hookup the start button
-			button_start.onclick = function() { current_dropzone.enqueueFile(file); };
+			button_start.onclick = function() {
+				current_dropzone.enqueueFile(file);
+			};
 			file.previewElement.querySelector(".name").innerHTML = current_name
 			button_delete_check_box.value = current_name
 
@@ -850,8 +858,9 @@ const create_template = async function(self) {
 					const source = create_source(self, 'delete_uploaded_file')
 					// add the necessary arguments used in the given function
 					source.arguments = {
-						key_dir		: self.key_dir,
-						file_name	: current_name
+						key_dir			: self.key_dir,
+						file_name		: current_name,
+						section_tipo	: self.section_tipo
 					}
 
 				// rqo
@@ -962,7 +971,8 @@ const create_template = async function(self) {
 			const source = create_source(self, 'list_uploaded_files')
 			// add the necessary arguments used in the given function
 			source.arguments = {
-				key_dir	: self.key_dir
+				key_dir			: self.key_dir,
+				section_tipo	: self.section_tipo
 			}
 
 		// rqo

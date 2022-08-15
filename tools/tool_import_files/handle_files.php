@@ -14,18 +14,21 @@ header('Content-Type: application/json');
 
 
 
-// tipo
-	$key_dir = $_REQUEST['key_dir'] ?? null;
+// request vars
+	$key_dir		= $_REQUEST['key_dir'] ?? null;
+	$section_tipo	= $_REQUEST['section_tipo'] ?? null;
 
 
 // tool_import_files
-	$tool_import_files = new tool_import_files();
+	$tool_import_files = new tool_import_files(
+		null,
+		$section_tipo
+	);
 	$tool_import_files->set_up($key_dir);
 
 	// dir
 		$upload_dir = TOOL_IMPORT_FILES_UPLOAD_DIR; // like /xxx/dedalo/media/upload/temp/files/user_2/rsc56/';
 		$upload_url = TOOL_IMPORT_FILES_UPLOAD_URL;
-
 
 	// target_file
 		$file_name		= $_FILES['file']['name'];
@@ -37,11 +40,11 @@ header('Content-Type: application/json');
 		$thumbnail_file	= $upload_dir . 'thumbnail/' . $basemane . '.jpg';
 
 	// move file
-		if (move_uploaded_file($_FILES["file"]["tmp_name"], $uploaded_file )) {
-		   $status = 1;
+		if (move_uploaded_file($_FILES['file']['tmp_name'], $uploaded_file )) {
+			$status = 1;
 
-			$target_pixels_width  = 192;
-			$target_pixels_height = 96;
+			$target_pixels_width	= 192;
+			$target_pixels_height	= 96;
 
 			$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height; //. ' -format jpeg'
 			ImageMagick::convert($uploaded_file, $thumbnail_file, $flags);
