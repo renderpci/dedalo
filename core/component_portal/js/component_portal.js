@@ -16,6 +16,7 @@
 	import {render_list_component_portal} from '../../component_portal/js/render_list_component_portal.js'
 	import {render_search_component_portal} from '../../component_portal/js/render_search_component_portal.js'
 	import {render_mini_component_portal} from '../../component_portal/js/render_mini_component_portal.js'
+	import {render_common_component_portal} from './render_common_component_portal.js'
 
 
 
@@ -92,6 +93,7 @@ export const component_portal = function() {
 	component_portal.prototype.edit_in_list			= render_edit_component_portal.prototype.edit
 	component_portal.prototype.search				= render_search_component_portal.prototype.search
 	component_portal.prototype.change_mode			= component_common.prototype.change_mode
+	component_portal.prototype.delete_record		= render_common_component_portal.prototype.delete_record
 
 
 
