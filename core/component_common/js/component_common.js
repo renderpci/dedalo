@@ -818,7 +818,7 @@ component_common.prototype.update_data_value = function(changed_data){
 /**
 * CHANGE_VALUE (AND SAVE)
 * @param object options
-* @return promise
+* @return promise || false
 */
 component_common.prototype.change_value = async function(options) {
 
@@ -833,23 +833,34 @@ component_common.prototype.change_value = async function(options) {
 		}
 
 	// options
-		const changed_data		= options.changed_data
-		const action			= changed_data.action
-		const label				= options.label
-		const refresh			= typeof options.refresh!=='undefined' ? options.refresh : false
-		const build_autoload	= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
-		const remove_dialog 	= typeof options.remove_dialog!=='undefined'
-			? options.remove_dialog
-			: function() {
-				const msg = SHOW_DEBUG
-					? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
-					: `Sure to remove value: ${label} ?`
-				return confirm( msg )
-			  }
+		const changed_data			= options.changed_data
+		const action				= changed_data.action
+		const label					= options.label
+		const refresh				= typeof options.refresh!=='undefined' ? options.refresh : false
+		const build_autoload		= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
+		const custom_remove_dialog	= options.remove_dialog // undefined|function|bool
 
-	// user confirmation prevents remove accidentally
-		if (action==='remove' && typeof remove_dialog==='function') {
-			if ( !remove_dialog() ) {
+	// check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
+		if (action==='remove') {
+
+			// generate default remove dialog to confirm the remove option is correct
+			// to overwrite this dialog use something as:
+			// function(){
+			// 		return confirm(get_label.sure)
+			// 	}
+			// the confirm will check the true and false option, don't check it in the function!
+			// to check the user result use the general response of this function (false or api_response)
+			const remove_dialog = typeof custom_remove_dialog!=='undefined' && typeof custom_remove_dialog==='function'
+				? custom_remove_dialog
+				: function() {
+					const msg = SHOW_DEBUG
+						? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
+						: `Sure to remove value: ${label} ?`
+					return confirm( msg )
+				  }
+
+			const remove_result = remove_dialog()
+			if ( remove_result===false ) {
 				return false
 			}
 		}
