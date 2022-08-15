@@ -13,7 +13,7 @@
 		// padding: 0px;
 
 		// button (could be button_edit, button_delete)
-		>button.button_edit, >button.button_delete {
+		>button.button_edit, >button.button_delete, >button.link_button {
 			display: flex;
 			width: 100%;
 			margin: 0px;
@@ -22,6 +22,12 @@
 
 			// justify-content
 			justify-content: flex-end;
+
+			&.link_button {
+				height: 3rem;
+				// padding-right: 0.33rem;
+				font-size: 1.25rem;
+			}
 
 			&.button_edit {
 				justify-content: space-between;
