@@ -113,10 +113,10 @@ page.prototype.init = async function(options) {
 					self.status = 'rendered'
 
 				// loading css add
-					const node = self.node
-						? self.node.querySelector('section') // .content_data.page
+					const container = self.node
+						? self.node.content_data
 						: null
-						if (node) { node.classList.add('loading') }
+						if (container) { container.classList.add('loading') }
 
 				try {
 
@@ -156,7 +156,7 @@ page.prototype.init = async function(options) {
 							if (!new_page_element_instance) {
 								console.error("error on get new_page_element_instance:", new_page_element_instance);
 								// loading css remove
-								if (node) {setTimeout(()=> node.classList.remove('loading'), 150)}
+								if (container) {setTimeout(()=> container.classList.remove('loading'), 150)}
 								console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
 								return false
 							}else{
@@ -228,7 +228,7 @@ page.prototype.init = async function(options) {
 							}
 
 						// loading css remove
-							if (node) { node.classList.remove('loading') }
+							if (container) { container.classList.remove('loading') }
 
 
 						resolve(new_page_element_instance.id)
@@ -236,7 +236,7 @@ page.prototype.init = async function(options) {
 
 				} catch (error) {
 					// loading css remove
-					if (node) { node.classList.remove('loading') }
+					if (container) { container.classList.remove('loading') }
 					// spinner.remove()
 					console.error('Error on user navigation. user_navigation_options:', user_navigation_options)
 					console.error(error)

@@ -374,7 +374,7 @@ class DDModal extends HTMLElement {
 				this.mini = false
 
 				// setTimeout(()=>{
-				// 	const wrapper_page = document.querySelector('.wrapper_page')
+				// 	const wrapper_page = document.querySelector('.wrapper.page')
 				// 	wrapper_page.appendChild(this)
 				// }, 2000)
 

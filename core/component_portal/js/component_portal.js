@@ -701,14 +701,26 @@ component_portal.prototype.navigate = async function(callback) {
 
 	const self = this
 
+	// unsaved_data check
+		// if (window.unsaved_data===true) {
+		// 	if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
+		// 		return false
+		// 	}else{
+		// 		window.unsaved_data===false
+		// 	}
+		// }
+
 	// callback execute
 		if (callback) {
 			await callback()
 		}
 
 	// container
-		const container = self.node.querySelector('.list_body') // view_table
-					   || self.node.querySelector('.content_data') // view_line
+		// const container = self.node.querySelector('.list_body') // view_table
+					   // || self.node.querySelector('.content_data') // view_line
+
+		const container = self.node.list_body // view table
+					   || self.node.content_data // view line
 
 	// loading
 		container.classList.add('loading')

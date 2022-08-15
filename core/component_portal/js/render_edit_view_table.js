@@ -116,6 +116,9 @@ render_edit_view_table.render = async function(self, options) {
 			// top			: top
 		})
 		wrapper.classList.add('portal', 'view_'+self.context.view)
+		// set pointers
+		wrapper.list_body		= list_body
+		wrapper.content_data	= content_data
 
 
 	// events
