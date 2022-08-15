@@ -168,7 +168,7 @@ const get_content_data = async function(self) {
 					return
 				}
 			// update_cache
-			if (confirm(get_label.seguro || 'Sure?')) {
+			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
 				const ar_component_tipo = checked_list.map(el => el.value)
 				self.update_cache(ar_component_tipo)

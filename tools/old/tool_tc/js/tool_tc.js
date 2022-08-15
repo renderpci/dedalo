@@ -62,7 +62,7 @@ var tool_tc = new function() {
 			}
 
 		if (save===true) {
-			if( !confirm(get_label.seguro) )  return false;	
+			if( !confirm(get_label.sure) )  return false;
 		}	
 
 		var trigger_vars = {

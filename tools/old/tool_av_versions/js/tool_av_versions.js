@@ -155,7 +155,7 @@ var tool_av_versions = new function() {
 	*/
 	this.conform_header = function(button_obj) {
 
-		if (!confirm( get_label.seguro )) return false;
+		if (!confirm( get_label.sure )) return false;
 
 		button_obj = $(button_obj)
 

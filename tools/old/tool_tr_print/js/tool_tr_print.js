@@ -466,7 +466,7 @@ var tool_tr_print = new function() {
 			}
 
 		if (save===true) {
-			if( !confirm(get_label.seguro) )  return false;	
+			if( !confirm(get_label.sure) )  return false;
 		}	
 
 		var trigger_vars = {

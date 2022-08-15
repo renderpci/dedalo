@@ -18,7 +18,6 @@
 	import {render_mini_component_portal} from '../../component_portal/js/render_mini_component_portal.js'
 
 
-
 /**
 * COMPONENT_PORTAL
 */

@@ -95,7 +95,7 @@ tool_indexation.prototype.render_empty_note = function(tag) {
 		parent			: empty_note_container
 	})
 	button_new_note.addEventListener('click', function(){
-		if ( confirm(get_label.seguro || 'Sure?') ) {
+		if ( confirm(get_label.sure || 'Sure?') ) {
 
 			const section_tipo = self.DEDALO_INDEXATION_SECTION_TIPO
 
