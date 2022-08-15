@@ -150,7 +150,7 @@ const get_content_data = async function(self) {
 		button_add.addEventListener("click", function(e){
 			e.preventDefault()
 			// propagate_component_data
-			if (confirm(get_label.seguro || 'Sure?')) {
+			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
 				self.propagate_component_data('add')
 				.then(function(response){
@@ -171,7 +171,7 @@ const get_content_data = async function(self) {
 		button_delete.addEventListener("click", function(e){
 			e.preventDefault()
 			// propagate_component_data
-			if (confirm(get_label.seguro || 'Sure?')) {
+			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
 				self.propagate_component_data('delete')
 				.then(function(response){

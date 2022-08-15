@@ -177,7 +177,7 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 	const self = this
 
 	// confirm dialog
-		if ( !confirm( (get_label.seguro || 'Sure?') ) ) {
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
 			return false
 		}
 
@@ -229,7 +229,7 @@ tool_media_versions.prototype.build_version = async function(quality) {
 	const self = this
 
 	// confirm dialog
-		if ( !confirm( (get_label.seguro || 'Sure?') ) ) {
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
 			return false
 		}
 
@@ -281,7 +281,7 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 	const self = this
 
 	// confirm dialog
-		if ( !confirm( (get_label.seguro || 'Sure?') ) ) {
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
 			return false
 		}
 
@@ -335,7 +335,7 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 	const self = this
 
 	// confirm dialog
-		if ( !confirm( (get_label.seguro || 'Sure?') ) ) {
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
 			return false
 		}
 
