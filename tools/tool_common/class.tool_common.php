@@ -33,8 +33,7 @@ class tool_common {
 
 	/**
 	* GET_JSON
-	* @param object $request_options
-	* 	Optional. Default is false
+	* @param object|null $request_options = null
 	* @return object $json
 	*/
 	public function get_json(object $request_options=null) : object {
