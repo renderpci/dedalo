@@ -464,13 +464,14 @@ component_common.prototype.save = async function(changed_data) {
 		}
 
 	// remove previous success/error css class if exists
-		if (self.node.classList.contains("error")) {
-			self.node.classList.remove("error")
+		if (self.node) {
+			if (self.node.classList.contains("error")) {
+				self.node.classList.remove("error")
+			}
+			if (self.node.classList.contains("save_success")) {
+				self.node.classList.remove("save_success")
+			}
 		}
-		if (self.node.classList.contains("save_success")) {
-			self.node.classList.remove("save_success")
-		}
-
 
 
 	// send_data
@@ -566,9 +567,14 @@ component_common.prototype.save = async function(changed_data) {
 					set_before_unload(false)
 
 				// updates db_data
-					self.db_data = self.db_data || {
-						value : [null]
-					}
+					self.db_data = self.db_data
+						? self.db_data
+						: {}
+
+					self.db_data.value = self.db_data.value
+						? self.db_data.value
+						: [null]
+
 					self.db_data.value[changed_data.key] = changed_data.value
 			}
 

@@ -7,7 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {instantiate_page_element} from './page.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {clone} from '../../common/js/utils/index.js'
 
 
 
@@ -34,43 +34,45 @@ render_page.prototype.edit = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// content data
-		const content_data = get_content_data(self) // result is a promise
+		const content_data = await get_content_data(self) // result is a promise
 		if (render_level==='content') {
-			return await content_data
+			return content_data
 		}
 
 	// wrapper
-		const wrapper_page = document.createElement('div')
-		wrapper_page.classList.add('wrapper_page', self.type)
+		const wrapper = document.createElement('div')
+		wrapper.classList.add('wrapper', self.type)
+		// set pointers
+		wrapper.content_data = content_data
 
 	// menu
 		// const element_menu = self.context.find(el => el.model==='menu')
 		// if (typeof element_menu!=='undefined') {
 		// 	const menu_node = render_menu(self)
-		// 	wrapper_page.appendChild(await menu_node)
+		// 	wrapper.appendChild(await menu_node)
 		// }
 
 	// body content_data
-		wrapper_page.appendChild(await content_data)
+		wrapper.appendChild(content_data)
 
 	// modal box hidden
 		// const dd_modal = document.createElement('dd-modal')
-		// wrapper_page.appendChild(dd_modal)
+		// wrapper.appendChild(dd_modal)
 
 	// events
 		// page click
-			wrapper_page.addEventListener("click", fn_deactivate_components)
+			wrapper.addEventListener('click', fn_deactivate_components)
 			function fn_deactivate_components() {
-				const active_component = document.querySelector(".wrapper_component.active")
+				const active_component = document.querySelector('.wrapper_component.active')
 				if (active_component) {
-					active_component.classList.remove("active")
+					active_component.classList.remove('active')
 					// deactivate_component
 					event_manager.publish('deactivate_component')
 				}
 			}
 
 
- 	return wrapper_page
+ 	return wrapper
 }//end render_page.prototype.edit
 
 
@@ -84,8 +86,8 @@ const get_content_data = async function(self) {
 	// const fragment = new DocumentFragment()
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.type)
 
 	// add all instance rendered nodes
 		// const ar_instances_length = self.ar_instances.length;
@@ -111,7 +113,7 @@ const get_content_data = async function(self) {
 
 			// 	const current_instance = self.ar_instances[i]
 
-			// 	// exclude menu already added to wrapper_page
+			// 	// exclude menu already added to wrapper
 			// 	if(current_instance.model==='menu') continue;
 
 			// 	const render_promise = current_instance.render()
@@ -158,7 +160,7 @@ const get_content_data = async function(self) {
 					self.ar_instances.push(current_instance)
 
 					// build (load data)
-					const autoload = true // current_instance.status==="initiated" // avoid reload menu data
+					const autoload = true // current_instance.status==='initiated' // avoid reload menu data
 					current_instance.build(autoload)
 					.then(function(){
 						// render instance
@@ -210,14 +212,14 @@ const get_content_data = async function(self) {
 export const render_server_response_error = function(msg) {
 
 	// wrapper
-		const wrapper_page = document.createElement('div')
-		wrapper_page.classList.add('wrapper_page', 'page')
+		const wrapper = document.createElement('div')
+		wrapper.classList.add('wrapper', 'page')
 
 	// error_container
 		const error_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'page_error_container',
-			parent			: wrapper_page
+			parent			: wrapper
 		})
 
 	// icon_dedalo
@@ -245,5 +247,5 @@ export const render_server_response_error = function(msg) {
 		})
 
 
-	return wrapper_page
+	return wrapper
 }//end render_server_response_error
