@@ -108,7 +108,7 @@ var tool_semantic_nodes = new function() {
 	*/
 	this.remove_index = function(button_obj) {
 
-		if (!confirm(get_label.seguro)) return false;
+		if (!confirm(get_label.sure)) return false;
 
 		var semantic_wrapper  = document.getElementById(button_obj.dataset.semantic_wrapper_id)
 		var component_wrapper = this.selected_wrap_div = find_ancestor(button_obj, 'wrap_component')

@@ -5,10 +5,11 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {render_edit_view_table} from './render_edit_view_table.js'
@@ -337,6 +338,9 @@ export const render_column_remove = function(options) {
 		const self			= options.caller
 		const row_key		= options.row_key
 		const paginated_key	= options.paginated_key
+		const section_id 	= options.section_id
+		const section_tipo	= options.section_tipo
+		// const locator		= options.locator
 
 	const fragment = new DocumentFragment()
 
@@ -349,64 +353,84 @@ export const render_column_remove = function(options) {
 		button_remove.addEventListener('click', function(e){
 			e.stopPropagation()
 
-			// label
-				let el = button_remove
-				while((el = el.parentElement) && !el.classList.contains('section_record')) {
-					// finding parent section_record
-				}
-				const children = el.children
+			// header
+				const header = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'header'
+				})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+					parent			: header
+				})
 
-				const ar_label = []
-				for (let i = 0; i < children.length; i++) {
-					if(children[i].textContent.length>0) {
-						ar_label.push(children[i].textContent)
+			// body
+				const body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'content delete_record'
+				})
+
+			// footer
+				const footer = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'footer'
+				})
+
+			// button_unlink_and_delete
+				const button_unlink_and_delete = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'danger remove',
+					text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
+					parent			: footer
+				})
+				button_unlink_and_delete.addEventListener("click", function(){
+					// stop if the user don't confirm
+					if (!confirm(get_label.sure)) {
+						return
 					}
-				}
-				const label = ar_label.join(', ')
+					delete_linked_record()
+					unlink_record()
+				})
 
-			// changed_data
+			// button_unlink_record
+				const button_unlink_record = ui.create_dom_element({
+					element_type	: 'button',
+					class_name 		: 'warning remove',
+					text_content 	: get_label.delete_only_the_link || 'Delete only the link',
+					parent			: footer
+				})
+				button_unlink_record.addEventListener("click", function(){
+					// stop if the user don't confirm
+					if (!confirm(get_label.sure)) {
+						return
+					}
+					unlink_record()
+				})
+
+			const unlink_record = function() {
+				// changed_data
 				const changed_data = Object.freeze({
 					action	: 'remove',
 					key		: paginated_key,
 					value	: null
 				})
-
-			// remove_dialog. User must to confirm the remove action to continue
-			// On true, data pagination offset is changed
-				const remove_dialog = function() {
-
-					const msg = SHOW_DEBUG
-						? `Sure to remove value: \n${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
-						: `Sure to remove value: \n${label} ?}`
-
-					if( !confirm(msg) ) {
-						return false
-					}
-
-					// data pagination offset. Check and update self data to allow save API request return the proper paginated data
-						const key = parseInt(row_key)
-						if (key===0 && self.data.pagination.offset>0) {
-							const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
-							// set before exec API request on Save
-							self.data.pagination.offset = next_offset>0
-								? next_offset
-								: 0
-						}
-
-					return true
-				}
-
-			// change_value (implies saves too)
+				// change_value (implies saves too)
+				// remove the remove_dialog it's controlled by the event of the button that call
+				// prevent the double confirmation
 				self.change_value({
 					changed_data	: changed_data,
-					label			: label,
+					label			: section_id,
 					refresh			: false,
-					remove_dialog	: remove_dialog
+					remove_dialog	: ()=>{
+						return true
+					}
 				})
 				.then(async (response)=>{
-
 					// the user has selected cancel from delete dialog
 						if (response===false) {
+							// modal. Close modal if isset
+							modal.on_close()
 							return
 						}
 
@@ -429,11 +453,78 @@ export const render_column_remove = function(options) {
 						event_manager.publish('remove_element_'+self.id, row_key)
 
 					// modal. Close modal if isset
-						if (self.modal) {
-							self.modal.close()
-							self.modal = null
-						}
+						modal.on_close()
 				})
+			}
+
+			const delete_linked_record = async function() {
+
+				// create the instance of the section called by the row of the portal,
+				// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+					const instance_options = {
+						model			: 'section',
+						tipo			: section_tipo,
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						mode			: 'list',
+						lang			: self.lang,
+						caller			: self,
+						inspector		: false,
+						filter			: false
+					}
+				// get the instance
+					const section =	await get_instance(instance_options)
+
+				// create the sqo to be used to find the section will be deleted
+					const sqo = {
+						section_tipo		: [section_tipo],
+						filter_by_locators	: [{
+							section_tipo	: section_tipo,
+							section_id		: section_id
+						}],
+						limit				: 1
+					}
+				// call to the section and delete it
+				section.delete_section({
+					sqo			: sqo,
+					delete_mode	: 'delete_record'
+				})
+				.then(function(){
+					modal.on_close()
+				})
+			}
+
+			// modal
+				const modal = ui.attach_to_modal({
+					header	: header,
+					body	: body,
+					footer	: footer,
+					size	: 'small' // string size big|normal
+				})
+				// when the modal will be ready in dom fire the function to attack the event
+				when_in_dom(modal, focus_the_button)
+				// set the default button to be fired when the modal is active
+				// when the user press the Enter key in the keyboard
+				// the unlink option will be fired
+				function focus_the_button() {
+					// set the focus to the button_unlink
+					button_unlink_record.focus()
+					button_unlink_record.addEventListener('keyup',(e)=>{
+						if(e.key === 'Enter'){
+							button_unlink_record.click()
+						}
+					})
+				}
+
+			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
+				const key = parseInt(row_key)
+				if (key===0 && self.data.pagination.offset>0) {
+					const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+					// set before exec API request on Save
+					self.data.pagination.offset = next_offset>0
+						? next_offset
+						: 0
+				}
 		})
 
 	// remove_icon

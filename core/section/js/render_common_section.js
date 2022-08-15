@@ -95,7 +95,7 @@ render_common_section.prototype.delete_record = (options) => {
 				parent			: footer
 			})
 			button_delete_record.addEventListener("click", function(){
-				if (!confirm(get_label.seguro)) {
+				if (!confirm(get_label.sure)) {
 					return
 				}
 				section.delete_section({
@@ -115,7 +115,7 @@ render_common_section.prototype.delete_record = (options) => {
 				parent			: footer
 			})
 			button_delete_data.addEventListener("click", function(){
-				if (!confirm(get_label.seguro)) {
+				if (!confirm(get_label.sure)) {
 					return
 				}
 				section.delete_section({

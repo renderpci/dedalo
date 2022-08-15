@@ -176,7 +176,7 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 	const self = this
 
 	// confirm dialog
-		if ( !confirm( (get_label.seguro || 'Sure?') ) ) {
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
 			return false
 		}
 
@@ -269,7 +269,7 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 	const self = this
 
 	// confirm dialog
-		if ( !confirm( (get_label.seguro || 'Sure?') ) ) {
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
 			return false
 		}
 

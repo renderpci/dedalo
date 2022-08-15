@@ -1397,7 +1397,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 					const body = ui.create_dom_element({
 						element_type	: 'h3',
 						class_name		: 'content delete_layer',
-						inner_html		: 'Layer: ' + layer.user_layer_name + '<br><br>' + (get_label.seguro || 'Sure?')
+						inner_html		: 'Layer: ' + layer.user_layer_name + '<br><br>' + (get_label.sure || 'Sure?')
 					})
 
 				// footer

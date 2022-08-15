@@ -259,7 +259,7 @@ const rebuild_columns_map = async function(self) {
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
 				width 		: 'auto',
-				callback	: render_column_remove
+				callback	: render_edit_view_line.render_column_remove
 			})
 		}
 
@@ -315,13 +315,121 @@ render_edit_view_line.render_column_id = function(options){
 	// edit icon
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button edit icon',
+			class_name		: 'button pen icon grey',
 			parent			: button_edit
 		})
 
 
 	return fragment
 }//end render_column_id
+
+
+
+
+
+
+/**
+* RENDER_COLUMN_REMOVE
+* Render column_remov node
+* Shared across views
+* @param object options
+* @return DOM DocumentFragment
+*/
+render_edit_view_line.render_column_remove = function(options) {
+
+	// options
+		const self			= options.caller
+		const row_key		= options.row_key
+		const paginated_key	= options.paginated_key
+		const section_id 	= options.section_id
+		const section_tipo	= options.section_tipo
+		// const locator		= options.locator
+
+	const fragment = new DocumentFragment()
+
+	// button_remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_remove',
+			parent			: fragment
+		})
+		button_remove.addEventListener('click', function(e){
+			e.stopPropagation()
+
+			// stop if the user don't confirm
+			if (!confirm(get_label.sure)) {
+				return
+			}
+
+			const unlink_record = function() {
+				// changed_data
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: paginated_key,
+					value	: null
+				})
+				// change_value (implies saves too)
+				// remove the remove_dialog it's controlled by the event of the button that call
+				// prevent the double confirmation
+				self.change_value({
+					changed_data	: changed_data,
+					label			: section_id,
+					refresh			: false,
+					remove_dialog	: ()=>{
+						return true
+					}
+				})
+				.then(async (response)=>{
+					// the user has selected cancel from delete dialog
+						if (response===false) {
+							// modal. Close modal if isset
+							modal.on_close()
+							return
+						}
+
+					// update pagination offset
+						self.update_pagination_values('remove')
+
+					// refresh
+						await self.refresh({
+							build_autoload : true // when true, force reset offset
+						})
+
+					// check if the caller has active a tag_id
+						if(self.active_tag){
+							// filter component data by tag_id and re-render content
+							console.log('++++++++++++++++++++++++++++++++++++++ self.active_tag:', self.active_tag);
+							self.filter_data_by_tag_id(self.active_tag)
+						}
+
+					// event to update the DOM elements of the instance
+						event_manager.publish('remove_element_'+self.id, row_key)
+				})
+			}
+			// fire the unlink
+			unlink_record()
+
+			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
+				const key = parseInt(row_key)
+				if (key===0 && self.data.pagination.offset>0) {
+					const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+					// set before exec API request on Save
+					self.data.pagination.offset = next_offset>0
+						? next_offset
+						: 0
+				}
+		})
+
+	// remove_icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button delete_bold icon grey',
+			parent			: button_remove
+		})
+
+
+	return fragment
+}//end render_column_remove()
 
 
 

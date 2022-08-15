@@ -281,7 +281,7 @@
 		const self = this
 
 		// Confirm delete by user
-		if (!confirm(get_label.seguro)) {
+		if (!confirm(get_label.sure)) {
 			return false
 		}
 

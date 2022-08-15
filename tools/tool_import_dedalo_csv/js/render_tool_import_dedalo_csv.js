@@ -471,7 +471,7 @@ const render_file_info = function(self, item) {
 				parent			: file_line
 			})
 			icon_delete.addEventListener("click", function(){
-				if(confirm(get_label.seguro || 'Sure?')) {
+				if(confirm(get_label.sure || 'Sure?')) {
 					// remove file
 					self.remove_file(item)
 					.then(function(){
