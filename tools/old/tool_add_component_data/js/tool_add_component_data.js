@@ -17,7 +17,7 @@ var tool_add_component_data = new function() {
 	*/
 	this.add_data = function(button_obj) {
 
-		if (!confirm(get_label.seguro)) return false;		
+		if (!confirm(get_label.sure)) return false;
 		
 		var component_tipo	= button_obj.dataset.component_tipo,
 			parent 			= button_obj.dataset.parent,

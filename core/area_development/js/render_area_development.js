@@ -355,7 +355,7 @@ export const build_form = function(widget_object) {
 		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
 
-			if ( confirm( (confirm_text || get_label.seguro || 'Sure?') ) ) {
+			if ( confirm( (confirm_text || get_label.sure || 'Sure?') ) ) {
 
 				// check mandatory values
 					for (let i = 0; i < input_nodes.length; i++) {
