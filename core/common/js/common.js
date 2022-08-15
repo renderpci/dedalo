@@ -555,7 +555,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 							if(self.node){
 								self.node.remove()
 							}
-							
+
 							// const node_length = self.node.length
 							// for (let i = node_length - 1; i >= 0; i--) {
 							// 	const current_node = self.node[i]
@@ -1268,10 +1268,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 				? sqo.filter_by_locators
 				: (sqo_config && sqo_config.filter_by_locators)
 					? sqo_config.filter_by_locators
-					// if the section send a section_id and it has mode in edit and doesn't have defined filter_by_locators, create a default locator with section_tipo and section_id
-					: (self.mode==='edit' && self.model==='section' && self.section_id)
-						? [{section_tipo: self.section_tipo, section_id: self.section_id}]
-						: null
+					: null
 			if (filter_by_locators) {
 				sqo.filter_by_locators = filter_by_locators
 			}
