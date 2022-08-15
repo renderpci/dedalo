@@ -104,6 +104,10 @@
 		&.white {
 			background-color: #ffffff !important;
 		}
+		&.grey{
+			background-color: #949494;
+			opacity: 0.5;
+		}
 	}//end .button
 
 
@@ -262,6 +266,11 @@
 	.delete_light {
 		@icon_name : 'delete.svg';
 		// @icon_name : 'trash_bold.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.delete_bold {
+		@icon_name : 'trash_bold.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
