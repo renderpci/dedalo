@@ -772,7 +772,7 @@ export const ui = {
 		error : (error, component) => {
 
 			if (error) {
-					console.log("ERRROR IN component:------////////-----------------",component);
+					console.error("ERRROR IN component:------////////-----------------",component);
 				component.classList.add("error")
 
 			}else{
@@ -840,6 +840,11 @@ export const ui = {
 		* @return promise
 		*/
 		exec_save_successfully_animation : (self) => {
+
+			// no rendered node exists cases
+				if (!self.node) {
+					return Promise.resolve(false)
+				}
 
 			return new Promise(function(resolve){
 
@@ -2046,7 +2051,7 @@ export const ui = {
 					: options.footer // DOM node
 				: null
 			const size				= options.size || 'normal' // string size='normal'
-			const modal_parent		= options.modal_parent || document.querySelector('.wrapper_page')
+			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page')
 			const remove_overlay	= options.remove_overlay || false
 
 		// page_y_offset. Current window scroll position (used to restore later)
@@ -2061,7 +2066,7 @@ export const ui = {
 			// }
 			const modal_container	= document.createElement('dd-modal')
 			// document.body.appendChild(modal_container)
-			// const wrapper_page		= document.querySelector('.wrapper_page')
+			// const wrapper_page		= document.querySelector('.wrapper.page')
 			modal_parent.appendChild(modal_container)
 
 		// modal_node
@@ -2580,7 +2585,7 @@ export const ui = {
 						// }]
 						path : path
 					}]
-					console.log("order:",order);
+					// console.log("order:",order);
 
 				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
 				// note that navigate only refresh current instance content_data, not the whole page
