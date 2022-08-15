@@ -567,9 +567,14 @@ component_common.prototype.save = async function(changed_data) {
 					set_before_unload(false)
 
 				// updates db_data
-					self.db_data = self.db_data || {
-						value : [null]
-					}
+					self.db_data = self.db_data
+						? self.db_data
+						: {}
+
+					self.db_data.value = self.db_data.value
+						? self.db_data.value
+						: [null]
+
 					self.db_data.value[changed_data.key] = changed_data.value
 			}
 
