@@ -337,6 +337,8 @@ export const render_column_remove = function(options) {
 		const self			= options.caller
 		const row_key		= options.row_key
 		const paginated_key	= options.paginated_key
+		const section_id 	= self.section_id
+		const section_tipo 	= self.section_tipo
 
 	const fragment = new DocumentFragment()
 
@@ -350,19 +352,19 @@ export const render_column_remove = function(options) {
 			e.stopPropagation()
 
 			// label
-				let el = button_remove
-				while((el = el.parentElement) && !el.classList.contains('section_record')) {
-					// finding parent section_record
-				}
-				const children = el.children
+				// let el = button_remove
+				// // while((el = el.parentElement) && !el.classList.contains('section_record')) {
+				// // 	// finding parent section_record
+				// // }
+				// const children = el.children
 
-				const ar_label = []
-				for (let i = 0; i < children.length; i++) {
-					if(children[i].textContent.length>0) {
-						ar_label.push(children[i].textContent)
-					}
-				}
-				const label = ar_label.join(', ')
+				// const ar_label = []
+				// for (let i = 0; i < children.length; i++) {
+				// 	if(children[i].textContent.length>0) {
+				// 		ar_label.push(children[i].textContent)
+				// 	}
+				// }
+				// const label = ar_label.join(', ')
 
 			// changed_data
 				const changed_data = Object.freeze({
@@ -371,69 +373,121 @@ export const render_column_remove = function(options) {
 					value	: null
 				})
 
-			// remove_dialog. User must to confirm the remove action to continue
-			// On true, data pagination offset is changed
-				const remove_dialog = function() {
 
-					const msg = SHOW_DEBUG
-						? `Sure to remove value: \n${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
-						: `Sure to remove value: \n${label} ?}`
 
-					if( !confirm(msg) ) {
-						return false
-					}
+				// header
+					const header = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'header'
+					})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'label',
+						inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+						parent			: header
+					})
 
-					// data pagination offset. Check and update self data to allow save API request return the proper paginated data
-						const key = parseInt(row_key)
-						if (key===0 && self.data.pagination.offset>0) {
-							const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
-							// set before exec API request on Save
-							self.data.pagination.offset = next_offset>0
-								? next_offset
-								: 0
-						}
+				// body
+					const body = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'content delete_record'
+					})
 
-					return true
-				}
+				// footer
+					const footer = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'footer'
+					})
 
-			// change_value (implies saves too)
-				self.change_value({
-					changed_data	: changed_data,
-					label			: label,
-					refresh			: false,
-					remove_dialog	: remove_dialog
-				})
-				.then(async (response)=>{
-
-					// the user has selected cancel from delete dialog
-						if (response===false) {
+				// button_unlink_and_delete
+					const button_unlink_and_delete = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'danger remove',
+						text_content	: get_label.delete_data_only || 'delete data',
+						parent			: footer
+					})
+					button_unlink_and_delete.addEventListener("click", function(){
+						if (!confirm(get_label.sure)) {
 							return
 						}
-
-					// update pagination offset
-						self.update_pagination_values('remove')
-
-					// refresh
-						await self.refresh({
-							build_autoload : true // when true, force reset offset
+						section.delete_section({
+							sqo			: sqo,
+							delete_mode	: 'delete_data'
 						})
+						.then(function(){
+							modal.on_close()
+						})
+					})
 
-					// check if the caller has active a tag_id
-						if(self.active_tag){
-							// filter component data by tag_id and re-render content
-							console.log('++++++++++++++++++++++++++++++++++++++ self.active_tag:', self.active_tag);
-							self.filter_data_by_tag_id(self.active_tag)
-						}
+				// button_unlink_record
+					const button_unlink_record = ui.create_dom_element({
+						element_type	: 'button',
+						class_name 		: 'warning remove',
+						text_content 	: get_label.delete_data_and_record || 'Delete record',
+						parent			: footer
+					})
+					// remove_dialog. User must to confirm the remove action to continue
+					// On true, data pagination offset is changed
 
-					// event to update the DOM elements of the instance
-						event_manager.publish('remove_element_'+self.id, row_key)
+					button_unlink_record.addEventListener("mouseup", function(){
 
-					// modal. Close modal if isset
-						if (self.modal) {
-							self.modal.close()
-							self.modal = null
-						}
-				})
+						// change_value (implies saves too)
+							self.change_value({
+								changed_data	: changed_data,
+								label			: section_id,
+								refresh			: false,
+								remove_dialog	: function(){
+									return confirm(get_label.sure)
+								}
+							})
+							.then(async (response)=>{
+								// the user has selected cancel from delete dialog
+									if (response===false) {
+										// modal. Close modal if isset
+										modal.on_close()
+										return
+									}
+
+								// update pagination offset
+									self.update_pagination_values('remove')
+
+								// refresh
+									await self.refresh({
+										build_autoload : true // when true, force reset offset
+									})
+
+								// check if the caller has active a tag_id
+									if(self.active_tag){
+										// filter component data by tag_id and re-render content
+										console.log('++++++++++++++++++++++++++++++++++++++ self.active_tag:', self.active_tag);
+										self.filter_data_by_tag_id(self.active_tag)
+									}
+
+								// event to update the DOM elements of the instance
+									event_manager.publish('remove_element_'+self.id, row_key)
+
+								// modal. Close modal if isset
+									modal.on_close()
+							})
+					})
+
+				// modal
+					const modal = ui.attach_to_modal({
+						header	: header,
+						body	: body,
+						footer	: footer,
+						size	: 'small' // string size big|normal
+					})
+
+				// data pagination offset. Check and update self data to allow save API request return the proper paginated data
+					const key = parseInt(row_key)
+					if (key===0 && self.data.pagination.offset>0) {
+						const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+						// set before exec API request on Save
+						self.data.pagination.offset = next_offset>0
+							? next_offset
+							: 0
+					}
 		})
 
 	// remove_icon
