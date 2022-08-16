@@ -128,6 +128,8 @@ component_common.prototype.init = async function(options) {
 				}
 			}
 
+		
+
 	// DES
 		// component_save (when user change component value) every component is looking if the own the instance was changed.
 			/*
