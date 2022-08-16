@@ -55,13 +55,12 @@ render_edit_component_date.prototype.edit = async function(options) {
 		})
 	// set pointer to content_data
 		wrapper.content_data = content_data
-		self.wrapper = wrapper
 
 	// set the mode as class to be adapted to specific css
 		wrapper.classList.add(date_mode)
 
 	// add events
-		// add_events(self, wrapper)
+		// add_events(self)
 
 
 	return wrapper
@@ -72,8 +71,9 @@ render_edit_component_date.prototype.edit = async function(options) {
 /**
 * ADD_EVENTS
 */
-const add_events = function(self, wrapper) {
+const add_events = function(self) {
 
+	// wrapper = self.node
 	const date_mode = self.get_date_mode()
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
@@ -113,6 +113,7 @@ const get_content_data_edit = function(self) {
 		for (let i = 0; i < value_length; i++) {
 			const input_element_edit = get_input_element_edit(i, inputs_value[i], self)
 			inputs_container.appendChild(input_element_edit)
+			// set the pointer
 			inputs_container[i] = input_element_edit
 		}
 
@@ -162,10 +163,13 @@ const get_buttons = (self) => {
 					refresh 	 : true
 				})
 				.then(()=>{
-					const inputs_container = self.wrapper.content_data.inputs_container
+					const inputs_container = self.node.content_data.inputs_container
+
 					// add new dom input element
 					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
 					inputs_container.appendChild(new_input)
+					// set the pointer
+					inputs_container[changed_data.key] = new_input
 				})
 			})
 		}
