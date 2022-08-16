@@ -81,13 +81,13 @@ const get_content_data_edit = async function(self) {
 
 		const right_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'right_container',
-			parent 			: fragment
+			class_name		: 'right_container',
+			parent			: fragment
 		})
 			const right_container_head = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'right_container_head',
-				parent 			: right_container
+				class_name		: 'right_container_head',
+				parent			: right_container
 			})
 			const header_node = render_header(self)
 			if(header_node){
@@ -95,15 +95,15 @@ const get_content_data_edit = async function(self) {
 			}
 			const right_container_text = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'right_container_text',
-				parent 			: right_container
+				class_name		: 'right_container_text',
+				parent			: right_container
 			})
 
 		// value is a raw html without parse into nodes (txt format)
 		const node_len 	= self.ar_raw_data.length
 		for (var i = 0; i < node_len; i++) {
-			const raw_data = self.ar_raw_data[i]
-			const text_node = self.tags_to_html(raw_data)
+			const raw_data	= self.ar_raw_data[i]
+			const text_node	= self.tags_to_html(raw_data)
 			right_container_text.insertAdjacentHTML("beforeend", text_node);
 			// right_container.appendChild(node)
 		}
@@ -152,12 +152,12 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'lang_selector',
 			parent			: fragment
 		})
-			const lang_label = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'lang_label',
-				inner_html 		: get_label.idioma || 'Language',
-				parent 			: lang_container
-			})
+		const lang_label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'lang_label',
+			inner_html 		: get_label.idioma || 'Language',
+			parent 			: lang_container
+		})
 		// the lang selector use the content_data pointer .right_container to remove the transcription text_area and rebuild the new node
 			const lang_selector = ui.build_select_lang({
 				selected	: self.lang,
@@ -183,40 +183,38 @@ const render_text_process_options = function(self, content_data) {
 
 				}
 			})
-		lang_container.appendChild(lang_selector)
+			lang_container.appendChild(lang_selector)
 
 	// OPTIONS
 	// header_option_container
 		const header_option_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'option_container',
-				parent			: fragment
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
 		})
-			const header_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'header_option',
-				parent 			: header_option_container
-			})
-			header_option.checked = true
-			const header_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'header_option_label',
-				inner_html 		: get_label.cabecera || 'Header',
-				parent 			: header_option_container
-			})
-		header_option_container.addEventListener('change',async function(){
+		header_option_container.addEventListener('change', async function(){
 			const header_elements = content_data.querySelector('.right_container_head')
-
 			if(!header_elements){
 				return
 			}
+			header_elements.style.display = header_option.checked===true
+				? ''
+				: 'none'
+		})
 
-			if (header_option.checked===true) {
-				header_elements.style.display = ''
-			}else{
-				header_elements.style.display = 'none'
-			}
+		const header_option = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			class_name		: 'header_option',
+			parent			: header_option_container
+		})
+		header_option.checked = true
+
+		const header_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'header_option_label',
+			inner_html		: get_label.cabecera || 'Header',
+			parent			: header_option_container
 		})
 
 	// timecodes_option_container
@@ -513,20 +511,20 @@ const render_text_process_options = function(self, content_data) {
 
 	// text options container
 		const text_selector = ui.create_dom_element({
-				element_type	: 'select',
-				class_name		: 'text_selector',
-				parent			: fragment
-			})
+			element_type	: 'select',
+			class_name		: 'text_selector',
+			parent			: fragment
+		})
 			const default_view_option = ui.create_dom_element({
 				element_type	: 'option',
-				inner_html 		: get_label.default || 'Default',
-				parent 			: text_selector
+				inner_html		: get_label.default || 'Default',
+				parent			: text_selector
 			})
 
 			const original_view_option = ui.create_dom_element({
 				element_type	: 'option',
-				inner_html 		: get_label.original || 'Original',
-				parent 			: text_selector
+				inner_html		: get_label.original || 'Original',
+				parent			: text_selector
 			})
 			// default checked
 			original_view_option.selected = true
