@@ -19,9 +19,9 @@
 		// });
 		// Use "tdd" interface, check global leaks, and force all tests to be asynchronous
 		mocha.setup({
-		  ui: 'bdd',
-		  checkLeaks: true,
-		  asyncOnly: true
+			ui			: 'bdd',
+			checkLeaks	: true,
+			asyncOnly	: true
 		});
 		//mocha.growl(); // <-- Enables web notifications
 	</script>
@@ -37,11 +37,6 @@
 		<div id="mocha"></div>
 
 	<!-- tests file -->
-		<script type="module" src="js/unit_test.js"></script>
-
-	<!-- run tests! -->
-		<script>
-			//mocha.run();
-		</script>
+		<script type="module" src="js/index.js"></script>
 </body>
 </html>
