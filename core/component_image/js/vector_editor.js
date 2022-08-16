@@ -1229,7 +1229,7 @@ vector_editor.prototype.render_layer_selector = function(self) {
 		})
 
 		// load the layer into the layer box
-		for (var i =  ar_layers.length - 1; i >= 0; i--) {
+		for (let i =  ar_layers.length - 1; i >= 0; i--) {
 		// for (let i = 0; i < ar_layers.length; i++) {
 			const layer = ar_layers[i]
 			const layer_li = this.render_layer_row(self, layer)
