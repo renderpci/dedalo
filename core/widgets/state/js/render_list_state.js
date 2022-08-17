@@ -29,7 +29,8 @@ render_list_state.prototype.list = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	// options
+		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_list(self)
@@ -41,6 +42,8 @@ render_list_state.prototype.list = async function(options) {
 		const wrapper = ui.widget.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -66,10 +69,13 @@ const get_content_data_list = async function(self) {
 	// values
 		const ipo			= self.ipo
 		const ipo_length	= ipo.length
+		// console.log('ipo:', ipo);
+		// console.log('self.value:', self.value);
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data = self.value.filter(item => item.key === i)
-			get_value_element(i, data , values_container, self)
+			const data			= self.value.filter(el => el.key===i)
+			const value_element	= get_value_element(i, data, self)
+			values_container.appendChild(value_element)
 		}
 
 	// content_data
@@ -86,15 +92,14 @@ const get_content_data_list = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return DOM node li
+* @return DOM node value_element
 */
-const get_value_element = (i, data, values_container, self) => {
+const get_value_element = (i, data, self) => {
 
 	// li, for every ipo will create a li node
-		const container = ui.create_dom_element({
+		const value_element = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'widget_item state',
-			parent			: values_container
+			class_name		: 'widget_item state'
 		})
 
 		// important!, data don't has all info
@@ -111,48 +116,52 @@ const get_value_element = (i, data, values_container, self) => {
 		let tooltip_node
 		// every ipo has one output array with the objects for every row
 		// get the output for reference of the rows
-		for (let o = 0; o < output.length; o++) {
-			const output_item = output[o]
+		const output_length = output.length
+		for (let z = 0; z < output_length; z++) {
+
+			const output_item = output[z]
 
 			// Situation
 				// get the total item for situation
 				const situation_total = data.find(item =>  item.id === output_item.id
 														&& item.column === 'situation'
 														&& item.type ==='total')
+				// console.log('situation_total:', situation_total.value, situation_total);
 
 			// State
 				// get the total item for state
 				const state_total = data.find(item =>  item.id === output_item.id
 													&& item.column === 'state'
 													&& item.type ==='total')
+				// console.log('state_total:', state_total.value, state_total);
 
 				if(situation_total.value > 0 || state_total.value > 0){
 					// node for the colum situation
 					const situation = ui.create_dom_element({
 						element_type	: 'span',
-						class_name		: 'state_icon '+output_item.id,
-						parent			: container
+						class_name		: 'state_icon ' + output_item.id,
+						parent			: value_element
 					})
 
-					situation.addEventListener('click', function(e){
+					situation.addEventListener('click', function() {
 						// delete the tool_tip node every time that user click in the icons
 						if (tooltip_node) {
 							tooltip_node.remove()
 						}
-						// get the value of specific output (situation, state ) with the totals
-						const tooltip = get_value_tooltip(output_item, data, self)
 
+						// tooltip_node
 						tooltip_node = ui.create_dom_element({
 							element_type	: 'span',
-							class_name		: 'state_tooltip ',
-							parent			: container
+							class_name		: 'state_tooltip',
+							parent			: value_element
 						})
 						tooltip_node.addEventListener('click', function(){
 							tooltip_node.remove()
 						})
 
+						// get the value of specific output (situation, state ) with the totals
+						const tooltip = get_value_tooltip(output_item, data, self)
 						tooltip_node.appendChild(tooltip)
-
 					})
 				}
 		}// end for (let o = 0; o < output.length; o++)
@@ -200,16 +209,22 @@ const get_value_element = (i, data, values_container, self) => {
 		}//end fn_update_widget_value
 
 
-	return container
+	return value_element
 }//end get_value_element
 
 
 
+/**
+* GET_VALUE_TOOLTIP
+* @return DOM DocumentFragment
+*/
 const get_value_tooltip = (output_item, data, self) => {
 
 	const fragment = new DocumentFragment()
 
-	const project_langs = page_globals.dedalo_projects_default_langs
+	// short vars
+		const project_langs	= page_globals.dedalo_projects_default_langs
+		const nolan			= page_globals.dedalo_data_nolan
 
 	// row container
 		const container = ui.create_dom_element({
@@ -219,12 +234,13 @@ const get_value_tooltip = (output_item, data, self) => {
 		})
 
 		// label for the row
-		const label = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'label',
+			class_name		: 'output_label',
 			inner_html		: get_label[output_item.label] || output_item.id,
 			parent			: container
 		})
-		const nolan = page_globals.dedalo_data_nolan
+
 	// Situation
 		// check if the component is translatable, with the first item in the data of the current column
 		const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
@@ -233,7 +249,7 @@ const get_value_tooltip = (output_item, data, self) => {
 		// if the item is translatable select the all projects langs, else the item will be lg-nolan and only will has 1 item
 		const situation_length = situation_translatable ? project_langs.length : 1;
 		// get the total item for situation
-		const situation_total = data.find(item => item.id === output_item.id
+		const situation_total = data.find(item =>  item.id === output_item.id
 												&& item.column === 'situation'
 												&& item.type ==='total')
 
@@ -274,26 +290,27 @@ const get_value_tooltip = (output_item, data, self) => {
 			// build the label with the lang name
 			const label_situation = ui.create_dom_element({
 				element_type	: 'label',
-				inner_html 		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
-				parent 			: situation_detail
+				inner_html		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
+				parent			: situation_detail
 			})
 			// create the node with the value
 			const item_situation = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html 		: (situation_items_data) ? situation_items_data.value+'%' : '0%',
-				parent 			: situation_detail
+				inner_html		: (situation_items_data) ? situation_items_data.value+'%' : '0%',
+				parent			: situation_detail
 			})
 			// build the label with the list name
 			const datalist_item = (situation_items_data && situation_items_data.locator)
 				? self.datalist.find(item => item.value.section_tipo === situation_items_data.locator.section_tipo
-										&& item.value.section_id === situation_items_data.locator.section_id)
+										  && item.value.section_id === situation_items_data.locator.section_id)
 				: {label: ''}
 
-			const label_list_situation = ui.create_dom_element({
+			// label_list_situation
+			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html 		: datalist_item.label,
-				parent 			: situation_detail
+				inner_html		: datalist_item ? datalist_item.label : '',
+				parent			: situation_detail
 			})
 		} // end for (let j = 0; j < situation_length; j++)
 	// State
@@ -304,16 +321,16 @@ const get_value_tooltip = (output_item, data, self) => {
 		// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
 		const item_length = state_translatable ? project_langs.length : 1;
 
-		const state_total = data.find(item => item.id === output_item.id
+		const state_total = data.find(item =>  item.id === output_item.id
 											&& item.column === 'state'
 											&& item.type ==='total')
 
 		// node for state colum
-		const state = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'state',
-			parent			: container
-		})
+			const state = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'state',
+				parent			: container
+			})
 			// total
 			const total_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -339,41 +356,40 @@ const get_value_tooltip = (output_item, data, self) => {
 			// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 			const lang = state_translatable ? project_langs[k].value : nolan
 			// find the data of the item with the lang
-			const state_item_data = data.find(item => item.id === output_item.id
+			const state_item_data = data.find(item =>  item.id === output_item.id
 													&& item.column === 'state'
 													&& item.lang === lang
 													&& item.type ==='detail')
 
-			// build the label with the lang
-			const label_state = ui.create_dom_element({
+			// label_state. build the label with the lang
+			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html 		: (state_translatable) ? project_langs[k].label+': ' : 'total :',
-				parent 			: detail
+				inner_html		: (state_translatable) ? project_langs[k].label+': ' : 'total :',
+				parent			: detail
 			})
 
-			// create the node with the value
-			const item_state = ui.create_dom_element({
+			// item_state. create the node with the value
+			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html 		: (state_item_data) ? state_item_data.value+'%' : '0%',
-				parent 			: detail
+				inner_html		: (state_item_data) ? state_item_data.value+'%' : '0%',
+				parent			: detail
 			})
+
 			// build the label with the list name
 			const datalist_item_status = (state_item_data && state_item_data.locator)
 				? self.datalist.find(item => item.value.section_tipo === state_item_data.locator.section_tipo
-										&& item.value.section_id === state_item_data.locator.section_id)
+										  && item.value.section_id === state_item_data.locator.section_id)
 				: {label: ''}
 
-			const label_list_state = ui.create_dom_element({
+			// label_list_state
+			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html 		: datalist_item_status.label,
-				parent 			: detail
+				inner_html		: datalist_item_status ? datalist_item_status.label : '',
+				parent			: detail
 			})
-
 		}// end for (let k = 0; k < item_length; k++)
 
 
 	return fragment
-}// end get_value_tooltip()
-
-
+}// end get_value_tooltip

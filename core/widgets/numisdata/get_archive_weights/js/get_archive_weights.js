@@ -39,27 +39,7 @@ export const get_archive_weights = function(){
 	// lifecycle
 	get_archive_weights.prototype.init		= widget_common.prototype.init
 	get_archive_weights.prototype.build		= widget_common.prototype.build
+	get_archive_weights.prototype.render	= widget_common.prototype.render
 	get_archive_weights.prototype.destroy	= widget_common.prototype.destroy
 	// render
-	get_archive_weights.prototype.edit 		= render_get_archive_weights.prototype.edit
-
-
-
-/**
-* RENDER
-*/
-get_archive_weights.prototype.render = async function(options={render_level:'full'}) {
-
-	const self = this
-
-	const render_level 	= options.render_level || 'full'
-	const render_mode 	= self.mode || 'edit'
-
-	const node = await self[render_mode]({
-		render_level : render_level
-	})
-
-	self.node = node
-
-	return node
-}//end render
+	get_archive_weights.prototype.edit		= render_get_archive_weights.prototype.edit
