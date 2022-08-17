@@ -40,29 +40,8 @@ export const state = function(){
 	// lifecycle
 	state.prototype.init	= widget_common.prototype.init
 	state.prototype.build	= widget_common.prototype.build
+	state.prototype.render	= widget_common.prototype.render
 	state.prototype.destroy	= widget_common.prototype.destroy
 	// render
 	state.prototype.edit	= render_edit_state.prototype.edit
 	state.prototype.list	= render_list_state.prototype.list
-
-
-/**
-* RENDER
-*/
-state.prototype.render = async function(options={render_level:'full'}) {
-
-	const self = this
-
-	const render_level	= options.render_level || 'full'
-	const render_mode	= self.mode || 'edit'
-
-	const node = await self[render_mode]({
-		render_level : render_level
-	})
-
-	self.node = node
-
-	return node
-}//end render
-
-

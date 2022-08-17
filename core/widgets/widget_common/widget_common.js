@@ -82,6 +82,30 @@ widget_common.prototype.build = async function(autoload=false) {
 
 
 /**
+* RENDER
+* Generic widget render function
+* @param object options
+* @return DOM node
+*/
+widget_common.prototype.render = async function(options={}) {
+
+	const self = this
+
+	const render_level	= options.render_level || 'full'
+	const render_mode	= self.mode || 'edit'
+
+	const node = await self[render_mode]({
+		render_level : render_level
+	})
+
+	self.node = node
+
+	return node
+}//end render
+
+
+
+/**
 * DESTROY
 * Generic widget destroy function
 * @param bool autoload
@@ -103,27 +127,3 @@ widget_common.prototype.destroy = async function() {
 
 	return true
 }//end destroy
-
-
-
-/**
-* RENDER
-* Generic widget render function
-* @param object options
-* @return DOM node
-*/
-widget_common.prototype.render = async function(options={}) {
-
-	const self = this
-
-	const render_level	= options.render_level || 'full'
-	const render_mode	= self.mode || 'edit'
-
-	const node = await self[render_mode]({
-		render_level : render_level
-	})
-
-	self.node = node
-
-	return node
-}//end render

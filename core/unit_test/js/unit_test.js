@@ -10,13 +10,20 @@
 
 
 
+import {
+	elements,
+	section_tipo,
+	section_id,
+	mode,
+	lang
+} from './elements.js'
+// import * as fn from './data.js'
 import {get_instance, key_instances_builder, delete_instance, get_all_instances} from '../../common/js/instances.js'
-// import {data_manager} from '../../common/js/data_manager.js'
-// import {create_source} from '../../common/js/common.js'
 import {page} from '../../page/js/page.js'
 import {component_input_text} from '../../component_input_text/js/component_input_text.js'
 import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
-import * as fn from './data.js'
+// import {data_manager} from '../../common/js/data_manager.js'
+// import {create_source} from '../../common/js/common.js'
 
 
 
@@ -38,378 +45,15 @@ import * as fn from './data.js'
 
 
 
-// Define components that will be tested
-	const elements = []
-
-	// components general values
-		const section_tipo	= 'test3'
-		const section_id	= 1
-		const mode			= 'edit'
-		const lang			= 'lg-eng'
-		const permissions	= 2
-
-	// component_av
-		elements.push({
-			model				: 'component_av',
-			tipo				: 'test94',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.custom_locator,
-			new_value_params	: [section_tipo, section_id, 'test94']
-		})
-
-	// component_calculation -to disappear-  (WORKING HERE)
-
-	// component_check_box
-		elements.push({
-			model				: 'component_check_box',
-			tipo				: 'test146',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_locator,
-			new_value_params	: ['dd501','test146']
-		})
-
-	// component_date
-		elements.push({
-			model			: 'component_date',
-			tipo			: 'test145',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: page_globals.dedalo_data_nolan,
-			new_value		: fn.random_date
-		})
-
-	// component_email
-		elements.push({
-			model			: 'component_email',
-			tipo			: 'test208',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: page_globals.dedalo_data_nolan,
-			new_value		: fn.random_email
-		})
-
-	// component_external -zenon- (WORKING HERE)
-
-	// component_filter
-		elements.push({
-			model				: 'component_filter',
-			tipo				: 'test101',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
-		})
-
-	// component_filter_master
-		elements.push({
-			model				: 'component_filter_master',
-			tipo				: 'test70',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test70'] // [section_tipo, from_component_tipo, paginated_key]
-		})
-
-	// component_filter_records
-		elements.push({
-			model				: 'component_filter_records',
-			tipo				: 'test69',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_filter_records,
-			new_value_params	: [] // [section_tipo, from_component_tipo, paginated_key]
-		})
-
-	// component_geolocation
-		elements.push({
-			model				: 'component_geolocation',
-			tipo				: 'test100',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_geolocation,
-			new_value_params	: [] // [section_tipo, from_component_tipo, paginated_key]
-		})
-
-	// component grouper/sync ?????? (WORKING HERE)
-
-	// component_html_text -full tinymce- (WORKING HERE)
-
-	// component_image
-		elements.push({
-			model				: 'component_image',
-			tipo				: 'test99',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_image_data,
-			new_value_params	: []
-		})
-
-	// component_info -widgets- (WORKING HERE)
-
-	// component_input_text
-		elements.push({
-			model			: 'component_input_text',
-			tipo			: 'test52',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			new_value		: fn.random_string
-		})
-
-	// component_inverse -section_id from caller- (WORKING HERE)
-
-	// component_ip -to disappear- (WORKING HERE)
-
-	// component_iri
-		elements.push({
-			model			: 'component_iri',
-			tipo			: 'test140',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			new_value		: fn.random_iri_data
-		})
-
-	// component_json
-		elements.push({
-			model			: 'component_json',
-			tipo			: 'test150',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: page_globals.dedalo_data_nolan,
-			new_value		: fn.random_json
-		})
-
-	// component_number
-		elements.push({
-			model			: 'component_number',
-			tipo			: 'test139',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			new_value		: fn.random_number
-		})
-
-	// component_password
-		elements.push({
-			model			: 'component_password',
-			tipo			: 'test152',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: page_globals.dedalo_data_nolan,
-			new_value		: fn.random_string,
-			test_save		: false
-		})
-
-	// component_pdf
-		elements.push({
-			model				: 'component_pdf',
-			tipo				: 'test85',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_pdf_data,
-			new_value_params	: []
-		})
-
-	// component_portal (basic v5 config)
-		elements.push({
-			model				: 'component_portal',
-			tipo				: 'test80',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['test38', 'test80', 0] // [section_tipo, from_component_tipo, paginated_key]
-		})
-
-	// component_publication
-		elements.push({
-			model				: 'component_publication',
-			tipo				: 'test92',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['dd64','test92']
-		})
-
-	// component_radio_button
-		elements.push({
-			model				: 'component_radio_button',
-			tipo				: 'test144',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['dd501','test144']
-		})
-
-	// component_relation_children
-		elements.push({
-			model				: 'component_relation_children',
-			tipo				: 'test201',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test201']
-		})
-
-	// component_relation_index
-		elements.push({
-			model				: 'component_relation_index',
-			tipo				: 'test25',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['es1','test25']
-		})
-
-	// component_relation_model
-		elements.push({
-			model				: 'component_relation_model',
-			tipo				: 'test169',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['es2','test169']
-		})
-
-	// component_relation_parent
-		elements.push({
-			model				: 'component_relation_parent',
-			tipo				: 'test71',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['es1','test71'],
-			test_save			: false
-		})
-
-	// component_relation_related
-		elements.push({
-			model				: 'component_relation_related',
-			tipo				: 'test56',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test56']
-		})
-
-	// component_section_id
-		elements.push({
-			model			: 'component_section_id',
-			tipo			: 'test102',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			new_value		: fn.random_string,
-			test_save		: false
-		})
-
-	// component_security_access
-		elements.push({
-			model				: 'component_security_access',
-			tipo				: 'test157',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_security_access
-		})
-
-	// component_select
-		elements.push({
-			model				: 'component_select',
-			tipo				: 'test91',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['es1','test91']
-		})
-
-	// component_select_lang
-		elements.push({
-			model				: 'component_select_lang',
-			tipo				: 'test89',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['lg1','test89']
-		})
-
-	// component_semantic_node -render portal column- (WORKING HERE)
-
-	// component_svg
-		elements.push({
-			model				: 'component_svg',
-			tipo				: 'test177',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_image_data
-		})
-
-	// component_text_area
-		elements.push({
-			model			: 'component_text_area',
-			tipo			: 'test17',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			new_value		: fn.random_string
-		})
+// short vars
+	const elements_length = elements.length
 
 
 
 // instances
 
 	// key_instances_builder
-		describe("instances : key_instances_builder", function(){
+		describe("instances : key_instances_builder", function() {
 
 			function make_test (elements, expected) {
 				it(`${JSON.stringify(elements)} => '${expected}'`, function(done) {
@@ -460,8 +104,9 @@ import * as fn from './data.js'
 					}, `${model}_${tipo}_${section_tipo}_${mode}`); // like 'component_input_text_test52_test65_edit'
 			});
 		});
+
 	// get_instance
-		describe("instances : get_instance", function(){
+		describe("instances : get_instance", function() {
 
 			function make_test(elements, expected) {
 				it(`${JSON.stringify(elements)} => '${expected.name}'`, async function() {
@@ -497,8 +142,9 @@ import * as fn from './data.js'
 						}, tool_lang);
 				});
 		});
+
 	// delete_instance
-		describe("instances : delete_instance", function(){
+		describe("instances : delete_instance", function() {
 
 			function make_test (elements, expected) {
 				it(`${JSON.stringify(elements)} => DELETED: ${expected}`, async function() {
@@ -548,101 +194,117 @@ import * as fn from './data.js'
 
 
 // components lifecycle functions for any component instance
-	describe("components : lifecycle", function(){
+	describe("components : lifecycle", function() {
 
-		function make_test (elements, property, expected, stage) {
+		function make_test(element, property, expected, stage) {
+
 			//it(`${JSON.stringify(property)} => Init: ${expected}`, async function() {
-			it(`${JSON.stringify(property)} => Init ${elements.model}: ${expected}`, async function() {
+			it(`${JSON.stringify(property)} => Init ${element.model}: ${expected}`, async function() {
+				// this.timeout(5000);
 
-				// get and set element context
-					// const element_context = await data_manager.get_element_context({
-					// 	tipo 			: elements.tipo,
-					// 	section_tipo 	: elements.section_tipo,
-					// 	section_id		: elements.section_id
-					// })
-					// // console.log("************* calculated element_context:",element_context.result[0]);
-					// elements.context = element_context.result[0]
+				return new Promise(async (resolve) => {
 
-				// direct minimum context
-					const request_config = [{
-						api_engine	: "dedalo",
-						show		: {
-							ddo_map : []
-						},
-						sqo			: {
-							section_tipo : [elements.section_tipo]
+					// get and set element context
+						// const element_context = await data_manager.get_element_context({
+						// 	tipo 			: element.tipo,
+						// 	section_tipo 	: element.section_tipo,
+						// 	section_id		: element.section_id
+						// })
+						// // console.log("************* calculated element_context:",element_context.result[0]);
+						// element.context = element_context.result[0]
+
+					// direct minimum context
+						const request_config = [{
+							api_engine	: 'dedalo',
+							show		: {
+								ddo_map : []
+							},
+							sqo			: {
+								section_tipo : [element.section_tipo]
+							}
+						}]
+						element.context = {
+							request_config : request_config // [source]
 						}
-					}]
-					elements.context = {
-						request_config : request_config // [source]
+
+					// init instance
+						const new_instance = await get_instance(element)
+							// console.log("new_instance:", stage);
+
+					// if (stage==='build' || stage==='render' || stage==='refresh' || stage==='destroy') {
+					if (stage!=='init') {
+
+						await new_instance.build(true)
+
+						if (stage==='render') {
+							await new_instance.render()
+						}
+						else if (stage==='refresh') {
+							await new_instance.render()
+							await new_instance.refresh()
+						}
+						else if (stage==='destroy') {
+
+							const instance_id	= new_instance.id
+							//const instance_key 	= element.key || key_instances_builder(element, true)
+							const instances	= get_all_instances()
+
+							// console.log("instances:",instances)
+							// 	console.log("instance_id:",instance_id)
+							// 		console.log("instance_key:",instance_key);
+
+							// const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
+							await new_instance.destroy()
+
+							// exists after destroy ?
+								const found_instance_after_destroy = instances.filter(instance => instance.id===instance_id)
+								// console.log("found_instance_before_destroy:",found_instance_before_destroy)
+								// console.log("found_instance_after_destroy:",found_instance_after_destroy)
+								assert.equal(found_instance_after_destroy.length, 0)
+
+							// resolve()
+							// return false // stop on destroy
+						}
 					}
 
-				// init instance
-					const new_instance = await get_instance(elements)
-						// console.log("new_instance:", stage, clone(new_instance) );
+					if (stage!=='destroy') {
 
-				if (stage==='build' || stage==='render' || stage==='refresh' || stage==='destroy') {
+						if (property) {
+							switch (property) {
+								case 'status':
+									assert.equal(new_instance.status, expected)
+									break;
+								case 'lang':
+									assert.equal(new_instance.lang, expected)
+									break;
+								case 'permissions':
+									assert.equal(new_instance.permissions, expected)
+									break;
+								default:
+									assert.equal(new_instance.status, expected)
+									break;
+							}
+						}
 
-					await new_instance.build(true)
-
-					if (stage==='render') {
-						await new_instance.render()
-					}
-					else if (stage==='refresh') {
-						await new_instance.render()
-						await new_instance.refresh()
-					}
-					else if (stage==='destroy') {
-
-						const instance_id	= new_instance.id
-						//const instance_key 	= elements.key || key_instances_builder(elements, true)
-						const instances	= get_all_instances()
-
-						// console.log("instances:",instances)
-						// 	console.log("instance_id:",instance_id)
-						// 		console.log("instance_key:",instance_key);
-
-						// const found_instance_before_destroy = instances.filter(instance => instance.id===instance_id)
 						await new_instance.destroy()
-
-						// exists after destroy ?
-							const found_instance_after_destroy = instances.filter(instance => instance.id===instance_id)
-							// console.log("found_instance_before_destroy:",found_instance_before_destroy)
-							// console.log("found_instance_after_destroy:",found_instance_after_destroy)
-							assert.equal(found_instance_after_destroy.length, 0)
-
-						return false // stop on destroy
 					}
-				}
 
-				if (property) {
-					switch (property) {
-						case 'status':
-							assert.equal(new_instance.status, expected)
-							break;
-						case 'lang':
-							assert.equal(new_instance.lang, expected)
-							break;
-						case 'permissions':
-							assert.equal(new_instance.permissions, expected)
-							break;
-						default:
-							assert.equal(new_instance.status, expected)
-							break;
-					}
-				}
-
-				await new_instance.destroy()
+					resolve()
+				})
 			});
 		}//end function make_test
 
+
 		// init
 			describe("INIT component based on elements values to create a component instance: status = initiated, lang = lg-eng and permissions = null", function() {
-
-				for (let i = 0; i < elements.length; i++) {
+				for (let i = 0; i < elements_length; i++) {
 					describe(elements[i].model, function() {
-						// params: elements, property, expected, stage
-						make_test(elements[i], 'status', 'initiated', 'init')
+						make_test(
+							elements[i], // object element
+							'status', // string property
+							'initiated', // string expected
+							'init' // string stage
+						)
 					})
 				}
 			});
@@ -650,12 +312,14 @@ import * as fn from './data.js'
 
 		// build
 			describe("BUILD component based on elements values to create a component instance: status = builded and permissions = 1", function() {
-
-				for (let i = 0; i < elements.length; i++) {
+				for (let i = 0; i < elements_length; i++) {
 					describe(elements[i].model, function() {
-						// params: elements, property, expected, stage
-						make_test(elements[i], 'status', 'builded', 'build')
-						// make_test(elements[i], 'permissions', 3, 'build')
+						make_test(
+							elements[i], // object element
+							'status', // string property
+							'builded', // string expected
+							'build' // string stage
+						)
 					})
 				}
 			});
@@ -663,11 +327,14 @@ import * as fn from './data.js'
 
 		// render
 			describe("RENDER component based on elements values to create a component instance: status = builded and permissions = 1", function() {
-
-				for (let i = 0; i < elements.length; i++) {
+				for (let i = 0; i < elements_length; i++) {
 					describe(elements[i].model, function() {
-						// params: elements, property, expected, stage
-						make_test(elements[i], 'status', 'rendered', 'render')
+						make_test(
+							elements[i], // object element
+							'status', // string property
+							'rendered', // string expected
+							'render' // string stage
+						)
 					})
 				}
 			});
@@ -675,11 +342,13 @@ import * as fn from './data.js'
 
 		// refresh
 			describe("REFRESH component based on elements values to create a component instance: status = builded and permissions = 1", function() {
-
-				for (let i = 0; i < elements.length; i++) {
-					// params: elements, property, expected, stage
+				for (let i = 0; i < elements_length; i++) {
 					describe(elements[i].model, function() {
-						make_test(elements[i], 'status', 'rendered', 'refresh')
+						make_test(elements[i], // object element
+							'status',  // string property
+							'rendered', // string expected
+							'refresh' // string stage
+						)
 					})
 				}
 			});
@@ -687,15 +356,17 @@ import * as fn from './data.js'
 
 		// destroy
 			describe("DESTROY component based on existing instance", function() {
-
-				for (let i = 0; i < elements.length; i++) {
-					// params: elements, property, expected, stage
+				for (let i = 0; i < elements_length; i++) {
 					describe(elements[i].model, function() {
-						make_test(elements[i], 'instance', 'destroy', 'destroy')
+						make_test(elements[i], // object element
+						'instance', // string property
+						'destroy', // string expected
+						'destroy' // string stage
+						)
 					})
 				}
 			});
-	});
+	});//end components lifecycle
 
 
 
@@ -811,35 +482,38 @@ import * as fn from './data.js'
 			});//end it(test_title, async function()
 		}//end function make_test_change_data
 
-		describe("save data equals", function() {
 
-			for (let i = 0; i < elements.length; i++) {
+		// save data equals
+			describe("save data equals", function() {
 
-				if (elements[i].test_save===false) {
-					continue
+				for (let i = 0; i < elements_length; i++) {
+
+					if (elements[i].test_save===false) {
+						continue
+					}
+					const model = elements[i].model
+					describe(model, function() {
+						make_test_change_data(elements[i], true)
+					})
 				}
-				const model = elements[i].model
-				describe(model, function() {
-					make_test_change_data(elements[i], true)
-				})
-			}
-		});
+			});
 
-		describe("save data NOT equals", function() {
+		// save data NOT equals
+			describe("save data NOT equals", function() {
 
-			for (let i = 0; i < elements.length; i++) {
+				for (let i = 0; i < elements_length; i++) {
 
-				if (elements[i].test_save===false) {
-					continue
+					if (elements[i].test_save===false) {
+						continue
+					}
+
+					const model = elements[i].model
+					describe(model, function() {
+						make_test_change_data(elements[i], false)
+					})
 				}
-
-				const model = elements[i].model
-				describe(model, function() {
-					make_test_change_data(elements[i], false)
-				})
-			}
-		});
-	});
+			});
+	});//end components change data
 
 
 
@@ -851,6 +525,7 @@ import * as fn from './data.js'
 		if (container) {
 			container.innerHTML = `Please, login`
 		}
+
 	}else{
 
 		mocha.checkLeaks(false)

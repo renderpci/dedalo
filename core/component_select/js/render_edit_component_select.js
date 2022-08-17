@@ -116,12 +116,12 @@ const add_events = (self, wrapper) => {
 			// e.stopPropagation()
 
 			// // edit target section
-			// 	if (e.target.matches('.button.edit')) {
-			// 		// rebuild_nodes. event to render the component again
-			// 		event_manager.publish('edit_element_'+self.id, self)
+				// if (e.target.matches('.button.edit')) {
+				// 	// rebuild_nodes. event to render the component again
+				// 	event_manager.publish('edit_element_'+self.id, self)
 
-			// 		return true
-			// 	}
+				// 	return true
+				// }
 
 			// // mode change
 			// 	if (e.target.matches('.button.close')) {

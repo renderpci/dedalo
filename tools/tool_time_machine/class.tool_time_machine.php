@@ -15,7 +15,7 @@ class tool_time_machine extends tool_common {
 	* @return object $response
 	*/
 	public static function apply_value(object $request_options) : object {
-		global $start_time;
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -149,14 +149,13 @@ class tool_time_machine extends tool_common {
 
 
 
-
 		$response->result	= true;
 		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 				$response->debug = $debug;
 			}
 

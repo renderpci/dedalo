@@ -127,7 +127,7 @@ const get_content_data_edit = async function(self) {
 						component.render()
 						.then(function(node){
 							// remove previous node
-							while (transcription_component_container.lastChild && transcription_component_container.lastChild.id!==lang_selector.id) {
+							while (transcription_component_container.lastChild && transcription_component_container.lastChild!==lang_selector) {
 								transcription_component_container.removeChild(transcription_component_container.lastChild)
 							}
 							// add the new component to the container

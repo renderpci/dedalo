@@ -192,26 +192,23 @@ function pdf_automatic_transcription(object $json_data) : object {
 	$component_text_area->Save(false, false);
 
 
-	$response->result 	= true;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+	$response->result	= true;
+	$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
 
-	# Debug
-	if(SHOW_DEBUG===true) {
+	// debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
+				$degbug->n_chars	= strlen($pdf_text);
+				$debug->path_pdf	= $path_pdf;
+				$debug->command		= $command;
+				$degbug->output		= $output;
 
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
-			$degbug->n_chars 	= strlen($pdf_text);
-			$debug->path_pdf 	= $path_pdf;
-			$debug->command 	= $command;
-			$degbug->output 	= $output;
+			$response->debug = $debug;
+		}
 
-		$response->debug = $debug;
-	}
-
-	return (object)$response;
+	return $response;
 }//end pdf_automatic_transcription
-
-

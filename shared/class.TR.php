@@ -280,37 +280,37 @@ abstract class TR {
 			// 	$text);
 
 		# SVG
-			$pattern	= TR::get_mark_pattern('svg');
+			$pattern = TR::get_mark_pattern('svg');
 			preg_match($pattern, $text, $matches);
 			if (!empty($matches)) {
-				#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-				#$text		= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
+				// $text	= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+				// $text	= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
 				$text = preg_replace_callback(
 					$pattern,
 					function ($matches) {
 
 						$new_text = null;
 
-						$_2 = $matches[2];
-						$_3 = $matches[3];
-						$_4 = $matches[4];
-						$_5 = $matches[5];
-						$_6 = $matches[6];
-						$_7 = $matches[7];
+						$_2	= $matches[2];
+						$_3	= $matches[3];
+						$_4	= $matches[4];
+						$_5	= $matches[5];
+						$_6	= $matches[6];
+						$_7	= $matches[7] ?? '';
 
-						# data is a locator encoded as text
-						# Restore double quotes from saved safe locator string
+						// data is a locator encoded as text
+						// Restore double quotes from saved safe locator string
 						$locator_text = str_replace('\'','"',$_7);
-						if($locator = json_decode($locator_text) ) {
+						if(!empty($locator_text) && $locator = json_decode($locator_text) ) {
 
 							$url = component_svg::get_url_from_locator($locator);
 
-							# Replace double quotes for safe management in text editor
+							// Replace double quotes for safe management in text editor
 							$data = str_replace('"','\'',$_7);
 
 							$new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
-
 						}
+
 						return $new_text;
 					},
 					$text

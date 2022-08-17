@@ -37,27 +37,8 @@ export const calculation = function(){
 	// lifecycle
 	calculation.prototype.init		= widget_common.prototype.init
 	calculation.prototype.build		= widget_common.prototype.build
+	calculation.prototype.render	= widget_common.prototype.render
 	calculation.prototype.destroy	= widget_common.prototype.destroy
 	// render
 	calculation.prototype.edit		= render_calculation.prototype.edit
 	calculation.prototype.list		= render_calculation.prototype.list
-
-
-/**
-* RENDER
-*/
-calculation.prototype.render = async function(options={render_level:'full'}) {
-
-	const self = this
-
-	const render_level 	= options.render_level || 'full'
-	const render_mode 	= self.mode || 'edit'
-
-	const node = await self[render_mode]({
-		render_level : render_level
-	})
-
-	self.node = node
-
-	return node
-}//end render
