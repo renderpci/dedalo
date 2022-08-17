@@ -45,12 +45,15 @@ function download_file($json_data) {
 
 	// component
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$component_av	= component_common::get_instance(	$model, // component_av expected
-															$tipo,
-															$section_id,
-															'list',
-															DEDALO_DATA_NOLAN,
-															$section_tipo);
+		$component_av	= component_common::get_instance(
+			$model, // string 'component_av' expected
+			$tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
+
 	// file path
 		$file_path = ($quality==='original')
 			? $component_av->get_original_file_path($quality)
@@ -66,8 +69,10 @@ function download_file($json_data) {
 
 			return $file_mime;
 		})();
+
 	// saved file name
 		$download_name = 'dedalo_download_' . $component_av->get_id() .'_'. $quality .'.'. $extension;
+
 	// file size in bytes
 		$file_bytes_size = filesize($file_path);
 
@@ -99,17 +104,14 @@ function download_file($json_data) {
 			}
 
 			// debug
-				$exec_time	= exec_time_unit($start_time,'ms')." ms";
+				$exec_time	= exec_time_unit($start_time,'ms').' ms';
 				debug_log(__METHOD__." Downloaded file $download_name ".$mime_type." in ".$exec_time, logger::DEBUG);
 
-		} catch (Exception $e) {
+		}catch (Exception $e) {
 			$msg = 'Caught exception: ' . $e->getMessage();
 			trigger_error($msg);
 		}
 
 
-
 	return true;
 }//end download_file
-
-

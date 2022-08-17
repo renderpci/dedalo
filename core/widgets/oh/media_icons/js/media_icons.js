@@ -45,8 +45,8 @@ export const media_icons = function(){
 	// lifecycle
 	media_icons.prototype.init		= widget_common.prototype.init
 	media_icons.prototype.build		= widget_common.prototype.build
-	media_icons.prototype.destroy	= widget_common.prototype.destroy
 	media_icons.prototype.render	= widget_common.prototype.render
+	media_icons.prototype.destroy	= widget_common.prototype.destroy
 	// render
 	media_icons.prototype.edit		= render_media_icons.prototype.edit
 	media_icons.prototype.list		= render_media_icons.prototype.list

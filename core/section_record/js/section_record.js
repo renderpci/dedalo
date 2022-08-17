@@ -228,9 +228,9 @@ section_record.prototype.get_ar_instances_edit = async function(){
 		// 	? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode===mode)
 		// 	: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo && el.mode===mode)
 		const items = self.datum.context.filter(el => el.section_tipo===section_tipo
-											&& el.parent===caller_tipo
-											&& (el.type==='component' || el.type==='grouper')
-											&& el.mode===mode)
+											 && el.parent===caller_tipo
+											 && (el.type==='component' || el.type==='grouper')
+											 && el.mode===mode)
 
 	// instances
 		const ar_promises	= []
