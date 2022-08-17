@@ -688,14 +688,14 @@ export const get_ar_instances = async function(self){
 					// instance_options.state			= value[i].state
 				}
 
-			// // section_record. init and build
-			// 	const current_section_record = await instances.get_instance(instance_options)
-			// 	await current_section_record.build(true)
+			// section_record. init and build
+				// 	const current_section_record = await instances.get_instance(instance_options)
+				// 	await current_section_record.build(true)
 
-			// // add instance
-			// 	ar_instances.push(current_section_record)
+			// add instance
+				// 	ar_instances.push(current_section_record)
 
-			// promise add and continue. Init and build
+			// promise add and continue init and build
 				ar_promises.push(new Promise(function(resolve){
 					instances.get_instance(instance_options)
 					.then(function(current_section_record){
@@ -706,8 +706,7 @@ export const get_ar_instances = async function(self){
 					})
 				}))
 
-
-		}//end for loop
+		}//end for (let i = 0; i < value_length; i++)
 
 	// ar_instances. When all section_record instances are built, set them
 		const ar_instances = await Promise.all(ar_promises).then((ready_instances) => {

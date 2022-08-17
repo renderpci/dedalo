@@ -17,8 +17,8 @@ class tool_upload extends tool_common {
 
 		// response
 			$response = new stdClass();
-				$response->result 	= false;
-				$response->msg 		= 'Error. Request failed. '.__METHOD__.' ';
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed. '.__METHOD__.' ';
 
 		// options
 			$file_data		= $options->file_data;
@@ -79,11 +79,10 @@ class tool_upload extends tool_common {
 					break;
 			}//end switch (true)
 
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 				$response->debug = $debug;
 			}
 
