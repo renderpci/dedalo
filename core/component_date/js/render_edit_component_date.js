@@ -59,32 +59,9 @@ render_edit_component_date.prototype.edit = async function(options) {
 	// set the mode as class to be adapted to specific css
 		wrapper.classList.add(date_mode)
 
-	// add events
-		// add_events(self)
-
 
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self) {
-
-	// wrapper = self.node
-	const date_mode = self.get_date_mode()
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, fn_update_value)
-		)
-		function fn_update_value (changed_data) {
-			console.log("changed_data:",changed_data);
-		}
-
-}//end add_events
 
 
 
@@ -501,8 +478,6 @@ const input_element_time = (i, current_value, self) => {
 			// event to update the dom elements of the instance
 			event_manager.publish('update_value_'+self.id, changed_data)
 		})
-
-		return true
 	})
 
 	// button_calendar
@@ -589,14 +564,12 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			})
 			self.change_value({
 				changed_data : changed_data,
-				refresh 	 : true
+				refresh 	 : false
 			})
 			.then((save_response)=>{
 				// event to update the dom elements of the instance
 				event_manager.publish('update_value_'+self.id, changed_data)
 			})
-
-			return true
 		})
 
 	// button_calendar
