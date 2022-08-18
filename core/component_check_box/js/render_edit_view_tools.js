@@ -64,7 +64,6 @@ render_edit_view_tools.render = async function(self, options) {
 */
 const get_content_data = function(self) {
 
-
 	// short vars
 		const datalist = self.data.datalist || []
 
@@ -95,14 +94,14 @@ const get_content_data = function(self) {
 */
 const get_input_element = (i, current_value, self) => {
 
-	const data				= self.data || {}
-	const value				= data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value
-	const datalist_value	= datalist_item.value
-	const label				= datalist_item.label // string e.g. 'Tool posterframe | <mark>tool_posterframe</mark>'
-	const section_id		= datalist_item.section_id
-
+	// short vars
+		const data				= self.data || {}
+		const value				= data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const datalist_value	= datalist_item.value
+		const label				= datalist_item.label // string e.g. 'Tool posterframe | <mark>tool_posterframe</mark>'
+		const section_id		= datalist_item.section_id
 
 	// create content_value
 		const content_value = ui.create_dom_element({
@@ -111,14 +110,12 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// input checkbox
-		const option = ui.create_dom_element({
+		const option_node = ui.create_dom_element({
 			element_type	: 'input',
-			type 			: 'checkbox',
-			id 				: self.id +"_"+ i,
-			parent 			: content_value
+			type			: 'checkbox'
 		})
-		option.addEventListener('change', function(){
-			const action 		= (option.checked===true) ? 'insert' : 'remove'
+		option_node.addEventListener('change', function(){
+			const action 		= (option_node.checked===true) ? 'insert' : 'remove'
 			const changed_key 	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
 			const changed_value = (action==='insert') ? datalist_value : null
 
@@ -140,73 +137,34 @@ const get_input_element = (i, current_value, self) => {
 				event_manager.publish('update_value_'+self.id, self)
 			})
 		})//end change event
-		// checked option set on match
+		// checked option_node set on match
 		for (let j = 0; j < value_length; j++) {
 			if (value[j] && datalist_value &&
 				value[j].section_id===datalist_value.section_id &&
 				value[j].section_tipo===datalist_value.section_tipo
 				) {
-					option.checked = 'checked'
+					option_node.checked = 'checked'
 			}
 		}
 
 	// label
-		const label_parts	= label.split(' | ')
-		const tool_label	= label_parts[0]
-		const tool_name		= strip_tags(label_parts[1])
+		const label_parts		= label.split(' | ')
+		const tool_label		= label_parts[0]
+		const tool_name			= strip_tags(label_parts[1])
 		// const label_string	= (SHOW_DEBUG===true) ? tool_label + ` [${tool_name} - ${section_id}]` : tool_label
 		const option_label	= ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: tool_label,
 			parent			: content_value
 		})
-		option_label.setAttribute("for", self.id +"_"+ i)
+		option_label.prepend(option_node)
 
 	// developer_info
-		const developer_info = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'developer_info show_on_active',
 			text_content	: `[${tool_name} - ${section_id}]`,
 			parent			: content_value
-		})
-
-	// button_edit
-		const button_edit = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button edit show_on_active',
-			parent			: content_value
-		})
-		button_edit.addEventListener("click", function(e){
-			e.stopPropagation()
-			try {
-				// target_section
-					const sqo					= self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
-					const target_section_tipo	= sqo.section_tipo[0].tipo
-					// console.log("+++ sqo:",sqo);
-				// navigation
-					const user_navigation_options = {
-						source		: {
-							action			: 'search',
-							model			: 'section',
-							tipo			: target_section_tipo,
-							section_tipo	: target_section_tipo,
-							mode			: 'edit',
-							lang			: self.lang
-						},
-						sqo : {
-							section_tipo		: [{tipo : target_section_tipo}],
-							filter				: null,
-							limit				: 1,
-							filter_by_locators	: [{
-								section_tipo	: target_section_tipo,
-								section_id		: section_id
-							}]
-						}
-					}
-				event_manager.publish('user_navigation', user_navigation_options)
-			} catch (error) {
-				console.error(error)
-			}
 		})
 
 	// tool_icon
@@ -221,5 +179,3 @@ const get_input_element = (i, current_value, self) => {
 
 	return content_value
 }//end get_input_element
-
-
