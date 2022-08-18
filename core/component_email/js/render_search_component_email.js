@@ -36,6 +36,10 @@ render_search_component_email.prototype.search = async function() {
 			content_data : content_data
 		})
 
+	// set pointer to content_data
+		wrapper.content_data = content_data
+
+
 	return wrapper
 }//end search
 
@@ -52,7 +56,9 @@ const get_content_data = function(self) {
 
 	const value = self.data.value
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -61,7 +67,7 @@ const get_content_data = function(self) {
 			type			: 'text',
 			value			: q_operator,
 			class_name		: 'q_operator',
-			parent			: fragment
+			parent			: content_data
 		})
 		input_q_operator.addEventListener('change',function() {
 			// value
@@ -77,14 +83,10 @@ const get_content_data = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element(i, inputs_value[i], self)
-			fragment.appendChild(input_element_node)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
-
 
 	return content_data
 }//end get_content_data
