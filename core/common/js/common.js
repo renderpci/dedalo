@@ -279,6 +279,8 @@ common.prototype.render = async function (options={}) {
 								}else{
 									// ok found case
 									base_container.replaceChild(new_content_data_node, old_content_data_node)
+									// set pointer to new content data in instance
+									self.node.content_data = new_content_data_node
 								}
 						// }//end for (let i = nodes_length - 1; i >= 0; i--)
 
