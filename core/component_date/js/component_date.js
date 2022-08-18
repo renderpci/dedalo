@@ -7,6 +7,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {events_subscription} from './events_subscription.js'
 	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
 	import {render_search_component_date} from '../../component_date/js/render_search_component_date.js'
 	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
@@ -52,11 +53,12 @@ export const component_date = function(){
 
 // prototypes assign
 	// lifecycle
-	component_date.prototype.init				= component_common.prototype.init
-	component_date.prototype.build				= component_common.prototype.build
-	component_date.prototype.render				= common.prototype.render
-	component_date.prototype.refresh			= common.prototype.refresh
-	component_date.prototype.destroy			= common.prototype.destroy
+	component_date.prototype.init					= component_common.prototype.init
+	component_date.prototype.build					= component_common.prototype.build
+	component_date.prototype.render					= common.prototype.render
+	component_date.prototype.refresh				= common.prototype.refresh
+	component_date.prototype.destroy				= common.prototype.destroy
+	component_date.prototype.events_subscription	= events_subscription
 
 	// change data
 	component_date.prototype.save				= component_common.prototype.save
