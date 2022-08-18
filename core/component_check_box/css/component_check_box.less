@@ -10,16 +10,13 @@
 		>.content_data {
 			overflow: auto;
 
-			>.inputs_container {
+			>.value {
+				display: flex;
+				align-items: center;
+				padding-bottom: 0.25rem;
 
-				>li {
-					display: flex;
-					align-items: center;
-					padding-bottom: 0.25rem;
-
-					.show_on_active {
-						margin-left: 0.5rem;
-					}
+				.show_on_active {
+					margin-left: 0.5rem;
 				}
 			}
 		}
@@ -30,13 +27,13 @@
 	&.view_tools {
 
 		// ul
-		.inputs_container {
+		.content_data {
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 
-			>li {
-				margin-left: 1.5rem;
+			>.value {
 				line-height: 1rem;
+				margin-left: 1.5rem;
 				border-bottom: 1px solid #eeeeee;
 				padding: 0.33rem;
 				align-items: center;

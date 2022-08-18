@@ -14,38 +14,36 @@
 			height: calc(100% - @component_label_height); // 1.75em
 			min-height: 385px;
 
-			// ul inputs container
-			>.inputs_container {
-				display: flex;
-		    	flex-wrap: nowrap;
-		    	height: 100%;
+			// display: flex;
+			// flex-wrap: nowrap;
+			// height: 100%;
 
-		    	>li {
-		    		flex: 1 1 auto;
-		    		flex-direction: column;
-		    		// z-index: 1;
+	    	>.value {
+	    		flex: 1 1 auto;
+	    		flex-direction: column;
+	    		// z-index: 1;
 
-		    		>div {
-						display: flex;
+	    		>div {
+					display: flex;
 
-						>label {
-							margin-right: 0.5em;
+					>label {
+						margin-right: 0.5em;
+					}
+
+					>input {
+						width: 5.7em;
+
+						&.zoom {
+							width: 2em;
 						}
 
-						>input {
-							width: 5.7em;
-
-							&.zoom {
-								width: 2em;
-							}
-
-							&.altitude {
-								width: 2em;
-							}
+						&.altitude {
+							width: 2em;
 						}
 					}
-		    	}
-			}
+				}
+	    	}
+
 
 			// map
 			.leaflet_map.leaflet-container {
@@ -212,4 +210,4 @@
 			display: none !important;
 		}
 	}//end .edit
-}
+}//end .component_geolocation

@@ -1,4 +1,9 @@
-&.component_pdf {
+/**
+* component_pdf
+*
+* Included from main.less file
+*/
+.component_pdf {
 
 	&.edit {
 
@@ -11,53 +16,48 @@
 			resize: vertical;
 			overflow: auto;
 
-			// ul
-			>.inputs_container {
-				height: 100%;
+			>.value {
+				flex-wrap: wrap;
+				align-items: flex-start;
 
-				>li {
-					flex-wrap: wrap;
-					align-items: flex-start;
+				// iframe
+				>.pdf_viewer_frame {
+					// flex: 0 0 100%;
+					// 	height: calc(100% - 32px);
+					width: 100%;
+					height: 100%;
+				}
 
-					// iframe
-					>.pdf_viewer_frame {
-						// flex: 0 0 100%;
-						// 	height: calc(100% - 32px);
-						width: 100%;
-						height: 100%;
+				>.fields {
+					flex: 0 0 100%;
+					background-color: @color_grey_dark;
+					padding: 0;
+					padding-left: 1.25em;
+					margin: 0;
+					display: flex;
+					align-items: center;
+					height: 32px;
+					font-size: 1em;
+					// Position absolute option
+					position: absolute;
+					bottom: 0;
+					width: 100%;
+
+					span {
+						color: white;
+						text-transform: capitalize;
 					}
-
-					>.fields {
-						flex: 0 0 100%;
+					input {
+						width: 5em;
+						margin-left: 1em;
+						text-align: center;
+						height: 20px;
 						background-color: @color_grey_dark;
-						padding: 0;
-						padding-left: 1.25em;
-						margin: 0;
-						display: flex;
-						align-items: center;
-						height: 32px;
-						font-size: 1em;
-						// Position absolute option
-						position: absolute;
-						bottom: 0;
-						width: 100%;
-
-						span {
-							color: white;
-							text-transform: capitalize;
-						}
-						input {
-							width: 5em;
-							margin-left: 1em;
-							text-align: center;
-							height: 20px;
-							background-color: @color_grey_dark;
-							outline-color: darken(@color_grey_dark, 10%);
-							color: white;
-						}
+						outline-color: darken(@color_grey_dark, 10%);
+						color: white;
 					}
 				}
 			}
 		}
 	}//end .edit
-}
+}//end .component_pdf

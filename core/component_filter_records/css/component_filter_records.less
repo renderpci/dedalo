@@ -9,28 +9,25 @@
 		>.content_data {
 			flex: 1 1 100%;
 
-			>.inputs_container {
+			>.value {
+				display: grid;
+				grid-template-columns: 1fr 2fr 8fr;
+				outline: 1px solid @color_grey_light;
 
-				>li {
-					display: grid;
-					grid-template-columns: 1fr 2fr 8fr;
-					outline: 1px solid @color_grey_light;
+				&.header_row {
+					background-color: #5b5b5b;
+					color: #ffffff;
+					padding: 0.333rem;
+				}
 
-					&.header_row {
-						background-color: #5b5b5b;
-						color: #ffffff;
-						padding: 0.333rem;
-					}
+				&.body_row {
 
-					&.body_row {
+				}
 
-					}
-
-					>span {
-						padding: 0.333rem;
-					}
+				>span {
+					padding: 0.333rem;
 				}
 			}
 		}
 	}//end .edit
-}
+}//end .component_filter_records
