@@ -134,12 +134,19 @@ section_record.prototype.init = async function(options) {
 
 
 /**
-* ADD_INSTANCE
+* BUILD_INSTANCE
 * Get and build a instance with the context given
 * Note that the returned promise await the build of the instance
+* @param instance object self
+* @param object context
+* @param string section_id
+* @param object current_data
+* @param int column_id
+*
 * @return promise current_instance
+* 	Instance of component / section_group initiated and built
 */
-const add_instance = async (self, context, section_id, current_data, column_id) => {
+const build_instance = async (self, context, section_id, current_data, column_id) => {
 
 	// current_context
 		const current_context = clone(context)
@@ -149,7 +156,7 @@ const add_instance = async (self, context, section_id, current_data, column_id) 
 		// For this, only the first one is added and therefore parent value it is not reliable. Use always self.caller.tipo as parent
 			current_context.parent = self.caller.tipo
 
-	// instance_options options
+	// component / section group instance_options
 		const instance_options = {
 			model			: current_context.model,
 			tipo			: current_context.tipo,
@@ -162,7 +169,7 @@ const add_instance = async (self, context, section_id, current_data, column_id) 
 			type			: current_context.type,
 			context			: current_context,
 			data			: current_data,
-			datum			: self.datum,
+			datum			: self.datum, // full datum from caller section or portal
 			request_config	: current_context.request_config,
 			columns_map		: current_context.columns_map,
 			caller			: self
@@ -183,22 +190,22 @@ const add_instance = async (self, context, section_id, current_data, column_id) 
 				instance_options.column_id = column_id
 			}
 
-	// component / section group. create the instance options for build it, the instance is reflect of the context and section_id
+	// component / section group. Create the instance options for build it, the instance is reflect of the context and section_id
 		const current_instance = await instances.get_instance(instance_options)
 		if(!current_instance || typeof current_instance.build!=='function'){
 			console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
 			return
 		}
 
-	// instance build await
+	// build. instance build await
 		await current_instance.build()
 
 	// add
 		// ar_instances.push(current_instance)
-		// dd_console(`__Time to add_instance section_record: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [current_context.tipo,current_context.model])
+		// dd_console(`__Time to build_instance section_record: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [current_context.tipo,current_context.model])
 
 	return current_instance
-}; //end add_instance
+}//end build_instance
 
 
 
@@ -241,7 +248,7 @@ section_record.prototype.get_ar_instances_edit = async function(){
 			// const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
 
 			// sequential mode
-				// const current_instance = await add_instance(self, current_context, section_id, current_data)
+				// const current_instance = await build_instance(self, current_context, section_id, current_data)
 				// ar_instances.push(current_instance)
 
 			// parallel mode
@@ -250,17 +257,16 @@ section_record.prototype.get_ar_instances_edit = async function(){
 					const current_context	= items[i]
 					const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)
 
-					add_instance(self, current_context, section_id, current_data)
+					build_instance(self, current_context, section_id, current_data)
 					.then(function(current_instance){
 						// current_instance.instance_order_key = i
 						resolve(current_instance)
 					}).catch((errorMsg) => {
-						console.error(errorMsg);
+						console.error('build_instance error: ', errorMsg);
 					})
 				})
 				ar_promises.push(current_promise)
-
-		}//end for loop
+		}//end for (let i = 0; i < items_length; i++) {
 
 	// instances. Await all instances are parallel builded and fix
 		await Promise.all(ar_promises).then(function(ar_instances){
@@ -385,7 +391,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								}
 
 							// instance create and set
-								const current_instance = await add_instance(self, new_context, section_id, current_data, current_column.id)
+								const current_instance = await build_instance(self, new_context, section_id, current_data, current_column.id)
 								self.ar_instances.push(current_instance)
 						}// end if(current_ddo.column_id..
 					}// end for (let k = 0; k < ar_first_level_ddo_len; k++)
@@ -507,12 +513,12 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 	// 				// get built instance
 	// 					// sequential mode
-	// 						// const current_instance = await add_instance(self, new_context, section_id, current_data, column_id)
+	// 						// const current_instance = await build_instance(self, new_context, section_id, current_data, column_id)
 	// 						// self.ar_instances.push(current_instance)
 
 	// 					// parallel mode
 	// 						const current_promise = new Promise(function(resolve){
-	// 							add_instance(self, new_context, section_id, current_data, column_id)
+	// 							build_instance(self, new_context, section_id, current_data, column_id)
 	// 							.then(function(current_instance){
 	// 								// current_instance.instance_order_key = i
 	// 								resolve(current_instance)
@@ -529,7 +535,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 	// 			// 	// sometimes the section_tipo can be different (es1, fr1, ...)
 	// 			// 	//the context get the first component, but the instance can be with the section_tipo data
 	// 			// 	current_context.section_tipo = current_data.section_tipo
-	// 			// 	const current_instance	= await add_instance(self, current_context, current_data.section_id, current_data)
+	// 			// 	const current_instance	= await build_instance(self, current_context, current_data.section_id, current_data)
 	// 			// 	//add
 	// 			// 	ar_instances.push(current_instance)
 	// 			// }
