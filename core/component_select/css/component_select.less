@@ -10,30 +10,19 @@
 
 		>.content_data {
 
-			>.inputs_container {
+			>.value {
+				align-items: center;
+				display: flex;
+				// padding-bottom: 0.25rem;
 
-				>li {
-					align-items: center;
-					display: flex;
-					// padding-bottom: 0.25rem;
+				>select {
+					width: 79%;
+				}
 
-					>select {
-						width: 79%;
-					}
-
-					.show_on_active {
-						margin-left: 0.5rem;
-					}
+				.show_on_active {
+					margin-left: 0.5rem;
 				}
 			}
-
-			// ul.inputs_container {
-			// 	// auto-create columns with min width of 8em
-			// 	display: grid;
-			// 	// grid-template-columns: repeat( auto-fit, minmax(8em, 1fr) );
-			// 	grid-template-columns: repeat( auto-fit, minmax(8em, auto) );
-			// }
 		}
-
 	}
-}
+}//end .component_select
