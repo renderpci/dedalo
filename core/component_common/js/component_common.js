@@ -681,30 +681,41 @@ component_common.prototype.update_datum = async function(new_data) {
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
 				const data_item = new_data[i]
+				const ar_data_elements = self.datum.data.filter(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
 
-				const index_to_delete = self.datum.data.findIndex(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
-				if (index_to_delete!==-1) {
-					// Ok, value already exists and will be deleted to prevent duplicates
-					if(SHOW_DEBUG===true) {
-						console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, clone(self.datum.data[index_to_delete]) );
-					}
-					self.datum.data.splice(index_to_delete, 1);
-				}else{
-					// Ops. data doesn't exists previously. Nothing to delete
-					if (self.datum.data.length>0) {
-						console.warn(`(!) [update_datum] NOT FOUND index_to_delete ${i} in component datum:`, self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) )
-					}
+				const ar_data_el_len = ar_data_elements.length
+
+				for (let j = ar_data_el_len - 1; j >= 0; j--) {
+					const current_data_element  = ar_data_elements[j]
+					current_data_element.value			= data_item.value
+					current_data_element.fallback_value	= data_item.fallback_value
 				}
+
+				//ATT ! removed because it get only 1 element in datum and it's necessary update the all items inside datum.
+
+				// const index_to_delete = self.datum.data.findIndex(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
+				// if (index_to_delete!==-1) {
+				// 	// Ok, value already exists and will be deleted to prevent duplicates
+				// 	if(SHOW_DEBUG===true) {
+				// 		console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, clone(self.datum.data[index_to_delete]) );
+				// 	}
+				// 	self.datum.data.splice(index_to_delete, 1);
+				// }else{
+				// 	// Ops. data doesn't exists previously. Nothing to delete
+				// 	if (self.datum.data.length>0) {
+				// 		console.warn(`(!) [update_datum] NOT FOUND index_to_delete ${i} in component datum:`, self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) )
+				// 	}
+				// }
 			}
 
 		// add the new data into the general datum
-			self.datum.data = [...self.datum.data, ...new_data]
+			// self.datum.data = [...self.datum.data, ...new_data]
 				// console.log("update_datum --------------------------- final self.datum.data:", clone(self.datum.data) );
 
 	// data (specific component data)
 		// current element data (from current component only), removed!, we need update all data in all components.
-			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
-
+			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+	// console.log("self.data:",self.datum.data.filter(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id));
 
 		// data of multiple components
 		// the data sent by the serve can be data of multiple components. The new_data is a array with the all response from server.
@@ -777,7 +788,7 @@ component_common.prototype.update_datum = async function(new_data) {
 		*/
 
 	// dispatch event
-		event_manager.publish('update_data_'+ self.id_base, '')
+		// event_manager.publish('update_data_'+ self.id_base, '')
 
 
 
