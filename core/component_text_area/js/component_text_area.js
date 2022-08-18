@@ -336,10 +336,15 @@ component_text_area.prototype.save_editor = function(key=0) {
 * 	}
 * @return promise save_promise
 */
-component_text_area.prototype.save = async function(changed_data) {
+component_text_area.prototype.save = async function(changed_data = undefined) {
+
+	// change data could be sent by the caller, if not is sent use the change_value that will be set by the change event
+	const safe_changed_data = changed_data
+		? self.change_value.changed_data
+		: changed_data
 
 	// call the generic common tool init
-		const save_promise = component_common.prototype.save.call(this, changed_data);
+		const save_promise = component_common.prototype.save.call(this, safe_changed_data);
 
 
 	return save_promise
