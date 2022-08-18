@@ -11,6 +11,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {set_context_vars, create_source} from '../../common/js/common.js'
+	import {events_subscription} from './events_subscription.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -101,41 +102,15 @@ component_common.prototype.init = async function(options) {
 	// is_data_changed. bool set as true when component data changes.
 		self.is_data_changed = false
 
-
 	// events subscription
-		// active_component (when user focus it in DOM)
-			self.events_tokens.push(
-				event_manager.subscribe('active_component', fn_active_component)
-			)
-			function fn_active_component(actived_component) {
-				// call ui.component
-				const response = ui.component.active(self, actived_component) // response is bool value
-				if (response===true && typeof self.active==="function") {
-					self.active()
-				}
-			}
-		// hilite (search mode)
-			if (self.mode==='search') {
-				self.events_tokens.push(
-					event_manager.subscribe('render_' + self.id, fn_hilite_element)
-				)
-				function fn_hilite_element() {
-					// set instance as changed or not based on their value
-					const instance = self
-					const hilite = (
-						(instance.data.value && instance.data.value.length>0) ||
-						(instance.data.q_operator && instance.data.q_operator.length>0)
-					)
-					setTimeout(function(){ // used timeout to allow css background transition occurs
-						ui.hilite({
-							instance	: instance, // instance object
-							hilite		: hilite // bool
-						})
-					}, 150)
-				}
-			}
-
-		
+		// Two calls:
+		// first; set the component_common events, the call is not in the instance and assign the self in the call
+		// second; set the specific events of the components, they are part of the instance
+		events_subscription(self)
+		// set the component events (it could had his own definition or not) in the instance.
+		if(typeof self.events_subscription==='function'){
+			self.events_subscription()
+		}
 
 	// DES
 		// component_save (when user change component value) every component is looking if the own the instance was changed.
