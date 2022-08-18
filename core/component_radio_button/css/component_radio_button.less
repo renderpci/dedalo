@@ -7,42 +7,33 @@
 
 	&.edit {
 		>.content_data {
+			// flex-wrap: nowrap;
+			// align-items: flex-start;
+			// justify-content: space-between;
+			// display: block;
 
-			>.inputs_container {
-				// flex-wrap: nowrap;
-				// align-items: flex-start;
-				// justify-content: space-between;
-				display: block;
+			>.value {
+				// flex: 1 0 auto;
+				display: inline-block;
+				margin-right: 0.5rem;
+				margin-top: 0.5rem;
+				margin-bottom: 0.25rem;
 
-				>li {
-					// flex: 1 0 auto;
-					display: inline-block;
-					margin-right: 0.5rem;
-					margin-top: 0.5rem;
-					margin-bottom: 0.25rem;
+				// label wraps the input too
+				>label {
+					// width: 100%;
+					padding-top: 0.33rem;
+					padding-bottom: 0.33rem;
+					padding-right: 0.5rem;
 
-					>label {
-						// width: 100%;
-						padding-top: 0.33rem;
-						padding-bottom: 0.33rem;
-						padding-right: 0.5rem;
-
-						display: flex;
-						cursor: pointer;
-					}
-
-					>.show_on_active {
-						// margin-left: 0.5rem;
-					}
+					display: flex;
+					cursor: pointer;
 				}
 
-				// ul.inputs_container {
-				// 	// auto-create columns with min width of 8em
-				// 	display: grid;
-				// 	// grid-template-columns: repeat( auto-fit, minmax(8em, 1fr) );
-				// 	grid-template-columns: repeat( auto-fit, minmax(8em, auto) );
-				// }
+				>.show_on_active {
+					// margin-left: 0.5rem;
+				}
 			}
 		}
 	}//end .edit
-}
+}//end .component_radio_button
