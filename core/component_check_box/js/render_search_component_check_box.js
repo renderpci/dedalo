@@ -36,75 +36,8 @@ render_search_component_check_box.prototype.search = async function() {
 			content_data : content_data
 		})
 
-	// Events
-		add_events(self, wrapper)
-
-
 	return wrapper
 }//end search
-
-
-
-/**
-* ADD_EVENTS
-* @return bool
-*/
-const add_events = function(self, wrapper) {
-
-	// change event, for every change the value in the inputs of the component
-	wrapper.addEventListener('change', (e) => {
-		//e.stopPropagation()
-
-		// input_value. The standard input for the value of the component
-			if (e.target.matches('input[type="checkbox"]')) {
-
-				// input. Get the input node that has changed
-					const input = e.target
-
-				// parsed_value
-					const parsed_value = JSON.parse(input.value)
-
-				const action		= (e.target.checked===true) ? 'insert' : 'remove'
-				const changed_key	= self.get_changed_key(action, parsed_value)
-				const changed_value	= (action==='insert') ? parsed_value : null
-
-				const changed_data = Object.freeze({
-					action	: action,
-					key		: changed_key,
-					value	: changed_value
-				})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data)
-				// set data.changed_data. The change_data to the instance
-					self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-
-				return true
-			}
-
-		// q_operator. get the input value of the q_operator
-			// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
-			// like; radio_button, check_box, date, autocomplete, etc
-			if (e.target.matches('input[type="text"].q_operator')) {
-
-				// input. Get the input node that has changed
-					const input = e.target
-				// value
-					const value = (input.value.length>0) ? input.value : null
-				// q_operator. Fix the data in the instance previous to save
-					self.data.q_operator = value
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-
-				return true
-			}
-	})
-
-
-	return true
-}//end add_events
 
 
 
@@ -129,6 +62,14 @@ const get_content_data = function(self) {
 			value			: q_operator,
 			class_name		: 'q_operator',
 			parent			: fragment
+		})
+		input_q_operator.addEventListener('change',function() {
+			// value
+				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+			// q_operator. Fix the data in the instance previous to save
+				self.data.q_operator = value
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
 		})
 
 	// inputs_container ul
@@ -182,9 +123,26 @@ const get_input_element = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'checkbox',
 			id				: input_id,
-			dataset			: { key : i },
-			value			: JSON.stringify(datalist_value),
 			parent			: li
+		})
+		input.addEventListener('change',function() {
+
+			const action		= (input.checked===true) ? 'insert' : 'remove'
+			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			const changed_value	= (action==='insert') ? datalist_value : null
+
+			const changed_data = Object.freeze({
+				action	: action,
+				key		: changed_key,
+				value	: changed_value
+			})
+
+			// update the instance data (previous to save)
+				self.update_data_value(changed_data)
+			// set data.changed_data. The change_data to the instance
+				self.data.changed_data = changed_data
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
 		})
 		// checked option set on match
 		for (let j = 0; j < value_length; j++) {
