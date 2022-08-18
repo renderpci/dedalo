@@ -71,6 +71,13 @@ component_common.prototype.init = async function(options) {
 		// caller
 		self.caller = options.caller
 
+		// Standalone
+		// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum
+		// if the property is set to false, the component will use datum to get his data and is forced to update datum to share his data with others
+		// false option is used to reduce the calls to API server and database, section use to load all data with 1 call and components load his data from datum
+		// true options is used to call directly to API and manage his data, used by tools or services that need components standalone.
+		self.standalone = true
+
 		// pagination info
 		// self.pagination = (self.data && self.data.pagination)
 		// 	? self.data.pagination
@@ -202,6 +209,7 @@ component_common.prototype.build = async function(autoload=false){
 		self.data = self.data || {}
 
 	// load data on auto-load true
+	// when the auto-load if false the data will be injected by the caller (as section_record or others)
 		if (autoload===true) {
 
 			// rqo
@@ -211,12 +219,25 @@ component_common.prototype.build = async function(autoload=false){
 				}
 
 			// get context and data
-				const api_response = await data_manager.request({body : rqo})
-					// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
-					dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
+				dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
 
-			// set context and data to current instance
-				await self.update_datum(api_response.result.data)
+			// Update datum when the component is not standalone, it's dependent of section or others with common datum
+				if(!self.standalone){
+					await self.update_datum(api_response.result.data)
+				}
+
+			// Data
+				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				if(!data){
+					console.error("data not found in api_response:",api_response);
+				}
+				self.data = data
+
+			// Context
 				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				if (!context) {
 					console.error("context not found in api_response:", api_response);
