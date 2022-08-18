@@ -10,12 +10,12 @@
 * The token is stored in the instances and the events is a array of objects. Each event is auto-explained
 * The instances has control to create news and destroy it.
 *
-* events format:[{
-*					event_name 	: the common name of the events for fired by publish/changes,
-*					token 		: unique id stored in the instance for control the event,
-*					callback 	: the function that will fired when publish/change will fired
-*				}]
-*
+* events format:
+* 	[{
+*		event_name 	: string. The common name of the events for fired by publish/changes as 'active_component'
+*		token 		: string. Unique id stored in the instance for control the event as 'event_19'
+*		callback 	: function. The function that will fired when publish/change will fired
+*	}]
 */
 const event_manager_class = function(){
 
@@ -57,6 +57,7 @@ const event_manager_class = function(){
 			// 	return a;
 			// }, {});
 			// console.log('subscribe duplicates:', this.events.filter(e => lookup[e.event_name]));
+			// console.log('this:', this);
 
 		// return the token to save into the events_tokens properties inside the caller instance
 			return token
