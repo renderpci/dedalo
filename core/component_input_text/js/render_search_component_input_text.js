@@ -54,24 +54,18 @@ const get_content_data = function(self) {
 
 	const value	= self.data.value
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element(i, inputs_value[i])
-			fragment.appendChild(input_element_node)
+			content_data.appendChild(input_element_node)
 			// set the pointer
-			inputs_container[i] = input_element_node
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
-
-	// set pointer
-		content_data.values_container = inputs_container
 
 	return content_data
 }//end get_content_data
