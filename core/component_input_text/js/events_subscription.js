@@ -31,6 +31,4 @@ export const events_subscription = function() {
 		})
 	}
 
-
-	return true
 }//end events_subscription
