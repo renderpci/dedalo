@@ -279,6 +279,8 @@ common.prototype.render = async function (options={}) {
 								}else{
 									// ok found case
 									base_container.replaceChild(new_content_data_node, old_content_data_node)
+									// set pointer to new content data in instance
+									self.node.content_data = new_content_data_node
 								}
 						// }//end for (let i = nodes_length - 1; i >= 0; i--)
 
@@ -289,6 +291,12 @@ common.prototype.render = async function (options={}) {
 				case 'full':
 				default:
 					// set
+						// replace dom node if the node exist,
+						// ex: when it's called by event that need change data in component (update_data event) and the component need to be rendered in full as in list mode
+						if(self.node){
+							const parent = self.node.parentNode
+							parent.replaceChild(node, self.node)
+						}
 						self.node = node
 
 					// return the new created node

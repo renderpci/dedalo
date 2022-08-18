@@ -55,36 +55,13 @@ render_edit_component_date.prototype.edit = async function(options) {
 		})
 	// set pointer to content_data
 		wrapper.content_data = content_data
-		self.wrapper = wrapper
 
 	// set the mode as class to be adapted to specific css
 		wrapper.classList.add(date_mode)
 
-	// add events
-		// add_events(self, wrapper)
-
 
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	const date_mode = self.get_date_mode()
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, fn_update_value)
-		)
-		function fn_update_value (changed_data) {
-			console.log("changed_data:",changed_data);
-		}
-
-}//end add_events
 
 
 
@@ -98,13 +75,9 @@ const get_content_data_edit = function(self) {
 
 	const value	= self.data.value
 
-	const fragment = new DocumentFragment()
-
-	// inputs_container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload			: true
 		})
 
 	// build values
@@ -112,18 +85,10 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_edit = get_input_element_edit(i, inputs_value[i], self)
-			inputs_container.appendChild(input_element_edit)
-			inputs_container[i] = input_element_edit
+			content_data.appendChild(input_element_edit)
+			// set the pointer
+			content_data[i] = input_element_edit
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload			: true
-		})
-		content_data.appendChild(fragment)
-
-	// set pointer
-		content_data.inputs_container = inputs_container
 
 	return content_data
 }//end get_content_data_edit
@@ -162,10 +127,13 @@ const get_buttons = (self) => {
 					refresh 	 : true
 				})
 				.then(()=>{
-					const inputs_container = self.wrapper.content_data.inputs_container
+					const inputs_container = self.node.content_data.inputs_container
+
 					// add new dom input element
 					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
 					inputs_container.appendChild(new_input)
+					// set the pointer
+					inputs_container[changed_data.key] = new_input
 				})
 			})
 		}
@@ -197,9 +165,10 @@ export const get_input_element_edit = (i, current_value, self) => {
 	const mode		= self.mode
 	const date_mode	= self.get_date_mode()
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// input node
@@ -225,15 +194,15 @@ export const get_input_element_edit = (i, current_value, self) => {
 				break;
 		}
 
-	// add input_node to the li
-		li.appendChild(input_node)
+	// add input_node to the content_value
+		content_value.appendChild(input_node)
 
 	// button remove
 		if(mode==='edit' || 'edit_in_list'){
 			const remove_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
-				parent			: li
+				parent			: content_value
 			})
 			remove_node.addEventListener('mouseup', function(){
 				// force possible input change before remove
@@ -256,7 +225,7 @@ export const get_input_element_edit = (i, current_value, self) => {
 		}
 
 
-	return li
+	return content_value
 }//end get_input_element_edit
 
 
@@ -497,8 +466,6 @@ const input_element_time = (i, current_value, self) => {
 			// event to update the dom elements of the instance
 			event_manager.publish('update_value_'+self.id, changed_data)
 		})
-
-		return true
 	})
 
 	// button_calendar
@@ -585,14 +552,12 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			})
 			self.change_value({
 				changed_data : changed_data,
-				refresh 	 : true
+				refresh 	 : false
 			})
 			.then((save_response)=>{
 				// event to update the dom elements of the instance
 				event_manager.publish('update_value_'+self.id, changed_data)
 			})
-
-			return true
 		})
 
 	// button_calendar

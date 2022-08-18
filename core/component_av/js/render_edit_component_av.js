@@ -35,9 +35,9 @@ render_edit_component_av.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -45,63 +45,15 @@ render_edit_component_av.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data,
+			content_data : content_data,
 			buttons 	 : buttons
 		})
 
-	// add events
-		//add_events(self, wrapper)
-
+	// set pointer to content_data
+		wrapper.content_data = content_data
 
 	return wrapper
 }//end  edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-	// const add_events = function(self, wrapper) {
-
-	// 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-	// 		self.events_tokens.push(
-	// 			event_manager.subscribe('update_value_'+self.id, update_value)
-	// 		)
-	// 		function update_value (changed_data) {
-	// 			//console.log("-------------- - event update_value changed_data:", changed_data);
-	// 			// change the value of the current dom element
-	// 			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
-	// 			changed_node.value = changed_data.value
-	// 		}
-
-	// 	// add element, subscription to the events
-	// 		self.events_tokens.push(
-	// 			event_manager.subscribe('add_element_'+self.id, add_element)
-	// 		)
-	// 		function add_element(changed_data) {
-	// 			//console.log("-------------- + event add_element changed_data:", changed_data);
-	// 			const inputs_container = wrapper.querySelector('.inputs_container')
-	// 			// add new dom input element
-	// 			input_element(changed_data.key, changed_data.value, inputs_container, self)
-	// 		}
-
-	// 	// click event [click]
-	// 		wrapper.addEventListener("click", e => {
-	// 			// e.stopPropagation()
-
-	// 			// change_mode
-	// 				if (e.target.matches('.button.close')) {
-
-	// 					//change mode
-	// 					self.change_mode('list', false)
-
-	// 					return true
-	// 				}
-	// 		})
-
-
-	// 	return true
-	// }//end  add_events
 
 
 
@@ -224,6 +176,8 @@ const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
+	// set the pointer. The data is not used to show the video node, so, the pointer is set to first position
+		content_data[0] = video_container
 
 	return content_data
 }//end  get_content_data_edit

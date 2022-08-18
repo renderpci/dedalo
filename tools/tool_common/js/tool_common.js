@@ -193,7 +193,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 				const ddo_map_length	= ddo_map.length
 				for (let i = 0; i < ddo_map_length; i++) {
 
-					// el. components / sections / areas used by the tool defained in tool_config.ddo_map
+					// el. components / sections / areas used by the tool defined in tool_config.ddo_map
 					const el = ddo_map[i]
 
 					// lang. If is defined in properties, parse and use it, else use the tool lang
