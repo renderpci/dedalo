@@ -54,7 +54,7 @@ render_common_section.prototype.delete_record = (options) => {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content delete_record'
+			class_name		: 'body content delete_record'
 		})
 
 		// warning/relation_list
@@ -84,7 +84,7 @@ render_common_section.prototype.delete_record = (options) => {
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'footer'
+			class_name		: 'footer content'
 		})
 
 		// button_delete_record
