@@ -75,13 +75,9 @@ const get_content_data_edit = function(self) {
 
 	const value	= self.data.value
 
-	const fragment = new DocumentFragment()
-
-	// inputs_container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload			: true
 		})
 
 	// build values
@@ -89,19 +85,10 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_edit = get_input_element_edit(i, inputs_value[i], self)
-			inputs_container.appendChild(input_element_edit)
+			content_data.appendChild(input_element_edit)
 			// set the pointer
-			inputs_container[i] = input_element_edit
+			content_data[i] = input_element_edit
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload			: true
-		})
-		content_data.appendChild(fragment)
-
-	// set pointer
-		content_data.inputs_container = inputs_container
 
 	return content_data
 }//end get_content_data_edit
@@ -178,9 +165,10 @@ export const get_input_element_edit = (i, current_value, self) => {
 	const mode		= self.mode
 	const date_mode	= self.get_date_mode()
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// input node
@@ -206,15 +194,15 @@ export const get_input_element_edit = (i, current_value, self) => {
 				break;
 		}
 
-	// add input_node to the li
-		li.appendChild(input_node)
+	// add input_node to the content_value
+		content_value.appendChild(input_node)
 
 	// button remove
 		if(mode==='edit' || 'edit_in_list'){
 			const remove_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
-				parent			: li
+				parent			: content_value
 			})
 			remove_node.addEventListener('mouseup', function(){
 				// force possible input change before remove
@@ -237,7 +225,7 @@ export const get_input_element_edit = (i, current_value, self) => {
 		}
 
 
-	return li
+	return content_value
 }//end get_input_element_edit
 
 
