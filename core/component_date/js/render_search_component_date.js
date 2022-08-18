@@ -40,6 +40,9 @@ render_search_component_date.prototype.search = async function() {
 			content_data : content_data
 		})
 
+	// set pointer to content_data
+		wrapper.content_data = content_data
+
 	return wrapper
 }//end search
 
@@ -53,6 +56,9 @@ const get_content_data_search = function(self) {
 
 	const value	= self.data.value
 	const mode	= self.mode
+
+	// content_data
+		const content_data = ui.component.build_content_data(self, {})
 
 	const fragment = new DocumentFragment()
 
@@ -85,15 +91,13 @@ const get_content_data_search = function(self) {
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			// const input_element = get_input_element(i, inputs_value[i], self)
-			const input_element = get_input_element_edit(i, inputs_value[i], self)
-			inputs_container.appendChild(input_element)
+			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
+			inputs_container.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
 
-	// content_data
-		const content_data = ui.component.build_content_data(self, {})
-			  content_data.appendChild(fragment)
-
+		content_data.appendChild(fragment)
 
 	return content_data
 }//end get_content_data_search
