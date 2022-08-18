@@ -7,6 +7,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {events_subscription} from './events_subscription.js'
 	import {render_edit_component_input_text} from '../../component_input_text/js/render_edit_component_input_text.js'
 	import {render_list_component_input_text} from '../../component_input_text/js/render_list_component_input_text.js'
 	import {render_search_component_input_text} from '../../component_input_text/js/render_search_component_input_text.js'
@@ -53,6 +54,7 @@ export const component_input_text = function(){
 	component_input_text.prototype.render				= common.prototype.render
 	component_input_text.prototype.refresh				= common.prototype.refresh
 	component_input_text.prototype.destroy				= common.prototype.destroy
+	component_input_text.prototype.events_subscription	= events_subscription
 
 	// change data
 	component_input_text.prototype.save					= component_common.prototype.save
@@ -118,7 +120,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 	const self = this
 
 	if (new_value.length<1) return false
-
+return true
 	// const unique_config = self.context.properties.unique
 
 	// search item rebuild filter q param and others
