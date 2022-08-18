@@ -46,6 +46,9 @@ render_edit_view_default.render = async function(self, options) {
 			buttons			: buttons
 		})
 
+	// set pointer to content_data
+		wrapper.content_data = content_data
+
 	return wrapper
 }//end render
 
@@ -61,37 +64,21 @@ export const get_content_data_edit = function(self) {
 	// short vars
 		const datalist = self.data.datalist || []
 
-	const fragment = new DocumentFragment()
-
-	// inputs
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
-
-		// build options
-		const datalist_length = datalist.length
-		for (let i = 0; i < datalist_length; i++) {
-			const input_element = get_input_element_edit(i, datalist[i], self)
-			inputs_container.appendChild(input_element)
-		}
-
-	// buttons
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_container',
-			parent			: fragment
-		})
-
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
 
-		content_data.classList.add("nowrap")
-		content_data.appendChild(fragment)
+	// build options
+		const datalist_length = datalist.length
+		for (let i = 0; i < datalist_length; i++) {
+			const input_element_node = get_input_element_edit(i, datalist[i], self)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
+		}
 
+		content_data.classList.add("nowrap")
 
 	return content_data
 }//end get_content_data_edit
@@ -100,7 +87,7 @@ export const get_content_data_edit = function(self) {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
-* @return DOM node li
+* @return DOM node content_value
 */
 const get_input_element_edit = (i, current_value, self) => {
 
@@ -111,9 +98,10 @@ const get_input_element_edit = (i, current_value, self) => {
 	const label				= datalist_item.label
 	const section_id		= datalist_item.section_id
 
-	// create li
-		const li = ui.create_dom_element({
-			element_type	: 'li'
+	// create content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// input checkbox
@@ -121,7 +109,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			element_type	: 'input',
 			type 			: 'checkbox',
 			id 				: self.id +"_"+ i,
-			parent 			: li
+			parent 			: content_value
 		})
 		option.addEventListener('change', function(){
 			const action 		= (option.checked===true) ? 'insert' : 'remove'
@@ -162,7 +150,7 @@ const get_input_element_edit = (i, current_value, self) => {
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: label,
-			parent			: li
+			parent			: content_value
 		})
 		option_label.setAttribute("for", self.id +"_"+ i)
 
@@ -171,14 +159,14 @@ const get_input_element_edit = (i, current_value, self) => {
 			element_type	: 'span',
 			class_name		: 'developer_info show_on_active',
 			text_content	: `[${section_id}]`,
-			parent			: li
+			parent			: content_value
 		})
 
 	// button_edit
 		// const button_edit = ui.create_dom_element({
 		// 	element_type	: 'span',
 		// 	class_name		: 'button edit show_on_active',
-		// 	parent			: li
+		// 	parent			: content_value
 		// })
 		// button_edit.addEventListener("click", function(e){
 		// 	e.stopPropagation()
@@ -215,7 +203,7 @@ const get_input_element_edit = (i, current_value, self) => {
 
 
 
-	return li
+	return content_value
 }//end get_input_element_edit
 
 
