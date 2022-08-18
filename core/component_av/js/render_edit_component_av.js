@@ -49,59 +49,8 @@ render_edit_component_av.prototype.edit = async function(options) {
 			buttons 	 : buttons
 		})
 
-	// add events
-		//add_events(self, wrapper)
-
-
 	return wrapper
 }//end  edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-	// const add_events = function(self, wrapper) {
-
-	// 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-	// 		self.events_tokens.push(
-	// 			event_manager.subscribe('update_value_'+self.id, update_value)
-	// 		)
-	// 		function update_value (changed_data) {
-	// 			//console.log("-------------- - event update_value changed_data:", changed_data);
-	// 			// change the value of the current dom element
-	// 			const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
-	// 			changed_node.value = changed_data.value
-	// 		}
-
-	// 	// add element, subscription to the events
-	// 		self.events_tokens.push(
-	// 			event_manager.subscribe('add_element_'+self.id, add_element)
-	// 		)
-	// 		function add_element(changed_data) {
-	// 			//console.log("-------------- + event add_element changed_data:", changed_data);
-	// 			const inputs_container = wrapper.querySelector('.inputs_container')
-	// 			// add new dom input element
-	// 			input_element(changed_data.key, changed_data.value, inputs_container, self)
-	// 		}
-
-	// 	// click event [click]
-	// 		wrapper.addEventListener("click", e => {
-	// 			// e.stopPropagation()
-
-	// 			// change_mode
-	// 				if (e.target.matches('.button.close')) {
-
-	// 					//change mode
-	// 					self.change_mode('list', false)
-
-	// 					return true
-	// 				}
-	// 		})
-
-
-	// 	return true
-	// }//end  add_events
 
 
 
