@@ -7,11 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags} from '../../common/js/utils/index.js'
-	import {
-		get_buttons,
-		add_events
-	} from './render_edit_component_check_box.js'
-	// import {render_edit_view_default} from './render_edit_view_default.js'
+	import {get_buttons} from './render_edit_component_check_box.js'
 
 
 /**
@@ -50,9 +46,6 @@ render_edit_view_tools.render = async function(self, options) {
 			buttons			: buttons
 		})
 		wrapper.classList.add('view_'+self.context.view)
-
-	// events
-		add_events(self, wrapper)
 
 	return wrapper
 }//end render
@@ -113,7 +106,6 @@ const get_content_data = function(self) {
 */
 const get_input_element = (i, current_value, self) => {
 
-
 	const data				= self.data || {}
 	const value				= data.value || []
 	const value_length		= value.length
@@ -137,6 +129,29 @@ const get_input_element = (i, current_value, self) => {
 			value 			: JSON.stringify(datalist_value),
 			parent 			: li
 		})
+		option.addEventListener('change', function(){
+			const action 		= (option.checked===true) ? 'insert' : 'remove'
+			const changed_key 	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			const changed_value = (action==='insert') ? datalist_value : null
+
+			const changed_data = Object.freeze({
+				action  : action,
+				key 	: changed_key,
+				value 	: changed_value
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false,
+				remove_dialog	: ()=>{
+					return true
+				}
+			})
+			.then((api_response)=>{
+				self.selected_key = i
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, self)
+			})
+		})//end change event
 		// checked option set on match
 		for (let j = 0; j < value_length; j++) {
 			if (value[j] && datalist_value &&
@@ -179,7 +194,7 @@ const get_input_element = (i, current_value, self) => {
 				// target_section
 					const sqo					= self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
 					const target_section_tipo	= sqo.section_tipo[0].tipo
-					console.log("+++ sqo:",sqo);
+					// console.log("+++ sqo:",sqo);
 				// navigation
 					const user_navigation_options = {
 						source		: {

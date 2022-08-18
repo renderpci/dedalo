@@ -6,10 +6,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {
-		get_buttons,
-		add_events
-	} from './render_edit_component_check_box.js'
+	import {get_buttons} from './render_edit_component_check_box.js'
 
 
 
@@ -48,9 +45,6 @@ render_edit_view_default.render = async function(self, options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// events
-		add_events(self, wrapper)
 
 	return wrapper
 }//end render
@@ -127,10 +121,32 @@ const get_input_element_edit = (i, current_value, self) => {
 			element_type	: 'input',
 			type 			: 'checkbox',
 			id 				: self.id +"_"+ i,
-			dataset 	 	: { key : i },
-			value 			: JSON.stringify(datalist_value),
 			parent 			: li
 		})
+		option.addEventListener('change', function(){
+			const action 		= (option.checked===true) ? 'insert' : 'remove'
+			const changed_key 	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			const changed_value = (action==='insert') ? datalist_value : null
+
+			const changed_data = Object.freeze({
+				action  : action,
+				key 	: changed_key,
+				value 	: changed_value
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false,
+				remove_dialog	: ()=>{
+					return true
+				}
+			})
+			.then((api_response)=>{
+				self.selected_key = i
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, self)
+			})
+		})//end change event
+
 		// checked option set on match
 		for (let j = 0; j < value_length; j++) {
 			if (value[j] && datalist_value &&
