@@ -12,50 +12,57 @@
 		}
 
 		>.content_data {
-			.input-group {
-				position: relative;
-				width: 8.75rem;
+
+			>.content_value {
 				display: flex;
+				width: 100%;
 				align-items: center;
-				>a { // icon calendar
-					position: absolute;
-					right: 0.5rem;
-					top: 0.33rem;
-					opacity: 0.6;
-					z-index: 1;
-				}
-				.input_period{
-					width: 3.5em;
-					>label{
-						margin-right: 0.1em;
+
+				>.input-group {
+					position: relative;
+					width: 8.75rem;
+					display: flex;
+					align-items: center;
+					>a { // icon calendar
+						position: absolute;
+						right: 0.5rem;
+						top: 0.33rem;
+						opacity: 0.6;
+						z-index: 1;
+					}
+					.input_period{
+						width: 3.5em;
+						>label{
+							margin-right: 0.1em;
+						}
+
+					}
+					.input_date {
+						letter-spacing: 0.05em;
+						font-family: 'date_separator', apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+					}
+					.input_time{
+						letter-spacing: 0.1em;
 					}
 
-				}
-				.input_date {
-					letter-spacing: 0.05em;
-					font-family: 'date_separator', apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-				}
-				.input_time{
-					letter-spacing: 0.1em;
+	  				@font-face {
+						font-family		: 'date_separator';
+						// src: local("Times New Roman");
+						src: local("Helvetica Neue UltraLight"),
+							 local("HelveticaNeue-UltraLight");
+						unicode-range	: U+002F;
+					}
 				}
 
-  				@font-face {
-					font-family		: 'date_separator';
-					// src: local("Times New Roman");
-					src: local("Helvetica Neue UltraLight"),
-						 local("HelveticaNeue-UltraLight");
-					unicode-range	: U+002F;
+				>.divisor {
+					padding-right: 0.5rem;
 				}
-			}
 
-			.remove {
-				margin-left: 0.75rem;
-				position: initial;
-			}
+				>.remove {
+					// margin-left: 0.75rem;
+					position: initial;
+				}
 
-			.divisor {
-				padding-left: 0.5rem;
-				padding-right: 0.5rem;
 			}
 
 			input::placeholder {
@@ -75,4 +82,4 @@
 			cursor: default;
 		}
 	}
-}
+}//end .component_date
