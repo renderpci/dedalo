@@ -229,42 +229,20 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = function(self) {
 
-	const value 		 = self.data.value
-	const is_inside_tool = self.is_inside_tool
-
-	const fragment = new DocumentFragment()
-
-	// init the editor with the wrapper
-		// const editor = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name 		: 'editor',
-		// 	parent 			: fragment
-		// })
-		// const load_editor = (wrapper) => {
-		// 	self.init_editor(editor)
-		// }
-		// self.events_tokens.push(
-		// 	event_manager.subscribe('render_'+self.id, load_editor)
-		// )
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
-
-	// values (inputs)
-		const inputs_value = value // is array
-		const value_length = inputs_value.length
-		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i], self, is_inside_tool)
-			inputs_container.appendChild(input_element)
-		}
+	// short vars
+		const value				= self.data.value
+		const is_inside_tool	= self.is_inside_tool
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
+
+	// values (inputs)
+		const inputs_value	= value // is array
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const input_element = get_input_element(i, inputs_value[i], self, is_inside_tool)
+			content_data.appendChild(input_element)
+		}
 
 
 	return content_data
@@ -326,32 +304,31 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM element li
+* @return DOM node content_value
 */
 const get_input_element = (i, current_value, self) => {
-
-	const mode = self.mode
 
 	// value is a raw html without parse into nodes (txt format)
 		const value = self.tags_to_html(current_value)
 
-	// text_editor_container container
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// toolbar_container
 		const toolbar_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toolbar_container hide',
-			parent			: li
+			parent			: content_value
 		})
 
 	// value_container
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value_container',
-			parent			: li
+			parent			: content_value
 		})
 
 	// init_current_service_text_editor
@@ -415,7 +392,7 @@ const get_input_element = (i, current_value, self) => {
 			}, 5)
 		}else{
 			// activate on user click
-			li.addEventListener('click', fn_click_init)
+			content_value.addEventListener('click', fn_click_init)
 			function fn_click_init(e) {
 				value_container.classList.add('loading')
 				// use timeout only to force real async execution
@@ -427,7 +404,7 @@ const get_input_element = (i, current_value, self) => {
 						service_editor.click(e)
 					})
 					// once only. Remove event to prevent duplicates
-					li.removeEventListener('click', fn_click_init)
+					content_value.removeEventListener('click', fn_click_init)
 				}, 25)
 			}
 		}
@@ -503,7 +480,7 @@ const get_input_element = (i, current_value, self) => {
 		// }
 
 
-	return li
+	return content_value
 }//end get_input_element
 
 

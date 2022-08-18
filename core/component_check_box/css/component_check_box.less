@@ -15,6 +15,13 @@
 				align-items: center;
 				padding-bottom: 0.25rem;
 
+				>label {
+					>input {
+						cursor: pointer;
+						margin-right: 0.5rem;
+					}
+				}
+
 				.show_on_active {
 					margin-left: 0.5rem;
 				}
@@ -33,12 +40,13 @@
 
 			>.content_value {
 				line-height: 1rem;
-				margin-left: 1.5rem;
 				border-bottom: 1px solid #eeeeee;
+				margin-left: 1.5rem;
 				padding: 0.33rem;
-				align-items: center;
+				align-items: flex-end;
 
-				.tool_icon {
+				// img
+				>.tool_icon {
 					height: 1.33rem;
 					width: 1.33rem;
 					margin-right: 0.5rem;
