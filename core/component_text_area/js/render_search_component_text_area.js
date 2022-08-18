@@ -113,36 +113,36 @@ const get_content_data = function(self) {
 	// short vars
 		const value = self.data.value
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const q_operator = self.data.q_operator
-			// input_q_operator
-			 const input_q_operator = ui.create_dom_element({
+
+			const current_value = inputs_value[i]
+
+			// q_operator
+				const q_operator = self.data.q_operator
+				ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'text',
 					value			: q_operator,
 					class_name		: 'q_operator',
-					parent			: fragment
+					parent			: content_data
 				})
 
 			// input field
-				const input = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'text',
 					class_name		: 'input_value',
 					dataset			: { key : i },
 					value			: current_value,
-					parent 			: fragment
+					parent			: content_data
 				})
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
 
 	return content_data
