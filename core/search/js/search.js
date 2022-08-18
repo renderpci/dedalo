@@ -142,9 +142,13 @@ search.prototype.init = async function(options) {
 		)
 		async function fn_change_search_element(instance) {
 			// parse filter to DOM
-			await self.parse_dom_to_json_filter({mode:self.mode})
+			await self.parse_dom_to_json_filter({
+				mode:self.mode
+			})
 			// Set as changed, it will fire the event to save the temp search section (temp preset)
-			self.update_state({state:'changed'})
+			self.update_state({
+				state:'changed'
+			})
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
 			// set instance as changed or not based on their value
