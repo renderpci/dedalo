@@ -11,6 +11,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 	import {set_context_vars, create_source} from '../../common/js/common.js'
+	import {events_subscription} from './events_subscription.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -71,6 +72,13 @@ component_common.prototype.init = async function(options) {
 		// caller
 		self.caller = options.caller
 
+		// Standalone
+		// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum
+		// if the property is set to false, the component will use datum to get his data and is forced to update datum to share his data with others
+		// false option is used to reduce the calls to API server and database, section use to load all data with 1 call and components load his data from datum
+		// true options is used to call directly to API and manage his data, used by tools or services that need components standalone.
+		self.standalone = true
+
 		// pagination info
 		// self.pagination = (self.data && self.data.pagination)
 		// 	? self.data.pagination
@@ -94,39 +102,15 @@ component_common.prototype.init = async function(options) {
 	// is_data_changed. bool set as true when component data changes.
 		self.is_data_changed = false
 
-
 	// events subscription
-		// active_component (when user focus it in DOM)
-			self.events_tokens.push(
-				event_manager.subscribe('active_component', fn_active_component)
-			)
-			function fn_active_component(actived_component) {
-				// call ui.component
-				const response = ui.component.active(self, actived_component) // response is bool value
-				if (response===true && typeof self.active==="function") {
-					self.active()
-				}
-			}
-		// hilite (search mode)
-			if (self.mode==='search') {
-				self.events_tokens.push(
-					event_manager.subscribe('render_' + self.id, fn_hilite_element)
-				)
-				function fn_hilite_element() {
-					// set instance as changed or not based on their value
-					const instance = self
-					const hilite = (
-						(instance.data.value && instance.data.value.length>0) ||
-						(instance.data.q_operator && instance.data.q_operator.length>0)
-					)
-					setTimeout(function(){ // used timeout to allow css background transition occurs
-						ui.hilite({
-							instance	: instance, // instance object
-							hilite		: hilite // bool
-						})
-					}, 150)
-				}
-			}
+		// Two calls:
+		// first; set the component_common events, the call is not in the instance and assign the self in the call
+		// second; set the specific events of the components, they are part of the instance
+		events_subscription(self)
+		// set the component events (it could had his own definition or not) in the instance.
+		if(typeof self.events_subscription==='function'){
+			self.events_subscription()
+		}
 
 	// DES
 		// component_save (when user change component value) every component is looking if the own the instance was changed.
@@ -200,6 +184,7 @@ component_common.prototype.build = async function(autoload=false){
 		self.data = self.data || {}
 
 	// load data on auto-load true
+	// when the auto-load if false the data will be injected by the caller (as section_record or others)
 		if (autoload===true) {
 
 			// rqo
@@ -209,12 +194,25 @@ component_common.prototype.build = async function(autoload=false){
 				}
 
 			// get context and data
-				const api_response = await data_manager.request({body : rqo})
-					// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
-					dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
+				dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
 
-			// set context and data to current instance
-				await self.update_datum(api_response.result.data)
+			// Update datum when the component is not standalone, it's dependent of section or others with common datum
+				if(!self.standalone){
+					await self.update_datum(api_response.result.data)
+				}
+
+			// Data
+				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				if(!data){
+					console.error("data not found in api_response:",api_response);
+				}
+				self.data = data
+
+			// Context
 				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				if (!context) {
 					console.error("context not found in api_response:", api_response);
@@ -658,30 +656,41 @@ component_common.prototype.update_datum = async function(new_data) {
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
 				const data_item = new_data[i]
+				const ar_data_elements = self.datum.data.filter(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
 
-				const index_to_delete = self.datum.data.findIndex(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
-				if (index_to_delete!==-1) {
-					// Ok, value already exists and will be deleted to prevent duplicates
-					if(SHOW_DEBUG===true) {
-						console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, clone(self.datum.data[index_to_delete]) );
-					}
-					self.datum.data.splice(index_to_delete, 1);
-				}else{
-					// Ops. data doesn't exists previously. Nothing to delete
-					if (self.datum.data.length>0) {
-						console.warn(`(!) [update_datum] NOT FOUND index_to_delete ${i} in component datum:`, self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) )
-					}
+				const ar_data_el_len = ar_data_elements.length
+
+				for (let j = ar_data_el_len - 1; j >= 0; j--) {
+					const current_data_element  = ar_data_elements[j]
+					current_data_element.value			= data_item.value
+					current_data_element.fallback_value	= data_item.fallback_value
 				}
+
+				//ATT ! removed because it get only 1 element in datum and it's necessary update the all items inside datum.
+
+				// const index_to_delete = self.datum.data.findIndex(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
+				// if (index_to_delete!==-1) {
+				// 	// Ok, value already exists and will be deleted to prevent duplicates
+				// 	if(SHOW_DEBUG===true) {
+				// 		console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, clone(self.datum.data[index_to_delete]) );
+				// 	}
+				// 	self.datum.data.splice(index_to_delete, 1);
+				// }else{
+				// 	// Ops. data doesn't exists previously. Nothing to delete
+				// 	if (self.datum.data.length>0) {
+				// 		console.warn(`(!) [update_datum] NOT FOUND index_to_delete ${i} in component datum:`, self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) )
+				// 	}
+				// }
 			}
 
 		// add the new data into the general datum
-			self.datum.data = [...self.datum.data, ...new_data]
+			// self.datum.data = [...self.datum.data, ...new_data]
 				// console.log("update_datum --------------------------- final self.datum.data:", clone(self.datum.data) );
 
 	// data (specific component data)
 		// current element data (from current component only), removed!, we need update all data in all components.
-			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id===self.section_id) || {}
-
+			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+	// console.log("self.data:",self.datum.data.filter(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id));
 
 		// data of multiple components
 		// the data sent by the serve can be data of multiple components. The new_data is a array with the all response from server.
@@ -754,7 +763,7 @@ component_common.prototype.update_datum = async function(new_data) {
 		*/
 
 	// dispatch event
-		event_manager.publish('update_data_'+ self.id_base, '')
+		// event_manager.publish('update_data_'+ self.id_base, '')
 
 
 

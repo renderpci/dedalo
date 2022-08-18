@@ -48,198 +48,11 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 			buttons			: buttons
 		})
 
-	// events
-		add_events(self, wrapper)
+	// set pointer to content_data
+		wrapper.content_data = content_data
+
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-* Add delegate events to the wrapper
-* @return bool
-*/
-const add_events = function(self, wrapper) {
-
-	const multi_line 	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
-	const element_type 	= (multi_line===true) ? 'textarea' :'input[type="text"]'
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, fn_update_value)
-		)
-		function fn_update_value(changed_data) {
-			// change the value of the current dom element after save it
-			// (!) It's really necessary this?
-			const changed_node = wrapper.querySelector(element_type + '[data-key="'+changed_data.key+'"]')
-			changed_node.value = changed_data.value
-		}
-
-	// add element, subscription to the events
-		// self.events_tokens.push(
-		// 	event_manager.subscribe('add_element_'+self.id, fn_add_element)
-		// )
-		// function fn_add_element(changed_data) {
-		// 	//console.log("-------------- + event add_element changed_data:", changed_data);
-		// 	// const inputs_container = wrapper.querySelector('.inputs_container')
-		// 	// add new dom input element
-		// 	const input_element = get_input_element_edit(changed_data.key, changed_data.value, self)
-		// }
-
-	// remove element, subscription to the events
-		//self.events_tokens.push(
-		//	event_manager.subscribe('remove_element_'+self.id, remove_element)
-		//)
-		//async function remove_element(component) {
-		//	// change all elements inside of content_data
-		//	const new_content_data = await content_data_edit(component)
-		//	// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
-		//	wrapper.childNodes[2].replaceWith(new_content_data)
-		//}
-
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', async (e) => {
-
-			// update
-				if (e.target.matches(element_type + '.input_value')) {
-					//console.log("++update e.target:", clone(e.target.dataset.key));
-					// console.log("++update e.target value:", clone(e.target.value));
-
-					// is_unique check
-						// if (self.context.properties.unique) {
-						// 	// const result = await check_duplicates(self, e.target.value, false)
-						// 	if (self.duplicates) {
-						// 		e.target.classList.add("duplicated")
-						// 		const message = ui.build_message("Warning. Duplicated value " + self.duplicates.section_id)
-						// 		wrapper.appedChild(message)
-						// 		return false
-						// 	}
-						// }
-
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: (e.target.value.length>0) ? e.target.value : null
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then(()=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('update_value_'+self.id, changed_data)
-					})
-
-					return true
-				}
-		})//end change
-
-	// click event [click]
-		wrapper.addEventListener("click", e => {
-
-				// reset remove buttons view
-					// const all_buttons_remove = wrapper.querySelectorAll('.remove')
-					// for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-					// 	all_buttons_remove[i].classList.add("display_none")
-					// }
-
-				// show current remove button
-					// if (e.target.matches(element_type)) {
-					// 	// set the button_remove associated to the input selected to visible
-					// 		const button_remove = e.target.parentNode.querySelector('.remove')
-					// 		if (button_remove) {
-					// 			button_remove.classList.remove("display_none")
-					// 		}
-					// }
-
-			// remove
-				if (e.target.matches('.button.remove')) {
-
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const current_input = e.target.previousElementSibling
-					const current_value = current_input ? current_input.value : null
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: e.target.dataset.key,
-						value	: null,
-						refresh	: true
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						label			: current_value,
-						refresh			: true
-					})
-
-					return true
-				}
-		})//end click
-
-	// keyup event
-		wrapper.addEventListener("keyup", async (e) => {
-
-			if (self.context.properties.unique && e.target.value!=='') {
-				const unique = await self.is_unique(e.target.value)
-				if (typeof unique!=="undefined") {
-					ui.show_message(
-						wrapper,
-						`Warning. Duplicated value '${e.target.value}' in id: ` + unique.section_id,
-						'warning'
-					)
-				}
-			}
-
-			// page unload event
-				if (e.key!=='Enter') {
-					const key				= e.target.dataset.key
-					const original_value	= self.db_data.value[key]
-					const new_value			= e.target.value
-					if (new_value!==original_value) {
-						// set_before_unload (bool) add
-						set_before_unload(true)
-					}else{
-						// set_before_unload (bool) remove
-						set_before_unload(false)
-					}
-				}
-		})//end keyup
-
-	// dblclick event
-		//wrapper.addEventListener("dblclick", function(e){
-		//	e.stopPropagation()
-		//	e.preventDefault()
-		//
-		//	if (self.mode==='edit_in_list') {
-		//		// change mode (from 'edit_in_list' to 'list')
-		//		self.change_mode('list', false)
-		//	}
-		//})
-
-	// // focus event [focusin]
-		// 	wrapper.addEventListener("focusin", e => {
-		// 		// selected_node. fix selected node
-		// 		//self.selected_node = wrapper
-
-		// 		if (e.target.matches('input[type="text"]')) {
-		// 			// set the button_remove associated to the input selected to visible
-		// 		 	const button_remove = e.target.parentNode.querySelector('.remove')
-		// 		 	button_remove.classList.remove("display_none")
-		// 		 	//event_manager.publish('active_component', self)
-		// 		}
-		// 	})
-
-	// // blur event [focusout]
-		// 	wrapper.addEventListener("focusout", e => {
-		// 		const button_remove = e.target.parentNode.querySelector('.remove')
-		// 		 	button_remove.classList.add("display_none")
-		// 	})
-
-
-	return true
-}//end add_events
 
 
 
@@ -253,27 +66,18 @@ const get_content_data_edit = function(self) {
 		const data	= self.data || {}
 		const value	= data.value || []
 
-	const fragment = new DocumentFragment()
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
-			inputs_container.appendChild(input_element_node)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
-
 
 	return content_data
 }//end get_content_data_edit
@@ -282,7 +86,7 @@ const get_content_data_edit = function(self) {
 
 /**
 * INPUT_ELEMENT
-* @return DOM node li
+* @return DOM node content_value
 */
 const get_input_element_edit = (i, current_value, self) => {
 
@@ -295,42 +99,96 @@ const get_input_element_edit = (i, current_value, self) => {
 		const is_inside_tool		= self.is_inside_tool
 		// const with_lang_versions	= self.context.properties.with_lang_versions || false
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// input field
-		ui.create_dom_element({
+		const input = ui.create_dom_element({
 			element_type	: element_type,
 			type			: 'text',
 			class_name		: 'input_value',
-			dataset			: { key : i },
 			value			: current_value,
-			parent			: li,
-			placeholder 	: (current_value) ? '' : self.data.fallback_value[i]
+			placeholder 	: (current_value) ? '' : self.data.fallback_value[i],
+			parent			: content_value
 		})
+		input.addEventListener('change', async function(){
+
+			// is_unique check
+				if (self.context.properties.unique && input.value!=='') {
+					const unique = await self.is_unique(input.value)
+					if (typeof unique!=="undefined") {
+						ui.show_message(
+							self.node,
+							`Warning. Duplicated value '${input.value}' in id: ` + unique.section_id,
+							'warning'
+						)
+					}
+				}
+
+			// change data
+			const changed_data = Object.freeze({
+				action	: 'update',
+				key		: i,
+				value	: (input.value.length>0) ? input.value : null
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+			.then(()=>{
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id_base, changed_data)
+			})
+		})//end change
+		input.addEventListener('keyup',async function(e){
+			// page unload event
+				if (e.key!=='Enter') {
+					const key				= i
+					const original_value	= self.db_data.value[key]
+					const new_value			= input.value
+					if (new_value!==original_value) {
+						// set_before_unload (bool) add
+						set_before_unload(true)
+					}else{
+						// set_before_unload (bool) remove
+						set_before_unload(false)
+					}
+				}
+		})//end keyup
 
 	// button remove. Triggered by wrapper delegated events
 		if((mode==='edit' || 'edit_in_list') && !is_inside_tool) {
 			// button_remove
-			ui.create_dom_element({
+			const remove_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
-				dataset			: { key : i },
-				parent			: li
+				parent			: content_value
 			})
-		}
+			remove_node.addEventListener('mouseup', function(){
+				// force possible input change before remove
+				document.activeElement.blur()
 
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	inner_html		: '* 18',
-		// 	parent			: li
-		// })
+				const current_value = input.value ? input.value : null
+
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: i,
+					value	: null,
+					refresh : true
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					label			: current_value,
+					refresh			: true
+				})
+			})
+		}// end if(mode)
 
 
-
-	return li
+	return content_value
 }//end input_element
 
 
@@ -349,11 +207,6 @@ const get_buttons = (self) => {
 
 	// button add input
 		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			// const button_add_input = ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	class_name 		: 'button add',
-			// 	parent 			: fragment
-			// })
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
@@ -373,17 +226,17 @@ const get_buttons = (self) => {
 				})
 				.then(()=>{
 					// event to update the dom elements of the instance
-					// event_manager.publish('add_element_'+self.id, changed_data)
 					self.refresh()
 					.then(()=>{
-						const input_text = self.node.querySelector(`input[data-key="${changed_data.key}"]`)
+							console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
+						const input_text = self.node.content_data[changed_data.key].querySelector('input')
 						if (input_text) {
 							input_text.focus()
 						}
 					})
 				})
-			})
-		}
+			})//end event click
+		}//end if(mode)
 
 	// buttons tools
 		if (!is_inside_tool && mode==='edit') {

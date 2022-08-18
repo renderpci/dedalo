@@ -3160,7 +3160,7 @@ abstract class component_common extends common {
 	/**
 	* GET_DATO_PAGINATED
 	* It slices the component array of locators to allocate pagination options
-	* @return arrray $dato_paginated
+	* @return array $dato_paginated
 	*/
 	public function get_dato_paginated(?int $custom_limit=null) : array {
 
@@ -3221,9 +3221,9 @@ abstract class component_common extends common {
 
 	/**
 	* GET_COMPONENT_TM_DATO
-	* @return array $tm_dato
+	* @return array|null $tm_dato
 	*/
-	public static function get_component_tm_dato(string $tipo, string $section_tipo, int $matrix_id) : array {
+	public static function get_component_tm_dato(string $tipo, string $section_tipo, int $matrix_id) : ?array {
 
 		// search query object
 			$sqo = json_decode('{

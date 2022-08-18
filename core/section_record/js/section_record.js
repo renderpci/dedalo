@@ -167,6 +167,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			section_lang	: self.lang,
 			parent			: current_context.parent,
 			type			: current_context.type,
+			standalone 		: false,
 			context			: current_context,
 			data			: current_data,
 			datum			: self.datum, // full datum from caller section or portal
