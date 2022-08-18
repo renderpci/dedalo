@@ -48,9 +48,8 @@ render_edit_component_email.prototype.edit = async function(options={render_leve
 			buttons			: buttons
 		})
 
-	// set pointer
+	// set pointer to content_data
 		wrapper.content_data = content_data
-		self.wrapper = wrapper
 
 	return wrapper
 }//end edit
@@ -67,28 +66,19 @@ const get_content_data_edit = function(self) {
 		const data	= self.data || {}
 		const value	= data.value || []
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
-	// inputs
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
 
 	// build values
 		const inputs_value = value
 		const value_length = inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element_edit(i, inputs_value[i], self)
-			inputs_container.appendChild(input_element)
+			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
-	// set pointer
-		content_data.inputs_container = inputs_container
 
 	return content_data
 }//end render_content_data
@@ -212,7 +202,7 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
-* @return dom element li
+* @return dom element content_value
 */
 const get_input_element_edit = (i, current_value, self) => {
 
@@ -223,9 +213,10 @@ const get_input_element_edit = (i, current_value, self) => {
 		? ' mandatory'
 		: ''
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// input field
@@ -234,7 +225,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			type			: 'text',
 			class_name		: 'input_value' + add_class,
 			value			: current_value,
-			parent			: li
+			parent			: content_value
 		})
 	//events
 		input_email.addEventListener('change',function(e){
@@ -291,7 +282,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
-				parent			: li
+				parent			: content_value
 			})
 			// button remove
 			button_remove.addEventListener('mouseup',function(e){
@@ -317,15 +308,14 @@ const get_input_element_edit = (i, current_value, self) => {
 			const button_email = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button email hidden_button',
-				dataset			: { key : i },
-				parent			: li
+				parent			: content_value
 			})
 			button_email.addEventListener('mouseup',function(e) {
 				self.send_email(current_value)
 			})
 		}
 
-	return li
+	return content_value
 }//end input_element
 
 
