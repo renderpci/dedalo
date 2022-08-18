@@ -36,6 +36,9 @@ render_search_component_check_box.prototype.search = async function() {
 			content_data : content_data
 		})
 
+	// set pointer to content_data
+		wrapper.content_data = content_data
+
 	return wrapper
 }//end search
 
@@ -52,7 +55,10 @@ const get_content_data = function(self) {
 		const mode		= self.mode
 		const datalist	= self.data.datalist
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload : false
+		})
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -61,7 +67,7 @@ const get_content_data = function(self) {
 			type			: 'text',
 			value			: q_operator,
 			class_name		: 'q_operator',
-			parent			: fragment
+			parent			: content_data
 		})
 		input_q_operator.addEventListener('change',function() {
 			// value
@@ -72,26 +78,14 @@ const get_content_data = function(self) {
 				event_manager.publish('change_search_element', self)
 		})
 
-	// inputs_container ul
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container '+mode,
-			parent			: fragment
-		})
-
 	// values (inputs)
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			const input_element = get_input_element(i, datalist[i], self)
-			inputs_container.appendChild(input_element)
+			const input_element_node = get_input_element(i, datalist[i], self)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : false
-		})
-		content_data.appendChild(fragment)
-
 
 	return content_data
 }//end get_content_data
