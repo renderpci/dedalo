@@ -35,9 +35,9 @@ render_edit_component_av.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// buttons
@@ -45,9 +45,12 @@ render_edit_component_av.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : current_content_data,
+			content_data : content_data,
 			buttons 	 : buttons
 		})
+
+	// set pointer to content_data
+		wrapper.content_data = content_data
 
 	return wrapper
 }//end  edit
@@ -173,6 +176,8 @@ const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
 
+	// set the pointer. The data is not used to show the video node, so, the pointer is set to first position
+		content_data[0] = video_container
 
 	return content_data
 }//end  get_content_data_edit
