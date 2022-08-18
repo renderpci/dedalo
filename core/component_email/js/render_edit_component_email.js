@@ -52,42 +52,8 @@ render_edit_component_email.prototype.edit = async function(options={render_leve
 		wrapper.content_data = content_data
 		self.wrapper = wrapper
 
-	// add events
-		add_events(self, wrapper)
-
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		// 	self.events_tokens.push(
-		// 		event_manager.subscribe('update_value_'+self.id, update_value)
-		// 	)
-		// 	function update_value (changed_data) {
-		// 		// change the value of the current dom element
-		// 		const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"]')
-		// 		changed_node.value = changed_data.value
-		// 	}
-
-	// remove element, subscription to the events
-		// self.events_tokens.push(
-		// 	event_manager.subscribe('remove_element_'+self.id, remove_element)
-		// )
-		// async function remove_element(component) {
-		// 	// change all elements inside of content_data
-		// 	const new_content_data = await render_content_data(component)
-		// 	// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
-		// 	wrapper.childNodes[2].replaceWith(new_content_data)
-		// }
-
-	return true
-}//end add_events
 
 
 
@@ -276,12 +242,16 @@ const get_input_element_edit = (i, current_value, self) => {
 			ui.component.error(!validated, input_email)
 
 			if (validated) {
+				// set the changed_data for replace it in the instance data
+				// new_value. key is the position in the data array, the value is the new value
 				const new_value = (input_email.value.length>0) ? input_email.value : null
+				// set the changed_data for update the component data and send it to the server for change when save
 				const changed_data = Object.freeze({
 					action	: 'update',
 					key		: i,
 					value	: new_value,
 				})
+				// update the data in the instance previous to save
 				self.change_value({
 					changed_data : changed_data,
 					refresh 	 : false
