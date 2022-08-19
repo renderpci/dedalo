@@ -41,6 +41,8 @@ render_search_component_section_id.prototype.search = async function(options) {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// id
 		wrapper.id = self.id
@@ -104,21 +106,18 @@ const get_content_data_search = function(self) {
 
 	const value = self.data.value || ['']
 
-	const fragment = new DocumentFragment()
-
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add('nowrap')
 
 	// values (inputs)
 		const inputs_value	= value //(value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_node = get_input_element_search(i, inputs_value[i])
-			fragment.appendChild(input_node)
+			content_data.appendChild(input_node)
 		}
 
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
 
 	return content_data
 }//end get_content_data_search
@@ -139,9 +138,26 @@ const get_input_element_search = (i, current_value) => {
 			dataset			: { key : i },
 			value			: current_value
 		})
+		input.addEventListener('change', function(){
+
+			// parsed_value
+				const parsed_value = (input.value.length>0) ? input.value : null
+
+			// changed_data
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: i,
+					value	: parsed_value
+				})
+
+			// update the instance data (previous to save)
+				self.update_data_value(changed_data)
+			// set data.changed_data. The change_data to the instance
+				self.data.changed_data = changed_data
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+		})//end event change
 
 
 	return input
 }//end get_input_element_search
-
-
