@@ -10,25 +10,27 @@
 		>.content_data {
 			min-height: @media_min_height;
 			max-height: @media_max_height;
-
 			// min-height: 30px;
 			// min-width: 30px;
-			resize: vertical;
-			overflow: auto;
 
 			>.content_value {
-				flex-wrap: wrap;
-				align-items: flex-start;
+				// flex-wrap: wrap;
+				// align-items: flex-start;
+				width: 100%;
+				height: 100%;
+				// resize: vertical;
+				// overflow: auto;
 
 				// iframe
 				>.pdf_viewer_frame {
 					// flex: 0 0 100%;
 					// 	height: calc(100% - 32px);
 					width: 100%;
-					height: 100%;
+					height: calc(100% - 32px);
 				}
 
 				>.fields {
+					height: 32px;
 					flex: 0 0 100%;
 					background-color: @color_grey_dark;
 					padding: 0;
@@ -36,11 +38,10 @@
 					margin: 0;
 					display: flex;
 					align-items: center;
-					height: 32px;
 					font-size: 1em;
 					// Position absolute option
-					position: absolute;
-					bottom: 0;
+					// position: absolute;
+					// bottom: 0;
 					width: 100%;
 
 					span {
