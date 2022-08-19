@@ -114,7 +114,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			placeholder 	: (current_value) ? '' : self.data.fallback_value[i],
 			parent			: content_value
 		})
-		input.addEventListener('change', function(){
+		input.addEventListener('change', async function() {
 
 			// is_unique check
 				if (self.context.properties.unique && input.value!=='') {
