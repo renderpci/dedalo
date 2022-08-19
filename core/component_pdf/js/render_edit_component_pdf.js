@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 
 
 
@@ -46,6 +47,15 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
+
+	// fix editor height. This guarantees that content_data grow to the maximum possible height
+		// when_in_dom(wrapper, ()=> {
+		// 	const wrapper_height	= wrapper.offsetHeight
+		// 	const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
+		// 	wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
+		// })
 
 	// add events
 		add_events(self, wrapper)
@@ -128,14 +138,8 @@ const get_content_data_edit = function(self) {
 		const data	= self.data || {}
 		const value	= data.value || []
 
-	const fragment = new DocumentFragment()
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// url
 		const quality		= self.quality || self.context.quality
@@ -145,24 +149,14 @@ const get_content_data_edit = function(self) {
 			? file_info.url
 			: null
 
-		if (pdf_url) {
+		// if (pdf_url) {
 			const i				= 0
 			const inputs_value	= (value && value.length>0) ? value : [{}]
-			const li			= get_input_element_edit(self, i, inputs_value[i], pdf_url)
-			inputs_container.appendChild(li)
-		}
-
-	// values (inputs)
-		// const inputs_value	= (value && value.length>0) ? value : [{}]
-		// const value_length	= inputs_value.length
-		// for (let i = 0; i < value_length; i++) {
-		// 	const li = get_input_element_edit(i, inputs_value[i], self)
-		// 	inputs_container.appendChild(li)
+			const content_value	= get_input_element_edit(self, i, inputs_value[i], pdf_url)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
 		// }
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -181,9 +175,10 @@ const get_input_element_edit = function(self, i, current_value, pdf_url) {
 			? current_value.offset
 			: 1
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// url
@@ -195,37 +190,37 @@ const get_input_element_edit = function(self, i, current_value, pdf_url) {
 		// 	? file_info.url
 		// 	: null
 
-	// iframe
-		if (pdf_url) {
 
-			// DES
-				// const pdf_viewer = ui.create_dom_element({
-				//    	element_type	: "div",
-				//    	class_name 		: 'pdf_viewer_frame',
-				//    	parent 			: li
-				// })
-				//
-				// const shadow = pdf_viewer.attachShadow({mode: 'open'});
-				//
-				// const response =  await fetch(viewer_url)
-				// // console.log("response", response);
-				// // .then(response => response.text())
-				// // .then( txt =>  new DOMParser().parseFromString(txt, 'text/html'))
-		  		// const txt = await response.text();
-				// // console.log("txt", txt);
-				// const html =  new DOMParser().parseFromString(txt, 'text/html');
-				//
-				// console.log("html", html);
-				//
-				// shadow.appendChild(html.querySelector('html') )// = txt;
+	if (pdf_url) {
 
-			// iframe
-				const iframe = ui.create_dom_element({
-					element_type	: "iframe",
-					class_name		: 'pdf_viewer_frame',
-					parent			: li
-				})
-				// iframe.setAttribute('allowfullscreen',true)
+		// DES
+			// const pdf_viewer = ui.create_dom_element({
+			//    	element_type	: "div",
+			//    	class_name 		: 'pdf_viewer_frame',
+			//    	parent 			: li
+			// })
+			//
+			// const shadow = pdf_viewer.attachShadow({mode: 'open'});
+			//
+			// const response =  await fetch(viewer_url)
+			// // console.log("response", response);
+			// // .then(response => response.text())
+			// // .then( txt =>  new DOMParser().parseFromString(txt, 'text/html'))
+	  		// const txt = await response.text();
+			// // console.log("txt", txt);
+			// const html =  new DOMParser().parseFromString(txt, 'text/html');
+			//
+			// console.log("html", html);
+			//
+			// shadow.appendChild(html.querySelector('html') )// = txt;
+
+		// iframe. PDF viewer (pdfjs) is loaded inside a iframe
+			const iframe = ui.create_dom_element({
+				element_type	: 'iframe',
+				class_name		: 'pdf_viewer_frame',
+				parent			: content_value
+			})
+			// iframe.setAttribute('allowfullscreen',true)
 
 			// webviewerloaded. when the standard html of pdf.js is loaded, it is possible to get the library and set the pdf
 				// iframe.addEventListener("webviewerloaded", fn_webviewerloaded)
@@ -271,44 +266,40 @@ const get_input_element_edit = function(self, i, current_value, pdf_url) {
 				// iframe.src = viewer_url // direct or by observe event
 
 			// set iframe url on DOM entry
-				const observer = new IntersectionObserver(function(entries) {
-					const entry = entries[1] || entries[0]
-					if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-						observer.disconnect();
+				when_in_viewport(
+					iframe, // node to observe
+					() => { // callback function
 						iframe.src = viewer_url // load URL to iframe
 					}
-				}, { threshold: [0] });
-				observer.observe(iframe);
+				)
 
-		}//end if (pdf_url)
-
-
-	// fields
-		const fields = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'fields',
-			parent			: li
-		})
-		// offset label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'label',
-			text_node		: 'offset',
-			parent			: fields
-		})
-		// offset input field
-		ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'number',
-			class_name		: '',
-			dataset			: { key : i },
-			value			: offset_value,
-			parent			: fields
-		})
+		// fields. Bottom line with input offset options
+			const fields = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'fields',
+				parent			: content_value
+			})
+			// offset label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				text_node		: 'offset',
+				parent			: fields
+			})
+			// offset input field
+			ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'number',
+				class_name		: '',
+				dataset			: { key : i },
+				value			: offset_value,
+				parent			: fields
+			})
+	}//end if (pdf_url)
 
 
-	return li
-}; //end input_element
+	return content_value
+}//end input_element
 
 
 
