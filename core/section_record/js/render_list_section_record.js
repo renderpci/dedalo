@@ -4,12 +4,12 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
+	// import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {when_in_dom} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
