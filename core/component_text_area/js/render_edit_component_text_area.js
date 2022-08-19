@@ -240,8 +240,10 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= value // is array
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i], self, is_inside_tool)
-			content_data.appendChild(input_element)
+			const content_value = get_input_element(i, inputs_value[i], self, is_inside_tool)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
 		}
 
 
