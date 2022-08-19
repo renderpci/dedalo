@@ -52,12 +52,8 @@ render_edit_component_json.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// fix
-		self.wrapper = wrapper
-
-	// add events
-		//add_events(self, wrapper)
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -138,31 +134,23 @@ const get_content_data_edit = function(self) {
 
 	const value = self.data.value
 
-	const fragment = new DocumentFragment()
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
 
 	// values (inputs)
-		const inputs_value = value
-		const value_length = inputs_value.length
+		const inputs_value	= value
+		const value_length	= inputs_value.length
 		if (value_length>1) {
 			console.warn("More than one value in component_json is not allowed at now. Ignored next values. N values: ",value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
-			const li = get_input_element(i, inputs_value[i], self)
-			inputs_container.appendChild(li)
+			const content_value = get_input_element(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
 			break; // only one is used for the time being
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -189,7 +177,7 @@ const get_buttons = (self) => {
 		})
 		button_fullscreen.addEventListener("click", function() {
 			// li.classList.toggle("fullscreen")
-			self.wrapper.classList.toggle("fullscreen")
+			self.node.classList.toggle("fullscreen")
 		})
 
 	// button_download . Force automatic download of component data value
@@ -230,104 +218,110 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element li
+* @return DOM node content_value
 */
 const get_input_element = (i, current_value, self) => {
 
-	let validated = true
-	// let editor
-
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
-	async function load_editor() {
+	// load_editor and init
+		async function load_editor() {
 
-		// load editor files (js/css)
-		self.load_editor_files()
-		.then(()=>{
+			// validated. Changed to false on editor.onValidationError
+			let validated = true
 
-			// button_save
-				const button_save = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'primary save button_save',
-					inner_html		: get_label.salvar || 'Save',
-					parent			: li
-				})
-				button_save.addEventListener("click", function(e) {
-					e.stopPropagation()
+			// load editor files (js/css)
+			self.load_editor_files()
+			.then(()=>{
 
-					self.save_sequence(editor)
-					.then(function(){
-
-						on_change(self, editor)
-
-						editor.frame.classList.remove("isDirty")
-						button_save.classList.remove("warning")
+				// button_save
+					const button_save = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'primary save button_save',
+						inner_html		: get_label.salvar || 'Save',
+						parent			: content_value
 					})
-				})
+					button_save.addEventListener("click", function(e) {
+						e.stopPropagation()
 
-			// editor_options
-				const editor_options = {
-					mode	 : 'code',
-					modes	 : ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-					// maxLines : 100, // Infinity,
-					onError	 : function (err) {
-						console.error("err:",err);
-						alert(err.toString());
-					},
-					onValidationError : function() {
-						validated = false
-					},
-					onChange : function(json) {
-						if (editor) {
+						self.save_sequence(editor)
+						.then(function(){
+
 							on_change(self, editor)
-						}else{
-							console.error("Error. editor is not available!:");
+
+							editor.frame.classList.remove("isDirty")
+							button_save.classList.remove("warning")
+						})
+					})
+
+				// editor_options
+					const editor_options = {
+						mode		: 'code',
+						modes		: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+						// maxLines : 100, // Infinity,
+						onError : function (err) {
+							console.error("err:",err);
+							alert(err.toString());
+						},
+						onValidationError : function() {
+							validated = false
+						},
+						onChange : function(json) {
+							if (editor) {
+								on_change(self, editor)
+							}else{
+								console.error("Error. editor is not available!:");
+							}
+						},
+						onValidate : function() {
+							validated = true
+
+					       //var json = editor.get();
+					       // Update hidden text area value
+					       //editor_text_area.value = editor.getText()
+
+							// const json = editor.get();
+							//      	console.log("json:",json);
+							//      	//console.log("json editor.get():",editor.get());
+							//      	console.log("text editor.getText():",editor.getText());
+
+							// const changed_data = Object.freeze({
+							// 	action	: 'update',
+							// 	key		: 0,
+							// 	value	: editor.get()
+							// })
+							// self.change_value({
+							// 	changed_data : changed_data,
+							// 	refresh 	 : false
+							// })
+							// .then((save_response)=>{
+							// 	// event to update the dom elements of the instance
+							// 	event_manager.publish('update_value_'+self.id, changed_data)
+							// })
+						},
+						onBlur : function() {
+						    // 	console.log('content changed:', this);
+						    // 	alert("content changed");
 						}
-					},
-					onValidate: function() {
-						validated = true
-
-				       //var json = editor.get();
-				       // Update hidden text area value
-				       //editor_text_area.value = editor.getText()
-
-						// const json = editor.get();
-						//      	console.log("json:",json);
-						//      	//console.log("json editor.get():",editor.get());
-						//      	console.log("text editor.getText():",editor.getText());
-
-						// const changed_data = Object.freeze({
-						// 	action	: 'update',
-						// 	key		: 0,
-						// 	value	: editor.get()
-						// })
-						// self.change_value({
-						// 	changed_data : changed_data,
-						// 	refresh 	 : false
-						// })
-						// .then((save_response)=>{
-						// 	// event to update the dom elements of the instance
-						// 	event_manager.publish('update_value_'+self.id, changed_data)
-						// })
-					},
-					onBlur: function() {
-					    // 	console.log('content changed:', this);
-					    // 	alert("content changed");
 					}
-				}
 
-			// create a new instace of the editor when DOM element is ready
-				// event_manager.when_in_dom(li, function(){
-				// 	console.log("container in DOM:",li);
-				// })
-				const editor = new JSONEditor(li, editor_options, current_value)
-				self.editors.push(editor) // append current editor
-		})
+				// create a new instace of the editor when DOM element is ready
+					// event_manager.when_in_dom(li, function(){
+					// 	console.log("container in DOM:",li);
+					// })
+					const editor = new JSONEditor(
+						content_value,
+						editor_options,
+						current_value
+					)
+					self.editors.push(editor) // append current editor
+			})
 
-		// blur event
+			// blur event
 				// const ace_editor = editor.aceEditor
 				// ace_editor.on("blur", function(e){
 				// 	e.stopPropagation()
@@ -344,18 +338,21 @@ const get_input_element = (i, current_value, self) => {
 				// 	}
 				// })
 
-	}//end load_editor
+			return true
+		}//end load_editor
 
-	const observer = new IntersectionObserver(function(entries) {
-		const entry = entries[1] || entries[0]
-		if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-			observer.disconnect();
-			load_editor()
-		}
-	}, { threshold: [0] });
-	observer.observe(li);
+	// observe in viewport
+		const observer = new IntersectionObserver(function(entries) {
+			const entry = entries[1] || entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+				observer.disconnect();
+				load_editor()
+			}
+		}, { threshold: [0] });
+		observer.observe(content_value);
 
-	return li
+
+	return content_value
 }; //end get_input_element
 
 
@@ -427,5 +424,3 @@ const download_object_as_json = function(export_obj, export_name){
 
     return true
 }//end download_object_as_json
-
-
