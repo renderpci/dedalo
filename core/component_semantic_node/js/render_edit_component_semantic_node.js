@@ -166,8 +166,7 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action	: 'remove',
 						key		: e.target.dataset.key,
-						value	: null,
-						refresh	: true
+						value	: null
 					})
 					self.change_value({
 						changed_data	: changed_data,

@@ -119,7 +119,7 @@ const get_input_element = (i, current_value, self) => {
 			id				: input_id,
 			parent			: li
 		})
-		input.addEventListener('change',function() {
+		input.addEventListener('change', function() {
 
 			const action		= (input.checked===true) ? 'insert' : 'remove'
 			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)

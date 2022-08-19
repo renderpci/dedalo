@@ -112,12 +112,12 @@ const get_buttons = (self) => {
 					value	: null
 				})
 				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : true
+					changed_data	: changed_data,
+					refresh			: true
 				})
 				.then((save_response)=>{
-					const inputs_container = self.wrapper.content_data.inputs_container
-					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
+					const inputs_container	= self.wrapper.content_data.inputs_container
+					const new_input			= get_input_element_edit(changed_data.key, changed_data.value, self)
 					inputs_container.appendChild(new_input)
 				})
 			})
@@ -240,12 +240,12 @@ const get_input_element_edit = (i, current_value, self) => {
 				const changed_data = Object.freeze({
 					action	: 'update',
 					key		: i,
-					value	: new_value,
+					value	: new_value
 				})
 				// update the data in the instance previous to save
 				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
+					changed_data	: changed_data,
+					refresh			: false
 				})
 				.then((save_response)=>{
 					// event to update the dom elements of the instance
@@ -278,7 +278,7 @@ const get_input_element_edit = (i, current_value, self) => {
 
 
 	// add buttons to the email row
-		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
+		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
@@ -292,13 +292,12 @@ const get_input_element_edit = (i, current_value, self) => {
 				const changed_data = Object.freeze({
 					action	: 'remove',
 					key		: i,
-					value	: null,
-					refresh : true
+					value	: null
 				})
 				self.change_value({
-					changed_data : changed_data,
-					label 		 : current_value || ' ',
-					refresh 	 : true
+					changed_data	: changed_data,
+					label			: current_value || ' ',
+					refresh			: true
 				})
 				.then(()=>{
 				})

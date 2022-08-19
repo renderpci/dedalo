@@ -179,8 +179,8 @@ const add_events = function(self, wrapper) {
 						value	: null
 					})
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then((save_response)=>{
 						// event to update the dom elements of the instance
@@ -199,13 +199,12 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action	: 'remove',
 						key		: e.target.dataset.key,
-						value	: null,
-						refresh : true
+						value	: null
 					})
 					self.change_value({
-						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.value,
-						refresh 	 : true
+						changed_data	: changed_data,
+						label			: e.target.previousElementSibling.value,
+						refresh			: true
 					})
 					.then(()=>{
 					})

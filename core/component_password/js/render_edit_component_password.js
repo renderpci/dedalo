@@ -83,8 +83,8 @@ const add_events = function(self, wrapper) {
 						value	: (e.target.value.length>0) ? e.target.value : null,
 					})
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then((save_response)=>{
 						// event to update the dom elements of the instance
