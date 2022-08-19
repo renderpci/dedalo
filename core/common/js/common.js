@@ -293,9 +293,12 @@ common.prototype.render = async function (options={}) {
 					// set
 						// replace dom node if the node exist,
 						// ex: when it's called by event that need change data in component (update_data event) and the component need to be rendered in full as in list mode
-						if(self.node){
+						if(self.node) {
 							const parent = self.node.parentNode
-							parent.replaceChild(node, self.node)
+							parent.replaceChild(
+								node, // new node
+								self.node // old node
+							)
 						}
 						self.node = node
 
