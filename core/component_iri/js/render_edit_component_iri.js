@@ -303,7 +303,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			parent			: li
 		})
 
-	if((mode==='edit' || 'edit_in_list')) {
+	if((mode==='edit' || mode==='edit_in_list')) {
 		// input iri field
 		const input_iri = ui.create_dom_element({
 			element_type	: 'input',
