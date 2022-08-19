@@ -632,7 +632,8 @@
 		// color: @color_grey_dark; // #9e9e9e;
 		color: @color_grey_ultradark; // #353535
 		display: grid;
-		grid-template-rows: @component_label_height auto;
+		// grid-template-rows: @component_label_height auto;
+		grid-template-rows: @component_label_height minmax(auto, 100%);
 		// grid-column: 1 / span 10; // default width is 100% (10 columns of 10)
     	align-content: start;
 
