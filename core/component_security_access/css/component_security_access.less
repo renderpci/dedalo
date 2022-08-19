@@ -4,129 +4,189 @@
 * Included from main.less file
 */
 .component_security_access {
-	// background-color: #d3fcea;
 
+	// edit mode only
 	&.edit {
 		>.content_data {
-			// display: block;
+			display: block;
 			min-height: 12rem;
 			pointer-events: unset !important; // prevent time machine lock tree arrows
 
-			display: flex;
-			flex-direction: column;
-			flex-wrap: wrap;
-			// width: 75%;
-
-			>.content_value {
-				margin-left: 1.5rem;
-				// min-height: 1.2rem;
-				// display: flex;
-
-				&.permissions {
-					color: #676767;
-					font-weight: 300;
-
-					>.radio_buttons_container {
-						margin-left: 1.25rem;
-					}
-				}
-
-				ul.branch {
-					// background-color: #faceb9;
-				}
-			}
-
-			.area_label {
-				position: relative;
-				padding: 0.22rem;
-				padding-left: 0;
-				line-height: 1.1rem;
-				vertical-align: bottom;
-
-				&.icon_arrow {
-
-				}
-
-				&.component {
-					color: orange;
-				}
-
-				.info_text {
-					color: #999999;
-					padding-left: 0.5rem;
-					padding-right: 0.25rem;
-					font-weight: 300;
-					font-size: 14px;
-				}
-			}
-
-			.radio_buttons_container, .permissions_global {
+			// ul
+			>.tree_root {
 				display: flex;
-				align-items: center;
-				margin-right: 0.5rem;
-				margin-left: 0.5rem;
-				label {
+				flex-direction: column;
+				flex-wrap: wrap;
+				height: inherit;
+				max-height: inherit;
+				font-size: 13px;
+
+				// all ul
+				ul {
+					width: 100%;
 					display: block;
+				}
 
-					input {
-						margin-right: 0.25rem;
-						-webkit-appearance: none;
-						-moz-appearance: none;
-						appearance: none;
-						display: inline-block;
-						width: 0.95rem;
-						height: 0.95rem;
-						padding: 1px;
-						background-clip: content-box;
-						border: 1px solid #c8c7ca;
-						background-color: #f3f3f3;
-						border-radius: 50%;
-						vertical-align: bottom;
+				// all li
+				li {
+					display: flex;
+					flex: 1 1 50%;
+					flex-wrap: wrap;
+					line-height: 1em;
+					align-items: center;
+					max-height: inherit;
+					margin-left: 1.5rem;
 
-						/* appearance for checked radiobutton */
-						&:checked {
-						  background-color: #4dbb4a; // green
-						  &.val_0 {
-						  	background-color: #f16053; // red
-						  }
-						  &.val_1 {
-						  	background-color: #f8b544; // orange
-						  }
+					&.permissions {
+						color: #676767;
+						font-weight: 300;
+
+						>.radio_buttons_container {
+							margin-left: 1.25rem;
 						}
 					}
-					margin-right: 0.25rem;
-				}
-			}
 
-			.icon_arrow {
-				// height: 1.09rem;
-				// position: relative;
-				margin-right: 1.5rem;
+					// grouper cases (filter)
+					&.grouper {
+						flex-wrap: wrap;
+						padding-bottom: 0.25em;
+						margin-left: 0;
+						padding: 0;
 
-				&:after {
-					background-color: #0075ff;
-					right: -1.45rem;
-					height: 1.2rem;
-					transform: rotate(270deg);
-				}
-				&.up {
-					&:after {
-						transform: rotate(360deg);
-						opacity: 0.5;
+						li {
+							flex: 0 0 100%;
+							padding: 0.25em;
+							// padding-left: 1em;
+							width: 100%;
+							// height: 100%;
+							height: inherit;
+							font-size: 0.90em;
+						}
+
+						>.grouper_label {
+							width: auto;
+							padding-left: 0;
+							padding-top: 0.25em;
+							padding-bottom: 0.25em;
+							padding-right: 1.66rem;
+							opacity: 0.7;
+							font-size: 0.80em;
+						}
+
+						input {
+							vertical-align: text-top;
+						}
+					}
+
+					label {
+						//padding-left: 0.15em;
+						//padding-right: 0.5em;
+						//vertical-align: baseline;
+					}
+
+					input {
+						margin-right: 0.33em;
+					}
+
+					// q_operator
+					>input.q_operator {
+						width: 3em;
+						text-align: center;
 					}
 				}
-			}
 
-			// .loading_info {
-			// 	position: absolute;
-			// 	top: 25%;
-			// 	left: 50%;
-			// 	transform: translate(-50%, -50%);
-			// 	color: #b9b9b9;
-			// 	font-weight: 300;
-			// }
+				// first level li
+				>li {
+					position: relative;
+					flex: 1 1 100%;
+					align-items: baseline;
+					z-index: 0;
+				}
 
-		}//end .content_data
+				// label area_label
+				.area_label {
+					position: relative;
+					padding: 0.22rem;
+					padding-left: 0;
+					line-height: 1.1rem;
+					vertical-align: bottom;
+
+					&.icon_arrow {
+
+					}
+
+					&.component {
+						color: orange;
+					}
+
+					.info_text {
+						color: #999999;
+						padding-left: 0.5rem;
+						padding-right: 0.25rem;
+						font-weight: 300;
+						font-size: 14px;
+					}
+				}
+
+				// radio buttons permissions
+				.radio_buttons_container, .permissions_global {
+					display: flex;
+					align-items: center;
+					margin-right: 0.5rem;
+					margin-left: 0.5rem;
+					label {
+						display: block;
+
+						input {
+							margin-right: 0.25rem;
+							-webkit-appearance: none;
+							-moz-appearance: none;
+							appearance: none;
+							display: inline-block;
+							width: 0.95rem;
+							height: 0.95rem;
+							padding: 1px;
+							background-clip: content-box;
+							border: 1px solid #c8c7ca;
+							background-color: #f3f3f3;
+							border-radius: 50%;
+							vertical-align: bottom;
+
+							/* appearance for checked radiobutton */
+							&:checked {
+							  background-color: #4dbb4a; // green
+							  &.val_0 {
+							  	background-color: #f16053; // red
+							  }
+							  &.val_1 {
+							  	background-color: #f8b544; // orange
+							  }
+							}
+						}
+						margin-right: 0.25rem;
+					}
+				}
+
+				// icon arrow show children
+				.icon_arrow {
+					// height: 1.09rem;
+					// position: relative;
+					margin-right: 1.5rem;
+					&:after {
+						background-color: #0075ff;
+						right: -1.45rem;
+						height: 1.2rem;
+						transform: rotate(270deg);
+					}
+					&.up {
+						&:after {
+							transform: rotate(360deg);
+							opacity: 0.5;
+						}
+					}
+				}
+			}//end .tree_root
+		}//end >.content_data
 
 		>.buttons_container {
 
@@ -136,9 +196,9 @@
 				top: 33px;
 			}
 		}
+	}//end &.edit
 
-	}//end .edit
-
+	// list mode only
 	&.list {
 		>span {
 			display: block;
@@ -148,4 +208,4 @@
 			font-size: 13px;
 		}
 	}
-}//end .component_security_access
+}//end component_security_access
