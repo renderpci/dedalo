@@ -4,18 +4,22 @@
 * Included from main.less file
 */
 .component_select {
-	// background-color: #edbaf6;
 
-	&.edit {
-
+	// &.edit {
 		>.content_data {
 
 			>.content_value {
-				align-items: center;
+				width: 100%;
 				display: flex;
-				// padding-bottom: 0.25rem;
+				align-items: center;
 
-				>select {
+				.q_operator {
+					width: 3rem;
+					text-align: center;
+				}
+
+				// select
+				>.select_lang {
 					width: 79%;
 				}
 
@@ -24,5 +28,5 @@
 				}
 			}
 		}
-	}
+	// }
 }//end .component_select
