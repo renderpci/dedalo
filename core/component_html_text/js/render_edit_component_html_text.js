@@ -297,7 +297,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			})
 
 	// button remove
-		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
+		// if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool){
 		// 	const button_remove = ui.create_dom_element({
 		// 		element_type	: 'div',
 		// 		class_name 		: 'button remove display_none',
