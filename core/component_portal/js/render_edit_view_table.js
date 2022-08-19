@@ -52,7 +52,9 @@ render_edit_view_table.render = async function(self, options) {
 		self.columns_map	= columns_map
 
 	// ar_section_record
-		const ar_section_record	= await self.get_ar_instances({mode:'list'})
+		const ar_section_record	= await self.get_ar_instances({
+			mode : 'list'
+		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
@@ -61,7 +63,8 @@ render_edit_view_table.render = async function(self, options) {
 		if (render_level==='content') {
 			// show header_wrapper_list if is hidden
 				if (ar_section_record.length>0) {
-					self.node.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
+					// self.node.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
+					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.remove('hide')
 				}
 			return content_data
 		}
@@ -140,8 +143,8 @@ const get_content_data = async function(self, ar_section_record) {
 	// build_values
 		const fragment = new DocumentFragment()
 
-		// add all section_record rendered nodes
-			const ar_section_record_length	= ar_section_record.length
+		// section_record. Add all section_record rendered nodes
+			const ar_section_record_length = ar_section_record.length
 			if (ar_section_record_length===0) {
 
 				// no records found case
@@ -154,7 +157,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 					const section_record	= ar_section_record[i]
 					// const section_id		= section_record.section_id
-					// const section_tipo		= section_record.section_tipo
+					// const section_tipo	= section_record.section_tipo
 
 					// section_record wrapper
 						// const row_wrapper = ui.create_dom_element({
@@ -196,7 +199,7 @@ const get_content_data = async function(self, ar_section_record) {
 				}
 			}//end if (ar_section_record_length===0)
 
-		// build references
+		// references. Build references if exists
 			if(self.data.references && self.data.references.length > 0){
 				const references_node = render_references(self.data.references)
 				fragment.appendChild(references_node)
@@ -391,5 +394,3 @@ const rebuild_columns_map = async function(self) {
 
 	// 	return li
 	// }//end get_input_element_await
-
-

@@ -41,7 +41,7 @@ export const render_edit_view_indexation = function() {
 */
 render_edit_view_indexation.render = async function(self, options) {
 
-	// prevent to load autocpmplete service
+	// prevents to load autocpmplete service
 		self.autocomplete = false
 
 	// options
@@ -70,6 +70,8 @@ render_edit_view_indexation.render = async function(self, options) {
 			'portal',
 			'view_indexation'
 		)
+		// set pointers
+		wrapper.content_data = content_data
 
 	// events
 		add_events(self, wrapper)

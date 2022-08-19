@@ -299,16 +299,19 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * DRAG_AND_DROP
-* @return
+* Set section_record_node ready to drag and drop
+* @param object options
+* @return bool
 */
 const drag_and_drop = function(options) {
 
-	const drag_node		= options.section_record_node
-	// const source_key	= options.i
-	// const locator		= options.locator
-	// const section_id	= locator.section_id
-	// const section_tipo	= locator.section_tipo
-	// const total_records = options.total_records
+	// options
+		const drag_node			= options.section_record_node
+		// const source_key		= options.i
+		// const locator		= options.locator
+		// const section_id		= locator.section_id
+		// const section_tipo	= locator.section_tipo
+		// const total_records	= options.total_records
 
 	drag_node.draggable = true
 	drag_node.classList.add('draggable')
@@ -317,14 +320,14 @@ const drag_and_drop = function(options) {
 	drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
 	drag_node.addEventListener('drop',function(e){on_drop(options, this, e)})
 
-
+	return true
 };//end drag_and_drop
+
 
 
 /**
 * RENDER_ALTERNATIVE_TABLE_VIEW
 * Render all received section records and place it into a DocumentFragment
-*
 * @param instance self
 * @param array ar_section_record
 * @param DOM node alt_list_body
@@ -421,7 +424,6 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 /**
 * RENDER_HOVER_VIEW
 * Render all received section records and place it into a DocumentFragment
-*
 * @param instance self
 * @param array ar_section_record
 * @param DOM node alt_list_body
@@ -583,5 +585,3 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 	// 			text_content	: section_id,
 	// 			parent			: fragment
 	// 		})
-
-
