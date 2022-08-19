@@ -47,10 +47,6 @@ render_edit_component_select.prototype.edit = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
-		// share component_select to component_select_lang CSS via wrapper selector
-		if (self.model==='component_select_lang') {
-			wrapper.classList.add('component_select')
-		}
 
 	// add events delegated
 		add_events(self, wrapper)
