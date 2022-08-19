@@ -36,13 +36,12 @@ render_search_component_input_text.prototype.search = async function() {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end search
-
 
 
 
@@ -66,6 +65,7 @@ const get_content_data = function(self) {
 			// set the pointer
 			content_data[i] = input_element_node
 		}
+
 
 	return content_data
 }//end get_content_data
@@ -108,5 +108,3 @@ const get_input_element = (i, current_value) => {
 
 	return input
 }//end get_input_element
-
-
