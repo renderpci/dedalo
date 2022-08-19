@@ -47,9 +47,9 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end edit
