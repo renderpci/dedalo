@@ -37,16 +37,18 @@ render_player_component_av.prototype.player = async function(options) {
 		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// content_data
-		const current_content_data = get_content_data_player(self)
+		const content_data = get_content_data_player(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data	: current_content_data,
+			content_data	: content_data,
 			label			: null
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// av_control_buttons
 		if (self.video) {
@@ -68,7 +70,7 @@ render_player_component_av.prototype.player = async function(options) {
 * @param instance self
 * @return DOM node content_data
 */
-const get_content_data_player = function(self) {
+export const get_content_data_player = function(self) {
 
 	const fragment = new DocumentFragment()
 
