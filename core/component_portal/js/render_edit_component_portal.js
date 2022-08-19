@@ -368,13 +368,13 @@ export const render_column_remove = function(options) {
 			// body
 				const body = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'content delete_record'
+					class_name		: 'body content'
 				})
 
 			// footer
 				const footer = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'footer'
+					class_name		: 'footer content'
 				})
 
 			// button_unlink_and_delete
