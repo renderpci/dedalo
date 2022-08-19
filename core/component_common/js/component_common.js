@@ -899,7 +899,7 @@ component_common.prototype.change_value = async function(options) {
 
 		// refresh
 			if (refresh===true) {
-				self.refresh({
+				await self.refresh({
 					build_autoload : build_autoload // default value is false
 				})
 			}
