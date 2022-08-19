@@ -6,6 +6,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_content_data_player} from '../../component_av/js/render_player_component_av.js'
 
 
 
@@ -33,32 +34,45 @@ render_viewer_component_av.prototype.viewer = async function() {
 		const datalist = self.data.datalist || []
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-		wrapper.classList.add('component_av')
-		wrapper.classList.add('viewer')
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper_component component_av viewer'
+		})
 
 	// url
 		const quality		= page_globals.dedalo_av_quality_default // '404'
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= (typeof url_object==="undefined")
-			? DEDALO_CORE_URL + "/themes/default/0.jpg"
+		const url			= (typeof url_object==='undefined')
+			? DEDALO_CORE_URL + '/themes/default/0.jpg'
 			: url_object.url
 
-	// media_component
-		self.mode = 'player'
-		const media_player_node = await self.render();
+	// wrapper background color from posterframe image
+		const posterframe_url = self.data.posterframe_url || page_globals.fallback_image
+		const image = ui.create_dom_element({
+			element_type	: 'img',
+			src				: posterframe_url
+		})
+		image.addEventListener('load', set_bg_color, false)
+		function set_bg_color() {
+			this.removeEventListener('load', set_bg_color, false)
+			ui.set_background_image(this, wrapper)
+		}
+
+	// media_component player
+		const media_player_node = get_content_data_player(self)
 		wrapper.appendChild(media_player_node)
 
 	// button download
 		const download_image_button = ui.create_dom_element({
-			element_type	: "button",
-			class_name 		: 'primary download',
-			// value 			: ' ok ',
-			parent			: wrapper,
+			element_type	: 'button',
+			class_name		: 'primary download',
+			parent			: wrapper
 		})
-		download_image_button.addEventListener('click', function(evt) {
+		download_image_button.addEventListener('click', function() {
+
 			// get the original quality for download
 			const original = datalist.find(item => item.quality==='original')
+
 			// check if the original file exist else get the url of the default image
 			const download_url	= (original.file_exist)
 				? original.url // original image
@@ -66,15 +80,21 @@ render_viewer_component_av.prototype.viewer = async function() {
 
 			// get the name of the original file uploaded (user filename)
 			// else get the default name
-			name = self.data.value[0].original_file_name
+			const name = self.data.value[0].original_file_name
 				? self.data.value[0].original_file_name
 				: self.tipo+'_'+self.section_tipo+'_'+self.section_id
 
-			download_original_av({download_url:download_url, name:name})
+			download_original_av({
+				download_url : download_url,
+				name : name
+			})
 		})
+
 
 	return wrapper
 }//end viewer
+
+
 
 /**
 * DOWNLOAD_ORIGINAL_IMAGE
