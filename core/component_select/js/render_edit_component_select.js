@@ -11,7 +11,7 @@
 
 /**
 * RENDER_EDIT_COMPONENT_SELECT
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_edit_component_select = function() {
 
@@ -32,7 +32,7 @@ render_edit_component_select.prototype.edit = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -45,6 +45,12 @@ render_edit_component_select.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
+		// share component_select to component_select_lang CSS via wrapper selector
+		if (self.model==='component_select_lang') {
+			wrapper.classList.add('component_select')
+		}
 
 	// add events delegated
 		add_events(self, wrapper)
@@ -153,32 +159,157 @@ const add_events = (self, wrapper) => {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data_edit = function(self) {
-
-	const fragment = new DocumentFragment()
-
-	// inputs
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
-
-	// build select able options
-		const li = get_input_element(self)
-		inputs_container.appendChild(li)
+const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  // content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
+
+	// build select-able options
+		const i				= 0
+		const content_value	= get_content_value(i, self)
+		content_data.appendChild(content_value)
+		// set pointers
+		content_data[i] = content_value
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
+
+
+
+/**
+* GET_CONTENT_VALUE
+* @return DOM node content_value
+*/
+const get_content_value = (i, self) => {
+
+	// short vars
+		const data		= self.data || {}
+		const value		= data.value || []
+		const datalist	= data.datalist || []
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// select
+		const select = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'select_lang',
+			parent			: content_value
+		})
+		select.addEventListener('change', function(){
+			const value = this.value
+				? JSON.parse(this.value)
+				: null
+			if (value) {
+				button_edit.classList.remove('hide')
+			}else{
+				button_edit.classList.add('hide')
+			}
+		})
+
+	// add empty option at beginning of the array
+		const empty_option = {
+			label	: '',
+			value	: null
+		}
+		datalist.unshift(empty_option);
+
+	// build options
+		const value_compare		= value.length>0 ? value[0] : null
+		const datalist_length	= datalist.length
+		for (let i = 0; i < datalist_length; i++) {
+
+			const datalist_item = datalist[i]
+
+			const current_section_id = typeof datalist_item.section_id!=='undefined'
+				? datalist_item.section_id
+				: null
+
+			const option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: JSON.stringify(datalist_item.value),
+				inner_html		: datalist_item.label,
+				parent			: select
+			})
+			// selected options set on match
+			if (value_compare && datalist_item.value &&
+				value_compare.section_id===datalist_item.value.section_id &&
+				value_compare.section_tipo===datalist_item.value.section_tipo
+				) {
+				option.selected = true
+			}
+
+			// developer_info
+				if (current_section_id) {
+					// developer_info
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'developer_info hide show_on_active',
+						text_content	: ` [${current_section_id}]`,
+						parent			: option
+					})
+				}
+		}//end for (let i = 0; i < datalist_length; i++)
+
+	// button_edit
+		const button_edit = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button edit show_on_active',
+			parent			: content_value
+		})
+		button_edit.addEventListener("click", function(e){
+			e.stopPropagation()
+			try {
+
+				if (!select.value) {
+					return false
+				}
+
+				const selected_locator = JSON.parse(select.value)
+				// target_section
+				const target_section_tipo	= selected_locator.section_tipo
+				const target_section_id		= selected_locator.section_id
+
+				// navigation
+					const user_navigation_options = {
+						source		: {
+							action			: 'search',
+							model			: 'section',
+							tipo			: target_section_tipo,
+							section_tipo	: target_section_tipo,
+							mode			: 'edit',
+							lang			: self.lang
+						},
+						sqo : {
+							section_tipo		: [{tipo : target_section_tipo}],
+							filter				: null,
+							limit				: 1,
+							filter_by_locators	: [{
+								section_tipo	: target_section_tipo,
+								section_id		: target_section_id
+							}]
+						}
+					}
+				event_manager.publish('user_navigation', user_navigation_options)
+			} catch (error) {
+				console.error(error)
+			}
+		})
+		// console.log("value_compare:", self.tipo, value_compare);
+		if (!value_compare) {
+			button_edit.classList.add('hide')
+		}
+
+
+	return content_value
+}//end get_content_value
 
 
 
@@ -247,135 +378,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT
-* @return DOM element li
-*/
-const get_input_element = (self) => {
-
-	// short vars
-		const data		= self.data || {}
-		const value		= data.value || []
-		const datalist	= data.datalist || []
-
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
-		})
-
-	// select
-		const select = ui.create_dom_element({
-			element_type	: 'select',
-			parent			: li
-		})
-		select.addEventListener("change", function(){
-			const value = this.value
-				? JSON.parse(this.value)
-				: null
-			if (value) {
-				button_edit.classList.remove('hide')
-			}else{
-				button_edit.classList.add('hide')
-			}
-		})
-
-	// add empty option at begining of array
-		const empty_option = {
-			label	: '',
-			value	: null
-		}
-		datalist.unshift(empty_option);
-
-	// build options
-		const value_compare = value.length>0 ? value[0] : null
-		const length = datalist.length
-		for (let i = 0; i < length; i++) {
-
-			const datalist_item = datalist[i]
-
-			const current_section_id = typeof datalist_item.section_id!=='undefined'
-				? datalist_item.section_id
-				: null
-
-			const option = ui.create_dom_element({
-				element_type	: 'option',
-				value			: JSON.stringify(datalist_item.value),
-				inner_html		: datalist_item.label,
-				parent			: select
-			})
-			// selected options set on match
-			if (value_compare && datalist_item.value &&
-				value_compare.section_id===datalist_item.value.section_id &&
-				value_compare.section_tipo===datalist_item.value.section_tipo
-				) {
-				option.selected = true
-			}
-
-			// developer_info
-				if (current_section_id) {
-					const developer_info = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'developer_info hide show_on_active',
-						text_content	: ` [${current_section_id}]`,
-						parent			: option
-					})
-				}
-		}
-
-	// button_edit
-		const button_edit = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button edit show_on_active',
-			parent			: li
-		})
-		button_edit.addEventListener("click", function(e){
-			e.stopPropagation()
-			try {
-
-				if (!select.value) {
-					return false
-				}
-
-				const selected_locator = JSON.parse(select.value)
-				// target_section
-				const target_section_tipo	= selected_locator.section_tipo
-				const target_section_id		= selected_locator.section_id
-
-				// navigation
-					const user_navigation_options = {
-						source		: {
-							action			: 'search',
-							model			: 'section',
-							tipo			: target_section_tipo,
-							section_tipo	: target_section_tipo,
-							mode			: 'edit',
-							lang			: self.lang
-						},
-						sqo : {
-							section_tipo		: [{tipo : target_section_tipo}],
-							filter				: null,
-							limit				: 1,
-							filter_by_locators	: [{
-								section_tipo	: target_section_tipo,
-								section_id		: target_section_id
-							}]
-						}
-					}
-				event_manager.publish('user_navigation', user_navigation_options)
-			} catch (error) {
-				console.error(error)
-			}
-		})
-		// console.log("value_compare:", self.tipo, value_compare);
-		if (!value_compare) {
-			button_edit.classList.add('hide')
-		}
-
-
-	return li
-}//end get_input_element
-
-
