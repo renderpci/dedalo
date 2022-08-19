@@ -178,8 +178,8 @@ component_json.prototype.save_sequence = async function(editor) {
 				value	: current_value
 			})
 			self.change_value({
-				changed_data : changed_data,
-				refresh 	 : false
+				changed_data	: changed_data,
+				refresh			: false
 			})
 			.then((save_response)=>{
 				// event to update the dom elements of the instance

@@ -148,8 +148,7 @@ render_edit_component_number.prototype.edit = async function(options) {
 	// 		// 		const changed_data = Object.freeze({
 	// 		// 			action	: 'remove',
 	// 		// 			key		: e.target.dataset.key,
-	// 		// 			value	: null,
-	// 		// 			refresh : true
+	// 		// 			value	: null
 	// 		// 		})
 	// 		// 		self.change_value({
 	// 		// 			changed_data : changed_data,
@@ -237,8 +236,8 @@ const get_buttons = (self) => {
 
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: fragment
+				class_name		: 'button add',
+				parent			: fragment
 			})
 			button_add_input.addEventListener('mouseup', function(){
 
@@ -362,9 +361,9 @@ const get_input_element_edit = (i, current_value, self) => {
 					value	: null
 				})
 				self.change_value({
-					changed_data : changed_data,
-					label 		 : current_value,
-					refresh 	 : true
+					changed_data	: changed_data,
+					label			: current_value,
+					refresh			: true
 				})
 			})
 		}//end if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool)

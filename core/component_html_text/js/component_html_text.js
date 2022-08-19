@@ -80,11 +80,11 @@ component_html_text.prototype.save_value = async function(key, value) {
 	const changed_data = Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: (value.length>0) ? value : null,
+		value	: (value.length>0) ? value : null
 	})
 	self.change_value({
-		changed_data : changed_data,
-		refresh 	 : false
+		changed_data	: changed_data,
+		refresh			: false
 	})
 	.then((save_response)=>{
 		// event to update the dom elements of the instance
@@ -206,8 +206,7 @@ component_html_text.prototype.save_value = async function(key, value) {
 // 		const changed_data = Object.freeze({
 // 			action	: 'remove',
 // 			key		: e.target.dataset.key,
-// 			value	: null,
-// 			refresh : true
+// 			value	: null
 // 		})
 // 		self.change_value({
 // 			changed_data : changed_data,

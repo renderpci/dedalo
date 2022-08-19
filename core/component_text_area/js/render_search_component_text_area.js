@@ -67,7 +67,7 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action	: 'update',
 						key		: JSON.parse(input.dataset.key),
-						value	: parsed_value,
+						value	: parsed_value
 					})
 
 				// update the instance data (previous to save)

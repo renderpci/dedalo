@@ -322,7 +322,6 @@ component_security_access.prototype.save_changes = async function() {
 			refresh			: false
 		})
 
+
 	return result
 }//end save_changes
-
-

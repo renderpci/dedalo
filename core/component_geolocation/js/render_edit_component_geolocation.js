@@ -135,11 +135,11 @@ const add_events = function(wrapper, self) {
 					const changed_data = Object.freeze({
 						action		: 'update',
 						key			: key,
-						value		: self.current_value[key],
+						value		: self.current_value[key]
 					})
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then((save_response)=>{
 						// event to update the dom elements of the instance

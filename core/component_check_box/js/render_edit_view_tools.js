@@ -120,9 +120,9 @@ const get_input_element = (i, current_value, self) => {
 			const changed_value = (action==='insert') ? datalist_value : null
 
 			const changed_data = Object.freeze({
-				action  : action,
-				key 	: changed_key,
-				value 	: changed_value
+				action	: action,
+				key		: changed_key,
+				value	: changed_value
 			})
 			self.change_value({
 				changed_data	: changed_data,

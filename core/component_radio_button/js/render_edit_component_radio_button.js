@@ -107,14 +107,14 @@ const add_events = function(self, wrapper) {
 					const parsed_value 	= JSON.parse(e.target.value)
 
 					const changed_data = Object.freeze({
-						action  : 'update',
-						key 	: 0,
-						value 	: parsed_value
+						action	: 'update',
+						key		: 0,
+						value	: parsed_value
 					})
 
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then(()=>{
 						//self.selected_key = e.target.dataset.key
@@ -142,15 +142,15 @@ const add_events = function(self, wrapper) {
 						}
 
 						const changed_data = Object.freeze({
-							action  : 'remove',
-							key 	: false,
-							value 	: null
+							action	: 'remove',
+							key		: false,
+							value	: null
 						})
 
 						self.change_value({
-							changed_data : changed_data,
-							label  		 : self.get_checked_value_label(),//'All',
-							refresh 	 : true
+							changed_data	: changed_data,
+							label			: self.get_checked_value_label(),//'All',
+							refresh			: true
 						})
 						.then(()=>{
 							// rebuild and save the component

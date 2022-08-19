@@ -55,7 +55,7 @@ const add_events = function(self, wrapper) {
 	// events delegated
 
 	// click
-		wrapper.addEventListener("click", e => {
+		wrapper.addEventListener('click', function(e) {
 
 			if (e.altKey===true) {
 
@@ -87,7 +87,7 @@ const add_events = function(self, wrapper) {
 		})
 
 	// change event, for every change the value in the inputs of the component
-		wrapper.addEventListener('change', (e) => {
+		wrapper.addEventListener('change', function(e) {
 
 			// value update
 				if (e.target.matches('input[type="radio"]')) {
@@ -100,9 +100,9 @@ const add_events = function(self, wrapper) {
 
 					// changed_data
 						const changed_data = Object.freeze({
-							action  : 'update',
-							key 	: 0,
-							value 	: parsed_value
+							action	: 'update',
+							key		: 0,
+							value	: parsed_value
 						})
 
 					// update the instance data (previous to save)
