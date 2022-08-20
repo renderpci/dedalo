@@ -39,67 +39,8 @@ render_search_component_select.prototype.search = async function() {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// events (delegated)
-		add_events(self, wrapper)
-
-
 	return wrapper
 }//end search
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = (self, wrapper) => {
-
-	// change event, for every change the value in the inputs of the component
-	wrapper.addEventListener('change', (e) => {
-		// e.stopPropagation()
-
-		// update
-			if (e.target.matches('select')) {
-
-				const parsed_value = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
-
-				const changed_data = Object.freeze({
-					action	: (parsed_value != null) ? 'update' : 'remove',
-					key		: (parsed_value != null) ? 0 : false,
-					value	: parsed_value
-				})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data)
-				// set data.changed_data. The change_data to the instance
-					self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-
-				return true
-			}
-
-		// q_operator. get the input value of the q_operator
-			// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
-			// like; radio_button, check_box, date, autocomplete, etc
-			// (!) Not used in input text
-			if (e.target.matches('input[type="text"].q_operator')) {
-
-				// input. Get the input node that has changed
-					const input = e.target
-				// value
-					const value = (input.value.length>0) ? input.value : null
-				// q_operator. Fix the data in the instance previous to save
-					self.data.q_operator = value
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-
-				return true
-			}
-	})//end wrapper.addEventListener('change', (e) =>
-
-
-	return true
-}//end add_events
 
 
 
@@ -150,6 +91,14 @@ const get_content_value = (i, self) => {
 			class_name		: 'q_operator',
 			parent			: content_value
 		})
+		input_q_operator.addEventListener('change', function() {
+			// value
+				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+			// q_operator. Fix the data in the instance previous to save
+				self.data.q_operator = value
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+		})// end event change
 
 
 	// select
@@ -158,6 +107,23 @@ const get_content_value = (i, self) => {
 			class_name		: 'select_lang',
 			parent			: content_value
 		})
+		select.addEventListener('change', function(){
+
+			const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
+
+			const changed_data = Object.freeze({
+				action	: (parsed_value != null) ? 'update' : 'remove',
+				key		: (parsed_value != null) ? 0 : false,
+				value	: parsed_value
+			})
+
+			// update the instance data (previous to save)
+				self.update_data_value(changed_data)
+			// set data.changed_data. The change_data to the instance
+				self.data.changed_data = changed_data
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+		})//end event change
 
 	// add empty option at beginning of array
 		const empty_option = {
