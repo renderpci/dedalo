@@ -47,6 +47,9 @@ render_edit_component_filter.prototype.edit = async function(options={render_lev
 			buttons			: buttons
 		})
 
+	// set pointer to content_data
+		wrapper.content_data = content_data
+
 	return wrapper
 }//end edit
 
@@ -63,14 +66,9 @@ const get_content_data = function(self) {
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
 
-	const fragment = new DocumentFragment()
-
-	// inputs
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
 
 		// render all items sequentially
 			const tree_object = {}
@@ -87,6 +85,10 @@ const get_content_data = function(self) {
 				// store in the tree_object
 				const key = datalist_item.section_tipo +'_'+ datalist_item.section_id
 				tree_object[key] = tree_node
+				// set the pointer
+				if(datalist_item.type!=='typology'){
+					content_data[i] = tree_node
+				}
 			}
 
 		// hierarchize nodes
@@ -111,12 +113,7 @@ const get_content_data = function(self) {
 					}
 				}
 			}
-			inputs_container.appendChild(tree_fragment)
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
+			content_data.appendChild(tree_fragment)
 
 
 	return content_data
@@ -225,7 +222,7 @@ const get_grouper_element = (i, datalist_item, self) => {
 
 	// grouper
 		const grouper = ui.create_dom_element({
-			element_type	: 'li',
+			element_type	: 'div',
 			class_name		: 'grouper'
 			// data_set		: {
 			// 	id		: key,

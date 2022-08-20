@@ -37,6 +37,9 @@ render_search_component_filter.prototype.search = async function() {
 			content_data : content_data
 		})
 
+	// set pointer to content_data
+		wrapper.content_data = content_data
+
 	return wrapper
 }//end search
 
