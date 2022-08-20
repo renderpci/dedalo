@@ -51,84 +51,8 @@ render_edit_component_publication.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// add events
-		add_events(self, wrapper)
-
-
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-	// events delegated
-
-	// change
-		wrapper.addEventListener("change", e => {
-			// e.stopPropagation()
-
-			if (e.target.matches('input[type="checkbox"]')) {
-
-				// selected_node. fix selected node
-				self.selected_node = wrapper
-
-				const input			= e.target
-				const checked		= input.checked
-				const changed_value	= (checked===true)
-					? self.data.datalist.filter(item => item.section_id==1)[0].value
-					: self.data.datalist.filter(item => item.section_id==2)[0].value
-
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: 0,
-					value	: changed_value
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					// label		: e.target.nextElementSibling.textContent,
-					refresh			: false
-				})
-				// publish the publication locator value. (ex: used to change state of notes tag)
-					event_manager.publish('change_publication_value_'+self.id_base, changed_value)
-
-				return true
-			}
-		})
-
-	// click event
-		wrapper.addEventListener("click", e => {
-			e.stopPropagation()
-
-			// change_mode
-				if (e.target.matches('.button.close')) {
-					//change mode
-					self.change_mode('list', true)
-
-					return true
-				}
-		})
-
-	// focus event
-		wrapper.addEventListener("focus", e => {
-			// e.stopPropagation()
-
-			// selected_node. fix selected node
-			self.selected_node = wrapper
-
-			if (e.target.matches('input[type="checkbox"]')) {
-			 	event_manager.publish('active_component', self)
-
-			 	return true
-			}
-		})
-
-
-	return true
-}//end add_events
-
 
 
 /**
@@ -150,7 +74,7 @@ const get_content_data = function(self) {
 		const inputs_value	= (value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_input_element(i, inputs_value[i])
+			const content_value = get_input_element(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set the pointer
 			content_data[i] = content_value
@@ -192,7 +116,7 @@ const get_buttons = (self) => {
 * GET_INPUT_ELEMENT
 * @return DOM element div_switcher
 */
-const get_input_element = (i, current_value) => {
+const get_input_element = (i, current_value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -216,6 +140,27 @@ const get_input_element = (i, current_value) => {
 			dataset			: { key : i },
 			value			: JSON.stringify(current_value),
 			parent			: div_switcher
+		})
+		input.addEventListener('change', function() {
+
+			const checked		= input.checked
+			const changed_value	= (checked===true)
+				? self.data.datalist.filter(item => item.section_id==1)[0].value
+				: self.data.datalist.filter(item => item.section_id==2)[0].value
+
+			const changed_data = Object.freeze({
+				action	: 'update',
+				key		: 0,
+				value	: changed_value
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+			.then(()=>{
+			// publish the publication locator value. (ex: used to change state of notes tag)
+				event_manager.publish('change_publication_value_'+self.id_base, changed_value)
+			})
 		})
 		// set checked from current value
 		if (current_value.section_id==1) {
