@@ -78,77 +78,6 @@ const add_events = function(self, wrapper) {
 			inputs_container.appendChild(input_element)
 		}
 
-	// click [click]
-		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-				const all_buttons_remove =wrapper.querySelectorAll('.remove')
-					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-						all_buttons_remove[i].classList.add("display_none")
-					}
-
-				// if (e.target.matches('.contenteditable')) {
-				// 	// set the button_remove associated to the input selected to visible
-				// 		const button_remove = e.target.parentNode.querySelector('.remove')
-				// 		button_remove.classList.remove("display_none")
-				// }
-
-			// insert
-				if (e.target.matches('.button.add')) {
-
-					const changed_data = Object.freeze({
-						action	: 'insert',
-						key		: self.data.value.length, //self.data.value.length>0 ? self.data.value.length : 1,
-						value	: null
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('add_element_'+self.id, changed_data)
-					})
-
-					return true
-				}
-
-			// remove
-				if (e.target.matches('.button.remove')) {
-
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: e.target.dataset.key,
-						value	: null
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						label			: e.target.previousElementSibling.value,
-						refresh			: true
-					})
-					.then(()=>{
-					})
-
-					return true
-				}
-
-			// change_mode
-				if (e.target.matches('.button.close')) {
-
-					// change mode
-					self.change_mode('list', false)
-
-					return true
-				}
-
-			//const current_buttons_editor = document.querySelector(".buttons_editor")
-			//if (current_buttons_editor) current_buttons_editor.remove()
-		})
-
-
 	return true
 }//end add_events
 
@@ -202,15 +131,6 @@ const get_buttons = (self) => {
 	const mode 			= self.mode
 
 	const fragment = new DocumentFragment()
-
-	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button add',
-				parent			: fragment
-			})
-		}
 
 	// buttons tools
 		if (!is_inside_tool) {
@@ -290,7 +210,9 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			}
 
 		// init editor
-			current_service.init(self, li, {
+			current_service.init({
+				caller			: self,
+				value_container	: li,
 				value			: current_value,
 				key				: i,
 				editor_config	: editor_config
