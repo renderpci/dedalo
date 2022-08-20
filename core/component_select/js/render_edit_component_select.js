@@ -48,109 +48,8 @@ render_edit_component_select.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// add events delegated
-		add_events(self, wrapper)
-
-
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = (self, wrapper) => {
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
-		)
-		function update_value (component) {
-			// change the value of the current dom element
-			const changed_data = component.data.changed_data
-			const changed_node = wrapper.querySelector('input[data-key="'+component.selected_key+'"]')
-		}
-
-	// edit button element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('edit_element_'+self.id, edit_element)
-		)
-		function edit_element(changed_data) {
-			// change the value of the current dom element
-			//const changed_data = component.data.changed_data
-			//const inputs_container = wrapper.querySelector('.inputs_container')
-			//input_element(changed_data.key, changed_data.value, inputs_container)
-		}
-
-	// change event, for every change the value in the inputs of the component
-		wrapper.addEventListener('change', (e) => {
-			// e.stopPropagation()
-
-			// update
-				if (e.target.matches('select')) {
-
-					const parsed_value = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
-
-					const changed_data = Object.freeze({
-						action	: (parsed_value != null) ? 'update' : 'remove',
-						key		: (parsed_value != null) ? 0 : false,
-						value	: parsed_value
-					})
-
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false,
-						remove_dialog	: false
-					})
-					.then((api_response)=>{
-						//self.selected_key = e.target.dataset.key
-						// event to update the dom elements of the instance
-						event_manager.publish('update_value_'+self.id, self)
-					})
-
-					return true
-				}
-		})
-
-	// click event
-		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-			// // edit target section
-				// if (e.target.matches('.button.edit')) {
-				// 	// rebuild_nodes. event to render the component again
-				// 	event_manager.publish('edit_element_'+self.id, self)
-
-				// 	return true
-				// }
-
-			// // mode change
-			// 	if (e.target.matches('.button.close')) {
-			// 		//change mode
-			// 		self.change_mode('list', true)
-
-			// 		return true
-			// 	}
-		})
-
-	// focus event
-		// wrapper.addEventListener("focus", e => {
-		// 	// e.stopPropagation()
-
-		// 	// selected_node. fix selected node
-		// 	self.selected_node = wrapper
-
-		// 	if (e.target.matches('select')) {
-		// 	 	event_manager.publish('active_component', self)
-
-		// 	 	return true
-		// 	}
-		// },true)
-
-
-	return true
-}//end add_events
 
 
 
@@ -208,7 +107,26 @@ const get_content_value = (i, self) => {
 			}else{
 				button_edit.classList.add('hide')
 			}
-		})
+
+			const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
+
+			const changed_data = Object.freeze({
+				action	: (parsed_value != null) ? 'update' : 'remove',
+				key		: (parsed_value != null) ? 0 : false,
+				value	: parsed_value
+			})
+
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false,
+				remove_dialog	: false
+			})
+			.then((api_response)=>{
+				//self.selected_key = e.target.dataset.key
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, self)
+			})
+		})//end change event
 
 	// add empty option at beginning of the array
 		const empty_option = {

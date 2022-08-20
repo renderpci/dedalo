@@ -105,7 +105,6 @@ const get_input_element = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'number',
 			class_name		: 'input_value',
-			dataset			: { key : i },
 			value			: current_value
 		})
 		input.addEventListener('change', function() {

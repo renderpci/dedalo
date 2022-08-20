@@ -32,12 +32,12 @@ render_search_component_geolocation.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = await get_content_data_edit(self)
+	// const content_data = await get_content_data_edit(self)
 
-	// ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
-		})
+	// // ui build_edit returns component wrapper
+	// 	const wrapper = ui.component.build_wrapper_edit(self, {
+	// 		content_data : content_data
+	// 	})
 
 	// id
 		wrapper.id = self.id
