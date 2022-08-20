@@ -116,10 +116,10 @@ render_edit_view_table.render = async function(self, options) {
 			// top			: top
 		})
 		wrapper.classList.add('portal', 'view_'+self.context.view)
-		// set pointers
+
+	// set pointers
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
-
 
 	// events
 		add_events(self, wrapper)
@@ -139,6 +139,8 @@ const get_content_data = async function(self, ar_section_record) {
 
 	// build_values
 		const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 		// add all section_record rendered nodes
 			const ar_section_record_length	= ar_section_record.length
@@ -175,7 +177,8 @@ const get_content_data = async function(self, ar_section_record) {
 						// 	parent			: row_wrapper
 						// })
 						const section_record_node = await section_record.render()
-
+						// set the pointer
+						content_data[i] = section_record_node
 					// button_remove
 						// if (self.permissions>1) {
 						// 	const column = ui.create_dom_element({
@@ -202,9 +205,8 @@ const get_content_data = async function(self, ar_section_record) {
 				fragment.appendChild(references_node)
 			}
 
-	// content_data
-		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
+
 
 	// set node only when it is in DOM (to save browser resources)
 		// const observer = new IntersectionObserver(async function(entries) {
