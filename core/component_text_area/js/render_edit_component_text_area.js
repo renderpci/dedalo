@@ -4,12 +4,8 @@
 
 
 // imports
-	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
-	// import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {tr} from '../../common/js/tr.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import * as instances from '../../common/js/instances.js'
 	import {when_in_dom} from '../../common/js/events.js'
 
@@ -69,156 +65,8 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 			wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
 		})
 
-	// add events
-		add_events(self, wrapper)
-
-	// defaultParagraphSeparator for contenteditable
-		// document.execCommand("defaultParagraphSeparator", false, "p");
-
-
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-* @return bool
-*/
-const add_events = function(self, wrapper) {
-
-	// add element, subscription to the events
-		// self.events_tokens.push(
-		// 	event_manager.subscribe('add_element_'+self.id, add_element)
-		// )
-		// function add_element(changed_data) {
-		// 	const inputs_container = wrapper.querySelector('.inputs_container')
-		// 	// add new DOM input element
-		// 	const input_element = get_input_element(changed_data.key, changed_data.value, self)
-		// 	inputs_container.appendChild(input_element)
-		// }
-
-	// focus
-		// wrapper.addEventListener('focus', async (e) => {
-		// 	// e.stopPropagation()
-
-		// 	// store current inner html to compare when blur
-		// 	if (e.target.matches('.input_tex_area')) {
-
-		// 		// store current contenteditable content
-		// 			e.target.data_orig = e.target.innerHTML;
-
-		// 		// contenteditable_buttons. use existing contenteditable_buttons or create a fresh one if not
-		// 			const contenteditable_buttons = document.querySelector(".contenteditable_buttons") || ui.get_contenteditable_buttons()
-		// 				  contenteditable_buttons.target = e.target // set current contenteditable as target
-		// 			e.target.parentNode.appendChild(contenteditable_buttons)
-
-		// 		return true
-		// 	}
-
-		// }, true)
-
-	// blur
-		// wrapper.addEventListener('blur', async (e) => {
-		// 	// e.stopPropagation()
-
-		// 	// store current inner html to compare when blur
-		// 	if (e.target.matches('.input_tex_area')) {
-
-		// 		// remove existing contenteditable_buttons
-		// 			const contenteditable_buttons = document.querySelector(".contenteditable_buttons")
-		// 			if (contenteditable_buttons) contenteditable_buttons.remove()
-
-		// 		// save changes if content is different
-		// 			const changed = e.target.innerHTML!==e.target.data_orig
-		// 			if (changed===true) {
-
-		// 				const value = e.target.innerHTML
-
-		// 				const changed_data = Object.freeze({
-		// 					action	: 'update',
-		// 					key		: JSON.parse(e.target.dataset.key),
-		// 					value	: value
-		// 				})
-		// 				self.change_value({
-		// 					changed_data : changed_data,
-		// 					refresh 	 : false
-		// 				})
-		// 				.then((save_response)=>{
-		// 					// event to update the dom elements of the instance
-		// 					event_manager.publish('update_value_'+self.id, changed_data)
-		// 				})
-		// 			}
-		// 		return true
-		// 	}
-
-		// }, true)
-
-	// click [click]
-		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-			// remove_buttons
-				const all_remove_buttons = wrapper.querySelectorAll('.remove')
-				for (let i = all_remove_buttons.length - 1; i >= 0; i--) {
-					all_remove_buttons[i].classList.add("display_none")
-				}
-
-				// if (e.target.matches('.contenteditable')) {
-				// 	// set the button_remove associated to the input selected to visible
-				// 		const button_remove = e.target.parentNode.querySelector('.remove')
-				// 		button_remove.classList.remove("display_none")
-				// }
-
-			// insert
-				if (e.target.matches('.button.add_input')) {
-
-					const changed_data = Object.freeze({
-						action	: 'insert',
-						key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
-						value	: null
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('add_element_'+self.id, changed_data)
-					})
-
-					return true
-				}
-
-			// remove
-				if (e.target.matches('.button.remove')) {
-
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: e.target.dataset.key,
-						value	: null
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						label			: e.target.previousElementSibling.value,
-						refresh			: true
-					})
-					.then(()=>{
-					})
-
-					return true
-				}
-
-			//const current_buttons_editor = document.querySelector(".buttons_editor")
-			//if (current_buttons_editor) current_buttons_editor.remove()
-		})//end wrapper.addEventListener("click"
-
-
-	return true
-}//end add_events
 
 
 
@@ -245,7 +93,6 @@ const get_content_data_edit = function(self) {
 			content_data[i] = content_value
 		}
 
-
 	return content_data
 }//end get_content_data_edit
 
@@ -258,26 +105,9 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	// const is_inside_tool	= self.is_inside_tool
-	// const mode				= self.mode
-
 	// short vars
 		const is_inside_tool	= (self.caller && self.caller.type==='tool')
 		const fragment			= new DocumentFragment()
-
-	// prevent show buttons inside a tool
-		// if (self.caller && self.caller.type==='tool') {
-		// 	return fragment
-		// }
-
-	// button add input
-		// if((self.mode==='edit' || self.mode==='edit_in_list') && !is_inside_tool){
-		// 	const button_add_input = ui.create_dom_element({
-		// 		element_type	: 'span',
-		// 		class_name 		: 'button add',
-		// 		parent 			: buttons_container
-		// 	})
-		// }
 
 	// buttons tools
 		if (!is_inside_tool) {
@@ -410,80 +240,8 @@ const get_input_element = (i, current_value, self) => {
 			}
 		}
 
-	// add button create fragment (Only when caller is a tool_indexation instance)
-		if (self.caller && self.caller.constructor.name==="tool_indexation") {
-
-			// create_fragment event subscription
-				// self.events_tokens.push(
-				// 	event_manager.subscribe('create_fragment'+'_'+ self.id, self.create_fragment.bind(self))
-				// )
-
-			// // text_selection
-				// 	console.log("event_manager.events:",event_manager.events);
-				// 	self.events_tokens.push(
-				// 		event_manager.subscribe('text_selection_'+ self.id, show_button_create_fragment)
-				// 	)
-				// 	function show_button_create_fragment(options) {
-				// 		dd_console('--> show_button_create_fragment options', 'DEBUG', options)
-
-				// 		// options
-				// 			const selection	= options.selection
-				// 			const callet	= options.caller
-
-				// 		const component_container	= li
-				// 		const button				= component_container.querySelector(".create_fragment")
-				// 		const last_tag_id			= self.get_last_tag_id('index', current_service_text_editor)
-				// 		const label					= (get_label["create_fragment"] || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
-
-				// 		const create_button = function(selection) {
-				// 			const button_create_fragment = ui.create_dom_element({
-				// 				element_type	: 'button',
-				// 				class_name 		: 'warning compress create_fragment',
-				// 				inner_html 		: label,
-				// 				parent 			: component_container
-				// 			})
-
-				// 			// event create_fragment add publish on click
-				// 				button_create_fragment.addEventListener("click", () => {
-
-				// 					event_manager.publish('create_fragment_'+ self.id, {
-				// 						caller	: self,
-				// 						key		: i,
-				// 						text_editor	: current_service_text_editor
-				// 					})
-				// 				})
-
-				// 			return button_create_fragment
-				// 		}
-
-				// 		if (selection.length<1) {
-				// 			if (button) {
-				// 				button.remove()
-				// 			}
-				// 		}else{
-				// 			if (!button) {
-				// 				create_button(selection)
-				// 			}else{
-				// 				button.innerHTML = label
-				// 			}
-				// 		}
-				// 	}
-		}//end if (self.caller && self.caller.constructor.name==="tool_indexation")
-
-	// button remove
-		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
-		// 	const button_remove = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name 		: 'button remove display_none',
-		// 		dataset			: { key : i },
-		// 		parent 			: li
-		// 	})
-		// }
-
-
 	return content_value
 }//end get_input_element
-
 
 
 /**
@@ -1712,92 +1470,4 @@ const render_langs_list = function(self, text_editor, i) {
 
 	return true
 }//end render_langs_list
-
-
-
-/**
-* GET_CONTENTEDITABLE_BUTTONS
-*/
-	// const get_contenteditable_buttons = () => {
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// bold
-	// 		const button_bold = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name 		: 'button bold',
-	// 			text_content 	: "Bold",
-	// 			parent 			: fragment
-	// 		})
-	// 		button_bold.addEventListener("click", (e)=>{
-	// 			e.stopPropagation()
-	// 			do_command('bold', null)
-	// 		})
-	// 	// italic
-	// 		const button_italic = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name 		: 'button italic',
-	// 			text_content 	: "Italic",
-	// 			parent 			: fragment
-	// 		})
-	// 		button_italic.addEventListener("click", (e)=>{
-	// 			e.stopPropagation()
-	// 			do_command('italic', null)
-	// 		})
-	// 	// underline
-	// 		const button_underline = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name 		: 'button underline',
-	// 			text_content 	: "Underline",
-	// 			parent 			: fragment
-	// 		})
-	// 		button_underline.addEventListener("click", (e)=>{
-	// 			e.stopPropagation()
-	// 			do_command('underline', null)
-	// 		})
-	// 	// find and replace
-	// 		const button_replace = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name 		: 'button replace',
-	// 			text_content 	: "Replace",
-	// 			parent 			: fragment
-	// 		})
-	// 		button_replace.addEventListener("click", (e)=>{
-	// 			e.stopPropagation()
-	// 			//replace_selected_text('nuevooooo')
-	// 			do_command('insertText', 'nuevoooooXXX')
-	// 		})
-
-	// 	// contenteditable_buttons
-	// 		const contenteditable_buttons = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name 		: 'contenteditable_buttons'
-	// 		})
-	// 		contenteditable_buttons.addEventListener("click", (e)=>{
-	// 			e.preventDefault()
-	// 		})
-	// 		contenteditable_buttons.appendChild(fragment)
-
-
-	// 	return contenteditable_buttons
-	// }//end get_contenteditable_buttons
-
-
-
-/**
-* DO_COMMAND
-*/
-	// const do_command = (command, val) => {
-	// 	document.execCommand(command, false, (val || ""));
-	// }
-
-
-
-/**
-* REPLACE_SELECTED_TEXT
-*/
-	// function replace_selected_text(replacementText) {
-	// 	document.execCommand( 'insertText', false, replacementText );
-	// }
-
 
