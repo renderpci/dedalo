@@ -39,100 +39,8 @@ render_search_component_radio_button.prototype.search = async function() {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// events
-		add_events(self, wrapper)
-
-
 	return wrapper
 }//end search
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-	// events delegated
-
-	// click
-		wrapper.addEventListener('click', function(e) {
-
-			if (e.altKey===true) {
-
-				// input. Get the input node that has changed
-					const input = e.target
-
-				// remove checked state
-					input.checked = false
-
-				// parsed_value
-					const parsed_value = null
-
-				// changed_data
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: 0,
-						value	: parsed_value
-					})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data)
-				// set data.changed_data. The change_data to the instance
-					self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-
-				return true
-			}
-		})
-
-	// change event, for every change the value in the inputs of the component
-		wrapper.addEventListener('change', function(e) {
-
-			// value update
-				if (e.target.matches('input[type="radio"]')) {
-
-					// input. Get the input node that has changed
-						const input = e.target
-
-					// parsed_value
-						const parsed_value = JSON.parse(input.value)
-
-					// changed_data
-						const changed_data = Object.freeze({
-							action	: 'update',
-							key		: 0,
-							value	: parsed_value
-						})
-
-					// update the instance data (previous to save)
-						self.update_data_value(changed_data)
-					// set data.changed_data. The change_data to the instance
-						self.data.changed_data = changed_data
-					// publish search. Event to update the dom elements of the instance
-						event_manager.publish('change_search_element', self)
-
-					return true
-				}
-
-			// q_operator. get the input value of the q_operator
-				// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
-				// like; radio_button, check_box, date, autocomplete, etc
-				if (e.target.matches('input[type="text"].q_operator')) {
-
-					// input. Get the input node that has changed
-						const input = e.target
-					// value
-						const value = (input.value.length>0) ? input.value : null
-					// q_operator. Fix the data in the instance previous to save
-						self.data.q_operator = value
-					// publish search. Event to update the dom elements of the instance
-						event_manager.publish('change_search_element', self)
-
-					return true
-				}
-		})
-}//end add_events
 
 
 
@@ -163,13 +71,14 @@ const get_content_data_search = function(self) {
 			class_name		: 'q_operator',
 			parent			: content_data
 		})
-
-	// content_value
-		// const content_value = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'content_value',
-		// 	parent			: content_data
-		// })
+		input_q_operator.addEventListener('change', function() {
+			// value
+				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+			// q_operator. Fix the data in the instance previous to save
+				self.data.q_operator = value
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+		})
 
 	// values (inputs)
 		const datalist_length = datalist.length
@@ -215,15 +124,61 @@ const get_input_element = (i, current_value, self) => {
 			parent			: content_value
 		})
 
-	// input checkbox
+	// input radio button
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',
-			name			: self.id,
-			dataset			: { key : i },
-			value			: JSON.stringify(datalist_value)
+			name			: 'self.id'
 		})
 		input_label.prepend(input)
+		input.addEventListener('change', function() {
+
+			// changed_data
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: 0,
+					value	: datalist_value
+				})
+
+			// update the instance data (previous to save)
+				self.update_data_value(changed_data)
+			// set data.changed_data. The change_data to the instance
+				self.data.changed_data = changed_data
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+		})// end change event
+		content_value.addEventListener('mousedown', function(e) {
+			if (e.altKey===true) {
+				e.stopPropagation()
+				e.preventDefault()
+
+				// remove checked state
+					input.checked = false
+
+				if (self.data.value.length===0) {
+					return true
+				}
+
+				// changed_data
+					const changed_data = Object.freeze({
+						action	: 'remove',
+						key		: false,
+						value	: null
+					})
+					// value = null
+
+				// update the instance data (previous to save)
+					self.change_value({
+						changed_data	: changed_data,
+						label			: self.get_checked_value_label(),//'All',
+						refresh			: false
+					})
+				// set data.changed_data. The change_data to the instance
+					self.data.changed_data = changed_data
+				// publish search. Event to update the dom elements of the instance
+					event_manager.publish('change_search_element', self)
+			}
+		})
 
 	// checked input set on match
 		for (let j = 0; j < value_length; j++) {
