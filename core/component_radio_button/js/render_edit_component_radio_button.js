@@ -49,147 +49,9 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// events
-		add_events(self, wrapper)
-
 
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-* @return bool
-*/
-const add_events = function(self, wrapper) {
-
-	// events delegated
-	// update_value_, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id, update_value)
-		)
-		function update_value (component) {
-			// change the value of the current dom element
-			const changed_data = component.data.changed_data
-			const changed_node = wrapper.querySelector('input[data-key="'+component.selected_key+'"]')
-		}
-
-	// edit_element_ add button element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('edit_element_'+self.id, edit_element)
-		)
-		function edit_element(changed_data) {
-			// change the value of the current dom element
-			//const changed_data = component.data.changed_data
-			//const inputs_container = wrapper.querySelector('.inputs_container')
-			//input_element(changed_data.key, changed_data.value, inputs_container)
-		}
-
-	// reset_element_ remove button element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('reset_element_'+self.id, reset_element)
-		)
-		async function reset_element(instance) {
-			// change all elements inside of content_data
-			const new_content_data = await get_content_data_edit(instance)
-			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
-			wrapper.childNodes[1].replaceWith(new_content_data)
-		}
-
-	// change event, for every change the value in the inputs of the component
-		wrapper.addEventListener('change', (e) => {
-			// e.stopPropagation()
-
-			// update
-				if (e.target.matches('input[type="radio"]')) {
-
-					const parsed_value 	= JSON.parse(e.target.value)
-
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: 0,
-						value	: parsed_value
-					})
-
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then(()=>{
-						//self.selected_key = e.target.dataset.key
-						// event to update the dom elements of the instance
-						event_manager.publish('update_value_'+self.id, self)
-					})
-
-					return true
-				}
-		})
-
-	// click event
-		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-			// remove all
-				if (e.target.matches('.button.reset')) {
-
-					if (self.data.value[0] !=null) {
-						// force possible input change before remove
-						document.activeElement.blur()
-
-						if (self.data.value.length===0) {
-							return true
-						}
-
-						const changed_data = Object.freeze({
-							action	: 'remove',
-							key		: false,
-							value	: null
-						})
-
-						self.change_value({
-							changed_data	: changed_data,
-							label			: self.get_checked_value_label(),//'All',
-							refresh			: true
-						})
-						.then(()=>{
-							// rebuild and save the component
-							// event_manager.publish('reset_element_'+self.id, self)
-							// event_manager.publish('save_component_'+self.id, self)
-						})
-
-						return true
-					}
-				}
-
-			// edit target section
-				if (e.target.matches('.button.edit')) {
-					// rebuild_nodes. event to render the component again
-					event_manager.publish('edit_element_'+self.id, self)
-
-					return true
-				}
-
-		})
-
-	// focus event
-		// wrapper.addEventListener("focus", e => {
-		// 	// e.stopPropagation()
-
-		// 	// selected_node. fix selected node
-		// 	self.selected_node = wrapper
-
-		// 	if (e.target.matches('input[type="radio"]')) {
-		// 	 	event_manager.publish('active_component', self)
-
-		// 	 	return true
-		// 	}
-		// },true)
-
-
-	return true
-}//end add_events
-
 
 
 /**
@@ -201,7 +63,6 @@ const get_content_data_edit = function(self) {
 	// short vars
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
-		// const mode	= self.mode
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
@@ -209,8 +70,6 @@ const get_content_data_edit = function(self) {
 		})
 
 	// inputs
-		// const value			= (self.data.value.length<1) ? [null] : self.data.value
-		// const value_compare	= value.length>0 ? value[0] : null
 		const datalist_length	= datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			const input_element = get_input_element_edit(i, datalist[i], self)
@@ -218,7 +77,6 @@ const get_content_data_edit = function(self) {
 			// set pointers
 			content_data[i] = input_element
 		}
-
 
 	return content_data
 }//end get_content_data_edit
@@ -272,10 +130,34 @@ const get_buttons = (self) => {
 
 	// button reset
 		if(mode==='edit' || mode==='edit_in_list'){// && !is_inside_tool){
-			ui.create_dom_element({
+			const reset_button = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button reset',
 				parent			: fragment
+			})
+			reset_button.addEventListener('click', function() {
+				// force possible input change before remove
+				document.activeElement.blur()
+
+				if (self.data.value.length===0) {
+					return true
+				}
+
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: false,
+					value	: null
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					label			: self.get_checked_value_label(),//'All',
+					refresh			: true
+				})
+				.then(()=>{
+					// rebuild and save the component
+					// event_manager.publish('reset_element_'+self.id, self)
+					event_manager.publish('update_value_'+self.id, self)
+				})
 			})
 		}
 
@@ -322,9 +204,6 @@ const get_input_element_edit = (i, current_value, self) => {
 		})
 
 	// label
-		// const label_string = (SHOW_DEBUG===true)
-		// 	? label + ' [' + section_id + ']'
-		// 	: label
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'label',
@@ -337,10 +216,58 @@ const get_input_element_edit = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'radio',
 			name			: self.id,
-			dataset			: { key : i },
-			value			: JSON.stringify(datalist_value)
 		})
 		input_label.prepend(input)
+		input.addEventListener('change', function() {
+
+			const changed_data = Object.freeze({
+				action	: 'update',
+				key		: 0,
+				value	: datalist_value
+			})
+
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+			.then(()=>{
+				//self.selected_key = e.target.dataset.key
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, self)
+			})
+		})//end change event
+
+		input.addEventListener('mousedown', function(e) {
+			if (e.altKey===true) {
+				e.stopPropagation()
+				e.preventDefault()
+
+				if (self.data.value.length===0) {
+					return true
+				}
+				// remove checked state
+				input.checked = false
+				
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: false,
+					value	: null
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					label			: self.get_checked_value_label(),//'All',
+					refresh			: false,
+					remove_dialog	: ()=>{
+						return true
+					}
+				})
+				.then(()=>{
+					//self.selected_key = e.target.dataset.key
+					// event to update the dom elements of the instance
+					event_manager.publish('update_value_'+self.id, self)
+				})
+			}
+		})
 
 	// checked input set on match
 		for (let j = 0; j < value_length; j++) {
@@ -351,65 +278,6 @@ const get_input_element_edit = (i, current_value, self) => {
 					input.checked = 'checked'
 			}
 		}
-
-	// show_on_active
-		// const show_on_active = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'show_on_active',
-		// 	parent			: li
-		// })
-
-
-	// developer_info
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'developer_info',
-		// 	text_content	: `[${section_id}]`,
-		// 	parent			: show_on_active
-		// })
-
-
-	// button_edit
-		// const button_edit = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button edit',
-		// 	parent			: show_on_active
-		// })
-		// button_edit.addEventListener("click", function(e){
-		// 	e.stopPropagation()
-		// 	try {
-		// 		// target_section
-		// 			const target_sections		= self.context.target_sections
-		// 			const target_section_tipo	= target_sections && target_sections[0]
-		// 				? target_sections[0].tipo
-		// 				: null
-
-		// 		// navigation
-		// 			const user_navigation_options = {
-		// 				source		: {
-		// 					action			: 'search',
-		// 					model			: 'section',
-		// 					tipo			: target_section_tipo,
-		// 					section_tipo	: target_section_tipo,
-		// 					mode			: 'edit',
-		// 					lang			: self.lang
-		// 				},
-		// 				sqo : {
-		// 					section_tipo		: [{tipo : target_section_tipo}],
-		// 					filter				: null,
-		// 					limit				: 1,
-		// 					filter_by_locators	: [{
-		// 						section_tipo	: target_section_tipo,
-		// 						section_id		: section_id
-		// 					}]
-		// 				}
-		// 			}
-		// 		event_manager.publish('user_navigation', user_navigation_options)
-		// 	} catch (error) {
-		// 		console.error(error)
-		// 	}
-		// })
-
 
 	return content_value
 }//end get_input_element_edit
