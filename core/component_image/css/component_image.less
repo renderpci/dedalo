@@ -25,6 +25,25 @@
 				display: flex;
 				align-items: center;
 				justify-content: center;
+				display: block;
+				width: 100%;
+
+				>.quality_selector {
+					margin: 0;
+					position: absolute;
+					top: 0.5rem;
+					width: 5rem;
+					right: 1rem;
+					height: 1.25rem;
+					font-size: 0.9rem;
+					border: none;
+					outline: none;
+					padding: 0;
+
+					.fullscreen& {
+						width: auto !important;
+					}
+				}
 
 				.image  {
 					// visibility: hidden;
@@ -56,32 +75,7 @@
 				}
 			}//end .content_value
 
-
-			>.quality_selector {
-				margin: 0;
-				position: absolute;
-				// bottom: 0;
-				// margin-left: 1em;
-				// width: calc(100% - 2em);
-				// margin-bottom: 1em;
-				// background-color: @color_grey_dark;
-				// opacity: 1;
-				// color: white;
-				top: 0.5rem;
-				width: 5rem;
-				right: 1rem;
-				height: 1.25rem;
-				font-size: 0.9rem;
-				border: none;
-				outline: none;
-				padding: 0;
-
-				.fullscreen& {
-					width: auto !important;
-				}
-			}
 		}//end .content_data
-
 
 		>.buttons_container {
 
@@ -90,7 +84,6 @@
 				.fn_add_mask('vector_editor.svg');
 			}
 		}//end .buttons_container
-
 	}//end .edit
 
 	&.list{
@@ -98,22 +91,22 @@
 	}//end .list
 
 	&.viewer {
-		button{
-			&.download{
-				position:fixed;
-				right: 10px;
-				bottom: 10px;
-				z-index: 2;
-				width: 3em;
-				height: 3em;
-				padding: unset;
-				margin : unset;
 
-				&:before{
-					height: 1.5em;
-					width: 1.5em;
-					margin : unset;
-				}
+		// button download
+		.download {
+			position:fixed;
+			right: 10px;
+			bottom: 10px;
+			z-index: 2;
+			width: 3em;
+			height: 3em;
+			padding: unset;
+			margin : unset;
+
+			&:before {
+				height: 1.5em;
+				width: 1.5em;
+				margin : unset;
 			}
 		}
 	}//end .viewer

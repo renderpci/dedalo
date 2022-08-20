@@ -30,7 +30,7 @@ render_edit_component_image.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -47,6 +47,8 @@ render_edit_component_image.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -60,18 +62,54 @@ render_edit_component_image.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	const fragment = new DocumentFragment()
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+
+	// values (images)
+		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set the pointer
+			content_data[i] = content_value
+		}
+
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+/**
+* GET_CONTENT_VALUE
+* @return DOM node content_value
+*/
+const get_content_value = function(i, value, self) {
+
+	// short vars
+		const quality	= self.quality || self.context.quality
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
 
 	// url
 		let url
-		const quality	= self.quality || self.context.quality
-		const datalist	= self.data.datalist || []
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		url = file_info
 			? file_info.url
 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
 
-	// fallback to default (when not already in default)
+		// fallback to default (when not already in default)
 		if (!url && quality!==self.context.default_quality) {
 			const file_info	= datalist.find(el => el.quality===self.context.default_quality && el.file_exist===true)
 			url = file_info
@@ -83,20 +121,6 @@ const get_content_data_edit = function(self) {
 			}
 		}
 
-	// ul inputs container
-		const ul = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
-
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			class_name 		: '',
-			parent			: ul
-		})
-
 	// image. (!) Only to get background color and apply to li node
 		if (url) {
 			const image = ui.create_dom_element({
@@ -107,7 +131,7 @@ const get_content_data_edit = function(self) {
 			image.addEventListener('load', set_bg_color, false)
 			function set_bg_color() {
 				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, li)
+				ui.set_background_image(this, content_value)
 				image.classList.remove('hide')
 			}
 			image.src = url
@@ -117,35 +141,34 @@ const get_content_data_edit = function(self) {
 		const object_node = ui.create_dom_element({
 			element_type	: 'object',
 			class_name		: 'image',
-			parent			: li
+			parent			: content_value
 		})
 		object_node.type = "image/svg+xml"
-			console.log("self.data.base_svg_url:",self.data);
+		// console.log("data.base_svg_url:",self.data);
 
-		if (self.data.base_svg_url && url) {
-			object_node.data = self.data.base_svg_url
+		if (data.base_svg_url && url) {
+			object_node.data = data.base_svg_url
 		}else{
 			object_node.data = DEDALO_CORE_URL + '/themes/default/0.svg'
-			li.addEventListener('mouseup',function(evt){
-				evt.stopPropagation();
-				// get the tool context to be opened
-				const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
+			content_value.addEventListener('mouseup',function(e) {
+				e.stopPropagation();
+				// tool_upload. Get the tool context to be opened
+				const tool_upload = self.tools.find(el => el.model==='tool_upload')
 				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
+				open_tool({
+					tool_context	: tool_upload,
+					caller			: self
+				})
 			})
 		}
 		self.object_node = object_node
 
-		// autochange the first time
+		// autochange url the first time
 		object_node.onload = async function() {
 			if (quality!==self.context.default_quality) {
 				await fn_img_quality_change(url)
 			}
-			li.classList.remove('hide')
+			content_value.classList.remove('hide')
 		}
 
 	// change event
@@ -167,9 +190,9 @@ const get_content_data_edit = function(self) {
 			if (image_node) {
 
 				// add spinner when new image is loading
-				li.classList.add('loading')
+				content_value.classList.add('loading')
 				image_node.addEventListener('load', function(){
-					li.classList.remove("loading")
+					content_value.classList.remove('loading')
 				})
 
 				// set the new source to the image node into the svg
@@ -179,18 +202,13 @@ const get_content_data_edit = function(self) {
 			return true
 		}
 
-
 	// quality_selector
 		const quality_selector = get_quality_selector(self)
-		fragment.appendChild(quality_selector)
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
+		content_value.appendChild(quality_selector)
 
 
-	return content_data
-}//end get_content_data_edit
+	return content_value
+}//end get_content_value
 
 
 
@@ -215,7 +233,7 @@ const get_buttons = (self) => {
 			title			: 'Fullscreen',
 			parent			: fragment
 		})
-		button_full_screen.addEventListener("mouseup", () =>{
+		button_full_screen.addEventListener('mouseup', () =>{
 			self.node.classList.toggle('fullscreen')
 			const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)
@@ -231,7 +249,7 @@ const get_buttons = (self) => {
 			title			: 'Toggle vector editor',
 			parent			: fragment
 		})
-		vector_editor.addEventListener("mouseup", () => {
+		vector_editor.addEventListener('mouseup', () => {
 			vector_editor_tools.classList.toggle('hide')
 			if(!vector_editor_tools.classList.contains('hide')){
 				self.load_vector_editor({load:'full'})
@@ -285,7 +303,7 @@ const get_quality_selector = (self) => {
 			class_name		: 'quality_selector',
 			parent			: fragment
 		})
-		quality_selector.addEventListener("change", (e) =>{
+		quality_selector.addEventListener('change', (e) =>{
 			const img_src = e.target.value
 			event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
@@ -294,8 +312,8 @@ const get_quality_selector = (self) => {
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
 			// create the node with the all qualities sended by server
-			const value = (typeof quality_list[i].url==="undefined")
-				? DEDALO_CORE_URL + "/themes/default/0.jpg"
+			const value = (typeof quality_list[i].url==='undefined')
+				? DEDALO_CORE_URL + '/themes/default/0.jpg'
 				: quality_list[i].url
 
 			const select_option = ui.create_dom_element({
@@ -311,5 +329,3 @@ const get_quality_selector = (self) => {
 
 	return quality_selector
 }//end get_quality_selector
-
-
