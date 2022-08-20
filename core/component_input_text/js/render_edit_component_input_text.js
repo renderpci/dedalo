@@ -149,13 +149,8 @@ const get_input_element_edit = (i, current_value, self) => {
 					const key				= i
 					const original_value	= self.db_data.value[key]
 					const new_value			= input.value
-					if (new_value!==original_value) {
-						// set_before_unload (bool) add
-						set_before_unload(true)
-					}else{
-						// set_before_unload (bool) remove
-						set_before_unload(false)
-					}
+					// set_before_unload (bool)
+					set_before_unload(new_value!==original_value)
 				}
 		})//end keyup
 
@@ -212,7 +207,8 @@ const get_buttons = (self) => {
 				title			: 'Add new input field',
 				parent			: fragment
 			})
-			button_add.addEventListener('click',function() {
+			button_add.addEventListener('click', function(e) {
+				e.stopPropagation()
 
 				const changed_data = Object.freeze({
 					action	: 'insert',
