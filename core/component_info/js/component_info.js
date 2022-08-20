@@ -5,13 +5,12 @@
 
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {common,create_source} from '../../common/js/common.js'
+	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_edit_component_info} from '../../component_info/js/render_edit_component_info.js'
 	import {render_list_component_info} from '../../component_info/js/render_list_component_info.js'
 	import {render_mini_component_info} from '../../component_info/js/render_mini_component_info.js'
-
 
 
 
@@ -172,6 +171,7 @@ component_info.prototype.get_widgets = async function(){
 				self.ar_instances = ar_instances
 			})
 
+
 	return self.ar_instances
 }//end get_widgets
 
@@ -204,6 +204,7 @@ component_info.prototype.update_data = async function(){
 				event_manager.publish(`update_widget_value_${i}_${widget_id}`, widget_value)
 			}
 		}
+
 
 	return true
 }//end update_data
