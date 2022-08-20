@@ -53,105 +53,11 @@ render_edit_component_html_text.prototype.edit = async function(options) {
 			content_data : content_data,
 			buttons 	 : buttons
 		})
-
-	// add events
-		add_events(self, wrapper)
+	// set pointers
+		wrapper.content_data = content_data
 
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
-		)
-		function add_element(changed_data) {
-			const inputs_container = wrapper.querySelector('.inputs_container')
-			// add new dom input element
-			const input_element = get_input_element(changed_data.key, changed_data.value, self)
-			inputs_container.appendChild(input_element)
-		}
-
-	// click [click]
-		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-				const all_buttons_remove =wrapper.querySelectorAll('.remove')
-					for (let i = all_buttons_remove.length - 1; i >= 0; i--) {
-						all_buttons_remove[i].classList.add("display_none")
-					}
-
-				// if (e.target.matches('.contenteditable')) {
-				// 	// set the button_remove associated to the input selected to visible
-				// 		const button_remove = e.target.parentNode.querySelector('.remove')
-				// 		button_remove.classList.remove("display_none")
-				// }
-
-			// insert
-				if (e.target.matches('.button.add')) {
-
-					const changed_data = Object.freeze({
-						action	: 'insert',
-						key		: self.data.value.length, //self.data.value.length>0 ? self.data.value.length : 1,
-						value	: null
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('add_element_'+self.id, changed_data)
-					})
-
-					return true
-				}
-
-			// remove
-				if (e.target.matches('.button.remove')) {
-
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: e.target.dataset.key,
-						value	: null
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						label			: e.target.previousElementSibling.value,
-						refresh			: true
-					})
-					.then(()=>{
-					})
-
-					return true
-				}
-
-			// change_mode
-				if (e.target.matches('.button.close')) {
-
-					// change mode
-					self.change_mode('list', false)
-
-					return true
-				}
-
-			//const current_buttons_editor = document.querySelector(".buttons_editor")
-			//if (current_buttons_editor) current_buttons_editor.remove()
-		})
-
-
-	return true
-}//end add_events
-
 
 
 /**
@@ -163,28 +69,18 @@ const get_content_data_edit = function(self) {
 	const value				= self.data.value
 	const is_inside_tool	= self.is_inside_tool
 
-	const fragment = new DocumentFragment()
-
-	// inputs
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// build values
 		const inputs_value = value//(value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			//input_element(i, inputs_value[i], inputs_container, self)
-			const input_element = get_input_element(i, inputs_value[i], self, is_inside_tool)
-			inputs_container.appendChild(input_element)
+			const input_element_node = get_input_element(i, inputs_value[i], self, is_inside_tool)
+			content_data.appendChild(input_element_node)
+				// set the pointer
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
-
 
 	return content_data
 }//end get_content_data_edit
@@ -202,15 +98,6 @@ const get_buttons = (self) => {
 	const mode 			= self.mode
 
 	const fragment = new DocumentFragment()
-
-	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button add',
-				parent			: fragment
-			})
-		}
 
 	// buttons tools
 		if (!is_inside_tool) {
@@ -243,9 +130,10 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	const mode = self.mode
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// q operator (search only)
@@ -256,19 +144,9 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 				type			: 'text',
 				value			: q_operator,
 				class_name		: 'q_operator',
-				parent			: li
+				parent			: content_value
 			})
 		}
-
-	// input contenteditable
-		// const input = ui.create_dom_element({
-		// 	element_type 	: 'div',
-		// 	class_name 		: 'input_tex_area contenteditable',
-		// 	dataset 	 	: { key : i },
-		// 	inner_html 		: current_value,
-		// 	contenteditable : true,
-		// 	parent 		 	: li
-		// })
 
 	// service_tinymce
 		const current_service = new service_tinymce()
@@ -290,23 +168,15 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			}
 
 		// init editor
-			current_service.init(self, li, {
+			current_service.init({
+				caller			: self,
+				value_container	: content_value,
 				value			: current_value,
 				key				: i,
 				editor_config	: editor_config
 			})
 
-	// button remove
-		// if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool){
-		// 	const button_remove = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name 		: 'button remove display_none',
-		// 		dataset			: { key : i },
-		// 		parent 			: li
-		// 	})
-		// }
-
-	return li
+	return content_value
 }//end input_element
 
 
@@ -325,10 +195,9 @@ const get_custom_buttons = (self, i, service) => {
 
 	// const editor = get_editor()
 
-	let button_name
+	const button_name = "button_upload"
 
 	// button_upload
-		button_name = "button_upload"
 		custom_buttons.push({
 			name 	: button_name,
 			options : {

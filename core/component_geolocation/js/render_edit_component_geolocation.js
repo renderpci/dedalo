@@ -50,6 +50,11 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 			buttons			: buttons
 		})
 
+	// set pointers
+		wrapper.content_data = content_data
+
+
+
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		// self.events_tokens.push(
 		// 	event_manager.subscribe('update_value_'+self.id, update_value)
@@ -88,27 +93,18 @@ export const get_content_data_edit = async function(self) {
 	const value				= self.data.value
 	// const is_inside_tool	= self.is_inside_tool
 
-	const fragment = new DocumentFragment()
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// inputs - loop with the value array
 		const inputs_value = value//(value.length<1) ? [''] : value
 		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
-			inputs_container.appendChild(input_element_node)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
-
 
 	return content_data
 }//end get_content_data_edit
@@ -121,15 +117,16 @@ export const get_content_data_edit = async function(self) {
 */
 export const get_input_element_edit = (i, current_value, self) =>{
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// inputs container
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'div',
-			parent			: li,
+			parent			: content_value,
 			class_name		: 'map_inputs'
 		})
 
@@ -253,7 +250,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 			element_type	: 'div',
 			class_name		: 'leaflet_map',
 			dataset			: { key : i },
-			parent			: li
+			parent			: content_value
 		})
 
 	// init the map with the wrapper when container node is in DOM
@@ -276,7 +273,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		}
 
 
-	return li
+	return content_value
 }//end get_input_element_edit
 
 
