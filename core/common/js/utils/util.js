@@ -313,3 +313,37 @@ export function strip_tags(value) {
 
 	return text_clean;
 }//end strip_tags
+
+
+
+/**
+* ARRAY_EQUALS
+* Compares two arrays for equality
+* @param array source
+* @param array array
+* @return bool
+*/
+export function array_equals(source, array) {
+	// if the other array is a falsy value, return
+	if (!array)
+		return false;
+
+	// compare lengths - can save a lot of time
+	if (source.length != array.length)
+		return false;
+
+	for (let i = 0, l=source.length; i < l; i++) {
+		// Check if we have nested arrays
+		if (source[i] instanceof Array && array[i] instanceof Array) {
+			// recurse into the nested arrays
+			if (!source[i].equals(array[i]))
+				return false;
+		}
+		else if (source[i] != array[i]) {
+			// Warning - two different object instances will never be equal: {x:20} != {x:20}
+			return false;
+		}
+	}
+
+	return true;
+}//end array_equals
