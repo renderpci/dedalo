@@ -10,13 +10,54 @@
 		>.content_data {
 
 			>.content_value {
-				// input  (text url)
+				align-items: center;
+
+				// input  (text title/url)
 				.input_value {
 					flex: 1;
+					padding-right: 0.5rem;
+					&.url {
+						padding-right: 3rem;
+					}
+				}
+
+				// buttons
+				>.button {
+					position: absolute;
+					right: 0.7rem;
+					z-index: 1;
+					&:hover {
+						background-color: darken(@color_orange_dedalo, 15%);
+					}
+
+					&.remove {
+						right: 2.0rem;
+					}
 				}
 			}
 
 		}
+	}//end &.edit
+
+
+	&.search {
+
+		>.content_data {
+
+			>.q_operator {
+				width: 3rem;
+				text-align: center;
+			}
+
+			>.content_value {
+				width: calc(100% - 3.5rem);
+
+				.input_value {
+
+				}
+			}
+		}
 	}
+
 
 }//end .component_iri

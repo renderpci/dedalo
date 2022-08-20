@@ -66,33 +66,18 @@ export const component_iri = function(){
 
 
 /**
-* OPEN IRI
-*/
-component_iri.prototype.open_iri = function(component_obj) {
-
-	const iri = component_obj.parentNode.querySelector('input[type="url"]').value
-
-	if(iri.length <= 0){
-		return false
-	}
-	window.open(iri, '_blank')
-
-	return true
-}//end open_iri
-
-
-
-/**
-* SET_VALUE
-* @param DOM node
+* BUILD_VALUE
+* Create a full object value from only title text or url partial values
 * @param int key
-* @return object value || null
+* 	Key of content_value element inside content_data
+* @return object|null value
 */
-component_iri.prototype.set_value = function(node, key) {
+component_iri.prototype.build_value = function(key) {
 
-	const li_nodes		= node.querySelectorAll('li');
-	const title_value	= li_nodes[key].querySelector('input[type="text"]').value
-	const iri_value		= li_nodes[key].querySelector('input[type="url"]').value
+	const self = this
+
+	const title_value	= self.node.content_data[key].querySelector('input[type="text"]').value
+	const iri_value		= self.node.content_data[key].querySelector('input[type="url"]').value
 
 	const value = (title_value.length > 0 || iri_value.length > 0)
 		? {
@@ -102,42 +87,4 @@ component_iri.prototype.set_value = function(node, key) {
 		: null
 
 	return value
-}//end set_value
-
-
-
-/**
-* SET_VALUE
-*/
-	// render_component_iri.prototype.set_value = function() {
-
-	// 	const self = this
-	// 	const node = self.node
-
-	// 	// inputs
-	// 	//const li_nodes = wrapper_obj.getElementsByTagName("li");
-	// 	const li_nodes = node.querySelectorAll('li');
-	// 		console.log("prueba:","prueba");
-	// 	//var" parent_ul 	= component_obj.parentNode.parentNode;
-	// 	//let li_nodes 	= parent_ul.childNodes;
-	// 	const len = li_nodes.length
-
-	// 		const ar_value = []
-	// 		for (let i = 0; i < len; i++) {
-	// 			const title_value 	= li_nodes[i].querySelector('input[type="text"]').value
-	// 			const iri_value 	= li_nodes[i].querySelector('input[type="url"]').value
-	// 			if(title_value.length > 0 || iri_value.length > 0 ){
-	// 				ar_value.push({
-	// 					iri 	: iri_value,
-	// 					title	: title_value
-	// 					})
-	// 			}
-	// 		}
-
-	// 	//set value in data isntance
-	// 		self.data.value = ar_value
-
-	// 	return true
-	// }//end set_value
-
-
+}//end build_value
