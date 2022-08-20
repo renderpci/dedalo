@@ -68,7 +68,7 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  content_data.classList.add('nowrap')
 
 		// render all items sequentially
 			const tree_object = {}
@@ -118,6 +118,141 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* GET_GROUPER_ELEMENT
+*	Typology element
+* @return DOM node li
+*/
+const get_grouper_element = (i, datalist_item, self) => {
+
+	const key = datalist_item.section_tipo +'_'+ datalist_item.section_id
+
+	// grouper
+		const grouper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'grouper'
+		})
+
+	// grouper_label
+		const grouper_label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'grouper_label icon_arrow',
+			inner_html		: datalist_item.label,
+			parent			: grouper
+		})
+
+	// branch
+		const branch = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'branch',
+			parent			: grouper
+		})
+		grouper.branch = branch
+
+	// collapse_toggle_track
+		ui.collapse_toggle_track({
+			header				: grouper_label,
+			content_data		: branch,
+			collapsed_id		: 'collapsed_component_filter_group_' + key,
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			grouper_label.classList.remove('up')
+		}
+		function expose() {
+			grouper_label.classList.add('up')
+		}
+
+
+	return grouper
+}//end get_grouper_element
+
+
+
+/**
+* GET_INPUT_ELEMENT
+* @return DOM node li
+*/
+const get_input_element = (i, current_value, self) => {
+
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const datalist_value	= datalist_item.value
+		const label				= datalist_item.label
+		const section_id		= datalist_item.section_id
+
+	// create li
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: 'item_li'
+			// data_set		: {
+			// 	id		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
+			// 	parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
+			// }
+		})
+
+	// label
+		const label_string = (SHOW_DEBUG===true) ? label + ' [' + section_id + ']' : label
+		const label_node = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'item_label',
+			inner_html		: label_string,
+			parent			: li
+		})
+
+	// input checkbox
+		const input_node = ui.create_dom_element({
+			element_type	: 'input',
+			class_name		: 'item_input',
+			type			: 'checkbox'
+		})
+		label_node.prepend(input_node)
+		input_node.addEventListener('change',function() {
+
+			const action		= (input_node.checked===true) ? 'insert' : 'remove'
+			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			const changed_value	= (action==='insert') ? datalist_value : null
+
+			const changed_data = Object.freeze({
+				action	: action,
+				key		: changed_key,
+				value	: changed_value
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false,
+				remove_dialog	: ()=>{
+					return true
+				}
+			})
+			.then(()=>{
+				self.selected_key = i
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, self)
+			})
+		})//end change event
+
+		// checked option set on match
+		for (let j = 0; j < value_length; j++) {
+			if (value[j] && datalist_value &&
+				value[j].section_id===datalist_value.section_id &&
+				value[j].section_tipo===datalist_value.section_tipo
+				) {
+					input_node.checked = 'checked'
+			}
+		}
+
+
+
+
+	return li
+}//end get_input_element
 
 
 
@@ -208,141 +343,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_GROUPER_ELEMENT
-*	Typology element
-* @return DOM node li
-*/
-const get_grouper_element = (i, datalist_item, self) => {
-
-	const key = datalist_item.section_tipo +'_'+ datalist_item.section_id
-
-	// grouper
-		const grouper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'grouper'
-			// data_set		: {
-			// 	id		: key,
-			// 	parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
-			// }
-		})
-
-	// grouper_label
-		const grouper_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'grouper_label icon_arrow',
-			inner_html		: datalist_item.label,
-			parent			: grouper
-		})
-
-	// branch
-		const branch = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'branch',
-			parent			: grouper
-		})
-		grouper.branch = branch
-
-	// collapse_toggle_track
-		ui.collapse_toggle_track({
-			header				: grouper_label,
-			content_data		: branch,
-			collapsed_id		: 'collapsed_component_filter_group_' + key,
-			collapse_callback	: collapse,
-			expose_callback		: expose
-		})
-		function collapse() {
-			grouper_label.classList.remove('up')
-		}
-		function expose() {
-			grouper_label.classList.add('up')
-		}
-
-
-	return grouper
-}//end get_grouper_element
-
-
-
-/**
-* GET_INPUT_ELEMENT
-* @return DOM node li
-*/
-const get_input_element = (i, current_value, self) => {
-
-	// short vars
-		const value				= self.data.value || []
-		const value_length		= value.length
-		const datalist_item		= current_value
-		const datalist_value	= datalist_item.value
-		const label				= datalist_item.label
-		const section_id		= datalist_item.section_id
-
-	// create li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			data_set		: {
-				id		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
-				parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
-			}
-		})
-
-	// input checkbox
-		const option = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			id				: self.id +"_"+ i,
-			parent			: li
-		})
-		option.addEventListener('change',function() {
-
-			const action		= (option.checked===true) ? 'insert' : 'remove'
-			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			const changed_value	= (action==='insert') ? datalist_value : null
-
-			const changed_data = Object.freeze({
-				action	: action,
-				key		: changed_key,
-				value	: changed_value
-			})
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false,
-				remove_dialog	: ()=>{
-					return true
-				}
-			})
-			.then((api_response)=>{
-				self.selected_key = i
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, self)
-			})
-		})//end change event
-
-		// checked option set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					option.checked = 'checked'
-			}
-		}
-
-	// label
-		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
-		const option_label = ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: label_string,
-			parent			: li
-		})
-		option_label.setAttribute("for", self.id +"_"+ i)
-
-
-	return li
-}//end get_input_element
-
-
