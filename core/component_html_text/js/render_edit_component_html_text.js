@@ -54,33 +54,8 @@ render_edit_component_html_text.prototype.edit = async function(options) {
 			buttons 	 : buttons
 		})
 
-	// add events
-		add_events(self, wrapper)
-
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
-		)
-		function add_element(changed_data) {
-			const inputs_container = wrapper.querySelector('.inputs_container')
-			// add new dom input element
-			const input_element = get_input_element(changed_data.key, changed_data.value, self)
-			inputs_container.appendChild(input_element)
-		}
-
-	return true
-}//end add_events
-
 
 
 /**
