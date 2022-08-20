@@ -48,6 +48,8 @@ render_edit_component_publication.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// add events
 		add_events(self, wrapper)
@@ -135,31 +137,24 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data = function(self) {
 
-	// Options vars
-	const value				= self.data.value || []
-	// const is_inside_tool	= self.is_inside_tool
-
-	const fragment = new DocumentFragment()
-
-	// inputs_container
-		// const inputs_container = ui.create_dom_element({
-		// 	element_type	: 'ul',
-		// 	class_name 		: 'inputs_container',
-		// 	parent 			: fragment
-		// })
-
-	// build values
-		const inputs_value = (value.length<1) ? [""] : value
-		const value_length = inputs_value.length
-		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i])
-			fragment.appendChild(input_element)
-		}
+	// short vars
+		const value = self.data.value || []
 
 	// content_data
-		const content_data = ui.component.build_content_data(self, {button_close: null})
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self, {
+			button_close : null
+		})
+		content_data.classList.add('nowrap')
+
+	// build values
+		const inputs_value	= (value.length<1) ? [''] : value
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_input_element(i, inputs_value[i])
+			content_data.appendChild(content_value)
+			// set the pointer
+			content_data[i] = content_value
+		}
 
 
 	return content_data
@@ -199,10 +194,17 @@ const get_buttons = (self) => {
 */
 const get_input_element = (i, current_value) => {
 
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
 	// div_switcher
 		const div_switcher = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'switcher_publication text_unselectable'
+			class_name		: 'switcher_publication text_unselectable',
+			parent			: content_value
 		})
 
 	// input checkbox
@@ -228,7 +230,5 @@ const get_input_element = (i, current_value) => {
 		})
 
 
-	return div_switcher
+	return content_value
 }//end get_input_element
-
-

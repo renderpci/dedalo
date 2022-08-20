@@ -29,9 +29,6 @@ render_search_component_radio_button.prototype.search = async function() {
 
 	const self = this
 
-	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// content data
 		const content_data = get_content_data_search(self)
 
@@ -39,9 +36,10 @@ render_search_component_radio_button.prototype.search = async function() {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
-
-	// Events
+	// events
 		add_events(self, wrapper)
 
 
@@ -57,7 +55,7 @@ const add_events = function(self, wrapper) {
 	// events delegated
 
 	// click
-		wrapper.addEventListener("click", e => {
+		wrapper.addEventListener('click', function(e) {
 
 			if (e.altKey===true) {
 
@@ -89,7 +87,7 @@ const add_events = function(self, wrapper) {
 		})
 
 	// change event, for every change the value in the inputs of the component
-		wrapper.addEventListener('change', (e) => {
+		wrapper.addEventListener('change', function(e) {
 
 			// value update
 				if (e.target.matches('input[type="radio"]')) {
@@ -102,9 +100,9 @@ const add_events = function(self, wrapper) {
 
 					// changed_data
 						const changed_data = Object.freeze({
-							action  : 'update',
-							key 	: 0,
-							value 	: parsed_value
+							action	: 'update',
+							key		: 0,
+							value	: parsed_value
 						})
 
 					// update the instance data (previous to save)
@@ -134,7 +132,6 @@ const add_events = function(self, wrapper) {
 					return true
 				}
 		})
-
 }//end add_events
 
 
@@ -145,11 +142,17 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_search = function(self) {
 
-	// const value	= self.data.value
-	const mode		= self.mode
-	const datalist	= self.data.datalist || []
+	// fix non value scenarios
+	self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const fragment = new DocumentFragment()
+	// short vars
+		const mode		= self.mode
+		const datalist	= self.data.datalist || []
+
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload : false
+		})
 
 	// q operator (search only)
 		const q_operator		= self.data.q_operator
@@ -158,28 +161,22 @@ const get_content_data_search = function(self) {
 			type			: 'text',
 			value			: q_operator,
 			class_name		: 'q_operator',
-			parent			: fragment
+			parent			: content_data
 		})
 
-	// inputs_container ul
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container '+mode,
-			parent			: fragment
-		})
+	// content_value
+		// const content_value = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'content_value',
+		// 	parent			: content_data
+		// })
 
 	// values (inputs)
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			const input_element = get_input_element(i, datalist[i], self)
-			inputs_container.appendChild(input_element)
+			content_data.appendChild(input_element)
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : false
-		})
-		content_data.appendChild(fragment)
 
 
 	return content_data
@@ -193,32 +190,40 @@ const get_content_data_search = function(self) {
 */
 const get_input_element = (i, current_value, self) => {
 
-	const input_id = self.id +"_"+ i + "_" + new Date().getUTCMilliseconds()
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const label				= datalist_item.label
+		// const section_id		= datalist_item.section_id
+		const datalist_value	= Object.assign({
+			from_component_tipo : self.tipo
+		}, datalist_item.value)
 
-	const value				= self.data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value
-	const label				= datalist_item.label
-	const section_id		= datalist_item.section_id
-	const datalist_value	= Object.assign({
-								from_component_tipo : self.tipo
-							  }, datalist_item.value)
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// label
+		// const label_string = (SHOW_DEBUG===true) ? (label + ' [' + section_id + ']') : label
+		const input_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'label',
+			inner_html		: label,
+			parent			: content_value
 		})
 
 	// input checkbox
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',
-			id				: input_id,
 			name			: self.id,
 			dataset			: { key : i },
-			value			: JSON.stringify(datalist_value),
-			parent			: li
+			value			: JSON.stringify(datalist_value)
 		})
+		input_label.prepend(input)
 
 	// checked input set on match
 		for (let j = 0; j < value_length; j++) {
@@ -230,15 +235,6 @@ const get_input_element = (i, current_value, self) => {
 			}
 		}
 
-	// input_label
-		const label_string = (SHOW_DEBUG===true) ? (label + ' [' + section_id + ']') : label
-		const input_label = ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: label_string,
-			parent			: li
-		})
-		input_label.setAttribute("for", input_id)
 
-
-	return li
+	return content_value
 }//end get_input_element

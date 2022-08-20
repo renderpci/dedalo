@@ -47,9 +47,9 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end edit
@@ -114,7 +114,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			placeholder 	: (current_value) ? '' : self.data.fallback_value[i],
 			parent			: content_value
 		})
-		input.addEventListener('change', async function(){
+		input.addEventListener('change', async function() {
 
 			// is_unique check
 				if (self.context.properties.unique && input.value!=='') {
@@ -143,7 +143,7 @@ const get_input_element_edit = (i, current_value, self) => {
 				event_manager.publish('update_value_'+self.id_base, changed_data)
 			})
 		})//end change
-		input.addEventListener('keyup',async function(e){
+		input.addEventListener('keyup', function(e) {
 			// page unload event
 				if (e.key!=='Enter') {
 					const key				= i
@@ -160,14 +160,14 @@ const get_input_element_edit = (i, current_value, self) => {
 		})//end keyup
 
 	// button remove. Triggered by wrapper delegated events
-		if((mode==='edit' || 'edit_in_list') && !is_inside_tool) {
+		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
 			// button_remove
 			const remove_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
 				parent			: content_value
 			})
-			remove_node.addEventListener('mouseup', function(){
+			remove_node.addEventListener('mouseup', function() {
 				// force possible input change before remove
 				document.activeElement.blur()
 
@@ -176,8 +176,7 @@ const get_input_element_edit = (i, current_value, self) => {
 				const changed_data = Object.freeze({
 					action	: 'remove',
 					key		: i,
-					value	: null,
-					refresh : true
+					value	: null
 				})
 				self.change_value({
 					changed_data	: changed_data,
@@ -206,14 +205,14 @@ const get_buttons = (self) => {
 	const fragment = new DocumentFragment()
 
 	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+		if(mode==='edit' || mode==='edit_in_list') { // && !is_inside_tool
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
 				title			: 'Add new input field',
 				parent			: fragment
 			})
-			button_add.addEventListener("click",function() {
+			button_add.addEventListener('click',function() {
 
 				const changed_data = Object.freeze({
 					action	: 'insert',
@@ -222,18 +221,14 @@ const get_buttons = (self) => {
 				})
 				self.change_value({
 					changed_data	: changed_data,
-					refresh			: false
+					refresh			: true
 				})
 				.then(()=>{
-					// event to update the dom elements of the instance
-					self.refresh()
-					.then(()=>{
-							console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
-						const input_text = self.node.content_data[changed_data.key].querySelector('input')
-						if (input_text) {
-							input_text.focus()
-						}
-					})
+					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
+					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					if (input_node) {
+						input_node.focus()
+					}
 				})
 			})//end event click
 		}//end if(mode)

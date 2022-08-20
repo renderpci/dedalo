@@ -23,7 +23,7 @@ export const render_edit_component_svg = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return DOM node wrapper
 */
 render_edit_component_svg.prototype.edit = async function(options) {
 
@@ -46,6 +46,8 @@ render_edit_component_svg.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -63,10 +65,17 @@ const get_content_data_edit = function(self) {
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
-	// value (array)
-		// const value = self.data.value || []
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value',
+			parent			: content_data
+		})
+		// set pointer. Only one element will be managed
+		content_data[0] = content_value
 
 	// media url from data.datalist based on selected context quality
 		const quality	= self.quality || self.context.quality
@@ -75,42 +84,17 @@ const get_content_data_edit = function(self) {
 			? file_info.url
 			: null
 
-	// ul inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
-
-	// svg elements
-		// const value_length = value.length
-		// for (let i = 0; i < value_length; i++) {
-		// 	const svg_element = get_svg_element(value[i])
-		// 	inputs_container.appendChild(svg_element)
-		// }
-
 	// svg item
 		if (url) {
-			// li
-				const li = ui.create_dom_element({
-					element_type	: 'li',
-					parent			: inputs_container
-				})
-
 			// image
 				const image = ui.create_dom_element({
 					element_type	: 'img',
 					class_name		: 'image svg_element',
 					src				: url,
-					parent			: li
+					parent			: content_value
 				})
 				image.setAttribute('tabindex', 0)
 		}
-
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
 
 	return content_data

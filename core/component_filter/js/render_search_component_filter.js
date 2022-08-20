@@ -161,12 +161,12 @@ const get_input_element = (i, current_value, self) => {
 
 	const input_id = self.id +"_"+ i + "_" + new Date().getUTCMilliseconds()
 
-	const value  		 = self.data.value || []
-	const value_length   = value.length
-	const datalist_item  = current_value
-	const datalist_value = datalist_item.value
-	const label 		 = datalist_item.label
-	const section_id	 = datalist_item.section_id
+	const value				= self.data.value || []
+	const value_length		= value.length
+	const datalist_item		= current_value
+	const datalist_value	= datalist_item.value
+	const label				= datalist_item.label
+	const section_id		= datalist_item.section_id
 
 	// create li
 		const li = ui.create_dom_element({
@@ -185,6 +185,7 @@ const get_input_element = (i, current_value, self) => {
 			parent			: li
 		})
 		input.addEventListener('change',function() {
+
 			const action		= (input.checked===true) ? 'insert' : 'remove'
 			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
 			const changed_value	= (action==='insert') ? datalist_value : null
@@ -192,7 +193,7 @@ const get_input_element = (i, current_value, self) => {
 			const changed_data = Object.freeze({
 				action	: action,
 				key		: changed_key,
-				value	: changed_value,
+				value	: changed_value
 			})
 
 			// update the instance data (previous to save)

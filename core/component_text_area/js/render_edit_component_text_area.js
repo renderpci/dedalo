@@ -179,8 +179,8 @@ const add_events = function(self, wrapper) {
 						value	: null
 					})
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then((save_response)=>{
 						// event to update the dom elements of the instance
@@ -199,13 +199,12 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action	: 'remove',
 						key		: e.target.dataset.key,
-						value	: null,
-						refresh : true
+						value	: null
 					})
 					self.change_value({
-						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.value,
-						refresh 	 : true
+						changed_data	: changed_data,
+						label			: e.target.previousElementSibling.value,
+						refresh			: true
 					})
 					.then(()=>{
 					})
@@ -240,8 +239,10 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= value // is array
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i], self, is_inside_tool)
-			content_data.appendChild(input_element)
+			const content_value = get_input_element(i, inputs_value[i], self, is_inside_tool)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
 		}
 
 

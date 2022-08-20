@@ -79,9 +79,9 @@ const add_events = function(self, wrapper) {
 			// update
 			if (e.target.matches('input[type="text"].input_value')) {
 
-				const section_tipo 	= e.target.dataset.tipo
-				const key   		= JSON.parse(e.target.dataset.key)
-				const value 		= (e.target.value.length>0)
+				const section_tipo	= e.target.dataset.tipo
+				const key			= JSON.parse(e.target.dataset.key)
+				const value			= (e.target.value.length>0)
 					? {
 						tipo 	: e.target.dataset.tipo,
 						value 	: self.validate_value(e.target.value.split(','))
@@ -89,9 +89,9 @@ const add_events = function(self, wrapper) {
 					: null;
 
 				// key_found. search section tipo key if exists. Remember: data array keys are differents that inputs keys
-					const current_values = self.data.value || []
-					const values_length	 = current_values.length
-					let key_found 		 = values_length // default is last (length of arary)
+					const current_values	= self.data.value || []
+					const values_length		= current_values.length
+					let key_found			= values_length // default is last (length of arary)
 					for (let i = 0; i < values_length; i++) {
 						if(current_values[i].tipo===section_tipo) {
 							key_found = i;
@@ -105,8 +105,8 @@ const add_events = function(self, wrapper) {
 					value	: value
 				})
 				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
+					changed_data	: changed_data,
+					refresh			: false
 				})
 				.then((save_response)=>{
 					// update safe value in input text

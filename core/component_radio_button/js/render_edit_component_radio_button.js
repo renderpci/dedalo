@@ -46,9 +46,12 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// events
 		add_events(self, wrapper)
+
 
 	return wrapper
 }//end edit
@@ -104,14 +107,14 @@ const add_events = function(self, wrapper) {
 					const parsed_value 	= JSON.parse(e.target.value)
 
 					const changed_data = Object.freeze({
-						action  : 'update',
-						key 	: 0,
-						value 	: parsed_value
+						action	: 'update',
+						key		: 0,
+						value	: parsed_value
 					})
 
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then(()=>{
 						//self.selected_key = e.target.dataset.key
@@ -139,15 +142,15 @@ const add_events = function(self, wrapper) {
 						}
 
 						const changed_data = Object.freeze({
-							action  : 'remove',
-							key 	: false,
-							value 	: null
+							action	: 'remove',
+							key		: false,
+							value	: null
 						})
 
 						self.change_value({
-							changed_data : changed_data,
-							label  		 : self.get_checked_value_label(),//'All',
-							refresh 	 : true
+							changed_data	: changed_data,
+							label			: self.get_checked_value_label(),//'All',
+							refresh			: true
 						})
 						.then(()=>{
 							// rebuild and save the component
@@ -200,13 +203,9 @@ const get_content_data_edit = function(self) {
 		const datalist	= data.datalist || []
 		// const mode	= self.mode
 
-	const fragment = new DocumentFragment()
-
-	// inputs_container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload : true
 		})
 
 	// inputs
@@ -215,21 +214,10 @@ const get_content_data_edit = function(self) {
 		const datalist_length	= datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			const input_element = get_input_element_edit(i, datalist[i], self)
-			inputs_container.appendChild(input_element)
+			content_data.appendChild(input_element)
+			// set pointers
+			content_data[i] = input_element
 		}
-
-	// buttons_container
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_container',
-			parent			: fragment
-		})
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
-		content_data.appendChild(fragment)
 
 
 	return content_data
@@ -320,16 +308,17 @@ const get_buttons = (self) => {
 */
 const get_input_element_edit = (i, current_value, self) => {
 
-	const value				= self.data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value
-	const datalist_value	= datalist_item.value
-	const label				= datalist_item.label
-	const section_id		= datalist_item.section_id
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const datalist_value	= datalist_item.value
+		const label				= datalist_item.label
 
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li'
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
 		})
 
 	// label
@@ -338,8 +327,9 @@ const get_input_element_edit = (i, current_value, self) => {
 		// 	: label
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
+			class_name		: 'label',
 			inner_html		: label,
-			parent			: li
+			parent			: content_value
 		})
 
 	// input radio button
@@ -421,5 +411,5 @@ const get_input_element_edit = (i, current_value, self) => {
 		// })
 
 
-	return li
+	return content_value
 }//end get_input_element_edit

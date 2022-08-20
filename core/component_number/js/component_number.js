@@ -69,7 +69,7 @@ export const component_number = function(){
 * FIX_NUMBER_FORMAT
 * Force unified number format.
 * Example: Change 17,2 to 17.2
-* @return
+* @return number
 */
 component_number.prototype.fix_number_format = function( number ) {
 
@@ -77,5 +77,3 @@ component_number.prototype.fix_number_format = function( number ) {
 
 	return Number(new_number)
 }//end fix_number_format
-
-

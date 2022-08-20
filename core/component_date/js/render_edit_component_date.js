@@ -123,8 +123,8 @@ const get_buttons = (self) => {
 					value	: null
 				})
 				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : true
+					changed_data	: changed_data,
+					refresh			: true
 				})
 				.then(()=>{
 					const inputs_container = self.node.content_data.inputs_container
@@ -198,7 +198,7 @@ export const get_input_element_edit = (i, current_value, self) => {
 		content_value.appendChild(input_node)
 
 	// button remove
-		if(mode==='edit' || 'edit_in_list'){
+		if(mode==='edit' || mode==='edit_in_list') {
 			const remove_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
@@ -213,8 +213,7 @@ export const get_input_element_edit = (i, current_value, self) => {
 				const changed_data = Object.freeze({
 					action	: 'remove',
 					key		: i,
-					value	: null,
-					refresh : true
+					value	: null
 				})
 				self.change_value({
 					changed_data	: changed_data,
@@ -397,7 +396,7 @@ const input_element_period = (i, current_value, self) => {
 			const changed_data = Object.freeze({
 				action	: 'update',
 				key		: i,
-				value	: value,
+				value	: value
 			})
 			self.change_value({
 				changed_data	: changed_data,
@@ -452,15 +451,14 @@ const input_element_time = (i, current_value, self) => {
 
 		const value = {start:response.result}
 
-
 		const changed_data = Object.freeze({
 			action	: 'update',
 			key		: i,
-			value	: value,
+			value	: value
 		})
 		self.change_value({
-			changed_data : changed_data,
-			refresh 	 : false
+			changed_data	: changed_data,
+			refresh			: false
 		})
 		.then((save_response)=>{
 			// event to update the dom elements of the instance
@@ -526,7 +524,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			placeholder		: self.get_placeholder_value(),
 			parent			: input_wrap
 		})
-		input.addEventListener('change', function(evt){
+		input.addEventListener('change', function() {
 			const response = self.parse_string_date(input.value)
 			if(response.error){
 				alert(response.error[0].msg)
@@ -548,11 +546,11 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			const changed_data = Object.freeze({
 				action	: 'update',
 				key		: i,
-				value	: value,
+				value	: value
 			})
 			self.change_value({
-				changed_data : changed_data,
-				refresh 	 : false
+				changed_data	: changed_data,
+				refresh			: false
 			})
 			.then((save_response)=>{
 				// event to update the dom elements of the instance
@@ -566,7 +564,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			class_name		: 'input-group-addon button calendar hidden_button ',
 			parent			: input_wrap
 		})
-		button_calendar.addEventListener('mouseup', function(evy){
+		button_calendar.addEventListener('mouseup', function() {
 			const dd_date_format = page_globals.DEDALO_DATE_ORDER  || 'dmy'
 
 			const ar_date_format = (dd_date_format === 'dmy')

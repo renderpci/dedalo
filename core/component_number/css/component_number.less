@@ -9,13 +9,23 @@
 	&.edit {
 		>.content_data {
 
-			// button over each text input (right)
-			.button.remove {
-				position: absolute;
-				right: 0.5em;
-				top: 0.5em;
-				z-index: 1;
+			>.content_value {
+				position: relative;
+				width: 100%;
+
+				>.input_value {
+					padding-right: 1.5rem;
+				}
+
+				// button over each text input (right)
+				>.button.remove {
+					position: absolute;
+					right: 0.5em;
+					top: 0.5em;
+					z-index: 1;
+				}
+
 			}
 		}
-	}
-}
+	}//end &.edit
+}//end .component_number

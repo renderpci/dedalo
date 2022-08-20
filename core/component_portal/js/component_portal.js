@@ -791,7 +791,7 @@ component_portal.prototype.sort_data = function(options) {
 
 		self.change_value({
 			changed_data	: changed_data,
-			refresh			: true,
+			refresh			: true
 		})
 		.then(async (response)=>{
 

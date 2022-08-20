@@ -169,23 +169,23 @@ const get_buttons = (self) => {
 	// button reset
 		const button_reset = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button reset',
-			parent 			: fragment
+			class_name		: 'button reset',
+			parent			: fragment
 		})
-		button_reset.addEventListener('click',function(){
+		button_reset.addEventListener('click', function() {
 			if (self.data.value.length===0) {
 				return true
 			}
 
 			const changed_data = Object.freeze({
-				action  : 'remove',
-				key 	: false,
-				value 	: null
+				action	: 'remove',
+				key		: false,
+				value	: null
 			})
 			self.change_value({
-				changed_data : changed_data,
-				label  		 : 'All',
-				refresh 	 : true
+				changed_data	: changed_data,
+				label			: 'All',
+				refresh			: true
 			})
 			.then((api_response)=>{
 				// rebuild and save the component
@@ -273,12 +273,13 @@ const get_grouper_element = (i, datalist_item, self) => {
 */
 const get_input_element = (i, current_value, self) => {
 
-	const value  		 = self.data.value || []
-	const value_length   = value.length
-	const datalist_item  = current_value
-	const datalist_value = datalist_item.value
-	const label 		 = datalist_item.label
-	const section_id	 = datalist_item.section_id
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const datalist_value	= datalist_item.value
+		const label				= datalist_item.label
+		const section_id		= datalist_item.section_id
 
 	// create li
 		const li = ui.create_dom_element({
@@ -297,14 +298,15 @@ const get_input_element = (i, current_value, self) => {
 			parent			: li
 		})
 		option.addEventListener('change',function() {
-			const action 		= (option.checked===true) ? 'insert' : 'remove'
-			const changed_key 	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			const changed_value = (action==='insert') ? datalist_value : null
+
+			const action		= (option.checked===true) ? 'insert' : 'remove'
+			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			const changed_value	= (action==='insert') ? datalist_value : null
 
 			const changed_data = Object.freeze({
-				action  : action,
-				key 	: changed_key,
-				value 	: changed_value
+				action	: action,
+				key		: changed_key,
+				value	: changed_value
 			})
 			self.change_value({
 				changed_data	: changed_data,

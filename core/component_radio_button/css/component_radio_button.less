@@ -5,7 +5,7 @@
 */
 .component_radio_button {
 
-	&.edit {
+	&.edit{
 		>.content_data {
 			// flex-wrap: nowrap;
 			// align-items: flex-start;
@@ -20,7 +20,7 @@
 				margin-bottom: 0.25rem;
 
 				// label wraps the input too
-				>label {
+				>.label {
 					// width: 100%;
 					padding-top: 0.33rem;
 					padding-bottom: 0.33rem;
@@ -28,6 +28,11 @@
 
 					display: flex;
 					cursor: pointer;
+
+					>input {
+						margin-right: 0.25rem;
+						cursor: pointer;
+					}
 				}
 
 				>.show_on_active {
@@ -36,4 +41,40 @@
 			}
 		}
 	}//end .edit
+
+
+	&.search {
+		>.content_data {
+
+			>.q_operator {
+				width: 3rem;
+				margin-right: 0.5rem;
+				text-align: center;
+			}
+
+			>.content_value {
+				display: inline-block;
+				margin-right: 0.5rem;
+				margin-top: 0.5rem;
+				margin-bottom: 0.25rem;
+
+
+				// label wraps the input too
+				>.label {
+					// width: 100%;
+					padding-top: 0.33rem;
+					padding-bottom: 0.33rem;
+					padding-right: 0.5rem;
+
+					display: flex;
+					cursor: pointer;
+
+					>input {
+						margin-right: 0.25rem;
+						cursor: pointer;
+					}
+				}
+			}
+		}
+	}
 }//end .component_radio_button
