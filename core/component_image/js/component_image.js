@@ -15,6 +15,7 @@
 	import {render_viewer_component_image} from '../../component_image/js/render_viewer_component_image.js'
 
 
+
 export const component_image = function(){
 
 	this.id
@@ -91,13 +92,13 @@ component_image.prototype.init = async function(options) {
 		self.canvas_height			= 432
 		self.canvas_width			= null
 	// canvas node
-		self.canvas_node 			= null
+		self.canvas_node			= null
 
 	// editor init vars
 		self.ar_layer_loaded		= []
-		self.vector_tools_loaded 	= false
-		self.current_paper 			= null
-		self.vector_editor 			= null
+		self.vector_tools_loaded	= false
+		self.current_paper			= null
+		self.vector_editor			= null
 
 
 	// call the generic common tool init
@@ -112,31 +113,36 @@ component_image.prototype.init = async function(options) {
 /**
 * GET_DATA_TAG
 * Send the data_tag to the text_area when it need create a new tag
+* @return object data_tag
 */
-component_image.prototype.get_data_tag = function(){
+component_image.prototype.get_data_tag = function() {
 
 	const self = this
 
-	const lib_data		= self.get_lib_data()
-	const last_layer_id	= self.get_last_layer_id()
+	// last_layer_id
+		const last_layer_id	= self.get_last_layer_id()
 
-	const layers 		= lib_data.map((item) => {
-		const layer = {
-			layer_id		: item.layer_id,
-			user_layer_name	: item.user_layer_name
+	// layers
+		const lib_data	= self.get_lib_data()
+		const layers	= lib_data.map((item) => {
+		const layer		= {
+				layer_id		: item.layer_id,
+				user_layer_name	: item.user_layer_name
+			}
+			return layer
+		})
+
+	// data_tag
+		const data_tag = {
+			type			: 'draw',
+			tag_id			: null,
+			state			: 'n',
+			label			: '',
+			data			: '',
+			last_layer_id	: last_layer_id + 1,
+			layers			: layers
 		}
-		return layer
-	})
 
-	const data_tag = {
-		type			: 'draw',
-		tag_id			: null,
-		state			: 'n',
-		label			: '',
-		data			: '',
-		last_layer_id	: last_layer_id+1,
-		layers			: layers
-	}
 
 	return data_tag
 }//end get_data_tag
@@ -146,18 +152,19 @@ component_image.prototype.get_data_tag = function(){
 /**
 * GET_LIB_DATA
 * get the lib_data in self.data, lib_data is the specific data of the library used (paperjs)
+* @return array lib_data
 */
-component_image.prototype.get_lib_data = function(){
+component_image.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
+	const lib_data = typeof (self.data.value[0])!=='undefined' && typeof (self.data.value[0].lib_data)!=='undefined'
 		? self.data.value[0].lib_data
 		: [{
-				layer_id 		: 1,
-				layer_data 		: [],
-				user_layer_name : 'layer_1'
-			}]
+			layer_id		: 1,
+			layer_data		: [],
+			user_layer_name	: 'layer_1'
+		  }]
 
 
 	return lib_data
@@ -168,14 +175,16 @@ component_image.prototype.get_lib_data = function(){
 /**
 * GET_LAST_LAYER_ID
 * Get the last layer_id in the data
+* @param int last_layer_id
 */
-component_image.prototype.get_last_layer_id = function(){
+component_image.prototype.get_last_layer_id = function() {
 
 	const self = this
 
 	const lib_data		= self.get_lib_data()
 	const ar_layer_id	= lib_data.map((item) => item.layer_id)
 	const last_layer_id	= Math.max(...ar_layer_id)
+
 
 	return last_layer_id
 }//end get_last_layer_id
@@ -184,6 +193,7 @@ component_image.prototype.get_last_layer_id = function(){
 
 /**
 * LOAD_VECTOR_EDITOR
+* @return bool true
 */
 component_image.prototype.load_vector_editor = async function(options) {
 
@@ -263,15 +273,19 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 /**
 * LOAD_TAG_INTO_VECTOR_EDITOR
+* @return bool true
 */
 component_image.prototype.load_tag_into_vector_editor = function(options) {
 
 	const self = this
 
+	// options
+		const tag = options.tag
+
 	// convert the tag dataset to 'real' object for manage it
 	try {
 
-		const ar_layer_id			= JSON.parse(options.tag.dataset.data)
+		const ar_layer_id			= JSON.parse(tag.dataset.data)
 		console.log("---> ar_layer_id:",ar_layer_id);
 		const ar_layer_id_length	= ar_layer_id.length
 		for (let i = 0; i < ar_layer_id_length; i++) {
@@ -283,9 +297,8 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 		}
 	} catch (error) {
 		console.error(error)
-		console.log("options.tag.dataset.data:",options.tag.dataset.data);
+		console.log("tag.dataset.data:", tag.dataset.data);
 	}
-
 
 
 	// TAG WAY
@@ -310,8 +323,9 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 
 /**
 * ADD_LAYER
+* @return int layer_id
 */
-component_image.prototype.add_layer = function(){
+component_image.prototype.add_layer = function() {
 
 	const self = this
 
@@ -346,7 +360,6 @@ component_image.prototype.delete_layer = function(layer) {
 
 		value.lib_data = self.ar_layer_loaded
 
-
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
 			action	: 'update',
@@ -364,6 +377,7 @@ component_image.prototype.delete_layer = function(layer) {
 
 /**
 * UPDATE_DRAW_DATA
+* @return bool true
 */
 component_image.prototype.update_draw_data = function() {
 
@@ -389,22 +403,21 @@ component_image.prototype.update_draw_data = function() {
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
 			action	: 'update',
-			key	  	: 0,
-			value 	: value
+			key		: 0,
+			value	: value
 		}
+
 	// set the change_data to the instance
 		self.data.changed_data = changed_data
 
 	// tag save OLD
-		// const tag_id 		= project.activeLayer.name.replace('_layer','')
+		// const tag_id			= project.activeLayer.name.replace('_layer','')
 		// const current_tag	= self.ar_tag_loaded.find((item) => item.tag_id === tag_id)
 
-		// const data 				= project.activeLayer.exportJSON()
-		// const current_draw_data 	= data.replace(/"/g, '\'');
-		// current_tag.dataset 		= {data:current_draw_data}
-		// current_tag.save 		= false
+		// const data				= project.activeLayer.exportJSON()
+		// const current_draw_data	= data.replace(/"/g, '\'');
+		// current_tag.dataset		= {data:current_draw_data}
+		// current_tag.save			= false
 
 	return true
 }//end update_draw_data
-
-

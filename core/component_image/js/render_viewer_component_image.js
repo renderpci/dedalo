@@ -34,19 +34,19 @@ render_viewer_component_image.prototype.viewer = function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
-		wrapper.classList.add('component_image')
-		wrapper.classList.add('viewer')
+			  wrapper.classList.add('component_image')
+			  wrapper.classList.add('viewer')
 
 	// url
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= (typeof url_object==="undefined")
-			? DEDALO_CORE_URL + "/themes/default/0.jpg"
+		const url			= (typeof url_object==='undefined')
+			? DEDALO_CORE_URL + '/themes/default/0.jpg'
 			: url_object.url
 
 	// image
 		const image = ui.create_dom_element({
-			element_type	: "img",
+			element_type	: 'img',
 			src				: url,
 			class_name 		: 'hidden',
 			parent			: wrapper
@@ -63,12 +63,13 @@ render_viewer_component_image.prototype.viewer = function() {
 		}
 	// button download
 		const download_image_button = ui.create_dom_element({
-			element_type	: "button",
+			element_type	: 'button',
 			class_name 		: 'primary download',
 			// value 			: ' ok ',
 			parent			: wrapper,
 		})
-		download_image_button.addEventListener('click', function(evt) {
+		download_image_button.addEventListener('click', function(e) {
+			e.stopPropagation()
 			// get the original quality for download
 			const original = self.data.datalist.find(item => item.quality==='original')
 			// check if the original file exist else get the url of the default image
@@ -86,9 +87,10 @@ render_viewer_component_image.prototype.viewer = function() {
 		})
 
 	// close window when the user click in the image
-		image.addEventListener('mousedown',function (evt) {
+		image.addEventListener('mousedown',function () {
 			window.close()
 		})
+
 
 	return wrapper
 }//end viewer
@@ -100,38 +102,39 @@ render_viewer_component_image.prototype.viewer = function() {
 * create a temp <a> node with the original quality or default quality if the original file is missing
 * set the node to be downloadable with the original filename uploaded by user
 * download the file
-* @param doom_node image
+* @param DOM node image
+* @return void
 */
 const resize_window_to_image_size = function(image) {
 	// screen size
-		const screen_max_width = window.screen.availWidth;
-		const screen_max_height = window.screen.availHeight;
+		const screen_max_width	= window.screen.availWidth;
+		const screen_max_height	= window.screen.availHeight;
 
 	// Image size, get the ratio of the image when the image is more bigger than screen size
 		const ratio_h = screen_max_height < image.height
 			?  screen_max_height / image.height
 			: 1;
-		const ratio_w  = screen_max_width < image.width
+		const ratio_w = screen_max_width < image.width
 			?  screen_max_width / image.width
 			: 1;
 		// get the ratio of the most high multiplied
 		// (lowest ratio is more difference between sizes; 0.5 > 0.7)
 		// ratio 1 is not necessary change the values the change is null
-		const ratio	= Math.min(ratio_h, ratio_w, 1)
-		const img_h	= image.height * ratio
-		const img_w	= image.width * ratio
+		const ratio		= Math.min(ratio_h, ratio_w, 1)
+		const img_h		= image.height * ratio
+		// const img_w	= image.width * ratio
 		// set one size of the image, it will resize the other size
 		image.height	= img_h
-		// image.width		= img_w
+		// image.width	= img_w
 
 		// use the image size to be applied to the window size
-		const height = image.height;
-		const width  = image.width;
+		const height	= image.height;
+		const width		= image.width;
 
 	const tool_bar_height = (window.outerHeight - window.innerHeight) || 50
 	window.resizeTo(width, height+tool_bar_height)
+}//end resize_window_to_image_size
 
-}// end resize_window_to_image_size
 
 
 /**
@@ -148,14 +151,17 @@ const download_original_image = function (options) {
 
 	// Create a temporal 'a' element and click it
 	const download_image_temp = document.createElement('a');
-		download_image_temp.href = download_url
-		download_image_temp.setAttribute('download', name);
-		download_image_temp.style.display = 'none';
+		  download_image_temp.href = download_url
+		  download_image_temp.setAttribute('download', name);
+		  download_image_temp.style.display = 'none';
+
 	document.body.appendChild(download_image_temp);
+
 	// do click to the image to be downloaded
 	download_image_temp.click();
+
 	// remove the temp node
 	document.body.removeChild(download_image_temp);
 
 	return true
-}// end download_original_image
+}//end download_original_image
