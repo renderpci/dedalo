@@ -38,12 +38,11 @@ export const component_filter_records = function(){
 
 
 
-
 /**
 * COMMON FUNCTIONS
 * extend component functions from component common
 */
-// prototypes assign
+	// prototypes assign
 	component_filter_records.prototype.init					= component_common.prototype.init
 	component_filter_records.prototype.build				= component_common.prototype.build
 	component_filter_records.prototype.render				= common.prototype.render
@@ -91,5 +90,3 @@ component_filter_records.prototype.validate_value = (value) => {
 
 	return safe_values
 }//end validate_value
-
-
