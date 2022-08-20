@@ -25,14 +25,11 @@ export const render_edit_component_semantic_node = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_semantic_node.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_semantic_node.prototype.edit = async function(options) {
 
 	const self = this
 
-	// fix non value scenarios
-		self.data.value = (self.data.value===null || self.data.value.length<1) ? [null] : self.data.value
-
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -49,6 +46,8 @@ render_edit_component_semantic_node.prototype.edit = async function(options={ren
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// events
 		add_events(self, wrapper)
@@ -84,10 +83,9 @@ const add_events = function(self, wrapper) {
 			event_manager.subscribe('add_element_'+self.id, fn_add_element)
 		)
 		function fn_add_element(changed_data) {
-			//console.log("-------------- + event add_element changed_data:", changed_data);
-			const inputs_container = wrapper.querySelector('.inputs_container')
 			// add new dom input element
-			get_input_element_edit(changed_data.key, changed_data.value, inputs_container, self)
+			const content_value = get_content_value(changed_data.key, changed_data.value, self)
+			wrapper.content_data.appendChild(content_value)
 		}
 
 	// remove element, subscription to the events
@@ -168,8 +166,7 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action	: 'remove',
 						key		: e.target.dataset.key,
-						value	: null,
-						refresh	: true
+						value	: null
 					})
 					self.change_value({
 						changed_data	: changed_data,
@@ -210,34 +207,73 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = function(self) {
 
+	// fix non value scenarios
+		self.data.value = (self.data.value===null || self.data.value.length<1) ? [null] : self.data.value
+
 	// sort vars
-		const value				= self.data.value
-		const mode				= self.mode
-		const is_inside_tool	= self.is_inside_tool
+		const value = self.data.value
 
-	const fragment = new DocumentFragment()
 
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
 		const inputs_value	= value//(value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			get_input_element_edit(i, inputs_value[i], inputs_container, self, is_inside_tool)
+			const content_value = get_content_value(i, inputs_value[i], self)
+			// set pointers
+			content_data[i] = content_value
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* INPUT_ELEMENT
+* @return DOM node li
+*/
+const get_content_value = (i, current_value, self) => {
+
+	const mode					= self.mode
+	const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
+	const element_type			= (multi_line===true) ? 'textarea' :'input'
+	const is_inside_tool		= self.is_inside_tool
+
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type	: element_type,
+			type			: 'text',
+			class_name		: 'input_value',
+			dataset			: { key : i },
+			value			: current_value,
+			parent			: content_value,
+			placeholder 	: (current_value) ? '' : self.data.fallback_value[i]
+		})
+
+	// button remove
+		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
+			const button_remove = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button remove hidden_button',
+				dataset			: { key : i },
+				parent			: li
+			})
+		}
+
+
+	return content_value
+}//end input_element
 
 
 
@@ -296,51 +332,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* INPUT_ELEMENT
-* @return DOM node li
-*/
-const get_input_element_edit = (i, current_value, inputs_container, self) => {
-
-	const mode					= self.mode
-	const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line')) ? self.context.properties.multi_line : false
-	const element_type			= (multi_line===true) ? 'textarea' :'input'
-	const is_inside_tool		= self.is_inside_tool
-	const with_lang_versions	= self.context.properties.with_lang_versions || false
-
-
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			parent			: inputs_container
-		})
-
-	// input field
-		const input = ui.create_dom_element({
-			element_type	: element_type,
-			type			: 'text',
-			class_name		: 'input_value',
-			dataset			: { key : i },
-			value			: current_value,
-			parent			: li,
-			placeholder 	: (current_value) ? '' : self.data.fallback_value[i]
-		})
-
-	// button remove
-		if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
-			const button_remove = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button remove hidden_button',
-				dataset			: { key : i },
-				parent			: li
-			})
-		}
-
-
-	return li
-}//end input_element
-
-

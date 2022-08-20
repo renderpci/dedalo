@@ -42,6 +42,8 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// add events
 		//add_events(self, wrapper)
@@ -63,6 +65,7 @@ const get_content_data_edit = function(self) {
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
+	// section_id value
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_id',

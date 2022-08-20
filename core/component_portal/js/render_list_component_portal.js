@@ -60,7 +60,8 @@ render_list_component_portal.prototype.list = async function(options) {
 		// columns_map
 			const columns_map = await self.columns_map
 
-		const fragment = new DocumentFragment()
+		// fragment container
+			const fragment = new DocumentFragment()
 
 		// list_body
 			const list_body = ui.create_dom_element({
@@ -109,6 +110,9 @@ render_list_component_portal.prototype.list = async function(options) {
 			const wrapper = ui.component.build_wrapper_list(self, {})
 			wrapper.classList.add('portal')
 			wrapper.appendChild(fragment)
+			// set pointers
+			wrapper.content_data	= content_data
+			wrapper.list_body		= list_body
 
 		// events
 			// add_events(self, wrapper)
@@ -159,5 +163,3 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
-
-

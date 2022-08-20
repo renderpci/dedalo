@@ -632,7 +632,8 @@
 		// color: @color_grey_dark; // #9e9e9e;
 		color: @color_grey_ultradark; // #353535
 		display: grid;
-		grid-template-rows: @component_label_height auto;
+		// grid-template-rows: @component_label_height auto;
+		grid-template-rows: @component_label_height minmax(auto, 100%);
 		// grid-column: 1 / span 10; // default width is 100% (10 columns of 10)
     	align-content: start;
 
@@ -1179,93 +1180,6 @@
 		// 	// font-size: 10px;
 		// 	// font-weight: 300;
 		// }
-
-
-
-// ul inside content data. ???????????? REVIEW (!)
-	// ul
-	.inputs_container {
-		&.branch {
-			width: 100%;
-		}
-
-		.wrapper_component >.content_data & {
-			//background-color: #74D6BA;
-			display: flex;
-			flex-wrap: wrap;
-			height: inherit;
-			max-height: inherit;
-
-			li {
-				//background-color: #D7B274;
-				//padding-right: 1em;
-				display: flex;
-				flex: 1 1 50%;
-				// flex-wrap: nowrap;
-				flex-wrap: wrap;
-				line-height: 1em;
-				align-items: center;
-				max-height: inherit;
-
-				// grouper cases (filter)
-				&.grouper {
-					flex-wrap: wrap;
-					padding-bottom: 0.25em;
-					margin-left: 0;
-					padding: 0;
-
-					li {
-						flex: 0 0 100%;
-						padding: 0.25em;
-						// padding-left: 1em;
-						width: 100%;
-						// height: 100%;
-						height: inherit;
-						font-size: 0.90em;
-					}
-
-					>.grouper_label {
-						width: auto;
-						padding-left: 0;
-						padding-top: 0.25em;
-						padding-bottom: 0.25em;
-						padding-right: 1.66rem;
-						opacity: 0.7;
-						font-size: 0.80em;
-					}
-
-					input {
-						vertical-align: text-top;
-					}
-				}
-
-				label {
-					//padding-left: 0.15em;
-					//padding-right: 0.5em;
-					//vertical-align: baseline;
-				}
-
-				input {
-					margin-right: 0.33em;
-				}
-
-				// q_operator
-				>input.q_operator {
-					width: 3em;
-					text-align: center;
-				}
-			}
-
-			// &.inputs_container >li {
-			>li {
-				position: relative;
-				flex: 1 1 100%;
-				align-items: baseline;
-				z-index: 0;
-				//padding-bottom: 0.25em;
-			}
-		}
-	}//end .inputs_container
 
 
 

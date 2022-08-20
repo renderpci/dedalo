@@ -98,12 +98,12 @@ const add_events = function(self, wrapper) {
 
 					const changed_data = Object.freeze({
 						action	: 'insert',
-						key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
+						key		: self.data.value.length, //self.data.value.length>0 ? self.data.value.length : 1,
 						value	: null
 					})
 					self.change_value({
-						changed_data : changed_data,
-						refresh 	 : false
+						changed_data	: changed_data,
+						refresh			: false
 					})
 					.then((save_response)=>{
 						// event to update the dom elements of the instance
@@ -122,13 +122,12 @@ const add_events = function(self, wrapper) {
 					const changed_data = Object.freeze({
 						action	: 'remove',
 						key		: e.target.dataset.key,
-						value	: null,
-						refresh : true
+						value	: null
 					})
 					self.change_value({
-						changed_data : changed_data,
-						label 		 : e.target.previousElementSibling.value,
-						refresh 	 : true
+						changed_data	: changed_data,
+						label			: e.target.previousElementSibling.value,
+						refresh			: true
 					})
 					.then(()=>{
 					})
@@ -298,7 +297,7 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 			})
 
 	// button remove
-		// if((mode==='edit' || 'edit_in_list') && !is_inside_tool){
+		// if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool){
 		// 	const button_remove = ui.create_dom_element({
 		// 		element_type	: 'div',
 		// 		class_name 		: 'button remove display_none',

@@ -419,7 +419,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 					// save
 						const changed_data = Object.freeze({
 							action	: 'insert',
-							key 	: 0,
+							key		: 0,
 							value	: new_value
 						})
 						const api_response_save = await old_instance.change_value({

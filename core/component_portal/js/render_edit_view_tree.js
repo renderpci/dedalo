@@ -482,5 +482,3 @@ const render_references = function(ar_references) {
 
 	return fragment
 }//end render_references
-
-

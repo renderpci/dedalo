@@ -156,11 +156,10 @@ component_text_area.prototype.init = async function(options) {
 					const caller	= options.caller
 
 				// short vars
-					const key					= 0; // key (only one editor is available but component could support multiple)
-					const current_text_editor	= self.text_editor[key]
-					const inputs_container		= self.node.querySelector('.inputs_container'); // (first ul)
-					const component_container	= inputs_container.querySelector('li'); // li (first li)
-					const button				= component_container.querySelector(".create_fragment") // could exists or not
+					const key						= 0; // key (only one editor is available but component could support multiple)
+					const current_text_editor		= self.text_editor[key]
+					const component_container		= self.node.content_data[key]
+					const button					= component_container.querySelector(".create_fragment") // could exists or not
 					// console.log("selection.length:",selection.length);
 
 				if (selection.length<1) {
@@ -283,7 +282,7 @@ component_text_area.prototype.save_value = function(key, value) {
 	const changed_data = Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: (new_data.length>0) ? new_data : null,
+		value	: (new_data.length>0) ? new_data : null
 	})
 	const js_promise = self.change_value({
 		changed_data	: changed_data,

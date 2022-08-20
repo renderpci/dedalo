@@ -42,6 +42,8 @@ render_search_component_publication.prototype.search = async function(options) {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// add events
 		add_events(self, wrapper)
@@ -151,51 +153,17 @@ const add_events = function(self, wrapper) {
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-	// const DES_get_content_data = function(self) {
-
-	// 	// short vars
-	// 		const mode	= self.mode
-	// 		const value	= self.data.value || []
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// inputs_container
-	// 		// const inputs_container = ui.create_dom_element({
-	// 		// 	element_type	: 'ul',
-	// 		// 	class_name 		: 'inputs_container',
-	// 		// 	parent 			: fragment
-	// 		// })
-
-	// 	// build values
-	// 		const inputs_value = (value.length<1) ? [""] : value
-	// 		const value_length = inputs_value.length
-	// 		for (let i = 0; i < value_length; i++) {
-	// 			const input_element = get_input_element(i, inputs_value[i], self)
-	// 			fragment.appendChild(input_element)
-	// 		}
-
-	// 	// content_data
-	// 		const content_data = ui.component.build_content_data(self)
-	// 			  content_data.classList.add("nowrap")
-	// 			  content_data.appendChild(fragment)
-
-
-	// 	return content_data
-	// }//end get_content_data
-
-
-
-/**
-* GET_CONTENT_DATA
-* @return DOM node content_data
-*/
 const get_content_data = function(self) {
 
-	// const value		= self.data.value
-	const mode		= self.mode
-	const datalist	= self.data.datalist || []
+	// short vars
+		// const value	= self.data.value
+		const mode		= self.mode
+		const datalist	= self.data.datalist || []
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self, {
+			autoload : false
+		})
 
 	// q operator (search only)
 		const q_operator		= self.data.q_operator
@@ -204,28 +172,15 @@ const get_content_data = function(self) {
 			type			: 'text',
 			value			: q_operator,
 			class_name		: 'q_operator',
-			parent			: fragment
-		})
-
-	// inputs_container ul
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container '+mode,
-			parent			: fragment
+			parent			: content_data
 		})
 
 	// values (inputs)
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 			const input_element = get_input_element(i, datalist[i], self)
-			inputs_container.appendChild(input_element)
+			content_data.appendChild(input_element)
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : false
-		})
-		content_data.appendChild(fragment)
 
 
 	return content_data
@@ -235,35 +190,43 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element div_switcher
+* @return DOM node content_value
 */
 const get_input_element = (i, current_value, self) => {
 
-	const input_id = self.id +"_"+ i + "_" + new Date().getUTCMilliseconds()
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const label				= datalist_item.label
+		const datalist_value	= Object.assign({
+			from_component_tipo : self.tipo
+		}, datalist_item.value)
 
-	const value				= self.data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value
-	const label				= datalist_item.label
-	const datalist_value	= Object.assign({
-								from_component_tipo : self.tipo
-							  }, datalist_item.value)
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// input_label
+		const input_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'label',
+			inner_html		: label,
+			parent			: content_value
 		})
 
 	// input checkbox
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',
-			id				: input_id,
 			name			: self.id,
 			dataset			: { key : i },
 			value			: JSON.stringify(datalist_value),
-			parent			: li
+			parent			: input_label
 		})
+		input_label.prepend(input)
 
 	// checked option set on match
 		for (let j = 0; j < value_length; j++) {
@@ -275,46 +238,6 @@ const get_input_element = (i, current_value, self) => {
 			}
 		}
 
-	// input_label
-		const label_string = (SHOW_DEBUG===true) ? (label + ' [' + datalist_value.section_id + ']') : label
-		const input_label = ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: label_string,
-			parent			: li
-		})
-		input_label.setAttribute("for", input_id)
 
-	// // div_switcher
-	// 	const div_switcher = ui.create_dom_element({
-	// 		element_type	: 'label',
-	// 		class_name		: 'switcher_publication text_unselectable',
-	// 		// parent		: li
-	// 	})
-
-	// // input checkbox
-	// 	const input = ui.create_dom_element({
-	// 		element_type	: 'input',
-	// 		type			: 'checkbox',
-	// 		// class_name	: 'ios-toggle',
-	// 		// id			: input_id,
-	// 		dataset			: { key : i },
-	// 		value			: JSON.stringify(current_value),
-	// 		parent			: div_switcher
-	// 	})
-	// 	// set checked from current value
-	// 	if (current_value.section_id==1) {
-	// 		input.setAttribute("checked", true)
-	// 	}
-
-	// // switch_label
-	// 	const switch_label = ui.create_dom_element({
-	// 		element_type	: 'i',
-	// 		// class_name	: 'checkbox-label',
-	// 		parent			: div_switcher
-	// 	})
-	// 	// switch_label.setAttribute("for",input_id)
-
-	return li
+	return content_value
 }//end get_input_element
-
-

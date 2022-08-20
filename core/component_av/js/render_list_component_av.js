@@ -10,6 +10,7 @@
 	import {object_to_url_vars} from '../../common/js/utils/index.js'
 
 
+
 /**
 * RENDER_LIST_COMPONENT_AV
 * Manages the component's logic and appearance in client side
@@ -40,13 +41,14 @@ render_list_component_av.prototype.list = async function() {
 		wrapper.classList.add('media')
 
 	// url
-		const posterframe_url	= data.posterframe_url || DEDALO_CORE_URL + "/themes/default/0.jpg"
-		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+		// const posterframe_url	= data.posterframe_url || DEDALO_CORE_URL + '/themes/default/0.jpg'
+		const posterframe_url		= data.posterframe_url || page_globals.fallback_image
+		const url					= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
 		const image = ui.create_dom_element({
-			element_type	: "img",
-			class_name		: 'loading',
+			element_type	: 'img',
+			class_name		: 'loading link',
 			parent			: wrapper
 		})
 		// image.loading = 'lazy'
@@ -54,9 +56,9 @@ render_list_component_av.prototype.list = async function() {
 		// ui.component.add_image_fallback(image)
 
 	// image background color
-		image.addEventListener("load", set_bg_color, false)
+		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
-			this.removeEventListener("load", set_bg_color, false)
+			this.removeEventListener('load', set_bg_color, false)
 			ui.set_background_image(this, this)
 		}
 

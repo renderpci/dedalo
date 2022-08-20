@@ -36,64 +36,12 @@ render_search_component_number.prototype.search = async function() {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
-	// events (delegated)
-		add_events(self, wrapper)
 
 	return wrapper
 }//end search
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', (e) => {
-			// e.stopPropagation()
-
-			// input_value. The standard input for the value of the component
-				if (e.target.matches('input[type="text"].input_value')) {
-
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: (e.target.value.length>0) ? self.fix_number_format(e.target.value) : null,
-					})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data)
-				// set data.changed_data. The change_data to the instance
-					self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-
-					return true
-				}
-
-			// q_operator. get the input value of the q_operator
-				// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
-				// like; radio_button, check_box, date, autocomplete, etc
-				// (!) Not used in input text
-				if (e.target.matches('input[type="text"].q_operator')) {
-
-					// input. Get the input node that has changed
-						const input = e.target
-					// value
-						const value = (input.value.length>0) ? input.value : null
-					// q_operator. Fix the data in the instance previous to save
-						self.data.q_operator = value
-					// publish search. Event to update the dom elements of the instance
-						event_manager.publish('change_search_element', self)
-
-					return true
-				}
-		})
-
-	return true
-}//end add_events
 
 
 
@@ -105,7 +53,9 @@ const get_content_data = function(self) {
 
 	const value = self.data.value
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+			  content_data.classList.add("nowrap")
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -114,21 +64,29 @@ const get_content_data = function(self) {
 			type			: 'text',
 			value			: q_operator,
 			class_name		: 'q_operator',
-			parent			: fragment
+			parent			: content_data
+		})
+		input_q_operator.addEventListener('change', function() {
+
+			// value
+				const value = this.value
+			// q_operator. Fix the data in the instance previous to save
+				self.data.q_operator = value
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+
+			return true
 		})
 
 	// values (inputs)
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element = get_input_element(i, inputs_value[i])
-			fragment.appendChild(input_element)
+			const input_element_node = get_input_element(i, inputs_value[i], self)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
-			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -140,16 +98,38 @@ const get_content_data = function(self) {
 * GET_INPUT_ELEMENT
 * @return dom element input
 */
-const get_input_element = (i, current_value) => {
+const get_input_element = (i, current_value, self) => {
 
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'text',
+			type			: 'number',
 			class_name		: 'input_value',
 			dataset			: { key : i },
 			value			: current_value
 		})
+		input.addEventListener('change', function() {
+
+			const safe_value = (this.value.length>0)
+				? self.fix_number_format(this.value)
+				: null
+
+			// changed_data
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: i,
+					value	: safe_value
+				})
+
+			// update the instance data (previous to save)
+				self.update_data_value(changed_data)
+			// set data.changed_data. The change_data to the instance
+				self.data.changed_data = changed_data
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
+
+			return true
+		})//end event change
 
 
 	return input

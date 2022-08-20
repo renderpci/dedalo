@@ -36,7 +36,7 @@ render_edit_component_security_access.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -49,6 +49,8 @@ render_edit_component_security_access.prototype.edit = async function(options) {
 			content_data : content_data,
 			buttons 	 : buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -57,10 +59,10 @@ render_edit_component_security_access.prototype.edit = async function(options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data = async function(self) {
 
 	// short vars
 		const data		= self.data || {}
@@ -80,23 +82,34 @@ const get_content_data_edit = async function(self) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add("nowrap")
 
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container invisible99',
-			parent			: content_data
-		});
+	// content_value
+		// const i = 0;
+		// const content_value = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'content_value',
+		// 	parent			: content_data
+		// })
+		// // set pointers
+		// content_data[i] = content_value
 
-	// root level nodes
-		const root_level_items = datalist.filter(el => el.parent==='dd1')
-		// create node and add to tree_object
-		const tree_nodes = await render_tree_item(root_level_items, datalist, value, self) // return li node
-		// append result fragment
-		inputs_container.appendChild(tree_nodes)
+	// tree
+		// ul tree_root
+			const ul = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'tree_root', // former 'inputs_container'
+				parent			: content_data
+			})
+
+		// root level nodes
+			const root_level_items = datalist.filter(el => el.parent==='dd1')
+
+		// tree_nodes. create nodes and add to tree_object
+			const tree_nodes = await render_tree_item(root_level_items, datalist, value, self) // return li nodes
+			ul.appendChild(tree_nodes)
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 

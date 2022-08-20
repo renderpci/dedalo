@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 
 
 
@@ -48,9 +49,9 @@ render_edit_component_av.prototype.edit = async function(options) {
 			content_data : content_data,
 			buttons 	 : buttons
 		})
-
-	// set pointer to content_data
+		// set pointers to content_data
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end  edit
@@ -63,17 +64,40 @@ render_edit_component_av.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
-	// video_container
-		const video_container = ui.create_dom_element({
+	// values (inputs)
+		const value			= self.data.value
+		const inputs_value	= value // is array
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set pointer
+			content_data[i] = content_value
+		}
+
+
+	return content_data
+}//end  get_content_data_edit
+
+
+
+/**
+* GET_CONTENT_VALUE
+* @return DOM node content_value
+*/
+const get_content_value = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'video_container',
-			parent 			: fragment
+			class_name 		: 'content_value'
 		})
 
 	// urls
-		// posterframe
+		// posterframe url
 			const posterframe_url = self.data.posterframe_url
 		// media url from data.datalist based on selected context quality
 			const quality	= self.quality || self.context.quality
@@ -83,38 +107,45 @@ const get_content_data_edit = function(self) {
 				? file_info.url
 				: null
 
-		// background video_container
-			if (posterframe_url) {
-				const image = ui.create_dom_element({
-					element_type: 'img'
-				})
-				// image background color
-				image.addEventListener('load', set_bg_color, false)
-				function set_bg_color() {
-					this.removeEventListener('load', set_bg_color, false)
-					ui.set_background_image(this, video_container)
-					image.remove()
-				}
-				image.src = posterframe_url
-			}
+		// background content_value. Load the posterframe image only to get the bg color, not for show it
+			// if (posterframe_url) {
+			// 	const image = ui.create_dom_element({
+			// 		element_type: 'img'
+			// 	})
+			// 	// image background color
+			// 	image.addEventListener('load', set_bg_color, false)
+			// 	function set_bg_color() {
+			// 		this.removeEventListener('load', set_bg_color, false)
+			// 		ui.set_background_image(this, content_value)
+			// 		image.remove()
+			// 	}
+			// 	image.src = posterframe_url
+			// }
 
+		// posterframe image
+			const posterframe = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'posterframe',
+				src				: posterframe_url,
+				parent			: content_value
+			})
 
 	// build_video_node
 		const build_video_node = function() {
 
 			// source tag
-				const source	= document.createElement("source")
-				source.type		= "video/mp4"
+				const source	= document.createElement('source')
+				source.type		= 'video/mp4'
 				source.src		= video_url
 
 			// video tag
-				const video		= document.createElement("video")
+				const video		= document.createElement('video')
 				if (posterframe_url) {
 					video.poster = posterframe_url
 				}
 				video.controls	= true
-				video.classList.add("posterframe")
-				video.setAttribute("tabindex", 0)
+				video.classList.add('posterframe')
+				video.setAttribute('tabindex', 0)
 				video.appendChild(source)
 
 			// keyup event
@@ -125,7 +156,7 @@ const get_content_data_edit = function(self) {
 
 			// append the video node to the instance
 				self.video = video
-				video_container.appendChild(video)
+				content_value.appendChild(video)
 
 			// event
 				// video.addEventListener('canplay', fn_canplay)
@@ -133,54 +164,48 @@ const get_content_data_edit = function(self) {
 				// 	// self.main_component.video.removeEventListener('canplay', fn_play);
 				// 	video.play()
 				// }
+
+			return video
 		}
 
-	// observers. Renders video node only when is visible
+	// video / posterframe cases
 		if (video_url) {
-			// observer. Set video node only when it is in DOM (to save browser resources)
-			const observer = new IntersectionObserver(function(entries) {
-				const entry = entries[1] || entries[0]
-				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-					observer.disconnect();
+			// observer. Set video node only when it is in viewport (to save browser resources)
+			when_in_viewport(
+				content_value, // node to observe
+				() => { // callback function
+					posterframe.remove()
 					build_video_node()
 				}
-			}, { threshold: [0] });
-			observer.observe(video_container);
+			)
 		}else{
 			// image default logo
-			const posterframe = ui.create_dom_element({
-				element_type	: 'img',
-				class_name		: 'posterframe',
-				src				: posterframe_url,
-				parent			: video_container
-			})
-			posterframe.addEventListener('mouseup',function(evt) {
-				evt.stopPropagation();
+			// const posterframe = ui.create_dom_element({
+			// 	element_type	: 'img',
+			// 	class_name		: 'posterframe',
+			// 	src				: posterframe_url,
+			// 	parent			: content_value
+			// })
+			posterframe.classList.add('link')
+			posterframe.addEventListener('mouseup',function(e) {
+				e.stopPropagation();
 
 				const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
 				// open_tool (tool_common)
 					open_tool({
 						tool_context	: tool_upload,
 						caller			: self
 					})
 			})
-
 		}
 
 	// quality_selector
 		const quality_selector = get_quality_selector(self)
-		fragment.appendChild(quality_selector)
+		content_value.appendChild(quality_selector)
 
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
-	// set the pointer. The data is not used to show the video node, so, the pointer is set to first position
-		content_data[0] = video_container
-
-	return content_data
-}//end  get_content_data_edit
+	return content_value
+}//end get_content_value
 
 
 
@@ -491,4 +516,3 @@ const get_quality_selector = (self) => {
 
 	// 	return video
 	// }//end  build_video_html5
-

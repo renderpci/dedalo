@@ -7,7 +7,7 @@
 	// background-color: #76fcc1 !important;
 	// z-index: 1;
 
-	&.edit {
+	&.edit{
 		>.content_data {
 			// background-color: #70c6f8;
 			min-height: @media_min_height;
@@ -15,6 +15,10 @@
 
 			>.content_value {
 				// align-items: initial;
+				height: 100%;
+				width: 100%;
+				position: relative;
+
 
 				// button save
 				>.button_save {
@@ -65,4 +69,27 @@
 
 		}
 	}//end .edit
+
+
+	&.search {
+		>.content_data {
+
+			// input q_operator
+			>.q_operator {
+				width: 3rem;
+				text-align: center;
+				margin-right: 0.5rem;
+			}
+
+			>.content_value {
+				width: calc(100% - 3.5rem);
+
+				// search input value
+				>.input_value {
+					width: 100%;
+				}
+			}
+
+		}
+	}//end &.search
 }//end .component_json

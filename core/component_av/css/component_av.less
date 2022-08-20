@@ -8,8 +8,8 @@
 	&.edit, &.player {
 
 		&.player {
-			display: block;
 			box-shadow: none;
+			display: block;
 
 			.label {
 				display: none;
@@ -25,7 +25,8 @@
 				min-height: unset;
 			}
 
-			.video_container {
+			// video_container
+			>.content_value {
 				background-color: #faf8fc;
 				height: 404px;
 				width: 100%;
@@ -60,32 +61,33 @@
 					.hilite(-1px);
 				}
 			}
-		}
 
-		.quality_selector {
-			margin: 0px;
-			position: absolute;
-			// bottom: 0;
-			// margin-left: 1em;
-			// width: calc(100% - 2em);
-			// margin-bottom: 1em;
-			// background-color: @color_grey_dark;
-			// opacity: 1;
-			// color: white;
-			top: 0.5rem;
-			width: 5rem;
-			right: 1rem;
-			height: 1.25rem;
-			font-size: 0.9rem;
-			border: none;
-			outline: none;
-			padding: 0;
+			.quality_selector {
+				margin: 0px;
+				position: absolute;
+				// bottom: 0;
+				// margin-left: 1em;
+				// width: calc(100% - 2em);
+				// margin-bottom: 1em;
+				// background-color: @color_grey_dark;
+				// opacity: 1;
+				// color: white;
+				top: 0.5rem;
+				width: 5rem;
+				right: 1rem;
+				height: 1.25rem;
+				font-size: 0.9rem;
+				border: 0px;
+				outline: none;
+				padding: 0px;
 
-			.fullscreen& {
-				width: auto !important;
+				.fullscreen& {
+					width: auto !important;
+				}
 			}
 		}
 	}//end .edit
+
 
 	// player av_control_buttons
 	.av_control_buttons {
@@ -131,26 +133,45 @@
 		}
 	}//end .av_control_buttons
 
-	&.viewer {
-		button{
-			&.download{
-				position:fixed;
-				right: 10px;
-				bottom: 10px;
-				z-index: 2;
-				width: 3em;
-				height: 3em;
-				padding: unset;
-				margin : unset;
 
-				&:before{
-					height: 1.5em;
-					width: 1.5em;
-					margin : unset;
-				}
+	&.viewer {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		background-color: #000000;
+
+		>.content_data {
+			height: unset;
+			width: 100%;
+			text-align: center;
+
+			video {
+				width: 100%;
 			}
 		}
 
-	}
+		// button download
+		.download {
+			bottom: 10px;
+			height: 3em;
+			position: fixed;
+			right: 10px;
+			width: 3em;
+			z-index: 2;
+			padding: unset;
+			margin: unset;
 
-}
+			&:before {
+				height: 1.5em;
+				width: 1.5em;
+				margin: unset;
+			}
+		}
+	}//end &.viewer
+
+
+}//end .component_av
