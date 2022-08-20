@@ -1,5 +1,5 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
-/*eslint no-undef: "error"*/
+/* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/* eslint no-undef: "error" */
 
 
 
@@ -7,11 +7,12 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags} from '../../../core/common/js/utils/index.js'
+	import {set_before_unload} from '../../common/js/events.js'
 
 
 
 /**
-* render_edit_component_iri
+* RENDER_EDIT_COMPONENT_IRI
 * Manage the components logic and appearance in client side
 */
 export const render_edit_component_iri = function() {
@@ -49,138 +50,12 @@ render_edit_component_iri.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
-	// add events
-		add_events(self, wrapper)
 
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-		// self.events_tokens.push(
-		// 	event_manager.subscribe('update_value_'+self.id, update_value)
-		// )
-		// function update_value (changed_data) {
-		// 	// change the value of the current dom element
-		// 	const changed_node = wrapper.querySelector('input[data-key="'+changed_data.key+'"][type="'+changed_data.type+'"]')
-		// 	changed_node.value = (changed_data.type==='text') ? changed_data.value.title : changed_data.value.iri
-		// }
-
-	// add element, subscription to the events
-		self.events_tokens.push(
-			event_manager.subscribe('add_element_'+self.id, add_element)
-		)
-		function add_element(changed_data) {
-		// change the value of the current dom element
-			const inputs_container	= wrapper.querySelector('.inputs_container')
-			const input_element		= get_input_element_edit(changed_data.key, changed_data.value, self)
-			inputs_container.appendChild(input_element)
-		}
-
-	//	// remove element, subscription to the events
-		//		self.events_tokens.push(
-		//			event_manager.subscribe('remove_element_'+self.id, remove_element)
-		//		)
-		//		async function remove_element(component) {
-		//			// change all elements inside of content_data
-		//			const new_content_data = await render_content_data(component)
-		//			// replace the content_data with the refresh dom elements (imputs, delete buttons, etc)
-		//			wrapper.childNodes[2].replaceWith(new_content_data)
-		//		}
-
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', (e) => {
-			// e.stopPropagation()
-
-			const target_type = (e.target.matches('input[type="text"].input_value'))? 'text':((e.target.matches('input[type="url"].input_value'))? 'url':'')
-			// input_value, type=text or url. The standard input for the value of the component
-			if (target_type==='text' || target_type==='url' ) {
-
-				//const value = self.set_value(self.selected_node, JSON.parse(e.target.dataset.key))
-				const value = self.set_value(wrapper, JSON.parse(e.target.dataset.key))
-
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: value, //(e.target.value.length>0) ? e.target.value : null,
-					type    : target_type
-				})
-				self.change_value({
-					changed_data : changed_data,
-					refresh 	 : false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
-
-				return true
-			}
-		})
-
-	// click event [mousedown]
-		wrapper.addEventListener("click", e => {
-
-			// insert
-			if (e.target.matches('.button.add')) {
-
-				const changed_data = Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
-					value	: null
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: true
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('add_element_'+self.id, changed_data)
-				})
-
-				return true
-			}
-
-			// remove
-			if (e.target.matches('.button.remove')) {
-
-				// force possible input change before remove
-				document.activeElement.blur()
-
-				const changed_data = Object.freeze({
-					action	: 'remove',
-					key		: e.target.dataset.key,
-					value	: null
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					label			: e.target.previousElementSibling.value,
-					refresh			: true
-				})
-				.then(()=>{
-				})
-
-				return true
-			}
-
-			if (e.target.matches('.button.link')) {
-
-				self.open_iri(e.target)
-
-				return true
-
-			}
-		})
-
-	return true
-}//end add_events
 
 
 
@@ -194,31 +69,199 @@ const get_content_data_edit = function(self) {
 	// const mode			= self.mode
 	// const is_inside_tool	= self.is_inside_tool
 
-	const fragment = new DocumentFragment()
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name 		: 'inputs_container',
-			parent 			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
 		const inputs_value	= (value.length<1) ? [{}] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const current_value = inputs_value[i]
-			const input_element = get_input_element_edit(i, current_value, self)
-			inputs_container.appendChild(input_element)
+			const content_value = get_content_value(i, current_value, self)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_CONTENT_VALUE
+* @return DOM node content_value
+*/
+const get_content_value = (i, current_value, self) => {
+
+	// current_value. (!) Fallback to {} because could be null when new blank value is added
+		current_value = current_value || {}
+
+	// short vars
+		const mode	= self.mode
+		const title	= current_value.title || ''
+		const iri	= current_value.iri || ''
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// placeholder. Strip label HTML tags
+		const placeholder_label = mode.indexOf('edit')!==-1
+			? (get_label.title || 'Tilte')
+			: null
+		const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
+
+	// input title field
+		const input_title = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_value',
+			placeholder		: placeholder_text,
+			value			: title,
+			parent			: content_value
+		})
+		input_title.addEventListener('change', function() {
+			update_value(self, i)
+		})
+		//end change
+		input_title.addEventListener('keyup', function(e) {
+			// page unload event
+			if (e.key!=='Enter') set_unload_state(self, i);
+		})//end keyup
+
+	if((mode==='edit' || mode==='edit_in_list')) {
+
+		// input iri field
+			const input_iri = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'url',
+				class_name		: 'input_value url',
+				placeholder		: 'http://',
+				pattern			: '(https?)?:\/\/.*\..+',
+				value			: iri,
+				parent			: content_value
+			})
+			input_iri.addEventListener('change', function() {
+				update_value(self, i)
+			})
+			//end change
+			input_iri.addEventListener('keyup', function(e) {
+				// page unload event
+				if (e.key!=='Enter') set_unload_state(self, i);
+			})//end keyup
+
+	// button remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button remove hidden_button',
+			parent			: content_value
+		})
+		button_remove.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			// force possible input change before remove
+			document.activeElement.blur()
+
+			const changed_data = Object.freeze({
+				action	: 'remove',
+				key		: i,
+				value	: null
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				label			: button_remove.previousElementSibling.value,
+				refresh			: true
+			})
+		})
+
+	// button link
+		const button_link = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button link hidden_button',
+			parent			: content_value
+		})
+		button_link.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			// open a new window
+				const url				= input_iri.value
+				const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
+				current_window.focus()
+		})
+	}//end if((mode==='edit' || mode==='edit_in_list'))
+
+
+	return content_value
+}//end get_content_value
+
+
+
+/**
+* UPDATE_VALUE
+* @return promise
+*/
+const update_value = function(self, i) {
+
+	// full object value built as:
+	// {
+	//		iri	  : iri_value,
+	//		title : title_value
+	// }
+	const full_value = self.build_value(i)
+
+	return new Promise(function(resolve){
+
+		// change_value
+		const changed_data = Object.freeze({
+			action	: 'update',
+			key		: i,
+			value	: full_value
+		})
+		self.change_value({
+			changed_data	: changed_data,
+			refresh			: false
+		})
+		.then(()=>{
+			// event to update the dom elements of the instance
+			event_manager.publish('update_value_'+self.id_base, changed_data)
+
+			resolve()
+		})
+	})
+}//end update_value
+
+
+
+/**
+* SET_UNLOAD_STATE
+* Page unload event
+* @return bool
+*/
+const set_unload_state = function(self, i) {
+
+	// values
+		const original_value	= self.db_data.value[i]
+		const new_value			= self.build_value(i)
+
+	// compares new and old full values by property
+		let equal = true
+		for(const prop in new_value) {
+			if (!original_value[prop] || original_value[prop]!==new_value[prop]) {
+				equal = false
+				break
+			}
+		}
+
+	// set_before_unload (bool)
+		set_before_unload(!equal)
+
+
+	return true
+}//end set_unload_state
 
 
 
@@ -229,17 +272,39 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	// short vars
+		const is_inside_tool	= self.is_inside_tool
+		const mode				= self.mode
 
-	const fragment = new DocumentFragment()
+	// DOM fragment
+		const fragment = new DocumentFragment()
 
 	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+		if(mode==='edit' || mode==='edit_in_list') { // && !is_inside_tool
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: fragment
+				class_name		: 'button add',
+				parent			: fragment
+			})
+			button_add_input.addEventListener('click', function(e) {
+				e.stopPropagation()
+
+				const changed_data = Object.freeze({
+					action	: 'insert',
+					key		: self.data.value.length,
+					value	: null
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: true
+				})
+				.then(()=>{
+					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
+					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					if (input_node) {
+						input_node.focus()
+					}
+				})
 			})
 		}
 
@@ -263,78 +328,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT_EDIT
-* @return DOM node li
-*/
-const get_input_element_edit = (i, current_value, self) => {
-
-	const mode				= self.mode
-	// const is_inside_tool	= self.is_inside_tool
-
-	// current_value. (!) Fallback to {} because could be null when new blank value is added
-		current_value = current_value || {}
-
-	const title	= current_value.title || ''
-	const iri	= current_value.iri || ''
-
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li'
-		})
-
-	// strip label HTML tags
-		const placeholder_label = mode.indexOf('edit')!==-1
-			? (get_label.title || 'Tilte')
-			: null
-		const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
-
-	// input title field
-		const input_title = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_value',
-			placeholder		: placeholder_text,
-			dataset			: { key : i },
-			value			: title,
-			parent			: li
-		})
-
-	if((mode==='edit' || mode==='edit_in_list')) {
-		// input iri field
-		const input_iri = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'url',
-			class_name		: 'input_value',
-			placeholder		: 'http://',
-			pattern			: '(https?)?:\/\/.*\..+',
-			dataset			: { key : i },
-			value			: iri,
-			parent			: li
-		})
-
-	// button remove
-		const button_remove = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button remove hidden_button',
-			dataset			: { key : i },
-			parent			: li
-		})
-
-	// button link
-		const button_link = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button link hidden_button',
-			dataset			: { key : i },
-			parent			: li
-		})
-	}//end if((mode==='edit' || 'edit_in_list'))
-
-
-	return li
-}//end get_input_element_edit
-
-
