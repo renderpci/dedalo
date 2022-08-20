@@ -237,7 +237,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			})
 		})//end change event
 
-		input.addEventListener('mousedown', function(e) {
+		content_value.addEventListener('mousedown', function(e) {
 			if (e.altKey===true) {
 				e.stopPropagation()
 				e.preventDefault()
