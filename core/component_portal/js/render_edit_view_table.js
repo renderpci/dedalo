@@ -17,7 +17,7 @@
 		render_column_component_info,
 		render_column_remove,
 		get_buttons,
-		add_events,
+		activate_autocomplete,
 		build_header,
 		render_references
 	} from './render_edit_component_portal.js'
@@ -124,8 +124,10 @@ render_edit_view_table.render = async function(self, options) {
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
 
-	// events
-		add_events(self, wrapper)
+	// autocomplete
+		wrapper.addEventListener('click', function() {
+			activate_autocomplete(self, wrapper)
+		})
 
 
 	return wrapper

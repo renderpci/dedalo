@@ -14,7 +14,6 @@
 	import {
 		render_column_component_info,
 		render_column_remove,
-		add_events,
 		render_references
 	} from './render_edit_component_portal.js'
 
@@ -72,10 +71,6 @@ render_edit_view_indexation.render = async function(self, options) {
 		)
 		// set pointers
 		wrapper.content_data = content_data
-
-	// events
-		add_events(self, wrapper)
-
 
 	return wrapper
 }//end render
