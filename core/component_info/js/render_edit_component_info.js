@@ -49,6 +49,8 @@ render_edit_component_info.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -63,32 +65,49 @@ render_edit_component_info.prototype.edit = async function(options) {
 export const get_content_data_edit = function(self) {
 
 	// sort vars
-		const is_inside_tool = self.is_inside_tool
+		// const is_inside_tool = self.is_inside_tool
 
-	const fragment = new DocumentFragment()
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
 		const widgets			= self.ar_instances
 		const widgets_length	= widgets.length
 		for (let i = 0; i < widgets_length; i++) {
-			const input_element_node = get_input_element_edit(i, widgets[i])
-			inputs_container.appendChild(input_element_node)
+			const content_value = get_content_value(i, widgets[i])
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_CONTENT_VALUE
+* @return DOM node content_value
+*/
+const get_content_value = (i, current_widget) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value ' + 'widget_item_' + current_widget.name
+		})
+
+	// widget
+		current_widget.build()
+		.then(async function(){
+			const widget_node = await current_widget.render()
+			content_value.appendChild(widget_node)
+		})
+
+
+	return content_value
+}//end get_content_value
 
 
 
@@ -115,33 +134,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* INPUT_ELEMENT
-* @return DOM node li
-*/
-const get_input_element_edit = (i, current_widget) => {
-
-	// const mode			= self.mode
-	// const is_inside_tool	= self.is_inside_tool
-	// const widget_name	= current_widget.widget
-	// const widget_value	= current_widget.value
-
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			class_name		: 'widget_item_' + current_widget.name,
-		})
-
-	// widget
-		current_widget.build()
-		.then(async function(){
-			const widget_node = await current_widget.render()
-			li.appendChild(widget_node)
-		})
-
-
-	return li
-}//end input_element
