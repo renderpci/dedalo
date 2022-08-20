@@ -396,7 +396,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 		const image_elements = cloned_text.querySelectorAll('img') // ! use querySelectorAll to avoid loop problems on i++
 		if (image_elements) {
 
-			const ar_svg_used_tag_id = [] // for renumerate on the fly
+			const ar_svg_used_tag_id = [] // for re-numerate on the fly
 
 			const image_elements_len = image_elements.length
 			for (let i = 0; i < image_elements_len; i++) {
@@ -459,18 +459,7 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 				temp_elements[i].remove()
 			}
 
-		// // remove <p> (and change </p> by <br>)
-		// 	temp_elements = cloned_text.getElementsByTagName("p")
-		// 	const p_len = temp_elements.length
-		// 	for (let i = p_len - 1; i >= 0; i--) {
-		// 		// Add tag <br> after </p>
-		// 		let new_element = document.createElement("br")
-		// 		temp_elements[i].parentNode.insertBefore(new_element, temp_elements[i].nextSibling);
-		// 		// Unwrap tag p content (removes tags and leaves only contents)
-		// 		unwrap_element(temp_elements[i]);
-		// 	}
-
-		// remove spaecial bogus elements (<br data-mce-bogus="1">)
+		// remove spacial bogus elements (<br data-mce-bogus="1">)
 			const bogus_elements		= cloned_text.querySelectorAll('[data-mce-bogus="1"]')
 			const bogus_elements_len	= bogus_elements.length
 			for (let i = bogus_elements_len - 1; i >= 0; i--) {
@@ -513,21 +502,6 @@ const unwrap_element = function(el) {
 
 	return true
 }//end unwrap_element
-
-
-
-/**
-* IS_TINY
-* @return bool
-*/
-	// const is_tiny = function(ed) {
-
-	// 	const is_tiny = (ed===null || typeof ed!=='object' || ed.type!=='setupeditor')
-	// 		? false // USING DIV AS EDITOR (LIKE STRUCT)
-	// 		: true  // USING TINYMCE EDITOR
-
-	// 	return is_tiny
-	// }//end is_tiny
 
 
 
@@ -683,14 +657,6 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 	const class_name = (type==='tc')
 		? type
 		: type_name
-
-	// const dataset = {
-	// 	type	: type,
-	// 	tag_id	: (type==='tc') ? "[TC_" + tag_id + "_TC]" : tag_id,
-	// 	state	: (type==='tc') ? 'n': state,
-	// 	label	: (type==='tc') ? tag_id : label,
-	// 	data	: (type==='tc') ? tag_id : data
-	// }
 
 	const view_tag_obj ={
 		src			: src,
@@ -864,8 +830,6 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 /*	Notes
 ----------------------------------------------------------------------------------------- */
 
-
-
 	/**
 	* CREATE_NEW_NOTE
 	* Build a new annotation when user clicks on text editor button
@@ -905,7 +869,7 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 ----------------------------------------------------------------------------------------- */
 
 /**
-	* CREATE_NEW_NOTE
+	* CREATE_GEO_TAG
 	* Build a new annotation when user clicks on text editor button
 	*
 	* @return
@@ -916,5 +880,4 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 		// get the text_editor sent by the event (button_note event)
 		const text_editor = options.text_editor
 
-			console.log("text_editor:---------------",text_editor);
 	}
