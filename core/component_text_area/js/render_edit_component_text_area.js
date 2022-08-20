@@ -207,10 +207,7 @@ const get_input_element = (i, current_value, self) => {
 	// set value
 		value_container.innerHTML = value
 
-	// direct. Init the editor now
-		// const text_editor = init_current_service_text_editor()
-
-	// user click init
+	// user click in the wrapper and init the editor
 		const auto_init_editor = self.auto_init_editor!==undefined
 			? self.auto_init_editor
 			: (self.render_level==='content') ? true : false
@@ -255,8 +252,6 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 	// custom_buttons
 	const custom_buttons = []
-
-	// const editor = get_editor()
 
 	// separator
 		custom_buttons.push({
