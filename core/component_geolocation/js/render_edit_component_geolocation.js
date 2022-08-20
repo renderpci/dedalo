@@ -50,9 +50,6 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 			buttons			: buttons
 		})
 
-	// events
-		add_events(wrapper, self)
-
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		// self.events_tokens.push(
 		// 	event_manager.subscribe('update_value_'+self.id, update_value)
@@ -79,102 +76,6 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 	return wrapper
 }//end edit
 
-
-
-/**
-* ADD_EVENTS
-* @return bool true
-*/
-const add_events = function(wrapper, self) {
-
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', async (e) => {
-			// e.stopPropagation()
-
-			// update lat
-				if (e.target.matches('input[type="text"][data-name="lat"]')) {
-					const key	= JSON.parse(e.target.dataset.key)
-					self.current_value[key].lat = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
-					//move the map to current value
-					self.map.panTo(new L.LatLng(self.current_value[key].lat, self.current_value[key].lon));
-				}
-
-			// update lon
-				if (e.target.matches('input[type="text"][data-name="lon"]')) {
-					const key	= JSON.parse(e.target.dataset.key)
-					self.current_value[key].lon = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
-					//move the map to current value
-					self.map.panTo(new L.LatLng(self.current_value[key].lat, self.current_value[key].lon));
-				}
-
-			// update zoom
-				if (e.target.matches('input[type="text"][data-name="zoom"]')) {
-					const key	= JSON.parse(e.target.dataset.key)
-					self.current_value[key].zoom = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
-					//zoom the map to current value
-					self.map.setZoom(self.current_value[key].zoom);
-				}
-
-			// update alt
-				if (e.target.matches('input[type="text"][data-name="alt"]')) {
-					const key	= JSON.parse(e.target.dataset.key)
-					self.current_value[key].alt = (e.target.value.length>0) ? JSON.parse(e.target.value) : null
-				}
-		})//end wrapper.addEventListener('change'
-
-	// click event [click]
-		wrapper.addEventListener("click", e => {
-			// e.stopPropagation()
-
-			// save
-				if (e.target.matches('.save')) {
-
-					// const key = JSON.parse(e.target.dataset.key)
-					const key = 0;
-
-					const changed_data = Object.freeze({
-						action		: 'update',
-						key			: key,
-						value		: self.current_value[key]
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('update_value_'+self.id, changed_data)
-					})
-
-					return true
-				}
-
-			// map_reload
-				if (e.target.matches('.map_reload')) {
-
-					const key = JSON.parse(e.target.dataset.key)
-					const li = e.target.parentNode.parentNode
-					const map_container = li.querySelector(".leaflet_map")
-
-					const lat	= self.data.value[key].lat
-					const lon	= self.data.value[key].lon
-					const zoom	= self.data.value[key].zoom
-
-					self.map.panTo([lat, lon],{animate:false,duration:0});
-			 		self.map.setZoom(zoom)
-
-					// Update input values
-						self.update_input_values({
-							lat		: lat,
-							lon		: lon,
-							zoom	: zoom,
-							alt		: self.data.value[key].alt,
-						},map_container)
-				}
-		})//end wrapper.addEventListener("click"
-
-	return true
-}//end add_events
 
 
 
@@ -235,19 +136,24 @@ export const get_input_element_edit = (i, current_value, self) =>{
 	// latitude
 		// label field latitude
 			ui.create_dom_element({
-				element_type 	: 'label',
-				inner_html 	: get_label['latitud'],
-				parent 		 	: inputs_container
+				element_type	: 'label',
+				inner_html		: get_label['latitud'],
+				parent			: inputs_container
 			})
 
 		// input field latitude
-			ui.create_dom_element({
+			const lat_node = ui.create_dom_element({
 				element_type 	: 'input',
 				type 		 	: 'text',
 				class_name 		: 'geo_active_input lat',
-				dataset 	 	: { name : 'lat' , key : i },
+				dataset 	 	: { name : 'lat' },
 				value 		 	: current_value.lat,
 				parent 		 	: inputs_container
+			})
+			lat_node.addEventListener('change', function() {
+				self.current_value[i].lat = (lat_node.value.length>0) ? JSON.parse(lat_node.value) : null
+				//move the map to current value
+				self.map.panTo(new L.LatLng(self.current_value[i].lat, self.current_value[key].lon));
 			})
 
 	// longitude
@@ -259,13 +165,18 @@ export const get_input_element_edit = (i, current_value, self) =>{
 			})
 
 		// input field longitude
-			ui.create_dom_element({
+			const lon_node = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				class_name		: 'geo_active_input lon',
-				dataset			: { name : 'lon' , key : i },
+				dataset			: { name : 'lon'},
 				value			: current_value.lon,
 				parent			: inputs_container
+			})
+			lon_node.addEventListener('change', function() {
+				self.current_value[i].lon = (lon_node.value.length>0) ? JSON.parse(lon_node.value) : null
+				//move the map to current value
+				self.map.panTo(new L.LatLng(self.current_value[i].lat, self.current_value[i].lon));
 			})
 
 	// zoom
@@ -277,13 +188,18 @@ export const get_input_element_edit = (i, current_value, self) =>{
 			})
 
 		// input field zoom
-			ui.create_dom_element({
+			const zoom_node = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				class_name		: 'geo_active_input zoom',
-				dataset			: { name : 'zoom' , key : i },
+				dataset			: { name : 'zoom' },
 				value			: current_value.zoom,
 				parent			: inputs_container
+			})
+			zoom_node.addEventListener('change', function() {
+				self.current_value[i].zoom = (zoom_node.value.length>0) ? JSON.parse(zoom_node.value) : null
+				//zoom the map to current value
+				self.map.setZoom(self.current_value[i].zoom);
 			})
 
 	// altitude
@@ -295,21 +211,41 @@ export const get_input_element_edit = (i, current_value, self) =>{
 			})
 
 		// input field altitude
-			ui.create_dom_element({
+			const alt_node = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				class_name		: 'altitude',
-				dataset			: { name : 'alt' , key : i },
+				dataset			: { name : 'alt' },
 				value			: current_value.alt,
 				parent			: inputs_container
 			})
+			alt_node.addEventListener('change', function() {
+				self.current_value[i].alt = (alt_node.value.length>0) ? JSON.parse(alt_node.value) : null
+			})
 
 	// refresh
-		ui.create_dom_element({
+		const refresh_node = ui.create_dom_element({
 			element_type	: 'span',
 			dataset			: { key : i },
 			parent			: inputs_container,
 			class_name		: 'map_reload'
+		})
+		refresh_node.addEventListener('click', function() {
+
+			const lat	= self.data.value[i].lat
+			const lon	= self.data.value[i].lon
+			const zoom	= self.data.value[i].zoom
+
+			self.map.panTo([lat, lon],{animate:false,duration:0});
+	 		self.map.setZoom(zoom)
+
+			// Update input values
+				self.update_input_values({
+					lat		: lat,
+					lon		: lon,
+					zoom	: zoom,
+					alt		: self.data.value[i].alt,
+				},map_container)
 		})
 
 	// map container
@@ -380,6 +316,24 @@ const get_buttons = (self) => {
 			element_type	: 'span',
 			class_name 		: 'button tool save',
 			parent 			: fragment
+		})
+		save.addEventListener('click', function() {
+			// const key = JSON.parse(e.target.dataset.key)
+			const key = 0;
+
+			const changed_data = Object.freeze({
+				action		: 'update',
+				key			: key,
+				value		: self.current_value[key]
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+			.then((save_response)=>{
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, changed_data)
+			})
 		})
 
 	// buttons container
