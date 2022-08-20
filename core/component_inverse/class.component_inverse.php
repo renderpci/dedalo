@@ -163,7 +163,7 @@ class component_inverse extends component_common {
 	* GET_INVERSE_VALUE
 	* @return array|null $inverse_value
 	*/
-	public function get_inverse_value(lobject $locator) : ?array {
+	public function get_inverse_value(object $locator) : ?array {
 
 		$tipo = $this->get_tipo();
 
