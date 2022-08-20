@@ -29,7 +29,7 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -44,9 +44,6 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
-
-	// add events
-		//add_events(self, wrapper)
 
 
 	return wrapper
