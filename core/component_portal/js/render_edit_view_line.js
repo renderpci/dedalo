@@ -14,7 +14,7 @@
 	import {
 		render_column_component_info,
 		render_column_remove,
-		add_events,
+		activate_autocomplete,
 		get_buttons,
 		render_references
 	} from './render_edit_component_portal.js'
@@ -75,104 +75,13 @@ render_edit_view_line.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// events
-		add_events(self, wrapper)
-
+	// autocomplete
+		wrapper.addEventListener('click', function() {
+			activate_autocomplete(self, wrapper)
+		})
 
 	return wrapper
 }//end render
-
-
-
-/**
-* ADD_EVENTS
-* @param component_portal instance self
-* @param DOM node wrapper
-* @return bool
-*/
-	// export const add_events = function(self, wrapper) {
-
-	// 	// click delegated
-	// 		wrapper.addEventListener("click", function(e){
-	// 			// e.stopPropagation()
-
-	// 			// ignore click on paginator
-	// 				// if (e.target.closest('.paginator')) {
-	// 				// 	return false
-	// 				// }
-
-	// 			// remove row
-	// 				if (e.target.matches('.button.remove')) {
-	// 					e.preventDefault()
-
-	// 					// label
-	// 						const children = e.target.parentNode.parentNode.children
-	// 						const ar_label = []
-	// 						for (let i = 0; i < children.length; i++) {
-	// 							if(children[i].textContent.length>0) {
-	// 								ar_label.push(children[i].textContent)
-	// 							}
-	// 						}
-	// 						const label = ar_label.join(', ')
-
-	// 					const changed_data = Object.freeze({
-	// 						action	: 'remove',
-	// 						key		: JSON.parse(e.target.dataset.key),
-	// 						value	: null
-	// 					})
-
-	// 					const changed = self.change_value({
-	// 						changed_data	: changed_data,
-	// 						label			: label,
-	// 						refresh			: false
-	// 					})
-	// 					changed.then(async (api_response)=>{
-
-	// 						// update pagination offset
-	// 							self.update_pagination_values('remove')
-
-	// 						// refresh
-	// 							await self.refresh()
-
-	// 						// check if the caller has active a tag_id
-	// 							if(self.active_tag){
-	// 								// filter component data by tag_id and re-render content
-	// 								self.filter_data_by_tag_id(self.active_tag)
-	// 							}
-
-	// 						// event to update the dom elements of the instance
-	// 							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-	// 					})
-
-	// 					return true
-	// 				}
-
-
-	// 			// activate service autocomplete. Enable the service_autocomplete when the user do click
-	// 				if(self.autocomplete_active===false){
-
-	// 					// set rqo
-	// 						self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-	// 						// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
-
-	// 					self.autocomplete = new service_autocomplete()
-	// 					self.autocomplete.init({
-	// 						caller	: self,
-	// 						wrapper : wrapper
-	// 					})
-	// 					.then(function(){
-	// 						self.autocomplete_active = true
-	// 						self.autocomplete.search_input.focus()
-	// 					})
-
-	// 					return true
-	// 				}
-
-	// 		})//end click event
-
-
-	// 	return true
-	// }//end add_events
 
 
 

@@ -743,158 +743,30 @@ export const get_buttons = (self) => {
 
 
 /**
-* ADD_EVENTS
+* activate_autocomplete
 * Shared across views
+* Activate service autocomplete. Enable the service_autocomplete when the user do click
 * @return bool
 */
-export const add_events = function(self, wrapper) {
+export const activate_autocomplete = async function(self, wrapper) {
 
-	// add element, subscription to the events
-	// show the add_value in the instance
-		//self.events_tokens.push(
-		//	event_manager.subscribe('add_element_'+self.id, add_element)
-		//)
-		//async function add_element(key) {
-		//	self.refresh()
-		//	// change the portal service to false and desactive it.
-		//
-		//	//if(self.portal_active===true){
-		//	//	self.portal.destroy()
-		//	//	self.portal_active = false
-		//	//	self.portal 		 = null
-		//	//}
-		//
-		//	//self.refresh();
-		//
-		//	// inset the new section_record into the ar_section_record and build the node of the new locator
-		//	//ar_section_record.push(current_section_record)
-		//	//const inputs_container 	= wrapper.querySelector('.inputs_container')
-		//	//get_input_element(current_section_record, inputs_container)
-		//}
+	if(self.autocomplete!==false && self.autocomplete_active!==undefined && self.autocomplete_active===false){
 
-	// subscribe to 'update_dom': if the DOM was changed by other DOM elements the value will be changed
-		//self.events_tokens.push(
-		//	event_manager.subscribe('update_dom_'+self.id, (value) => {
-		//		// change the value of the current dom element
-		//	})
-		//)
+		// set rqo
+			self.rqo_search	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
 
-	// click delegated
-		wrapper.addEventListener("click", function(e){
-			e.stopPropagation()
+		self.autocomplete = new service_autocomplete()
+		await self.autocomplete.init({
+			caller	: self,
+			wrapper : wrapper
+		})
 
-			// ignore click on paginator
-				// if (e.target.closest('.paginator')) {
-				// 	return false
-				// }
-
-			// remove row
-				// if (e.target.matches('.button.remove')) {
-				// 	e.preventDefault()
-				// 	e.stopPropagation()
-
-				// 	// label
-				// 		const children = e.target.parentNode.parentNode.children
-				// 		const ar_label = []
-				// 		for (let i = 0; i < children.length; i++) {
-				// 			if(children[i].textContent.length>0) {
-				// 				ar_label.push(children[i].textContent)
-				// 			}
-				// 		}
-				// 		const label = ar_label.join(', ')
-
-				// 	// changed_data
-				// 		const changed_data = Object.freeze({
-				// 			action	: 'remove',
-				// 			// key	: JSON.parse(e.target.dataset.key),
-				// 			key		: JSON.parse(e.target.dataset.paginated_key),
-				// 			value	: null
-				// 		})
-
-				// 	// remove_dialog. User must to confirm the remove action to continue
-				// 	// On true, data pagination offset is changed
-				// 		const remove_dialog = function() {
-
-				// 			const msg = SHOW_DEBUG
-				// 				? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
-				// 				: `Sure to remove value: ${label} ?}`
-
-				// 			if( !confirm(msg) ) {
-				// 				return false
-				// 			}
-
-				// 			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
-				// 				const key = parseInt(e.target.dataset.key)
-				// 				if (key===0 && self.data.pagination.offset>0) {
-				// 					const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
-				// 					// set before exec API request on Save
-				// 					self.data.pagination.offset = next_offset>0
-				// 						? next_offset
-				// 						: 0
-				// 				}
-
-				// 			return true
-				// 		}
-
-				// 	// change_value (implies saves too)
-				// 		const changed = self.change_value({
-				// 			changed_data	: changed_data,
-				// 			label			: label,
-				// 			refresh			: false,
-				// 			remove_dialog	: remove_dialog
-				// 		})
-				// 		changed.then(async (response)=>{
-
-				// 			// the user has selected cancel from delete dialog
-				// 				if (response===false) {
-				// 					return
-				// 				}
-
-				// 			// update pagination offset
-				// 				self.update_pagination_values('remove')
-
-				// 			// refresh
-				// 				await self.refresh({
-				// 					build_autoload : false
-				// 				})
-
-				// 			// check if the caller has active a tag_id
-				// 				if(self.active_tag){
-				// 					// filter component data by tag_id and re-render content
-				// 					self.filter_data_by_tag_id(self.active_tag)
-				// 				}
-
-				// 			// event to update the DOM elements of the instance
-				// 				event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-				// 		})
-
-				// 	return true
-				// }//end if (e.target.matches('.button.remove')) {
-
-			// activate service autocomplete. Enable the service_autocomplete when the user do click
-				if(self.autocomplete!==false && self.autocomplete_active!==undefined && self.autocomplete_active===false){
-
-					// set rqo
-						self.rqo_search		= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-						// self.rqo.choose	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
-
-					self.autocomplete = new service_autocomplete()
-					self.autocomplete.init({
-						caller	: self,
-						wrapper : wrapper
-					})
-					.then(function(){
-						self.autocomplete_active = true
-						// self.autocomplete.search_input.focus()
-					})
-
-					return true
-				}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
-		})//end click event
-
+		self.autocomplete_active = true
+		// self.autocomplete.search_input.focus()
+	}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
 
 	return true
-}//end add_events
+}//end activate_autocomplete
 
 
 
