@@ -50,9 +50,6 @@ render_search_component_radio_button.prototype.search = async function() {
 */
 const get_content_data_search = function(self) {
 
-	// fix non value scenarios
-	self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// short vars
 		const mode		= self.mode
 		const datalist	= self.data.datalist || []
@@ -104,7 +101,6 @@ const get_input_element = (i, current_value, self) => {
 		const value_length		= value.length
 		const datalist_item		= current_value
 		const label				= datalist_item.label
-		// const section_id		= datalist_item.section_id
 		const datalist_value	= Object.assign({
 			from_component_tipo : self.tipo
 		}, datalist_item.value)
@@ -116,7 +112,6 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// label
-		// const label_string = (SHOW_DEBUG===true) ? (label + ' [' + section_id + ']') : label
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'label',
@@ -128,7 +123,7 @@ const get_input_element = (i, current_value, self) => {
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',
-			name			: 'self.id'
+			name			: self.id,
 		})
 		input_label.prepend(input)
 		input.addEventListener('change', function() {
@@ -147,10 +142,10 @@ const get_input_element = (i, current_value, self) => {
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
 		})// end change event
-		content_value.addEventListener('mousedown', function(e) {
+		content_value.addEventListener('click', function(e) {
 			if (e.altKey===true) {
-				e.stopPropagation()
-				e.preventDefault()
+				// e.stopPropagation()
+				// e.preventDefault()
 
 				// remove checked state
 					input.checked = false
@@ -168,11 +163,7 @@ const get_input_element = (i, current_value, self) => {
 					// value = null
 
 				// update the instance data (previous to save)
-					self.change_value({
-						changed_data	: changed_data,
-						label			: self.get_checked_value_label(),//'All',
-						refresh			: false
-					})
+					self.update_data_value(changed_data)
 				// set data.changed_data. The change_data to the instance
 					self.data.changed_data = changed_data
 				// publish search. Event to update the dom elements of the instance
