@@ -10,7 +10,7 @@
 
 
 /**
-* render_mini_component_info
+* RENDER_MINI_COMPONENT_INFO
 * Manages the component's logic and apperance in client side
 */
 export const render_mini_component_info = function() {
@@ -19,8 +19,9 @@ export const render_mini_component_info = function() {
 }//end render_mini_component_info
 
 
+
 /**
-* INI
+* MINI
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node wrapper
 */
@@ -44,5 +45,3 @@ render_mini_component_info.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-

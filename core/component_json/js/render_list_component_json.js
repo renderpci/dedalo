@@ -16,7 +16,7 @@
 export const render_list_component_json = function() {
 
 	return true
-}; //end render_list_component_json
+}//end render_list_component_json
 
 
 
@@ -40,7 +40,7 @@ render_list_component_json.prototype.list = function() {
 
 
 	return wrapper
-}; //end list
+}//end list
 
 
 

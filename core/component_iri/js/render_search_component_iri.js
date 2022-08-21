@@ -119,7 +119,6 @@ const get_content_value = (i, current_value, self) => {
 					key		: i,
 					value	: parsed_value
 				})
-				console.log('changed_data:', changed_data);
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data)

@@ -29,7 +29,7 @@ render_edit_component_info.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// widgets load

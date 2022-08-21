@@ -67,15 +67,12 @@ const get_content_data = function(self) {
 			parent			: content_data
 		})
 		input_q_operator.addEventListener('change', function() {
-
 			// value
 				const value = this.value
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-
-			return true
 		})
 
 	// values (inputs)
@@ -126,8 +123,6 @@ const get_input_element = (i, current_value, self) => {
 				self.data.changed_data = changed_data
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-
-			return true
 		})//end event change
 
 

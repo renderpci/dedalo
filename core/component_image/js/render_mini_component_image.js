@@ -36,15 +36,15 @@ render_mini_component_image.prototype.mini = function() {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// url
-		const quality		= "thumb"
-		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= (typeof url_object==="undefined")
-			? DEDALO_CORE_URL + "/themes/default/0.jpg"
-			: url_object.url
+		const quality		= 'thumb'
+		const url_object	= datalist.find(item => item.quality===quality)
+		const url			= url_object
+			? url_object.url
+			: DEDALO_CORE_URL + '/themes/default/0.jpg'
 
 	// image
 		ui.create_dom_element({
-			element_type	: "img",
+			element_type	: 'img',
 			src				: url,
 			parent			: wrapper
 		})
@@ -52,6 +52,4 @@ render_mini_component_image.prototype.mini = function() {
 
 
 	return wrapper
-}//end list
-
-
+}//end mini

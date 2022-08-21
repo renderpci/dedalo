@@ -62,9 +62,9 @@ export const component_input_text = function(){
 	component_input_text.prototype.update_datum			= component_common.prototype.update_datum
 	component_input_text.prototype.change_value			= component_common.prototype.change_value
 	component_input_text.prototype.build_rqo			= common.prototype.build_rqo
-	// component_input_text.prototype.build_rqo_show		= common.prototype.build_rqo_show
-	// component_input_text.prototype.build_rqo_search		= common.prototype.build_rqo_search
-	// component_input_text.prototype.build_rqo_choose		= common.prototype.build_rqo_choose
+	// component_input_text.prototype.build_rqo_show	= common.prototype.build_rqo_show
+	// component_input_text.prototype.build_rqo_search	= common.prototype.build_rqo_search
+	// component_input_text.prototype.build_rqo_choose	= common.prototype.build_rqo_choose
 
 	// render
 	component_input_text.prototype.list					= render_list_component_input_text.prototype.list
@@ -100,7 +100,7 @@ component_input_text.prototype.init = async function(options) {
 */
 component_input_text.prototype.active = function() {
 
-	//console.log("Yujuu! This is my component custom active test triggered after ui.active. id:", this.id )
+	// console.log("Yujuu! This is my component custom active test triggered after ui.active. id:", this.id )
 
 	return true
 }//end active
@@ -119,8 +119,15 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 	const self = this
 
-	if (new_value.length<1) return false
-return true
+	if (new_value.length<1) {
+		return false
+	}
+
+	// (!) UNFINISHED METHOD. STOP HERE !
+	return true
+
+
+
 	// const unique_config = self.context.properties.unique
 
 	// search item rebuild filter q param and others

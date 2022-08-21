@@ -30,14 +30,14 @@ render_edit_component_html_text.prototype.edit = async function(options) {
 
 	const self = this
 
+	// options
+		const render_level = options.render_level || 'full'
+
  	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	// render_level
-		const render_level = options.render_level || 'full'
-
-	//load
-		//await self.init_editor()
+	// load
+		// await self.init_editor()
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -53,11 +53,13 @@ render_edit_component_html_text.prototype.edit = async function(options) {
 			content_data : content_data,
 			buttons 	 : buttons
 		})
-	// set pointers
+		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end edit
+
 
 
 /**
@@ -88,45 +90,10 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
-
-	const fragment = new DocumentFragment()
-
-	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
-
-	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
-		})
-		buttons_fold.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
-
-
-
-/**
 * GET_INPUT_ELEMENT
-* @return DOM element li
+* @return DOM node content_value
 */
-const get_input_element = (i, current_value, self, is_inside_tool) => {
+const get_input_element = (i, current_value, self) => {
 
 	const mode = self.mode
 
@@ -178,6 +145,41 @@ const get_input_element = (i, current_value, self, is_inside_tool) => {
 
 	return content_value
 }//end input_element
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+			// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 

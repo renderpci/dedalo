@@ -2,45 +2,48 @@
 /*eslint no-undef: "error"*/
 
 
-
-// imports
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-	import {
-		get_content_data_edit
-	}
-	from '../../component_geolocation/js/render_edit_component_geolocation.js'
+// UNDER CONSTRUCTION. (!) NOTE THAT CURRENTLY, THIS COMPONENT IS NOT SHOWED IN SEARCH LIST
 
 
-/**
-* render_search_component_geolocation
-* Manages the component's logic and apperance in client side
-*/
-export const render_search_component_geolocation = function() {
-
-	return true
-}//end render_search_component_geolocation
-
+// // imports
+// 	// import {event_manager} from '../../common/js/event_manager.js'
+// 	import {ui} from '../../common/js/ui.js'
+// 	import {
+// 		get_content_data_edit
+// 	}
+// 	from '../../component_geolocation/js/render_edit_component_geolocation.js'
 
 
-/**
-* SEARCH
-* Render node for use in edit
-* @return DOM node wrapper
-*/
-render_search_component_geolocation.prototype.search = async function() {
+// /**
+// * RENDER_SEARCH_COMPONENT_GEOLOCATION
+// * Manages the component's logic and apperance in client side
+// */
+// export const render_search_component_geolocation = function() {
 
-	const self 	= this
+// 	return true
+// }//end render_search_component_geolocation
 
-	// const content_data = await get_content_data_edit(self)
 
-	// // ui build_edit returns component wrapper
-	// 	const wrapper = ui.component.build_wrapper_edit(self, {
-	// 		content_data : content_data
-	// 	})
 
-	// id
-		wrapper.id = self.id
+// /**
+// * SEARCH
+// * Render node for use in edit
+// * @return DOM node wrapper
+// */
+// render_search_component_geolocation.prototype.search = async function() {
 
-	return wrapper
-}//end search
+// 	const self = this
+
+// 	// content data
+// 		const content_data = get_content_data_edit(self)
+
+// 	// wrapper. ui build_edit returns component wrapper
+// 		const wrapper = ui.component.build_wrapper_search(self, {
+// 			content_data : content_data
+// 		})
+// 		// set pointers
+// 		wrapper.content_data = content_data
+
+
+// 	return wrapper
+// }//end search
