@@ -64,7 +64,6 @@ render_list_view_mosaic.render = function(self, options) {
 			}
 		}
 
-
 	// image background color
 		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
@@ -100,6 +99,4 @@ render_list_view_mosaic.render = function(self, options) {
 
 
 	return wrapper
-}//end list
-
-
+}//end render

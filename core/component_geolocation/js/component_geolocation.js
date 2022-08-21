@@ -13,6 +13,7 @@
 	import {render_search_component_geolocation} from '../../component_geolocation/js/render_search_component_geolocation.js'
 
 
+
 export const component_geolocation = function(){
 
 	this.id
@@ -187,19 +188,19 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 
 			case 'GOOGLE':
 				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
-			    const googleLayer = new L.Google('ROADMAP');
-			    //map.addLayer(googleLayer);
-			    googleLayer.addTo(self.map);
-			    break;
+				const googleLayer = new L.Google('ROADMAP');
+				//map.addLayer(googleLayer);
+				googleLayer.addTo(self.map);
+				break;
 
 			case 'ARCGIS':
-			 	self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
-		        L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-		        maxZoom: 18,
-		        attribution: 'Tiles &copy; Esri — '
-		            + 'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, '
-		            + 'Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}).addTo(self.map);
-		        break;
+				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+				maxZoom: 18,
+				attribution: 'Tiles &copy; Esri — '
+					+ 'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, '
+					+ 'Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}).addTo(self.map);
+				break;
 
 			case 'NUMISDATA':
 				// LAYER
@@ -226,7 +227,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				}
 
 				self.map.on('overlayadd', function(e) {
-				  	self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
+					self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
 				})
 				break;
 
@@ -268,7 +269,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				// );
 
 
-			    //var ggl 	= new L.Google();
+				//var ggl 	= new L.Google();
 				//var ggl2 	= new L.Google('TERRAIN');
 
 				// MAP
@@ -284,7 +285,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 				}
 
 				self.map.on('overlayadd', function(e) {
-				  	self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
+					self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
 				});
 
 				break;
@@ -484,34 +485,34 @@ component_geolocation.prototype.load_layer = function(layer){
 		self.ar_FeatureGroup[layer_id].clearLayers();
 		L.geoJson( layer_data, {
 			//For each Feature load all layer data of the tag
-	    	onEachFeature: function (feature, current_data_layer) {
+			onEachFeature: function (feature, current_data_layer) {
 
-	    		if(current_data_layer){
+				if(current_data_layer){
 
-	    			// PopupContent. get the popup information
+					// PopupContent. get the popup information
 						const content = self.get_popup_content(current_data_layer);
 							if (content) {
 								current_data_layer.bindPopup(content);
 							}//end if(content)
 
-		            // Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
+					// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 						current_data_layer.on('click', function(e) {
 							if(self.draw_state==="delete"){
 								self.ar_FeatureGroup[layer_id].removeLayer(e.layer);
 								return;
-	            			}// end if(self.draw_state==="delete")
-	            			// change all features and layers for activate or deactivate the edit mode.
-	            			const FeatureGroup_length = self.ar_FeatureGroup.length;
+							}// end if(self.draw_state==="delete")
+							// change all features and layers for activate or deactivate the edit mode.
+							const FeatureGroup_length = self.ar_FeatureGroup.length;
 							for (var i = FeatureGroup_length - 1; i >= 1; i--) {
 								if(self.ar_FeatureGroup[i]){
 									if(self.ar_FeatureGroup[i]===self.ar_FeatureGroup[layer_id]){
 										//All layers and features to desactive and change to blue color
 										self.ar_FeatureGroup[layer_id].eachLayer(function (layer){
 											layer.editing.disable();
-									    	if(!(layer instanceof L.Marker)){
-										    	layer.setStyle({color: '#31df25'});
-										    }
-									    });
+											if(!(layer instanceof L.Marker)){
+												layer.setStyle({color: '#31df25'});
+											}
+										});
 									}else{
 										//The layers of the actual feature disable and change to green color
 										self.ar_FeatureGroup[i].eachLayer(function(layer) {
@@ -537,7 +538,7 @@ component_geolocation.prototype.load_layer = function(layer){
 					// addLayer
 						 // console.log("self.ar_FeatureGroup[layer_id]:",self.ar_FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
 						self.ar_FeatureGroup[layer_id].addLayer(current_data_layer)
-		    	}// end if (current_data_layer)
+				}// end if (current_data_layer)
 			}// end onEachFeature
 		})// end L.geoJson
 	}// end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
@@ -625,7 +626,7 @@ component_geolocation.prototype.get_parts_of_tag = function(tag_node) {
 * GET_DATA_TAG
 * Send the data_tag to the text_area when it need create a new tag
 */
-component_geolocation.prototype.get_data_tag = function(){
+component_geolocation.prototype.get_data_tag = function() {
 
 	const self = this
 
@@ -655,11 +656,13 @@ component_geolocation.prototype.get_data_tag = function(){
 }//end get_data_tag
 
 
+
 /**
 * GET_LIB_DATA
 * get the lib_data in self.data, lib_data is the specific data of the library used (leaflet)
+* @return array lib_data
 */
-component_geolocation.prototype.get_lib_data = function(){
+component_geolocation.prototype.get_lib_data = function() {
 
 	const self = this
 
@@ -681,8 +684,9 @@ component_geolocation.prototype.get_lib_data = function(){
 * GET_LAST_LAYER_ID
 * Get the last layer_id in the data
 * will be used for create new layer with the tag
+* @return int last_layer_id
 */
-component_geolocation.prototype.get_last_layer_id = function(){
+component_geolocation.prototype.get_last_layer_id = function() {
 
 	const self = this
 
@@ -697,7 +701,7 @@ component_geolocation.prototype.get_last_layer_id = function(){
 
 /**
 * GET_POPUP_CONTENT
-* @return
+* @return string|null
 * 	Generate popup content based on layer type
 *	Returns HTML string, or null if unknown object
 */
@@ -705,34 +709,35 @@ component_geolocation.prototype.get_popup_content = function(layer) {
 
 	const sefl = this
 
-    // Marker - add lat/long
-    if (layer instanceof L.Marker) {
-        return this.str_lat_lng(layer.getLatLng());
-    // Circle - lat/long, radius
-    } else if (layer instanceof L.Circle) {
-        var center = layer.getLatLng(),
-            radius = layer.getRadius();
-        return "Center: "+this.str_lat_lng(center)+"<br />"
-              +"Radius: "+this.round_coordinate(radius, 2)+" m";
-    // Rectangle/Polygon - area
-    } else if (layer instanceof L.Polygon) {
-        var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
-            area = L.GeometryUtil.geodesicArea(latlngs);
-        return "Area: "+L.GeometryUtil.readableArea(area, true);
-    // Polyline - distance
-    } else if (layer instanceof L.Polyline) {
-        var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
-            distance = 0;
-        if (latlngs.length < 2) {
-            return "Distance: N/A";
-        } else {
-            for (var i = 0; i < latlngs.length-1; i++) {
-                distance += latlngs[i].distanceTo(latlngs[i+1]);
-            }
-            return "Distance: "+this.round_coordinate(distance, 2)+" m";
-        }
-    }
-    return null;
+	// Marker - add lat/long
+	if (layer instanceof L.Marker) {
+		return this.str_lat_lng(layer.getLatLng());
+	// Circle - lat/long, radius
+	} else if (layer instanceof L.Circle) {
+		var center = layer.getLatLng(),
+			radius = layer.getRadius();
+		return "Center: "+this.str_lat_lng(center)+"<br />"
+			  +"Radius: "+this.round_coordinate(radius, 2)+" m";
+	// Rectangle/Polygon - area
+	} else if (layer instanceof L.Polygon) {
+		var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
+			area = L.GeometryUtil.geodesicArea(latlngs);
+		return "Area: "+L.GeometryUtil.readableArea(area, true);
+	// Polyline - distance
+	} else if (layer instanceof L.Polyline) {
+		var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
+			distance = 0;
+		if (latlngs.length < 2) {
+			return "Distance: N/A";
+		} else {
+			for (var i = 0; i < latlngs.length-1; i++) {
+				distance += latlngs[i].distanceTo(latlngs[i+1]);
+			}
+			return "Distance: "+this.round_coordinate(distance, 2)+" m";
+		}
+	}
+
+	return null;
 }//end get_popup_content
 
 
@@ -840,16 +845,16 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 			const	content = self.get_popup_content(layer)
 
 			if (content!==null) {
-                layer.bindPopup(content);
-            }
-            //listener fired when the layer is selected.
-            layer.on('click', function(e) {
-            	if(self.draw_state==="delete"){
+				layer.bindPopup(content);
+			}
+			//listener fired when the layer is selected.
+			layer.on('click', function(e) {
+				if(self.draw_state==="delete"){
 					self.ar_FeatureGroup[self.active_layer_id].removeLayer(e.layer);
 					return;
-            	}else{
+				}else{
 					e.target.editing.enable();
-            	}
+				}
 			})
 
 			self.ar_FeatureGroup[self.active_layer_id].addLayer(layer);

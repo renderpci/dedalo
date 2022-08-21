@@ -44,5 +44,3 @@ render_mini_component_geolocation.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-

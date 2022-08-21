@@ -20,7 +20,7 @@
 export const render_mini_component_json = function() {
 
 	return true
-}; //end render_mini_component_json
+}//end render_mini_component_json
 
 
 
@@ -43,5 +43,3 @@ render_mini_component_json.prototype.mini = function() {
 
 	return wrapper
 }//end mini
-
-
