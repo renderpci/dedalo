@@ -53,6 +53,7 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 
 /**
 * CONTENT_DATA_EDIT
+* Note that this component it's editable only in search mode
 * @return DOM node content_data
 */
 const get_content_data_edit = function(self) {
