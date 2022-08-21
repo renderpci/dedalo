@@ -48,8 +48,8 @@ render_search_component_security_access.prototype.search = async function() {
 */
 const get_content_data = function(self) {
 
-	const value				= self.data.value
-	const datalist			= self.data.datalist
+	const value		= self.data.value
+	const datalist	= self.data.datalist
 
 	const fragment = new DocumentFragment()
 
@@ -70,5 +70,3 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
-
-

@@ -12,7 +12,7 @@
 			min-height: 12rem;
 			pointer-events: unset !important; // prevent time machine lock tree arrows
 
-			// ul
+			// ul root
 			>.tree_root {
 				display: flex;
 				flex-direction: column;
@@ -22,13 +22,13 @@
 				font-size: 13px;
 
 				// all ul
-				ul {
+				.ul_item {
 					width: 100%;
 					display: block;
 				}
 
 				// all li
-				li {
+				.li_item {
 					display: flex;
 					flex: 1 1 50%;
 					flex-wrap: wrap;
@@ -50,8 +50,8 @@
 					&.grouper {
 						flex-wrap: wrap;
 						padding-bottom: 0.25em;
-						margin-left: 0;
-						padding: 0;
+						margin-left: 0px;
+						padding: 0px;
 
 						li {
 							flex: 0 0 100%;
@@ -65,7 +65,7 @@
 
 						>.grouper_label {
 							width: auto;
-							padding-left: 0;
+							padding-left: 0px;
 							padding-top: 0.25em;
 							padding-bottom: 0.25em;
 							padding-right: 1.66rem;
@@ -86,6 +86,7 @@
 
 					input {
 						margin-right: 0.33em;
+						cursor: pointer;
 					}
 
 					// q_operator
@@ -96,7 +97,7 @@
 				}
 
 				// first level li
-				>li {
+				>.li_item {
 					position: relative;
 					flex: 1 1 100%;
 					align-items: baseline;
@@ -107,7 +108,7 @@
 				.area_label {
 					position: relative;
 					padding: 0.22rem;
-					padding-left: 0;
+					padding-left: 0px;
 					line-height: 1.1rem;
 					vertical-align: bottom;
 

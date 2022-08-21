@@ -124,5 +124,3 @@ function get_parents(item, datalist) {
 
 	return ar_parents
 }//end get_parents
-
-
