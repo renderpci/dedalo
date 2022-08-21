@@ -209,15 +209,18 @@ abstract class RecordDataBoundObject {
 				// 	return false;
 				// }
 
-			$arRow = pg_fetch_assoc($result);
+			// pg_fetch_assoc: false is returned if row exceeds the number of rows in the set, there are no more rows, or on any other error.
+			$arRow = pg_fetch_assoc($result); // array|false
 			if($arRow===false)	{
 				if(SHOW_DEBUG===true) {
-					#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
+					// dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					// throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
+					dump($arRow, ' strQuery +++++++++++++++++++++++++++++++++++ '.PHP_EOL.to_string($strQuery)).PHP_EOL;
 					$bt = debug_backtrace();
-					dump($bt, ' bt ++ '.to_string());
+					dump($bt, ' Load pg_fetch_assoc bt +++++++++++++++++++++ '.to_string($this->ID));
 				}
-				trigger_error('WARNING: No result on Load arRow. $strQuery: ' .PHP_EOL. $strQuery);
+				// trigger_error('WARNING: No result on Load arRow. $strQuery: ' .PHP_EOL. $strQuery);
+				debug_log(__METHOD__." 'WARNING: No result on Load arRow: ".to_string($arRow), logger::WARNING);
 				return false;
 			}
 

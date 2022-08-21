@@ -738,10 +738,10 @@ class hierarchy {
 			$esdescriptor_orig	= (string)$rows['esdescriptor'];
 			$visible_orig		= (string)$rows['visible'];
 			$norden				= (int)$rows['norden'];
-			$usableIndex_orig	= (string)$rows['usableIndex'];
+			$usableIndex_orig	= $rows['usableIndex'] ?? ''; // string
 			#$traducible		= (string)$rows['traducible'];
 			$relaciones			= (string)$rows['relaciones'];
-			$properties		= (string)$rows['properties'];
+			$properties			= (string)$rows['properties'];
 
 			self::rows_jer_to_matrix_json(	$id,
 											$terminoID,

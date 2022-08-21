@@ -522,6 +522,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATO
+	* @return array|null $dato
 	*/
 	protected function get_dato() {
 
@@ -1136,7 +1137,8 @@ abstract class component_common extends common {
 	*/
 	private function get_required() : bool {
 
-		return ($this->required==='si');
+		// return ($this->required==='si'); // (!) Not used in structure anymore (usableIndex)
+		return true;
 	}//end get_required
 
 
