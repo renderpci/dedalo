@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -30,7 +30,7 @@ render_edit_component_json.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// fix non value scenarios
@@ -71,7 +71,7 @@ const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  content_data.classList.add('nowrap')
 
 	// values (inputs)
 		const inputs_value	= value
@@ -80,7 +80,7 @@ const get_content_data_edit = function(self) {
 			console.warn("More than one value in component_json is not allowed at now. Ignored next values. N values: ",value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_input_element(i, inputs_value[i], self)
+			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -94,68 +94,10 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	const is_inside_tool= self.is_inside_tool
-
-	const fragment = new DocumentFragment()
-
-	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type : 'span',
-			class_name	 : 'button full_screen',
-			parent 		 : fragment
-		})
-		button_fullscreen.addEventListener("click", function() {
-			// li.classList.toggle("fullscreen")
-			self.node.classList.toggle("fullscreen")
-		})
-
-	// button_download . Force automatic download of component data value
-		const button_download = ui.create_dom_element({
-			element_type : 'span',
-			class_name	 : 'button download',
-			title 		 : "Download data",
-			parent 		 : fragment
-		})
-		button_download.addEventListener("click", function() {
-			const export_obj  = self.data.value[0]
-			const export_name = self.id
-			download_object_as_json(export_obj, export_name)
-		})
-
-	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
-
-	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
-		})
-		buttons_fold.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT
+* GET_content_value
 * @return DOM node content_value
 */
-const get_input_element = (i, current_value, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -180,7 +122,7 @@ const get_input_element = (i, current_value, self) => {
 						inner_html		: get_label.salvar || 'Save',
 						parent			: content_value
 					})
-					button_save.addEventListener("click", function(e) {
+					button_save.addEventListener('click', function(e) {
 						e.stopPropagation()
 
 						self.save_sequence(editor)
@@ -188,8 +130,8 @@ const get_input_element = (i, current_value, self) => {
 
 							on_change(self, editor)
 
-							editor.frame.classList.remove("isDirty")
-							button_save.classList.remove("warning")
+							editor.frame.classList.remove('isDirty')
+							button_save.classList.remove('warning')
 						})
 					})
 
@@ -199,7 +141,7 @@ const get_input_element = (i, current_value, self) => {
 						modes		: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 						// maxLines : 100, // Infinity,
 						onError : function (err) {
-							console.error("err:",err);
+							console.error('err:',err);
 							alert(err.toString());
 						},
 						onValidationError : function() {
@@ -209,7 +151,7 @@ const get_input_element = (i, current_value, self) => {
 							if (editor) {
 								on_change(self, editor)
 							}else{
-								console.error("Error. editor is not available!:");
+								console.error('Error. editor is not available!:');
 							}
 						},
 						onValidate : function() {
@@ -288,7 +230,65 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return content_value
-}; //end get_input_element
+}; //end get_content_value
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool= self.is_inside_tool
+
+	const fragment = new DocumentFragment()
+
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type : 'span',
+			class_name	 : 'button full_screen',
+			parent 		 : fragment
+		})
+		button_fullscreen.addEventListener("click", function() {
+			// li.classList.toggle("fullscreen")
+			self.node.classList.toggle("fullscreen")
+		})
+
+	// button_download . Force automatic download of component data value
+		const button_download = ui.create_dom_element({
+			element_type : 'span',
+			class_name	 : 'button download',
+			title 		 : "Download data",
+			parent 		 : fragment
+		})
+		button_download.addEventListener("click", function() {
+			const export_obj  = self.data.value[0]
+			const export_name = self.id
+			download_object_as_json(export_obj, export_name)
+		})
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+			// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 

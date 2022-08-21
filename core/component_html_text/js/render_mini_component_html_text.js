@@ -47,5 +47,3 @@ render_mini_component_html_text.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-

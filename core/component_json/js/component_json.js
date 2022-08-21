@@ -1,11 +1,13 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {common,create_source} from '../../common/js/common.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
+	import {common} from '../../common/js/common.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_json, on_change} from '../../component_json/js/render_edit_component_json.js'
 	import {render_list_component_json} from '../../component_json/js/render_list_component_json.js'
@@ -268,46 +270,3 @@ component_json.prototype.save_sequence = async function(editor) {
 
 	// 	return js_promise
 	// }//end load_data
-
-
-
-/**
-* RENDER
-* @return promise
-*/
-	// component_json.prototype.render = function(){
-
-	// 	const self = this
-
-	// 	const context = self.context
-	// 	return self.load_data().then(function(){
-
-	// 		return new Promise(function(resolve){
-
-	// 			// render
-	// 				const current_render = new render_component_json(self)
-
-	// 				let node = ""
-	// 				const mode = self.mode
-	// 				switch (mode){
-	// 					case 'list':
-	// 						node = current_render.list()
-	// 					break
-
-	// 					case 'edit':
-	// 					default :
-	// 						node = current_render.edit()
-	// 				}
-
-	// 			// set node
-	// 				self.node = node
-
-	// 			// return self
-	// 				//setTimeout(function(){
-	// 					resolve(self)
-	// 				//},1000)
-	// 		})
-	// 	})
-	// }//end render
-
-

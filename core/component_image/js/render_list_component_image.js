@@ -54,5 +54,3 @@ render_list_component_image.prototype.list = function(options) {
 
 	return wrapper
 }//end list
-
-

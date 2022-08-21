@@ -70,6 +70,8 @@ export const component_info = function(){
 
 /**
 * GET_WIDGETS
+* @return promise
+* 	Resolve: array|false self.ar_instances
 */
 component_info.prototype.get_widgets = async function(){
 
@@ -179,6 +181,7 @@ component_info.prototype.get_widgets = async function(){
 
 /**
 * UPDATE_DATA
+* @return promise
 */
 component_info.prototype.update_data = async function(){
 
@@ -214,6 +217,7 @@ component_info.prototype.update_data = async function(){
 /**
 * CHANGE_MODE
 * Catch method only. Nothing to do here
+* @return promise
 */
 component_info.prototype.change_mode = async function() {
 

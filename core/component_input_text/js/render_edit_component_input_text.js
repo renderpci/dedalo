@@ -73,7 +73,7 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
+			const input_element_node = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -85,10 +85,10 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* INPUT_ELEMENT
+* GET_CONTENT_VALUE
 * @return DOM node content_value
 */
-const get_input_element_edit = (i, current_value, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const mode					= self.mode
@@ -129,19 +129,19 @@ const get_input_element_edit = (i, current_value, self) => {
 				}
 
 			// change data
-			const changed_data = Object.freeze({
-				action	: 'update',
-				key		: i,
-				value	: (input.value.length>0) ? input.value : null
-			})
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-			.then(()=>{
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id_base, changed_data)
-			})
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: i,
+					value	: (input.value.length>0) ? input.value : null
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+				.then(()=>{
+					// event to update the dom elements of the instance
+					event_manager.publish('update_value_'+self.id_base, changed_data)
+				})
 		})//end change
 		input.addEventListener('keyup', function(e) {
 			// page unload event
@@ -183,7 +183,7 @@ const get_input_element_edit = (i, current_value, self) => {
 
 
 	return content_value
-}//end input_element
+}//end get_content_value
 
 
 
@@ -236,7 +236,6 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({

@@ -23,7 +23,7 @@ export const render_viewer_component_image = function() {
 /**
 * VIEWER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return DOM node wrapper
 */
 render_viewer_component_image.prototype.viewer = function() {
 

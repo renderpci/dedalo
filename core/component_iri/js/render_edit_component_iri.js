@@ -33,7 +33,7 @@ render_edit_component_iri.prototype.edit = async function(options) {
 
 	self.data.value = self.data.value || []
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data

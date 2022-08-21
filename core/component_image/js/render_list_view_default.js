@@ -111,6 +111,4 @@ render_list_view_default.render = function(self, options) {
 
 
 	return wrapper
-}//end list
-
-
+}//end render

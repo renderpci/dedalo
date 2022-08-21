@@ -3,6 +3,7 @@
 	// import {common} from '../../common/js/common.js'
 
 
+
 /**
 * RENDER_MINI_COMPONENT_INVERSE
 * Manage the components logic and appearance in client side
@@ -11,6 +12,7 @@ export const render_mini_component_inverse = function() {
 
 	return true
 }//end render_mini_component_inverse
+
 
 
 /**
@@ -39,5 +41,3 @@ render_mini_component_inverse.prototype.mini = function() {
 
 	return wrapper
 }//end mini
-
-
