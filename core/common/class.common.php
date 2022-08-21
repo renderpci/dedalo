@@ -2601,6 +2601,11 @@ abstract class common {
 								$final_search_ddo_map = [];
 								foreach ($ar_search_ddo_map as $current_search_ddo_map) {
 
+									if (empty($current_search_ddo_map->tipo)) {
+										debug_log(__METHOD__." Ignored empty search_ddo_map->tipo. current_search_ddo_map: ".PHP_EOL.to_string($current_search_ddo_map), logger::ERROR);
+										continue;
+									}
+
 									// label. Add to all ddo_map items
 										$current_search_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
