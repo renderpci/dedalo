@@ -738,7 +738,8 @@ final class dd_core_api {
 			$lang			= $source->lang;
 			$type			= $source->type; // the type of the dd_object that is calling to update like 'component'
 			$changed_data	= $data->changed_data ?? null;
-
+dump($mode, ' mode +---///////////---------------------+ '.to_string());
+dump($type, ' type +---///////////---------------------+ '.to_string());
 		// switch by the element context type (component, section)
 		switch ($type) {
 			case 'component':
@@ -771,8 +772,9 @@ final class dd_core_api {
 				if ($mode==='search') {
 
 					// force same changed_data (whole dato)
-						$value = $changed_data->value || null;
+						$value = $changed_data->value ?? null;
 						$component->set_dato([$value]);
+
 
 				}else{
 

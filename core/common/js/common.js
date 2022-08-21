@@ -813,13 +813,21 @@ export const get_columns_map = function(context, datum_context) {
 	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create the final grid.
 		const request_config_length	= request_config.length
 		for (let i = 0; i < request_config_length; i++) {
-
 			const request_config_item = request_config[i]
+
+			// get the ddo map to be used
+			const ddo_map = (context.mode !== 'search')
+				? request_config_item.show.ddo_map
+				: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
+					? request_config_item.search.ddo_map
+					: request_config_item.show.ddo_map
+
 			// get the direct components of the caller (component or section)
-			const ar_first_level_ddo		= request_config_item.show.ddo_map.filter(item => item.parent === tipo)
+			const ar_first_level_ddo = ddo_map.filter(item => item.parent === tipo)
 			const ar_first_level_ddo_len	= ar_first_level_ddo.length
+
 			// store the current component in the full ddo map
-			full_ddo_map.push(...request_config_item.show.ddo_map)
+			full_ddo_map.push(...ddo_map)
 
 			for (let j = 0; j < ar_first_level_ddo_len; j++) {
 
