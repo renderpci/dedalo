@@ -77,7 +77,7 @@ const get_content_data = function(self) {
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_input_element(i, inputs_value[i], self)
+			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -91,10 +91,10 @@ const get_content_data = function(self) {
 
 
 /**
-* GET_INPUT_ELEMENT
+* GET_CONTENT_VALUE
 * @return DOM element input
 */
-const get_input_element = (i, current_value, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -132,4 +132,4 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return content_value
-}//end get_input_element
+}//end get_content_value

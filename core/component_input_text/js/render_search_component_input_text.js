@@ -60,7 +60,7 @@ const get_content_data = function(self) {
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_input_element(i, inputs_value[i])
+			const input_element_node = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -73,19 +73,26 @@ const get_content_data = function(self) {
 
 
 /**
-* GET_INPUT_ELEMENT
-* @return DOM element input
+* GET_CONTENT_VALUE
+* @return DOM node content_value
 */
-const get_input_element = (i, current_value) => {
+const get_content_value = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
 
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value
+			value			: current_value,
+			parent			: content_value
 		})
-		input.addEventListener('change', function(){
+		input.addEventListener('change', function() {
 
 			// parsed_value
 				const parsed_value = (input.value.length>0) ? input.value : null
@@ -106,5 +113,5 @@ const get_input_element = (i, current_value) => {
 		})//end event change
 
 
-	return input
-}//end get_input_element
+	return content_value
+}//end get_content_value

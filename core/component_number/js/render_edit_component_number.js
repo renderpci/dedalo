@@ -30,7 +30,7 @@ render_edit_component_number.prototype.edit = async function(options) {
 
 	const self 	= this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -72,7 +72,7 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_input_element_edit(i, inputs_value[i], self)
+			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -85,75 +85,10 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	// short vars
-		const is_inside_tool	= self.is_inside_tool
-		const mode				= self.mode
-
-	// DOM fragment
-		const fragment = new DocumentFragment()
-
-	// button add input
-		if(mode==='edit' || mode==='edit_in_list') { // && !is_inside_tool
-
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button add',
-				parent			: fragment
-			})
-			button_add_input.addEventListener('mouseup', function(){
-
-				const changed_data = Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,
-					value	: null
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: true
-				})
-				.then(()=>{
-					const input_node = self.node.content_data[changed_data.key].querySelector('input')
-					if (input_node) {
-						input_node.focus()
-					}
-				})
-			})
-		}
-
-	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
-
-	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
-		})
-		buttons_fold.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT_EDIT
+* GET_CONTENT_VALUE
 * @return DOM element content_value
 */
-const get_input_element_edit = (i, current_value, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -196,13 +131,8 @@ const get_input_element_edit = (i, current_value, self) => {
 					const key				= i
 					const original_value	= self.db_data.value[key]
 					const new_value			= this.value
-					if (new_value!=original_value) {
-						// set_before_unload (bool) add
-						set_before_unload(true)
-					}else{
-						// set_before_unload (bool) remove
-						set_before_unload(false)
-					}
+					// set_before_unload (bool)
+					set_before_unload(new_value!==original_value)
 				}
 		})//end keyup
 
@@ -237,4 +167,69 @@ const get_input_element_edit = (i, current_value, self) => {
 
 
 	return content_value
-}//end input_element
+}//end get_content_value
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	// short vars
+		const is_inside_tool	= self.is_inside_tool
+		const mode				= self.mode
+
+	// DOM fragment
+		const fragment = new DocumentFragment()
+
+	// button add input
+		if(mode==='edit' || mode==='edit_in_list') { // && !is_inside_tool
+
+			const button_add_input = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button add',
+				parent			: fragment
+			})
+			button_add_input.addEventListener('mouseup', function() {
+
+				const changed_data = Object.freeze({
+					action	: 'insert',
+					key		: self.data.value.length,
+					value	: null
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: true
+				})
+				.then(()=>{
+					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					if (input_node) {
+						input_node.focus()
+					}
+				})
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool) {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+			// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons

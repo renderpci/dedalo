@@ -696,13 +696,14 @@ vector_editor.prototype.init_tools = function(self) {
 
 /**
 * RENDER_TOOLS_BUTTONS
+* @return bool
 */
 vector_editor.prototype.render_tools_buttons = function(self) {
 
 	// Tool buttons. Show
 		// const view			= self.current_paper.view
 		const buttons_container	= self.vector_editor_tools
-		buttons_container.classList.remove("hide")
+		buttons_container.classList.remove('hide')
 
 	// vector editor tools
 		const buttons = []
@@ -720,7 +721,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name		: 'button open_layer_selector',
 					parent			: buttons_container,
 				})
-				layer_selector_button.addEventListener("mouseup", () =>{
+				layer_selector_button.addEventListener('mouseup', () =>{
 					// clean
 						while (layer_selector_container.firstChild) {
 							layer_selector_container.removeChild(layer_selector_container.firstChild)
@@ -746,7 +747,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name 		: 'button pointer_alt',
 					parent 			: buttons_container
 				})
-				pointer.addEventListener("mouseup", (e) =>{
+				pointer.addEventListener('mouseup', () =>{
 					this.pointer.activate()
 					activate_status(pointer)
 				})
@@ -875,45 +876,44 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 			// color_picker
 				this.button_color_picker = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button tool button_color_picker',
-					parent 			: buttons_container
+					class_name		: 'button tool button_color_picker',
+					parent			: buttons_container
+				})
+				const color_wheel_contaniner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'hide color_wheel_contaniner',
+					parent			: buttons_container
 				})
 
-					const color_wheel_contaniner = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'hide color_wheel_contaniner',
-						parent 			: buttons_container
+				this.color_picker = new iro.ColorPicker(color_wheel_contaniner, {
+						// Set the size of the color picker
+						width: 160,
+						// Set the initial color to paper project color
+						color: "#f00",
+						// color wheel will not fade to black when the lightness decreases.
+						wheelLightness: false,
+						transparency: true,
+						layout: [
+							{
+								component: iro.ui.Wheel, //can be iro.ui.Box
+								options: {
+									sliderShape: 'circle'
+								}
+							},
+							{
+								component: iro.ui.Slider,
+								options: {
+									sliderType: 'value' // can also be 'saturation', 'value', 'alpha' or 'kelvin'
+								}
+							},
+							{
+								component: iro.ui.Slider,
+								options: {
+									sliderType: 'alpha'
+								}
+							},
+						]
 					})
-
-					this.color_picker = new iro.ColorPicker(color_wheel_contaniner, {
-							// Set the size of the color picker
-							width: 160,
-							// Set the initial color to paper project color
-							color: "#f00",
-							// color wheel will not fade to black when the lightness decreases.
-							wheelLightness: false,
-							transparency: true,
-							layout: [
-								{
-									component: iro.ui.Wheel, //can be iro.ui.Box
-									options: {
-										sliderShape: 'circle'
-									}
-								},
-								{
-									component: iro.ui.Slider,
-									options: {
-										sliderType: 'value' // can also be 'saturation', 'value', 'alpha' or 'kelvin'
-									}
-								},
-								{
-									component: iro.ui.Slider,
-									options: {
-										sliderType: 'alpha'
-									}
-								},
-							]
-						})
 				this.button_color_picker.addEventListener("mouseup", (e) =>{
 					color_wheel_contaniner.classList.toggle('hide')
 				})
@@ -934,7 +934,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				// listen to a color picker's color:change event
 				this.color_picker.on('color:change', color_selected);
 
-		//change the buttons status: active, desactive
+		// change the buttons status: active, desactive
 			const activate_status = (button) =>{
 				const buttons_lenght = buttons.length
 				for (let i = 0; i < buttons_lenght; i++) {
@@ -956,7 +956,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 /**
 * SET_COLOR_PICKER
 * get the color of the current active layer to set to the color picker and the button color picker
-* @return
+* @return void
 */
 vector_editor.prototype.set_color_picker = function(item) {
 
@@ -968,7 +968,6 @@ vector_editor.prototype.set_color_picker = function(item) {
 		this.button_color_picker.style.backgroundColor = color
 	// set the color picker with the selected path color
 		this.color_picker.color.rgbaString = color
-
 }//end set_color_picker
 
 
@@ -1185,7 +1184,7 @@ vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 
 
 /**
-* LAYER_SELECTOR
+* RENDER_LAYER_SELECTOR
 * @return DOM node layer_selector
 */
 vector_editor.prototype.render_layer_selector = function(self) {
@@ -1245,7 +1244,7 @@ vector_editor.prototype.render_layer_selector = function(self) {
 		layer_selector.appendChild(fragment)
 
 	return layer_selector
-}//end layer_selector
+}//end render_layer_selector
 
 
 

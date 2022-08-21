@@ -29,11 +29,11 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 
 	const self = this
 
+	// options
+		const render_level = options.render_level
+
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
-	// render_level
-		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -49,11 +49,8 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// set pointers
+		// set pointers
 		wrapper.content_data = content_data
-
-
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		// self.events_tokens.push(
@@ -113,7 +110,7 @@ export const get_content_data_edit = async function(self) {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
-* @return DOM element li
+* @return DOM element content_value
 */
 export const get_input_element_edit = (i, current_value, self) =>{
 
@@ -148,9 +145,11 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				parent 		 	: inputs_container
 			})
 			lat_node.addEventListener('change', function() {
-				self.current_value[i].lat = (lat_node.value.length>0) ? JSON.parse(lat_node.value) : null
-				//move the map to current value
-				self.map.panTo(new L.LatLng(self.current_value[i].lat, self.current_value[key].lon));
+				self.current_value[i].lat = (lat_node.value.length>0)
+					? JSON.parse(lat_node.value)
+					: null
+				// move the map to current value
+				self.map.panTo(new L.LatLng(self.current_value[i].lat, self.current_value[i].lon));
 			})
 
 	// longitude
@@ -194,8 +193,10 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				parent			: inputs_container
 			})
 			zoom_node.addEventListener('change', function() {
-				self.current_value[i].zoom = (zoom_node.value.length>0) ? JSON.parse(zoom_node.value) : null
-				//zoom the map to current value
+				self.current_value[i].zoom = (zoom_node.value.length>0)
+					? JSON.parse(zoom_node.value)
+					: null
+				// zoom the map to current value
 				self.map.setZoom(self.current_value[i].zoom);
 			})
 
@@ -217,7 +218,9 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				parent			: inputs_container
 			})
 			alt_node.addEventListener('change', function() {
-				self.current_value[i].alt = (alt_node.value.length>0) ? JSON.parse(alt_node.value) : null
+				self.current_value[i].alt = (alt_node.value.length>0)
+					? JSON.parse(alt_node.value)
+					: null
 			})
 
 	// refresh
@@ -242,7 +245,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 					lon		: lon,
 					zoom	: zoom,
 					alt		: self.data.value[i].alt,
-				},map_container)
+				}, map_container)
 		})
 
 	// map container
@@ -285,18 +288,19 @@ export const get_input_element_edit = (i, current_value, self) =>{
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	// short vars
+		const is_inside_tool = self.is_inside_tool
+
 
 	const fragment = new DocumentFragment()
 
 	// button full_screen
 		const button_full_screen = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button full_screen',
-			parent 			: fragment
+			class_name		: 'button full_screen',
+			parent			: fragment
 		})
-		button_full_screen.addEventListener("mouseup", () =>{
+		button_full_screen.addEventListener('mouseup', () =>{
 			self.node.classList.toggle('fullscreen')
 			const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
 			event_manager.publish('full_screen_'+self.id, fullscreen_state)
@@ -311,8 +315,8 @@ const get_buttons = (self) => {
 	// save
 		const save = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'button tool save',
-			parent 			: fragment
+			class_name		: 'button tool save',
+			parent			: fragment
 		})
 		save.addEventListener('click', function() {
 			// const key = JSON.parse(e.target.dataset.key)
@@ -335,7 +339,6 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({
@@ -348,5 +351,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-

@@ -51,5 +51,3 @@ export const component_inverse = function(){
 	component_inverse.prototype.list		= render_list_component_inverse.prototype.list
 	component_inverse.prototype.edit		= render_edit_component_inverse.prototype.edit
 	component_inverse.prototype.search		= render_edit_component_inverse.prototype.edit
-
-
