@@ -2088,10 +2088,39 @@ abstract class common {
 						}
 					}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
-				// create the new request_config with the caller
+					// create the new request_config with the caller
 					$request_config = new stdClass();
 						$request_config->api_engine	= 'dedalo';
 						$request_config->show		= $requested_show;
+
+
+					$requested_search = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->search)
+						? unserialize(serialize(dd_core_api::$rqo->search))
+						: false;
+
+					if (!empty($requested_search)) {
+
+						// consolidate ddo items properties
+						foreach ($requested_search->ddo_map as $key => $current_ddo) {
+							//get the direct ddo linked by the source
+							if ($current_ddo->parent===$requested_source->tipo || $current_ddo->parent==='self') {
+								// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
+								if(in_array($this->tipo, (array)$current_ddo->section_tipo) || $current_ddo->section_tipo==='self'){
+									$current_ddo->parent		= $this->tipo;
+									$current_ddo->section_tipo	= $this->tipo;
+								}
+							}
+							// added label & mode if not are already defined
+							if(!isset($current_ddo->label)) {
+								$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+							}
+							if(!isset($current_ddo->mode)) {
+								$current_ddo->mode = $this->modo;
+							}
+						}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
+
+						$request_config->search		= $requested_search;
+					}
 
 					// sqo add
 						if (isset(dd_core_api::$rqo->sqo)) {
@@ -2113,6 +2142,8 @@ abstract class common {
 
 				return $this->request_config; // we have finished ! Note we stop here (!)
 			}//end if (!empty($requested_show))
+
+
 		}//end if(!empty($requested_show))
 
 		// short vars
@@ -2564,6 +2595,37 @@ abstract class common {
 							$parsed_item->set_search(
 								$item_request_config->search
 							);
+							$ar_search_ddo_map = $parsed_item->search->ddo_map ?? null;
+							if($ar_search_ddo_map){
+								// ddo_map
+								$final_search_ddo_map = [];
+								foreach ($ar_search_ddo_map as $current_search_ddo_map) {
+
+									// label. Add to all ddo_map items
+										$current_search_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+
+									// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
+										$current_search_ddo_map->section_tipo = $current_search_ddo_map->section_tipo==='self'
+											? $ar_section_tipo
+											: $current_search_ddo_map->section_tipo;
+
+									// parent. Set the default "self" value to the current tipo (the parent)
+										$current_search_ddo_map->parent = $current_search_ddo_map->parent==='self'
+											? $tipo
+											: $current_search_ddo_map->parent;
+
+									// mode
+										$current_search_ddo_map->mode = isset($current_search_ddo_map->mode)
+											? $current_search_ddo_map->mode
+											: ($model !== 'section'
+												? 'list'
+												: $mode);
+
+									$final_search_ddo_map[] = $current_search_ddo_map;
+								}
+
+								$parsed_item->search->ddo_map = $final_search_ddo_map;
+							}
 							if (isset($parsed_item->search->sqo_config)) {
 								// fallback non defined operator
 								if (!isset($parsed_item->search->sqo_config->operator)) {
