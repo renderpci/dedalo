@@ -6,13 +6,11 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-	// import {build_content_data} from '../../component_portal/js/render_edit_component_portal.js'
-	// import {view_autocomplete} from './view_autocomplete.js'
-
+	import {
+		// render_column_remove,
+		activate_autocomplete,
+	} from './render_edit_component_portal.js'
 
 
 /**
@@ -38,8 +36,14 @@ render_search_component_portal.prototype.search = async function(options) {
 	// options
 		const render_level = options.render_level || 'full'
 
+
+	// columns_map
+		const columns_map = rebuild_columns_map(self)
+		self.columns_map = columns_map
+
+
 	// content_data. Note that function build_content_data is imported from edit mode
-		const content_data = build_content_data(self)
+		const content_data = await build_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -48,101 +52,25 @@ render_search_component_portal.prototype.search = async function(options) {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
-		wrapper.classList.add("portal")
+		wrapper.classList.add('portal', 'view_line')
 
 	// events
-		add_events(self, wrapper)
+		// add_events(self, wrapper)
+
+	// autocomplete
+		wrapper.addEventListener('click', function() {
+			activate_autocomplete(self, wrapper).then(function(){
+				// if (e.target.matches('input[type="text"].q_operator')) {
+				// 	// prevent activate component on click inside q_operator input
+				// 	return true
+				// }
+				// self.autocomplete.search_input.focus()
+			})
+
+		})
 
 	return wrapper
 }//end search
-
-
-
-/**
-* ADD_EVENTS
-* @return bool
-*/
-export const add_events = function(self, wrapper) {
-
-	// change event, for every change the value in the inputs of the component
-		wrapper.addEventListener('change', (e) => {
-
-			// q_operator. get the input value of the q_operator
-				// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
-				// like; radio_button, check_box, date, autocomplete, etc
-				if (e.target.matches('input[type="text"].q_operator')) {
-
-					// input. Get the input node that has changed
-						const input = e.target
-					// value
-						const value = (input.value.length>0) ? input.value : null
-					// q_operator. Fix the data in the instance previous to save
-						self.data.q_operator = value
-					// publish search. Event to update the dom elements of the instance
-						event_manager.publish('change_search_element', self)
-
-					return true
-				}
-		})
-
-	// click delegated
-		wrapper.addEventListener('click', function(e){
-			e.stopPropagation()
-
-			// q_operator
-				if (e.target.matches('input[type="text"].q_operator')) {
-					// prevent activate component on click inside q_operator input
-					return true
-				}
-
-			// remove row
-				if (e.target.matches('.button.remove')) {
-					e.preventDefault()
-
-					const changed_data = Object.freeze({
-						action	: 'remove',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: null
-					})
-
-					// update . return bool
-						const update = self.update_data_value(changed_data)
-
-					// publish search. Event to update the dom elements of the instance
-						// event_manager.publish('change_search_element', self)
-
-					// refresh
-						self.refresh()
-
-					return true
-				}
-
-			// activate service autocomplete. Enable the service_autocomplete when the user do click
-				if(self.autocomplete_active===false){
-
-					// set rqo
-						self.rqo_search = self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-						// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
-
-					// autocomplete
-						self.autocomplete = new service_autocomplete()
-						self.autocomplete.init({
-							caller	: self,
-							wrapper : wrapper
-						})
-						.then(function(){
-							self.autocomplete_active = true
-							self.autocomplete.search_input.focus()
-						})
-
-					return true
-				}
-		})//end click event
-
-
-	return true
-}//end  add_events
-
 
 
 /**
@@ -150,7 +78,7 @@ export const add_events = function(self, wrapper) {
 * Used too in search mode
 * @return DOM node content_data
 */
-export const build_content_data = function(self) {
+export const build_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -163,53 +91,39 @@ export const build_content_data = function(self) {
 			class_name		: 'q_operator',
 			parent			: fragment
 		})
-
-	// inputs container
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container'
+		input_q_operator.addEventListener('change', function(){
+			// value
+				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+			// q_operator. Fix the data in the instance previous to save
+				self.data.q_operator = value
+			// publish search. Event to update the dom elements of the instance
+				event_manager.publish('change_search_element', self)
 		})
 
-	// build values (add all nodes from the rendered_section_record)
-		const build_values = async function() {
+		const ar_section_record = await self.get_ar_instances({mode:'list'})
 
-			const ar_section_record = await self.get_ar_instances({mode:'mini'})
-			// store to allow destroy later
-			self.ar_instances.push(...ar_section_record)
+		// store to allow destroy later
+		self.ar_instances.push(...ar_section_record)
 
-			const length = ar_section_record.length
-			for (let i = 0; i < length; i++) {
+		const ar_section_record_length = ar_section_record.length
+		const ar_promises = []
+		for (let i = 0; i < ar_section_record_length; i++) {
 
-				const current_section_record = ar_section_record[i]
-				if (!current_section_record) {
-					console.warn("empty current_section_record:",current_section_record)
-				}
-
-				// input_element. Get_input_element, also renders current section record
-				const input_element = get_input_element(current_section_record)
-				inputs_container.appendChild(input_element)
-			}
-
-			return true
+			const render_promise = ar_section_record[i].render()
+			ar_promises.push(render_promise)
 		}
-		fragment.appendChild(inputs_container)
+		await Promise.all(ar_promises).then(function(values) {
+		  for (let i = 0; i < ar_section_record_length; i++) {
 
-	// set node only when it is in DOM (to save browser resources)
-		when_in_viewport(
-			inputs_container, // node
-			build_values // callback
-		)
+			const section_record = values[i]
 
-	// build references
-		// if(self.data.references && self.data.references.length > 0){
-		// 	const references_node = render_references(self.data.references)
-		// 	fragment.appendChild(references_node)
-		// }
+			fragment.appendChild(section_record)
+		  }
+		});
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
-
 
 	return content_data
 }//end build_content_data
@@ -217,37 +131,106 @@ export const build_content_data = function(self) {
 
 
 /**
-* GET_INPUT_ELEMENT
-* @return dom element li
+* REBUILD_COLUMNS_MAP
+* Adding control columns to the columns_map that will processed by section_recods
+* @return obj columns_map
 */
-const get_input_element = function(current_section_record){
+const rebuild_columns_map = async function(self) {
 
-	 // key. when portal is in search mode, is undefined, fallback to zero
-	const key = current_section_record.paginated_key || 0
+	const columns_map = []
 
-	// li
-		const li = ui.create_dom_element({
-			element_type	: 'li',
-			dataset			: { key : key }
+	// // column section_id check
+	// 	columns_map.push({
+	// 		id			: 'section_id',
+	// 		label		: 'Id',
+	// 		width 		: 'auto',
+	// 		callback	: render_edit_view_line.render_column_id
+	// 	})
+
+
+	const base_columns_map = await self.columns_map
+
+	columns_map.push(...base_columns_map)
+
+	// column component_info check
+		if (self.add_component_info===true) {
+			columns_map.push({
+				id			: 'ddinfo',
+				label		: 'Info',
+				callback	: render_column_component_info
+			})
+		}
+
+	// button_remove
+		if (self.permissions>1) {
+			columns_map.push({
+				id			: 'remove',
+				label		: '', // get_label.delete || 'Delete',
+				width 		: 'auto',
+				callback	: render_column_remove // self.render_column_remove
+			})
+		}
+
+	return columns_map
+}//end rebuild_columns_map
+
+
+
+/**
+* RENDER_COLUMN_REMOVE
+* Render column_remov node
+* Shared across views
+* @param object options
+* @return DOM DocumentFragment
+*/
+const render_column_remove = function(options) {
+
+	// options
+		const self			= options.caller
+		const row_key		= options.row_key
+		const paginated_key	= options.paginated_key
+		const section_id 	= options.section_id
+		const section_tipo	= options.section_tipo
+		// const locator		= options.locator
+
+	const fragment = new DocumentFragment()
+
+	// button_remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_remove',
+			parent			: fragment
 		})
+		button_remove.addEventListener('click', function(e){
+			e.stopPropagation()
 
-	// input field
-		current_section_record.render()
-		.then(function(section_record_node){
-
-			// section_record_node append
-				li.appendChild(section_record_node)
-
-			// button remove
-				const button_remove = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button remove',
-					dataset			: { key : key },
-					parent			: li
+			const unlink_record = function() {
+				// changed_data
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: false,
+					value	: null
 				})
+				// update the instance data (previous to save)
+					self.update_data_value(changed_data)
+				// set data.changed_data. The change_data to the instance
+					self.data.changed_data = changed_data
+				// publish search. Event to update the dom elements of the instance
+					event_manager.publish('change_search_element', self)
+					
+					self.refresh()
+			}
+
+			unlink_record()
 		})
 
-	return li
-}//end  get_input_element
+	// remove_icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button delete_light icon',
+			parent			: button_remove
+		})
 
 
+	return fragment
+}//end render_column_remove()

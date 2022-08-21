@@ -75,55 +75,9 @@ render_inspector.prototype.edit = async function(options) {
 		wrapper.appendChild(label)
 		wrapper.appendChild(content_data)
 
-	// events
-		add_events(wrapper, self)
-
-
 	return wrapper
 }//end edit
 
-
-
-/**
-* ADD_EVENTS
-* Attach element generic events to wrapper
-*/
-const add_events = (wrapper, self) => {
-
-	// mousedown
-		wrapper.addEventListener("click", function(e){
-			e.stopPropagation()
-			//e.preventDefault()
-			// prevent buble event to container element
-
-			// label click collapse 'content_data'
-				// if (e.target.matches('.label')) {
-
-					// const collapsed_id		= e.target.id //.classList.join('_')
-					// const collapsed_table	= 'context'
-
-					// const content_data	= e.target.nextSibling
-					// const collapsed		= content_data.classList.contains('hide')
-					// if (!collapsed) {
-					// 	// add record to local DB
-					// 	data_manager.set_local_db_data({
-					// 		id		: collapsed_id,
-					// 		value	: !collapsed
-					// 	}, collapsed_table)
-					// 	content_data.classList.add('hide')
-					// }else{
-					// 	// remove record from local DB
-					// 	data_manager.delete_local_db_data(collapsed_id, collapsed_table)
-					// 	content_data.classList.remove('hide')
-					// }
-				// }
-
-			return false
-		})
-
-
-	return true
-}//end add_events
 
 
 
