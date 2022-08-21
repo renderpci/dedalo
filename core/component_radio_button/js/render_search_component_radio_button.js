@@ -147,9 +147,9 @@ const get_input_element = (i, datalist_item, self) => {
 				event_manager.publish('change_search_element', self)
 		})// end change event
 		content_value.addEventListener('click', function(e) {
+			// de-select option
 			if (e.altKey===true) {
-				// e.stopPropagation()
-				// e.preventDefault()
+				e.preventDefault()
 
 				// remove checked state
 					input.checked = false
