@@ -241,9 +241,9 @@ abstract class common {
 			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
 
 			# Fix vars
-			$this->model	= $this->RecordObj_dd->get_modelo();
-			$this->norden	= $this->RecordObj_dd->get_norden();
-			$this->required	= $this->RecordObj_dd->get_usableIndex();
+			$this->model		= $this->RecordObj_dd->get_modelo();
+			$this->norden		= $this->RecordObj_dd->get_norden();
+			// $this->required	= $this->RecordObj_dd->get_usableIndex();  // (!) Not used in structure anymore (usableIndex)
 
 
 			$this->label = RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
