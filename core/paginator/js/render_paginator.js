@@ -50,33 +50,8 @@ render_paginator.prototype.edit = async function(options) {
 			wrapper.appendChild(content_data_node)
 		})
 
-	// events
-		add_events(wrapper, self)
-
-
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-* Attach element generic events to wrapper
-* @return bool
-*/
-const add_events = (wrapper, self) => {
-
-	// mousedown
-		wrapper.addEventListener("mousedown", function(e){
-			e.stopPropagation()
-			//e.preventDefault()
-			// prevent buble event to container element
-			return false
-		})
-
-
-	return true
-}//end add_events
 
 
 
