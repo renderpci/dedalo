@@ -63,22 +63,45 @@ const get_content_data_edit = function(self) {
 
 	// short vars
 		const data		= self.data || {}
-		const datalist	= data.datalist || []
+		const value		= data.value || []
+		// const datalist	= data.datalist || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
+	// values iterate (one or zero is expected)
+		const inputs_value	= value.length>0 ? value : [null]
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set the pointer
+			content_data[i] = content_value
+		}
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+/**
+* GET_CONTENT_VALUE
+* @return DOM node content_value
+*/
+const get_content_value = function(i, value, self) {
+
+	// short vars
+		const datalist	= self.data.datalist || []
+		const quality	= self.quality || self.context.quality
+
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value',
-			parent			: content_data
+			class_name		: 'content_value'
 		})
-		// set pointer. Only one element will be managed
-		content_data[0] = content_value
 
 	// media url from data.datalist based on selected context quality
-		const quality	= self.quality || self.context.quality
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		const url		= file_info
 			? file_info.url
@@ -87,18 +110,17 @@ const get_content_data_edit = function(self) {
 	// svg item
 		if (url) {
 			// image
-				const image = ui.create_dom_element({
-					element_type	: 'img',
-					class_name		: 'image svg_element',
-					src				: url,
-					parent			: content_value
-				})
-				image.setAttribute('tabindex', 0)
+			const image = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'image svg_element',
+				src				: url,
+				parent			: content_value
+			})
+			image.setAttribute('tabindex', 0)
 		}
 
-
-	return content_data
-}//end get_content_data_edit
+	return content_value
+}//end get_content_value
 
 
 

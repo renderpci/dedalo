@@ -43,5 +43,3 @@ render_mini_component_svg.prototype.mini = function() {
 
 	return wrapper
 }//end mini
-
-

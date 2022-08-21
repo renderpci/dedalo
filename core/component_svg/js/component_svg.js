@@ -45,7 +45,7 @@ export const component_svg = function(){
 * COMMON FUNCTIONS
 * extend component functions from component common
 */
-// prototypes assign
+	// prototypes assign
 	// lifecycle
 	component_svg.prototype.init				= component_common.prototype.init
 	component_svg.prototype.build				= component_common.prototype.build
@@ -65,25 +65,3 @@ export const component_svg = function(){
 	component_svg.prototype.mini				= render_mini_component_svg.prototype.mini
 	component_svg.prototype.list				= render_list_component_svg.prototype.list
 	component_svg.prototype.edit				= render_edit_component_svg.prototype.edit
-
-
-
-/**
-* BUILD
-*/
-	// component_svg.prototype.build = async function(autoload=false) {
-
-	// 	const self = this
-
-	// 	// call generic component commom build
-	// 		const common_build = component_common.prototype.build.call(this, autoload);
-
-	// 	// fix useful vars
-	// 		self.allowed_extensions		= self.context.allowed_extensions
-	// 		self.default_target_quality	= self.context.default_target_quality
-
-
-	// 	return common_build
-	// }//end build_custom
-
-
