@@ -48,9 +48,6 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	// validate browser version
 		validate_browser()
 
-	// events delegated
-		add_events(self, wrapper, content_data)
-
 	// autofocus username
 	setTimeout(()=>{
 		const username = wrapper.querySelector("#username")
