@@ -39,6 +39,8 @@ export const component_portal = function() {
 	this.modal					= null
 	this.caller					= null
 
+	self.standalone 			= null
+
 	// context - data
 	this.datum					= null
 	this.context				= null
@@ -115,6 +117,12 @@ component_portal.prototype.init = async function(options) {
 		self.columns_map		= options.columns_map
 		self.add_component_info	= false
 
+	// Standalone
+	// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum
+	// if the property is set to false, the component will use datum to get his data and is forced to update datum to share his data with others
+	// false option is used to reduce the calls to API server and database, section use to load all data with 1 call and components load his data from datum
+	// true options is used to call directly to API and manage his data, used by tools or services that need components standalone.
+		self.standalone = true
 
 	// events subscribe
 		// initiator_link. Observes user click over list record_
@@ -213,7 +221,7 @@ component_portal.prototype.build = async function(autoload=false) {
 			const add_show	= false
 			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
 			if(self.mode==='search') {
-				self.rqo.source.value = self.data.value
+				self.rqo.source.value = self.data.value || []
 			}
 		}
 		await generate_rqo()
@@ -255,11 +263,33 @@ component_portal.prototype.build = async function(autoload=false) {
 				dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
 
 			// set context and data to current instance
-				await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
+				// await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
+				
+			// Data
+				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				if(!data){
+					console.warn("data not found in api_response:",api_response);
+				}
+				self.data = data || {}
 
-			// context. update instance properties from context (type, label, tools, divisor, permissions)
-				self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-				self.datum.context	= api_response.result.context
+			// Context
+				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				if (!context) {
+					console.error("context not found in api_response:", api_response);
+				}
+				self.context = context
+
+			// Update datum when the component is not standalone, it's dependent of section or others with common datum
+				if(!self.standalone){
+					await self.update_datum(api_response.result.data)
+				}else{
+					self.datum.context	= api_response.result.context
+					self.datum.data		= api_response.result.data
+				}
+
+			// // context. update instance properties from context (type, label, tools, divisor, permissions)
+			// 	self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+			// 	self.datum.context	= api_response.result.context
 
 			// force re-assign self.total
 				self.total = null
@@ -440,7 +470,6 @@ component_portal.prototype.add_value = async function(value) {
 			console.warn("// add_value api_response.result.data (unexpected total):",api_response.result.data);
 		}
 
-
 	// check if value already existed. (!) Note that here, the whole portal data has been compared in server
 		if (parseInt(total) <= parseInt(total_before)) {
 			// self.update_pagination_values('remove') // remove added pagination value
@@ -463,6 +492,10 @@ component_portal.prototype.add_value = async function(value) {
 		// context. update instance properties from context (type, label, tools, divisor, permissions)
 			self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 			self.datum.context	= api_response.result.context
+
+		// // data. update instance properties from data (locators)
+			self.data		= api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+			self.datum.data	= api_response.result.data
 
 		// force re-assign self.total and pagination values on build
 			self.total = null
