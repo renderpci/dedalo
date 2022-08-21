@@ -812,7 +812,7 @@ export const service_ckeditor = function() {
 		// options
 			const type			= options.type
 			const tag_id		= options.tag_id
-			const new_data_obj	= options.new_data_obj
+			const new_data_obj	= options.new_data_obj // all properties need to be his type (object, string, etc) do not send stringify properties
 
 		// short vars
 			const self		= this
