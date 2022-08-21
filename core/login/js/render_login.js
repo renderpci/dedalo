@@ -61,86 +61,6 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 }//end edit
 
 
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper, content_data) {
-
-	// click event
-		wrapper.addEventListener("click", e => {
-			//e.stopPropagation()
-
-			// submit form
-				if (e.target.matches('#auth_submit')) {
-					e.preventDefault()
-
-					const username = e.target.parentNode.querySelector('#username').value
-					if (username.length<2) {
-						const message = `Invalid username ${username}!`
-						ui.show_message(content_data, message, 'error', 'component_message', true)
-						return false
-					}
-
-					const auth = e.target.parentNode.querySelector('#auth').value
-					if (auth.length<2) {
-						const message = `Invalid auth code!`
-						ui.show_message(content_data, message, 'error', 'component_message', true)
-						return false
-					}
-
-					//wrapper.classList.add('loading')
-					//wrapper.classList.add('preload')
-
-					const button		= e.target
-					const button_label	= button.querySelector('.button_label')
-					const preload		= button.querySelector('.preload')
-
-					// show spinner and hide button label
-						button_label.classList.add("display_none")
-						preload.classList.remove("display_none")
-
-					// data_manager API call
-					const api_response = data_manager.request({
-						body : {
-							action	: 'login',
-							dd_api	: 'dd_utils_api',
-							options	: {
-								username	: username,
-								auth		: auth
-							}
-						}
-					}).then((response)=>{
-
-						// hide spinner and show button label
-							button_label.classList.remove("display_none")
-							preload.classList.add("display_none")
-
-						const message	= response.msg
-						const msg_type	= response.result===true ? 'ok' : 'error'
-						ui.show_message(content_data, message, msg_type, 'component_message', true)
-
-						if (response.result===true) {
-
-							if (response.result_options && response.result_options.redirect) {
-								setTimeout(function(){
-									window.location.replace(response.result_options.redirect)
-								}, 2000)
-							}else{
-								window.location.reload(false);
-							}
-						}
-					})
-
-					return true
-				}
-		})
-
-	return true
-}//end add_events
-
-
-
 /**
 * GET_CONTENT_DATA
 * @return DOM node content_data
@@ -223,19 +143,66 @@ const get_content_data = function(self) {
 			class_name		: 'preload display_none',
 			parent			: button_enter
 		})
-		const button_enter_content = ui.create_dom_element({
+		const button_enter_label = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button_label',
 			inner_html		: strip_tags(login_item_enter.label),
 			parent			: button_enter
 		})
 
-		// button_enter.addEventListener("click", (e) => {
-		// 	e.stopPropagation()
-		// 	e.preventDefault()
+		button_enter.addEventListener('click', function(e) {
+			e.preventDefault()
 
-		// 	console.log("e:",e);
-		// })
+			const username = user_input.value
+			if (username.length<2) {
+				const message = `Invalid username ${username}!`
+				ui.show_message(content_data, message, 'error', 'component_message', true)
+				return false
+			}
+
+			const auth = auth_input.value
+			if (auth.length<2) {
+				const message = `Invalid auth code!`
+				ui.show_message(content_data, message, 'error', 'component_message', true)
+				return false
+			}
+
+			// show spinner and hide button label
+				button_enter_label.classList.add("display_none")
+				button_enter_loading.classList.remove("display_none")
+
+			// data_manager API call
+			const api_response = data_manager.request({
+				body : {
+					action	: 'login',
+					dd_api	: 'dd_utils_api',
+					options	: {
+						username	: username,
+						auth		: auth
+					}
+				}
+			}).then((response)=>{
+
+				// hide spinner and show button label
+					button_enter_label.classList.remove("display_none")
+					button_enter_loading.classList.add("display_none")
+
+				const message	= response.msg
+				const msg_type	= response.result===true ? 'ok' : 'error'
+				ui.show_message(content_data, message, msg_type, 'component_message', true)
+
+				if (response.result===true) {
+
+					if (response.result_options && response.result_options.redirect) {
+						setTimeout(function(){
+							window.location.replace(response.result_options.redirect)
+						}, 2000)
+					}else{
+						window.location.reload(false);
+					}
+				}
+			})
+		})
 
 	// info
 		const info = ui.create_dom_element({
