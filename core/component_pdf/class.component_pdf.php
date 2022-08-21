@@ -146,10 +146,14 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_DATO
+	* @return array|null $dato
 	*/
 	public function get_dato() {
 
 		$dato = parent::get_dato();
+		if (!empty($dato) && !is_array($dato)) {
+			$dato = [$dato];
+		}
 
 		return $dato;
 	}//end get_dato
