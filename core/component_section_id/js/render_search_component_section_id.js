@@ -35,7 +35,8 @@ render_search_component_section_id.prototype.search = async function(options) {
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
-	const content_data = get_content_data_search(self)
+	// content_data
+		const content_data = get_content_data_search(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
@@ -45,7 +46,8 @@ render_search_component_section_id.prototype.search = async function(options) {
 		wrapper.content_data = content_data
 
 	// id
-		wrapper.id = self.id
+		// wrapper.id = self.id
+
 
 	return wrapper
 }//end search
@@ -64,10 +66,10 @@ const get_content_data_search = function(self) {
 			  content_data.classList.add('nowrap')
 
 	// values (inputs)
-		const inputs_value	= value //(value.length<1) ? [''] : value
+		const inputs_value	= value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_node = get_input_element_search(i, inputs_value[i])
+			const input_node = get_input_element_search(i, inputs_value[i], self)
 			content_data.appendChild(input_node)
 		}
 
@@ -79,9 +81,10 @@ const get_content_data_search = function(self) {
 
 /**
 * GET_INPUT_ELEMENT_SEARCH
+* Note that this component it's editable only in search mode
 * @return dom element input
 */
-const get_input_element_search = (i, current_value) => {
+const get_input_element_search = (i, current_value, self) => {
 
 	// input field
 		const input = ui.create_dom_element({
@@ -90,7 +93,7 @@ const get_input_element_search = (i, current_value) => {
 			class_name		: 'input_value',
 			value			: current_value
 		})
-		input.addEventListener('change', function(){
+		input.addEventListener('change', function() {
 
 			// parsed_value
 				const parsed_value = (input.value.length>0) ? input.value : null
