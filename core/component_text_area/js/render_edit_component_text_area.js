@@ -1033,9 +1033,10 @@ const render_note = async function(options) {
 	// short vars
 		const data_string		= view_tag.data
 		// convert the data_tag form string to json*-
-		const data				= data_string.replace(/\'/g, '"')
 		// replace the ' to " stored in the html data to JSON "
+		const data				= data_string.replace(/\'/g, '"')
 		const locator			= JSON.parse(data)
+
 		const note_section_id	= locator.section_id
 		const note_section_tipo	= locator.section_tipo
 
@@ -1061,6 +1062,7 @@ const render_note = async function(options) {
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
 		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
 		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
+
 		function fn_change_publication_state(changed_value) {
 			// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)
 			const state = changed_value.section_id=='2' // no active value
@@ -1068,13 +1070,14 @@ const render_note = async function(options) {
 				: 'b' // publishable
 			const current_tag_state = view_tag.state || 'a'
 			// create new tag with the new state of the tag
+
 			if (current_tag_state !== state){
 				const note_tag		= {
 					type	: 'note',
 					label	: view_tag.label,
 					tag_id	: view_tag.tag_id,
 					state	: state,
-					data	: data_string
+					data	: locator // object format
 				}
 				text_editor.update_tag({
 					type			: 'note',
