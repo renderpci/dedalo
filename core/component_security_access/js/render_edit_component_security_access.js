@@ -80,7 +80,7 @@ const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  content_data.classList.add('nowrap')
 
 	// content_value
 		// const i = 0;
@@ -96,7 +96,7 @@ const get_content_data = async function(self) {
 		// ul tree_root
 			const ul = ui.create_dom_element({
 				element_type	: 'ul',
-				class_name		: 'tree_root', // former 'inputs_container'
+				class_name		: 'ul_item tree_root', // former 'inputs_container'
 				parent			: content_data
 			})
 
@@ -215,7 +215,8 @@ const render_area_item = function(item, datalist, value, self) {
 
 	// li
 		const li = ui.create_dom_element({
-			element_type	: 'li'
+			element_type	: 'li',
+			class_name		: 'li_item'
 		})
 
 	// checkbox
@@ -306,7 +307,7 @@ const render_area_item = function(item, datalist, value, self) {
 			// branch (ul container for children)
 				const branch = ui.create_dom_element({
 					element_type	: 'ul',
-					class_name		: 'branch hide'
+					class_name		: 'ul_item branch hide'
 				})
 				li.branch = branch
 
@@ -402,7 +403,7 @@ const render_permissions_item = function(item, datalist, value, self) {
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'permissions'
+			class_name		: 'li_item permissions'
 		})
 
 	// radio_buttons_container
@@ -434,7 +435,7 @@ const render_permissions_item = function(item, datalist, value, self) {
 			// branch (ul container for children)
 				const branch = ui.create_dom_element({
 					element_type	: 'ul',
-					class_name		: 'branch',
+					class_name		: 'ul_item branch',
 					parent			: li
 				})
 			li.branch = branch
@@ -662,7 +663,6 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({
@@ -712,5 +712,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-

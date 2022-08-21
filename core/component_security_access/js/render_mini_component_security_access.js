@@ -43,5 +43,3 @@ render_mini_component_security_access.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-
