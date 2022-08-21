@@ -25,12 +25,18 @@ export const render_search_component_select = function() {
 * Render node for use in current mode
 * @return DOM node wrapper
 */
-render_search_component_select.prototype.search = async function() {
+render_search_component_select.prototype.search = async function(options) {
 
 	const self = this
 
-	// content data
+	// options
+		const render_level = options.render_level || 'full'
+
+	// content_data
 		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
@@ -38,6 +44,7 @@ render_search_component_select.prototype.search = async function() {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end search
@@ -50,15 +57,22 @@ render_search_component_select.prototype.search = async function() {
 */
 const get_content_data = function(self) {
 
+	// short vars
+		const data		= self.data || {}
+		const value		= data.value || []
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-	// build select-able options
-		const i				= 0
-		const content_value	= get_content_value(i, self)
-		content_data.appendChild(content_value)
-		// set pointers
-		content_data[i] = content_value
+	// values (inputs)
+		const inputs_value	= value.length>0 ? value : [null]
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
+		}
 
 
 	return content_data
@@ -68,13 +82,25 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* @param int i
+* 	Value key like 0
+* @param object|null current_value
+* 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
+* @param object self
+* 	Component instance pointer
 * @return DOM node content_value
 */
-//const get_content_value = (i, current_value, inputs_container, self) => {
-const get_content_value = (i, self) => {
+const get_content_value = (i, current_value, self) => {
 
-	const value		= self.data.value || []
-	const datalist	= self.data.datalist || []
+	// short vars
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+		// add empty option at beginning of the datalist array
+		const empty_option = {
+			label	: '',
+			value	: null
+		}
+		datalist.unshift(empty_option);
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -100,11 +126,10 @@ const get_content_value = (i, self) => {
 				event_manager.publish('change_search_element', self)
 		})// end event change
 
-
 	// select
 		const select = ui.create_dom_element({
 			element_type	: 'select',
-			class_name		: 'select_lang',
+			class_name		: 'select',
 			parent			: content_value
 		})
 		select.addEventListener('change', function(){
@@ -113,7 +138,7 @@ const get_content_value = (i, self) => {
 
 			const changed_data = Object.freeze({
 				action	: (parsed_value != null) ? 'update' : 'remove',
-				key		: (parsed_value != null) ? 0 : false,
+				key		: (parsed_value != null) ? i : false,
 				value	: parsed_value
 			})
 
@@ -125,21 +150,15 @@ const get_content_value = (i, self) => {
 				event_manager.publish('change_search_element', self)
 		})//end event change
 
-	// add empty option at beginning of array
-		const empty_option = {
-			label	: '',
-			value	: null
-		}
-		datalist.unshift(empty_option);
-
-	// build options
-		const value_compare = value.length>0 ? value[0] : null
+	// select options
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 
 			const datalist_item = datalist[i]
 
-			const current_section_id = typeof datalist_item.section_id!=="undefined" ? datalist_item.section_id : null
+			const current_section_id = typeof datalist_item.section_id!=="undefined"
+				? datalist_item.section_id
+				: null
 
 			const current_label = (SHOW_DEBUG===true)
 				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
@@ -152,9 +171,9 @@ const get_content_value = (i, self) => {
 				parent			: select
 			})
 			// selected options set on match
-			if (value_compare && datalist_item.value &&
-				value_compare.section_id===datalist_item.value.section_id &&
-				value_compare.section_tipo===datalist_item.value.section_tipo
+			if (current_value && datalist_item.value &&
+				current_value.section_id===datalist_item.value.section_id &&
+				current_value.section_tipo===datalist_item.value.section_tipo
 				) {
 				option.selected = true
 			}
