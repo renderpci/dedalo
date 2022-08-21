@@ -264,7 +264,7 @@ component_portal.prototype.build = async function(autoload=false) {
 
 			// set context and data to current instance
 				// await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
-	console.log("api_response.result.data:",api_response.result);
+				
 			// Data
 				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
 				if(!data){
