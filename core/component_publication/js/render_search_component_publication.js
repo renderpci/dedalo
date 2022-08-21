@@ -49,6 +49,7 @@ render_search_component_publication.prototype.search = async function(options) {
 }//end search
 
 
+
 /**
 * GET_CONTENT_DATA
 * @return DOM node content_data
@@ -86,7 +87,7 @@ const get_content_data = function(self) {
 	// values (inputs)
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			const input_element = get_input_element(i, datalist[i], self)
+			const input_element = get_content_value(i, datalist[i], self)
 			content_data.appendChild(input_element)
 		}
 
@@ -97,10 +98,18 @@ const get_content_data = function(self) {
 
 
 /**
-* GET_INPUT_ELEMENT
-* @return DOM node content_value
+* GET_CONTENT_VALUE
+* Render the current value DOM nodes
+* @param int i
+* 	Value key
+* @param object current_value
+* 	Current locator value as:
+* 	{type: 'dd151', section_id: '1', section_tipo: 'dd64', from_component_tipo: 'rsc20'}
+* @param object self
+*
+* @return DOM element content_value
 */
-const get_input_element = (i, current_value, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const value				= self.data.value || []
@@ -138,7 +147,7 @@ const get_input_element = (i, current_value, self) => {
 			// changed_data
 				const changed_data = Object.freeze({
 					action	: 'update',
-					key		: 0,
+					key		: i,
 					value	: datalist_value
 				})
 
@@ -148,10 +157,11 @@ const get_input_element = (i, current_value, self) => {
 				self.data.changed_data = changed_data
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-		})
-
+		})//end change
 		content_value.addEventListener('click', function(e) {
+			// de-select option
 			if (e.altKey===true) {
+				e.preventDefault()
 
 				// remove checked state
 					input.checked = false
@@ -159,14 +169,12 @@ const get_input_element = (i, current_value, self) => {
 				if (self.data.value.length===0) {
 					return true
 				}
-				// parsed_value
-					const parsed_value = null
 
 				// changed_data
 					const changed_data = Object.freeze({
 						action	: 'update',
-						key		: 0,
-						value	: parsed_value
+						key		: false,
+						value	: null
 					})
 
 				// update the instance data (previous to save)
@@ -176,7 +184,7 @@ const get_input_element = (i, current_value, self) => {
 				// publish search. Event to update the dom elements of the instance
 					event_manager.publish('change_search_element', self)
 			}
-		})
+		})//end click
 
 	// checked option set on match
 		for (let j = 0; j < value_length; j++) {
@@ -190,4 +198,4 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return content_value
-}//end get_input_element
+}//end get_content_value

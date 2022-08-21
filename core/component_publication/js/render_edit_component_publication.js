@@ -51,8 +51,10 @@ render_edit_component_publication.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+
 	return wrapper
 }//end edit
+
 
 
 /**
@@ -74,7 +76,7 @@ const get_content_data = function(self) {
 		const inputs_value	= (value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_input_element(i, inputs_value[i], self)
+			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set the pointer
 			content_data[i] = content_value
@@ -83,6 +85,78 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* GET_CONTENT_VALUE
+* Render the current value DOM nodes
+* @param int i
+* 	Value key
+* @param object current_value
+* 	Current locator value as:
+* 	{type: 'dd151', section_id: '1', section_tipo: 'dd64', from_component_tipo: 'rsc20'}
+* @param object self
+*
+* @return DOM element content_value
+*/
+const get_content_value = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// div_switcher
+		const div_switcher = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'switcher_publication text_unselectable',
+			parent			: content_value
+		})
+
+	// input checkbox
+		const input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			value			: JSON.stringify(current_value),
+			parent			: div_switcher
+		})
+		input.addEventListener('change', function() {
+
+			const checked		= input.checked
+			const changed_value	= (checked===true)
+				? self.data.datalist.filter(item => item.section_id==1)[0].value
+				: self.data.datalist.filter(item => item.section_id==2)[0].value
+
+			const changed_data = Object.freeze({
+				action	: 'update',
+				key		: i,
+				value	: changed_value
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+			.then(()=>{
+			// publish the publication locator value. (ex: used to change state of notes tag)
+				event_manager.publish('change_publication_value_'+self.id_base, changed_value)
+			})
+		})
+		// set checked from current value
+		if (current_value.section_id==1) {
+			input.setAttribute('checked', true)
+		}
+
+	// switch_label
+		ui.create_dom_element({
+			element_type	: 'i',
+			parent			: div_switcher
+		})
+
+
+	return content_value
+}//end get_content_value
 
 
 
@@ -109,71 +183,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT
-* @return DOM element div_switcher
-*/
-const get_input_element = (i, current_value, self) => {
-
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value'
-		})
-
-	// div_switcher
-		const div_switcher = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'switcher_publication text_unselectable',
-			parent			: content_value
-		})
-
-	// input checkbox
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			// class_name	: 'ios-toggle',
-			// id			: input_id,
-			dataset			: { key : i },
-			value			: JSON.stringify(current_value),
-			parent			: div_switcher
-		})
-		input.addEventListener('change', function() {
-
-			const checked		= input.checked
-			const changed_value	= (checked===true)
-				? self.data.datalist.filter(item => item.section_id==1)[0].value
-				: self.data.datalist.filter(item => item.section_id==2)[0].value
-
-			const changed_data = Object.freeze({
-				action	: 'update',
-				key		: 0,
-				value	: changed_value
-			})
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-			.then(()=>{
-			// publish the publication locator value. (ex: used to change state of notes tag)
-				event_manager.publish('change_publication_value_'+self.id_base, changed_value)
-			})
-		})
-		// set checked from current value
-		if (current_value.section_id==1) {
-			input.setAttribute("checked", true)
-		}
-
-	// switch_label
-		ui.create_dom_element({
-			element_type	: 'i',
-			// class_name	: 'checkbox-label',
-			parent			: div_switcher
-		})
-
-
-	return content_value
-}//end get_input_element

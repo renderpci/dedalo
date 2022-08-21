@@ -64,5 +64,3 @@ export const component_publication = function(){
 	component_publication.prototype.edit				= render_edit_component_publication.prototype.edit
 	component_publication.prototype.edit_in_list		= render_edit_component_publication.prototype.edit
 	component_publication.prototype.change_mode			= component_common.prototype.change_mode
-
-
