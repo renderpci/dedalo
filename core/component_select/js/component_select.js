@@ -44,7 +44,7 @@ export const component_select = function(){
 * COMMON FUNCTIONS
 * extend component functions from component common
 */
-// prototypes assign
+	// prototypes assign
 	// lifecycle
 	component_select.prototype.init					= component_common.prototype.init
 	component_select.prototype.build				= component_common.prototype.build
@@ -67,5 +67,3 @@ export const component_select = function(){
 	component_select.prototype.edit_in_list			= render_edit_component_select.prototype.edit
 	component_select.prototype.search				= render_search_component_select.prototype.search
 	component_select.prototype.change_mode			= component_common.prototype.change_mode
-
-

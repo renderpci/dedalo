@@ -39,5 +39,3 @@ render_mini_component_select.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-

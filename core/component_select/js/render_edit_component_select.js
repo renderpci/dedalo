@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {object_to_url_vars} from '../../common/js/utils/index.js'
 
 
 
@@ -29,7 +30,8 @@ render_edit_component_select.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data(self)
@@ -48,6 +50,7 @@ render_edit_component_select.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+
 	return wrapper
 }//end edit
 
@@ -59,15 +62,22 @@ render_edit_component_select.prototype.edit = async function(options) {
 */
 const get_content_data = function(self) {
 
+	// short vars
+		const data		= self.data || {}
+		const value		= data.value || []
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-	// build select-able options
-		const i				= 0
-		const content_value	= get_content_value(i, self)
-		content_data.appendChild(content_value)
-		// set pointers
-		content_data[i] = content_value
+	// values (inputs)
+		const inputs_value	= value.length>0 ? value : [null]
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
+		}
 
 
 	return content_data
@@ -77,14 +87,25 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* @param int i
+* 	Value key like 0
+* @param object|null current_value
+* 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
+* @param object self
+* 	Component instance pointer
 * @return DOM node content_value
 */
-const get_content_value = (i, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const data		= self.data || {}
-		const value		= data.value || []
 		const datalist	= data.datalist || []
+		// add empty option at beginning of the datalist array
+		const empty_option = {
+			label	: '',
+			value	: null
+		}
+		datalist.unshift(empty_option);
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -95,7 +116,7 @@ const get_content_value = (i, self) => {
 	// select
 		const select = ui.create_dom_element({
 			element_type	: 'select',
-			class_name		: 'select_lang',
+			class_name		: 'select',
 			parent			: content_value
 		})
 		select.addEventListener('change', function(){
@@ -112,32 +133,23 @@ const get_content_value = (i, self) => {
 
 			const changed_data = Object.freeze({
 				action	: (parsed_value != null) ? 'update' : 'remove',
-				key		: (parsed_value != null) ? 0 : false,
+				key		: (parsed_value != null) ? i : false,
 				value	: parsed_value
 			})
-
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false,
 				remove_dialog	: false
 			})
-			.then((api_response)=>{
+			.then(()=>{
 				//self.selected_key = e.target.dataset.key
 				// event to update the dom elements of the instance
 				event_manager.publish('update_value_'+self.id, self)
 			})
 		})//end change event
 
-	// add empty option at beginning of the array
-		const empty_option = {
-			label	: '',
-			value	: null
-		}
-		datalist.unshift(empty_option);
-
-	// build options
-		const value_compare		= value.length>0 ? value[0] : null
-		const datalist_length	= datalist.length
+	// select options
+		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 
 			const datalist_item = datalist[i]
@@ -146,30 +158,34 @@ const get_content_value = (i, self) => {
 				? datalist_item.section_id
 				: null
 
-			const option = ui.create_dom_element({
+			const current_label = (SHOW_DEBUG===true)
+				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
+				: datalist_item.label
+
+			const option_node = ui.create_dom_element({
 				element_type	: 'option',
 				value			: JSON.stringify(datalist_item.value),
-				inner_html		: datalist_item.label,
+				inner_html		: current_label,
 				parent			: select
 			})
 			// selected options set on match
-			if (value_compare && datalist_item.value &&
-				value_compare.section_id===datalist_item.value.section_id &&
-				value_compare.section_tipo===datalist_item.value.section_tipo
+			if (current_value && datalist_item.value &&
+				current_value.section_id===datalist_item.value.section_id &&
+				current_value.section_tipo===datalist_item.value.section_tipo
 				) {
-				option.selected = true
+				option_node.selected = true
 			}
 
 			// developer_info
-				if (current_section_id) {
-					// developer_info
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'developer_info hide show_on_active',
-						text_content	: ` [${current_section_id}]`,
-						parent			: option
-					})
-				}
+				// if (current_section_id) {
+				// 	// developer_info
+				// 	ui.create_dom_element({
+				// 		element_type	: 'span',
+				// 		class_name		: 'developer_info hide show_on_active',
+				// 		text_content	: ` [${current_section_id}]`,
+				// 		parent			: option_node
+				// 	})
+				// }
 		}//end for (let i = 0; i < datalist_length; i++)
 
 	// button_edit
@@ -178,46 +194,59 @@ const get_content_value = (i, self) => {
 			class_name		: 'button edit show_on_active',
 			parent			: content_value
 		})
-		button_edit.addEventListener("click", function(e){
+		button_edit.addEventListener('click', function(e) {
 			e.stopPropagation()
+
 			try {
 
 				if (!select.value) {
 					return false
 				}
 
-				const selected_locator = JSON.parse(select.value)
-				// target_section
-				const target_section_tipo	= selected_locator.section_tipo
-				const target_section_id		= selected_locator.section_id
+				// short vars
+					const selected_locator		= JSON.parse(select.value)
+					const target_section_tipo	= selected_locator.section_tipo
+					const target_section_id		= selected_locator.section_id
+
+				// open a new window
+					const url_vars = {
+						tipo			: target_section_tipo,
+						section_tipo	: target_section_tipo,
+						id				: target_section_id,
+						mode			: 'edit',
+						menu			: false
+					}
+					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+					const current_window	= window.open(url, '', 'width=1030,height=500')
+					current_window.focus()
 
 				// navigation
-					const user_navigation_options = {
-						source		: {
-							action			: 'search',
-							model			: 'section',
-							tipo			: target_section_tipo,
-							section_tipo	: target_section_tipo,
-							mode			: 'edit',
-							lang			: self.lang
-						},
-						sqo : {
-							section_tipo		: [{tipo : target_section_tipo}],
-							filter				: null,
-							limit				: 1,
-							filter_by_locators	: [{
-								section_tipo	: target_section_tipo,
-								section_id		: target_section_id
-							}]
-						}
-					}
-				event_manager.publish('user_navigation', user_navigation_options)
+					// const user_navigation_options = {
+					// 	source		: {
+					// 		action			: 'search',
+					// 		model			: 'section',
+					// 		tipo			: target_section_tipo,
+					// 		section_tipo	: target_section_tipo,
+					// 		mode			: 'edit',
+					// 		lang			: self.lang
+					// 	},
+					// 	sqo : {
+					// 		section_tipo		: [{tipo : target_section_tipo}],
+					// 		filter				: null,
+					// 		limit				: 1,
+					// 		filter_by_locators	: [{
+					// 			section_tipo	: target_section_tipo,
+					// 			section_id		: target_section_id
+					// 		}]
+					// 	}
+					// }
+					// event_manager.publish('user_navigation', user_navigation_options)
 			} catch (error) {
-				console.error(error)
+				console.error('ERROR on component_select.get_content_value.button_edit:'. error)
 			}
 		})
-		// console.log("value_compare:", self.tipo, value_compare);
-		if (!value_compare) {
+		// console.log("current_value:", self.tipo, current_value);
+		if (!current_value) {
 			button_edit.classList.add('hide')
 		}
 
