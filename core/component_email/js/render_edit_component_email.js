@@ -228,11 +228,17 @@ const get_input_element_edit = (i, current_value, self) => {
 			parent			: content_value
 		})
 	//events
-		input_email.addEventListener('change',function(e){
-			const validated = self.verify_email(input_email.value)
-			ui.component.error(!validated, input_email)
+		input_email.addEventListener('change',function(e) {
+			e.preventDefault();
 
-			if (validated) {
+			// validate
+				const validated = self.verify_email(input_email.value)
+				ui.component.error(!validated, input_email)
+				if (!validated) {
+					return false
+				}
+
+			// save value
 				// set the changed_data for replace it in the instance data
 				// new_value. key is the position in the data array, the value is the new value
 				const new_value = (input_email.value.length>0) ? input_email.value : null
@@ -247,7 +253,7 @@ const get_input_element_edit = (i, current_value, self) => {
 					changed_data	: changed_data,
 					refresh			: false
 				})
-				.then((save_response)=>{
+				.then(()=>{
 					// event to update the dom elements of the instance
 					event_manager.publish('update_value_'+self.id, changed_data)
 				})
@@ -257,22 +263,15 @@ const get_input_element_edit = (i, current_value, self) => {
 				}else{
 					input_email.classList.add('mandatory')
 				}
-
-			}
 		})//end change
-		input_email.addEventListener('keyup',async function(e){
+		input_email.addEventListener('keyup', async function(e) {
 			// page unload event
 				if (e.key!=='Enter') {
 					const key				= i
 					const original_value	= self.db_data.value[key]
 					const new_value			= input_email.value
-					if (new_value!==original_value) {
-						// set_before_unload (bool) add
-						set_before_unload(true)
-					}else{
-						// set_before_unload (bool) remove
-						set_before_unload(false)
-					}
+					// set_before_unload (bool)
+					set_before_unload(new_value!==original_value)
 				}
 		})//end keyup
 
