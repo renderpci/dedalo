@@ -10,7 +10,7 @@
 
 
 /**
-* render_edit_component_password
+* RENDER_EDIT_COMPONENT_PASSWORD
 * Manages the component's logic and apperance in client side
 */
 export const render_edit_component_password = function() {
@@ -29,7 +29,7 @@ render_edit_component_password.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -45,59 +45,9 @@ render_edit_component_password.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// add events
-		add_events(self, wrapper)
-
 
 	return wrapper
 }//end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// change event, for every change the value in the imputs of the component
-		wrapper.addEventListener('change', async (e) => {
-			//e.stopPropagation()
-
-			// update
-			if (e.target.matches('input[type="password"].password_value')) {
-
-				// Avoid Safari autofill save
-				if (!confirm(get_label["seguro"] + " [edit password]")) {
-					return false
-				}
-
-				// Test password is aceptable string
-				const validated = self.validate_password_format(e.target.value)
-				ui.component.error(!validated, e.target)
-
-				if (validated) {
-
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: 0,
-						value	: (e.target.value.length>0) ? e.target.value : null,
-					})
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						//event_manager.publish('update_value_'+self.id, changed_data)
-					})
-				}
-
-				return true
-			}
-		})
-
-	return true
-}//end add_events
 
 
 
@@ -107,15 +57,12 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data_edit = function(self) {
 
-	// const value	= (self.data.value.length<1) ? [null] : self.data.value
-	// const mode	= self.mode
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  content_data.classList.add('nowrap')
 
 	// value (input)
-		const content_value = get_input_element()
+		const content_value	= get_content_value(0, self)
 		content_data.appendChild(content_value)
 		// set pointers
 		content_data[0] = content_value
@@ -127,10 +74,10 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* GET_INPUT_ELEMENT
+* get_content_value
 * @return DOM node content_value
 */
-const get_input_element = function() {
+const get_content_value = function(i, self) {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -147,9 +94,33 @@ const get_input_element = function() {
 			parent			: content_value
 		})
 		input.autocomplete = 'new-password'
+		input.addEventListener('change', function(e) {
+			e.preventDefault()
+
+			// user confirm. Prevents Safari auto-fill save
+				// if (!confirm(get_label.seguro + " [edit password]")) {
+				// 	return false
+				// }
+
+			// validated. Test password is acceptable string
+				const validated = self.validate_password_format(input.value)
+				ui.component.error(!validated, input)
+				if (!validated) {
+					return false
+				}
+
+			// save value
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: 0,
+					value	: (input.value.length>0) ? input.value : null
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+		})
 
 
 	return content_value
-}//end get_input_element
-
-
+}//end get_content_value

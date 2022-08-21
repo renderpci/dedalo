@@ -47,5 +47,3 @@ render_mini_component_password.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
-
-
