@@ -5,6 +5,8 @@
 */
 .component_pdf {
 
+	@color_grey_viewer: #3f3f3f;
+
 	&.edit {
 
 		>.content_data {
@@ -18,24 +20,27 @@
 				// align-items: flex-start;
 				width: 100%;
 				height: 100%;
-				// resize: vertical;
-				// overflow: auto;
+				resize: vertical;
+				overflow: auto;
 
 				// iframe
 				>.pdf_viewer_frame {
 					// flex: 0 0 100%;
 					// 	height: calc(100% - 32px);
+					display: block;
+					height: calc(100% - 30px);
 					width: 100%;
-					height: calc(100% - 32px);
+					border-right: 1px solid @color_grey_viewer;
+					background-color: @color_grey_viewer;
 				}
 
 				>.fields {
-					height: 32px;
+					height: 30px;
 					flex: 0 0 100%;
-					background-color: @color_grey_dark;
-					padding: 0;
+					background-color: @color_grey_viewer; // @color_grey_dark;
+					padding: 0px;
 					padding-left: 1.25em;
-					margin: 0;
+					margin: 0px;
 					display: flex;
 					align-items: center;
 					font-size: 1em;

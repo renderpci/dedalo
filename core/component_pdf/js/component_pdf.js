@@ -128,10 +128,11 @@ component_pdf.prototype.get_data_tag = function(){
 	}
 
 	return data_tag
-}// end get_data_tag
+}//end get_data_tag
 
 
-///// don't used
+
+///// not used
 function get_text(){
 
 	const ar_text = self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textContentItemsStr
@@ -226,7 +227,7 @@ function get_text(){
 
 }
 
-
+///// not used
 function getHightlightCoords() {
 	const pageIndex			= self.pdf_viewer.pdfViewer.currentPageNumber - 1;
 	const page				= self.pdf_viewer.pdfViewer.getPageView(pageIndex);
@@ -241,7 +242,7 @@ function getHightlightCoords() {
 	return {page: pageIndex, coords: selected};
 }
 
-
+///// not used
 function showHighlight(selected) {
 	const pageIndex		= selected.page;
 	const page			= self.pdf_viewer.pdfViewer.getPageView(pageIndex);

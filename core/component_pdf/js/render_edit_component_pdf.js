@@ -57,73 +57,9 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 		// 	wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
 		// })
 
-	// add events
-		add_events(self, wrapper)
-
 
 	return wrapper
-}; //end edit
-
-
-
-/**
-* ADD_EVENTS
-*/
-const add_events = function(self, wrapper) {
-
-	// change event, for every change the value in the inputs of the component
-		wrapper.addEventListener('change', (e) => {
-			// e.stopPropagation()
-
-			// offset. input_value. The standard input for the value of the component
-			if (e.target.matches('input[type="number"]')) {
-
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: {offset : (e.target.value.length>0) ? parseInt(e.target.value) : null}
-				})
-				console.log("changed_data", changed_data);
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-				.then((save_response)=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
-
-				return true
-			}
-		})
-
-	// click event [mousedown]
-		wrapper.addEventListener('click', function(e) {
-			// remove
-			if (e.target.matches('.button.remove')) {
-
-				// force possible input change before remove
-				document.activeElement.blur()
-
-				const changed_data = Object.freeze({
-					action	: 'remove',
-					key		: e.target.dataset.key,
-					value	: null
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					label			: e.target.previousElementSibling.value,
-					refresh			: true
-				})
-				.then(()=>{
-				})
-
-				return true
-			}
-		})
-
-	return true
-}; //end add_events
+}//end edit
 
 
 
@@ -140,37 +76,49 @@ const get_content_data_edit = function(self) {
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-	// url
-		const quality		= self.quality || self.context.quality
-		const datalist		= self.data.datalist || []
-		const file_info		= datalist.find(el => el.quality===quality && el.file_exist===true)
-		const pdf_url		= file_info
-			? file_info.url
-			: null
-
-		// if (pdf_url) {
-			const i				= 0
-			const inputs_value	= (value && value.length>0) ? value : [{}]
-			const content_value	= get_input_element_edit(self, i, inputs_value[i], pdf_url)
+	// values (documents)
+		const inputs_value	= (value.length<1) ? [null] : value // force one empty element at least
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
-			// set pointers
+			// set the pointer
 			content_data[i] = content_value
-		// }
+		}
 
 
 	return content_data
-}; //end get_content_data_edit
+}//end get_content_data_edit
 
 
 
 /**
-* INPUT_ELEMENT
+* GET_CONTENT_VALUE
+*
+* @param int i
+* 	Value key
+* @param object current_value
+* 	Object value as
+* {
+    "original_file_name": "rsc209_rsc205_524_lg-spa.pdf",
+    "original_upload_date": {
+      "day": 21,
+      "hour": 13,
+      "time": 65009224561,
+      "year": 2022,
+      "month": 8,
+      "minute": 56,
+      "second": 1
+    }
+  }
 * @return DOM node li
 */
-const get_input_element_edit = function(self, i, current_value, pdf_url) {
+const get_content_value = function(i, current_value, self) {
 
-	// offset
-		const offset_value = current_value && current_value.offset!=='undefined' && current_value.offset!==null
+	// short vars
+		const quality		= self.quality || self.context.quality
+		const datalist		= self.data.datalist || []
+		const offset_value	= current_value && current_value.offset!=='undefined' && current_value.offset!==null
 			? current_value.offset
 			: 1
 
@@ -180,15 +128,11 @@ const get_input_element_edit = function(self, i, current_value, pdf_url) {
 			class_name		: 'content_value'
 		})
 
-	// url
-		// // const pdf_url	= self.data.datalist[i].url || null
-		// const quality		= self.quality || self.context.quality
-		// const datalist		= self.data.datalist
-		// const file_info		= datalist.find(el => el.quality===quality && el.file_exist===true)
-		// const pdf_url		= file_info
-		// 	? file_info.url
-		// 	: null
-
+	// pdf_url
+		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+		const pdf_url	= file_info
+			? file_info.url
+			: null
 
 	if (pdf_url) {
 
@@ -285,14 +229,34 @@ const get_input_element_edit = function(self, i, current_value, pdf_url) {
 				text_node		: 'offset',
 				parent			: fields
 			})
-			// offset input field
-			ui.create_dom_element({
+			// offset_input field
+			const offset_input = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'number',
 				class_name		: '',
-				dataset			: { key : i },
 				value			: offset_value,
 				parent			: fields
+			})
+			offset_input.addEventListener('change', function() {
+
+				// value
+					current_value.offset = (this.value.length>0)
+						? parseInt(this.value)
+						: null
+
+				const changed_data = Object.freeze({
+					action	: 'update',
+					key		: i,
+					value	: current_value
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+				.then(()=>{
+					// event to update the dom elements of the instance
+					event_manager.publish('update_value_'+self.id, changed_data)
+				})
 			})
 	}//end if (pdf_url)
 
@@ -309,7 +273,8 @@ const get_input_element_edit = function(self, i, current_value, pdf_url) {
 */
 const get_buttons = (self) => {
 
-	const fragment = new DocumentFragment()
+	// DOM fragment
+		const fragment = new DocumentFragment()
 
 	// prevent show buttons inside a tool
 		if (self.caller && self.caller.type==='tool') {
@@ -333,7 +298,6 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({
@@ -345,6 +309,4 @@ const get_buttons = (self) => {
 
 
 	return buttons_container
-}; //end get_buttons
-
-
+}//end get_buttons

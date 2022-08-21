@@ -41,6 +41,4 @@ render_mini_component_pdf.prototype.mini = function() {
 		})
 
 	return wrapper
-}; //end mini
-
-
+}//end mini
