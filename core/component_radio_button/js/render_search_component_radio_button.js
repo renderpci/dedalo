@@ -51,7 +51,6 @@ render_search_component_radio_button.prototype.search = async function() {
 const get_content_data_search = function(self) {
 
 	// short vars
-		const mode		= self.mode
 		const datalist	= self.data.datalist || []
 
 	// content_data
@@ -91,15 +90,20 @@ const get_content_data_search = function(self) {
 
 
 /**
-* GET_INPUT_ELEMENT
-* @return dom element li
+* GET_INPUT_ELEMENT_EDIT
+* Note that param 'i' is key from datalist, not from component value
+* @param int i
+* 	datalist key
+* @param object datalist_item
+* @param object self
+*
+* @return DOM element content_value
 */
-const get_input_element = (i, current_value, self) => {
+const get_input_element = (i, datalist_item, self) => {
 
 	// short vars
 		const value				= self.data.value || []
 		const value_length		= value.length
-		const datalist_item		= current_value
 		const label				= datalist_item.label
 		const datalist_value	= Object.assign({
 			from_component_tipo : self.tipo
@@ -160,7 +164,6 @@ const get_input_element = (i, current_value, self) => {
 						key		: false,
 						value	: null
 					})
-					// value = null
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data)

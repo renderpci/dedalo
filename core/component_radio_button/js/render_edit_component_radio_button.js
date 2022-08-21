@@ -1,4 +1,4 @@
-/*global, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -54,6 +54,7 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 }//end edit
 
 
+
 /**
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
@@ -69,17 +70,126 @@ const get_content_data_edit = function(self) {
 			autoload : true
 		})
 
-	// inputs
-		const datalist_length	= datalist.length
+	// inputs. Iterate datalist
+		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			const input_element = get_input_element_edit(i, datalist[i], self)
+			const input_element = get_input_element_edit(
+				i, // int datalist key
+				datalist[i], // object datalist item
+				self
+			)
 			content_data.appendChild(input_element)
 			// set pointers
 			content_data[i] = input_element
 		}
 
+
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* GET_INPUT_ELEMENT_EDIT
+* Note that param 'i' is key from datalist, not from component value
+* @param int i
+* 	datalist key
+* @param object datalist_item
+* @param object self
+*
+* @return DOM element content_value
+*/
+const get_input_element_edit = (i, datalist_item, self) => {
+
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_value	= datalist_item.value
+		const label				= datalist_item.label
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// label
+		const input_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'label',
+			inner_html		: label,
+			parent			: content_value
+		})
+
+	// input radio button
+		const input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'radio',
+			name			: self.id,
+		})
+		input_label.prepend(input)
+		input.addEventListener('change', function() {
+
+			const changed_data = Object.freeze({
+				action	: 'update',
+				key		: 0,
+				value	: datalist_value
+			})
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+			.then(()=>{
+				//self.selected_key = e.target.dataset.key
+				// event to update the dom elements of the instance
+				event_manager.publish('update_value_'+self.id, self)
+			})
+		})//end change event
+
+		content_value.addEventListener('mousedown', function(e) {
+			if (e.altKey===true) {
+				e.stopPropagation()
+				e.preventDefault()
+
+				if (self.data.value.length===0) {
+					return true
+				}
+				// remove checked state
+				input.checked = false
+
+				const changed_data = Object.freeze({
+					action	: 'remove',
+					key		: false,
+					value	: null
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					label			: self.get_checked_value_label(),
+					refresh			: false,
+					remove_dialog	: ()=>{
+						return true
+					}
+				})
+				.then(()=>{
+					//self.selected_key = e.target.dataset.key
+					// event to update the dom elements of the instance
+					event_manager.publish('update_value_'+self.id, self)
+				})
+			}
+		})
+
+	// checked input set on match
+		for (let j = 0; j < value_length; j++) {
+			if (value[j] && datalist_value &&
+				value[j].section_id===datalist_value.section_id &&
+				value[j].section_tipo===datalist_value.section_tipo
+				) {
+					input.checked = 'checked'
+			}
+		}
+
+	return content_value
+}//end get_input_element_edit
 
 
 
@@ -90,10 +200,12 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	// short vars
+		const is_inside_tool	= self.is_inside_tool
+		const mode				= self.mode
 
-	const fragment = new DocumentFragment()
+	// document fragment
+		const fragment = new DocumentFragment()
 
 	// button edit (go to target section)
 		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
@@ -168,7 +280,6 @@ const get_buttons = (self) => {
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({
@@ -181,103 +292,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT_EDIT
-* @return DOM element li
-*/
-const get_input_element_edit = (i, current_value, self) => {
-
-	// short vars
-		const value				= self.data.value || []
-		const value_length		= value.length
-		const datalist_item		= current_value
-		const datalist_value	= datalist_item.value
-		const label				= datalist_item.label
-
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value'
-		})
-
-	// label
-		const input_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'label',
-			inner_html		: label,
-			parent			: content_value
-		})
-
-	// input radio button
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'radio',
-			name			: self.id,
-		})
-		input_label.prepend(input)
-		input.addEventListener('change', function() {
-
-			const changed_data = Object.freeze({
-				action	: 'update',
-				key		: 0,
-				value	: datalist_value
-			})
-
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-			.then(()=>{
-				//self.selected_key = e.target.dataset.key
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, self)
-			})
-		})//end change event
-
-		content_value.addEventListener('mousedown', function(e) {
-			if (e.altKey===true) {
-				e.stopPropagation()
-				e.preventDefault()
-
-				if (self.data.value.length===0) {
-					return true
-				}
-				// remove checked state
-				input.checked = false
-				
-				const changed_data = Object.freeze({
-					action	: 'remove',
-					key		: false,
-					value	: null
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					label			: self.get_checked_value_label(),//'All',
-					refresh			: false,
-					remove_dialog	: ()=>{
-						return true
-					}
-				})
-				.then(()=>{
-					//self.selected_key = e.target.dataset.key
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, self)
-				})
-			}
-		})
-
-	// checked input set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					input.checked = 'checked'
-			}
-		}
-
-	return content_value
-}//end get_input_element_edit

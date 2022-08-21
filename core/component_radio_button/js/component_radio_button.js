@@ -85,5 +85,3 @@ component_radio_button.prototype.get_checked_value_label = function() {
 
 	return label
 }//end get_checked_value_label
-
-
