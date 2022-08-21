@@ -1290,6 +1290,12 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 					: null
 			if (filter_by_locators) {
 				sqo.filter_by_locators = filter_by_locators
+			}else if(self.section_id && self.section_tipo){
+				sqo.filter_by_locators = [{
+					section_tipo	:self.section_tipo,
+					section_id		: self.section_id
+				}]
+
 			}
 
 	// sqo clean
