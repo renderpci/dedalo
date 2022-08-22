@@ -7,7 +7,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {events_subscription} from './events_subscription.js'
+	import {events_subscription} from '../../component_input_text/js/events_subscription.js'
 	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
 	import {render_search_component_date} from '../../component_date/js/render_search_component_date.js'
 	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
