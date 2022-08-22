@@ -226,9 +226,6 @@ const update_value = function(self, i) {
 			refresh			: false
 		})
 		.then(()=>{
-			// event to update the dom elements of the instance
-			event_manager.publish('update_value_'+self.id_base, changed_data)
-
 			resolve()
 		})
 	})

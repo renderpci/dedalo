@@ -139,11 +139,6 @@ const get_input_element_edit = (i, datalist_item, self) => {
 				changed_data	: changed_data,
 				refresh			: false
 			})
-			.then(()=>{
-				//self.selected_key = e.target.dataset.key
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, self)
-			})
 		})//end change event
 
 		content_value.addEventListener('mousedown', function(e) {
@@ -169,11 +164,6 @@ const get_input_element_edit = (i, datalist_item, self) => {
 					remove_dialog	: ()=>{
 						return true
 					}
-				})
-				.then(()=>{
-					//self.selected_key = e.target.dataset.key
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, self)
 				})
 			}
 		})
@@ -264,11 +254,6 @@ const get_buttons = (self) => {
 					changed_data	: changed_data,
 					label			: self.get_checked_value_label(),//'All',
 					refresh			: true
-				})
-				.then(()=>{
-					// rebuild and save the component
-					// event_manager.publish('reset_element_'+self.id, self)
-					event_manager.publish('update_value_'+self.id, self)
 				})
 			})
 		}

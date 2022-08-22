@@ -23,9 +23,9 @@ export const events_subscription = function() {
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id_base, fn_update_value)
 		)
-		function fn_update_value (changed_data) {
+		function fn_update_value (options) {
 
-			self.update_data_value(changed_data)
+			self.update_data_value(options.changed_data)
 			self.refresh({
 				build_autoload : false,
 				render_level : self.mode==='edit'
