@@ -25,7 +25,7 @@ export const events_subscription = function() {
 		)
 		function fn_update_value (options) {
 
-			if(options.id === self.id){
+			if(options.caller.id === self.id){
 				return
 			}
 
