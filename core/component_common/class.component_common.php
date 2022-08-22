@@ -505,10 +505,14 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATO
-	* @param mixed dato
+	* @param array|null dato
 	* @return bool true
 	*/
 	public function set_dato($dato) {
+
+		if (!is_null($dato) && !is_array($dato)) {
+			debug_log(__METHOD__.' - '. get_called_class() .PHP_EOL.'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. Type: '. gettype($dato) .' - dato: '. to_string($dato), logger::ERROR);
+		}
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
 		parent::set_dato($dato);
@@ -570,7 +574,12 @@ abstract class component_common extends common {
 		# MATRIX DATA : Load matrix data
 		$this->load_component_dato();
 
-		return $this->dato; # <- Se aplicará directamente el fallback de idioma para el modo list
+		$dato = $this->dato;
+		if (!is_null($dato) && !is_array($dato)) {
+			debug_log(__METHOD__.' - '. get_called_class() .PHP_EOL.'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. Type: '. gettype($dato) .' - dato: '. to_string($dato), logger::ERROR);
+		}
+
+		return $dato; # <- Se aplicará directamente el fallback de idioma para el modo list
 	}//end get_dato
 
 
