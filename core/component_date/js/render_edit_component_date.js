@@ -402,10 +402,6 @@ const input_element_period = (i, current_value, self) => {
 				changed_data	: changed_data,
 				refresh			: false
 			})
-			.then((save_response)=>{
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, changed_data)
-			})
 		}
 
 
@@ -459,10 +455,6 @@ const input_element_time = (i, current_value, self) => {
 		self.change_value({
 			changed_data	: changed_data,
 			refresh			: false
-		})
-		.then((save_response)=>{
-			// event to update the dom elements of the instance
-			event_manager.publish('update_value_'+self.id, changed_data)
 		})
 	})
 
@@ -551,10 +543,6 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false
-			})
-			.then((save_response)=>{
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, changed_data)
 			})
 		})
 

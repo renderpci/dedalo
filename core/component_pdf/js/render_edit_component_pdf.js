@@ -253,10 +253,6 @@ const get_content_value = function(i, current_value, self) {
 					changed_data	: changed_data,
 					refresh			: false
 				})
-				.then(()=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
 			})
 	}//end if (pdf_url)
 

@@ -175,10 +175,6 @@ const get_content_value = (i, current_value, self) => {
 							// 	changed_data : changed_data,
 							// 	refresh 	 : false
 							// })
-							// .then((save_response)=>{
-							// 	// event to update the dom elements of the instance
-							// 	event_manager.publish('update_value_'+self.id, changed_data)
-							// })
 						},
 						onBlur : function() {
 						    // 	console.log('content changed:', this);

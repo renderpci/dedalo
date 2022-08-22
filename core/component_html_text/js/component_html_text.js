@@ -87,10 +87,6 @@ component_html_text.prototype.save_value = async function(key, value) {
 		changed_data	: changed_data,
 		refresh			: false
 	})
-	.then((save_response)=>{
-		// event to update the dom elements of the instance
-		event_manager.publish('update_value_'+self.id, changed_data)
-	})
 
 	return true
 }//end save_value
@@ -158,11 +154,6 @@ component_html_text.prototype.save_value = async function(key, value) {
 	// 			self.change_value({
 	// 				changed_data : changed_data,
 	// 				refresh 	 : false
-	// 			})
-	// 			.then((save_response)=>{
-	// 				// event to update the dom elements of the instance
-	// 				event_manager.publish('update_value_'+obj_html_text.id, changed_data)
-	// 				ed.setDirty(false)
 	// 			})
 
 	// 	}else{

@@ -31,11 +31,23 @@
 							"source" : "fixed_dato",
 							"value" : [
 							{
-								"f_path" : ["numisdata3","numisdata27"],
+								"path": [
+									{
+										"name": "Usable in indexing",
+										"modelo": "component_radio_button",
+										"section_tipo": "hierarchy20",
+										"component_tipo": "hierarchy24"
+									}
+								],
 								"q":
 									{
-									"value" : ["{\"section_id\":\"2\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"hierarchy24\"}",
-									2,"abc"]
+										"type": "dd151",
+										"section_id": "2",
+										"section_tipo": "dd64",
+										"from_component_tipo": "hierarchy24"
+									},
+									2,
+									"abc"
 									}
 								,
 								"q_operator": null

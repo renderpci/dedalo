@@ -52,7 +52,6 @@ const add_events = function(self, wrapper) {
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		// self.events_tokens.push(
-		// 	event_manager.subscribe('update_value_'+self.id, update_value)
 		// )
 		// function update_value (changed_data) {
 		// 	//console.log("-------------- - event update_value changed_data:", changed_data);
