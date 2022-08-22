@@ -460,13 +460,20 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 						}else{
 
-							const expected	= data_value
-								? JSON.stringify(data_value)
-								: null
+							// const expected	= data_value
+							// 	? JSON.stringify(data_value)
+							// 	: null
+							// const equal_to	= JSON.stringify(reference_value)
 
-							console.log("data_value:",new_instance.data.value);
-							const equal_to	= JSON.stringify(reference_value)
-							assert.equal( expected, equal_to, "Compares equal saved value and sended value" )
+							const expected = data_value
+							const equal_to = reference_value
+
+							console.log('++ /////////////////////////// expected:', expected);
+							console.log('++ /////////////////////////// reference_value:', equal_to);
+
+							// equal
+							assert.deepEqual( expected, equal_to, "Compares equal saved value and sent value" )
+
 						}
 
 					}else{

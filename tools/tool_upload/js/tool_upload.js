@@ -371,6 +371,8 @@ tool_upload.prototype.build = async function(autoload=false) {
 *	tmp_name: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
 *	type: "image/tiff"
 * }
+* @return promise
+* 	Resolve: object API response
 */
 tool_upload.prototype.process_uploaded_file = function(file_data) {
 

@@ -52,6 +52,26 @@ import {component_date} from '../../component_date/js/component_date.js'
 		return value
 	}
 
+	export const random_av_data = function() {
+
+		// expected
+		// 	"section_id": "1",
+		// 	"section_tipo": "test3",
+		// 	"component_tipo": "test94"
+
+		const section_tipo			= arguments[0][0]
+		const section_id			= arguments[0][1] + '' // string force
+		const from_component_tipo	= arguments[0][2]
+
+		const value = {
+			section_id		: section_id,
+			section_tipo	: section_tipo,
+			component_tipo	: from_component_tipo
+		}
+
+		return value
+	}
+
 	export const ar_random_locator = function() {
 		const result = random_locator(...arguments)
 		return [result]
