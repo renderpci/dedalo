@@ -33,47 +33,39 @@ class component_av extends component_media_common {
 	*/
 	function __construct(string $tipo, $section_id=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
-		# Creamos el componente normalmente
-		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
+		// __construct. Creates the component as normally do with parent class
+			parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
 
-		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
-		# Force calculate and set initial dato
-		$dato = $this->get_dato();
-			#dump($dato," dato 1 $modo");
+		// dato : We verify that there is a data. If not, we assign the default data in the current language
+		// Force calculate and set initial dato
+			$dato = $this->get_dato();
 
-		$need_save=false;
-		if($modo==='edit' && (int)$this->section_id>0 && !isset($dato->section_id)) {
+		// default data
+			$need_save = false;
+			if($modo==='edit' && (int)$this->section_id>0 && !isset($dato->section_id)) {
 
-			#####################################################################################################
-			# DEFAULT DATO
-			$locator = new locator();
-				$locator->set_component_tipo($this->tipo);
-				$locator->set_section_tipo($this->section_tipo);
-				$locator->set_section_id($this->section_id);
-			# END DEFAULT DATO
-			######################################################################################################
+				// default dato
+					$locator = new locator();
+						$locator->set_component_tipo($this->tipo);
+						$locator->set_section_tipo($this->section_tipo);
+						$locator->set_section_id($this->section_id);
 
-			# Dato
-			$this->set_dato($locator);
-			$need_save=true;
+				// dato set
+				$this->set_dato([$locator]);
+				$need_save = true;
+			}
 
-		}#end if(empty($dato->counter) && $this->section_id>0)
+		// video_id. Set and fix current video_id
+			$this->video_id = $this->get_video_id();
 
-
-			#
-			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no están estas variables asignadas)
-			#
-				# Set and fix current video_id
-				$this->video_id = $this->get_video_id();
-
-
-		if ($need_save===true) {
-			# result devuelve el id de la sección parent creada o editada
-			$result = $this->Save();
-			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - section_id:$this->section_id - lang:$this->lang)");
-
-		}//end if ($need_save)
+		// save default value if needed
+			if($need_save===true) {
+				// save. Result returns the id of the created or edited parent section
+				$result = $this->Save();
+				debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".
+					get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - section_id:$this->section_id - lang:$this->lang)");
+			}//end if($need_save)
 	}//end __construct
 
 
@@ -82,7 +74,7 @@ class component_av extends component_media_common {
 	* GET DATO
 	* @return array|null $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
 		$dato = parent::get_dato();
 
 		if (!empty($dato) && !is_array($dato)) {
@@ -98,6 +90,7 @@ class component_av extends component_media_common {
 	* SET_DATO
 	*/
 	public function set_dato($dato) {
+
 		parent::set_dato( $dato );
 	}//end set_dato
 

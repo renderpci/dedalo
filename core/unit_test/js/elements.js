@@ -1,3 +1,6 @@
+/* global page_globals */
+/* eslint no-undef: "error" */
+
 import * as fn from './data.js'
 
 
@@ -24,7 +27,7 @@ import * as fn from './data.js'
 			section_id			: section_id,
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.custom_locator,
+			new_value			: fn.random_av_data, // return array
 			new_value_params	: [section_tipo, section_id, 'test94']
 		})
 
@@ -66,18 +69,6 @@ import * as fn from './data.js'
 
 	// component_external -zenon- (WORKING HERE)
 
-	// component_filter
-		elements.push({
-			model				: 'component_filter',
-			tipo				: 'test101',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
-		})
-
 	// component_filter_master
 		elements.push({
 			model				: 'component_filter_master',
@@ -88,6 +79,18 @@ import * as fn from './data.js'
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: [section_tipo,'test70'] // [section_tipo, from_component_tipo, paginated_key]
+		})
+
+	// component_filter
+		elements.push({
+			model				: 'component_filter',
+			tipo				: 'test101',
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			mode				: mode,
+			lang				: page_globals.dedalo_data_nolan,
+			new_value			: fn.random_locator,
+			new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
 		})
 
 	// component_filter_records
@@ -324,18 +327,6 @@ import * as fn from './data.js'
 			new_value			: fn.random_security_access
 		})
 
-	// component_select
-		elements.push({
-			model				: 'component_select',
-			tipo				: 'test91',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['es1','test91']
-		})
-
 	// component_select_lang
 		elements.push({
 			model				: 'component_select_lang',
@@ -346,6 +337,18 @@ import * as fn from './data.js'
 			lang				: lang,
 			new_value			: fn.random_locator,
 			new_value_params	: ['lg1','test89']
+		})
+
+	// component_select
+		elements.push({
+			model				: 'component_select',
+			tipo				: 'test91',
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			mode				: mode,
+			lang				: lang,
+			new_value			: fn.random_locator,
+			new_value_params	: ['es1','test91']
 		})
 
 	// component_semantic_node -render portal column- (WORKING HERE)
