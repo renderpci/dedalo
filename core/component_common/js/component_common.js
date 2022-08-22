@@ -912,9 +912,10 @@ component_common.prototype.change_value = async function(options) {
 			if(self.change_value_pool.length > 0) {
 				(self.change_value_pool.shift())();
 			}
-
-	// console.log("/////////////////////////// *** api_response:",api_response);
-	// console.log("/////////////////////////// *** self.data.value:",self.data.value);
+		// event to update the dom elements of the instance
+			event_manager.publish('update_value_'+self.id_base, {
+				changed_data : changed_data
+			})
 
 	return api_response
 }//end change_value

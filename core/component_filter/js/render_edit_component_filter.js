@@ -231,11 +231,6 @@ const get_input_element = (i, current_value, self) => {
 					return true
 				}
 			})
-			.then(()=>{
-				self.selected_key = i
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, self)
-			})
 		})//end change event
 
 		// checked option set on match

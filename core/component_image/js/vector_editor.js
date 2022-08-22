@@ -864,10 +864,6 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 						changed_data : self.data.changed_data,
 						refresh 	 : false
 					})
-					.then((save_response)=>{
-						// event to update the dom elements of the instance
-						event_manager.publish('update_value_'+self.id, self.data.changed_data)
-					})
 
 					activate_status(save)
 				})

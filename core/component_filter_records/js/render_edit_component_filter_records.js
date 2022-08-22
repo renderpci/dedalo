@@ -220,8 +220,6 @@ const get_content_value = (i, datalist_item, self) => {
 					if (value) {
 						input_node.value = value.value.join(",")
 					}
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id_base, changed_data)
 				})
 		})//end change
 		input_node.addEventListener('keyup', function(e) {
