@@ -25,10 +25,16 @@ export const events_subscription = function() {
 		)
 		function fn_update_value (options) {
 
+			if(options.id === self.id){
+				return
+			}
+
 			self.update_data_value(options.changed_data)
 			self.refresh({
-				build_autoload : false,
-				render_level : self.mode==='edit'
+				build_autoload	: self.mode==='edit'
+					? false
+					: true,
+				render_level	: self.mode==='edit'
 					? 'content'
 					: 'full'
 			})
