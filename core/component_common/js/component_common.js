@@ -914,7 +914,7 @@ component_common.prototype.change_value = async function(options) {
 			}
 		// event to update the dom elements of the instance
 			event_manager.publish('update_value_'+self.id_base, {
-				id				: self.id,
+				caller			: self,
 				changed_data	: changed_data
 			})
 
