@@ -2602,6 +2602,7 @@ abstract class common {
 								foreach ($ar_search_ddo_map as $current_search_ddo_map) {
 
 									if (empty($current_search_ddo_map->tipo)) {
+										// dump($ar_search_ddo_map, ' ar_search_ddo_map +++++++++++++++++++++++++++++++++++++ '.to_string($tipo));
 										debug_log(__METHOD__." Ignored empty search_ddo_map->tipo. current_search_ddo_map: ".PHP_EOL.to_string($current_search_ddo_map), logger::ERROR);
 										continue;
 									}
