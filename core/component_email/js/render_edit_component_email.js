@@ -253,10 +253,6 @@ const get_input_element_edit = (i, current_value, self) => {
 					changed_data	: changed_data,
 					refresh			: false
 				})
-				.then(()=>{
-					// event to update the dom elements of the instance
-					event_manager.publish('update_value_'+self.id, changed_data)
-				})
 				// check if the new value is empty or not to remove the mandatory class
 				if(new_value){
 					input_email.classList.remove('mandatory')

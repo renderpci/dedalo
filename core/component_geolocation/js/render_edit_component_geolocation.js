@@ -54,7 +54,6 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 
 	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 		// self.events_tokens.push(
-		// 	event_manager.subscribe('update_value_'+self.id, update_value)
 		// )
 		// function update_value (changed_data) {
 		// 	console.log("-------------- - event update_value changed_data:", changed_data);
@@ -330,10 +329,6 @@ const get_buttons = (self) => {
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false
-			})
-			.then((save_response)=>{
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, changed_data)
 			})
 		})
 

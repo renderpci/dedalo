@@ -184,9 +184,6 @@ component_json.prototype.save_sequence = async function(editor) {
 				refresh			: false
 			})
 			.then((save_response)=>{
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, changed_data)
-
 				// on_change(self, editor)
 
 				// editor.frame.classList.remove("isDirty")

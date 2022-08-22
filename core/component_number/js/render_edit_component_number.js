@@ -120,10 +120,6 @@ const get_content_value = (i, current_value, self) => {
 				changed_data	: changed_data,
 				refresh			: false
 			})
-			.then(()=>{
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id_base, changed_data)
-			})
 		})//end change
 		input.addEventListener('keyup', function(e) {
 			// page unload event

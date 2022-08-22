@@ -141,11 +141,6 @@ const get_content_value = (i, current_value, self) => {
 				refresh			: false,
 				remove_dialog	: false
 			})
-			.then(()=>{
-				//self.selected_key = e.target.dataset.key
-				// event to update the dom elements of the instance
-				event_manager.publish('update_value_'+self.id, self)
-			})
 		})//end change event
 
 	// select options
