@@ -813,12 +813,14 @@ const view_window = async function(options) {
 
 			// remove window.callers pointer
 			// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
+
 			// refresh caller
 			caller.refresh()
+
 			// close opened window if is open
-			if (tool_window) {
+			// if (tool_window) {
 				// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
-			}
+			// }
 		}
 
 
