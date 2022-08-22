@@ -11,7 +11,7 @@
 
 /**
 * RENDER_TOOL_UPLOAD
-* Manages the tool's logic and apperance in client side
+* Manages the tool's logic and appearance in client side
 */
 export const render_tool_upload = function() {
 
@@ -165,13 +165,13 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		}
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "spinner",
+			class_name		: 'spinner',
 			parent			: self.process_file
 		})
 		const process_file_info = ui.create_dom_element({
 			element_type	: 'span',
 			inner_html		: 'Processing file..',
-			class_name		: "info",
+			class_name		: 'info',
 			parent			: self.process_file
 		})
 		self.process_file.appendChild(spinner)
@@ -200,12 +200,13 @@ render_tool_upload.prototype.upload_done = async function (options) {
 					}
 
 				// caller update. (usually media component like component_image)
-					self.caller.refresh()
+					// self.caller.refresh() (!) Unnecessary because on close this tool window, component is refresh too
 			}
 		})
 
 	return true
 }//end upload_done
+
 
 
 /**
