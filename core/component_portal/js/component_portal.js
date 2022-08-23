@@ -264,13 +264,6 @@ component_portal.prototype.build = async function(autoload=false) {
 
 			// set context and data to current instance
 				// await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
-				
-			// Data
-				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
-				if(!data){
-					console.warn("data not found in api_response:",api_response);
-				}
-				self.data = data || {}
 
 			// Context
 				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
@@ -278,6 +271,13 @@ component_portal.prototype.build = async function(autoload=false) {
 					console.error("context not found in api_response:", api_response);
 				}
 				self.context = context
+
+			// Data
+				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				if(!data){
+					console.warn("data not found in api_response:",api_response);
+				}
+				self.data = data || {}
 
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
 				if(!self.standalone){
