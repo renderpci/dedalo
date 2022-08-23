@@ -7,6 +7,7 @@
 	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_edit_component_geolocation} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
 	import {render_mini_component_geolocation} from '../../component_geolocation/js/render_mini_component_geolocation.js'
@@ -942,4 +943,92 @@ component_geolocation.prototype.update_draw_data = function() {
 	return true
 }//end update_draw_data
 
+
+/**
+* MAP_UPDATE_COORDINATES
+* Update the coordinates based in the data sent by other components, as autocomplet_hi
+* this components can point to other record, as toponomy, that has a geolocation component
+* this method will use the data of the referenced geolocation data in the pointed record as own coordinates
+* The caller component will dispatch a event when it update his data that will fire this method
+* the self component(geolocation that is listen) could be configured in properties as:
+*
+* 	"observe":[
+* 		{
+*			"event": "update_value",
+*			"perform": "map_update_coordinates",
+*			"component_tipo": "test9" // The component to be observe, usually an autocomplete_hi
+*		}]
+*
+* the observable component could specify the component_geolocation that has the coordinates to be used:
+*
+* 	"target_geolocation_tipo": "hierarchy31"
+*
+* If the observable doesn't has specified the component_geolocation will use the default thesaurus component_geolocation: hierarchy31
+*
+*/
+
+component_geolocation.prototype.map_update_coordinates = async function(options) {
+
+	const self = this
+
+	const caller		= options.caller
+	const changed_data	= options.changed_data
+	// check if the data sent has value(a locator), if not stop
+	if(changed_data.value === null){
+		return
+	}
+
+	const section_tipo	= changed_data.value.section_tipo
+	const section_id	= changed_data.value.section_id
+	// check if the caller has defined 'target_geolocation_tipo' in his properties
+	const tipo = caller.context.properties.target_geolocation_tipo
+		? caller.context.properties.target_geolocation_tipo
+		: "hierarchy31" // Default geolocation map in thesarus
+
+	// create the component to get the data
+	// source object
+		const source = {
+			typo			: "source",
+			type			: self.type,
+			action			: 'get_data',
+			model			: self.model,
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: 'edit',
+			lang			: self.lang
+		}
+	// create the default rqo
+		const rqo = {
+			action	: 'read',
+			source	: source
+		}
+
+	// load data. get context and data from API
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+	// if result, incorporate it to the current map and reload it
+	if(api_response.result){
+		const data = api_response.result.data
+		// geolocation doesn't has multiple maps and the key of the data array is always 0
+		const key = 0
+		self.current_value = data[key].value
+		self.update_input_values(self.current_value[key], self.node.content_data[key].map_container)
+		// move the map to the new point and zoom with the values
+		self.map.panTo(new L.LatLng(self.current_value[key].lat, self.current_value[key].lon));
+		self.map.setZoom(self.current_value[key].zoom);
+		// modify his own data with the new values
+		const changed_data = Object.freeze({
+				action		: 'update',
+				key			: key,
+				value		: self.current_value[key]
+			})
+		self.change_value({
+			changed_data	: changed_data,
+			refresh			: false
+		})
+	}//end if check api_response
+}//end map_update_coordinates
 
