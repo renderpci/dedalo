@@ -474,7 +474,6 @@ component_common.prototype.save = async function(changed_data) {
 			}
 		}
 
-
 	// send_data
 		const send_data = async () => {
 			try {
@@ -527,75 +526,76 @@ component_common.prototype.save = async function(changed_data) {
 				}
 			}
 		}
-		const save_promise = send_data()
+		const response = await send_data()
 
 	// check result for errors
-		save_promise.then(async function(response){
+	// result expected is current section_id. False is returned if a problem found
+		const result = response.result
+		if (result===false) {
 
-			// self.node.map(item => {
-			// 	item.classList.remove('loading')
-			// })
+			// error case
 
-			// result expected is current section_id. False is returned if a problem found
-			const result = response.result
-			if (result===false) {
+			self.node.classList.add("error")
 
-				// error case
-				self.node.classList.add("error")
-
-				if (response.error) {
-					console.error(response.error)
-				}
-				if (response.msg) {
-					alert("Error on save self "+self.model+" data: \n" + response.msg)
-				}
-
-				console.error("ERROR response:",response);
-
-			}else{
-				// success case
-
-				// update datum (centralized update datum call)
-					await self.update_datum(result.data)
-
-				// success. add save_success class to component wrappers (green line animation)
-					if (self.mode==='edit') {
-						ui.component.exec_save_successfully_animation(self)
-					}
-
-				// page unload event
-					// set_before_unload (bool)
-					set_before_unload(false)
-
-				// updates db_data
-					if (self.model!=='component_password') {
-						self.db_data = self.db_data
-							? self.db_data
-							: {}
-
-						self.db_data.value = self.db_data.value
-							? self.db_data.value
-							: [null]
-
-						self.db_data.value[changed_data.key] = changed_data.value
-					}
+			if (response.error) {
+				console.error(response.error)
+			}
+			if (response.msg) {
+				alert("Error on save self "+self.model+" data: \n" + response.msg)
 			}
 
-			// dispatch event save
-				event_manager.publish('save', {
-					instance		: self,
-					api_response	: response
-				})
+			console.error("ERROR response:",response);
 
-			// remove acive
-				// ui.component.inactive(self)
+		}else{
 
-			// blur selection
-				// document.activeElement.blur()
-		})
+			// success case
+
+			// data
+				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				if(!data){
+					console.warn("data not found in result:", result);
+				}
+				self.data = data || {}
+
+			// datum. Update datum (centralized update datum call)
+				await self.update_datum(result.data)
+
+			// db_data. Updates db_data
+				if (self.model!=='component_password') {
+					self.db_data = self.db_data
+						? self.db_data
+						: {}
+
+					self.db_data.value = self.db_data.value
+						? self.db_data.value
+						: [null]
+
+					self.db_data.value[changed_data.key] = changed_data.value
+				}
+
+			// ui. Add save_success class to component wrappers (green line animation)
+				if (self.mode==='edit') {
+					ui.component.exec_save_successfully_animation(self)
+				}
+
+			// page unload event set as false (reset)
+				set_before_unload(false)
+		}
+
+		// dispatch save event
+			event_manager.publish('save', {
+				instance		: self,
+				api_response	: response
+			})
+
+		// remove acive
+			// ui.component.inactive(self)
+
+		// blur selection
+			// document.activeElement.blur()
 
 
-	return save_promise
+	return response
 }//end save
 
 
@@ -788,7 +788,7 @@ component_common.prototype.update_datum = async function(new_data) {
 * @param object changed_data
 * @return bool true
 */
-component_common.prototype.update_data_value = function(changed_data){
+component_common.prototype.update_data_value = function(changed_data) {
 
 	const self = this
 
@@ -805,19 +805,24 @@ component_common.prototype.update_data_value = function(changed_data){
 			: null
 		const changed_value	= changed_data.value
 
+		self.data = self.data || {}
+
 	// set_data. if action is set_data the value is changed as is, bulk insert or update the data of the component.
 		if(action==='set_data'){
 			self.data.value = changed_value || []
 			return true
 		}
 
-	// data.value. When the data_key is false the value is propagated to all items in the array
+	// data.value. When the data_key is false and value is null, the value is propagated to all items in the array
 		if (data_key===false && changed_value===null) {
-			self.data.value = []
+				// delete all values
+				self.data.value = []
 		}else{
 			if (changed_value===null) {
+				// delete current value key from array
 				self.data.value.splice(data_key,1)
 			}else{
+				// add / update array key value
 				self.data.value = self.data.value || []
 				self.data.value[data_key] = changed_value
 			}
@@ -826,7 +831,7 @@ component_common.prototype.update_data_value = function(changed_data){
 	if(SHOW_DEBUG===true) {
 		//console.log("***** update_data_value data_key:",clone(data_key));
 		//console.log("======= update_data_value:",clone(self.data.value));
-		console.log("======= update_data_value POST CHANGE:", clone(self.data.value), self.id);
+		console.log("======= [component_common] update_data_value POST CHANGE:", clone(self.data.value), self.id);
 	}
 
 
@@ -860,7 +865,7 @@ component_common.prototype.change_value = async function(options) {
 		const build_autoload		= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
 		const custom_remove_dialog	= options.remove_dialog // undefined|function|bool
 
-	// check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
+	// remove. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
 		if (action==='remove') {
 
 			// generate default remove dialog to confirm the remove option is correct
@@ -907,17 +912,19 @@ component_common.prototype.change_value = async function(options) {
 				})
 			}
 
-		// restore previous status
-			self.status = prev_status
+	// restore previous status
+		self.status = prev_status
 
-		// exec queue one by one
-			if(self.change_value_pool.length > 0) {
-				(self.change_value_pool.shift())();
-			}
-		// event to update the dom elements of the instance
-			event_manager.publish('update_value_'+self.id_base, {
-				changed_data : changed_data
-			})
+	// exec queue one by one
+		if(self.change_value_pool.length > 0) {
+			(self.change_value_pool.shift())();
+		}
+
+	// event to update the DOM elements of the instance
+		event_manager.publish('update_value_'+self.id_base, {
+			changed_data : changed_data
+		})
+
 
 	return api_response
 }//end change_value
