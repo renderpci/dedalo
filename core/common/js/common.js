@@ -439,7 +439,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 	const result = {}
 
 	// destroy all instances associated
-		if(delete_dependencies===true){
+		if(delete_dependencies===true) {
 
 			const do_delete_dependencies = async function() {
 
@@ -495,19 +495,19 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 			}
 
 			result.delete_dependencies = await do_delete_dependencies()
-		}
+		}//end if(delete_dependencies===true)
 
 
 	// delete self instance
-		if(delete_self===true){
+		if(delete_self===true) {
 
 			const do_delete_self = async function() {
 
-				// events_tokens. get the events that the instance was created
-					const events_tokens = self.events_tokens
-
-				// events. delete the registered events
-					const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token)) // remove all subscriptions
+				// delete events. Delete the registered events
+					// get the events that the instance was created
+					const events_tokens	= self.events_tokens
+					// remove all subscriptions
+					events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
 				// delete paginator
 					if(self.paginator){
@@ -561,22 +561,19 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 					// }
 
 				// remove_dom optional
-					if (remove_dom===true) {
-						const remove_node = async () => {
-							if(self.node){
-								self.node.remove()
-							}
+					// if (remove_dom===true) {
+					// 	const remove_node = async () => {
+					// 		if(self.node){
+					// 			// remove DOM node if exists (wrapper)
+					// 			self.node.remove()
+					// 		}
+					// 		// reset instance node property value
+					// 		self.node = null
+					// 	}
+					// 	await remove_node()
+					// }
 
-							// const node_length = self.node.length
-							// for (let i = node_length - 1; i >= 0; i--) {
-							// 	const current_node = self.node[i]
-							// 	current_node.remove()
-							// }
-						}
-						await remove_node()
-					}
-
-				// delete_instance
+				// delete_instance from instances register array
 					const instance_options = {
 						id				: self.id,
 						model			: self.model,
@@ -593,34 +590,21 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 					const result = await delete_instance(instance_options)
 
 				return result
-			}
+			}//end function do_delete_self
 
 			result.delete_self = await do_delete_self()
-		}
-
+		}//end if(delete_self===true)
 
 
 	// remove_dom optional
-		if (remove_dom===true && delete_self===false) {
-			const remove_node = async () => {
+		if (remove_dom===true) {
 
-				const node = self.node
-					while (node.firstChild) {
-						node.removeChild(node.firstChild);
-					}
-       			node.remove()
-
-				// const node_length = self.node.length
-				// //for (let i = 0, l = node_length; i < l; i++) {
-				// for (let i = node_length - 1; i >= 0; i--) {
-				// 	const current_node = self.node[i]
-				// 	while (current_node.firstChild) {
-				// 		current_node.removeChild(current_node.firstChild);
-				// 	}
-				//		current_node.remove()
-				// }
+			if(self.node){
+				// remove DOM node if exists (wrapper)
+				self.node.remove()
 			}
-			await remove_node()
+			// reset instance node property value
+			self.node = null
 		}
 
 	// status update
