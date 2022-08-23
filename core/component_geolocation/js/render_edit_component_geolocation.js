@@ -274,7 +274,8 @@ export const get_input_element_edit = (i, current_value, self) =>{
 			observer.observe(map_container);
 		}
 
-
+	content_value.map_container = map_container
+	
 	return content_value
 }//end get_input_element_edit
 

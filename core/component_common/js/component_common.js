@@ -915,15 +915,16 @@ component_common.prototype.change_value = async function(options) {
 	// restore previous status
 		self.status = prev_status
 
+	// event to update the DOM elements of the instance
+		event_manager.publish('update_value_'+self.id_base, {
+			caller			: self,
+			changed_data	: changed_data
+		})
+
 	// exec queue one by one
 		if(self.change_value_pool.length > 0) {
 			(self.change_value_pool.shift())();
 		}
-
-	// event to update the DOM elements of the instance
-		event_manager.publish('update_value_'+self.id_base, {
-			changed_data : changed_data
-		})
 
 
 	return api_response
