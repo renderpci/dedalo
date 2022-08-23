@@ -28,7 +28,8 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_av_data, // return array
-			new_value_params	: [section_tipo, section_id, 'test94']
+			new_value_params	: [section_tipo, section_id, 'test94'],
+			test_save			: false
 		})
 
 	// component_calculation -to disappear-  (WORKING HERE)
@@ -81,18 +82,6 @@ import * as fn from './data.js'
 			new_value_params	: [section_tipo,'test70'] // [section_tipo, from_component_tipo, paginated_key]
 		})
 
-	// component_filter
-		elements.push({
-			model				: 'component_filter',
-			tipo				: 'test101',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
-		})
-
 	// component_filter_records
 		elements.push({
 			model				: 'component_filter_records',
@@ -103,6 +92,18 @@ import * as fn from './data.js'
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_filter_records,
 			new_value_params	: [] // [section_tipo, from_component_tipo, paginated_key]
+		})
+
+	// component_filter
+		elements.push({
+			model				: 'component_filter',
+			tipo				: 'test101',
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			mode				: mode,
+			lang				: page_globals.dedalo_data_nolan,
+			new_value			: fn.random_locator,
+			new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
 		})
 
 	// component_geolocation
@@ -264,7 +265,11 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: lang,
 			new_value			: fn.random_locator,
-			new_value_params	: ['es1','test25']
+			new_value_params	: ['es1','test25'],
+			test_save			: false
+			// test_exclude		: [
+			// 	'save data equals'
+			// ]
 		})
 
 	// component_relation_model
@@ -295,13 +300,13 @@ import * as fn from './data.js'
 	// component_relation_related
 		elements.push({
 			model				: 'component_relation_related',
-			tipo				: 'test56',
+			tipo				: 'test54', //  'test56',
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
 			lang				: lang,
 			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test56']
+			new_value_params	: [section_tipo,'test54']
 		})
 
 	// component_section_id
