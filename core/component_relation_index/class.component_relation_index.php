@@ -19,53 +19,54 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_DATA
-	* @return array $data
+	* @return array|null $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
 
-		# Custom properties external dato
-		if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
-			(isset($this->properties->source->mode) && $this->properties->source->mode==='external')) {
+		// external. Custom properties external dato
+			if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
+				(isset($this->properties->source->mode) && $this->properties->source->mode==='external')) {
 
-			$reference_locator = new locator();
-				$reference_locator->set_type('dd96');
-				$reference_locator->set_section_tipo($this->section_tipo);
-				$reference_locator->set_section_id($this->section_id);
+				$reference_locator = new locator();
+					$reference_locator->set_type('dd96');
+					$reference_locator->set_section_tipo($this->section_tipo);
+					$reference_locator->set_section_id($this->section_id);
 
 
-			# Get calculated inverse locators for all matrix tables
-			$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
+				# Get calculated inverse locators for all matrix tables
+				$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
 
-			$new_dato = [];
-			foreach ($ar_inverse_locators as $current_locator) {
-				$locator = new locator();
-					$locator->set_type($current_locator->type);
-					$locator->set_section_tipo($current_locator->from_section_tipo);
-					$locator->set_section_id($current_locator->from_section_id);
-					if(isset($current_locator->tag_component_tipo)){
-						$locator->set_component_tipo($current_locator->tag_component_tipo);
-					}
-					if(isset($current_locator->tag_id)){
-						$locator->set_tag_id($current_locator->tag_id);
-					}
-					if(isset($current_locator->section_top_id)){
-						$locator->set_section_top_id($current_locator->section_top_id);
-					}
-					if(isset($current_locator->section_top_id)){
-						$locator->set_section_top_tipo($current_locator->section_top_tipo);
-					}
-					if(isset($current_locator->from_component_tipo)){
-						$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
-					}
+				$new_dato = [];
+				foreach ($ar_inverse_locators as $current_locator) {
+					$locator = new locator();
+						$locator->set_type($current_locator->type);
+						$locator->set_section_tipo($current_locator->from_section_tipo);
+						$locator->set_section_id($current_locator->from_section_id);
+						if(isset($current_locator->tag_component_tipo)){
+							$locator->set_component_tipo($current_locator->tag_component_tipo);
+						}
+						if(isset($current_locator->tag_id)){
+							$locator->set_tag_id($current_locator->tag_id);
+						}
+						if(isset($current_locator->section_top_id)){
+							$locator->set_section_top_id($current_locator->section_top_id);
+						}
+						if(isset($current_locator->section_top_id)){
+							$locator->set_section_top_tipo($current_locator->section_top_tipo);
+						}
+						if(isset($current_locator->from_component_tipo)){
+							$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
+						}
 
-					$new_dato[] = $locator;
+						$new_dato[] = $locator;
 
+				}
+
+				$this->set_dato($new_dato);
 			}
-			$this->set_dato($new_dato);
+	dump($this->dato, ' this->dato ++ '.to_string());
 
-		}
-
-		return $this->dato;;
+		return $this->dato;
 	}//end get_data
 
 
@@ -115,7 +116,6 @@ class component_relation_index extends component_relation_common {
 	* @return bool
 	*/
 	public function add_locator( object $locator ) : bool {
-
 
 		$locator = clone($locator);
 
@@ -278,7 +278,7 @@ class component_relation_index extends component_relation_common {
 	* GET_LOCATOR_FROM_AR_RELATIONS
 	* Find searched locator in array of locators
 	* Used to locate the correct locator inside relations container returned for SQL search
-	* @return objet $current_locator | null
+	* @return object|null $current_locator
 	*/
 		// public static function get_locator_from_ar_relations_DES($relations, $section_tipo, $section_id, $type, $tag_id=false) {
 

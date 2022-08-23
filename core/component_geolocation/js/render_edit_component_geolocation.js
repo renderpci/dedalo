@@ -11,7 +11,7 @@
 
 /**
 * RENDER_edit_COMPONENT_GEOLOCATION
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_edit_component_geolocation = function() {
 
@@ -318,8 +318,8 @@ const get_buttons = (self) => {
 			parent			: fragment
 		})
 		save.addEventListener('click', function() {
-			// const key = JSON.parse(e.target.dataset.key)
-			const key = 0;
+
+			const key = 0; // fixed key (only one element is allowed)
 
 			const changed_data = Object.freeze({
 				action		: 'update',
