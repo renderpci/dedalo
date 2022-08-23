@@ -1,0 +1,124 @@
+/*global it, describe, assert */
+/*eslint no-undef: "error"*/
+
+import {
+	elements
+} from './elements.js'
+import {get_instance} from '../../common/js/instances.js'
+
+
+
+describe("components data changes", function() {
+
+	for (let i = 0; i < elements.length; i++) {
+
+		// skip save compare test on some components like password
+			if (elements[i].test_save===false) {
+				continue
+			}
+
+		const element = elements[i]
+		// add minimum context
+			const request_config = [{
+				api_engine	: 'dedalo',
+				show		: {
+					ddo_map : []
+				},
+				sqo			: {
+					section_tipo : [element.section_tipo]
+				}
+			}]
+			element.context = {
+				request_config : request_config // [source]
+			}
+
+		describe(element.model, function() {
+
+			let old_instance = null
+			let new_instance = null
+
+			// new_value. Calculated as random proper data for current component
+				const new_value = element.new_value(element.new_value_params)
+
+			// TEST data save
+				it(`${element.model}. Data save using API`, async function() {
+
+					// old_instance
+						// init and build instance
+							old_instance = await get_instance(element)
+							await old_instance.build(true)
+
+						// save
+							const changed_data = Object.freeze({
+								action	: 'insert',
+								key		: 0,
+								value	: new_value
+							})
+							const response = await old_instance.change_value({
+								changed_data	: changed_data,
+								refresh			: false
+							})
+
+							// console.log('--- new_value:', new_value);
+							// console.log('--- response.result:', response.result);
+
+						// api_returned_value
+							const api_returned_value = response.result.data[0] && response.result.data[0].value
+								? response.result.data[0].value[0]
+								: undefined
+
+							// portal locator cases remove paginated_key
+								if (api_returned_value && api_returned_value.hasOwnProperty('paginated_key')) {
+									delete api_returned_value.paginated_key
+								}
+
+							assert.deepEqual( new_value, api_returned_value,
+								`api_returned_value: Not equal values (new_value, api_returned_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(api_returned_value)}\n`
+							)
+
+						// component_data_value
+							const component_data_value = old_instance.data.value
+								? old_instance.data.value[0]
+								: undefined
+
+							assert.deepEqual( new_value, component_data_value,
+								`component_data_value: Not equal values (new_value, component_data_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(component_data_value)}\n`
+							)
+
+						// destroy instances
+							old_instance.destroy()
+							old_instance = null
+							// console.log('--- old_instance:', old_instance);
+				});
+
+
+			// TEST data read and compare
+				it(`${element.model}. Data read from API and compares with saved data`, data_read);
+				async function data_read() {
+					// new instance
+						// init and build instance
+							new_instance = await get_instance(element)
+							await new_instance.build(true)
+							// console.log('new_instance:', new_instance);
+						// read value from saved DDBB
+							const read_value = new_instance.data.value[0]
+						// portal locator cases remove paginated_key
+							if (read_value.hasOwnProperty('paginated_key')) {
+								delete read_value.paginated_key
+							}
+
+							// console.log('+++ new_value:', new_value);
+							// console.log('+++ read_value:', read_value);
+							// console.log('--- new_instance:', new_instance);
+
+
+						// destroy instances
+							new_instance.destroy()
+
+					assert.deepEqual( new_value, read_value, `Not equal values (new_value, read_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(read_value)}\n` )
+				}
+
+		})//end describe(element.model, function() {
+
+	}//end for (let i = 0; i < elements.length; i++)
+});

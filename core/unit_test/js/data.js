@@ -220,12 +220,12 @@ import {component_date} from '../../component_date/js/component_date.js'
 		const lon = Math.random()
 		const zoom = random_number(15) // expected int from 1 to 15
 
-		const result = [{
+		const result = {
 			alt		: alt,
 			lat		: lat,
 			lon		: lon,
 			zoom	: zoom
-		}]
+		}
 
 		return result;
 	}
