@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	import {set_before_unload, when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 
@@ -354,16 +354,21 @@ const render_area_item = function(item, datalist, value, self) {
 				// fn_global_radio()
 
 				// delegates get_children task to worker. When finish, create global radio for current area
-					const current_worker = new Worker('../component_security_access/js/worker.js');
-					current_worker.postMessage({
-						fn		: 'get_children',
-						params	: [item, datalist]
-					});
-					current_worker.onmessage = function(e) {
-						const children = e.data.result
-						fn_global_radio(children)
-						current_worker.terminate()
-					}
+					when_in_viewport(
+						li, // DOM node
+						function() {
+							const current_worker = new Worker('../component_security_access/js/worker.js');
+							current_worker.postMessage({
+								fn		: 'get_children',
+								params	: [item, datalist]
+							});
+							current_worker.onmessage = function(e) {
+								const children = e.data.result
+								fn_global_radio(children)
+								current_worker.terminate()
+							}
+						}
+					)
 
 			// add brach at last position
 			li.appendChild(branch)
