@@ -200,13 +200,6 @@ component_common.prototype.build = async function(autoload=false){
 				// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
 				dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
 
-			// Data
-				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
-				if(!data){
-					console.warn("data not found in api_response:",api_response);
-				}
-				self.data = data || {}
-
 			// Context
 				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				if (!context) {
@@ -214,11 +207,20 @@ component_common.prototype.build = async function(autoload=false){
 				}
 				self.context = context
 
+			// Data
+				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				if(!data){
+					console.warn("data not found in api_response:",api_response);
+				}
+				self.data = data || {}
+
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
 				if(!self.standalone){
 					await self.update_datum(api_response.result.data)
+				}else{
+					self.datum.context	= api_response.result.context
+					self.datum.data		= api_response.result.data
 				}
-
 
 			// rqo. build again rqo with updated request_config if exists
 				// if (self.context.request_config) {
