@@ -275,6 +275,8 @@ export const delete_instance = async function(options) {
 
 		// return delete_value
 
+	// debug
+		// console.log('found_instances A:', structuredClone(instances));
 
 	let deleted = 0;
 	function check_options(item, index) {
@@ -292,6 +294,7 @@ export const delete_instance = async function(options) {
 				result = true
 			}else{
 				result = false
+				// console.log('Break loop on property:', key, item[key], value, options);
 				break;
 			}
 		}
@@ -301,13 +304,13 @@ export const delete_instance = async function(options) {
 			//console.log("deleted instance:", clone(instances[index]));
 			instances.splice(index, 1)
 			deleted++
-			//console.log(" ++++++++ [delete_instance] deleted:", index, options);
+			// console.log(" ++++++++ [delete_instance] deleted:", index, options);
 		}
 
 		return result
 	}
-	const found_instances = instances.filter(check_options)
-
+	// const found_instances = instances.filter(check_options)
+	instances.map(check_options)
 
 	// debug
 		if (deleted<1) {
@@ -315,6 +318,8 @@ export const delete_instance = async function(options) {
 		}
 		// console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
 		// console.log(" ++++++++ instances:",instances, deleted)
+		// console.log(' ++++++++ [delete_instance] instances B:', structuredClone(instances));
+
 
 	return deleted
 }//end delete_instance
