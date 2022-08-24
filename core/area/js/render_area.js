@@ -14,7 +14,7 @@
 
 /**
 * RENDER_AREA
-* Manages the area apperance in client side
+* Manages the area appearance in client side
 */
 export const render_area = function() {
 
