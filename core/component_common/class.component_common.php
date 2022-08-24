@@ -511,7 +511,8 @@ abstract class component_common extends common {
 	public function set_dato($dato) {
 
 		if (!is_null($dato) && !is_array($dato)) {
-			debug_log(__METHOD__.' - '. get_called_class() .PHP_EOL.'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. Type: '. gettype($dato) .' - dato: '. to_string($dato), logger::ERROR);
+			debug_log(__METHOD__.' - '. get_called_class() . ' -> tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+				.'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. Type: '. gettype($dato) .' - dato: '. to_string($dato), logger::ERROR);
 		}
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
@@ -576,7 +577,8 @@ abstract class component_common extends common {
 
 		$dato = $this->dato;
 		if (!is_null($dato) && !is_array($dato)) {
-			debug_log(__METHOD__.' - '. get_called_class() .PHP_EOL.'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. Type: '. gettype($dato) .' - dato: '. to_string($dato), logger::ERROR);
+			debug_log(__METHOD__.' - '. get_called_class() . ' -> tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+				.'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. Type: '. gettype($dato) .' - dato: '. to_string($dato), logger::ERROR);
 		}
 
 		return $dato; # <- Se aplicará directamente el fallback de idioma para el modo list

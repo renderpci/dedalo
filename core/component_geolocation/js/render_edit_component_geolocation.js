@@ -280,7 +280,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		}
 
 	content_value.map_container = map_container
-	
+
 	return content_value
 }//end get_input_element_edit
 
@@ -296,19 +296,23 @@ const get_buttons = (self) => {
 	// short vars
 		const is_inside_tool = self.is_inside_tool
 
+	// DOM fragment
+		const fragment = new DocumentFragment()
 
-	const fragment = new DocumentFragment()
-
-	// button full_screen
-		const button_full_screen = ui.create_dom_element({
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button full_screen',
 			parent			: fragment
 		})
-		button_full_screen.addEventListener('mouseup', () =>{
-			self.node.classList.toggle('fullscreen')
-			const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
-			event_manager.publish('full_screen_'+self.id, fullscreen_state)
+		// button_fullscreen.addEventListener('mouseup', () =>{
+		// 	self.node.classList.toggle('fullscreen')
+		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
+		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
+		// 	self.map.invalidateSize()
+		// })
+		button_fullscreen.addEventListener('click', function() {
+			ui.enter_fullscreen(self.node)
 			self.map.invalidateSize()
 		})
 

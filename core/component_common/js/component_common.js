@@ -5,7 +5,7 @@
 
 // imports
 	// import * as dd from '../../common/js/dd.common.funtions.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone, dd_console, is_equal} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {set_before_unload} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -446,8 +446,9 @@ component_common.prototype.save = async function(changed_data) {
 		if (changed_data.action==='update') {
 			const original_value	= self.db_data.value[changed_data.key]
 			const new_value			= changed_data.value
-			if (new_value==original_value) {
 
+			// console.log("original_value:", original_value, new_value, new_value==original_value);
+			if (is_equal(new_value, original_value)) {
 				// dispatch event save
 					event_manager.publish('save', {
 						instance		: self,
