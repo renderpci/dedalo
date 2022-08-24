@@ -2865,7 +2865,37 @@ export const ui = {
 
 
 		return true
-	}//end hilite
+	},//end hilite
+
+
+
+	/**
+	* ENTER_FULLSCREEN
+	* Set element as full screen size
+	* To exit, press key 'Escape'
+	* @param DOM none
+	* 	Usually the component wrapper
+	* @return bool
+	*/
+	enter_fullscreen : function(node) {
+
+		// apply style fullscreen
+		node.classList.toggle('fullscreen')
+
+		// set exit event
+		document.addEventListener('keyup', exit_fullscreen, {
+			passive : true
+		})
+		function exit_fullscreen(e) {
+			if (e.key==='Escape') {
+				document.removeEventListener('keyup', exit_fullscreen)
+				node.classList.remove('fullscreen')
+			}
+		}
+
+
+		return true
+	}//end enter_fullscreen
 
 
 
