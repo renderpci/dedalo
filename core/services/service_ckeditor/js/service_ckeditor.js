@@ -368,7 +368,9 @@ export const service_ckeditor = function() {
 				}
 			});//end click event
 
-
+			// change data is used to observe changes in editor as insert or remove
+			// select the image changes (tag changes) to fire event to other components
+			// see the render_edit_component_text_area to see the event dispatched
 			editor.editing.model.document.on('change:data', (evt, batch) => {
 				const changes = editor.editing.model.document.differ.getChanges(); //{ includeChangesInGraveyard: true }
 				const ar_changes =[]
@@ -387,7 +389,7 @@ export const service_ckeditor = function() {
 				if (custom_events.changeData) {
 					custom_events.changeData(evt, ar_changes)
 				}
-			});
+			});//end change:data event
 
 		// keyup event
 			editor.editing.view.document.on('keydown', function(evt, data ) {
