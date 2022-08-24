@@ -659,8 +659,8 @@ export const ui = {
 		*/
 		active : (component, actived_component) => {
 
-			if (typeof actived_component==="undefined") {
-				console.warn("[ui.component.active]: WARNING. Received undefined actived_component!");
+			if (typeof actived_component==='undefined') {
+				console.warn('[ui.component.active]: WARNING. Received undefined actived_component!');
 				return false
 			}
 
@@ -669,7 +669,7 @@ export const ui = {
 
 					// match . Add wrapper css active
 						// component.node.map(function(item_node) {
-							component.node.classList.add("active")
+							component.node.classList.add('active')
 
 							// event mouse out add to component wrapper
 								// const wrapper = item_node
@@ -747,7 +747,7 @@ export const ui = {
 
 			// not match cases. Remove wrapper css active if exists
 			if(component.node){
-				component.node.classList.remove("active")
+				component.node.classList.remove('active')
 			}
 
 			// service autocomplete remove if active
@@ -777,10 +777,10 @@ export const ui = {
 
 			if (error) {
 					console.error("ERRROR IN component:------////////-----------------",component);
-				component.classList.add("error")
+				component.classList.add('error')
 
 			}else{
-				component.classList.remove("error")
+				component.classList.remove('error')
 			}
 
 			return true
@@ -815,12 +815,12 @@ export const ui = {
 		*/
 		add_image_fallback : (img_node, callback) => {
 
-			img_node.addEventListener("error", change_src, true)
+			img_node.addEventListener('error', change_src, true)
 
 			function change_src(item) {
 
 				// remove onerror listener to avoid infinite loop (!)
-				item.target.removeEventListener("error", change_src, true);
+				item.target.removeEventListener('error', change_src, true);
 
 				// set fallback src to the image
 				item.target.src = page_globals.fallback_image
@@ -853,28 +853,28 @@ export const ui = {
 			return new Promise(function(resolve){
 
 				// remove previous save_success classes
-					if (self.node.classList.contains("save_success")) {
-						self.node.classList.remove("save_success")
+					if (self.node.classList.contains('save_success')) {
+						self.node.classList.remove('save_success')
 					}
 
 
 				setTimeout(()=>{
 
 					// success. add save_success class to component wrappers (green line animation)
-						self.node.classList.add("save_success")
+						self.node.classList.add('save_success')
 
 
 					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
 						setTimeout(()=>{
 
-							// item.classList.remove("save_success")
+							// item.classList.remove('save_success')
 							// allow restart animation. Not set state pause before animation ends (2 secs)
-							self.node.style.animationPlayState = "paused";
-							self.node.style.webkitAnimationPlayState = "paused";
+							self.node.style.animationPlayState = 'paused';
+							self.node.style.webkitAnimationPlayState = 'paused';
 
 							// remove animation style
-							if (self.node.classList.contains("save_success")) {
-								self.node.classList.remove("save_success")
+							if (self.node.classList.contains('save_success')) {
+								self.node.classList.remove('save_success')
 							}
 
 							resolve(true)
@@ -1178,8 +1178,8 @@ export const ui = {
 								element_type	: 'span',
 								class_name		: 'button white', // gear
 								style : {
-									"-webkit-mask"	: "url('" +context.icon +"')",
-									"mask"			: "url('" +context.icon +"')"
+									'-webkit-mask'	: "url('" +context.icon +"')",
+									'mask'			: "url('" +context.icon +"')"
 								}
 							})
 							component_label.prepend(icon)
@@ -1221,7 +1221,7 @@ export const ui = {
 						class_name		: 'button close white',
 						parent			: tool_header
 					})
-					button_close.addEventListener("click", function(e){
+					button_close.addEventListener('click', function(){
 						window.close();
 					})
 			}//end if (mode!=='mini')
@@ -1266,10 +1266,10 @@ export const ui = {
 				const mode = instance.mode
 
 			// node
-				const content_data = document.createElement("div")
+				const content_data = document.createElement('div')
 
 			// css
-				content_data.classList.add("content_data", type, mode)
+				content_data.classList.add('content_data', type, mode)
 
 
 			return content_data
@@ -1301,8 +1301,8 @@ export const ui = {
 					element_type	: 'span',
 					class_name		: 'button white tool',
 					style			: {
-						"-webkit-mask"		: "url('" +tool_context.icon +"')",
-						"mask"				: "url('" +tool_context.icon +"')"
+						'-webkit-mask'	: "url('" +tool_context.icon +"')",
+						'mask'			: "url('" +tool_context.icon +"')"
 					},
 					parent : tool_button
 				})
@@ -1343,8 +1343,8 @@ export const ui = {
 					class_name		: 'button tool',
 					title_label		: tool_context.label,
 					style			: {
-						"-webkit-mask"	: "url('" +tool_context.icon +"')",
-						"mask"			: "url('" +tool_context.icon +"')"
+						'-webkit-mask'	: "url('" +tool_context.icon +"')",
+						'mask'			: "url('" +tool_context.icon +"')"
 					},
 					dataset			: {
 						tool : tool_context.name
