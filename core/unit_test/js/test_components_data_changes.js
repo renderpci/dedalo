@@ -109,13 +109,21 @@ describe("components data changes", function() {
 
 							// console.log('+++ new_value:', new_value);
 							// console.log('+++ read_value:', read_value);
-							// console.log('--- new_instance:', new_instance);
+							console.log('--- new_instance:', new_instance);
 
 
 						// destroy instances
 							new_instance.destroy()
 
+					// datum check
+					assert.isOk( Array.isArray(new_instance.datum.context), `new_instance.datum.context is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.context)}, \n ${typeof new_instance.datum.context}\n` )
+					assert.isOk( Array.isArray(new_instance.datum.data), `new_instance.datum.data is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.data)}, \n ${typeof new_instance.datum.data}\n` )
+					// compare values
 					assert.deepEqual( new_value, read_value, `Not equal values (new_value, read_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(read_value)}\n` )
+					// check type of data is object
+					assert.isOk( typeof new_instance.data==='object', `instance.data is NOT as expected type (object): \n ${JSON.stringify(new_instance.data)}, \n ${typeof new_instance.data}\n` )
+					// check type of data value is array
+					assert.isOk( Array.isArray(new_instance.data.value), `new_instance.data.value is NOT as expected type (array): \n ${JSON.stringify(new_instance.data.value)}, \n ${typeof new_instance.data.value}\n` )
 				}
 
 		})//end describe(element.model, function() {

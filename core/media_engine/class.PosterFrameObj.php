@@ -1,6 +1,6 @@
 <?php
-#require_once( DEDALO_CONFIG_PATH .'/config.php');
-require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
+// require_once( DEDALO_CONFIG_PATH .'/config.php');
+// require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
 
 /**
 * PosterFrameObj
@@ -99,12 +99,10 @@ class PosterFrameObj extends MediaObj {
 		$h 			= $maxHeight;
 		# 'm','quality','SID','w','h','fx','p','prop'
 		$thumb_url = DEDALO_CORE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&SID=' .$SID. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;
-			#dump($thumb_url,'thumb_url');
 
 		return $thumb_url;
-	}
+	}//end get_thumb_url
 
 
 
-}
-?>
+}//end class PosterFrameObj

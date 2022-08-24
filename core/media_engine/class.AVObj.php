@@ -1,7 +1,5 @@
 <?php
-require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
-
-
+// require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
 /**
 * AVObj
 */

@@ -20,8 +20,15 @@ include(DEDALO_CORE_PATH . '/common/class.filter.php');
 include(DEDALO_CORE_PATH . '/common/class.counter.php');
 include(DEDALO_CORE_PATH . '/common/class.tools.php');
 include(DEDALO_CORE_PATH . '/common/class.label.php');
+// media_engine. media auxiliary classes
 include(DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 #include(DEDALO_CORE_PATH . '/common/class.operator.php');
 include(DEDALO_CORE_PATH . '/common/class.locator.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
@@ -54,6 +61,8 @@ include(DEDALO_CORE_PATH . '/lock_components/class.lock_components.php');
 include(DEDALO_SHARED_PATH . '/class.TR.php');
 include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
 include(DEDALO_SHARED_PATH . '/class.subtitles.php');
+
+
 
 // components json
 	// $ar_components = [
