@@ -774,9 +774,12 @@ const get_custom_events = (self, i, text_editor) => {
 			const changes_len = ar_changes.length
 			for (var i = changes_len - 1; i >= 0; i--) {
 				const change = ar_changes[i]
-				event_manager.publish('editor_tag_' +change.action +'_'+ self.id_base, change)
+				// create the event name as:
+				// editor_tag_geo_change_
+				// editor_tag_indexIn_change_
+				const event_name =  'editor_tag_'+ change.type + '_change_' + self.id_base
+				event_manager.publish(event_name, change)
 			}
-
 		}// end changeData event
 
 	return custom_events
