@@ -309,8 +309,10 @@ export const delete_instance = async function(options) {
 
 		return result
 	}
-	// const found_instances = instances.filter(check_options)
-	instances.map(check_options)
+	const found_instances = instances.filter(check_options)
+	if (found_instances.length===0) {
+		// console.log('Instance not found from options:', options);
+	}
 
 	// debug
 		if (deleted<1) {
