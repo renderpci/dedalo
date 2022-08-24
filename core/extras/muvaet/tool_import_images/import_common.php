@@ -4,8 +4,8 @@
 	# COMMON IMPORT MUPREVA
 	#
 
-	
-	
+
+
 
 	#
 	# REGEX : Expresión regular a usar al leer los ficheros
@@ -19,8 +19,8 @@
 	# INFO : Texto informativo relativo a la anatomía o structura del nombre de fichero
 	#
 	$import_help  ='';
-	
-	$import_help .= "<div class=\"info_line import_help\">";	
+
+	$import_help .= "<div class=\"info_line import_help\">";
 	$import_help .= "Seleccione en su disco duro los archivos a importar";
 	$import_help .= "
 	- La imágenes se importarán adoptando un ‘código’ secuencial de formato 1-1,1-2,1-3,… donde el primer número será el section_id de la ficha de inventario o galería que agrupa los recursos, y el segundo número será la secuencia de recursos asociados al la ficha “nodriza”.
@@ -33,29 +33,29 @@
 
 	$debug_msg = [];
 
-	
+
 
 	if(!function_exists('get_last_disparo_number')) { function get_last_disparo_number($numero_inventario) {
 		global $debug_msg;
 
-		$componente_tipo 	= MUPREVA_COMPONENT_TIPO_CODIGO;	//'rsc21'; 		// Virtual de Sección Media Recursos (rsc2), campo 'código'
-		$section_tipo 		= SECTION_TIPO_IMAGENES;			// Virtual de Sección Media Recursos (rsc2)'
-		$value 				= $numero_inventario.'-'; 
+		$componente_tipo	= MUPREVA_COMPONENT_TIPO_CODIGO;	//'rsc21'; 		// Virtual de Sección Media Recursos (rsc2), campo 'código'
+		$section_tipo		= SECTION_TIPO_IMAGENES;			// Virtual de Sección Media Recursos (rsc2)'
+		$value				= $numero_inventario.'-';
 		$matrix_table		= common::get_matrix_table_from_tipo($section_tipo);
 		$strQuery="
 		-- get_last_disparo_number
-		SELECT 
+		SELECT
 		datos #>>'{components,$componente_tipo,dato,lg-nolan}' as codigo
 		FROM \"$matrix_table\"
 		WHERE
-		section_tipo = '$section_tipo' AND 
+		section_tipo = '$section_tipo' AND
 		datos #>>'{components,$componente_tipo,dato,lg-nolan}' LIKE '$value%'
 		ORDER BY id DESC
 		LIMIT 1
 		";
 		#dump($strQuery, 'strQuery'); #die();
 		$debug_msg[] = $strQuery;
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);	
+		$result		= JSON_RecordObj_matrix::search_free($strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
 			$codigo = $rows['codigo'];
 			$ar_parts = explode('-', $codigo);
@@ -65,9 +65,8 @@
 	}}
 
 
-	# IMPORT SCRIPT MUPREVA IMAGENES ASOCIADAS 
+	# IMPORT SCRIPT MUPREVA IMAGENES ASOCIADAS
 	require_once( DEDALO_CONFIG_PATH.'/config.php');
-	require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 
 	# Login check
 		if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -75,10 +74,3 @@
 	# Set vars
 		$vars = array('process','quality','fotografo','dibujante','delete_after','import_image_checkbox');
 			foreach($vars as $name)	$$name = common::setVar($name);
-
-
-
-	
-
-
-?>
