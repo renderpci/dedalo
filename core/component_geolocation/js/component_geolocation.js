@@ -666,30 +666,30 @@ component_geolocation.prototype.get_last_layer_id = function() {
 */
 component_geolocation.prototype.get_popup_content = function(layer) {
 
-	const sefl = this
+	const self = this
 
 	// Marker - add lat/long
 	if (layer instanceof L.Marker) {
 		return this.str_lat_lng(layer.getLatLng());
 	// Circle - lat/long, radius
 	} else if (layer instanceof L.Circle) {
-		var center = layer.getLatLng(),
+		const center = layer.getLatLng(),
 			radius = layer.getRadius();
 		return "Center: "+this.str_lat_lng(center)+"<br />"
 			  +"Radius: "+this.round_coordinate(radius, 2)+" m";
 	// Rectangle/Polygon - area
 	} else if (layer instanceof L.Polygon) {
-		var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
+		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
 			area = L.GeometryUtil.geodesicArea(latlngs);
 		return "Area: "+L.GeometryUtil.readableArea(area, true);
 	// Polyline - distance
 	} else if (layer instanceof L.Polyline) {
-		var latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
+		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
 			distance = 0;
 		if (latlngs.length < 2) {
 			return "Distance: N/A";
 		} else {
-			for (var i = 0; i < latlngs.length-1; i++) {
+			for (let i = 0; i < latlngs.length-1; i++) {
 				distance += latlngs[i].distanceTo(latlngs[i+1]);
 			}
 			return "Distance: "+this.round_coordinate(distance, 2)+" m";
