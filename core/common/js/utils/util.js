@@ -403,7 +403,7 @@ export function object_equals(obj1, obj2) {
 * 	Could compare strings, arrays and objects
 * @return bool
 */
-this.prototype.is_equal = function(el1, el2) {
+export function is_equal(el1, el2) {
 
 	if (el1==el2) {
 		return true
