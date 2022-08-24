@@ -247,9 +247,8 @@ const get_buttons = (self) => {
 			class_name	 : 'button full_screen',
 			parent 		 : fragment
 		})
-		button_fullscreen.addEventListener("click", function() {
-			// li.classList.toggle("fullscreen")
-			self.node.classList.toggle("fullscreen")
+		button_fullscreen.addEventListener('click', function() {
+			ui.enter_fullscreen(self.node)
 		})
 
 	// button_download . Force automatic download of component data value
