@@ -153,7 +153,7 @@ component_av.prototype.rewind = function(seconds) {
 	self.video.currentTime = parseFloat(self.video.currentTime - seconds);
 
 	return self.video.currentTime
-};// end rewind
+}//end rewind
 
 
 
