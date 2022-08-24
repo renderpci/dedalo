@@ -324,12 +324,12 @@ export function strip_tags(value) {
 * @return bool
 */
 export function array_equals(source, array) {
-	// if the other array is a falsy value, return
+	// if the other array is a false value, return
 	if (!array)
 		return false;
 
 	// compare lengths - can save a lot of time
-	if (source.length != array.length)
+	if (source.length !== array.length)
 		return false;
 
 	for (let i = 0, l=source.length; i < l; i++) {
@@ -347,3 +347,80 @@ export function array_equals(source, array) {
 
 	return true;
 }//end array_equals
+
+
+
+/**
+* OBJECT_EQUALS
+* Deep Equality comparison example
+*
+* This is an example of how to implement an object-comparison function in
+* JavaScript (ES5+). A few points of interest here:
+*
+* * You can get an array of all an object's properties in ES5+ by calling
+*   the class method Object.keys(obj).
+* * The function recursively calls itself in the for / in loop when it
+*   compares the contents of each property
+* * You can hide a "private" function inside a function of this kind by
+*   placing one function declaration inside of another. The inner function
+*   is not hoisted out into the global scope, so it is only visible inside
+*   of the parent function.
+* * The reason this nested helper function is necessary is that
+*   `typeof null` is still "object" in JS, a major "gotcha" to watch out for.
+*/
+export function object_equals(obj1, obj2) {
+
+	if (obj1 === obj2) {
+		return true;
+	}else if (isObject(obj1) && isObject(obj2)) {
+		if (Object.keys(obj1).length !== Object.keys(obj2).length) {
+			return false
+		}
+		for (const prop in obj1) {
+			if (!object_equals(obj1[prop], obj2[prop])) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+
+	// Private
+	function isObject(obj) {
+		if (typeof obj === "object" && obj != null) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+}//end object_equals
+
+
+
+/**
+* IS_EQUAL
+* Check elements equality deeply
+* 	Could compare strings, arrays and objects
+* @return bool
+*/
+this.prototype.is_equal = function(el1, el2) {
+
+	if (el1==el2) {
+		return true
+	}
+
+	if (typeof el1!==typeof el2) {
+		return false
+	}
+
+	if (Array.isArray(el1)) {
+		return array_equals(el1, el2)
+	}
+
+	if (typeof el1==="object" && el1!==null) {
+		return object_equals(el1, el2)
+	}
+
+
+	return false
+}//end is_equal
