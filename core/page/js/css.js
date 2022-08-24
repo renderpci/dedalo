@@ -182,7 +182,7 @@ const update_style_sheet = async function(key, value) {
 * @param boolean skip_insert
 * 	Used to control deep recursive resolutions
 *
-* @return object root_css
+* @return array rules
 */
 const insert_rule = function(selector, json_css_values, css_style_sheet, skip_insert) {
 
@@ -217,6 +217,7 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 				css_style_sheet,
 				true // skip_insert
 			)
+			console.log('deep_rules:', deep_rules); // used ?
 			const _joined	= deep_rules.join('; ')
 			const rule		= `
 			${key} {
@@ -226,6 +227,10 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 			}`
 			// console.log("... FINAL RULE 1:", rule);
 			css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+			// window.requestAnimationFrame(inserting_inside)
+			// function inserting_inside() {
+			// 	css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+			// }
 		}
 	}
 	// console.log("rules:",rules);
@@ -240,17 +245,24 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 	// }).join(';');
 	// console.log("//////////// propText:",propText);
 
-	const rule = selector + '{ ' + rules.join('; ') + ' }'
-	// const rule =  rules.join('; ')
-	// const rule = `@media screen and (min-width: 900px) {
-	//   .example {
-	//     background-color: blue;
-	//   }
-	// }`;
-	// console.log("... FINAL RULE 2:", rule);
-	const index = css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+	// combine all rules
+		const rule = selector + '{ ' + rules.join('; ') + ' }'
+		// const rule =  rules.join('; ')
+		// const rule = `@media screen and (min-width: 900px) {
+		//   .example {
+		//     background-color: blue;
+		//   }
+		// }`;
+		// console.log("... FINAL RULE 2:", rule);
 
-	return index
+	css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+	// console.log('index:', index);
+	// window.requestAnimationFrame(inserting)
+	// function inserting() {
+	// 	css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+	// }
+
+	return rules
 }//end insert_rule
 
 
