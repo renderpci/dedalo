@@ -1,7 +1,7 @@
 <?php
 require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
-require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+// require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 /**
 * Ffmpeg
 *
@@ -13,7 +13,7 @@ final class Ffmpeg {
 	protected $settings_path	= DEDALO_AV_FFMPEG_SETTINGS ;
 	protected $ar_settings		= array();					# array of settings files
 
-	# supported qualitys array
+	# supported quality's array
 	static protected $ar_supported_qualitys = array('1080','720','576','480','404','240','audio');
 
 
