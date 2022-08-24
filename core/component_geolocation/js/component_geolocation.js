@@ -91,9 +91,14 @@ component_geolocation.prototype.init = async function(options) {
 	// draw editor vars
 		self.drawControl				= null
 		self.draw_editor_is_initated	= false
-		self.ar_FeatureGroup			= []
+		self.FeatureGroup				= {}
 		self.draw_state					= null
 		self.active_layer_id			= null
+
+	// Data buffer will store the changes send by text area when the tags are removed or inserted
+	// if the user undo the remove tag in the editor, restore for the data_buffer the layer data
+	// this var will not save in DB, if the user delete the tag and do not undo in the same session or close the window the buffer will erase
+		self.ar_data_buffer = []
 
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(this, options);
@@ -230,7 +235,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				}
 
 				self.map.on('overlayadd', function(e) {
-					self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
+					self.init_draw_editor(self.FeatureGroup[e.name], e.name)
 				})
 				break;
 
@@ -288,7 +293,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				}
 
 				self.map.on('overlayadd', function(e) {
-					self.init_draw_editor(self.ar_FeatureGroup[e.name], e.name)
+					self.init_draw_editor(self.FeatureGroup[e.name], e.name)
 				});
 
 				break;
@@ -408,11 +413,23 @@ component_geolocation.prototype.layers_loader = function(options) {
 	// load_layer
 		switch(load) {
 			case ('full'):
+
 				const ar_layer	=  self.ar_layer_loaded
 				const ar_layer_len	= ar_layer.length
 				for (let i = 0; i < ar_layer_len; i++) {
 					const layer = ar_layer[i]
 					self.load_layer(layer)
+				}
+				// active all layer in control
+				const control_layers_len = self.layer_control._layers.length
+				for (var i = 0; i < control_layers_len; i++) {
+					const layer = self.layer_control._layers[i]
+					if(layer.overlay){
+						const input = self.layer_control._layerControlInputs[i]
+						if(!input.checked){
+							input.click()
+						}
+					}
 				}
 				break;
 			case ('layer'):
@@ -460,31 +477,32 @@ component_geolocation.prototype.load_layer = function(layer){
 		const user_layer_name	= typeof(layer.user_layer_name)!=='undefined'
 			? layer.user_layer_name
 			: layer_name
-
+		console.log("self.FeatureGroup:",self.FeatureGroup[layer_id]);
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
-	// if( self.map.hasLayer(self.ar_FeatureGroup[layer_id])===false ) {
-	if( typeof self.ar_FeatureGroup[layer_id] === 'undefined'){
+	// if( self.map.hasLayer(self.FeatureGroup[layer_id])===false ) {
+	if( typeof self.FeatureGroup[layer_id] === 'undefined'){
 		// the FeatureGroup is not loaded and does not exist into the map
 		// Create a new FeatureGroup
-		self.ar_FeatureGroup[layer_id] = new L.FeatureGroup();
+		self.FeatureGroup[layer_id] = new L.FeatureGroup();
 		// set the FeatureGroup to the map
-		self.ar_FeatureGroup[layer_id].addTo(self.map);
+		self.FeatureGroup[layer_id].addTo(self.map);
 		// add to the layer control with checkbox and the name of the user
-		self.layer_control.addOverlay(self.ar_FeatureGroup[layer_id], layer_id);
+		self.layer_control.addOverlay(self.FeatureGroup[layer_id], layer_id);
 	}else{
 		// FeatureGroup exist and it's loaded
-		// remove the checkbox for all FeatureGroup into the control panel (remove the visualitzation)
-		for (let i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
-			self.ar_FeatureGroup[i].remove()
+		// remove the checkbox for all FeatureGroup into the control panel (remove the visualization)
+		for (let feature in self.FeatureGroup) {
+			self.FeatureGroup[feature].remove()
 		}
+
 		// add to the layer control with checkbox and the name of the user
-		self.ar_FeatureGroup[layer_id].addTo(self.map);
+		self.FeatureGroup[layer_id].addTo(self.map);
 	}
 
 	// LAYERS : Load layers from data
 	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
 		//remove previous data into the layer
-		self.ar_FeatureGroup[layer_id].clearLayers();
+		self.FeatureGroup[layer_id].clearLayers();
 		L.geoJson( layer_data, {
 			//For each Feature load all layer data of the tag
 			onEachFeature: function (feature, current_data_layer) {
@@ -500,32 +518,32 @@ component_geolocation.prototype.load_layer = function(layer){
 					// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 						current_data_layer.on('click', function(e) {
 							if(self.draw_state==="delete"){
-								self.ar_FeatureGroup[layer_id].removeLayer(e.layer);
+								self.FeatureGroup[layer_id].removeLayer(e.layer);
 								return;
 							}// end if(self.draw_state==="delete")
 							// change all features and layers for activate or deactivate the edit mode.
-							const FeatureGroup_length = self.ar_FeatureGroup.length;
-							for (var i = FeatureGroup_length - 1; i >= 1; i--) {
-								if(self.ar_FeatureGroup[i]){
-									if(self.ar_FeatureGroup[i]===self.ar_FeatureGroup[layer_id]){
-										//All layers and features to desactive and change to blue color
-										self.ar_FeatureGroup[layer_id].eachLayer(function (layer){
-											layer.editing.disable();
-											if(!(layer instanceof L.Marker)){
-												layer.setStyle({color: '#31df25'});
-											}
-										});
-									}else{
-										//The layers of the actual feature disable and change to green color
-										self.ar_FeatureGroup[i].eachLayer(function(layer) {
-											layer.editing.disable();
-											if(!(layer instanceof L.Marker)){
-												layer.setStyle({color: '#3388ff'});
-											}
-										});
+
+								for (let feature in self.FeatureGroup) {
+									if(feature){
+										if(self.FeatureGroup[feature]===self.FeatureGroup[layer_id]){
+											self.FeatureGroup[layer_id].eachLayer(function (layer){
+												layer.editing.disable();
+												if(!(layer instanceof L.Marker)){
+													layer.setStyle({color: '#31df25'});
+												}
+											});
+										}else{
+
+											//The layers of the actual feature disable and change to green color
+											self.FeatureGroup[feature].eachLayer(function(layer) {
+												layer.editing.disable();
+												if(!(layer instanceof L.Marker)){
+													layer.setStyle({color: '#3388ff'});
+												}
+											});
+										}
 									}
 								}
-							}
 							// current layer activate and change to pink color
 							//e.target.editing.enable();
 							if(!(e.target instanceof L.Marker)){
@@ -534,21 +552,21 @@ component_geolocation.prototype.load_layer = function(layer){
 								console.log("NOt e.target instanceof L.Marker ",);
 							}
 							//activate the feature (for save)
-							//self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
+							//self.init_draw_editor( self.FeatureGroup[layer_id], layer_id )
 						 });
 
 					// addLayer
-						 // console.log("self.ar_FeatureGroup[layer_id]:",self.ar_FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
-						self.ar_FeatureGroup[layer_id].addLayer(current_data_layer)
+						 // console.log("self.FeatureGroup[layer_id]:",self.FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
+						self.FeatureGroup[layer_id].addLayer(current_data_layer)
 				}// end if (current_data_layer)
 			}// end onEachFeature
 		})// end L.geoJson
 	}// end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
 
 
-	//map.addControl(L.Control.Layers.addOverlay( self.ar_FeatureGroup[layer_id], layer_id));
+	//map.addControl(L.Control.Layers.addOverlay( self.FeatureGroup[layer_id], layer_id));
 	// DRAW_EDITOR : Init draw editor and pass current FeatureGroup
-	// self.init_draw_editor( self.ar_FeatureGroup[layer_id], layer_id )
+	// self.init_draw_editor( self.FeatureGroup[layer_id], layer_id )
 
 	// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
 	self.active_layer_id = layer_id;
@@ -576,6 +594,8 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 			load 		: 'layer',
 			layer_id	: layer_id
 		})
+
+
 
 	return true
 }//end load_tag_into_geo_editor
@@ -809,14 +829,14 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 			//listener fired when the layer is selected.
 			layer.on('click', function(e) {
 				if(self.draw_state==="delete"){
-					self.ar_FeatureGroup[self.active_layer_id].removeLayer(e.layer);
+					self.FeatureGroup[self.active_layer_id].removeLayer(e.layer);
 					return;
 				}else{
 					e.target.editing.enable();
 				}
 			})
 
-			self.ar_FeatureGroup[self.active_layer_id].addLayer(layer);
+			self.FeatureGroup[self.active_layer_id].addLayer(layer);
 
 			// Update draw_data
 			self.update_draw_data();
@@ -843,9 +863,9 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 		// Listerner to the map for change the edit mode the all layer of the all features (change the state and color)
 		map.on('click', function(e){
 			self.draw_state ="";
-			for (var i = self.ar_FeatureGroup.length - 1; i >= 1; i--) {
-				if(self.ar_FeatureGroup[i]){
-					self.ar_FeatureGroup[i].eachLayer(function(layer) {
+			for (var i = self.FeatureGroup.length - 1; i >= 1; i--) {
+				if(self.FeatureGroup[i]){
+					self.FeatureGroup[i].eachLayer(function(layer) {
 						layer.editing.disable();
 						if(!(layer instanceof L.Marker)){
 							layer.setStyle({color: '#3388ff'});
@@ -874,7 +894,7 @@ component_geolocation.prototype.update_draw_data = function() {
 	const self = this
 
 	// active_layer. get the active draw data of the active_layer
-		const active_layer = self.ar_FeatureGroup[self.active_layer_id];
+		const active_layer = self.FeatureGroup[self.active_layer_id];
 
 	// layer_id. get the active_layer_id
 		const layer_id = self.active_layer_id
@@ -989,4 +1009,110 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 		})
 	}//end if check api_response
 }//end map_update_coordinates
+
+
+
+/**
+* LAYER_DATA_CHANGE
+* @param object change, with the information of the tag and the action (insert, remove)
+* {
+* 	action : 'remove'
+* 	tag_id : 1
+* 	type : 'geo'
+* }
+* @return
+*/
+component_geolocation.prototype.layer_data_change = function(change) {
+
+	const self = this
+
+	// set the layer data
+		const action 		= change.action
+		const layer_id		= parseInt(change.tag_id)
+		const layer_name	= 'layer_' +layer_id
+		const key = 0; // fixed key (only one element is allowed)
+
+		switch(action) {
+			case 'insert':
+				const recover_layer = self.ar_data_buffer[layer_id] ||
+					{
+						layer_id	: layer_id,
+						layer_data	: []
+					};
+
+				self.ar_layer_loaded.push(recover_layer)
+				self.load_layer(recover_layer)
+
+				self.current_value[key].lib_data = self.ar_layer_loaded
+
+				const recover_changed_data = Object.freeze({
+					action		: 'update',
+					key			: key,
+					value		: self.current_value[key]
+				})
+				self.change_value({
+					changed_data	: recover_changed_data,
+					refresh			: false
+				}).then(()=>{
+					self.db_data.value[key] = clone(self.current_value[key])
+				})
+			break;
+
+			case 'remove':
+
+				// get the layer from the loaded data
+				const layer = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
+				if(!layer){
+					return false
+				}
+				//store the layer into the data_buffer
+				self.ar_data_buffer[layer_id] = layer;
+				// remove the data of the FeatureGroup
+				if(!self.FeatureGroup[layer_id]){
+					return
+				}
+				self.FeatureGroup[layer_id].remove();
+				self.FeatureGroup[layer_id].clearLayers();
+				self.layer_control.removeLayer(self.FeatureGroup[layer_id]);
+				delete self.FeatureGroup[layer_id];
+
+				// remove the layer
+				const index = self.ar_layer_loaded.findIndex((item) => item.layer_id===layer_id)
+				self.ar_layer_loaded.splice(index,1)
+
+				self.current_value[key].lib_data = self.ar_layer_loaded
+
+				const changed_data = Object.freeze({
+					action		: 'update',
+					key			: key,
+					value		: self.current_value[key]
+				})
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+				.then(()=>{
+					self.db_data.value[key] = clone(self.current_value[key])
+				})
+
+			break;
+		}
+
+
+};//end layer_data_change
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

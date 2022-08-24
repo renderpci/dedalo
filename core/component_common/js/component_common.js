@@ -446,7 +446,6 @@ component_common.prototype.save = async function(changed_data) {
 		if (changed_data.action==='update') {
 			const original_value	= self.db_data.value[changed_data.key]
 			const new_value			= changed_data.value
-			// console.log("original_value:", original_value, new_value, new_value==original_value);
 			if (new_value==original_value) {
 
 				// dispatch event save
