@@ -226,17 +226,20 @@ const get_buttons = (self) => {
 			return fragment
 		}
 
-	// button full_screen
-		const button_full_screen = ui.create_dom_element({
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button full_screen',
 			title			: 'Fullscreen',
 			parent			: fragment
 		})
-		button_full_screen.addEventListener('mouseup', () =>{
-			self.node.classList.toggle('fullscreen')
-			const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
-			event_manager.publish('full_screen_'+self.id, fullscreen_state)
+		// button_fullscreen.addEventListener('mouseup', () =>{
+		// 	self.node.classList.toggle('fullscreen')
+		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
+		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
+		// })
+		button_fullscreen.addEventListener('click', function() {
+			ui.enter_fullscreen(self.node)
 		})
 
 	// buttons tools

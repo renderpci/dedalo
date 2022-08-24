@@ -17,7 +17,7 @@
 	import {render_search_component_text_area} from '../../component_text_area/js/render_search_component_text_area.js'
 	//import '../../../prosemirror/dist/prosemirror.js';
 	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
-	import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
+	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 
 
 
@@ -48,7 +48,7 @@ export const component_text_area = function(){
 		// service_text_editor_instance. array of created service instances based on input key (one is expected)
 		this.service_text_editor_instance	= []
 		// auto_init_editor. default is false. To activate, set Ontology property 'auto_init_editor' as true, or configure this component in run-time from tool (like tool_indexation do)
-		this.auto_init_editor				= false
+		this.auto_init_editor				= undefined
 
 
 	return true
@@ -236,7 +236,11 @@ component_text_area.prototype.build = async function(options) {
 		const common_build = component_common.prototype.build.call(self, options);
 
 	// auto_init_editor
-		self.auto_init_editor = self.auto_init_editor || self.context.properties.auto_init_editor || false
+		self.auto_init_editor = self.auto_init_editor!==undefined
+			? self.auto_init_editor
+			: self.context.properties && self.context.properties.auto_init_editor!==undefined
+				? self.context.properties.auto_init_editor
+				: false
 
 
 	return common_build

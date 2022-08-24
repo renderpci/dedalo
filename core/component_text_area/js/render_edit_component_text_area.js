@@ -109,6 +109,16 @@ const get_buttons = (self) => {
 		const is_inside_tool	= (self.caller && self.caller.type==='tool')
 		const fragment			= new DocumentFragment()
 
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button full_screen',
+			parent			: fragment
+		})
+		button_fullscreen.addEventListener('click', function() {
+			ui.enter_fullscreen(self.node)
+		})
+
 	// buttons tools
 		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
