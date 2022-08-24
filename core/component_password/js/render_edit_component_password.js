@@ -11,7 +11,7 @@
 
 /**
 * RENDER_EDIT_COMPONENT_PASSWORD
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_edit_component_password = function() {
 

@@ -12,7 +12,7 @@
 
 /**
 * RENDER_LIST_COMPONENT_SECURITY_ACCESS
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_list_component_security_access = function() {
 
