@@ -47,6 +47,8 @@ export const component_text_area = function(){
 		this.service_text_editor			= null
 		// service_text_editor_instance. array of created service instances based on input key (one is expected)
 		this.service_text_editor_instance	= []
+		// auto_init_editor. default is false. To activate, set Ontology property 'auto_init_editor' as true, or configure this component in run-time from tool (like tool_indexation do)
+		this.auto_init_editor				= false
 
 
 	return true
@@ -86,6 +88,7 @@ export const component_text_area = function(){
 /**
 * INIT
 * @return promise bool
+* 	Resolve bool
 */
 component_text_area.prototype.init = async function(options) {
 
@@ -207,15 +210,37 @@ component_text_area.prototype.init = async function(options) {
 				event_manager.subscribe('create_geo_tag_'+ self.id_base, self.create_geo_tag)
 			)
 
-	// call the generic common tool init
+	// call the generic method
 		const common_init = component_common.prototype.init.call(self, options);
 
 	// service_text_editor
 		// self.service_text_editor	= service_tinymce
 		self.service_text_editor	= service_ckeditor
 
+
 	return common_init
 }//end init
+
+
+
+/**
+* BUILD
+* @return promise bool
+* 	Resolve bool
+*/
+component_text_area.prototype.build = async function(options) {
+
+	const self = this
+
+	// call the generic common method
+		const common_build = component_common.prototype.build.call(self, options);
+
+	// auto_init_editor
+		self.auto_init_editor = self.auto_init_editor || self.context.properties.auto_init_editor || false
+
+
+	return common_build
+}//end build
 
 
 
