@@ -45,7 +45,7 @@ render_paginator_mini.prototype.mini = async function(options) {
 
 	// content data. Added when total is ready
 		self.get_total()
-		.then(function(response){
+		.then(function(){
 			const content_data_node = get_content_data(self)
 			wrapper.appendChild(content_data_node)
 		})
@@ -67,7 +67,7 @@ render_paginator_mini.prototype.mini = async function(options) {
 const add_events = (wrapper, self) => {
 
 	// mousedown
-		wrapper.addEventListener("mousedown", function(e){
+		wrapper.addEventListener('mousedown', function(e){
 			e.stopPropagation()
 			//e.preventDefault()
 			// prevent buble event to container element
@@ -132,11 +132,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number>1) {
-				paginator_first.addEventListener("mousedown",function(){
+				paginator_first.addEventListener('mousedown',function(){
 					self.paginate(offset_first)
 				})
 			}else{
-				paginator_first.classList.add("unactive")
+				paginator_first.classList.add('inactive')
 			}
 
 		// btn previous
@@ -146,11 +146,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(prev_page_offset>=0) {
-				paginator_prev.addEventListener("mousedown",function(){
+				paginator_prev.addEventListener('mousedown',function(){
 					self.paginate(offset_prev)
 				})
 			}else{
-				paginator_prev.classList.add("unactive")
+				paginator_prev.classList.add('inactive')
 			}
 
 		// btn next
@@ -160,11 +160,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(next_page_offset<total) {
-				paginator_next.addEventListener("mousedown",function(){
+				paginator_next.addEventListener('mousedown',function(){
 					self.paginate(offset_next)
 				})
 			}else{
-				paginator_next.classList.add("unactive")
+				paginator_next.classList.add('inactive')
 			}
 
 		// btn last
@@ -174,11 +174,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number<total_pages) {
-				paginator_last.addEventListener("mousedown",function(){
+				paginator_last.addEventListener('mousedown',function(){
 					self.paginate(offset_last)
 				})
 			}else{
-				paginator_last.classList.add("unactive")
+				paginator_last.classList.add('inactive')
 			}
 
 	// paginator_info
@@ -205,7 +205,7 @@ const get_content_data = function(self) {
 		// const goto_page = ui.create_dom_element({
 		// 	element_type	: 'span',
 		// 	class_name		: 'goto_page',
-		// 	inner_html 	: get_label["go_to_page"],
+		// 	inner_html 	: get_label['go_to_page'],
 		// 	parent			: paginator_info
 		// })
 		// // input_go_to_page
@@ -242,5 +242,3 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
-
-
