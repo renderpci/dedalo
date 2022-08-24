@@ -183,7 +183,7 @@ const get_content_value = (i, current_value, self) => {
 					}
 
 				// create a new instace of the editor when DOM element is ready
-					// event_manager.when_in_dom(li, function(){
+					// event_manager.when_in_viewport(li, function(){
 					// 	console.log("container in DOM:",li);
 					// })
 					const editor = new JSONEditor(
