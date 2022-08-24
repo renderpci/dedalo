@@ -369,8 +369,29 @@ export const service_ckeditor = function() {
 			});//end click event
 
 
+			editor.editing.model.document.on('change:data', (evt, batch) => {
+				const changes = editor.editing.model.document.differ.getChanges(); //{ includeChangesInGraveyard: true }
+				const ar_changes =[]
+				for (const entry of changes) {
+					if (entry.name == 'imageInline' ) {
+						const attributes = entry.attributes
+						const type = attributes.get('type')
+						const tag_id = attributes.get('tag_id')
+						ar_changes.push({
+							action	: entry.type, // insert || remove
+							tag_id	: tag_id,
+							type	: type // draw, geo, tc, indexIn, indexOut, svg. page, person, note, lang, reference
+						})
+					}
+				}
+				if (custom_events.changeData) {
+					custom_events.changeData(evt, ar_changes)
+				}
+			});
+
 		// keyup event
-			editor.editing.view.document.on('keyup', function(evt, data ) {
+			editor.editing.view.document.on('keydown', function(evt, data ) {
+
 				if (custom_events.KeyUp) {
 					custom_events.KeyUp(data.domEvent, {})
 				}

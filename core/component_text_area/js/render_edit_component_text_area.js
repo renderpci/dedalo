@@ -751,9 +751,23 @@ const get_custom_events = (self, i, text_editor) => {
 					text_editor.set_content(node_tag_lang)
 
 					break;
+
+				case evt.code==='Backspace' || evt.code==='Delete':
+					console.log(options)
+				break;
 			}
 		}//end KeyUp
 
+	//changeData
+		custom_events.changeData = (evt, options) => {
+			const ar_changes = options
+			const changes_len = ar_changes.length
+			for (var i = changes_len - 1; i >= 0; i--) {
+				const change = ar_changes[i]
+				event_manager.publish('editor_tag_' +change.action +'_'+ self.id_base, change)
+			}
+
+		}// end changeData event
 
 	return custom_events
 }//end get_custom_events
