@@ -1,5 +1,4 @@
 <?php
-require_once(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 /**
 * CLASS COMPONENT IMAGE
 *

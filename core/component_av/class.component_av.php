@@ -1,9 +1,4 @@
 <?php
-include_once( DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
-include_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
-
-
-
 /**
 * CLASS COMPONENT_AV
 *

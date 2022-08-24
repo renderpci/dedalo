@@ -1,6 +1,6 @@
 <?php
 require_once( DEDALO_CONFIG_PATH .'/config.php');
-require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
+// require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
 
 
 class PdfObj extends MediaObj {

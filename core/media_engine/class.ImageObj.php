@@ -1,8 +1,8 @@
 <?php
 require_once( DEDALO_CONFIG_PATH .'/config.php');
-require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
-require_once( DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
-require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
+// require_once( DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
+// require_once( DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
+// require_once( DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 
 
 /**
