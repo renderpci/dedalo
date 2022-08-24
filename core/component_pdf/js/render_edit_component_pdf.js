@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
@@ -116,8 +116,8 @@ const get_content_data_edit = function(self) {
 const get_content_value = function(i, current_value, self) {
 
 	// short vars
-		const quality				= self.quality || self.context.quality
-		const datalist			= self.data.datalist || []
+		const quality		= self.quality || self.context.quality
+		const datalist		= self.data.datalist || []
 		const offset_value	= current_value && current_value.offset!=='undefined' && current_value.offset!==null
 			? current_value.offset
 			: 1
@@ -149,7 +149,7 @@ const get_content_value = function(i, current_value, self) {
 			// // console.log("response", response);
 			// // .then(response => response.text())
 			// // .then( txt =>  new DOMParser().parseFromString(txt, 'text/html'))
-	  		// const txt = await response.text();
+			// const txt = await response.text();
 			// // console.log("txt", txt);
 			// const html =  new DOMParser().parseFromString(txt, 'text/html');
 			//
@@ -161,7 +161,7 @@ const get_content_value = function(i, current_value, self) {
 			const iframe = ui.create_dom_element({
 				element_type	: 'iframe',
 				class_name		: 'pdf_viewer_frame',
-				parent				: content_value
+				parent			: content_value
 			})
 			// iframe.setAttribute('allowfullscreen',true)
 
@@ -220,22 +220,22 @@ const get_content_value = function(i, current_value, self) {
 			const fields = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'fields',
-				parent				: content_value
+				parent			: content_value
 			})
 			// offset label
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				text_node			: 'offset',
-				parent				: fields
+				text_node		: 'offset',
+				parent			: fields
 			})
 			// offset_input field
 			const offset_input = ui.create_dom_element({
 				element_type	: 'input',
-				type					: 'number',
+				type			: 'number',
 				class_name		: '',
-				value					: offset_value,
-				parent				: fields
+				value			: offset_value,
+				parent			: fields
 			})
 			offset_input.addEventListener('change', function() {
 
@@ -246,12 +246,12 @@ const get_content_value = function(i, current_value, self) {
 
 				const changed_data = Object.freeze({
 					action	: 'update',
-					key			: i,
-					value		: current_value
+					key		: i,
+					value	: current_value
 				})
 				self.change_value({
 					changed_data	: changed_data,
-					refresh				: false
+					refresh			: false
 				})
 			})
 	}//end if (pdf_url)

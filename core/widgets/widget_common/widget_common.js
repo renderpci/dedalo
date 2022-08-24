@@ -30,10 +30,12 @@ widget_common.prototype.init = async function(options) {
 
 	// set vars
 		self.id				= options.id
+		self.tipo			= null
 		self.section_tipo	= options.section_tipo
 		self.section_id		= options.section_id
 		self.lang			= options.lang
 		self.mode			= options.mode
+		self.model			= 'widget'
 		self.value			= options.value
 		self.datalist		= options.datalist
 		self.ipo			= options.ipo
