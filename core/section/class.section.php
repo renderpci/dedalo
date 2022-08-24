@@ -3927,12 +3927,14 @@ class section extends common {
 						case DEDALO_SECTION_INFO_MODIFIED_BY_USER: // 'dd197' Modified by user
 							$user_id_tipo	= DEDALO_SECTION_INFO_MODIFIED_BY_USER; // 'dd197' Modified by user
 							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($user_id_tipo,true); // select
-							$component		= component_common::get_instance($modelo_name,
-																			 $user_id_tipo,
-																			 $section_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);
+							$component		= component_common::get_instance(
+								$modelo_name,
+								$user_id_tipo,
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$section_tipo
+							);
 							// dato
 								$locator = new locator();
 									$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
@@ -4015,8 +4017,8 @@ class section extends common {
 
 							// get component JSON data
 								$get_json_options = new stdClass();
-									$get_json_options->get_context 	= false;
-									$get_json_options->get_data 	= true;
+									$get_json_options->get_context	= false;
+									$get_json_options->get_data		= true;
 								$element_json = $current_element->get_json($get_json_options);
 
 							// add matrix_id
