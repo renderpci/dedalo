@@ -893,7 +893,7 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 /*	Geo location
 ----------------------------------------------------------------------------------------- */
 
-/**
+	/**
 	* CREATE_GEO_TAG
 	* Build a new annotation when user clicks on text editor button
 	*
@@ -901,8 +901,30 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 	*/
 	component_text_area.prototype.create_geo_tag = function(options) {
 
-		const self = this
+		const self = options.caller
 		// get the text_editor sent by the event (button_note event)
 		const text_editor = options.text_editor
+
+		// last_tag_id. Find last geo and returns id or 0
+		const last_tag_index_id = self.get_last_tag_id('geo', text_editor)
+
+		// tag_id. Last id plus one
+			const tag_id = parseInt(last_tag_index_id) + 1
+
+		// create new string wrapping selection with new tags
+		// tag state. Default is 'n' (normal)
+			const tag_state = 'n';
+
+		// tag images
+			const geo_view_tag  = self.build_view_tag_obj({
+				type	: "geo",
+				state	: tag_state,
+				label	: tag_id,
+				data	: ""
+			}, tag_id)
+
+		// const tag = self.build_view_tag_obj(geo_view_tag, tag_id)
+		// insert the new note tag in the caret position of the text_editor
+		const inserted_tag = text_editor.set_content(geo_view_tag)
 
 	}

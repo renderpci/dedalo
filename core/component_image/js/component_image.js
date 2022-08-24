@@ -273,6 +273,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 /**
 * LOAD_TAG_INTO_VECTOR_EDITOR
+* usually fire with 'click_tag_draw' event
 * @return bool true
 */
 component_image.prototype.load_tag_into_vector_editor = function(options) {
@@ -282,10 +283,10 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 	// options
 		const tag = options.tag
 
-	// convert the tag dataset to 'real' object for manage it
+	// convert the tag to 'real' object for manage it
 	try {
 
-		const ar_layer_id			= JSON.parse(tag.dataset.data)
+		const ar_layer_id			= JSON.parse(tag.data)
 		console.log("---> ar_layer_id:",ar_layer_id);
 		const ar_layer_id_length	= ar_layer_id.length
 		for (let i = 0; i < ar_layer_id_length; i++) {
@@ -297,7 +298,7 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 		}
 	} catch (error) {
 		console.error(error)
-		console.log("tag.dataset.data:", tag.dataset.data);
+		console.log("tag.data:", tag.data);
 	}
 
 
