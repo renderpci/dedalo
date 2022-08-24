@@ -381,7 +381,7 @@ export const ui = {
 
 		/**
 		* BUILD_BUTTONS_CONTAINER
-		* @param object component instance
+		* @param object instance
 		* @return DOM node buttons_container
 		*/
 		build_buttons_container : (instance) => {
@@ -647,15 +647,13 @@ export const ui = {
 		/**
 		* ACTIVE
 		* Set component state as active/inactive by subscription event
-		* @see util.events event_manage.publish
+		* @see common events event_manage.publish
 		*
 		* @param object component
 		*	Full component instance. Each component that is subscribed
 		* @param object actived_component
 		*	Full component instance. Actual active component
-		* @return async promise
-		*	Note that this function return always a promise to allow the caller
-		*	continue applying another custom actions
+		* @return bool
 		*/
 		active : (component, actived_component) => {
 
@@ -708,19 +706,6 @@ export const ui = {
 					return true
 				}
 
-			// old way
-				// // not match cases. Remove wrapper css active if exists
-				// 	component.node.map(function(item_node) {
-				// 		item_node.classList.remove("active")
-				// 	})
-
-				// // service autocomplete remove if active
-				// 	if(component.autocomplete_active===true){
-				// 		component.autocomplete.destroy()
-				// 		component.autocomplete_active = false
-				// 		component.autocomplete = null
-				// 	}
-
 			// inactive by function
 				ui.component.inactive(component)
 
@@ -737,11 +722,7 @@ export const ui = {
 		*
 		* @param object component
 		*	Full component instance
-		* @param string id
-		*	ID of clicked component
-		* @return async promise
-		*	Note that this function return always a promise to allow the caller
-		*	continue applying another custom actions
+		* @return bool
 		*/
 		inactive : (component) => {
 
@@ -812,6 +793,7 @@ export const ui = {
 		/**
 		* ADD_IMAGE_FALLBACK
 		* Unified fallback image adds event listener error and changes the image src when event error is triggered
+		* @return bool
 		*/
 		add_image_fallback : (img_node, callback) => {
 
@@ -841,7 +823,10 @@ export const ui = {
 		/**
 		* EXEC_SAVE_SUCCESSFULLY_ANIMATION
 		* Used on component save successfully
+		* @param object self
+		* 	Element instance
 		* @return promise
+		* 	Resolve bool
 		*/
 		exec_save_successfully_animation : (self) => {
 
@@ -1011,6 +996,8 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_EDIT
+		* Common method to create element wrapper in current mode
+		* @return DOM node wrapper
 		*/
 		build_wrapper_edit : (instance, items={}) => {
 			if(SHOW_DEBUG===true) {
