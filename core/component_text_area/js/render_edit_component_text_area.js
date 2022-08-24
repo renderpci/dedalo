@@ -752,9 +752,9 @@ const get_custom_events = (self, i, text_editor) => {
 
 					break;
 
-				case evt.code==='Backspace' || evt.code==='Delete':
-					console.log(options)
-				break;
+				// case evt.code==='Backspace' || evt.code==='Delete':
+				// 	console.log(options)
+				// break;
 			}
 		}//end KeyUp
 
