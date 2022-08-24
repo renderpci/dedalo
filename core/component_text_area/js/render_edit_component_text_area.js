@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
-	import {when_in_dom} from '../../common/js/events.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 
 
 
@@ -59,11 +59,12 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 		wrapper.content_data = content_data
 
 	// fix editor height. This guarantees that content_data grow to the maximum possible height
-		when_in_dom(wrapper, ()=> {
+		when_in_viewport(wrapper, ()=> {
 			const wrapper_height	= wrapper.offsetHeight
 			const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
 			wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
 		})
+
 
 	return wrapper
 }//end edit

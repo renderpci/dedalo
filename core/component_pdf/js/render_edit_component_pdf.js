@@ -45,13 +45,13 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons				: buttons
+			buttons			: buttons
 		})
 		// set pointers
 		wrapper.content_data = content_data
 
 	// fix editor height. This guarantees that content_data grow to the maximum possible height
-		// when_in_dom(wrapper, ()=> {
+		// when_in_viewport(wrapper, ()=> {
 		// 	const wrapper_height	= wrapper.offsetHeight
 		// 	const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
 		// 	wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'

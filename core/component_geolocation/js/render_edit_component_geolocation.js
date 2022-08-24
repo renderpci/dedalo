@@ -256,7 +256,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		})
 
 	// init the map with the wrapper when container node is in DOM
-		// event_manager.when_in_dom(map_container, draw_map)
+		// event_manager.when_in_viewport(map_container, draw_map)
 		// function draw_map() {
 		// 	self.get_map(map_container, current_value)
 		// }

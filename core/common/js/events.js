@@ -147,7 +147,8 @@ export const when_in_viewport = function(node, callback, once=true) {
 				observer.disconnect();
 			}
 
-			callback()
+			// callback()
+			window.requestAnimationFrame(callback)
 		}
 	}, { threshold: [0] });
 	observer.observe(node);
