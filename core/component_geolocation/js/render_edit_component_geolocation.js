@@ -266,7 +266,12 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				const entry = entries[1] || entries[0]
 				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
 					observer.disconnect();
-					self.get_map(map_container, current_value)
+					self.get_map(map_container, i)
+					.then(()=>{
+						self.layers_loader({
+							load: 'full'
+						})
+					})
 					// observer.unobserve(entry.target);
 				}
 			}, { threshold: [0] });

@@ -79,7 +79,7 @@ component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
-	self.ar_layer_loaded	= []
+	self.ar_layer_loaded	= null
 	self.map				= null
 	self.layer_control		= false
 
@@ -128,7 +128,7 @@ component_geolocation.prototype.init = async function(options) {
 * GET_MAP
 * load the libraries and specific css
 */
-component_geolocation.prototype.get_map = async function(map_container, value) {
+component_geolocation.prototype.get_map = async function(map_container, key) {
 
 	const self = this
 
@@ -138,12 +138,14 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 		const default_zoom	= 16
 		const default_alt	= 0
 
+		const value = self.data.value || []
+
 	// get data
-		const key			= JSON.parse(map_container.dataset.key)
-		const field_lat		= value.lat 	|| default_lat
-		const field_lon		= value.lon 	|| default_lon
-		const field_zoom	= value.zoom 	|| default_zoom
-		const field_alt		= value.alt 	|| default_alt
+		// const key			= JSON.parse(map_container.dataset.key)
+		const field_lat		= value[key].lat 	|| default_lat
+		const field_lon		= value[key].lon 	|| default_lon
+		const field_zoom	= value[key].zoom 	|| default_zoom
+		const field_alt		= value[key].alt 	|| default_alt
 
 	// update the current_value with the data from DDBB
 	// current_value will be update with different changes to create change_data to save
@@ -219,7 +221,7 @@ component_geolocation.prototype.get_map = async function(map_container, value) {
 
 				// LAYER SELECTOR
 				base_maps = {
-					dare 	:  dare,
+					dare 	: dare,
 					arcgis 	: arcgis,
 					osm 	: osm
 				}
@@ -392,10 +394,10 @@ component_geolocation.prototype.refresh_map = function(map) {
 
 
 /**
-* LOAD_GEO_EDITOR
+* LAYERS_LOADER
 * Load all data information of the current selected tag or full database layer loaded.
 */
-component_geolocation.prototype.load_geo_editor = function(options) {
+component_geolocation.prototype.layers_loader = function(options) {
 
 	const self = this
 
@@ -406,7 +408,7 @@ component_geolocation.prototype.load_geo_editor = function(options) {
 	// load_layer
 		switch(load) {
 			case ('full'):
-				const ar_layer		= self.ar_layer_loaded
+				const ar_layer	=  self.ar_layer_loaded
 				const ar_layer_len	= ar_layer.length
 				for (let i = 0; i < ar_layer_len; i++) {
 					const layer = ar_layer[i]
@@ -415,7 +417,6 @@ component_geolocation.prototype.load_geo_editor = function(options) {
 				break;
 			case ('layer'):
 				const loaded_layer = self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
-					console.log("loaded_layer:",loaded_layer);
 				// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
 				// create new layer data with the new id and set to ar_layer_loaded
 				const layer = typeof(loaded_layer)!=='undefined'
@@ -436,7 +437,7 @@ component_geolocation.prototype.load_geo_editor = function(options) {
 		}//end switch
 
 	return true
-}//end load_geo_editor
+}//end layers_loader
 
 
 
@@ -565,62 +566,19 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 	const self = this
 
 	// options
-		const tag_node = options.tag // DOM node image from component_text_area used click
+		const tag_obj = options.tag
 
-	// parts_of_tag (layer_id, tag_state, data)
-		const parts_of_tag = self.get_parts_of_tag(tag_node)
+	// layer_id
+		const layer_id	= parseInt(tag_obj.tag_id)
 
 	// load_layer
-		self.load_layer({
-			layer_id	: parts_of_tag.layer_id,
-			layer_data	: parts_of_tag.data
+		self.layers_loader({
+			load 		: 'layer',
+			layer_id	: layer_id
 		})
-
-	// des
-		// // convert the tag dataset to 'real' object for manage it
-		// 	const ar_layer_id = JSON.parse(data)
-
-		// // for every layer_id in the tag load the data from the DDBB
-		// 	for (let i = 0; i < ar_layer_id.length; i++) {
-		// 		self.load_geo_editor({
-		// 			load		: 'layer',
-		// 			layer_id	: parseInt(ar_layer_id[i])
-		// 		})
-		// 	}
 
 	return true
 }//end load_tag_into_geo_editor
-
-
-
-/**
-* GET_PARTS_OF_TAG
-* Get normalized info from given tag DOM node
-* @param DOM node tag_node
-* @return object parts_of_tag
-*/
-component_geolocation.prototype.get_parts_of_tag = function(tag_node) {
-
-	// type check
-		const type = tag_node.dataset.type
-		if (type!=='geo'){
-			alert("invalid tag here!!!!")
-			return false
-		}
-
-	const tag_state	= tag_node.dataset.state
-	const layer_id	= parseInt(tag_node.dataset.tag_id)
-	const data		= JSON.parse(tag_node.dataset.data.replaceAll("'",'"')) // restore quotes "
-
-	const parts_of_tag = {
-		layer_id	: layer_id,
-		tag_state	: tag_state,
-		data		: data
-	}
-
-	return parts_of_tag
-}//end get_parts_of_tag
-
 
 
 /**
@@ -937,6 +895,7 @@ component_geolocation.prototype.update_draw_data = function() {
 		// 	? clone(self.data.value[0])
 		// 	: {}
 
+
 		self.current_value[key].lib_data = self.ar_layer_loaded
 
 
@@ -966,7 +925,6 @@ component_geolocation.prototype.update_draw_data = function() {
 * If the observable doesn't has specified the component_geolocation will use the default thesaurus component_geolocation: hierarchy31
 *
 */
-
 component_geolocation.prototype.map_update_coordinates = async function(options) {
 
 	const self = this
