@@ -30,70 +30,43 @@ class component_image extends component_media_common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $tipo, $parent, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	public function __construct(string $tipo, $section_id, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		// lang. Force always DEDALO_DATA_NOLAN
-		$lang = DEDALO_DATA_NOLAN;
+			$lang = DEDALO_DATA_NOLAN;
 
-		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		// common constructor. Creates the component as normally do with parent class
+			parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
-		/*
-		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
-		# Force calculate and set initial dato
-		$dato = $this->get_dato();
-			#dump(empty($dato)," dato $modo");
-
-		$this->need_save=false;
-		if($this->parent>0 && !isset($dato->section_id)) {
-
-			#####################################################################################################
-			# DEFAULT DATO
-			$locator = new locator();
-				$locator->set_component_tipo($this->tipo);
-				$locator->set_section_tipo($this->section_tipo);
-				$locator->set_section_id($this->parent);
-			# END DEFAULT DATO
-			######################################################################################################
-
-			# Dato
-			$this->set_dato($locator);
-			$this->need_save=true;
-		}//end if(empty($dato->counter) && $this->parent>0)
-		*/
-
-			#
-			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
-			#
+		// fix component main properties
 			if (!empty($this->section_id)) {
 
-				# IMAGE_ID : Set and fix current image_id
-				$this->image_id = $this->get_image_id();
-					#dump($this->image_id,"image_id $modo");
+				// image_id : Set and fix current image_id
+					$this->image_id = $this->get_image_id();
 
-				# INITIAL MEDIA PATH SET
-				$this->initial_media_path = $this->get_initial_media_path();
-					#dump($this->initial_media_path, ' this->initial_media_path');
+				// quality
+					$this->quality = $this->get_quality();
 
-				# ADITIONAL_PATH : Set and fix current aditional image path
-				$this->aditional_path = $this->get_aditional_path();
-					#dump($this->aditional_path,'$this->aditional_path');
+				// initial media path set
+					$this->initial_media_path = $this->get_initial_media_path();
 
-				# ADITIONAL_PATH : Set and fix current aditional image path
-				$this->external_source = $this->get_external_source();
+				// aditional_path : set and fix current additional image path
+					$this->aditional_path = $this->get_aditional_path();
 
-				# IMAGEOBJ : Add a ImageObj obj
-				$this->ImageObj = new ImageObj(
-					$this->get_image_id(),
-					$this->get_quality(),
-					$this->aditional_path,
-					$this->initial_media_path,
-					$this->external_source
-				);
+				// aditional_path : set and fix current additional image path
+					$this->external_source = $this->get_external_source();
+
+				// ImageObj : Add a ImageObj obj
+					if (!empty($this->image_id)) {
+						$this->ImageObj = new ImageObj(
+							$this->image_id,
+							$this->quality,
+							$this->aditional_path,
+							$this->initial_media_path,
+							$this->external_source
+						);
+					}
 			}
-
-
-		return true;
 	}//end __construct
 
 
@@ -153,28 +126,33 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET DATO : Format {"component_tipo":"dd42","section_tipo":"rsc20","section_id":"7"}
+	* GET DATO
+	* @return array|null $dato
+	* Sample data:
+	* [
+	*  {
+    *    "original_file_name": "poblado_raspa.jpg",
+    *    "original_upload_date": {
+    *      "day": 20,
+    *      "hour": 17,
+    *      "time": 65009152486,
+    *      "year": 2022,
+    *      "month": 8,
+    *      "minute": 54,
+    *      "second": 46
+    *    }
+    *  }
+	* ]
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
 		$dato = parent::get_dato();
 
-		if(is_object($dato)){
-			$this->dato = null;
-			$dato = $this->dato;
+		if (!empty($dato) && !is_array($dato)) {
+			$dato = [$dato];
 		}
 
 		return (array)$dato;
 	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	*/
-	public function set_dato($dato) {
-
-		parent::set_dato( (array)$dato );
-	}//end set_dato
 
 
 
@@ -1402,26 +1380,25 @@ class component_image extends component_media_common {
 		// imagemagick. Normalize uploaded image format to Dédalo working format like jpg from tif
 			try {
 
-				// default_image_format : If uploaded file is not in Dedalo standar format (jpg), is converted,
+				// default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
 				// and original file is conserved (like myfilename.tif and myfilename.jpg)
 					$standard_file_path = self::build_standard_image_format($full_file_path);
-
 
 				// target_filename. Save original file name in a component_input_text if defined
 					$properties = $this->get_properties();
 					if (isset($properties->target_filename)) {
 
-						$current_section_id  		= $this->get_section_id();
-						$target_section_tipo 		= $this->get_section_tipo();
-						$model_name_target_filename = RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
-						$component_target_filename 	= component_common::get_instance(
-																			$model_name_target_filename,
-																			$properties->target_filename,
-																			$current_section_id,
-																			'edit',
-																			DEDALO_DATA_NOLAN,
-																			$target_section_tipo
-																			);
+						$current_section_id			= $this->get_section_id();
+						$target_section_tipo		= $this->get_section_tipo();
+						$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+						$component_target_filename	= component_common::get_instance(
+							$model_name_target_filename,
+							$properties->target_filename,
+							$current_section_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							$target_section_tipo
+						);
 						$component_target_filename->set_dato( $original_file_name );
 						$component_target_filename->Save();
 					}
@@ -1444,25 +1421,33 @@ class component_image extends component_media_common {
 						debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
 					}
 
+				// generate the SVG file
+					$svg_string_node = $this->create_default_svg_file();
+
 				// add data with the file uploaded, only for original and retouched images, other quality images don't has relevant info.
-					if($this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED){
-						$file_name		= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_file_name' 	: 'retouched_file_name';
-						$upload_date 	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_upload_date' 	: 'retouched_upload_date';
-						$dato  = $this->get_dato();
-						$value = empty($dato) ? new stdClass() : reset($dato);
-						// dump($value);
-							$value->$file_name 		= $original_file_name;
-							$value->$upload_date	= component_date::get_date_now();
-						$this->set_dato([$value]);
+					if( $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ||
+						$this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED) {
+
+						$file_name_label	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_file_name'   : 'retouched_file_name';
+						$upload_date_label	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_upload_date' : 'retouched_upload_date';
+
+						$dato			= $this->get_dato();
+						$value			= empty($dato) ? new stdClass() : reset($dato);
+						$media_value	= $this->build_media_value((object)[
+							'value'				=> $value,
+							'file_name'			=> $original_file_name,
+							'file_name_label'	=> $file_name_label,
+							'upload_date'		=> component_date::get_date_now(),
+							'upload_date_label'	=> $upload_date_label
+						]);
+
+						$this->set_dato([$media_value]);
 						$this->Save();
 					}
 
-				// generate the svg file
-					$svg_string_node = $this->create_default_svg_file();
-
-				// all is ok
-					$response->result 	= true;
-					$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+				// all is OK
+					$response->result	= true;
+					$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 
 			} catch (Exception $e) {
 				$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";

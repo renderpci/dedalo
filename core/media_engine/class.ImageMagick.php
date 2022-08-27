@@ -217,10 +217,10 @@ final class ImageMagick {
 	* @param $AVObj
 	*	AVObj object
 	* @param $setting
-	*	ffmpeg_settings to aplicate like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
+	*	ffmpeg_settings to apply like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
 	*
 	* @return $av_alternate_command_exc
-	*	Terminal commnad response
+	*	Terminal command response
 	*
 	*/
 	public static function convert(string $source_file, string $target_file, string $flags='') : ?string {
@@ -260,7 +260,7 @@ final class ImageMagick {
 			# CMYK to RGB
 			# Si la imagen orgiginal es CMYK, la convertimos a RGB aignándole un perfil de salida para la conversión. Una vez convertida (y flateada en caso de psd)
 			# le eliminamos el perfil orginal (cmyk) para evitar incoherencia con el nuevo espacio de color (rgb)
-			case ( strpos($colorspace_info, 'CMYK')!==false ) :
+			case ( !empty($colorspace_info) && strpos($colorspace_info, 'CMYK')!==false ) :
 
 				# Profile full path
 				$profile_file = COLOR_PROFILES_PATH.'sRGB_Profile.icc';
@@ -368,7 +368,7 @@ final class ImageMagick {
 
 	/**
 	* ROTATE
-	* 	Rotate annd save source image to target (self or other)
+	* 	Rotate and save source image to target (self or other)
 	* @param string $source
 	* @param string
 	* @return string|null $result

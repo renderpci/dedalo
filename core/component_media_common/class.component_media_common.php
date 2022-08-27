@@ -143,7 +143,7 @@ class component_media_common extends component_common {
 	* RENAME_OLD_FILES
 	* @param $file_id string as 'test175_test65_3'
 	* @param $folder_path string
-	* @return object $reponse
+	* @return object $response
 	*/
 	protected function rename_old_files(string $file_id, string $folder_path) : object {
 
@@ -216,6 +216,35 @@ class component_media_common extends component_common {
 
 		return $response;
 	}//end process_uploaded_file
+
+
+
+	/**
+	* BUILD_MEDIA_VALUE
+	*  Creates a standardized media value
+	* Used by each media component to store their data
+	* @param object $options
+	* @return object $value
+	*/
+	protected function build_media_value(object $options) : object {
+
+		// options
+			$value				= $options->value ?? new stdClass();
+			$file_name			= $options->file_name;
+			$file_name_label	= $options->file_name_label ?? 'original_file_name';
+			$upload_date		= $options->upload_date ?? component_date::get_date_now();
+			$upload_date_label	= $options->upload_date_label ?? 'upload_date';
+			$user_id			= $options->user_id ?? navigator::get_user_id();
+			$user_id_label		= $options->user_id_label ?? 'user_id';
+
+		// set value properties
+			$value->{$file_name_label}		= $file_name;
+			$value->{$upload_date_label}	= $upload_date;
+			$value->{$user_id_label}		= (int)$user_id;
+
+
+		return $value;
+	}//end build_media_value
 
 
 
@@ -321,7 +350,7 @@ class component_media_common extends component_common {
 							'url'			=> $file_url
 						];
 					}
-			}
+			}//end foreach ($ar_quality as $quality)
 
 		return $files_info;
 	}//end get_files_info
