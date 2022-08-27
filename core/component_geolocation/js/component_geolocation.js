@@ -93,7 +93,6 @@ component_geolocation.prototype.init = async function(options) {
 		self.drawControl				= null
 		self.draw_editor_is_initated	= false
 		self.FeatureGroup				= {}
-		self.draw_state					= null
 		self.active_layer_id			= null
 
 	// Data buffer will store the changes send by text area when the tags are removed or inserted
@@ -116,12 +115,17 @@ component_geolocation.prototype.init = async function(options) {
 
 			await Promise.all(load_promises).then(async function(response){
 
-				const draw_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.js'
-				common.prototype.load_script(draw_lib_js_file)
+				const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
+				common.prototype.load_script(geo_editor_lib_js_file)
 
-				const draw_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.css'
-				common.prototype.load_style(draw_lib_css_file)
+				const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
+				common.prototype.load_style(geo_editor_lib_css_file)
 
+				// const draw_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.js'
+				// common.prototype.load_script(draw_lib_js_file)
+
+				// const draw_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.css'
+				// common.prototype.load_style(draw_lib_css_file)
 			})
 
 
@@ -235,9 +239,6 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
 
-				self.map.on('overlayadd', function(e) {
-					self.init_draw_editor(self.FeatureGroup[e.name], e.name)
-				})
 				break;
 
 			case 'VARIOUS':
@@ -293,13 +294,20 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
 
-				self.map.on('overlayadd', function(e) {
-					self.init_draw_editor(self.FeatureGroup[e.name], e.name)
-				});
+
 
 				break;
 		}//end switch(self.context.geo_provider)
 
+
+
+
+	self.init_draw_editor()
+
+	self.map.on('overlayadd', function(e) {
+		self.active_layer_id = e.name
+	})
+	// self.map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
 
 	// set the lang of the tool
 	const dedalo_lang = page_globals.dedalo_data_lang
@@ -309,10 +317,11 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		: 'en'
 
 	self.map.pm.setLang(lang);
+
 	// disable zoom handlers
 	self.map.scrollWheelZoom.disable();
 	// disable tap handler, if present.
-	if (self.map.tap) self.map.tap.disable();
+	// if (self.map.tap) self.map.tap.disable();
 
 	// map move listeners
 		self.map.on('dragend', function(e){
@@ -332,16 +341,30 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				zoom : self.map.getZoom()
 			},map_container)
 		});
+		self.map.on('click', function(e){
+
+			for (let feature in self.FeatureGroup) {
+				const feature_group = self.FeatureGroup[feature]
+				feature_group.eachLayer(function (layer){
+
+					layer.pm.disable()
+					if(!(layer instanceof L.Marker)){
+						layer.setStyle({color: '#3388ff'});
+					}
+				});
+			}
+
+		})
 
 	// map ready event
 		self.map.whenReady(function(e){
 			//load data into map
-			const ar_layer 		= self.ar_layer_loaded
-			const ar_layer_len 	= ar_layer.length
-			for (let i = 0; i < ar_layer_len; i++) {
-				const layer = ar_layer[i]
-				self.load_layer(layer)
-			}
+			// const ar_layer 		= self.ar_layer_loaded
+			// const ar_layer_len 	= ar_layer.length
+			// for (let i = 0; i < ar_layer_len; i++) {
+			// 	const layer = ar_layer[i]
+			// 	self.load_layer(layer)
+			// }
 
 			// needless (!)
 				// force refresh map (apply 'invalidateSize')
@@ -350,6 +373,8 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				// 	// map.invalidateSize();
 				// 	self.refresh_map(current_map)
 				// }, 20)
+
+
 		});
 
 	return true
@@ -486,13 +511,21 @@ component_geolocation.prototype.load_layer = function(layer){
 		const user_layer_name	= typeof(layer.user_layer_name)!=='undefined'
 			? layer.user_layer_name
 			: layer_name
-		console.log("self.FeatureGroup:",self.FeatureGroup[layer_id]);
+
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
 	// if( self.map.hasLayer(self.FeatureGroup[layer_id])===false ) {
 	if( typeof self.FeatureGroup[layer_id] === 'undefined'){
+
+
 		// the FeatureGroup is not loaded and does not exist into the map
 		// Create a new FeatureGroup
 		self.FeatureGroup[layer_id] = new L.FeatureGroup();
+		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
+
+		// self.FeatureGroup[layer_id].options.tag_id = layer_id
+		// self.FeatureGroup[layer_id].options = { pmIgnore: true }
+		// self.FeatureGroup[layer_id].options.pmIgnore = false;
+
 		// set the FeatureGroup to the map
 		self.FeatureGroup[layer_id].addTo(self.map);
 		// add to the layer control with checkbox and the name of the user
@@ -504,39 +537,56 @@ component_geolocation.prototype.load_layer = function(layer){
 			self.FeatureGroup[feature].remove()
 		}
 
+		// self.FeatureGroup[layer_id].setStyle({pmIgnore: false});
+		// self.FeatureGroup[layer_id].options.pmIgnore = false; // If the layer is a LayerGroup / FeatureGroup / GeoJSON this line is needed too
+		// L.PM.reInitLayer(self.FeatureGroup[layer_id]);
+
 		// add to the layer control with checkbox and the name of the user
 		self.FeatureGroup[layer_id].addTo(self.map);
+		// self.FeatureGroup[layer_id].options.tag_id = layer_id
+		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
 	}
 
 	// LAYERS : Load layers from data
 	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
 		//remove previous data into the layer
 		self.FeatureGroup[layer_id].clearLayers();
+
+		self.FeatureGroup[layer_id].on('pm:update', (e) => {
+			console.log("layer_id update-----------", layer_id);
+			self.update_draw_data(layer_id);
+		});
+		self.FeatureGroup[layer_id].on('pm:edit', (e) => {
+			console.log("layer_id edit-----------", layer_id);
+			self.update_draw_data(layer_id);
+		});
+		self.FeatureGroup[layer_id].options.tag_id = layer_id
+		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
+
 		L.geoJson( layer_data, {
 			//For each Feature load all layer data of the tag
 			onEachFeature: function (feature, current_data_layer) {
 
 				if(current_data_layer){
-
 					// PopupContent. get the popup information
 						const content = self.get_popup_content(current_data_layer);
-							if (content) {
-								current_data_layer.bindPopup(content);
-							}//end if(content)
+						if (content) {
+							current_data_layer.bindPopup(content);
+						}//end if(content)
 
 					// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 						current_data_layer.on('click', function(e) {
-							if(self.draw_state==="delete"){
-								self.FeatureGroup[layer_id].removeLayer(e.layer);
-								return;
-							}// end if(self.draw_state==="delete")
-							// change all features and layers for activate or deactivate the edit mode.
+							// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
+								self.active_layer_id = layer_id;
 
+							// change all features and layers for activate or deactivate the edit mode.
 								for (let feature in self.FeatureGroup) {
+
 									if(feature){
 										if(self.FeatureGroup[feature]===self.FeatureGroup[layer_id]){
 											self.FeatureGroup[layer_id].eachLayer(function (layer){
-												layer.editing.disable();
+												// layer.editing.disable();
+												layer.pm.enable()
 												if(!(layer instanceof L.Marker)){
 													layer.setStyle({color: '#31df25'});
 												}
@@ -545,7 +595,8 @@ component_geolocation.prototype.load_layer = function(layer){
 
 											//The layers of the actual feature disable and change to green color
 											self.FeatureGroup[feature].eachLayer(function(layer) {
-												layer.editing.disable();
+												// layer.editing.disable();
+												layer.pm.disable()
 												if(!(layer instanceof L.Marker)){
 													layer.setStyle({color: '#3388ff'});
 												}
@@ -560,10 +611,8 @@ component_geolocation.prototype.load_layer = function(layer){
 							}else{
 								console.log("NOt e.target instanceof L.Marker ",);
 							}
-							//activate the feature (for save)
-							//self.init_draw_editor( self.FeatureGroup[layer_id], layer_id )
-						 });
 
+						 });
 					// addLayer
 						 // console.log("self.FeatureGroup[layer_id]:",self.FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
 						self.FeatureGroup[layer_id].addLayer(current_data_layer)
@@ -572,13 +621,12 @@ component_geolocation.prototype.load_layer = function(layer){
 		})// end L.geoJson
 	}// end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
 
-
-	//map.addControl(L.Control.Layers.addOverlay( self.FeatureGroup[layer_id], layer_id));
-	// DRAW_EDITOR : Init draw editor and pass current FeatureGroup
-	// self.init_draw_editor( self.FeatureGroup[layer_id], layer_id )
-
 	// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
-	self.active_layer_id = layer_id;
+		self.active_layer_id = layer_id;
+
+	// enable Edit Mode
+		// self.FeatureGroup[layer_id].pm.enable();
+
 }//end load_geo_editor
 
 
@@ -708,13 +756,13 @@ component_geolocation.prototype.get_popup_content = function(layer) {
 			  +"Radius: "+this.round_coordinate(radius, 2)+" m";
 	// Rectangle/Polygon - area
 	} else if (layer instanceof L.Polygon) {
-		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
-			area = L.GeometryUtil.geodesicArea(latlngs);
-		return "Area: "+L.GeometryUtil.readableArea(area, true);
+		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
+			//const area = L.GeometryUtil.geodesicArea(latlngs);
+		return "Area: "//+L.GeometryUtil.readableArea(area, true);
 	// Polyline - distance
 	} else if (layer instanceof L.Polyline) {
-		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs(),
-			distance = 0;
+		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
+		let	distance = 0;
 		if (latlngs.length < 2) {
 			return "Distance: N/A";
 		} else {
@@ -756,134 +804,61 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 }//end round_coordinate
 
 
-
 /*
 * INIT_DRAW_EDITOR
 * @see https://github.com/Leaflet/Leaflet.draw/issues/66
 * @editable_FeatureGroup = the current layer data with all items in the current_layer (FeatureGroup)
 * @layer_id = the id of the active layer
 */
-component_geolocation.prototype.init_draw_editor = function( editable_FeatureGroup, layer_id ) {
+component_geolocation.prototype.init_draw_editor = function() {
 
 	const self = this
 	const map  = self.map
 
-	self.active_layer_id 	= layer_id;
+		console.log("init:");
 
 	// DRAW CONTROL REMOVE
-	// If the draw control is loaded, it's necesary remove from the map, because the drawControl need to be loaded with especific layer/ FeatureGroup data.
+	// If the draw control is loaded, it's necesary remove from the map, because the drawControl need to be loaded with specific layer/ FeatureGroup data.
 	// When the layer is switched by the user, draw control need to be replace with the new selection.
-		if (self.drawControl !== null) {
-			self.drawControl.remove(map)
-			map.removeControl(self.drawControl)
-		}
+		// if (self.drawControl !== null) {
+		// 	self.drawControl.remove(map)
+		// 	map.removeControl(self.drawControl)
+		// }
 
-	// DRAW CONTROL
-	// El editor se inicaliza cada vez y recibe el FeatureGroup recién cargado como parámetro (ver https://github.com/Leaflet/Leaflet.draw/issues/66)
-	self.drawControl = new L.Control.Draw({
-		position: 'topright',
-		draw: {
-			polyline: {
-				metric: true,
-				shapeOptions: {
-					color: '#31df25'
-				}
-			},
-			polygon: {
-				allowIntersection: false,
-				showArea: true,
-				drawError: {
-					color: '#31df25',
-					timeout: 1000
-				},
-				shapeOptions: {
-					color: '#31df25'
-				}
-			},
-			circle: {
-				shapeOptions: {
-					color: '#31df25'
-				}
-			},
-			rectangle: {
-				shapeOptions: {
-					color: '#31df25'
-				}
-			},
-			marker: true
-		},
-		edit: {
-			featureGroup: editable_FeatureGroup,
-			remove: true,
-		}
-	});
-	map.addControl(self.drawControl);
-
-		// DRAW HANDLERS
-		// IMPORTANT: The editor is initiated every time that user change the layer selected, but the context and handlers for the items is the same
-		 if(self.draw_editor_is_initated===true) {
-			return false;
-		}
-
-		// Listener for object created - bind popup to layer, add to feature group
-		map.on(L.Draw.Event.CREATED, function (e) {	// Triggered when a new vector or marker has been created.
-
-			//var type  	= e.layerType
-			const	layer 	= e.layer
-			const	content = self.get_popup_content(layer)
-
-			if (content!==null) {
-				layer.bindPopup(content);
-			}
-			//listener fired when the layer is selected.
-			layer.on('click', function(e) {
-				if(self.draw_state==="delete"){
-					self.FeatureGroup[self.active_layer_id].removeLayer(e.layer);
-					return;
-				}else{
-					e.target.editing.enable();
-				}
-			})
-
-			self.FeatureGroup[self.active_layer_id].addLayer(layer);
-
-			// Update draw_data
-			self.update_draw_data();
-
+		// add Leaflet-Geoman controls with some options to the map
+		map.pm.addControls({
+			position: 'topright',
+			drawCircle: true,
 		});
+
+		map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
 		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
-		map.on(L.Draw.Event.EDITED, function (e) {	// Triggered when layers in the FeatureGroup, initialised with the plugin, have been edited and saved.
+		// listen to when a layer is changed in Edit Mode
+		map.on('pm:create', (e) => {
+			// const layers = L.PM.Utils.findLayers(map).options
+			console.log("active_layer_id", self.active_layer_id)
+			// e.layer.setStyle({ pmIgnore: false });
+			// L.PM.reInitLayer(e.layer);
+			console.log("create:",e);
+			const layer = self.FeatureGroup[self.active_layer_id]
+			 e.layer.addTo(layer)
 			// Update draw_data
-			self.update_draw_data();
+			self.update_draw_data(self.active_layer_id);
 		});
-		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
-		map.on(L.Draw.Event.DELETED, function (e) {	// Triggered when layers have been removed (and saved) from the FeatureGroup.
-			// Update draw_data
-			self.update_draw_data();
-		});
-		// Listener for change the mode of the draw (trash button in the editor)
-		map.on(L.Draw.Event.DELETESTART, function (e) {
-			self.draw_state = "delete";
-		});
-		// Listener for exit of the "delete mode" of the draw editor (close or save options of the trash button in the editor)
-		map.on(L.Draw.Event.DELETESTOP, function (e) {
-			self.draw_state = "";
-		});
-		// Listerner to the map for change the edit mode the all layer of the all features (change the state and color)
-		map.on('click', function(e){
-			self.draw_state ="";
-			for (var i = self.FeatureGroup.length - 1; i >= 1; i--) {
-				if(self.FeatureGroup[i]){
-					self.FeatureGroup[i].eachLayer(function(layer) {
-						layer.editing.disable();
-						if(!(layer instanceof L.Marker)){
-							layer.setStyle({color: '#3388ff'});
-						}
-					})
-				}
-			}
-		})
 
+		// map.on('pm:drawend', (e) => {
+
+		// 		console.log("drawend:",e);
+		// 	// Update draw_data
+		// 	self.update_draw_data();
+		// });
+
+		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
+		map.on('pm:remove', (e) => {
+			console.log("remove:",e);
+			// Update draw_data
+			self.update_draw_data(self.active_layer_id);
+		});
 
 	// DRAW_EDITOR_IS_INITATED : Fija la variable a global a true (default is false) para evitar duplicidades
 	self.draw_editor_is_initated = true;
@@ -898,21 +873,25 @@ component_geolocation.prototype.init_draw_editor = function( editable_FeatureGro
 * Preparing the data for save, update the layers data into the instance
 * Save action is not exec here, see the render_component_geolocation for the save action
 */
-component_geolocation.prototype.update_draw_data = function() {
+component_geolocation.prototype.update_draw_data = function(layer_id) {
 
 	const self = this
 
 	// active_layer. get the active draw data of the active_layer
-		const active_layer = self.FeatureGroup[self.active_layer_id];
+		const active_layer = self.FeatureGroup[layer_id];
 
-	// layer_id. get the active_layer_id
-		const layer_id = self.active_layer_id
+	// // layer_id. get the active_layer_id
+	// 	const layer_id = self.active_layer_id
 
 	// current_layer. get the layer from the loaded data
 		const current_layer = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
 
 	// layer_data. get the GeoJson of the active layer (from leaflet)
 		current_layer.layer_data = active_layer.toGeoJSON()
+
+		if (active_layer instanceof L.Circle) {
+			current_layer.layer_data.properties.radius = active_layer.getRadius();
+		}
 
 	// value key
 		const key = self.map.getContainer().dataset.key
