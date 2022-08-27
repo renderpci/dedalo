@@ -70,7 +70,7 @@ const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// values (images)
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
+		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const content_value = get_content_value(i, inputs_value[i], self)
@@ -78,7 +78,6 @@ const get_content_data_edit = function(self) {
 			// set the pointer
 			content_data[i] = content_value
 		}
-
 
 
 	return content_data

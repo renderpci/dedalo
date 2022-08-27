@@ -7,7 +7,7 @@ class component_pdf extends component_media_common {
 
 
 
-	// file name formated as 'tipo'-'order_id' like dd732-1
+	// file name formatted as 'tipo'-'order_id' like dd732-1
 	public $pdf_id ;
 	public $pdf_url ;
 	public $quality ;
@@ -24,45 +24,37 @@ class component_pdf extends component_media_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	function __construct(string $tipo=null, $section_id=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
-		// We create the component normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		// common constructor. Creates the component as normally do with parent class
+			parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
-			// Configuration required to be able to save
-			// When saving, a valor_list HTML version is saved that does not work if these variables are not assigned
+		// fix component main properties
+			if (!empty($this->section_id)) {
 
-			// Set and fix current pdf_id
-			$this->pdf_id = $this->get_pdf_id();
+				// pdf_id. Set and fix current pdf_id
+					$this->pdf_id = $this->get_pdf_id();
 
-			// initial media path set
-			$this->initial_media_path = $this->get_initial_media_path();
+				// quality
+					$this->quality = $this->get_quality();
 
-			# ADITIONAL_PATH : Set and fix current additional image path
-			$this->aditional_path = $this->get_aditional_path();
+				// initial_media_path set
+					$this->initial_media_path = $this->get_initial_media_path();
 
-			# PDFOBJ : Add a PdfObj obj
-			if ($this->pdf_id) {
-				$this->PdfObj = new PdfObj(
-					$this->pdf_id,
-					$this->get_quality(),
-					$this->aditional_path,
-					$this->initial_media_path
-				);
+				// aditional_path : Set and fix current additional image path
+					$this->aditional_path = $this->get_aditional_path();
+
+				// PdfObj : Add a PdfObj obj
+					if ($this->pdf_id) {
+						$this->PdfObj = new PdfObj(
+							$this->pdf_id,
+							$this->quality,
+							$this->aditional_path,
+							$this->initial_media_path
+						);
+					}
 			}
 
-		/*
-		if ($need_save) {
-			# result devuelve el id de la sección parent creada o editada
-			$result = $this->Save();
-			# DEBUG
-			if(SHOW_DEBUG===true) {
-				$total=round(start_time()-$start_time,3);
-				$name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true);
-				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
-			}
-		}//end if ($need_save)
-		*/
 
 		return true;
 	}//end __construct
@@ -71,7 +63,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_ADITIONAL_PATH
-	* Calculate image additional path from 'properties' json config.
+	* Calculate image additional path from 'properties' JSON config.
 	* @return
 	*/
 	public function get_aditional_path() {
@@ -177,16 +169,6 @@ class component_pdf extends component_media_common {
 
 		return $dato;
 	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	*/
-	public function set_dato($dato) {
-
-		parent::set_dato( $dato );
-	}//end set_dato
 
 
 
@@ -700,11 +682,10 @@ class component_pdf extends component_media_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// vars
+		// short vars
 			$original_file_name	= $file_data->original_file_name; 	// like "my doc is beaty.psdf"
 			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.pdf"
 			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
-
 
 		// thumb : Create pdf_thumb
 			$thumb_url = $this->get_pdf_thumb( $force_create=true );
@@ -712,7 +693,6 @@ class component_pdf extends component_media_common {
 
 		// transcription to text automatic
 			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
-				#dump($ar_related_component_text_area_tipo, ' ar_related_component_text_area_tipo ++ '.$this->get_tipo().to_string());
 			if (!empty($ar_related_component_text_area_tipo)) {
 
 				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
@@ -729,12 +709,14 @@ class component_pdf extends component_media_common {
 
 					if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
 
-						$component_text_area = component_common::get_instance($related_component_text_area_model,
-																			  $related_component_text_area_tipo,
-																			  $this->section_id,
-																			  'edit',
-																			  DEDALO_DATA_LANG,
-																			  $this->section_tipo);
+						$component_text_area = component_common::get_instance(
+							$related_component_text_area_model,
+							$related_component_text_area_tipo,
+							$this->section_id,
+							'edit',
+							DEDALO_DATA_LANG,
+							$this->section_tipo
+						);
 						$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
 						$component_text_area->Save();
 					}
@@ -742,58 +724,53 @@ class component_pdf extends component_media_common {
 				} catch (Exception $e) {
 					debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
 				}
-
 			}//end if (!empty($related_component_text_area_tipo)) {
 
 
+		try {
 
+			// target_filename. Save original file name in a component_input_text if defined
+				$properties = $this->get_properties();
+				if (isset($properties->target_filename)) {
 
-			try {
+					$current_section_id			= $this->get_section_id();
+					$target_section_tipo		= $this->get_section_tipo();
+					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+					$component_target_filename	= component_common::get_instance(
+						$model_name_target_filename,
+						$properties->target_filename,
+						$current_section_id,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$target_section_tipo
+					);
+					$component_target_filename->set_dato( $original_file_name );
+					$component_target_filename->Save();
+				}
 
-				// target_filename. Save original file name in a component_input_text if defined
-					$properties = $this->get_properties();
-					if (isset($properties->target_filename)) {
+			// add data with the file uploaded
+				if ($quality===DEDALO_PDF_QUALITY_DEFAULT) {
 
-						$current_section_id			= $this->get_section_id();
-						$target_section_tipo		= $this->get_section_tipo();
-						$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
-						$component_target_filename	= component_common::get_instance(
-							$model_name_target_filename,
-							$properties->target_filename,
-							$current_section_id,
-							'edit',
-							DEDALO_DATA_NOLAN,
-							$target_section_tipo
-						);
-						$component_target_filename->set_dato( $original_file_name );
-						$component_target_filename->Save();
-					}
-
-
-				// add data with the file uploaded
-					$file_name		= 'original_file_name';
-					$upload_date	= 'original_upload_date';
 					$dato			= $this->get_dato();
+					$value			= empty($dato) ? new stdClass() : reset($dato);
+					$media_value	= $this->build_media_value((object)[
+						'value'		=> $value,
+						'file_name'	=> $original_file_name
+					]);
 
-					$value = empty($dato)
-						? new stdClass()
-						: (is_array($dato) ? reset($dato) : (object)$dato);
-
-					$value->{$file_name}	= $original_file_name;
-					$value->{$upload_date}	= component_date::get_date_now();
-
-					$this->set_dato([$value]);
+					$this->set_dato([$media_value]);
 					$this->Save();
+				}
 
-				// all is ok
-					$response->result	= true;
-					$response->msg		= 'Ok. Request done ['.__METHOD__.'] ';
+			// all is OK
+				$response->result	= true;
+				$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 
-			} catch (Exception $e) {
-				$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";
-				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-				$response->msg .= ' - '.$msg;
-			}
+		} catch (Exception $e) {
+			$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";
+			debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+			$response->msg .= ' - '.$msg;
+		}
 
 
 		return $response;
