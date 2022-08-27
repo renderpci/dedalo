@@ -80,6 +80,10 @@ component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
+	// is_data_changed. bool set as true when component data changes.
+		self.is_data_changed = false
+
+
 	self.ar_layer_loaded	= null
 	self.map				= null
 	self.layer_control		= false
@@ -87,7 +91,7 @@ component_geolocation.prototype.init = async function(options) {
 	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
 	// We need a temporary value for all current values of the inputs (lat, lon, zoom, alt)
 	// to will be used for save it when the user clicks on the save button
-	this.current_value = []
+		this.current_value = []
 
 	// draw editor vars
 		self.drawControl				= null
@@ -121,11 +125,6 @@ component_geolocation.prototype.init = async function(options) {
 				const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
 				common.prototype.load_style(geo_editor_lib_css_file)
 
-				// const draw_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.js'
-				// common.prototype.load_script(draw_lib_js_file)
-
-				// const draw_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.draw/leaflet.draw.css'
-				// common.prototype.load_style(draw_lib_css_file)
 			})
 
 
@@ -553,11 +552,9 @@ component_geolocation.prototype.load_layer = function(layer){
 		self.FeatureGroup[layer_id].clearLayers();
 
 		self.FeatureGroup[layer_id].on('pm:update', (e) => {
-			console.log("layer_id update-----------", layer_id);
 			self.update_draw_data(layer_id);
 		});
 		self.FeatureGroup[layer_id].on('pm:edit', (e) => {
-			console.log("layer_id edit-----------", layer_id);
 			self.update_draw_data(layer_id);
 		});
 		self.FeatureGroup[layer_id].options.tag_id = layer_id
@@ -877,11 +874,11 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 
 	const self = this
 
+	// set the data_changed to true to control that the data was changed
+		self.is_data_changed = true
+
 	// active_layer. get the active draw data of the active_layer
 		const active_layer = self.FeatureGroup[layer_id];
-
-	// // layer_id. get the active_layer_id
-	// 	const layer_id = self.active_layer_id
 
 	// current_layer. get the layer from the loaded data
 		const current_layer = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
