@@ -24,11 +24,11 @@ class component_relation_index extends component_relation_common {
 	public function get_dato() : ?array {
 
 		// external. Custom properties external dato
-			if(	(!empty($this->build_options) && $this->build_options->get_dato_external === true) ||
+			if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
 				(isset($this->properties->source->mode) && $this->properties->source->mode==='external')) {
 
 				$reference_locator = new locator();
-					$reference_locator->set_type('dd96');
+					$reference_locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO); // dd96
 					$reference_locator->set_section_tipo($this->section_tipo);
 					$reference_locator->set_section_id($this->section_id);
 
@@ -38,6 +38,7 @@ class component_relation_index extends component_relation_common {
 
 				$new_dato = [];
 				foreach ($ar_inverse_locators as $current_locator) {
+
 					$locator = new locator();
 						$locator->set_type($current_locator->type);
 						$locator->set_section_tipo($current_locator->from_section_tipo);
@@ -59,12 +60,11 @@ class component_relation_index extends component_relation_common {
 						}
 
 						$new_dato[] = $locator;
-
 				}
 
 				$this->set_dato($new_dato);
-			}
-	dump($this->dato, ' this->dato ++ '.to_string());
+			}//end if
+
 
 		return $this->dato;
 	}//end get_data

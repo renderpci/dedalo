@@ -112,7 +112,8 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// ddo_map. Update ddo_map elements lang before common build
 		// Note that when user switch lang from tool lang selector, we need refresh whole tool
 		// re-building ddo_map from tool_common. To prevent re-create the first ddo_imap items
-		// it its necessary to update the items lang before (only for tranlatable elements)
+		// it its necessary to update the items lang before (only for translatable elements)
+		self.tool_config.ddo_map = self.tool_config.ddo_map || []
 		const ddo_map_length = self.tool_config.ddo_map.length
 		for (let i = 0; i < ddo_map_length; i++) {
 			const item = self.tool_config.ddo_map[i]

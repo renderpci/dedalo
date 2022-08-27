@@ -11,7 +11,7 @@
 
 /**
 * RENDER_EDIT_SERVICE_UPLOAD
-* Manages the service's logic and apperance in client side
+* Manages the service's logic and appearance in client side
 */
 export const render_edit_service_upload = function() {
 

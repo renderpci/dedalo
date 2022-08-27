@@ -13,7 +13,7 @@
 
 /**
 * RENDER_TOOL_INDEXATION
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_tool_indexation = function() {
 

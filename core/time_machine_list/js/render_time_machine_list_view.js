@@ -233,6 +233,6 @@ const rebuild_columns_map = async function(self) {
 	// 		})
 
 	// 	return fragment
-	// };// end render_column_id()
+	// }//end render_column_id()
 
 
