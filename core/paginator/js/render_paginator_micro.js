@@ -10,7 +10,7 @@
 
 /**
 * RENDER_PAGINATOR_MICRO
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_paginator_micro = function() {
 
@@ -132,11 +132,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number>1) {
-				paginator_first.addEventListener("mousedown",function(){
+				paginator_first.addEventListener('mousedown',function(){
 					self.paginate(offset_first)
 				})
 			}else{
-				paginator_first.classList.add("unactive")
+				paginator_first.classList.add('inactive')
 			}
 
 		// btn previous
@@ -146,11 +146,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(prev_page_offset>=0) {
-				paginator_prev.addEventListener("mousedown",function(){
+				paginator_prev.addEventListener('mousedown',function(){
 					self.paginate(offset_prev)
 				})
 			}else{
-				paginator_prev.classList.add("unactive")
+				paginator_prev.classList.add('inactive')
 			}
 
 		// btn next
@@ -160,11 +160,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(next_page_offset<total) {
-				paginator_next.addEventListener("mousedown",function(){
+				paginator_next.addEventListener('mousedown',function(){
 					self.paginate(offset_next)
 				})
 			}else{
-				paginator_next.classList.add("unactive")
+				paginator_next.classList.add('inactive')
 			}
 
 		// btn last
@@ -174,11 +174,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number<total_pages) {
-				paginator_last.addEventListener("mousedown",function(){
+				paginator_last.addEventListener('mousedown',function(){
 					self.paginate(offset_last)
 				})
 			}else{
-				paginator_last.classList.add("unactive")
+				paginator_last.classList.add('inactive')
 			}
 
 	// paginator_info

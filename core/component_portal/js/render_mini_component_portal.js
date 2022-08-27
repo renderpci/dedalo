@@ -10,7 +10,7 @@
 
 /**
 * RENDER_MINI_COMPONENT_PORTAL
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_mini_component_portal = function() {
 

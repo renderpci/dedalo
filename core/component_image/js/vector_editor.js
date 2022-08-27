@@ -1060,7 +1060,7 @@ vector_editor.prototype.load_layer = function(self, layer) {
 				console.log("-> create new layer: " , current_layer);
 			}// end if
 
-		};// end else
+		}//end else
 
 		// set the global handle margin
 		project.options.handleSize = 8;

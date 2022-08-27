@@ -11,7 +11,7 @@
 
 /**
 * RENDER_TOOL_PDF_EXTRACTOR
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_tool_pdf_extractor = function() {
 

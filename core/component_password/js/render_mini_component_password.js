@@ -11,7 +11,7 @@
 
 /**
 * RENDER_MINI_COMPONENT_PASSWORD
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_mini_component_password = function() {
 

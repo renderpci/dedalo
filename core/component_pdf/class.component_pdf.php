@@ -29,20 +29,27 @@ class component_pdf extends component_media_common {
 		// We create the component normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-			#
-			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
+			// Configuration required to be able to save
+			// When saving, a valor_list HTML version is saved that does not work if these variables are not assigned
 
-			# Set and fix current video_id
+			// Set and fix current pdf_id
 			$this->pdf_id = $this->get_pdf_id();
 
-			# INITIAL MEDIA PATH SET
+			// initial media path set
 			$this->initial_media_path = $this->get_initial_media_path();
 
-			# ADITIONAL_PATH : Set and fix current aditional image path
+			# ADITIONAL_PATH : Set and fix current additional image path
 			$this->aditional_path = $this->get_aditional_path();
 
 			# PDFOBJ : Add a PdfObj obj
-			$this->PdfObj = new PdfObj( $this->pdf_id, $this->get_quality(), $this->aditional_path, $this->initial_media_path );
+			if ($this->pdf_id) {
+				$this->PdfObj = new PdfObj(
+					$this->pdf_id,
+					$this->get_quality(),
+					$this->aditional_path,
+					$this->initial_media_path
+				);
+			}
 
 		/*
 		if ($need_save) {
@@ -64,7 +71,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_ADITIONAL_PATH
-	* Calculate image aditional path from 'properties' json config.
+	* Calculate image additional path from 'properties' json config.
 	* @return
 	*/
 	public function get_aditional_path() {
@@ -222,7 +229,7 @@ class component_pdf extends component_media_common {
 			$section_id = $this->get_section_id();
 			if (!isset($section_id)) {
 				if(SHOW_DEBUG===true) {
-					error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
+					debug_log(__METHOD__." Error on get pdf_id. Component section_id is empty. tipo:$this->tipo, section_tipo:$this->section_tipo): ".to_string($this->section_id), logger::ERROR);
 				}
 				return null;
 			}
@@ -235,7 +242,7 @@ class component_pdf extends component_media_common {
 
 			$pdf_id	= $locator->get_flat();
 
-		// add lang when tanslatable
+		// add lang when translatable
 			if ($this->traducible==='si') {
 				$pdf_id .= '_'.DEDALO_DATA_LANG;
 			}
@@ -750,12 +757,14 @@ class component_pdf extends component_media_common {
 						$current_section_id			= $this->get_section_id();
 						$target_section_tipo		= $this->get_section_tipo();
 						$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
-						$component_target_filename	= component_common::get_instance($model_name_target_filename,
-																					 $properties->target_filename,
-																					 $current_section_id,
-																					 'edit',
-																					 DEDALO_DATA_NOLAN,
-																					 $target_section_tipo);
+						$component_target_filename	= component_common::get_instance(
+							$model_name_target_filename,
+							$properties->target_filename,
+							$current_section_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							$target_section_tipo
+						);
 						$component_target_filename->set_dato( $original_file_name );
 						$component_target_filename->Save();
 					}
@@ -819,7 +828,6 @@ class component_pdf extends component_media_common {
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
 				return $response;
 			}
-
 
 		// test engine pdf to text
 			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {

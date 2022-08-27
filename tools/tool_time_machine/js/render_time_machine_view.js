@@ -11,6 +11,7 @@
 	// import {tool_label} from '../../../tools/tool_common/js/tool_common.js'
 
 
+
 /**
 * RENDER_TIME_MACHINE_VIEW
 *
@@ -99,6 +100,8 @@ export const render_time_machine_view = async function(self, options) {
 			class_name		: `wrapper_${self.type} ${self.model} ${self.section_tipo+'_'+self.tipo} ${self.tipo} ${self.mode}`
 		})
 		wrapper.appendChild(fragment)
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -156,7 +159,8 @@ const get_content_data = async function(ar_section_record, self) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @return obj columns_map
+* @param object self
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -166,7 +170,7 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
-			width 		: 'auto',
+			width		: 'auto',
 			callback	: render_column_id
 		})
 
@@ -266,7 +270,7 @@ const render_column_id = function(options) {
 			parent			: button_view
 		})
 
-	// icon eye ime machine preview (eye)
+	// icon eye time machine preview (eye)
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button icon ' + (main_caller.model==='section' ? 'history' : 'eye'),
@@ -275,4 +279,4 @@ const render_column_id = function(options) {
 
 
 	return fragment
-};// end render_column_id()
+}//end render_column_id()

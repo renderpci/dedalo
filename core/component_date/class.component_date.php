@@ -161,13 +161,8 @@ class component_date extends component_common {
 	*/
 	public function get_date_mode() {
 
-		$properties = $this->get_properties();
-
-		if (isset($properties->date_mode)) {
-			$date_mode = $properties->date_mode; // Default from structure if is defined
-		}else{
-			$date_mode = 'date'; // Default
-		}
+		$properties	= $this->get_properties();
+		$date_mode	= $properties->date_mode ?? 'date';
 
 		return $date_mode;
 	}//end get_date_mode
@@ -1378,5 +1373,7 @@ class component_date extends component_common {
 
 		return $list_value;
 	}//end get_list_value
+
+
 
 }//end class component_date

@@ -10,7 +10,7 @@
 
 /**
 * RENDER_PAGINATOR
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_paginator = function() {
 
@@ -61,11 +61,10 @@ render_paginator.prototype.edit = async function(options) {
 */
 const get_content_data = function(self) {
 
-	// build vars
+	// short vars
 		const total				= self.caller.total
-		const limit				= self.get_limit()
-		const offset			= self.get_offset()
-
+		// const limit			= self.get_limit()
+		// const offset			= self.get_offset()
 		const total_pages		= self.total_pages
 		const page_number		= self.page_number
 		const prev_page_offset	= self.prev_page_offset
@@ -77,21 +76,23 @@ const get_content_data = function(self) {
 		const offset_next		= self.offset_next
 		const offset_last		= self.offset_last
 
+	// debug
 		if(SHOW_DEBUG===true) {
 			// const model = self.id.split("_")[1] +" "+ self.id.split("_")[2]
 			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
 	// display none with empty case, or when pages are <2
-		if (!total_pages || total_pages<2) {
-			const wrap_rows_paginator = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'content_data paginator display_none ' +total_pages
-			})
-			return wrap_rows_paginator
-		}
+		// if (!total_pages || total_pages<2) {
+		// 	const wrap_rows_paginator = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name		: 'content_data paginator display_none ' +total_pages
+		// 	})
+		// 	return wrap_rows_paginator
+		// }
 
-	const fragment = new DocumentFragment()
+	// DOM fragment
+		const fragment = new DocumentFragment()
 
 	// nav_buttons
 		const paginator_div_links = ui.create_dom_element({
@@ -107,11 +108,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number>1) {
-				paginator_first.addEventListener("mousedown",function(){
+				paginator_first.addEventListener('mousedown',function(){
 					self.paginate(offset_first)
 				})
 			}else{
-				paginator_first.classList.add("unactive")
+				paginator_first.classList.add('inactive')
 			}
 
 		// btn previous
@@ -121,11 +122,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(prev_page_offset>=0) {
-				paginator_prev.addEventListener("mousedown",function(){
+				paginator_prev.addEventListener('mousedown',function(){
 					self.paginate(offset_prev)
 				})
 			}else{
-				paginator_prev.classList.add("unactive")
+				paginator_prev.classList.add('inactive')
 			}
 
 		// btn next
@@ -135,11 +136,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(next_page_offset<total) {
-				paginator_next.addEventListener("mousedown",function(){
+				paginator_next.addEventListener('mousedown',function(){
 					self.paginate(offset_next)
 				})
 			}else{
-				paginator_next.classList.add("unactive")
+				paginator_next.classList.add('inactive')
 			}
 
 		// btn last
@@ -149,11 +150,11 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number<total_pages) {
-				paginator_last.addEventListener("mousedown",function(){
+				paginator_last.addEventListener('mousedown',function(){
 					self.paginate(offset_last)
 				})
 			}else{
-				paginator_last.classList.add("unactive")
+				paginator_last.classList.add('inactive')
 			}
 
 	// paginator_info
@@ -166,7 +167,7 @@ const get_content_data = function(self) {
 		// const page_info = ui.create_dom_element({
 		// 	element_type	: 'span',
 		// 	class_name		: 'page_info',
-		// 	inner_html		: (get_label.pagina || "Page") + ` ${page_number} ` + (get_label.de || "of") + ` ${total_pages} `,
+		// 	inner_html		: (get_label.pagina || 'Page') + ` ${page_number} ` + (get_label.de || 'of') + ` ${total_pages} `,
 		// 	parent			: paginator_info
 		// })
 
@@ -182,15 +183,14 @@ const get_content_data = function(self) {
 					element_type	: 'input',
 					class_name		: 'input_go_to_page',
 					title			: get_label.go_to_page,
+					placeholder		: page_number,
 					parent			: paginator_info
 				})
-				input_go_to_page.placeholder = page_number
-				// add the Even onchage to the select, whe it change the section selected will be loaded
-				input_go_to_page.addEventListener('keyup', function(e){
+				input_go_to_page.addEventListener('keyup', function(e) {
 					e.preventDefault()
 					if (e.key==='Enter' && input_go_to_page.value.length>0) {
-						const page = parseInt(input_go_to_page.value)
-						const result = self.go_to_page_json(page) // returns bool
+						const page		= parseInt(input_go_to_page.value)
+						const result	= self.go_to_page_json(page) // returns bool
 						if (result===false) {
 							input_go_to_page.classList.add('invalid')
 						}else{
@@ -206,13 +206,13 @@ const get_content_data = function(self) {
 					}
 					input_go_to_page.value = null
 				})
+			// page_info label
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_info',
 				inner_html		: (get_label.de || 'of') + ` ${total_pages}`,
 				parent			: paginator_info
 			})
-
 
 		// displayed_records (hidden on edit mode)
 			ui.create_dom_element({
@@ -221,39 +221,6 @@ const get_content_data = function(self) {
 				inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total}. `,
 				parent			: paginator_info
 			})
-
-		// goto_page
-			// const goto_page = ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	class_name		: 'goto_page',
-			// 	inner_html		: get_label.go_to_page,
-			// 	parent			: paginator_info
-			// })
-
-		// input_go_to_page
-			// const input_go_to_page = ui.create_dom_element({
-			// 	element_type	: 'input',
-			// 	class_name		: 'input_go_to_page',
-			// 	title			: get_label.go_to_page,
-			// 	parent			: paginator_info
-			// })
-			// input_go_to_page.placeholder = page_number
-			// // add the Even onchage to the select, whe it change the section selected will be loaded
-			// input_go_to_page.addEventListener('keyup',function(event){
-			// 	self.go_to_page_json(this, event, total_pages, limit)
-			// })
-
-		// let text = ""
-		// 	text += get_label["pagina"] || "Page"
-		// 	text += " " + page_number + " "
-		// 	text += get_label["de"] || "of"
-		// 	text += " " + total_pages
-		// //if (modo==="edit") {
-		// //	text += '. ' + get_label['go_to_record']  + ' '
-		// //}else{
-		// 	text += '<span class="displayed_records">. Displayed records from ' + page_row_begin + ' to ' + page_row_end + ' of ' + total + '.</span> '
-		// 	text += '<span class="go_to_page_text">' + get_label["go_to_page"] + '</span> '
-		// //}
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -265,5 +232,3 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
-
-

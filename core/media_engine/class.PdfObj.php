@@ -5,22 +5,26 @@ require_once( DEDALO_CONFIG_PATH .'/config.php');
 
 class PdfObj extends MediaObj {
 
-	protected $pdf_id ;			# pdf_id
-	protected $quality ;
 
-	function __construct($pdf_id, $quality=false, $aditional_path=false, $initial_media_path=false) {
 
-		# SPECIFIC VARS
+	protected $pdf_id;
+	protected $quality;
+
+
+
+	function __construct(?string $pdf_id, $quality=false, $aditional_path=false, $initial_media_path=false) {
+
+		# specific vars
 		$this->set_pdf_id($pdf_id);
 		$this->set_name($pdf_id);
 		$this->set_quality($quality);
 
-		$this->initial_media_path = $initial_media_path; // No usada de momento
-		$this->aditional_path 	  = $aditional_path;
+		$this->initial_media_path	= $initial_media_path; // No usada de momento
+		$this->aditional_path		= $aditional_path;
 
 		parent::__construct($pdf_id);
+	}//end __construct
 
-	}
 
 
 	# MANDATORY DEFINITIONS
@@ -71,13 +75,15 @@ class PdfObj extends MediaObj {
 
 	/**
 	* SET QUALITY
-	* Asigna la calidad recibida verificando que existe en el arary de calidades definido en config
-	* So no existe, asigna la calidad por defecto
+	* Assigns the quality received verifying that it exists in the qualities array defined in config
+	* If it does not exist, it assigns the default quality
+	* @param string $quality = null
+	* @return string $his->quality
 	*/
-	protected function set_quality($quality) {
+	protected function set_quality(string $quality=null) : string {
 
 		$default	= $this->get_quality_default();
-		$ar_valid 	= $this->get_ar_quality();
+		$ar_valid	= $this->get_ar_quality();
 
 		if(empty($quality)) {
 			$this->quality = $default;
@@ -97,32 +103,37 @@ class PdfObj extends MediaObj {
 		$this->quality = $quality;
 
 		return $this->quality;
-	}
+	}//end set_quality
 
 
-	# QUALITY FOLDERS WITH EXISTING FILES
-	# Return array whith existing quality files
-	public function get_ar_quality_with_file() {
+	/**
+	* GET_AR_QUALITY_WITH_FILE
+	* Quality folders with existing files
+	* Return array with existing quality files
+	* @return array $ar_quality_with_file
+	*/
+	public function get_ar_quality_with_file() : array {
 
 		$ar_quality 			= self::get_ar_quality();
-		$ar_quality_with_file	= array();
+		$ar_quality_with_file	= [];
 
 		if(is_array($ar_quality)) foreach($ar_quality as $quality) {
 
 			#$obj = new PdfObj($this->image_id, $quality);
-			$obj = new PdfObj($this->pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
-
+			$obj = new PdfObj(
+				$this->pdf_id,
+				$quality,
+				$this->aditional_path,
+				$this->initial_media_path
+			);
 
 			if($obj->get_file_exists()) {
-
 				 $ar_quality_with_file[] = $quality ;
 			}
 		}
-		return $ar_quality_with_file ;
-	}
+		return $ar_quality_with_file;
+	}//end get_ar_quality_with_file
 
 
 
-
-}
-?>
+}//end class PdfObj

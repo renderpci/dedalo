@@ -15,7 +15,7 @@
 
 /**
 * RENDER_SEARCH_COMPONENT_PORTAL
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_search_component_portal = function() {
 
@@ -217,7 +217,7 @@ const render_column_remove = function(options) {
 					self.data.changed_data = changed_data
 				// publish search. Event to update the dom elements of the instance
 					event_manager.publish('change_search_element', self)
-					
+
 					self.refresh()
 			}
 

@@ -151,6 +151,7 @@ component_info.prototype.get_widgets = async function(){
 							section_id		: self.section_id,
 							lang			: self.lang,
 							mode			: self.mode,
+							model			: 'widget',
 							value			: widget_value,
 							datalist		: widget_datalist,
 							ipo				: current_widget.ipo,

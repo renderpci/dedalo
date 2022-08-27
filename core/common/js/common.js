@@ -431,14 +431,23 @@ common.prototype.refresh = async function(options={}) {
 * DESTROY
 * Delete all instances dependents of the section and all events that was created by the instances.
 * but it not delete the own section instance.
-* @return
+*
+* @param bool delete_self = true
+* 	On true, Delete self instance events, paginator, services, inspector, filter and instance
+* @param bool delete_dependencies = false
+* 	On true, Call to destroy all associated instances (ar_instances)
+* @param bool remove_dom = false
+* 	On true, removes the instance DOM node
+*
+* @return promise
+* 	Resolve object result
 */
 common.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
-	const self = this
-	const result = {}
+	const self		= this
+	const result	= {}
 
-	// destroy all instances associated
+	// destroy all associated instances
 		if(delete_dependencies===true) {
 
 			const do_delete_dependencies = async function() {
@@ -447,7 +456,6 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 					console.log("Undefined self.ar_instances:", self);
 					return false
 				}
-
 
 				const ar_instances_length = self.ar_instances.length
 
@@ -475,7 +483,6 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 							// 	continue;
 							// }
 
-
 						// destroy instance
 							if (typeof destroyed_elements[0].destroy==='function') {
 								destroyed_elements[0].destroy(
@@ -496,7 +503,6 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 			result.delete_dependencies = await do_delete_dependencies()
 		}//end if(delete_dependencies===true)
-
 
 	// delete self instance
 		if(delete_self===true) {
@@ -576,17 +582,18 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 				// delete_instance from instances register array
 					const instance_options = {
 						id				: self.id,
-						model			: self.model,
-						tipo			: self.tipo,
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
-						mode			: self.mode,
-						lang			: self.lang
+						// model		: self.model,
+						// tipo			: self.tipo,
+						// section_tipo	: self.section_tipo,
+						// section_id	: self.section_id,
+						// mode			: self.mode,
+						// lang			: self.lang
 					}
 					// time machine case
 					if (self.matrix_id) {
 						instance_options.matrix_id = self.matrix_id
 					}
+
 					const result = await delete_instance(instance_options)
 
 				return result
@@ -594,7 +601,6 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 			result.delete_self = await do_delete_self()
 		}//end if(delete_self===true)
-
 
 	// remove_dom optional
 		if (remove_dom===true) {
