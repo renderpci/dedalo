@@ -222,7 +222,7 @@ class component_pdf extends component_media_common {
 			$section_id = $this->get_section_id();
 			if (!isset($section_id)) {
 				if(SHOW_DEBUG===true) {
-					error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
+					debug_log(__METHOD__." Error on get pdf_id. Component section_id is empty. tipo:$this->tipo, section_tipo:$this->section_tipo): ".to_string($this->section_id), logger::ERROR);
 				}
 				return null;
 			}
@@ -235,7 +235,7 @@ class component_pdf extends component_media_common {
 
 			$pdf_id	= $locator->get_flat();
 
-		// add lang when tanslatable
+		// add lang when translatable
 			if ($this->traducible==='si') {
 				$pdf_id .= '_'.DEDALO_DATA_LANG;
 			}
@@ -750,12 +750,14 @@ class component_pdf extends component_media_common {
 						$current_section_id			= $this->get_section_id();
 						$target_section_tipo		= $this->get_section_tipo();
 						$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
-						$component_target_filename	= component_common::get_instance($model_name_target_filename,
-																					 $properties->target_filename,
-																					 $current_section_id,
-																					 'edit',
-																					 DEDALO_DATA_NOLAN,
-																					 $target_section_tipo);
+						$component_target_filename	= component_common::get_instance(
+							$model_name_target_filename,
+							$properties->target_filename,
+							$current_section_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							$target_section_tipo
+						);
 						$component_target_filename->set_dato( $original_file_name );
 						$component_target_filename->Save();
 					}
@@ -819,7 +821,6 @@ class component_pdf extends component_media_common {
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
 				return $response;
 			}
-
 
 		// test engine pdf to text
 			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
