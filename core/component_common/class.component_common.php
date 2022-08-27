@@ -296,7 +296,13 @@ abstract class component_common extends common {
 				if ( !isset($ar_component_instances) || !array_key_exists($cache_key, $ar_component_instances) ) {
 
 					// __CONSTRUCT : Store new component in static array var
-						$ar_component_instances[$cache_key] = new $component_name($tipo, $section_id, $modo, $lang, $section_tipo);
+						$ar_component_instances[$cache_key] = new $component_name(
+							$tipo,
+							$section_id,
+							$modo,
+							$lang,
+							$section_tipo
+						);
 
 				}
 				// else{
