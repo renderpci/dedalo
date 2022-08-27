@@ -1,0 +1,91 @@
+.marker-icon,
+.marker-icon:focus {
+  background-color: #ffffff;
+  border: 1px solid #3388ff;
+  border-radius: 50%;
+  margin: -8px 0 0 -8px !important;
+  width: 14px !important;
+  height: 14px !important;
+  outline: 0;
+  transition: opacity ease 0.3s;
+}
+
+.marker-icon-middle,
+.marker-icon-middle:focus {
+  opacity: 0.7;
+  margin: -6px 0 0 -6px !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.leaflet-pm-draggable {
+  cursor: move !important;
+}
+
+.cursor-marker {
+  cursor: crosshair;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.cursor-marker.visible {
+  opacity: 1 !important;
+}
+
+.leaflet-pm-invalid {
+  stroke: red;
+  transition: fill ease 0s, stroke ease 0s;
+}
+
+.rect-style-marker,
+.rect-start-marker {
+  opacity: 0;
+}
+
+.rect-style-marker.visible,
+.rect-start-marker.visible {
+  opacity: 1 !important;
+}
+
+.vertexmarker-disabled {
+  opacity: 0.7;
+}
+
+.pm-text-marker {
+  width: 0;
+  height: 0;
+}
+
+.pm-textarea {
+    background-color: #fff;
+    color: #000;
+    resize: none;
+    border: none;
+    outline: 0;
+    cursor: pointer;
+    border-radius: 3px;
+    padding-left: 7px;
+    padding-bottom: 0;
+    padding-top: 4px;
+}
+
+.leaflet-pm-draggable .pm-textarea {
+  cursor: move;
+}
+
+.pm-textarea:focus,
+.pm-textarea:focus-within,
+.pm-textarea:focus-visible,
+.pm-textarea:active {
+  border: 2px solid #000;
+  outline: 0;
+}
+
+.pm-textarea.pm-disabled {
+  border: none;
+  user-select: none;
+}
+
+.pm-textarea.pm-hasfocus {
+  cursor: auto;
+}
