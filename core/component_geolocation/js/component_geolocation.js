@@ -9,7 +9,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import langs from '../../common/js/lang.json' assert { type: "json" };
-	import {render_edit_component_geolocation} from '../../component_geolocation/js/render_edit_component_geolocation.js'
+	import {render_edit_component_geolocation, render_popup_text, color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
 	import {render_mini_component_geolocation} from '../../component_geolocation/js/render_mini_component_geolocation.js'
 	import {render_search_component_geolocation} from '../../component_geolocation/js/render_search_component_geolocation.js'
@@ -128,6 +128,8 @@ component_geolocation.prototype.init = async function(options) {
 				const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
 				common.prototype.load_script(geo_messure_lib_js_file)
 
+				const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
+				common.prototype.load_script(color_picker_lib_js_file)
 			})
 
 
@@ -348,11 +350,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 			for (let feature in self.FeatureGroup) {
 				const feature_group = self.FeatureGroup[feature]
 				feature_group.eachLayer(function (layer){
-
 					layer.pm.disable()
-					if(!(layer instanceof L.Marker)){
-						layer.setStyle({color: '#3388ff'});
-					}
 				});
 			}
 
@@ -543,7 +541,7 @@ component_geolocation.prototype.load_layer = function(layer){
 		self.FeatureGroup[layer_id].on('pm:update', (e) => {
 			self.update_draw_data(layer_id);
 			// recalculate the popup
-			const content = self.get_popup_content(e.layer);
+			const content = self.get_popup_content(e.layer, layer_id);
 			if (content) {
 				e.layer.bindPopup(content);
 			}//end if(content)
@@ -553,7 +551,7 @@ component_geolocation.prototype.load_layer = function(layer){
 		self.FeatureGroup[layer_id].on('pm:edit', (e) => {
 			self.update_draw_data(layer_id);
 			// recalculate the popup
-			const content = self.get_popup_content(e.layer);
+			const content = self.get_popup_content(e.layer, layer_id);
 			if (content) {
 				e.layer.bindPopup(content);
 			}//end if(content)
@@ -563,7 +561,7 @@ component_geolocation.prototype.load_layer = function(layer){
 		self.FeatureGroup[layer_id].on('pm:markerdrag', (e) => {
 			// self.update_draw_data(layer_id);
 			// recalculate the popup
-			const content = self.get_popup_content(e.layer);
+			const content = self.get_popup_content(e.layer, layer_id);
 			if (content) {
 				e.layer.bindPopup(content);
 			}//end if(content)
@@ -586,7 +584,8 @@ component_geolocation.prototype.load_layer = function(layer){
 				init_feature({
 					self		: self,
 					data_layer	: data_layer,
-					layer_id	: layer_id
+					layer_id	: layer_id,
+					feature 	: feature
 				})
 			}// end onEachFeature
 		})// end L.geoJson
@@ -622,8 +621,6 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 			load 		: 'layer',
 			layer_id	: layer_id
 		})
-
-
 
 	return true
 }//end load_tag_into_geo_editor
@@ -712,41 +709,84 @@ component_geolocation.prototype.get_last_layer_id = function() {
 * 	Generate popup content based on layer type
 *	Returns HTML string, or null if unknown object
 */
-component_geolocation.prototype.get_popup_content = function(layer) {
+component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 
 	const self = this
-
+	const ar_mesures = []
 	// Marker - add lat/long
 	if (layer instanceof L.Marker) {
 		return this.str_lat_lng(layer.getLatLng());
+
 	// Circle - lat/long, radius
 	} else if (layer instanceof L.Circle) {
-		const center = layer.getLatLng(),
-			radius = layer.getRadius();
-		return "Center: "+this.str_lat_lng(center)+"<br />"
-			  +"Radius: "+this.round_coordinate(radius, 2)+" m";
+		const center	= layer.getLatLng()
+		const radius	= layer.getRadius()
+		const area		= (2 * Math.PI * radius).toFixed(2);
+
+		ar_mesures.push(
+			{
+				label: "Center: "+this.str_lat_lng(center)
+			},{
+				label: "Radius: "+this.round_coordinate(radius, 2),
+				messure: 'm'
+			},{
+				label: "Area: "+ area,
+				messure: 'm'
+			},{
+				label: "Color: ",
+				separator: false
+			}
+		)
+
 	// Rectangle/Polygon - area
 	} else if (layer instanceof L.Polygon) {
-		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
-		const geojson = layer.toGeoJSON()
-		const area 		= turf.area(geojson)
-		// const area = geodesic_area(latlngs);
-		return "Area: "+readable_area(area, true);
+		const latlngs	= layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
+		const geojson	= layer.toGeoJSON()
+		const area		= turf.area(geojson)
+
+		ar_mesures.push(
+			{
+				label: "Area: "+readable_area(area, true)
+			},{
+				label: "Color: ",
+				separator: false
+			}
+		)
+
 	// Polyline - distance
 	} else if (layer instanceof L.Polyline) {
 		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
 		let	distance = 0;
 		if (latlngs.length < 2) {
-			return "Distance: N/A";
+			ar_mesures.push(
+				{
+					label: "Distance: N/A"
+				},{
+					label: "Color: ",
+					separator: false
+				}
+			)
 		} else {
 			for (let i = 0; i < latlngs.length-1; i++) {
 				distance += latlngs[i].distanceTo(latlngs[i+1]);
 			}
-			return "Distance: "+this.round_coordinate(distance, 2)+" m";
+			ar_mesures.push(
+				{
+					label: "Distance: "+this.round_coordinate(distance, 2),
+					messure: 'm'
+				},{
+					label: "Color: ",
+					separator: false
+				}
+			)
 		}
 	}
 
-	return null;
+	const text_node		= render_popup_text(ar_mesures)
+	const color_node	= color_picker(self, layer, layer_id)
+	text_node.appendChild(color_node)
+
+	return text_node
 }//end get_popup_content
 
 
@@ -815,20 +855,15 @@ component_geolocation.prototype.init_draw_editor = function() {
 
 		// finish the editing feature data
 		map.on('pm:cut', (e) => {
+			e.originalLayer.remove()
+			e.originalLayer.removeFrom(map)
 			self.update_draw_data(self.active_layer_id);
 			// recalculate the popup
-			const content = self.get_popup_content(e.layer);
+			const content = self.get_popup_content(e.layer, self.active_layer_id);
 			if (content) {
 				e.layer.bindPopup(content);
 			}//end if(content)
 		});
-
-		// map.on('pm:drawend', (e) => {
-
-		// 		console.log("drawend:",e);
-		// 	// Update draw_data
-		// 	self.update_draw_data();
-		// });
 
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
 		map.on('pm:remove', (e) => {
@@ -875,6 +910,11 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 				? json.properties
 				: {}
 			json.properties.layer_id = layer_id
+			const layer_color = layer.options.color
+
+			if(layer_color){
+				json.properties.color =  layer_color
+			}
 
 			if (layer instanceof L.Circle) {
 				json.properties.shape		= "circle";
@@ -907,6 +947,7 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 
 	return true
 }//end update_draw_data
+
 
 
 /**
@@ -1109,15 +1150,23 @@ const init_feature = function(options) {
 	const self			= options.self
 	const data_layer	= options.data_layer
 	const layer_id		= options.layer_id
+	const feature		= options.feature || null
 
 	// check if the feature has data else do nothing
 	if(data_layer){
+
+		//color
+			const color = feature && feature.properties && feature.properties.color
+				? feature.properties.color
+				: null
+			if(color){
+				data_layer.setStyle({color: color})
+			}
 		// PopupContent. get the popup information
-			const content = self.get_popup_content(data_layer);
+			const content = self.get_popup_content(data_layer, layer_id);
 			if (content) {
 				data_layer.bindPopup(content);
 			}//end if(content)
-
 		// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 			data_layer.on('click', function(e) {
 				// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
@@ -1131,9 +1180,9 @@ const init_feature = function(options) {
 								self.FeatureGroup[layer_id].eachLayer(function (layer){
 									// layer.editing.disable();
 									layer.pm.enable()
-									if(!(layer instanceof L.Marker)){
-										layer.setStyle({color: '#31df25'});
-									}
+									// if(!(layer instanceof L.Marker)){
+									// 	layer.setStyle({color: '#31df25'});
+									// }
 								});
 							}else{
 
@@ -1141,20 +1190,20 @@ const init_feature = function(options) {
 								self.FeatureGroup[feature].eachLayer(function(layer) {
 									// layer.editing.disable();
 									layer.pm.disable()
-									if(!(layer instanceof L.Marker)){
-										layer.setStyle({color: '#3388ff'});
-									}
+									// if(!(layer instanceof L.Marker)){
+									// 	layer.setStyle({color: '#3388ff'});
+									// }
 								});
 							}
 						}
 					}
 				// current layer activate and change to pink color
 				//e.target.editing.enable();
-				if(!(e.target instanceof L.Marker)){
-					e.target.setStyle({color: '#97009C'});
-				}else{
-					console.log("Not e.target instanceof L.Marker ",);
-				}
+				// if(!(e.target instanceof L.Marker)){
+				// 	e.target.setStyle({color: '#97009C'});
+				// }else{
+				// 	console.log("Not e.target instanceof L.Marker ",);
+				// }
 
 			 });
 		// addLayer
@@ -1162,6 +1211,7 @@ const init_feature = function(options) {
 	}// end if (data_layer)
 
 };//end init_feature
+
 
 
 
