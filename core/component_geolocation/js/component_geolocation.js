@@ -125,6 +125,9 @@ component_geolocation.prototype.init = async function(options) {
 				const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
 				common.prototype.load_style(geo_editor_lib_css_file)
 
+				const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
+				common.prototype.load_script(geo_messure_lib_js_file)
+
 			})
 
 
@@ -613,12 +616,11 @@ component_geolocation.prototype.load_layer = function(layer){
 							if(!(e.target instanceof L.Marker)){
 								e.target.setStyle({color: '#97009C'});
 							}else{
-								console.log("NOt e.target instanceof L.Marker ",);
+								console.log("Not e.target instanceof L.Marker ",);
 							}
 
 						 });
 					// addLayer
-						 // console.log("self.FeatureGroup[layer_id]:",self.FeatureGroup[layer_id]); // , "current_data_layer", current_data_layer, "layer_id",layer_id
 						self.FeatureGroup[layer_id].addLayer(current_data_layer)
 				}// end if (current_data_layer)
 			}// end onEachFeature
@@ -761,8 +763,10 @@ component_geolocation.prototype.get_popup_content = function(layer) {
 	// Rectangle/Polygon - area
 	} else if (layer instanceof L.Polygon) {
 		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
-			//const area = L.GeometryUtil.geodesicArea(latlngs);
-		return "Area: "//+L.GeometryUtil.readableArea(area, true);
+		const geojson = layer.toGeoJSON()
+		const area 		= turf.area(geojson)
+		// const area = geodesic_area(latlngs);
+		return "Area: "+readable_area(area, true);
 	// Polyline - distance
 	} else if (layer instanceof L.Polyline) {
 		const latlngs = layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
@@ -819,16 +823,6 @@ component_geolocation.prototype.init_draw_editor = function() {
 	const self = this
 	const map  = self.map
 
-		console.log("init:");
-
-	// DRAW CONTROL REMOVE
-	// If the draw control is loaded, it's necesary remove from the map, because the drawControl need to be loaded with specific layer/ FeatureGroup data.
-	// When the layer is switched by the user, draw control need to be replace with the new selection.
-		// if (self.drawControl !== null) {
-		// 	self.drawControl.remove(map)
-		// 	map.removeControl(self.drawControl)
-		// }
-
 		// add Leaflet-Geoman controls with some options to the map
 		map.pm.addControls({
 			position: 'topright',
@@ -845,7 +839,7 @@ component_geolocation.prototype.init_draw_editor = function() {
 			// L.PM.reInitLayer(e.layer);
 			console.log("create:",e);
 			const layer = self.FeatureGroup[self.active_layer_id]
-			 e.layer.addTo(layer)
+			e.layer.addTo(layer)
 			// Update draw_data
 			self.update_draw_data(self.active_layer_id);
 		});
@@ -859,7 +853,6 @@ component_geolocation.prototype.init_draw_editor = function() {
 
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
 		map.on('pm:remove', (e) => {
-			console.log("remove:",e);
 			// Update draw_data
 			self.update_draw_data(self.active_layer_id);
 		});
@@ -1106,16 +1099,47 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 
 
+/*
+* @method readable_area(area, isMetric, precision): string
+* @return Returns a readable area string in yards or metric.
+* The value will be rounded as defined by the precision option object.
+*/
+const readable_area = function (area, metric=true) {
 
+	const precision = {
+		km	: 2,
+		ha	: 2,
+		m	: 0,
+		mi	: 2,
+		ac	: 2,
+		yd	: 0,
+		ft	: 0,
+		nm	: 2
+	}
 
+	let area_string
 
+	if (metric) {
 
+		if (area >= 1000000) {
+			area_string = turf.round(turf.convertArea(area, 'meters', 'kilometers'), precision['km']) + ' km²';
+		} else if (area >= 10000 ) {
+			area_string = turf.round(turf.convertArea(area, 'meters', 'hectares'), precision['ha']) + ' ha';
+		} else {
+			area + ' m²';
+		}
+	} else {
+		if (area >= 2589986.9952) { //2589986,9952 square meters are 1 square mile
+			area_string = turf.round(turf.convertArea(area, 'meters', 'miles'), precision['mi']) + ' mi²';
+		} else if (area >= 4046.8564224) { //4046.8564224 square meters are 1 acres
+			area_string = turf.round(turf.convertArea(area, 'meters', 'acres'), precision['ac']) + ' acres';
+		} else {
+			area_string = turf.round(turf.convertArea(area, 'meters', 'yards'), precision['yd']) + ' yd²';
+		}
+	}
 
-
-
-
-
-
+	return area_string;
+};//end readable_area
 
 
 
