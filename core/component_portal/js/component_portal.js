@@ -80,6 +80,7 @@ export const component_portal = function() {
 	component_portal.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_portal.prototype.update_datum			= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
+	component_portal.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
 	component_portal.prototype.build_rqo_show		= common.prototype.build_rqo_show
 	component_portal.prototype.build_rqo_search		= common.prototype.build_rqo_search
@@ -407,6 +408,24 @@ component_portal.prototype.build = async function(autoload=false) {
 
 	return true
 }//end component_portal.prototype.build
+
+
+
+/**
+* DEACTIVATE
+* Custom deactivate function triggered after ui.deactivate has finish
+*/
+component_portal.prototype.deactivate = function() {
+
+	// service autocomplete remove if active
+		if(self.autocomplete_active===true){
+			self.autocomplete.destroy()
+			self.autocomplete_active = false
+			self.autocomplete = null
+		}
+
+	return true
+}//end deactivate
 
 
 

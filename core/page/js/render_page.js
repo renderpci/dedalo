@@ -31,7 +31,8 @@ render_page.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	// content data
 		const content_data = await get_content_data(self) // result is a promise
@@ -42,32 +43,17 @@ render_page.prototype.edit = async function(options) {
 	// wrapper
 		const wrapper = document.createElement('div')
 		wrapper.classList.add('wrapper', self.type)
+		wrapper.appendChild(content_data)
 		// set pointers
 		wrapper.content_data = content_data
-
-	// menu
-		// const element_menu = self.context.find(el => el.model==='menu')
-		// if (typeof element_menu!=='undefined') {
-		// 	const menu_node = render_menu(self)
-		// 	wrapper.appendChild(await menu_node)
-		// }
-
-	// body content_data
-		wrapper.appendChild(content_data)
-
-	// modal box hidden
-		// const dd_modal = document.createElement('dd-modal')
-		// wrapper.appendChild(dd_modal)
 
 	// events
 		// page click
 			wrapper.addEventListener('click', fn_deactivate_components)
 			function fn_deactivate_components() {
-				const active_component = document.querySelector('.wrapper_component.active')
-				if (active_component) {
-					active_component.classList.remove('active')
-					// deactivate_component
-					event_manager.publish('deactivate_component')
+				// active component is set as active on each component activation (ui.activate)
+				if (ui.component.component_active) {
+					ui.component.deactivate(ui.component.component_active)
 				}
 			}
 

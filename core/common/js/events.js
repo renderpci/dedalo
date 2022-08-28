@@ -61,17 +61,27 @@ export const events_init = function(){
 */
 export const set_before_unload = function(value) {
 	if(SHOW_DEBUG===true) {
-		console.log("///////////////////// set_before_unload value:",value);
+		console.log("///////////////////// set_before_unload value:", value);
 	}
-	if (value===true) {
-		// window dialog will be shown when user leaves the page
-		addEventListener('beforeunload', before_unload_listener, {capture: true});
-		window.unsaved_data = true
-	}else{
-		// restore the normal page exit status
-		removeEventListener('beforeunload', before_unload_listener, {capture: true});
-		window.unsaved_data = false
-	}
+
+	// already fixed current value (true/false)
+		if (value===window.unsaved_data) {
+			return
+		}
+
+	// fix value
+		window.unsaved_data = value
+
+	// add/remove listener
+		// if (value===true) {
+		// 	// window dialog will be shown when user leaves the page
+		// 	addEventListener('beforeunload', before_unload_listener, {capture: true});
+		// 	// window.unsaved_data = true
+		// }else if(value===false){
+		// 	// restore the normal page exit status
+		// 	removeEventListener('beforeunload', before_unload_listener, {capture: true});
+		// 	// window.unsaved_data = false
+		// }
 
 	return true
 }//end set_before_unload
@@ -83,13 +93,16 @@ export const set_before_unload = function(value) {
 * Prevent to accidentally user leaves the page with unsaved changes
 * @param object event
 */
-const before_unload_listener = function(event) {
+	// const before_unload_listener = function(event) {
+	// 	event.preventDefault();
 
-	event.preventDefault();
-	document.activeElement.blur()
+	// 	// document.activeElement.blur()
+	// 	if (window.unsaved_data===false) {
+	// 		return
+	// 	}
 
-	// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
-}//end before_unload_listener
+	// 	return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
+	// }//end before_unload_listener
 
 
 

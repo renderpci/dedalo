@@ -8,22 +8,20 @@
 	import {ui} from '../../common/js/ui.js'
 
 
+
 // subscription to events, the events could be fired by itself or other components, section, area, etc...
 // Use event_manager to get the publications
-// in some cases, events are fired by observables and some events are controlled by ontology, his definition is not in the code, see the ontology.
+// in some cases, events are fired by observable and some events are controlled by ontology, his definition is not in the code, see the ontology.
 // wrapper = self.node
 export const events_subscription = function(self) {
 
-	// active_component (when user focus it in DOM)
+	// activate_component (when user focus it in DOM)
 		self.events_tokens.push(
-			event_manager.subscribe('active_component', fn_active_component)
+			event_manager.subscribe('activate_component', fn_activate_component)
 		)
-		function fn_active_component(actived_component) {
-			// call ui.component
-			const response = ui.component.active(self, actived_component) // response is bool value
-			if (response===true && typeof self.active==="function") {
-				self.active()
-			}
+		function fn_activate_component(actived_component) {
+			// console.log('self:', self, actived_component);
+			ui.component.activate(self, actived_component)
 		}
 
 	// hilite (search mode)
@@ -47,6 +45,6 @@ export const events_subscription = function(self) {
 			}
 		}
 
+
 	return true
 }//end events_subscription
-

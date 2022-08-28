@@ -51,6 +51,7 @@ export const component_password = function(){
 	component_password.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_password.prototype.update_datum		= component_common.prototype.update_datum
 	component_password.prototype.change_value		= component_common.prototype.change_value
+	component_password.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_password.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render

@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_before_unload} from '../../common/js/events.js'
 	import {array_equals} from '../../common/js/utils/index.js'
@@ -184,64 +184,87 @@ const get_content_value = (i, datalist_item, self) => {
 			placeholder		: 'Comma separated id like 1,2,3',
 			parent			: content_value
 		})
-		input_node.addEventListener('change', function() {
+		// change event
+			input_node.addEventListener('change', function() {
 
-			const section_tipo	= datalist_item.tipo
-			const value			= this.value.length>0
-				? {
-					tipo 	: datalist_item.tipo,
-					value 	: self.validate_value(this.value.split(','))
-				  }
-				: null;
+				const section_tipo	= datalist_item.tipo
+				const value			= this.value.length>0
+					? {
+						tipo 	: datalist_item.tipo,
+						value 	: self.validate_value(this.value.split(','))
+					  }
+					: null;
 
-			// key_found. search section tipo key if exists. Remember: data array keys are differents that inputs keys
-				const current_values	= self.data.value || []
-				const values_length		= current_values.length
-				let key_found			= values_length // default is last (length of arary)
-				for (let j = 0; j < values_length; j++) {
-					if(current_values[j].tipo===section_tipo) {
-						key_found = j;
-						break;
+				// key_found. search section tipo key if exists. Remember: data array keys are differents that inputs keys
+					const current_values	= self.data.value || []
+					const values_length		= current_values.length
+					let key_found			= values_length // default is last (length of arary)
+					for (let j = 0; j < values_length; j++) {
+						if(current_values[j].tipo===section_tipo) {
+							key_found = j;
+							break;
+						}
 					}
-				}
 
-			// change_value
-				const changed_data = Object.freeze({
-					action	: (value===null) ? 'remove' : 'update',
-					key		: key_found,
-					value	: value
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-				.then(()=>{
-					// update safe value in input text
-					if (value) {
-						input_node.value = value.value.join(",")
+				// change_value
+					const changed_data = Object.freeze({
+						action	: (value===null) ? 'remove' : 'update',
+						key		: key_found,
+						value	: value
+					})
+					self.change_value({
+						changed_data	: changed_data,
+						refresh			: false
+					})
+					.then(()=>{
+						// update safe value in input text
+						if (value) {
+							input_node.value = value.value.join(",")
+						}
+					})
+			})//end change
+		// keyup event
+			input_node.addEventListener('keyup', function(e) {
+				// page unload event
+					// if (e.key!=='Enter') {
+					// 	const value_key			= value.findIndex(el => el.tipo===datalist_item.tipo);
+					// 	const original_value	= self.db_data.value[value_key]
+					// 	const new_value			= this.value.length>0
+					// 		? {
+					// 			tipo 	: datalist_item.tipo,
+					// 			value 	: self.validate_value(this.value.split(','))
+					// 		  }
+					// 		: null;
+
+					// 	const is_equal = original_value && original_value.value && new_value && new_value.value
+					// 		? array_equals(original_value.value, new_value.value)
+					// 		: false
+					// 	// set_before_unload (bool)
+					// 	set_before_unload(!is_equal)
+					// }
+
+				// Enter key force to save changes
+					if (e.key==='Enter') {
+						// force to save current input if changed
+						if (self.data.changed_data.length>0) {
+							// change_value (save data)
+							self.change_value({
+								changed_data	: self.data.changed_data,
+								refresh			: false
+							})
+						}
+						return false
 					}
-				})
-		})//end change
-		input_node.addEventListener('keyup', function(e) {
-			// page unload event
-				if (e.key!=='Enter') {
+				// change data
+					const changed_data = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: (this.value.length>0) ? this.value : null
+					})
 
-					const value_key			= value.findIndex(el => el.tipo===datalist_item.tipo);
-					const original_value	= self.db_data.value[value_key]
-					const new_value			= this.value.length>0
-						? {
-							tipo 	: datalist_item.tipo,
-							value 	: self.validate_value(this.value.split(','))
-						  }
-						: null;
-
-					const is_equal = original_value && original_value.value && new_value && new_value.value
-						? array_equals(original_value.value, new_value.value)
-						: false
-					// set_before_unload (bool)
-					set_before_unload(!is_equal)
-				}
-		})//end keyup
+				// fix instance changed_data
+					self.set_changed_data(changed_data)
+			})//end keyup
 
 
 	return content_value

@@ -114,41 +114,76 @@ const get_content_value = (i, current_value, self) => {
 			placeholder 	: (current_value) ? '' : self.data.fallback_value[i],
 			parent			: content_value
 		})
-		input.addEventListener('change', async function() {
+		// focus event
+			input.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					event_manager.publish('activate_component', self)
+				}
+			})
+		// blur event
+			// input.addEventListener('blur', function() {
+			// 	// force to save current input if changed (prevents override changed_data
+			// 	// in multiple values cases)
+			// 	if (self.data.changed_data) {
+			// 		// change_value
+			// 		self.change_value({
+			// 			changed_data	: self.data.changed_data,
+			// 			refresh			: false
+			// 		})
+			// 	}
+			// })
+		// keyup event
+			input.addEventListener('keyup', function(e) {
 
-			// is_unique check
-				if (self.context.properties.unique && input.value!=='') {
-					const unique = await self.is_unique(input.value)
-					if (typeof unique!=="undefined") {
-						ui.show_message(
-							self.node,
-							`Warning. Duplicated value '${input.value}' in id: ` + unique.section_id,
-							'warning'
-						)
+				// Enter key force to save changes
+					if (e.key==='Enter') {
+						// force to save current input if changed
+						if (self.data.changed_data.length>0) {
+							// change_value (save data)
+							self.change_value({
+								changed_data	: self.data.changed_data,
+								refresh			: false
+							})
+						}
+						return false
 					}
-				}
 
-			// change data
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: (input.value.length>0) ? input.value : null
-				})
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-		})//end change
-		input.addEventListener('keyup', function(e) {
-			// page unload event
-				if (e.key!=='Enter') {
-					const key				= i
-					const original_value	= self.db_data.value[key]
-					const new_value			= input.value
-					// set_before_unload (bool)
-					set_before_unload(new_value!==original_value)
-				}
-		})//end keyup
+				// change data
+					const changed_data = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: (this.value.length>0) ? this.value : null
+					})
+
+				// fix instance changed_data
+					self.set_changed_data(changed_data)
+			})
+		// change event
+			// input.addEventListener('change', async function() {
+			// 	// is_unique check
+			// 		if (self.context.properties.unique && input.value!=='') {
+			// 			const unique = await self.is_unique(input.value)
+			// 			if (typeof unique!=="undefined") {
+			// 				ui.show_message(
+			// 					self.node,
+			// 					`Warning. Duplicated value '${input.value}' in id: ` + unique.section_id,
+			// 					'warning'
+			// 				)
+			// 			}
+			// 		}
+			// 	// change data
+			// 		const changed_data = Object.freeze({
+			// 			action	: 'update',
+			// 			key		: i,
+			// 			value	: (input.value.length>0) ? input.value : null
+			// 		})
+			// 		self.change_value({
+			// 			changed_data	: changed_data,
+			// 			refresh			: false
+			// 		})
+			// })
+
 
 	// button remove. Triggered by wrapper delegated events
 		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {

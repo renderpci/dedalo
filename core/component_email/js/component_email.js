@@ -55,6 +55,7 @@ export const component_email = function(){
 	component_email.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_email.prototype.update_datum		= component_common.prototype.update_datum
 	component_email.prototype.change_value		= component_common.prototype.change_value
+	component_email.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_email.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render

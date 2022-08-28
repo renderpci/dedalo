@@ -52,6 +52,7 @@ export const component_publication = function(){
 	component_publication.prototype.get_value			= component_common.prototype.get_value
 	component_publication.prototype.set_value			= component_common.prototype.set_value
 	component_publication.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_publication.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_publication.prototype.update_datum		= component_common.prototype.update_datum
 	component_publication.prototype.change_value		= component_common.prototype.change_value
 	component_publication.prototype.build_rqo			= common.prototype.build_rqo

@@ -56,6 +56,7 @@ export const component_info = function(){
 	// component_info.prototype.update_data_value	= component_common.prototype.update_data_value
 	// component_info.prototype.update_datum		= component_common.prototype.update_datum
 	// component_info.prototype.change_value		= component_common.prototype.change_value
+	// component_info.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	// component_info.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render

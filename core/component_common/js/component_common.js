@@ -182,6 +182,8 @@ component_common.prototype.build = async function(autoload=false){
 			context	: []
 		}
 		self.data = self.data || {}
+		// changed_data. Set as empty array always
+		self.data.changed_data = []
 
 	// load data on auto-load true
 	// when the auto-load if false the data will be injected by the caller (as section_record or others)
@@ -424,7 +426,7 @@ component_common.prototype.save = async function(changed_data) {
 	const self = this
 
 	// check data
-		if (typeof changed_data==="undefined") {
+		if (typeof changed_data==='undefined') {
 			if(SHOW_DEBUG===true) {
 				console.error("+++++ Invalid changed_data [stop save]:", changed_data)
 				console.trace()
@@ -781,10 +783,11 @@ component_common.prototype.update_datum = async function(new_data) {
 * UPDATE_DATA_VALUE
 * Updates component data value with changed_data sent by the DOM element
 * changed_data format is:
-* {
-* 	key		: i,
-*	value	: input.value
-* }
+* [{
+*	key		: 0,
+*	value	: input.value,
+*	action	: 'update'
+* }]
 * @param object changed_data
 * @return bool true
 */
@@ -792,11 +795,12 @@ component_common.prototype.update_data_value = function(changed_data) {
 
 	const self = this
 
-	if(SHOW_DEBUG===true) {
-		// console.log("======= update_data_value changed_data:", clone(changed_data));
-		// const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
-		// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
-	}
+	// debug
+		if(SHOW_DEBUG===true) {
+			// console.log("======= update_data_value changed_data:", clone(changed_data));
+			// const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
+			// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
+		}
 
 	// changed_data
 		const action		= changed_data.action
@@ -807,7 +811,7 @@ component_common.prototype.update_data_value = function(changed_data) {
 
 		self.data = self.data || {}
 
-	// set_data. if action is set_data the value is changed as is, bulk insert or update the data of the component.
+	// set_data. If action is 'set_data' the value is changed as is, exec a bulk insert or update the data of the component.
 		if(action==='set_data'){
 			self.data.value = changed_value || []
 			return true
@@ -828,11 +832,12 @@ component_common.prototype.update_data_value = function(changed_data) {
 			}
 		}
 
-	if(SHOW_DEBUG===true) {
-		//console.log("***** update_data_value data_key:",clone(data_key));
-		//console.log("======= update_data_value:",clone(self.data.value));
-		console.log("======= [component_common] update_data_value POST CHANGE:", clone(self.data.value), self.id);
-	}
+	// debug
+		if(SHOW_DEBUG===true) {
+			//console.log("***** update_data_value data_key:",clone(data_key));
+			//console.log("======= update_data_value:",clone(self.data.value));
+			console.log("======= [component_common] update_data_value POST CHANGE:", clone(self.data.value), self.id);
+		}
 
 
 	return true
@@ -843,7 +848,8 @@ component_common.prototype.update_data_value = function(changed_data) {
 /**
 * CHANGE_VALUE (AND SAVE)
 * @param object options
-* @return promise || false
+* @return promise
+* 	Resolve bool|object (API response)
 */
 component_common.prototype.change_value = async function(options) {
 
@@ -865,7 +871,7 @@ component_common.prototype.change_value = async function(options) {
 		const build_autoload		= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
 		const custom_remove_dialog	= options.remove_dialog // undefined|function|bool
 
-	// remove. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
+	// remove dialog. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
 		if (action==='remove') {
 
 			// generate default remove dialog to confirm the remove option is correct
@@ -890,20 +896,29 @@ component_common.prototype.change_value = async function(options) {
 			}
 		}
 
-	const prev_status = self.status
-	//self.status = 'changing'
+	// status
+		const prev_status = self.status
+		// self.status = 'changing'
 
-	// update the data in the instance previous to save (returns bool)
-		const update_data = self.update_data_value(changed_data)
-		if (!update_data) {
-			return false
+	// update the component data value in the instance before to save (returns bool)
+		const changed_data_length = changed_data.length
+		for (let i = 0; i < changed_data_length; i++) {
+			const changed_data_item = changed_data[i] // must be a freeze object
+			const update_data = self.update_data_value(changed_data_item)
+			if (!update_data) {
+				return false
+			}
 		}
 
 	// save. save and rebuild the component
 		const api_response = await self.save(changed_data)
 
 		// fix instance changed_data
-			self.data.changed_data = changed_data
+			// self.data.changed_data = changed_data
+			if (api_response && api_response.result) {
+				// reset component changed_data to empty object
+				self.data.changed_data = []
+			}
 
 		// refresh
 			if (refresh===true) {
@@ -1156,9 +1171,43 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 
 	// active component at end
 		if (new_mode.indexOf('edit')!==-1) {
-			event_manager.publish('active_component', new_instance)
+			if (!new_instance.active) {
+				event_manager.publish('activate_component', new_instance)
+			}
 		}
 
 
 	return true
 }//end change_mode
+
+
+
+/**
+* SET_CHANGED_DATA
+* Unified way to set changed_data
+* @param object options
+* @return bool
+*/
+component_common.prototype.set_changed_data = function(changed_data_item) {
+
+	const self = this
+
+	// debug
+		console.log('+++++++++++++++++++++++++++++ self.data.changed_data:', self.data.changed_data);
+
+	// set changed_data item
+		const key = self.data.changed_data.findIndex(el => el.key===changed_data_item.key)
+		if (key!==-1) {
+			// replace
+			self.data.changed_data[key] = changed_data_item
+		}else{
+			// add
+			self.data.changed_data.push(changed_data_item)
+		}
+
+	// prevents user navigate loosing changes without warning
+		set_before_unload(true)
+
+
+	return true
+}//end set_changed_data

@@ -108,7 +108,9 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number>1) {
-				paginator_first.addEventListener('mousedown',function(){
+				paginator_first.addEventListener('mousedown',function(e) {
+					e.stopPropagation()
+					e.preventDefault()
 					self.paginate(offset_first)
 				})
 			}else{
@@ -122,7 +124,9 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(prev_page_offset>=0) {
-				paginator_prev.addEventListener('mousedown',function(){
+				paginator_prev.addEventListener('mousedown',function(e) {
+					e.stopPropagation()
+					e.preventDefault()
 					self.paginate(offset_prev)
 				})
 			}else{
@@ -136,7 +140,9 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(next_page_offset<total) {
-				paginator_next.addEventListener('mousedown',function(){
+				paginator_next.addEventListener('mousedown',function(e) {
+					e.stopPropagation()
+					e.preventDefault()
 					self.paginate(offset_next)
 				})
 			}else{
@@ -150,7 +156,9 @@ const get_content_data = function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number<total_pages) {
-				paginator_last.addEventListener('mousedown',function(){
+				paginator_last.addEventListener('mousedown',function(e) {
+					e.stopPropagation()
+					e.preventDefault()
 					self.paginate(offset_last)
 				})
 			}else{

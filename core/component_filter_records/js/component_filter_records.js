@@ -55,6 +55,7 @@ export const component_filter_records = function(){
 	component_filter_records.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_filter_records.prototype.update_datum			= component_common.prototype.update_datum
 	component_filter_records.prototype.change_value			= component_common.prototype.change_value
+	component_filter_records.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_filter_records.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
