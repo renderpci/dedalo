@@ -9,16 +9,14 @@ class component_av extends component_media_common {
 	#protected $lang = DEDALO_DATA_LANG;
 
 	# file name formatted as 'tipo'-'order_id' like dd732-1
-	public $video_id ;
-	public $video_url ;
-	public $quality ;
+	public $video_id;
+	public $video_url;
+	public $quality;
 
-	public $target_filename ;
-	public $target_dir ;
+	public $target_filename;
+	public $target_dir;
 
 	public $aditional_path;
-
-	#public $AVObj;
 
 
 
@@ -28,39 +26,13 @@ class component_av extends component_media_common {
 	*/
 	function __construct(string $tipo, $section_id=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
-		// __construct. Creates the component as normally do with parent class
+		// common constructor. Creates the component as normally do with parent class
 			parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
-
-		// dato : We verify that there is a data. If not, we assign the default data in the current language
-		// Force calculate and set initial dato
-			$dato = $this->get_dato();
-
-		// default data
-			$need_save = false;
-			if($modo==='edit' && (int)$this->section_id>0 && !isset($dato->section_id)) {
-
-				// default dato
-					$locator = new locator();
-						$locator->set_component_tipo($this->tipo);
-						$locator->set_section_tipo($this->section_tipo);
-						$locator->set_section_id($this->section_id);
-
-				// dato set
-				$this->set_dato([$locator]);
-				$need_save = true;
-			}
-
 		// video_id. Set and fix current video_id
-			$this->video_id = $this->get_video_id();
-
-		// save default value if needed
-			if($need_save===true) {
-				// save. Result returns the id of the created or edited parent section
-				$result = $this->Save();
-				debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".
-					get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - section_id:$this->section_id - lang:$this->lang)");
-			}//end if($need_save)
+			if (!empty($this->section_id)) {
+				$this->video_id = $this->get_video_id();
+			}
 	}//end __construct
 
 
@@ -68,6 +40,22 @@ class component_av extends component_media_common {
 	/**
 	* GET DATO
 	* @return array|null $dato
+	* Sample data:
+	* [
+	*  {
+	*    "user_id": -1,
+	*    "upload_date": {
+	*      "day": 27,
+	*      "hour": 12,
+	*      "time": 65009738806,
+	*      "year": 2022,
+	*      "month": 8,
+	*      "minute": 46,
+	*      "second": 46
+	*    },
+	*    "original_file_name": "interview2.mp4"
+	*  }
+	* ]
 	*/
 	public function get_dato() : ?array {
 		$dato = parent::get_dato();
@@ -78,16 +66,6 @@ class component_av extends component_media_common {
 
 		return $dato;
 	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	*/
-	public function set_dato($dato) {
-
-		parent::set_dato( $dato );
-	}//end set_dato
 
 
 
@@ -1081,26 +1059,21 @@ class component_av extends component_media_common {
 
 
 			// audio files. Audio files generate always a audio file
-				if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
-					$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
-					if (in_array($file_ext, $ar_audio_only_ext)) {
+				$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
+				if (in_array($file_ext, $ar_audio_only_ext) && $quality===DEDALO_AV_QUALITY_ORIGINAL) {
 
-						# Audio conversion
-						$AVObj_target = new AVObj($video_id, 'audio');
-						$target_file  = $AVObj_target->get_local_full_path();
-						if (!file_exists($target_file)) {
-							$source_file = $full_file_path;
-							if (!file_exists($source_file)) {
-								debug_log(__METHOD__." ERROR: Source file not exists ($source_file) 2 ".to_string(), logger::WARNING);
-							}
-							Ffmpeg::convert_to_dedalo_av($source_file, $target_file);
-							debug_log(__METHOD__." Converted source audio file to 'audio' quality ".to_string(), logger::DEBUG);
-						}//end if (!file_exists($target_file)) {
-
-					}else{
-						#throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality) (2)", 1);
-					}
-				}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
+					# Audio conversion
+					$AVObj_target = new AVObj($video_id, 'audio');
+					$target_file  = $AVObj_target->get_local_full_path();
+					if (!file_exists($target_file)) {
+						$source_file = $full_file_path;
+						if (!file_exists($source_file)) {
+							debug_log(__METHOD__." ERROR: Source file not exists ($source_file) 2 ".to_string(), logger::WARNING);
+						}
+						Ffmpeg::convert_to_dedalo_av($source_file, $target_file);
+						debug_log(__METHOD__." Converted source audio file to 'audio' quality ".to_string(), logger::DEBUG);
+					}//end if (!file_exists($target_file))
+				}
 
 
 			// target_filename. Save original file name in a component_input_text
@@ -1124,7 +1097,22 @@ class component_av extends component_media_common {
 					debug_log(__METHOD__." Saved original filename: ".to_string($original_file_name), logger::DEBUG);
 				}
 
-			// all is ok
+
+			// add data with the file uploaded
+				if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
+
+					$dato			= $this->get_dato();
+					$value			= empty($dato) ? new stdClass() : reset($dato);
+					$media_value	= $this->build_media_value((object)[
+						'value'		=> $value,
+						'file_name'	=> $original_file_name
+					]);
+
+					$this->set_dato([$media_value]);
+					$this->Save();
+				}
+
+			// all is OK
 				$response->result	= true;
 				$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 

@@ -55,7 +55,6 @@ render_search_component_date.prototype.search = async function() {
 const get_content_data_search = function(self) {
 
 	const value	= self.data.value
-	const mode	= self.mode
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {})
@@ -70,6 +69,12 @@ const get_content_data_search = function(self) {
 			value			: q_operator,
 			class_name		: 'q_operator',
 			parent			: fragment
+		})
+		input_q_operator.addEventListener('focus', function() {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				event_manager.publish('activate_component', self)
+			}
 		})
 		input_q_operator.addEventListener('change', function(){
 			// value

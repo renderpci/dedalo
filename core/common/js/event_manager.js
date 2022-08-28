@@ -12,7 +12,7 @@
 *
 * events format:
 * 	[{
-*		event_name 	: string. The common name of the events for fired by publish/changes as 'active_component'
+*		event_name 	: string. The common name of the events for fired by publish/changes as 'activate_component'
 *		token 		: string. Unique id stored in the instance for control the event as 'event_19'
 *		callback 	: function. The function that will fired when publish/change will fired
 *	}]
@@ -30,9 +30,9 @@ const event_manager_class = function(){
 	* SUBSCRIBE
 	* Add received event to the events list array
 	* @param string event_name
-	* 	Like: 'active_component'
+	* 	Like: 'activate_component'
 	* @param function callback
-	* 	Like: 'fn_active_component'
+	* 	Like: 'fn_activate_component'
 	* @return string token
 	* 	custom string incremental like: 'event_270'
 	*/
@@ -98,7 +98,7 @@ const event_manager_class = function(){
 	* PUBLISH
 	* when the publish event is fired it need propagated to the subscribers events
 	* @param string event_name
-	* 	Like: 'active_component'
+	* 	Like: 'activate_component'
 	* @param object data
 	* 	object container to pass data ta to the target callback
 	*/
@@ -125,8 +125,8 @@ const event_manager_class = function(){
 	* @return array this.events
 	* 	list of registered events (objects) as
 	* [{
-	* 	callback: ƒ fn_active_component(actived_component)
-	*	event_name: "active_component"
+	* 	callback: ƒ fn_activate_component(actived_component)
+	*	event_name: "activate_component"
 	*	token: "event_270"
 	* }]
 	*/

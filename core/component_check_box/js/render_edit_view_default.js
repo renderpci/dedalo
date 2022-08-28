@@ -104,33 +104,50 @@ const get_input_element_edit = (i, current_value, self) => {
 			class_name		: 'content_value'
 		})
 
-	// input checkbox
-		const option = ui.create_dom_element({
-			element_type	: 'input',
-			type 			: 'checkbox',
-			id 				: self.id +"_"+ i,
-			parent 			: content_value
+	// label
+		// const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
+		const option_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: label,
+			parent			: content_value
 		})
-		option.addEventListener('change', function(){
-			const action 		= (option.checked===true) ? 'insert' : 'remove'
-			const changed_key 	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			const changed_value = (action==='insert') ? datalist_value : null
+
+	// input_checkbox
+		const input_checkbox = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox'
+		})
+		option_label.prepend(input_checkbox)
+		input_checkbox.addEventListener('focus', function() {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				event_manager.publish('activate_component', self)
+			}
+		})
+		input_checkbox.addEventListener('change', function(){
+
+			const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
+			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			const changed_value	= (action==='insert') ? datalist_value : null
 
 			const changed_data = Object.freeze({
 				action  : action,
 				key 	: changed_key,
 				value 	: changed_value
 			})
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false,
-				remove_dialog	: ()=>{
-					return true
-				}
-			})
-			.then((api_response)=>{
-				self.selected_key = i
-			})
+			// fix instance changed_data
+				self.data.changed_data = changed_data
+			// force to save on every change
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false,
+					remove_dialog	: ()=>{
+						return true
+					}
+				})
+				.then((api_response)=>{
+					self.selected_key = i
+				})
 		})//end change event
 
 		// checked option set on match
@@ -139,18 +156,9 @@ const get_input_element_edit = (i, current_value, self) => {
 				value[j].section_id===datalist_value.section_id &&
 				value[j].section_tipo===datalist_value.section_tipo
 				) {
-					option.checked = 'checked'
+					input_checkbox.checked = 'checked'
 			}
 		}
-
-	// label
-		// const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
-		const option_label = ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: label,
-			parent			: content_value
-		})
-		option_label.setAttribute("for", self.id +"_"+ i)
 
 	// developer_info
 		const developer_info = ui.create_dom_element({
@@ -198,7 +206,6 @@ const get_input_element_edit = (i, current_value, self) => {
 		// 		console.error(error)
 		// 	}
 		// })
-
 
 
 	return content_value

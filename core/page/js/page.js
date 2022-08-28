@@ -11,6 +11,7 @@
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	// import {menu} from '../../menu/js/menu.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {common, push_browser_history} from '../../common/js/common.js'
@@ -96,11 +97,11 @@ page.prototype.init = async function(options) {
 
 				// unsaved_data check
 					if (window.unsaved_data===true) {
-						if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
+						if (!confirm('page: ' + get_label.discard_changes || 'Discard unsaved changes?')) {
 							return false
-						}else{
-							window.unsaved_data===false
 						}
+						// reset unsaved_data state by the user
+						window.unsaved_data = false
 					}
 
 				// check valid vars
@@ -269,17 +270,20 @@ page.prototype.init = async function(options) {
 			// )
 
 	// beforeunload (event)
-		// window.addEventListener("beforeunload", function (event) {
-		// 	event.preventDefault();
+		window.addEventListener('beforeunload', (event) => {
+			event.preventDefault();
 
-		// 	document.activeElement.blur()
+			// document.activeElement.blur()
+			if (window.unsaved_data!==true) {
+				return null
+			}
 
-		// 	const confirmationMessage = "Leaving tool transcription page.. ";
-		// 	event.returnValue  	= confirmationMessage;	// Gecko, Trident, Chrome 34+
-		// 	// return confirmationMessage;				// Gecko, WebKit, Chrome <34
+			// set event.returnValue value to force browser standard message (unable to customize)
+			// like : 'Changes that you made may not be saved.'
+			event.returnValue = true
 
-		// 	return null
-		// })//end beforeunload
+			// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
+		})//end beforeunload
 
 	// window messages
 		// window.addEventListener("message", receiveMessage, false);
@@ -376,7 +380,7 @@ page.prototype.add_events = function() {
 				case evt.key==='Escape':
 					// unactive user activated component
 						if (ui.component.component_active) {
-							ui.component.inactive(ui.component.component_active)
+							ui.component.deactivate(ui.component.component_active)
 							ui.component.component_active = null
 						}
 					break;

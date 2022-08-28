@@ -59,6 +59,7 @@ export const component_external = function(){
 	component_external.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_external.prototype.update_datum		= component_common.prototype.update_datum
 	component_external.prototype.change_value		= component_common.prototype.change_value
+	component_external.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_external.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render

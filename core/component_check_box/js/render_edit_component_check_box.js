@@ -43,7 +43,7 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 		default:
 			return render_edit_view_default.render(self, options)
 	}
-	
+
 	return null
 }//end edit
 
@@ -80,7 +80,7 @@ export const get_buttons = (self) => {
 					title			: label,
 					parent			: fragment
 				})
-				button_edit.addEventListener("click", function(e){
+				button_edit.addEventListener('click', function(e){
 					e.stopPropagation()
 					// navigate link
 					event_manager.publish('user_navigation', {
@@ -117,10 +117,6 @@ export const get_buttons = (self) => {
 					label  		 : 'All',
 					refresh 	 : true
 				})
-				.then((api_response)=>{
-					// rebuild and save the component
-					// event_manager.publish('reset_element_'+self.id, self)
-				})
 			})
 		}
 
@@ -144,5 +140,3 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-

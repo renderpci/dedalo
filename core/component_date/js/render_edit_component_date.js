@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {set_before_unload} from '../../common/js/events.js'
 
 
 
@@ -158,7 +159,7 @@ const get_buttons = (self) => {
 * @param int i
 * @param object|null current_value
 * @param object self
-* @return dom element li
+* @return DOM node content_value
 */
 export const get_input_element_edit = (i, current_value, self) => {
 
@@ -314,15 +315,25 @@ const input_element_period = (i, current_value, self) => {
 				placeholder		: 'Y',
 				parent			: input_wrap
 			})
-
-				const span_year = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: label_year,
-					parent			: input_wrap
-				})
-
-			input_year.addEventListener('change', function(evt){
+			input_year.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					event_manager.publish('activate_component', self)
+				}
+			})
+			input_year.addEventListener('keyup', function(e) {
+				if (e.key==='Enter') {
+					this.dispatchEvent(new Event('change'));
+				}
+			})
+			input_year.addEventListener('change', function(){
 				collect_data(input_year, input_month, input_day)
+			})
+			// year label
+			ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: label_year,
+				parent			: input_wrap
 			})
 
 		// month
@@ -334,15 +345,25 @@ const input_element_period = (i, current_value, self) => {
 				placeholder		: 'M',
 				parent			: input_wrap
 			})
-
-				const span_month = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: label_month,
-					parent			: input_wrap
-				})
-
-			input_month.addEventListener('change', function(evt){
+			input_month.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					event_manager.publish('activate_component', self)
+				}
+			})
+			input_month.addEventListener('keyup', function(e) {
+				if (e.key==='Enter') {
+					this.dispatchEvent(new Event('change'));
+				}
+			})
+			input_month.addEventListener('change', function(){
 				collect_data(input_year, input_month, input_day)
+			})
+			// month label
+			ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: label_month,
+				parent			: input_wrap
 			})
 
 		// day
@@ -354,19 +375,31 @@ const input_element_period = (i, current_value, self) => {
 				placeholder		: 'D',
 				parent			: input_wrap
 			})
-
-				const span_day = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: label_day,
-					parent			: input_wrap
-				})
-
-			input_day.addEventListener('change', function(evt){
+			input_day.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					event_manager.publish('activate_component', self)
+				}
+			})
+			input_day.addEventListener('keyup', function(e) {
+				if (e.key==='Enter') {
+					this.dispatchEvent(new Event('change'));
+				}
+			})
+			input_day.addEventListener('change', function(){
 				collect_data(input_year, input_month, input_day)
 			})
+			// day label
+			ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: label_day,
+				parent			: input_wrap
+			})
 
-	// collect_data
-		const collect_data = function(input_year, input_month, input_day){
+
+	// collect_data function. Mix all fields data and saves
+		const collect_data = function(input_year, input_month, input_day) {
+
 			const new_year = (input_year.value)
 				? input_year.value
 				: null
@@ -434,9 +467,20 @@ const input_element_time = (i, current_value, self) => {
 		class_name		: 'input_time',
 		value			: input_value,
 		placeholder		: self.get_placeholder_value(),
-		parent 			: input_wrap
+		parent			: input_wrap
 	})
-	input.addEventListener('change', function(evt){
+	input.addEventListener('focus', function() {
+		// force activate on input focus (tabulating case)
+		if (!self.active) {
+			event_manager.publish('activate_component', self)
+		}
+	})
+	input.addEventListener('keyup', function(e) {
+		if (e.key==='Enter') {
+			this.dispatchEvent(new Event('change'));
+		}
+	})
+	input.addEventListener('change', function(){
 		const response = self.parse_string_time(input.value)
 		if(response.error){
 			alert(response.error[0].msg)
@@ -516,7 +560,19 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			placeholder		: self.get_placeholder_value(),
 			parent			: input_wrap
 		})
+		input.addEventListener('focus', function() {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				event_manager.publish('activate_component', self)
+			}
+		})
+		input.addEventListener('keyup', function(e) {
+			if (e.key==='Enter') {
+				this.dispatchEvent(new Event('change'));
+			}
+		})
 		input.addEventListener('change', function() {
+
 			const response = self.parse_string_date(input.value)
 			if(response.error){
 				alert(response.error[0].msg)

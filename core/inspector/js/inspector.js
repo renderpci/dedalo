@@ -70,11 +70,11 @@ inspector.prototype.init = async function(options) {
 			function fn_update_section_info() {
 				render_section_info(self)
 			}
-		// active_component (when user focus it in DOM)
+		// activate_component (when user focus it in DOM)
 			self.events_tokens.push(
-				event_manager.subscribe('active_component', fn_active_component)
+				event_manager.subscribe('activate_component', fn_activate_component)
 			)
-			function fn_active_component(actived_component) {
+			function fn_activate_component(actived_component) {
 				render_component_info(self, actived_component)
 			}
 		// deactivate_component

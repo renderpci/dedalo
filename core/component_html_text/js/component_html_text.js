@@ -56,6 +56,7 @@ export const component_html_text = function(){
 	component_html_text.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_html_text.prototype.update_datum		= component_common.prototype.update_datum
 	component_html_text.prototype.change_value		= component_common.prototype.change_value
+	component_html_text.prototype.set_changed_data	= component_common.prototype.set_changed_data
 
 	// render
 	component_html_text.prototype.mini				= render_mini_component_html_text.prototype.mini
