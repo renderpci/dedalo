@@ -774,19 +774,17 @@ component_geolocation.prototype.init_draw_editor = function() {
 		// add Leaflet-Geoman controls with some options to the map
 		map.pm.addControls({
 			position: 'topright',
-			drawCircle: true,
+			drawCircleMarker: false,
+			drawText: false
 		});
 
 		map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
 		// Listener on change the draw editor to "edited mode" for save the the current data of the editable_FeatureGroup
 		// listen to when a layer is changed in Edit Mode
 		map.on('pm:create', (e) => {
-			// const layers = L.PM.Utils.findLayers(map).options
-			console.log("active_layer_id", self.active_layer_id)
-			// e.layer.setStyle({ pmIgnore: false });
-			// L.PM.reInitLayer(e.layer);
-			console.log("create:",e);
+			// get layer active
 			const layer = self.FeatureGroup[self.active_layer_id]
+			// add the new feature to active layer
 			e.layer.addTo(layer)
 			// Update draw_data
 			self.update_draw_data(self.active_layer_id);
