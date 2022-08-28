@@ -360,23 +360,16 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 	// map ready event
 		self.map.whenReady(function(e){
-			//load data into map
-			// const ar_layer 		= self.ar_layer_loaded
-			// const ar_layer_len 	= ar_layer.length
-			// for (let i = 0; i < ar_layer_len; i++) {
-			// 	const layer = ar_layer[i]
-			// 	self.load_layer(layer)
-			// }
+			// check if the map has any layer loaded, if not create new one
+			const check_layer_loaded = self.FeatureGroup[self.active_layer_id]
 
-			// needless (!)
-				// force refresh map (apply 'invalidateSize')
-				// const current_map = this
-				// setTimeout(()=>{
-				// 	// map.invalidateSize();
-				// 	self.refresh_map(current_map)
-				// }, 20)
-
-
+			if(!check_layer_loaded){
+				// load_layer
+					self.layers_loader({
+						load 		: 'layer',
+						layer_id	: self.active_layer_id
+					})
+			}
 		});
 
 	return true
