@@ -2,133 +2,6 @@
 
 
 
-// column_section_id
-	.column.column_section_id {
-		background-color: #f6f6f6;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		// justify-content: flex-start; // vertical
-		// align-items: flex-end; // horizontal
-		// padding: 0px;
-
-		// button (could be button_edit, button_delete)
-		>button.button_edit, >button.button_delete, >button.link_button {
-			display: flex;
-			width: 100%;
-			margin: 0px;
-			padding: 0.5em;
-			border-radius: 0px;
-
-			// justify-content
-			justify-content: flex-end;
-
-			&.link_button {
-				height: 3rem;
-				// padding-right: 0.33rem;
-				font-size: 1.25rem;
-			}
-
-			&.button_edit {
-				justify-content: space-between;
-				// justify-content: flex-end;
-				@media screen and (max-width: @width_break_point_0) {
-					justify-content: flex-start;
-				}
-			}
-
-			&.button_delete {
-				// justify-content: flex-end;
-			}
-
-			&:hover {
-				z-index: 99999;
-
-				// background-color
-				background-color: @color_orange_dedalo;
-				&.button_edit {
-					background-color: @color_green_success;
-				}
-				&.button_delete {
-					background-color: @color_danger;
-				}
-
-				>.section_id {
-					color: #ffffff;
-				}
-				>.icon {
-					background-color: #ffffff;
-				}
-			}
-
-			>.section_id {
-				font-size: 1.25rem;
-				padding-right: 3px;
-				padding-left: 2px;
-			}
-
-			>.icon {
-				height: 1.4rem;
-				width: 1.3rem;
-				margin-right: -2px;
-			}
-		}//end >button
-
-		// drag and drop button
-		>.drag {
-
-			// @see component_portal.less for specific styles
-		}//end >.drag.icon
-
-	}//end .column_section_id
-
-
-
-// column_remove
-	.column.column_remove {
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-start;
-		background-color: #f6f6f6;
-		padding: 0px;
-
-		>button.button_remove {
-			display: flex;
-			width: 100%;
-			margin: 0px;
-			padding: 0.5em;
-			padding-top: 0.75rem;
-			padding-bottom: 0.75rem;
-			border-radius: 0px;
-			justify-content: flex-end;
-
-			// &.button_remove {
-				justify-content: space-between;
-				// justify-content: flex-end;
-				@media screen and (max-width: @width_break_point_0) {
-					justify-content: flex-start;
-				}
-			// }
-
-			>.icon {
-				height: 1.4rem;
-				width: 1.3rem;
-				// margin-right: -2px;
-			}
-
-			&:hover {
-				z-index: 99999;
-				background-color: @color_danger;
-
-				>.icon {
-					background-color: #ffffff;
-				}
-			}
-		}
-	}//end .column_remove
-
-
-
 // list_body. Used in sections and portals in list mode
 	.list_body {
 		display: grid;
@@ -377,7 +250,6 @@
 
 
 
-
 // header_wrapper_list
 	.header_wrapper_list {
 		position: -webkit-sticky;
@@ -558,22 +430,31 @@
 
 // column
 	.column {
+		height: inherit;
 		position: relative;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: flex-start; // vertical alignment
 		justify-content: flex-start; // vertical distribution
 		// background-color: @color_grey_untralight; // @color_grey_untralight
-		outline: 1px solid @color_grey_light;
-		height: inherit;
 		// min-height: 3rem;
 		// height: 100%;
 		// width: 100%;
 		// background-color: #91a4af;
 		// margin: 1px;
+
+		// cell outline
+		outline: 1px solid @color_grey_light;
+
+		// mobile custom
 		@media screen and (max-width: @width_break_point_0) {
 			// width: 72%;
 			// padding-left: 0.3rem;
+		}
+
+		// every column
+		&.column_section {
+			// box-shadow: 0 1px #f1f1f1;
 		}
 
 		&.column_service_time_machine {
@@ -796,3 +677,126 @@
 	}//end id_column
 
 
+// column_section_id
+	.column.column_section_id {
+		background-color: #f6f6f6;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		// justify-content: flex-start; // vertical
+		// align-items: flex-end; // horizontal
+		// padding: 0px;
+
+		// button (could be button_edit, button_delete)
+		>button.button_edit, >button.button_delete, >button.link_button {
+			display: flex;
+			width: 100%;
+			margin: 0px;
+			padding: 0.5em;
+			border-radius: 0px;
+
+			// justify-content
+			justify-content: flex-end;
+
+			&.link_button {
+				height: 3rem;
+				// padding-right: 0.33rem;
+				font-size: 1.25rem;
+			}
+
+			&.button_edit {
+				justify-content: space-between;
+				// justify-content: flex-end;
+				@media screen and (max-width: @width_break_point_0) {
+					justify-content: flex-start;
+				}
+			}
+
+			&.button_delete {
+				// justify-content: flex-end;
+			}
+
+			&:hover {
+				z-index: 99999;
+
+				// background-color
+				background-color: @color_orange_dedalo;
+				&.button_edit {
+					background-color: @color_green_success;
+				}
+				&.button_delete {
+					background-color: @color_danger;
+				}
+
+				>.section_id {
+					color: #ffffff;
+				}
+				>.icon {
+					background-color: #ffffff;
+				}
+			}
+
+			>.section_id {
+				font-size: 1.25rem;
+				padding-right: 3px;
+				padding-left: 2px;
+			}
+
+			>.icon {
+				height: 1.4rem;
+				width: 1.3rem;
+				margin-right: -2px;
+			}
+		}//end >button
+
+		// drag and drop button
+		>.drag {
+
+			// @see component_portal.less for specific styles
+		}//end >.drag.icon
+	}//end .column_section_id
+
+
+
+// column_remove
+	.column.column_remove {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+		background-color: #f6f6f6;
+		padding: 0px;
+
+		>button.button_remove {
+			display: flex;
+			width: 100%;
+			margin: 0px;
+			padding: 0.5em;
+			padding-top: 0.75rem;
+			padding-bottom: 0.75rem;
+			border-radius: 0px;
+			justify-content: flex-end;
+
+			// &.button_remove {
+				justify-content: space-between;
+				// justify-content: flex-end;
+				@media screen and (max-width: @width_break_point_0) {
+					justify-content: flex-start;
+				}
+			// }
+
+			>.icon {
+				height: 1.4rem;
+				width: 1.3rem;
+				// margin-right: -2px;
+			}
+
+			&:hover {
+				z-index: 99999;
+				background-color: @color_danger;
+
+				>.icon {
+					background-color: #ffffff;
+				}
+			}
+		}
+	}//end .column_remove
