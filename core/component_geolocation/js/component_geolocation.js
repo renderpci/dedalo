@@ -561,6 +561,13 @@ component_geolocation.prototype.load_layer = function(layer){
 		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
 
 		L.geoJson( layer_data, {
+			pointToLayer: (feature, latlng) => {
+				if (feature.properties.shape==='circle') {
+					return new L.Circle(latlng, feature.properties.radius);
+				} else {
+					return new L.Marker(latlng);
+				}
+			},
 			//For each Feature load all layer data of the tag
 			onEachFeature: function (feature, current_data_layer) {
 
@@ -886,9 +893,20 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 	// layer_data. get the GeoJson of the active layer (from leaflet)
 		current_layer.layer_data = active_layer.toGeoJSON()
 
-		if (active_layer instanceof L.Circle) {
-			current_layer.layer_data.properties.radius = active_layer.getRadius();
-		}
+		const features = []
+		active_layer.eachLayer(function (layer){
+
+			const json = layer.toGeoJSON();
+			// add layer_id
+			json.properties.layer_id	= layer_id
+
+			if (layer instanceof L.Circle) {
+				json.properties.shape		= "circle";
+				json.properties.radius		= layer.getRadius();
+			}
+			features.push(json)
+		});
+		current_layer.layer_data.features = features
 
 	// value key
 		const key = self.map.getContainer().dataset.key
