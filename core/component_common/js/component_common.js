@@ -570,7 +570,7 @@ component_common.prototype.save = async function(changed_data) {
 						? self.db_data.value
 						: [null]
 
-					self.db_data.value[changed_data.key] = changed_data.value
+					self.db_data.value[changed_data.key] = clone(changed_data.value)
 				}
 
 			// ui. Add save_success class to component wrappers (green line animation)
