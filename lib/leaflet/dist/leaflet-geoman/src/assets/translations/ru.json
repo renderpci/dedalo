@@ -1,0 +1,32 @@
+{
+  "tooltips": {
+    "placeMarker": "Нажмите, чтобы нанести маркер",
+    "firstVertex": "Нажмите, чтобы нанести первый объект",
+    "continueLine": "Нажмите, чтобы продолжить рисование",
+    "finishLine": "Нажмите любой существующий маркер для завершения",
+    "finishPoly": "Выберите первую точку, чтобы закончить",
+    "finishRect": "Нажмите, чтобы закончить",
+    "startCircle": "Нажмите, чтобы добавить центр круга",
+    "finishCircle": "Нажмите, чтобы задать радиус",
+    "placeCircleMarker": "Нажмите, чтобы нанести круговой маркер"
+  },
+  "actions": {
+    "finish": "Завершить",
+    "cancel": "Отменить",
+    "removeLastVertex": "Отменить последнее действие"
+  },
+  "buttonTitles": {
+    "drawMarkerButton": "Добавить маркер",
+    "drawPolyButton": "Рисовать полигон",
+    "drawLineButton": "Рисовать кривую",
+    "drawCircleButton": "Рисовать круг",
+    "drawRectButton": "Рисовать прямоугольник",
+    "editButton": "Редактировать слой",
+    "dragButton": "Перенести слой",
+    "cutButton": "Вырезать слой",
+    "deleteButton": "Удалить слой",
+    "drawCircleMarkerButton": "Добавить круговой маркер",
+    "snappingButton": "Привязать перетаскиваемый маркер к другим слоям и вершинам",
+    "pinningButton": "Связать общие точки вместе"
+  }
+}

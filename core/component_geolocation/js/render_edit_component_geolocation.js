@@ -340,6 +340,11 @@ const get_buttons = (self) => {
 				changed_data	: changed_data,
 				refresh			: false
 			})
+			.then(()=>{
+				// set the data_changed to false to control that the data was changed
+					self.is_data_changed = false
+			})
+
 		})
 
 	// buttons container
