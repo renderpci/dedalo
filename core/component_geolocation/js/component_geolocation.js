@@ -904,6 +904,14 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		// 	? clone(self.data.value[0])
 		// 	: {}
 
+	// publish the change to used by component_text_area from properties like 'hierarchy42'
+		event_manager.publish('updated_layer_data_'+ self.id_base, {
+				layer: {
+					type		: 'geo',
+					layer_id	: layer_id
+				},
+				caller: self
+			})
 
 		self.current_value[key].lib_data = self.ar_layer_loaded
 

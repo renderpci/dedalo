@@ -851,6 +851,57 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 
 
 
+/**
+* UPDATED_LAYER_DATA
+* @param object layer
+* {
+* 	type // type of the layer, it's equivalent to tag.type ('geo', 'svg', ...)
+* 	layer_id // number of the layer, it's equivalent to tag.tag_id ex: 2
+* }
+* @param caller
+* @return promise
+* 	resolve object response
+*/
+component_text_area.prototype.updated_layer_data= function(options) {
+
+	const self = this
+
+	const caller	= options.caller
+	const type		= options.layer.type
+	const layer_id	= options.layer.layer_id
+	const tag_id 	= JSON.stringify(layer_id)
+
+	const tag_obj 	= {
+		type	: type,
+		tag_id	: tag_id
+	}
+
+	// check if the tag exists in the editor
+	const key = 0;
+	const inserted_tag = self.text_editor[key].get_view_tag(tag_obj)
+	// if the editor do not find the tag, create new one
+	if(inserted_tag === false){
+
+		// create new string wrapping selection with new tags
+		// tag state. Default is 'n' (normal)
+			const tag_state = 'n';
+
+		// tag images
+			const geo_view_tag  = self.build_view_tag_obj({
+				type	: type,
+				state	: tag_state,
+				label	: tag_id,
+				data	: ""
+			}, tag_id)
+
+		// const tag = self.build_view_tag_obj(geo_view_tag, tag_id)
+		// insert the new note tag in the caret position of the text_editor
+		const inserted_tag = self.text_editor[key].set_content(geo_view_tag)
+	}
+
+
+}//end updated_layer_data
+
 /*	Persons
 ----------------------------------------------------------------------------------------- */
 
