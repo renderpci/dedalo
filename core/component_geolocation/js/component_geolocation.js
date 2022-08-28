@@ -845,8 +845,12 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		active_layer.eachLayer(function (layer){
 
 			const json = layer.toGeoJSON();
+
 			// add layer_id
-			json.properties.layer_id	= layer_id
+			json.properties = json.properties
+				? json.properties
+				: {}
+			json.properties.layer_id = layer_id
 
 			if (layer instanceof L.Circle) {
 				json.properties.shape		= "circle";
