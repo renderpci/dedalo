@@ -3777,7 +3777,7 @@ abstract class common {
 			}
 
 		return $ar_inverted_paths;
-	}// end get_ar_inverted_paths
+	}//end get_ar_inverted_paths
 
 
 
