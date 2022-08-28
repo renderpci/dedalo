@@ -368,7 +368,7 @@ export function array_equals(source, array) {
 * * The reason this nested helper function is necessary is that
 *   `typeof null` is still "object" in JS, a major "gotcha" to watch out for.
 */
-export function object_equals(obj1, obj2) {
+export function object_equals_DES(obj1, obj2) {
 
 	if (obj1 === obj2) {
 		return true;
@@ -396,6 +396,18 @@ export function object_equals(obj1, obj2) {
 }//end object_equals
 
 
+export function  object_equals (o1, o2){
+
+		// console.log("o1:",JSON.parse(JSON.stringify(o1)));
+		// console.log("o2:",JSON.parse(JSON.stringify(o2)));
+	const equal = typeof o1 === 'object' && Object.keys(o1).length > 0
+		? Object.keys(o1).length === Object.keys(o2).length
+			&& Object.keys(o1).every(p => object_equals(o1[p], o2[p]))
+		: o1 === o2;
+
+	return equal
+}//end object_equals
+
 
 /**
 * IS_EQUAL
@@ -405,9 +417,9 @@ export function object_equals(obj1, obj2) {
 */
 export function is_equal(el1, el2) {
 
-	if (el1==el2) {
-		return true
-	}
+	// if (el1==el2) {
+	// 	return true
+	// }
 
 	if (typeof el1!==typeof el2) {
 		return false
