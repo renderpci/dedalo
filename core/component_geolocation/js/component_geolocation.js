@@ -565,57 +565,12 @@ component_geolocation.prototype.load_layer = function(layer){
 				}
 			},
 			//For each Feature load all layer data of the tag
-			onEachFeature: function (feature, current_data_layer) {
-
-				if(current_data_layer){
-					// PopupContent. get the popup information
-						const content = self.get_popup_content(current_data_layer);
-						if (content) {
-							current_data_layer.bindPopup(content);
-						}//end if(content)
-
-					// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
-						current_data_layer.on('click', function(e) {
-							// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
-								self.active_layer_id = layer_id;
-
-							// change all features and layers for activate or deactivate the edit mode.
-								for (let feature in self.FeatureGroup) {
-
-									if(feature){
-										if(self.FeatureGroup[feature]===self.FeatureGroup[layer_id]){
-											self.FeatureGroup[layer_id].eachLayer(function (layer){
-												// layer.editing.disable();
-												layer.pm.enable()
-												if(!(layer instanceof L.Marker)){
-													layer.setStyle({color: '#31df25'});
-												}
-											});
-										}else{
-
-											//The layers of the actual feature disable and change to green color
-											self.FeatureGroup[feature].eachLayer(function(layer) {
-												// layer.editing.disable();
-												layer.pm.disable()
-												if(!(layer instanceof L.Marker)){
-													layer.setStyle({color: '#3388ff'});
-												}
-											});
-										}
-									}
-								}
-							// current layer activate and change to pink color
-							//e.target.editing.enable();
-							if(!(e.target instanceof L.Marker)){
-								e.target.setStyle({color: '#97009C'});
-							}else{
-								console.log("Not e.target instanceof L.Marker ",);
-							}
-
-						 });
-					// addLayer
-						self.FeatureGroup[layer_id].addLayer(current_data_layer)
-				}// end if (current_data_layer)
+			onEachFeature: function (feature, data_layer) {
+				init_feature({
+					self		: self,
+					data_layer	: data_layer,
+					layer_id	: layer_id
+				})
 			}// end onEachFeature
 		})// end L.geoJson
 	}// end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
@@ -835,6 +790,13 @@ component_geolocation.prototype.init_draw_editor = function() {
 			e.layer.addTo(layer)
 			// Update draw_data
 			self.update_draw_data(self.active_layer_id);
+			// init the feature
+			init_feature({
+				self		: self,
+				data_layer	: e.layer,
+				layer_id	: self.active_layer_id
+			})
+		});
 		});
 
 		// map.on('pm:drawend', (e) => {
@@ -1100,8 +1062,80 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 
 
-/*
-* @method readable_area(area, isMetric, precision): string
+/**
+* INIT_FEATURE
+* private function
+* @param options object with instance data_layer and layer_id
+* {
+* 	self  // current instance with all properties
+*	data_layer // object, the feature data (new or loaded)
+*	layer_id // the int of the layer of the feature
+* }
+* @return
+*/
+const init_feature = function(options) {
+
+	const self			= options.self
+	const data_layer	= options.data_layer
+	const layer_id		= options.layer_id
+
+	// check if the feature has data else do nothing
+	if(data_layer){
+		// PopupContent. get the popup information
+			const content = self.get_popup_content(data_layer);
+			if (content) {
+				data_layer.bindPopup(content);
+			}//end if(content)
+
+		// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
+			data_layer.on('click', function(e) {
+				// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
+					self.active_layer_id = layer_id;
+
+				// change all features and layers for activate or deactivate the edit mode.
+					for (let feature in self.FeatureGroup) {
+
+						if(feature){
+							if(self.FeatureGroup[feature]===self.FeatureGroup[layer_id]){
+								self.FeatureGroup[layer_id].eachLayer(function (layer){
+									// layer.editing.disable();
+									layer.pm.enable()
+									if(!(layer instanceof L.Marker)){
+										layer.setStyle({color: '#31df25'});
+									}
+								});
+							}else{
+
+								//The layers of the actual feature disable and change to green color
+								self.FeatureGroup[feature].eachLayer(function(layer) {
+									// layer.editing.disable();
+									layer.pm.disable()
+									if(!(layer instanceof L.Marker)){
+										layer.setStyle({color: '#3388ff'});
+									}
+								});
+							}
+						}
+					}
+				// current layer activate and change to pink color
+				//e.target.editing.enable();
+				if(!(e.target instanceof L.Marker)){
+					e.target.setStyle({color: '#97009C'});
+				}else{
+					console.log("Not e.target instanceof L.Marker ",);
+				}
+
+			 });
+		// addLayer
+			self.FeatureGroup[layer_id].addLayer(data_layer)
+	}// end if (data_layer)
+
+};//end init_feature
+
+
+
+/**
+* @method readable_area(area, metric ): string
 * @return Returns a readable area string in yards or metric.
 * The value will be rounded as defined by the precision option object.
 */
