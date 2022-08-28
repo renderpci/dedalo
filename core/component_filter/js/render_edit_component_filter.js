@@ -224,13 +224,16 @@ const get_input_element = (i, current_value, self) => {
 				key		: changed_key,
 				value	: changed_value
 			})
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false,
-				remove_dialog	: ()=>{
-					return true
-				}
-			})
+			// self.change_value({
+			// 	changed_data	: changed_data,
+			// 	refresh			: false,
+			// 	remove_dialog	: ()=>{
+			// 		return true
+			// 	}
+			// })
+
+			// fix instance changed_data
+				self.set_changed_data(changed_data)
 		})//end change event
 
 		// checked option set on match

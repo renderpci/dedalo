@@ -231,8 +231,9 @@ const get_custom_events = (self, i, service) => {
 	const custom_events = {}
 
 	custom_events.focus = (evt, options) => {
-
-		event_manager.publish('active_component', self)
+		if (!self.active) {
+			event_manager.publish('activate_component', self)
+		}
 	}//end focus
 
 	custom_events.blur = (evt, options) => {

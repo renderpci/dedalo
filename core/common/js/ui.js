@@ -10,6 +10,7 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {set_before_unload} from '../../common/js/events.js'
 	import '../../common/js/dd-modal.js'
 
 
@@ -195,14 +196,12 @@ export const ui = {
 					}
 
 				// event click . Activate component on event
-					wrapper.addEventListener("click", e => {
+					wrapper.addEventListener('click', (e) => {
 						e.stopPropagation()
 						if (mode.indexOf('edit')===-1) {
 							return
 						}
-						if (!wrapper.classList.contains('active')) {
-							event_manager.publish('active_component', instance)
-						}
+						event_manager.publish('activate_component', instance)
 					})
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
@@ -298,7 +297,7 @@ export const ui = {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					wrapper.addEventListener("click", function(e){
+					wrapper.addEventListener('click', function(e){
 						if (e.altKey) {
 							e.stopPropagation()
 							e.preventDefault()
@@ -632,9 +631,11 @@ export const ui = {
 					// }
 
 				// event click . Activate component on event
-					wrapper.addEventListener("click", e => {
+					wrapper.addEventListener('click', e => {
 						e.stopPropagation()
-						event_manager.publish('active_component', instance)
+						if (!instance.active) {
+							event_manager.publish('activate_component', instance)
+						}
 					})
 
 				wrapper.appendChild(fragment)
@@ -645,102 +646,143 @@ export const ui = {
 
 
 		/**
-		* ACTIVE
+		* ACTIVATE
 		* Set component state as active/inactive by subscription event
 		* @see common events event_manage.publish
 		*
-		* @param object component
+		* @param object self
 		*	Full component instance. Each component that is subscribed
 		* @param object actived_component
 		*	Full component instance. Actual active component
 		* @return bool
 		*/
-		active : (component, actived_component) => {
+		activate : async (self, actived_component) => {
 
-			if (typeof actived_component==='undefined') {
-				console.warn('[ui.component.active]: WARNING. Received undefined actived_component!');
-				return false
-			}
-
-			// match case
-				if (component.id===actived_component.id) {
-
-					// match . Add wrapper css active
-						// component.node.map(function(item_node) {
-							component.node.classList.add('active')
-
-							// event mouse out add to component wrapper
-								// const wrapper = item_node
-								// wrapper.addEventListener('mouseleave', fn_mouseleave, false)
-								// function fn_mouseleave(){
-								// 	// remove event to prevent duplicity
-								// 	wrapper.removeEventListener('mouseleave', fn_mouseleave, false)
-								// 	// blur the active element by forcing the component to save the modified values and to deactivate it
-								// 	document.activeElement.blur()
-								// }
-						// })
-
-					// fix nearby inspector overlapping
-						const el = component.node
-						if (el) {
-							const el_rect	= el.getBoundingClientRect();
-							const inspector	= document.getElementById('inspector')
-							if (inspector) {
-								const inspector_rect = inspector.getBoundingClientRect();
-								// console.log("/// inspector_rect:",inspector_rect);
-								if (inspector_rect.left > 50 // prevent affects responsive mobile view
-									&& el_rect.right > inspector_rect.left-20
-									) {
-									el.classList.add('inside')
-									// const buttons_container = el.querySelector(':scope > .buttons_container')
-									// if (buttons_container) {
-									// 	buttons_container.classList.add('left')
-									// }
-								}
-							}
-						}
-
-					// set as active
-						ui.component.component_active = component
-
-					return true
+			// actived_component mandatory check
+				if (typeof actived_component==='undefined') {
+					console.warn('[ui.component.active]: WARNING. Received undefined actived_component!');
+					return false
 				}
 
-			// inactive by function
-				ui.component.inactive(component)
+			// already active case
+				if (self.active===true) {
+
+					if (self.id===actived_component.id) {
+						console.log('Ignored already self active:', self.id);
+					}else{
+						// deactivate active component
+						console.log('Deactivating self active:', self.id);
+						await ui.component.deactivate(self)
+					}
+					return false
+				}
+
+			// ignore another non match to active
+				if (self.id!==actived_component.id) {
+					return false
+				}
+
+			// match . Add wrapper css active
+				// component.node.map(function(item_node) {
+					self.node.classList.add('active')
+
+					// event mouse out add to component wrapper
+						// const wrapper = item_node
+						// wrapper.addEventListener('mouseleave', fn_mouseleave, false)
+						// function fn_mouseleave(){
+						// 	// remove event to prevent duplicity
+						// 	wrapper.removeEventListener('mouseleave', fn_mouseleave, false)
+						// 	// blur the active element by forcing the component to save the modified values and to deactivate it
+						// 	document.activeElement.blur()
+						// }
+				// })
+
+			// inspector. fix nearby inspector overlapping
+				const wrapper = self.node
+				if (wrapper) {
+					const el_rect	= wrapper.getBoundingClientRect();
+					const inspector	= document.getElementById('inspector')
+					if (inspector) {
+						const inspector_rect = inspector.getBoundingClientRect();
+						// console.log("/// inspector_rect:",inspector_rect);
+						if (inspector_rect.left > 50 // prevent affects responsive mobile view
+							&& el_rect.right > inspector_rect.left-20
+							) {
+							wrapper.classList.add('inside')
+							// const buttons_container = wrapper.querySelector(':scope > .buttons_container')
+							// if (buttons_container) {
+							// 	buttons_container.classList.add('left')
+							// }
+						}
+					}
+				}
+
+			// component active status
+				self.active = true
+
+			// fix component as ui active
+				ui.component.component_active = self
+
+			// custom component deactivate callbacks
+				if (typeof self.activate==='function') {
+					self.activate(true)
+				}
 
 
-			return false
-		},//end active
+			return true
+		},//end activate
 
 
 
 		/**
-		* INACTIVE
-		* Set component state as inactive by callback event
-		* @see util.events event_manage.publish
+		* DEACTIVATE
+		* Removes component active style and save data if
+		* changed_data is different from undefined
+		* @see events event_manage.publish
 		*
 		* @param object component
 		*	Full component instance
-		* @return bool
+		* @return promise
+		* 	Resolve bool saved
 		*/
-		inactive : (component) => {
+		deactivate : async (component) => {
 
-			// not match cases. Remove wrapper css active if exists
-			if(component.node){
-				component.node.classList.remove('active')
-			}
+			// check already inactive
+				if (component.active!==true) {
+					console.log('Ignored component already active:', component.id);
+					return false
+				}
 
-			// service autocomplete remove if active
-				if(component.autocomplete_active===true){
-					component.autocomplete.destroy()
-					component.autocomplete_active = false
-					component.autocomplete = null
+			// styles. Remove wrapper css active if exists
+				if(component.node && component.node.classList.contains('active')) {
+					component.node.classList.remove('active')
+				}
+
+			// changed_data check. This action saves changed_data
+			// and reset component changed_data to undefined
+				if (component.data && component.data.changed_data && component.data.changed_data.length>0) {
+					// set_before_unload(true)
+					await component.change_value({
+						changed_data	: component.data.changed_data,
+						refresh			: false
+					})
+					set_before_unload(false)
+				}
+
+			// component active status
+				component.active = false
+
+			// fix component as ui non active
+				ui.component.component_active = null
+
+			// custom component deactivate callbacks
+				if (typeof component.deactivate==='function') {
+					component.deactivate()
 				}
 
 
-			return false
-		},//end active
+			return true
+		},//end deactivate
 
 
 

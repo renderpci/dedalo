@@ -57,6 +57,7 @@ export const component_select = function(){
 	component_select.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_select.prototype.update_datum			= component_common.prototype.update_datum
 	component_select.prototype.change_value			= component_common.prototype.change_value
+	component_select.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	// component_select.prototype.build_rqo			= common.prototype.build_rqo
 	// component_select.prototype.build_rqo_show	= common.prototype.build_rqo_show
 

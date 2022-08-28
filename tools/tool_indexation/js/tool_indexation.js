@@ -564,7 +564,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 	// 			console.warn("Must to be selected a index tag in text to continue");
 	// 			alert("Please select a tag");
 	// 			// should activate the component (focus)
-	// 			event_manager.publish('active_component', self.transcription_component)
+	// 			event_manager.publish('activate_component', self.transcription_component)
 	// 			return false
 	// 		}
 
