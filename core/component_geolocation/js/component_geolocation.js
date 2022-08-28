@@ -97,7 +97,7 @@ component_geolocation.prototype.init = async function(options) {
 		self.drawControl				= null
 		self.draw_editor_is_initated	= false
 		self.FeatureGroup				= {}
-		self.active_layer_id			= null
+		self.active_layer_id			= 1
 
 	// Data buffer will store the changes send by text area when the tags are removed or inserted
 	// if the user undo the remove tag in the editor, restore for the data_buffer the layer data
@@ -511,15 +511,11 @@ component_geolocation.prototype.load_layer = function(layer){
 	// if( self.map.hasLayer(self.FeatureGroup[layer_id])===false ) {
 	if( typeof self.FeatureGroup[layer_id] === 'undefined'){
 
-
 		// the FeatureGroup is not loaded and does not exist into the map
 		// Create a new FeatureGroup
 		self.FeatureGroup[layer_id] = new L.FeatureGroup();
 		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
 
-		// self.FeatureGroup[layer_id].options.tag_id = layer_id
-		// self.FeatureGroup[layer_id].options = { pmIgnore: true }
-		// self.FeatureGroup[layer_id].options.pmIgnore = false;
 
 		// set the FeatureGroup to the map
 		self.FeatureGroup[layer_id].addTo(self.map);
@@ -532,10 +528,6 @@ component_geolocation.prototype.load_layer = function(layer){
 			self.FeatureGroup[feature].remove()
 		}
 
-		// self.FeatureGroup[layer_id].setStyle({pmIgnore: false});
-		// self.FeatureGroup[layer_id].options.pmIgnore = false; // If the layer is a LayerGroup / FeatureGroup / GeoJSON this line is needed too
-		// L.PM.reInitLayer(self.FeatureGroup[layer_id]);
-
 		// add to the layer control with checkbox and the name of the user
 		self.FeatureGroup[layer_id].addTo(self.map);
 		// self.FeatureGroup[layer_id].options.tag_id = layer_id
@@ -546,13 +538,35 @@ component_geolocation.prototype.load_layer = function(layer){
 	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
 		//remove previous data into the layer
 		self.FeatureGroup[layer_id].clearLayers();
-
+		// update the feature data
 		self.FeatureGroup[layer_id].on('pm:update', (e) => {
 			self.update_draw_data(layer_id);
+			// recalculate the popup
+			const content = self.get_popup_content(e.layer);
+			if (content) {
+				e.layer.bindPopup(content);
+			}//end if(content)
 		});
+		// finish the editing feature data
 		self.FeatureGroup[layer_id].on('pm:edit', (e) => {
 			self.update_draw_data(layer_id);
+			// recalculate the popup
+			const content = self.get_popup_content(e.layer);
+			if (content) {
+				e.layer.bindPopup(content);
+			}//end if(content)
 		});
+
+		self.FeatureGroup[layer_id].on('pm:markerdrag', (e) => {
+			// self.update_draw_data(layer_id);
+			// recalculate the popup
+			const content = self.get_popup_content(e.layer);
+			if (content) {
+				e.layer.bindPopup(content);
+			}//end if(content)
+		});
+
+
 		self.FeatureGroup[layer_id].options.tag_id = layer_id
 		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
 
@@ -795,6 +809,15 @@ component_geolocation.prototype.init_draw_editor = function() {
 				layer_id	: self.active_layer_id
 			})
 		});
+
+		// finish the editing feature data
+		map.on('pm:cut', (e) => {
+			self.update_draw_data(self.active_layer_id);
+			// recalculate the popup
+			const content = self.get_popup_content(e.layer);
+			if (content) {
+				e.layer.bindPopup(content);
+			}//end if(content)
 		});
 
 		// map.on('pm:drawend', (e) => {
@@ -995,6 +1018,10 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 		switch(action) {
 			case 'insert':
+				const layer_loaded = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
+				if(layer_loaded){
+					return
+				}
 				const recover_layer = self.ar_data_buffer[layer_id] ||
 					{
 						layer_id	: layer_id,
