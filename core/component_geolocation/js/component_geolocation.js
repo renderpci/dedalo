@@ -538,6 +538,7 @@ component_geolocation.prototype.load_layer = function(layer){
 	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
 		//remove previous data into the layer
 		self.FeatureGroup[layer_id].clearLayers();
+
 		// update the feature data
 		self.FeatureGroup[layer_id].on('pm:update', (e) => {
 			self.update_draw_data(layer_id);
@@ -547,6 +548,7 @@ component_geolocation.prototype.load_layer = function(layer){
 				e.layer.bindPopup(content);
 			}//end if(content)
 		});
+
 		// finish the editing feature data
 		self.FeatureGroup[layer_id].on('pm:edit', (e) => {
 			self.update_draw_data(layer_id);
@@ -557,6 +559,7 @@ component_geolocation.prototype.load_layer = function(layer){
 			}//end if(content)
 		});
 
+		// when the user drag a handler update the popup data
 		self.FeatureGroup[layer_id].on('pm:markerdrag', (e) => {
 			// self.update_draw_data(layer_id);
 			// recalculate the popup
@@ -901,7 +904,6 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 			})
 
 		self.current_value[key].lib_data = self.ar_layer_loaded
-
 
 	return true
 }//end update_draw_data
