@@ -245,6 +245,8 @@ export const get_input_element_edit = (i, current_value, self) =>{
 					zoom	: zoom,
 					alt		: self.data.value[i].alt,
 				}, map_container)
+			// load all layers
+				self.layers_loader({load:'full'})
 		})
 
 	// map container
