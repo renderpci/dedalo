@@ -58,6 +58,7 @@ export const component_svg = function(){
 	component_svg.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_svg.prototype.update_datum		= component_common.prototype.update_datum
 	component_svg.prototype.change_value		= component_common.prototype.change_value
+	component_svg.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_svg.prototype.build_rqo			= common.prototype.build_rqo
 
 

@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -227,49 +227,85 @@ const get_input_element_edit = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
-	//events
-		input_email.addEventListener('change',function(e) {
-			e.preventDefault();
+		// event focus
+			input_email.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					event_manager.publish('activate_component', self)
+				}
+			})
+		// blur event
+			// input_email.addEventListener('blur', function() {
+			// 	// force to save current input if changed (prevents override changed_data
+			// 	// in multiple values cases)
+			// 	if (self.data.changed_data) {
+			// 		// change_value
+			// 		self.change_value({
+			// 			changed_data	: self.data.changed_data,
+			// 			refresh			: false
+			// 		})
+			// 	}
+			// })
+		// event change
+			input_email.addEventListener('change',function(e) {
+				e.preventDefault();
 
-			// validate
-				const validated = self.verify_email(input_email.value)
-				ui.component.error(!validated, input_email)
-				if (!validated) {
-					return false
-				}
+				// validate
+					const validated = self.verify_email(input_email.value)
+					ui.component.error(!validated, input_email)
+					if (!validated) {
+						return false
+					}
 
-			// save value
-				// set the changed_data for replace it in the instance data
-				// new_value. key is the position in the data array, the value is the new value
-				const new_value = (input_email.value.length>0) ? input_email.value : null
-				// set the changed_data for update the component data and send it to the server for change when save
-				const changed_data = Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: new_value
-				})
-				// update the data in the instance previous to save
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-				// check if the new value is empty or not to remove the mandatory class
-				if(new_value){
-					input_email.classList.remove('mandatory')
-				}else{
-					input_email.classList.add('mandatory')
-				}
-		})//end change
-		input_email.addEventListener('keyup', async function(e) {
-			// page unload event
-				if (e.key!=='Enter') {
-					const key				= i
-					const original_value	= self.db_data.value[key]
-					const new_value			= input_email.value
-					// set_before_unload (bool)
-					set_before_unload(new_value!==original_value)
-				}
-		})//end keyup
+				return
+
+				// save value
+					// set the changed_data for replace it in the instance data
+					// new_value. key is the position in the data array, the value is the new value
+					const new_value = (input_email.value.length>0) ? input_email.value : null
+					// set the changed_data for update the component data and send it to the server for change when save
+					const changed_data = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: new_value
+					})
+					// update the data in the instance previous to save
+					self.change_value({
+						changed_data	: changed_data,
+						refresh			: false
+					})
+					// check if the new value is empty or not to remove the mandatory class
+					if(new_value){
+						input_email.classList.remove('mandatory')
+					}else{
+						input_email.classList.add('mandatory')
+					}
+			})//end change
+		// event keyup
+			input_email.addEventListener('keyup', async function(e) {
+
+				// Enter key force to save changes
+					if (e.key==='Enter') {
+						// force to save current input if changed
+						if (self.data.changed_data.length>0) {
+							// change_value
+							self.change_value({
+								changed_data	: self.data.changed_data,
+								refresh			: false
+							})
+						}
+						return false
+					}
+
+				// change data
+					const changed_data = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: (this.value.length>0) ? this.value : null
+					})
+				// fix instance changed_data
+					self.set_changed_data(changed_data)
+			})//end keyup
 
 
 	// add buttons to the email row
@@ -309,7 +345,6 @@ const get_input_element_edit = (i, current_value, self) => {
 			})
 		}
 
+
 	return content_value
 }//end input_element
-
-

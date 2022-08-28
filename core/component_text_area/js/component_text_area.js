@@ -71,6 +71,7 @@ export const component_text_area = function(){
 	// change data
 	// component_text_area.prototype.save			= component_common.prototype.save
 	component_text_area.prototype.change_value		= component_common.prototype.change_value
+	component_text_area.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_text_area.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_text_area.prototype.update_datum		= component_common.prototype.update_datum
 	component_text_area.prototype.build_rqo			= common.prototype.build_rqo

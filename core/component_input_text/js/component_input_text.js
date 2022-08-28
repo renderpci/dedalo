@@ -61,6 +61,7 @@ export const component_input_text = function(){
 	component_input_text.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_input_text.prototype.update_datum			= component_common.prototype.update_datum
 	component_input_text.prototype.change_value			= component_common.prototype.change_value
+	component_input_text.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_input_text.prototype.build_rqo			= common.prototype.build_rqo
 	// component_input_text.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	// component_input_text.prototype.build_rqo_search	= common.prototype.build_rqo_search
@@ -95,15 +96,30 @@ component_input_text.prototype.init = async function(options) {
 
 
 /**
-* ACTIVE
-* Custom active function triggered after ui.active has finish
+* ACTIVATE
+* Custom activate function triggered after ui.activate has finish
 */
-component_input_text.prototype.active = function() {
+component_input_text.prototype.activate = function(result) {
 
-	// console.log("Yujuu! This is my component custom active test triggered after ui.active. id:", this.id )
+	// place custom component code here after activate
+	console.log('--> component activated. result:', result);
 
 	return true
-}//end active
+}//end activate
+
+
+
+/**
+* DEACTIVATE
+* Custom deactivate function triggered after ui.deactivate has finish
+*/
+component_input_text.prototype.deactivate = function() {
+
+	// place custom component code here after deactivate
+	console.log('--> component deactivated.', this.id);
+
+	return true
+}//end deactivate
 
 
 

@@ -60,6 +60,7 @@ export const component_json = function(){
 	component_json.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_json.prototype.update_datum		= component_common.prototype.update_datum
 	component_json.prototype.change_value		= component_common.prototype.change_value
+	component_json.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_json.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render

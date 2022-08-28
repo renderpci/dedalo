@@ -12,6 +12,39 @@ class component_svg extends component_media_common {
 
 
 	/**
+	* GET DATO
+	* @return array|null $dato
+	* Sample data:
+	* [
+	*  {
+	*    "user_id": -1,
+	*    "upload_date": {
+	*      "day": 27,
+	*      "hour": 17,
+	*      "time": 65009757539,
+	*      "year": 2022,
+	*      "month": 8,
+	*      "minute": 58,
+	*      "second": 59
+	*    },
+	*    "original_file_name": "icon_link.svg"
+	*  }
+	* ]
+	*/
+	public function get_dato() : ?array {
+		$dato = parent::get_dato();
+
+		if (!empty($dato) && !is_array($dato)) {
+			$dato = [$dato];
+		}
+
+		return (array)$dato;
+	}//end get_dato
+
+
+
+
+	/**
 	* GET VALOR
 	* LIST:
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
@@ -25,7 +58,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor_export
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -56,8 +89,8 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET SVG ID
-	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
-	* Se puede sobreescribir en properties con json ej. {"svg_id":"dd851"} y se leerá del contenido del componente referenciado
+	* By default, it is built with the type of the current component_image and the section_id number, eg. 'dd20_rsc750_1'
+	* It can be overwritten in properties with JSON eg. {"svg_id":"dd851"} and will read from the content of the referenced component
 	* @return string|null $svg_id
 	*/
 	public function get_svg_id() : string {
@@ -139,7 +172,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_ADITIONAL_PATH
-	* Calculate image aditional path from 'properties' json config.
+	* Calculate image additional path from 'properties' JSON config.
 	* @return string|null $aditional_path
 	*/
 	public function get_aditional_path() : ?string {
@@ -517,6 +550,66 @@ class component_svg extends component_media_common {
 
 		return $this->extension ?? DEDALO_SVG_EXTENSION;
 	}//end get_extension
+
+
+
+	/**
+	* PROCESS_UPLOADED_FILE
+	* @param object $file_data
+	*	Data from trigger upload file
+	* Format:
+	* {
+	*     "original_file_name": "my_file.svg",
+	*     "full_file_name": "test81_test65_2.svg",
+	*     "full_file_path": "/mypath/media/svg/standard/test81_test65_2.svg"
+	* }
+	* @return object $response
+	*/
+	public function process_uploaded_file(object $file_data) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// short vars
+			$original_file_name	= $file_data->original_file_name;	// kike "my file785.svg"
+			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.svg"
+			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/svg/standard/test81_test65_2.svg"
+
+		// extension
+			$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
+			if (empty($file_ext)) {
+				// throw new Exception("Error Processing Request. File extension is unknow", 1);
+				$msg = ' Error Processing Request. File extension is unknow';
+				debug_log(__METHOD__.$msg, logger::ERROR);
+				$response->msg .= $msg;
+				return $response;
+			}
+
+		// quality default in upload is 'original' (!)
+			$quality  = $this->get_quality();
+
+		// add data with the file uploaded
+			if ($quality===DEDALO_SVG_QUALITY_DEFAULT) {
+
+				$dato			= $this->get_dato();
+				$value			= empty($dato) ? new stdClass() : reset($dato);
+				$media_value	= $this->build_media_value((object)[
+					'value'		=> $value,
+					'file_name'	=> $original_file_name
+				]);
+
+				$this->set_dato([$media_value]);
+				$this->Save();
+			}
+
+		// all is OK
+			$response->result	= true;
+			$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
+
+
+		return $response;
+	}//end process_uploaded_file
 
 
 

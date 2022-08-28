@@ -51,6 +51,7 @@ export const component_section_id = function(){
 	component_section_id.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_section_id.prototype.update_datum			= component_common.prototype.update_datum
 	component_section_id.prototype.change_value			= component_common.prototype.change_value
+	component_section_id.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_section_id.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render

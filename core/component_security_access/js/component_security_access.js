@@ -57,6 +57,7 @@ export const component_security_access = function(){
 	component_security_access.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_security_access.prototype.update_datum		= component_common.prototype.update_datum
 	component_security_access.prototype.change_value		= component_common.prototype.change_value
+	component_security_access.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_security_access.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render

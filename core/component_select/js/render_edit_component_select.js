@@ -119,29 +119,40 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'select',
 			parent			: content_value
 		})
-		select.addEventListener('change', function(){
-			const value = this.value
-				? JSON.parse(this.value)
-				: null
-			if (value) {
-				button_edit.classList.remove('hide')
-			}else{
-				button_edit.classList.add('hide')
-			}
-
-			const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
-
-			const changed_data = Object.freeze({
-				action	: (parsed_value != null) ? 'update' : 'remove',
-				key		: (parsed_value != null) ? i : false,
-				value	: parsed_value
+		// focus event
+			select.addEventListener('focus', function(){
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					event_manager.publish('activate_component', self)
+				}
 			})
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false,
-				remove_dialog	: false
+		// change event
+			select.addEventListener('change', function(){
+				const value = this.value
+					? JSON.parse(this.value)
+					: null
+				if (value) {
+					button_edit.classList.remove('hide')
+				}else{
+					button_edit.classList.add('hide')
+				}
+
+				const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
+
+				const changed_data = Object.freeze({
+					action	: (parsed_value != null) ? 'update' : 'remove',
+					key		: (parsed_value != null) ? i : false,
+					value	: parsed_value
+				})
+				// fix instance changed_data
+					self.data.changed_data = changed_data
+				// force to save on every change
+					self.change_value({
+						changed_data	: changed_data,
+						refresh			: false,
+						remove_dialog	: false
+					})
 			})
-		})//end change event
 
 	// select options
 		const datalist_length = datalist.length

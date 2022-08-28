@@ -47,7 +47,7 @@ render_menu.prototype.edit = async function() {
 			id				: 'quit',
 			parent			: fragment
 		})
-		quit_button.addEventListener("click", () => {
+		quit_button.addEventListener('click', () => {
 			// local_db_data remove in all langs
 				for (let i = 0; i < self.data.langs_datalist.length; i++) {
 					const lang	= self.data.langs_datalist[i].value
@@ -65,7 +65,7 @@ render_menu.prototype.edit = async function() {
 			id				: 'dedalo_icon_top',
 			parent			: fragment
 		})
-		dedalo_icon.addEventListener("click", function(){
+		dedalo_icon.addEventListener('click', function(){
 			window.open('https://dedalo.dev', 'Dédalo Site', []);
 		})
 
@@ -85,7 +85,10 @@ render_menu.prototype.edit = async function() {
 		})
 
 		// click . Manages global click action on the menu items
-			hierarchy.addEventListener("click", (e) => {
+			hierarchy.addEventListener('click', (e) => {
+				// e.stopPropagation()
+				// e.preventDefault()
+
 				// first menu items only (when the ul is the main menu)
 
 				//close all menu items when the menu change to inactive
@@ -119,30 +122,28 @@ render_menu.prototype.edit = async function() {
 							nodes_li[i].classList.remove("menu_li_inactive");
 						}
 					}
-					event.stopPropagation();
 					self.menu_active = true
 				}// end if (self.menu_active===true)
 			})
 
 		// mousedown. document. do global click action on the document body
-			document.addEventListener('mousedown', function(event) {
-				event.stopPropagation();
+			document.addEventListener('mousedown', (e) => {
 				// if the menu is inactive nothing to do
 				if(self.menu_active===false) {
 					return false
 				}
 				// if the user do click in other node than 'a' node, close all nodes, no other action to do
-				if (event.target.tagName.toLowerCase()!=='a') {
+				if (e.target.tagName.toLowerCase()!=='a') {
 					close_all_drop_menu(self)
 				}
 			})
 
 		// keydown. set the escape key to close al menu nodes
-			document.addEventListener('keydown', (event) => {
+			document.addEventListener('keydown', (e) => {
 				if(self.menu_active===false) {
 					return false
 				}
-				if (event.key==='Escape') {
+				if (e.key==='Escape') {
 					close_all_drop_menu(self);
 				}
 			})
@@ -155,7 +156,7 @@ render_menu.prototype.edit = async function() {
 				parent			: fragment,
 				text_content	: 'Ontology'
 			})
-			ontology_link.addEventListener("click", ()=>{
+			ontology_link.addEventListener('click', () => {
 				const url = DEDALO_CORE_URL + '/ontology'
 				const win = window.open(url, '_blank');
 					  win.focus();
@@ -170,10 +171,10 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment
 		})
 		if (username!=='root') {
-			logged_user_name.addEventListener("click", function(e){
+			logged_user_name.addEventListener('click', (e) => {
 				e.stopPropagation();
 
-				// tool_context (minimun created on the fly)
+				// tool_context (minimum created on the fly)
 					const tool_context = {
 						model		: 'tool_user_admin',
 						tool_config	: {
@@ -258,7 +259,8 @@ render_menu.prototype.edit = async function() {
 				}
 			}
 			section_label.addEventListener('click', async (e) => {
-				e.stopPropagation();
+				e.stopPropagation()
+				e.preventDefault()
 
 				// navigate browser from edit to list
 				// Note that internal navigation (based on injected browser history) uses the stored local database
@@ -475,7 +477,7 @@ const item_hierarchy = (options) => {
 
 	// events
 		// mouseover
-			li.addEventListener("mouseover", e => {
+			li.addEventListener('mouseover', (e) => {
 				//e.stopPropagation();
 				if(self.menu_active===false) {
 					return false
@@ -538,7 +540,7 @@ const item_hierarchy = (options) => {
 			});//end mouseover
 
 		// mouseout
-			li.addEventListener("mouseout", e => {
+			li.addEventListener('mouseout', (e) => {
 				// e.stopPropagation();
 				if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
 					close_all_drop_menu(self);
@@ -567,7 +569,9 @@ const item_hierarchy = (options) => {
 		// click
 		// when the user do click publish the tipo to go and set the mode in list
 		// the action can be executed mainly in page, but it can be used for any instance.
-			link.addEventListener("click", e => {
+			link.addEventListener('click', (e) => {
+				// e.preventDefault()
+				// e.stopPropagation()
 
 				// nonactive menu case
 				if (self.menu_active===false) {
@@ -654,14 +658,14 @@ const close_all_drop_menu = function(self) {
 
 /**
 * CLOSE_ALL_CHILDREN
-* Get all nodes childen of the tipo set to them the css to remove the visualization
+* Get all nodes children of the tipo set to them the css to remove the visualization
 * @param string tipo
 * @return bool
 */
 const close_all_children = function(tipo){
 
 	if(tipo){
-		//get the children nodes of the sended tipo and add/remove the css
+		//get the children nodes of the sent tipo and add/remove the css
 		const close_ul = document.getElementById(tipo)
 			  close_ul.classList.remove("menu_ul_displayed");
 			  close_ul.classList.add("menu_ul_hidden");
@@ -687,9 +691,11 @@ const close_all_children = function(tipo){
 * @return promise
 * 	API request response
 */
-const change_lang = async function(event) {
+const change_lang = async function(e) {
+	e.stopPropagation()
+	e.preventDefault()
 
-	const current_lang = event.target.value
+	const current_lang = e.target.value
 
 	const api_response = await data_manager.request({
 		body : {
@@ -697,7 +703,7 @@ const change_lang = async function(event) {
 			dd_api	: 'dd_utils_api',
 			options	: {
 				dedalo_data_lang		: current_lang,
-				dedalo_application_lang	: event.target.id==='dd_data_lang' ? null : current_lang
+				dedalo_application_lang	: e.target.id==='dd_data_lang' ? null : current_lang
 			}
 		}
 	})
@@ -707,5 +713,3 @@ const change_lang = async function(event) {
 
 	return api_response
 }//end change_lang
-
-

@@ -511,8 +511,9 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// focus
 		custom_events.focus = (evt, options) => {
-
-			event_manager.publish('active_component', self)
+			if (!self.active) {
+				event_manager.publish('activate_component', self)
+			}
 		}//end focus
 
 	// blur

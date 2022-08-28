@@ -53,6 +53,7 @@ export const component_iri = function(){
 	component_iri.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_iri.prototype.update_datum		= component_common.prototype.update_datum
 	component_iri.prototype.change_value		= component_common.prototype.change_value
+	component_iri.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_iri.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render

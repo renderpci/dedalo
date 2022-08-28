@@ -777,6 +777,24 @@ final class dd_core_api {
 
 				}else{
 
+					$ar_changed_data = is_array($changed_data)
+						? $changed_data
+						: [$changed_data];
+
+					foreach ($ar_changed_data as $current_changed_data) {
+						// update the dato with the changed data sent by the client
+						$update_result = (bool)$component->update_data_value($current_changed_data);
+						if ($update_result===false) {
+
+							$response->error	 = 1;
+							$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
+							return $response;
+						}
+						$component->Save();
+						// force recalculate dato
+						$dato = $component->get_dato();
+					}
+					/*
 					// update the dato with the changed data sent by the client
 						$update_result = (bool)$component->update_data_value($changed_data);
 
@@ -790,6 +808,7 @@ final class dd_core_api {
 
 					// force recalculate dato
 						$dato = $component->get_dato();
+					*/
 				}
 
 				// pagination. Update offset based on save request (portals)

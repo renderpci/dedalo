@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {when_in_viewport} from '../../common/js/events.js'
@@ -64,12 +64,15 @@ render_edit_component_av.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const value			= self.data.value
-		const inputs_value	= value // is array
+		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const content_value = get_content_value(i, inputs_value[i], self)
