@@ -363,3 +363,136 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* render_text
+* @return
+*/
+export const render_popup_text = function(ar_text_obj) {
+
+	const text_container = ui.create_dom_element({
+		element_type	: 'div',
+	})
+
+	const text_len = ar_text_obj.length
+	for (var i = 0; i < text_len; i++) {
+		const current_obj	= ar_text_obj[i]
+		const label			= current_obj.label || ''
+		const messure		= current_obj.messure || ''
+		const separator		= current_obj.separator === false
+			? false
+			: true
+
+		const text = ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: label + ' ' +messure,
+			parent			: text_container
+		})
+
+		if(separator){
+			const separator = ui.create_dom_element({
+				element_type	: 'br',
+				parent 	: text_container
+			})
+		}
+	}
+
+	return text_container
+}
+
+/**
+* COLOR_PICKER
+* @return
+*/
+export const color_picker = function(self, layer, layer_id) {
+
+	const layer_color = layer.options.color || '#31df25'
+
+	const color_container = ui.create_dom_element({
+		element_type	: 'span'
+	})
+
+	// color_picker
+	const button_color_picker = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'button tool button_color_picker',
+		parent			: color_container
+	})
+	button_color_picker.style.backgroundColor = layer_color
+
+	const text_color = ui.create_dom_element({
+		element_type	: 'input',
+		type			: 'text',
+		value 			: layer_color,
+		class_name		: 'text_color',
+		parent			: color_container
+	})
+	text_color.addEventListener('change', function(e) {
+		button_color_picker.style.backgroundColor = text_color.value
+		layer.setStyle({color: text_color.value});
+		self.update_draw_data(layer_id)
+	})
+
+	const color_wheel_contaniner = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'hide color_wheel_contaniner',
+		parent			: color_container
+	})
+
+	const color_picker = new iro.ColorPicker(color_wheel_contaniner, {
+			// Set the size of the color picker
+			width: 160,
+			// Set the initial color to paper project color
+			color: layer_color,
+			// color wheel will not fade to black when the lightness decreases.
+			wheelLightness: true,
+			// transparency: true,
+			layout: [
+				{
+					component: iro.ui.Wheel, //can be iro.ui.Box
+					options: {
+						sliderShape: 'circle'
+					}
+				},
+				{
+					component: iro.ui.Slider,
+					options: {
+						sliderType: 'value' // can also be 'saturation', 'value', 'alpha' or 'kelvin'
+					}
+				},
+				// {
+				// 	component: iro.ui.Slider,
+				// 	options: {
+				// 		sliderType: 'alpha'
+				// 	}
+				// },
+			]
+		})
+	button_color_picker.addEventListener("mouseup", (e) =>{
+
+		color_wheel_contaniner.classList.toggle('hide')
+	})
+	// color:change event callback
+	// color:change callbacks receive the current color and a changes object
+	const color_selected = (color) =>{
+		// if(this.path !== null){
+		// 	this.path.fillColor = color.hex8String
+		// }
+		layer.setStyle({color: color.hex8String});
+		button_color_picker.style.backgroundColor = color.hex8String
+		text_color.value = color.hex8String
+		// update the instance with the new layer information, prepared to save
+		// (but is not saved directly, the user need click in the save button)
+		self.update_draw_data(layer_id)
+		// event_manager.publish('color_change_'+this.active_layer.data.layer_id, color.hex8String)
+	}
+
+	// listen to a color picker's color:change event
+	color_picker.on(["color:change"], color_selected);
+
+	return color_container
+};//end color_picker
+
+
