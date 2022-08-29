@@ -48,7 +48,6 @@ render_edit_component_filter_records.prototype.edit = async function(options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-		// wrapper.classList.add("with_100")
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -243,27 +242,15 @@ const get_content_value = (i, datalist_item, self) => {
 					// 	set_before_unload(!is_equal)
 					// }
 
-				// Enter key force to save changes
+				// Enter key force to dispatchEvent change
 					if (e.key==='Enter') {
-						// force to save current input if changed
-						if (self.data.changed_data.length>0) {
-							// change_value (save data)
-							self.change_value({
-								changed_data	: self.data.changed_data,
-								refresh			: false
-							})
-						}
+						input_node.dispatchEvent(new Event('change'))
 						return false
 					}
-				// change data
-					const changed_data = Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: (this.value.length>0) ? this.value : null
-					})
 
-				// fix instance changed_data
-					self.set_changed_data(changed_data)
+				// set as changed to prevent accidentally loose unsaved data
+				// Note that because this component have a validator, only change event will be used to save values
+					set_before_unload(true)
 			})//end keyup
 
 
@@ -279,8 +266,7 @@ const get_content_value = (i, datalist_item, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool = self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
