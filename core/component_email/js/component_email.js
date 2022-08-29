@@ -116,9 +116,8 @@ component_email.prototype.verify_email = function(email_value) {
 */
 component_email.prototype.send_email = function(value) {
 
-	const email = value
-
-	if(email.length<=0){
+	const email = value || []
+	if(email.length<1){
 		return false
 	}
 	//window.open('mailto:'+email, '_blank');
