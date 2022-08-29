@@ -25,12 +25,12 @@ export const render_edit_component_filter = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_edit_component_filter.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_filter.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
-		const render_level 	= options.render_level
+	// options
+		const render_level 	= options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data(self)
@@ -46,9 +46,9 @@ render_edit_component_filter.prototype.edit = async function(options={render_lev
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// set pointer to content_data
+		// set pointer s
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end edit
@@ -191,10 +191,6 @@ const get_input_element = (i, current_value, self) => {
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'item_li'
-			// data_set		: {
-			// 	id		: datalist_item.section_tipo +'_'+ datalist_item.section_id,
-			// 	parent	: datalist_item.parent ? (datalist_item.parent.section_tipo +'_'+ datalist_item.parent.section_id) : ''
-			// }
 		})
 
 	// label
@@ -224,13 +220,15 @@ const get_input_element = (i, current_value, self) => {
 				key		: changed_key,
 				value	: changed_value
 			})
-			// self.change_value({
-			// 	changed_data	: changed_data,
-			// 	refresh			: false,
-			// 	remove_dialog	: ()=>{
-			// 		return true
-			// 	}
-			// })
+
+			// direct save
+				// self.change_value({
+				// 	changed_data	: changed_data,
+				// 	refresh			: false,
+				// 	remove_dialog	: ()=>{
+				// 		return true
+				// 	}
+				// })
 
 			// fix instance changed_data
 				self.set_changed_data(changed_data)
@@ -245,8 +243,6 @@ const get_input_element = (i, current_value, self) => {
 					input_node.checked = 'checked'
 			}
 		}
-
-
 
 
 	return li
