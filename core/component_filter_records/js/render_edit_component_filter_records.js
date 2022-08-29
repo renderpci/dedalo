@@ -195,10 +195,10 @@ const get_content_value = (i, datalist_item, self) => {
 					  }
 					: null;
 
-				// key_found. search section tipo key if exists. Remember: data array keys are differents that inputs keys
+				// key_found. search section tipo key if exists. Remember: data array keys are different that inputs keys
 					const current_values	= self.data.value || []
 					const values_length		= current_values.length
-					let key_found			= values_length // default is last (length of arary)
+					let key_found			= values_length // default is last (length of array)
 					for (let j = 0; j < values_length; j++) {
 						if(current_values[j].tipo===section_tipo) {
 							key_found = j;

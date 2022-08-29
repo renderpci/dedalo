@@ -28,7 +28,7 @@ export const render_edit_view_default = function() {
 */
 render_edit_view_default.render = async function(self, options) {
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -45,9 +45,9 @@ render_edit_view_default.render = async function(self, options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end render
@@ -68,6 +68,7 @@ export const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
+		content_data.classList.add('nowrap')
 
 	// build options
 		const datalist_length = datalist.length
@@ -78,7 +79,6 @@ export const get_content_data_edit = function(self) {
 			content_data[i] = input_element_node
 		}
 
-		content_data.classList.add("nowrap")
 
 	return content_data
 }//end get_content_data_edit
@@ -161,7 +161,7 @@ const get_input_element_edit = (i, current_value, self) => {
 		}
 
 	// developer_info
-		const developer_info = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'developer_info show_on_active',
 			text_content	: `[${section_id}]`,

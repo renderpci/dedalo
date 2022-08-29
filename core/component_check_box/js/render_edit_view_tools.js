@@ -46,8 +46,7 @@ render_edit_view_tools.render = async function(self, options) {
 			buttons			: buttons
 		})
 		wrapper.classList.add('view_'+self.context.view)
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
 
 
@@ -71,6 +70,7 @@ const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
+		content_data.classList.add('nowrap')
 
 	// build options
 		const datalist_length = datalist.length
@@ -81,7 +81,6 @@ const get_content_data = function(self) {
 			content_data[i] = input_element_node
 		}
 
-		content_data.classList.add("nowrap")
 
 	return content_data
 }//end get_content_data

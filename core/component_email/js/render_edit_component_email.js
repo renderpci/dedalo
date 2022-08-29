@@ -26,11 +26,11 @@ export const render_edit_component_email = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node
 */
-render_edit_component_email.prototype.edit = async function(options={render_level : 'full'}) {
+render_edit_component_email.prototype.edit = async function(options) {
 
 	const self 	= this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -47,9 +47,9 @@ render_edit_component_email.prototype.edit = async function(options={render_leve
 			content_data	: content_data,
 			buttons			: buttons
 		})
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end edit
@@ -68,7 +68,6 @@ const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-
 
 	// build values
 		const inputs_value = value
@@ -92,8 +91,8 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
-	const mode 			= self.mode
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 

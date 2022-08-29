@@ -759,7 +759,7 @@ export const ui = {
 				}
 
 			// changed_data check. This action saves changed_data
-			// and reset component changed_data to undefined
+			// and reset component changed_data to empty array []
 				if (component.data && component.data.changed_data && component.data.changed_data.length>0) {
 					// set_before_unload(true)
 					await component.change_value({
