@@ -768,47 +768,36 @@ final class dd_core_api {
 					$permissions = $component->get_component_permissions();
 					if($permissions < 2) return $response;
 
+				// changed_data is array always. Check to safe value
+					if (!is_array($changed_data)) {
+						$changed_data = [$changed_data];
+						debug_log(__METHOD__." ERROR. var 'changed_data' expected to be array. Received type: ". gettype($changed_data), logger::ERROR);
+					}
+
 				if ($mode==='search') {
 
 					// force same changed_data (whole dato)
-						$value = $changed_data->value ?? null;
+						$changed_data_item	= reset($changed_data) ?? null;
+						$value				= $changed_data_item ?? null;
 						$component->set_dato([$value]);
-
 
 				}else{
 
-					$ar_changed_data = is_array($changed_data)
-						? $changed_data
-						: [$changed_data];
-
-					foreach ($ar_changed_data as $current_changed_data) {
-						// update the dato with the changed data sent by the client
-						$update_result = (bool)$component->update_data_value($current_changed_data);
-						if ($update_result===false) {
-
-							$response->error	 = 1;
-							$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
-							return $response;
+					// changed_data is array always. Update items
+						foreach ($changed_data as $changed_data_item) {
+							// update the dato with the changed data sent by the client
+							$update_result = (bool)$component->update_data_value($changed_data_item);
+							if ($update_result===false) {
+								$response->error	 = 1;
+								$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
+								return $response;
+							}
 						}
+
+					// save
 						$component->Save();
-						// force recalculate dato
-						$dato = $component->get_dato();
-					}
-					/*
-					// update the dato with the changed data sent by the client
-						$update_result = (bool)$component->update_data_value($changed_data);
-
-					// save the new data to the component
-						if ($update_result===true) {
-							$component->Save();
-						}else{
-							$response->error	 = 1;
-							$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
-						}
-
 					// force recalculate dato
 						$dato = $component->get_dato();
-					*/
 				}
 
 				// pagination. Update offset based on save request (portals)
