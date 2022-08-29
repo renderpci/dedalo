@@ -217,7 +217,7 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 				css_style_sheet,
 				true // skip_insert
 			)
-			console.log('deep_rules:', deep_rules); // used ?
+			// console.log('deep_rules:', deep_rules); // used ?
 			const _joined	= deep_rules.join('; ')
 			const rule		= `
 			${key} {

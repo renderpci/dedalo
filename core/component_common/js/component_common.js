@@ -782,32 +782,32 @@ component_common.prototype.update_datum = async function(new_data) {
 /**
 * UPDATE_DATA_VALUE
 * Updates component data value with changed_data sent by the DOM element
-* changed_data format is:
-* [{
+* @param object changed_data
+* Sample data:
+* {
 *	key		: 0,
 *	value	: input.value,
 *	action	: 'update'
-* }]
-* @param object changed_data
+* }
 * @return bool true
 */
-component_common.prototype.update_data_value = function(changed_data) {
+component_common.prototype.update_data_value = function(changed_data_item) {
 
 	const self = this
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			// console.log("======= update_data_value changed_data:", clone(changed_data));
+			// console.log("======= update_data_value changed_data_item:", clone(changed_data_item));
 			// const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
 			// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
 		}
 
-	// changed_data
-		const action		= changed_data.action
-		const data_key		= typeof changed_data.key!=='undefined'
-			? changed_data.key // (!) allowed int 0 or bool false
+	// changed_data_item
+		const action		= changed_data_item.action
+		const data_key		= typeof changed_data_item.key!=='undefined'
+			? changed_data_item.key // (!) allowed int 0 or bool false
 			: null
-		const changed_value	= changed_data.value
+		const changed_value	= changed_data_item.value
 
 		self.data = self.data || {}
 
@@ -847,6 +847,12 @@ component_common.prototype.update_data_value = function(changed_data) {
 
 /**
 * CHANGE_VALUE (AND SAVE)
+* 	Changes one or more component's values:
+* 		1 - Update self.data.value
+* 		2 - Save values to DDBB
+* 		3 - Reset self.data.changed_data to empty array
+* 	Publish event 'update_value_'+self.id_base
+*
 * @param object options
 * @return promise
 * 	Resolve bool|object (API response)
