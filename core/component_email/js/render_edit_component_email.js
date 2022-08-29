@@ -104,7 +104,7 @@ const get_buttons = (self) => {
 				class_name		: 'button add',
 				parent			: fragment
 			})
-			add_button.addEventListener('mouseup',function(e) {
+			add_button.addEventListener('mouseup',function() {
 				const changed_data = Object.freeze({
 					action	: 'insert',
 					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
@@ -112,24 +112,27 @@ const get_buttons = (self) => {
 				})
 				self.change_value({
 					changed_data	: changed_data,
-					refresh			: true
+					refresh			: false
 				})
-				.then((save_response)=>{
-					const inputs_container	= self.wrapper.content_data.inputs_container
-					const new_input			= get_input_element_edit(changed_data.key, changed_data.value, self)
-					inputs_container.appendChild(new_input)
+				.then(()=>{
+					const new_input	= get_input_element_edit(changed_data.key, changed_data.value, self)
+					self.node.content_data.appendChild(new_input)
+					const input_value = new_input.querySelector('.input_value')
+					if (input_value) {
+						input_value.focus()
+					}
 				})
 			})
 
-			// button_add_input
+		// button send_multiple_email
 			const send_multiple_email = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button email_multiple',
 				parent			: fragment
 			})
 			send_multiple_email.addEventListener('mouseup', async function (e) {
-				const ar_emails = await self.get_ar_emails()
-				const mailto_prefix = 'mailto:?bcc=';
+				const ar_emails		= await self.get_ar_emails()
+				const mailto_prefix	= 'mailto:?bcc=';
 				// ar_mails could be an array with 1 string item with all addresses or more than 1 string when the length is more than length supported by the SO (in Windows 2000 charts)
 				// if the maximum chars is surpassed the string it was spliced in sorted strings and passed as string items of the array
 				// every item of the array will be opened by the user to create the email
@@ -137,7 +140,7 @@ const get_buttons = (self) => {
 
 					const body = ui.create_dom_element({
 						element_type	: 'span',
-						class_name 		: 'body'
+						class_name		: 'body'
 					})
 
 					const body_title = ui.create_dom_element({
