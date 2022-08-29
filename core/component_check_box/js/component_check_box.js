@@ -105,32 +105,39 @@ export const component_check_box = function(){
 * @param string action
 * @param object value
 */
-component_check_box.prototype.get_changed_key = function(action, value) {
+component_check_box.prototype.get_changed_key = function(action, value, source=this.data.value) {
 
-	const self = this
+	// const self = this
+
+	// source usually is self.data.value
+	// source = source || self.data.value
 
 	const changed_key = (() => {
 
 		if (action==='insert') {
 
 			// insert value
-			if (self.data.value) {
+			if (source) {
 
 				// check if value already exists
-				const ar_found = self.data.value.filter(item => item.section_id===value.section_id && item.section_tipo===value.section_tipo)
+				const ar_found = source.filter(item =>
+					item.section_id==value.section_id &&
+					item.section_tipo===value.section_tipo
+				)
 				if (ar_found.length>0) {
 					console.warn("Ignored to add value because already exists:", value)
 				}
 
 				// component common add value and save (without refresh)
-				return self.data.value.length || 0
+				return source.length || 0
 			}
 
 		}else{
 
 			// remove value
-			const value_key = self.data.value.findIndex(item => {
-				return (item.section_id===value.section_id && item.section_tipo===value.section_tipo)
+			const value_key = source.findIndex(item => {
+				return (item.section_id==value.section_id &&
+						item.section_tipo===value.section_tipo)
 			})
 			if (value_key===-1) {
 				console.warn("Error. item not found in values:", value)

@@ -135,8 +135,6 @@ const get_input_element_edit = (i, current_value, self) => {
 				key 	: changed_key,
 				value 	: changed_value
 			})
-			// fix instance changed_data
-				self.data.changed_data = changed_data
 			// force to save on every change
 				self.change_value({
 					changed_data	: changed_data,
