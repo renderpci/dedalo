@@ -138,11 +138,9 @@
 					$data[] = $sub_value;
 				}
 
-
 				// $context	= array_merge($context, $section_json->context);
-				// $data		= array_merge($data, $section_json->data);
-
-			}
+				// $data	= array_merge($data, $section_json->data);
+			}//end foreach ($value as $locator)
 
 			// if (!empty($ar_section_tipo)) {
 			// 	foreach ($ar_section_tipo as $current_section_tipo) {
