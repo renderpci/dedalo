@@ -129,11 +129,11 @@ const get_content_value = (i, current_value, self) => {
 				? self.data.datalist.filter(item => item.section_id==1)[0].value
 				: self.data.datalist.filter(item => item.section_id==2)[0].value
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'update',
 				key		: i,
 				value	: changed_value
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false

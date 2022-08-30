@@ -130,11 +130,11 @@ const get_input_element_edit = (i, datalist_item, self) => {
 		input_label.prepend(input)
 		input.addEventListener('change', function() {
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'update',
 				key		: 0,
 				value	: datalist_value
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false
@@ -152,11 +152,11 @@ const get_input_element_edit = (i, datalist_item, self) => {
 				// remove checked state
 				input.checked = false
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: false,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					label			: self.get_checked_value_label(),
@@ -245,11 +245,11 @@ const get_buttons = (self) => {
 					return true
 				}
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: false,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					label			: self.get_checked_value_label(),//'All',

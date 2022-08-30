@@ -107,11 +107,11 @@ export const get_buttons = (self) => {
 					return true
 				}
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action  : 'remove',
 					key 	: false,
 					value 	: null
-				})
+				})]
 				self.change_value({
 					changed_data : changed_data,
 					label  		 : 'All',

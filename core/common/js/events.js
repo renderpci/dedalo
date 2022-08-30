@@ -61,7 +61,7 @@ export const events_init = function(){
 */
 export const set_before_unload = function(value) {
 	if(SHOW_DEBUG===true) {
-		console.log("///////////////////// set_before_unload value:", value);
+		console.warn("///////////////////// set_before_unload value:", value);
 	}
 
 	// already fixed current value (true/false)

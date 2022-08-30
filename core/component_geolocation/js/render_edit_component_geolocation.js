@@ -333,11 +333,11 @@ const get_buttons = (self) => {
 
 			const key = 0; // fixed key (only one element is allowed)
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action		: 'update',
 				key			: key,
 				value		: self.current_value[key]
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false

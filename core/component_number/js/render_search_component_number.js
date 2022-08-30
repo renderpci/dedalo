@@ -111,11 +111,11 @@ const get_input_element = (i, current_value, self) => {
 				: null
 
 			// changed_data
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'update',
 					key		: i,
 					value	: safe_value
-				})
+				})]
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data)

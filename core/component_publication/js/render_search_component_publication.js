@@ -145,11 +145,11 @@ const get_content_value = (i, current_value, self) => {
 		input.addEventListener('change', function() {
 
 			// changed_data
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'update',
 					key		: i,
 					value	: datalist_value
-				})
+				})]
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data)
@@ -171,11 +171,11 @@ const get_content_value = (i, current_value, self) => {
 				}
 
 				// changed_data
-					const changed_data = Object.freeze({
+					const changed_data = [Object.freeze({
 						action	: 'update',
 						key		: false,
 						value	: null
-					})
+					})]
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data)

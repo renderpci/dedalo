@@ -166,11 +166,11 @@ const get_content_value = (i, current_value, self) => {
 							//      	//console.log("json editor.get():",editor.get());
 							//      	console.log("text editor.getText():",editor.getText());
 
-							// const changed_data = Object.freeze({
+							// const changed_data = [Object.freeze({
 							// 	action	: 'update',
 							// 	key		: 0,
 							// 	value	: editor.get()
-							// })
+							// })]
 							// self.change_value({
 							// 	changed_data : changed_data,
 							// 	refresh 	 : false

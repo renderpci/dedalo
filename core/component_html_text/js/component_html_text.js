@@ -79,11 +79,11 @@ component_html_text.prototype.save_value = async function(key, value) {
 
 	const self = this
 
-	const changed_data = Object.freeze({
+	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: key,
 		value	: (value.length>0) ? value : null
-	})
+	})]
 	self.change_value({
 		changed_data	: changed_data,
 		refresh			: false
@@ -147,11 +147,11 @@ component_html_text.prototype.save_value = async function(key, value) {
 	// //		//top.component_common.changed_original_content = 1;   //if(SHOW_DEBUG===true) console.log(tool_time_machine.changed_original_content)
 	// //
 	// 		////if(SHOW_DEBUG===true) console.log( obj_html_text )
-	// 		const changed_data = Object.freeze({
+	// 		const changed_data = [Object.freeze({
 	// 				action	: 'update',
 	// 				key		: JSON.parse(obj_html_text.dataset.key),
 	// 				value	: (obj_html_text.value.length>0) ? obj_html_text.value : null,
-	// 			})
+	// 			})]
 	// 			self.change_value({
 	// 				changed_data : changed_data,
 	// 				refresh 	 : false
@@ -174,11 +174,11 @@ component_html_text.prototype.save_value = async function(key, value) {
 	// 	// insert
 	// 	if (e.target.matches('.button.add')) {
 
-	// 		const changed_data = Object.freeze({
+	// 		const changed_data = [Object.freeze({
 	// 			action	: 'insert',
 	// 			key		: self.data.value.length,
 	// 			value	: null
-	// 		})
+	// 		})]
 	// 		self.change_value({
 	// 			changed_data : changed_data,
 	// 			refresh 	 : false
@@ -197,11 +197,11 @@ component_html_text.prototype.save_value = async function(key, value) {
 	// 		// force possible input change before remove
 	// 		document.activeElement.blur()
 
-	// 		const changed_data = Object.freeze({
+	// 		const changed_data = [Object.freeze({
 	// 			action	: 'remove',
 	// 			key		: e.target.dataset.key,
 	// 			value	: null
-	// 		})
+	// 		})]
 	// 		self.change_value({
 	// 			changed_data : changed_data,
 	// 			label 		 : e.target.previousElementSibling.value,

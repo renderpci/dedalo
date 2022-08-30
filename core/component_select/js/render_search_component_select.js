@@ -136,11 +136,11 @@ const get_content_value = (i, current_value, self) => {
 
 			const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: (parsed_value != null) ? 'update' : 'remove',
 				key		: (parsed_value != null) ? i : false,
 				value	: parsed_value
-			})
+			})]
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data)

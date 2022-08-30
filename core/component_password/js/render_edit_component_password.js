@@ -110,11 +110,11 @@ const get_content_value = function(i, self) {
 				}
 
 			// save value
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'update',
 					key		: 0,
 					value	: (input.value.length>0) ? input.value : null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: false

@@ -206,11 +206,11 @@ const get_content_value = (i, datalist_item, self) => {
 					}
 
 				// change_value
-					const changed_data = Object.freeze({
+					const changed_data = [Object.freeze({
 						action	: (value===null) ? 'remove' : 'update',
 						key		: key_found,
 						value	: value
-					})
+					})]
 					self.change_value({
 						changed_data	: changed_data,
 						refresh			: false

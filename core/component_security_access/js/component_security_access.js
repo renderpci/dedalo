@@ -312,10 +312,10 @@ component_security_access.prototype.save_changes = async function() {
 		}
 
 	// changed_data build. (!) Note that action is 'set_data' instead 'insert' or 'update', to save whole array data as raw
-		const changed_data = Object.freeze({
+		const changed_data = [Object.freeze({
 			action	: 'set_data',
 			value	: clean_changed_value
-		})
+		})]
 
 	// change_value to save
 		const result = self.change_value({

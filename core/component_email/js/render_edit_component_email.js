@@ -105,11 +105,11 @@ const get_buttons = (self) => {
 				parent			: fragment
 			})
 			add_button.addEventListener('mouseup',function() {
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: false
@@ -266,11 +266,11 @@ const get_input_element_edit = (i, current_value, self) => {
 					// new_value. key is the position in the data array, the value is the new value
 					const new_value = (input_email.value.length>0) ? input_email.value : null
 					// set the changed_data for update the component data and send it to the server for change when save
-					const changed_data = Object.freeze({
+					const changed_data = [Object.freeze({
 						action	: 'update',
 						key		: i,
 						value	: new_value
-					})
+					})]
 					// update the data in the instance previous to save
 					self.change_value({
 						changed_data	: changed_data,
@@ -300,13 +300,13 @@ const get_input_element_edit = (i, current_value, self) => {
 					}
 
 				// change data
-					const changed_data = Object.freeze({
+					const changed_data_item = Object.freeze({
 						action	: 'update',
 						key		: i,
 						value	: (this.value.length>0) ? this.value : null
 					})
 				// fix instance changed_data
-					self.set_changed_data(changed_data)
+					self.set_changed_data(changed_data_item)
 			})//end keyup
 
 
@@ -322,11 +322,11 @@ const get_input_element_edit = (i, current_value, self) => {
 				// force possible input change before remove
 				document.activeElement.blur()
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: i,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					label			: current_value || ' ',

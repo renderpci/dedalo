@@ -98,11 +98,11 @@ const get_content_value = (i, current_value, self) => {
 				const parsed_value = (input.value.length>0) ? input.value : null
 
 			// changed_data
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'update',
 					key		: i,
 					value	: parsed_value
-				})
+				})]
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data)
