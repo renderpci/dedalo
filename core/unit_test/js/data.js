@@ -1,4 +1,4 @@
-import {component_date} from '../../component_date/js/component_date.js'
+// import {component_date} from '../../component_date/js/component_date.js'
 
 
 
@@ -59,15 +59,31 @@ import {component_date} from '../../component_date/js/component_date.js'
 		// 	"section_tipo": "test3",
 		// 	"component_tipo": "test94"
 
-		const section_tipo			= arguments[0][0]
-		const section_id			= arguments[0][1] + '' // string force
-		const from_component_tipo	= arguments[0][2]
+		// const section_tipo			= arguments[0][0]
+		// const section_id			= arguments[0][1] + '' // string force
+		// const from_component_tipo	= arguments[0][2]
+
+		// const value = {
+		// 	section_id		: section_id,
+		// 	section_tipo	: section_tipo,
+		// 	component_tipo	: from_component_tipo
+		// }
+
+		const file_name = random_string(128) + '_' + random_number(99) + '.mp4'
 
 		const value = {
-			section_id		: section_id,
-			section_tipo	: section_tipo,
-			component_tipo	: from_component_tipo
-		}
+			user_id		: -1,
+			upload_date	: {
+				day		: 27,
+				hour	: 12,
+				time	: 65009738806,
+				year	: 2022,
+				month	: 8,
+				minute	: 46,
+				second	: 46
+			},
+			original_file_name : file_name
+		  }
 
 		return value
 	}
