@@ -1,4 +1,4 @@
-/*global it, describe, assert */
+/*global it, describe, assert, page_globals */
 /*eslint no-undef: "error"*/
 
 import {
@@ -45,7 +45,7 @@ describe("components activate", async function() {
 			// TEST activation
 				it(`${element.model}. Activation`, async function() {
 
-					const instance = await check_activate(element)
+					const instance = await get_instance_rendered(element)
 
 					// pointer content_data
 					assert( instance.node, `wrapper DO NOT exists`)
@@ -63,6 +63,7 @@ describe("components activate", async function() {
 					wrapper.click()
 					assert( wrapper.classList.contains('active'), `wrapper activated styles are NOT found`)
 					assert( instance.active===true, `instance property active is NOT set as true`)
+					assert( page_globals.component_active===instance, `page_globals.component_active is NOT set correctly`)
 					content.prepend(wrapper)
 
 					// skip save compare test on some components like password
@@ -72,9 +73,9 @@ describe("components activate", async function() {
 
 					}else{
 						// console.log('instance.data:', instance.data);
-						const value = instance.data.value
-							? instance.data.value[0]
-							: null
+						// const value = instance.data.value
+						// 	? instance.data.value[0]
+						// 	: null
 						// console.log(`${element.model} value:`, value);
 
 						// new_value. Calculated as random proper data for current component
@@ -95,9 +96,10 @@ describe("components activate", async function() {
 					}
 
 					// deactivate current component
-					await ui.component.deactivate(ui.component.component_active)
+					await ui.component.deactivate(page_globals.component_active)
 					assert( !wrapper.classList.contains('active'), `wrapper activated styles are NOT removed`)
 					assert( instance.active===false, `instance property active is NOT set as false`)
+					assert( page_globals.component_active===null, `page_globals.component_active is NOT reset (expected null)`)
 				});
 
 		})//end describe(element.model, function() {
@@ -106,7 +108,7 @@ describe("components activate", async function() {
 });
 
 
-async function check_activate(element) {
+async function get_instance_rendered(element) {
 
 	const component_instance =  await get_instance(element)
 	await component_instance.build(true)
