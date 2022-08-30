@@ -35,7 +35,7 @@ describe("COMPONENTS ACTIVATE", async function() {
 				request_config : request_config // [source]
 			}
 
-		describe(`component: ${element.model} :`, async function() {
+		describe(`component: ${element.model} :`,  function() {
 
 			// const component_instance = await get_instance(element)
 			// await component_instance.build(true)

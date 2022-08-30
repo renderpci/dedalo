@@ -14,7 +14,7 @@ import {
 
 
 
-describe("instances : key_instances (using key_instances_builder)", function() {
+describe("INSTANCES : KEY_INSTANCES (USING KEY_INSTANCES_BUILDER)", function() {
 
 	function make_test (elements, expected) {
 		it(`${JSON.stringify(elements)} => '${expected}'`, async function() {

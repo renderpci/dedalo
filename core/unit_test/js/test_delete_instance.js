@@ -11,7 +11,7 @@ import {get_instance, delete_instance} from '../../common/js/instances.js'
 
 
 
-describe("Instances : delete_instance", function() {
+describe("INSTANCES : DELETE_INSTANCE", function() {
 
 	describe("Delete non existent component_input_text instance. Expected int 0", function() {
 		const expected = 0
