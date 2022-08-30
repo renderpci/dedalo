@@ -28,8 +28,7 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_av_data, // return array
-			new_value_params	: [section_tipo, section_id, 'test94'],
-			test_save			: false
+			new_value_params	: [section_tipo, section_id, 'test94']
 		})
 
 	// component_calculation -to disappear-  (WORKING HERE)

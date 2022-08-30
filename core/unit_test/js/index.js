@@ -14,7 +14,7 @@
 	import './test_delete_instance.js'
 	import './test_components_lifecycle.js'
 	import './test_components_data_changes.js'
-
+	import './test_components_activate.js'
 
 // exec mocha
 	import './exec.js'

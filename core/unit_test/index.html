@@ -5,7 +5,35 @@
 	<link rel="shortcut icon" href="../../favicon.ico" />
 	<title>Dédalo V6 unit test</title>
 	<meta charset="utf-8">
-	<script defer="defer" src="../common/js/environment.js.php" as="script"></script>
+	<style type="text/css">
+		.loading {
+			opacity: 0.4;
+			pointer-events: none !important;
+			-webkit-user-select: none !important;
+			-khtml-user-select: none !important;
+			-moz-user-select: none !important;
+			-o-user-select: none !important;
+			user-select: none !important;
+			/*transition: opacity 0.25s*/
+		}
+		.hide {
+			display: none !important;
+		}
+		.invisible {
+			visibility: hidden !important;
+			opacity: 0 !important;
+			height: 0 !important;
+			width: 0 !important;
+			padding: 0!important;
+			margin: 0!important;
+		}
+		#content {
+			padding: 4rem;
+			padding-top: 0px;
+		}
+	</style>
+	<script defer="defer" rel="preload" src="../common/js/environment.js.php" as="script"></script>
+	<link rel="stylesheet" type="text/css" href="../page/css/main.css">
 
 	<!-- add mocha css, to show results  https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.css | https://unpkg.com/mocha/mocha.css -->
 		<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css">
@@ -35,6 +63,9 @@
 <body>
 	<!-- the element with id="mocha" will contain test results -->
 		<div id="mocha"></div>
+
+	<!-- content -->
+		<div id="content" class="section_record"></div>
 
 	<!-- tests file -->
 		<script type="module" src="js/index.js"></script>

@@ -12,8 +12,11 @@ describe("components data changes", function() {
 
 	for (let i = 0; i < elements.length; i++) {
 
+		// if (elements[i].model!=='component_av') continue;
+
 		// skip save compare test on some components like password
 			if (elements[i].test_save===false) {
+				console.log(`* Skip non test save element ${elements[i].model}:`, elements[i]);
 				continue
 			}
 
@@ -49,18 +52,18 @@ describe("components data changes", function() {
 							await old_instance.build(true)
 
 						// save
-							const changed_data = Object.freeze({
+							const changed_data = [Object.freeze({
 								action	: 'insert',
 								key		: 0,
 								value	: new_value
-							})
+							})]
 							const response = await old_instance.change_value({
 								changed_data	: changed_data,
 								refresh			: false
 							})
 
 							// console.log('--- new_value:', new_value);
-							// console.log('--- response.result:', response.result);
+							console.log('--- response.result:', response.result);
 
 						// api_returned_value
 							const api_returned_value = response.result.data[0] && response.result.data[0].value
