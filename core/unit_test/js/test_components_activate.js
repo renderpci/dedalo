@@ -8,7 +8,7 @@ import {get_instance} from '../../common/js/instances.js'
 import {ui} from '../../common/js/ui.js'
 
 
-describe("components activate", async function() {
+describe("COMPONENTS ACTIVATE", async function() {
 
 	const content = document.getElementById('content');
 	content.addEventListener('click', function(e) {
