@@ -649,6 +649,23 @@
 			align-content: flex-start; // maintain items flow from top to bottom
 			*/
 
+		&.modified {
+			&:after {
+				content: " ";
+				display: block;
+				width: 22px;
+				height: 22px;
+				position: absolute;
+				right: 4px;
+				top: 4px;
+				// background-image: url('../../themes/default/icons/alert.svg');
+				// background-repeat: no-repeat;
+				// background-size: contain;
+				.fn_add_mask('alert.svg');
+				background-color: @color_orange_dedalo;
+			}
+		}
+
 		&.fullscreen {
 			.buttons_fold {
 				top: 0.5rem !important;
