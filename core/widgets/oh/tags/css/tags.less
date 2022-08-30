@@ -25,12 +25,16 @@
 					grid-template-columns: 1fr auto;
 					padding: 0px;
 
-					>.label, .value {
+					>.label, >.value {
 						display: block;
 						padding: 0.2rem;
 						padding-top: 0.1rem;
 						padding-bottom: 0.1rem;
 						font-size: 10.2px;
+
+						.edit & {
+							font-size: inherit;
+						}
 					}
 
 					>.label {
@@ -92,5 +96,11 @@
 		}//end .values_container
 
 	}//end .content_data
+
+	&.edit {
+		.label, .value {
+			font-size: inherit;
+		}
+	}
 
 }//end .wrapper_widget.tags

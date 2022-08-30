@@ -8,7 +8,7 @@ import {get_instance} from '../../common/js/instances.js'
 
 
 
-describe("components Life-cycle", function() {
+describe("COMPONENTS LIFE-CYCLE", function() {
 
 	for (let i = 0; i < elements.length; i++) {
 

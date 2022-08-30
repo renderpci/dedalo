@@ -8,7 +8,7 @@ import {get_instance} from '../../common/js/instances.js'
 
 
 
-describe("components data changes", function() {
+describe("COMPONENTS DATA CHANGES", function() {
 
 	for (let i = 0; i < elements.length; i++) {
 

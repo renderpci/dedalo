@@ -12,7 +12,7 @@ import {tool_lang} from '../../../tools/tool_lang/js/tool_lang.js'
 
 
 
-describe("instances : get_instance (page/component/tool)", function() {
+describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 
 	function make_test(elements, expected) {
 		it(`${JSON.stringify(elements)} => '${expected.name}'`, async function() {
