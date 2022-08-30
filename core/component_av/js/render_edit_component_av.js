@@ -133,67 +133,33 @@ const get_content_value = (i, current_value, self) => {
 				parent			: content_value
 			})
 
-	// build_video_node
-		const build_video_node = function() {
-
-			// source tag
-				const source	= document.createElement('source')
-				source.type		= 'video/mp4'
-				source.src		= video_url
-
-			// video tag
-				const video		= document.createElement('video')
-				if (posterframe_url) {
-					video.poster = posterframe_url
-				}
-				video.controls	= true
-				video.classList.add('posterframe')
-				video.setAttribute('tabindex', 0)
-				video.appendChild(source)
-
-			// keyup event
-				// video.addEventListener("timeupdate", async (e) => {
-				// 	// e.stopPropagation()
-				// 	// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-				// })
-
-			// append the video node to the instance
-				self.video = video
-				content_value.appendChild(video)
-
-			// event
-				// video.addEventListener('canplay', fn_canplay)
-				// function fn_canplay() {
-				// 	// self.main_component.video.removeEventListener('canplay', fn_play);
-				// 	video.play()
-				// }
-
-			return video
-		}
-
 	// video / posterframe cases
 		if (video_url) {
+
+			const video = build_video_node(
+				posterframe_url
+			)
+			// fix pointer
+			content_value.video = video
+			// append node to content_value
+			content_value.prepend(video)
+
 			// observer. Set video node only when it is in viewport (to save browser resources)
 			when_in_viewport(
 				content_value, // node to observe
 				() => { // callback function
 					posterframe.remove()
-					build_video_node()
+					video.src		= video_url
+					video.classList.remove('hide')
 				}
 			)
 		}else{
-			// image default logo
-			// const posterframe = ui.create_dom_element({
-			// 	element_type	: 'img',
-			// 	class_name		: 'posterframe',
-			// 	src				: posterframe_url,
-			// 	parent			: content_value
-			// })
+
 			posterframe.classList.add('link')
-			posterframe.addEventListener('mouseup',function(e) {
+			posterframe.addEventListener('mouseup', function(e) {
 				e.stopPropagation();
 
-				const tool_upload = self.tools.find(el => el.model === 'tool_upload')
+				const tool_upload = self.tools.find(el => el.model==='tool_upload')
 				// open_tool (tool_common)
 					open_tool({
 						tool_context	: tool_upload,
@@ -203,12 +169,107 @@ const get_content_value = (i, current_value, self) => {
 		}
 
 	// quality_selector
-		const quality_selector = get_quality_selector(self)
+		const quality_selector = get_quality_selector(content_value, self)
 		content_value.appendChild(quality_selector)
 
 
 	return content_value
 }//end get_content_value
+
+
+
+/**
+* BUILD_VIDEO_NODE
+*
+* @param string|null posterframe_url
+* @return DOM node video
+*/
+const build_video_node = (posterframe_url) => {
+
+	// source tag
+		const source	= document.createElement('source')
+		source.type		= 'video/mp4'
+		// source.src	= video_url
+
+	// video tag
+		const video		= document.createElement('video')
+		video.classList.add('hide')
+		if (posterframe_url) {
+			video.poster = posterframe_url
+		}
+		video.controls	= true
+		video.classList.add('posterframe')
+		video.setAttribute('tabindex', 0)
+		video.appendChild(source)
+
+	// keyup event
+		// video.addEventListener("timeupdate", async (e) => {
+		// 	// e.stopPropagation()
+		// 	// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
+		// })
+
+	// canplay event
+		// video.addEventListener('canplay', fn_canplay)
+		// function fn_canplay() {
+		// 	// self.main_component.video.removeEventListener('canplay', fn_play);
+		// 	video.play()
+		// }
+
+	return video
+}//end build_video_node
+
+
+
+/**
+* GET_QUALITY_SELECTOR
+*
+* @param object content_value
+* @return DOM node select
+*/
+const get_quality_selector = (content_value, self) => {
+
+	// short vars
+		const data		= self.data
+		const quality	= self.quality || self.context.quality
+		const video		= content_value.video
+
+		const fragment = new DocumentFragment()
+
+	// create the quality selector
+		const quality_selector = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'quality_selector',
+			parent			: fragment
+		})
+		quality_selector.addEventListener('change', (e) =>{
+			const src = e.target.value
+			// self.video.src = src
+			video.src = src
+			// event_manager.publish('image_quality_change_'+self.id, img_src)
+			console.log("src:",src);
+		})
+
+		const quality_list		= data.datalist.filter(el => el.file_exist===true)
+		const quality_list_len	= quality_list.length
+		for (let i = 0; i < quality_list_len; i++) {
+			// create the node with the all qualities sended by server
+			const value = (typeof quality_list[i].url==='undefined')
+				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
+				: quality_list[i].url
+
+			const select_option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: value,
+				text_node		: quality_list[i].quality,
+				parent			: quality_selector
+			})
+			//set the default quality_list to config variable dedalo_image_quality_default
+			select_option.selected = quality_list[i].quality===quality ? true : false
+		}
+
+
+	return quality_selector
+}//end get_quality_selector
 
 
 
@@ -294,52 +355,7 @@ const get_buttons = (self) => {
 
 
 
-/**
-* GET_QUALITY_SELECTOR
-* @return DOM node select
-*/
-const get_quality_selector = (self) => {
 
-	// short vars
-		const data		= self.data
-		const quality	= self.quality || self.context.quality
-
-		const fragment = new DocumentFragment()
-
-	// create the quality selector
-		const quality_selector = ui.create_dom_element({
-			element_type	: 'select',
-			class_name		: 'quality_selector',
-			parent			: fragment
-		})
-		quality_selector.addEventListener("change", (e) =>{
-			const src = e.target.value
-			self.video.src = src
-			// event_manager.publish('image_quality_change_'+self.id, img_src)
-			console.log("src:",src);
-		})
-
-		const quality_list		= data.datalist.filter(el => el.file_exist===true)
-		const quality_list_len	= quality_list.length
-		for (let i = 0; i < quality_list_len; i++) {
-			// create the node with the all qualities sended by server
-			const value = (typeof quality_list[i].url==="undefined")
-				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
-				: quality_list[i].url
-
-			const select_option = ui.create_dom_element({
-				element_type	: 'option',
-				value			: value,
-				text_node		: quality_list[i].quality,
-				parent			: quality_selector
-			})
-			//set the default quality_list to config variable dedalo_image_quality_default
-			select_option.selected = quality_list[i].quality===quality ? true : false
-		}
-
-
-	return quality_selector
-}//end get_quality_selector
 
 
 
