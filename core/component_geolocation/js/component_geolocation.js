@@ -8,7 +8,7 @@
 	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import langs from '../../common/js/lang.json' assert { type: "json" };
+	// import langs from '../../common/js/lang.json' assert { type: "json" };
 	import {render_edit_component_geolocation, render_popup_text, render_color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
 	import {render_mini_component_geolocation} from '../../component_geolocation/js/render_mini_component_geolocation.js'
@@ -37,7 +37,7 @@ export const component_geolocation = function(){
 
 	this.tools
 
-	this.duplicates 	= false
+	this.duplicates = false
 	this.events_tokens
 
 	return true
@@ -118,19 +118,36 @@ component_geolocation.prototype.init = async function(options) {
 			const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
 			load_promises.push( common.prototype.load_style(lib_css_file) )
 
-			await Promise.all(load_promises).then(async function(response){
+			const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
+			load_promises.push( common.prototype.load_script(geo_editor_lib_js_file) )
 
-				const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
-				common.prototype.load_script(geo_editor_lib_js_file)
+			const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
+			load_promises.push( common.prototype.load_style(geo_editor_lib_css_file) )
 
-				const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
-				common.prototype.load_style(geo_editor_lib_css_file)
+			const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
+			load_promises.push( common.prototype.load_script(geo_messure_lib_js_file) )
 
-				const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
-				common.prototype.load_script(geo_messure_lib_js_file)
+			const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
+			load_promises.push( common.prototype.load_script(color_picker_lib_js_file) )
 
-				const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
-				common.prototype.load_script(color_picker_lib_js_file)
+			// load and set JSON langs file
+			load_promises.push(
+				new Promise(function(resolve){
+					data_manager.request({
+						url		: '../common/js/lang.json',
+						method	: 'GET'
+					})
+					.then(function(response){
+						// set json_langs
+						self.json_langs = response
+						resolve(response)
+					})
+				})
+			)
+
+			await Promise.all(load_promises)
+			.then(async function(response){
+				// console.log('All component_geolocation items are loaded:', response);
 			})
 
 
@@ -305,23 +322,26 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		}//end switch(self.context.geo_provider)
 
 
+	// init map editor
+		self.init_draw_editor()
 
-
-	self.init_draw_editor()
-
-	self.map.on('overlayadd', function(e) {
-		self.active_layer_id = e.name
-	})
-	// self.map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
+	// set active layer
+		self.map.on('overlayadd', function(e) {
+			self.active_layer_id = e.name
+		})
+		// self.map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
 
 	// set the lang of the tool
-	const dedalo_lang = page_globals.dedalo_data_lang
-	const lang_obj = langs.find(item => item.dd_lang === dedalo_lang)
-	const lang = lang_obj
-		? lang_obj.tld2
-		: 'en'
-
-	self.map.pm.setLang(lang);
+		const json_langs	= self.json_langs || []
+		if (json_langs.length<1) {
+			console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
+		}
+		const dedalo_lang	= page_globals.dedalo_data_lang
+		const lang_obj		= json_langs.find(item => item.dd_lang===dedalo_lang)
+		const lang			= lang_obj
+			? lang_obj.tld2
+			: 'en'
+		self.map.pm.setLang(lang);
 
 	// disable zoom handlers
 	self.map.scrollWheelZoom.disable();
@@ -367,7 +387,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		})
 
 	// map ready event
-		self.map.whenReady(function(e){
+		self.map.whenReady(function(){
 			// check if the map has any layer loaded, if not create new one
 			const check_layer_loaded = self.FeatureGroup[self.active_layer_id]
 
