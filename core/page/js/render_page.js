@@ -51,9 +51,8 @@ render_page.prototype.edit = async function(options) {
 		// page click
 			wrapper.addEventListener('click', fn_deactivate_components)
 			function fn_deactivate_components() {
-				// active component is set as active on each component activation (ui.activate)
-				if (ui.component.component_active) {
-					ui.component.deactivate(ui.component.component_active)
+				if (page_globals.component_active) {
+					ui.component.deactivate(page_globals.component_active)
 				}
 			}
 
