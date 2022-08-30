@@ -102,10 +102,6 @@ export const ui = {
 
 
 
-		component_active : null,
-
-
-
 		/**
 		* BUILD_WRAPPER_EDIT
 		* Component wrapper unified builder
@@ -720,8 +716,8 @@ export const ui = {
 			// component active status
 				self.active = true
 
-			// fix component as ui active
-				ui.component.component_active = self
+			// fix component as active
+				page_globals.component_active = self
 
 			// custom component deactivate callbacks
 				if (typeof self.activate==='function') {
@@ -771,8 +767,8 @@ export const ui = {
 			// component active status
 				component.active = false
 
-			// fix component as ui non active
-				ui.component.component_active = null
+			// fix component_active as null
+				page_globals.component_active = null
 
 			// custom component deactivate callbacks
 				if (typeof component.deactivate==='function') {
