@@ -75,6 +75,13 @@
 					$pagination->offset	= $offset;
 				$item->pagination = $pagination;
 
+			// references. Add to item if exists
+				if (isset($references)) {
+					$item->references = $references;
+				}
+
+			$data[] = $item;
+
 			// subdata.
 				// $ar_subdata = $this->get_ar_subdata($value);
 
@@ -98,17 +105,17 @@
 					}
 				}else{
 					foreach ($ar_subdata as $current_data) {
-						$data[] =$current_data;
+						$data[] = $current_data;
 					}
 				}
 		}//end if (!empty($dato))
 
-		// references. Add to item if exists
-			if (isset($references)) {
-				$item->references = $references;
-			}
+		// // references. Add to item if exists
+		// 	if (isset($references)) {
+		// 		$item->references = $references;
+		// 	}
 
-		$data[] = $item;
+		// $data[] = $item;
 	}//end if $options->get_data===true && $permissions>0
 
 
