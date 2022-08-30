@@ -9,7 +9,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import langs from '../../common/js/lang.json' assert { type: "json" };
-	import {render_edit_component_geolocation, render_popup_text, color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
+	import {render_edit_component_geolocation, render_popup_text, render_color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
 	import {render_mini_component_geolocation} from '../../component_geolocation/js/render_mini_component_geolocation.js'
 	import {render_search_component_geolocation} from '../../component_geolocation/js/render_search_component_geolocation.js'
@@ -332,19 +332,28 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		self.map.on('dragend', function(e){
 
 			// Update input values
-			self.update_input_values({
-				lat  : self.map.getCenter().lat,
-				lon  : self.map.getCenter().lng,
-				zoom : self.map.getZoom()
-			},map_container)
+			self.update_input_values(
+				key,
+				{
+					lat		: self.map.getCenter().lat,
+					lon		: self.map.getCenter().lng,
+					zoom	: self.map.getZoom()
+				},
+				map_container
+			)
 		});
 		self.map.on('zoomend', function(e){
 			// Update input values
-			self.update_input_values({
-				lat  : self.map.getCenter().lat,
-				lon  : self.map.getCenter().lng,
-				zoom : self.map.getZoom()
-			},map_container)
+			self.update_input_values(
+				key,
+				{
+					key		: key,
+					lat		: self.map.getCenter().lat,
+					lon		: self.map.getCenter().lng,
+					zoom	: self.map.getZoom()
+				},
+				map_container
+			)
 		});
 		self.map.on('click', function(e){
 
@@ -380,18 +389,17 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 * UPDATE_INPUT_VALUES
 * @return bool true
 */
-component_geolocation.prototype.update_input_values = function(data, map_container) {
+component_geolocation.prototype.update_input_values = function(key, data, map_container) {
 
 	const self = this
 
-	const key	= map_container.dataset.key
-	const li	= map_container.parentNode
+	const content_value = map_container.parentNode
 
 	// inputs
-		const input_lat		= li.querySelector("input[data-name='lat']")
-		const input_lon		= li.querySelector("input[data-name='lon']")
-		const input_zoom	= li.querySelector("input[data-name='zoom']")
-		const input_alt		= li.querySelector("input[data-name='alt']")
+		const input_lat		= content_value.querySelector("input[data-name='lat']")
+		const input_lon		= content_value.querySelector("input[data-name='lon']")
+		const input_zoom	= content_value.querySelector("input[data-name='zoom']")
+		const input_alt		= content_value.querySelector("input[data-name='alt']")
 
 	// Set values to inputs
 		input_lat.value  = data.lat
@@ -406,6 +414,17 @@ component_geolocation.prototype.update_input_values = function(data, map_contain
 		self.current_value[key].lon		= data.lon
 		self.current_value[key].zoom	= data.zoom
 		self.current_value[key].alt		= data.alt
+
+	// track changes in self.data.changed_data
+		// changed_data
+			const changed_data_item = Object.freeze({
+				action		: 'update',
+				key			: key,
+				value		: self.current_value[key]
+			})
+		// fix instance changed_data
+			self.set_changed_data(changed_data_item)
+
 
 	return true
 }//end update_input_values
@@ -544,7 +563,9 @@ component_geolocation.prototype.load_layer = function(layer){
 			// recalculate the popup
 			const content = self.get_popup_content(e.layer, layer_id);
 			if (content) {
-				e.layer.bindPopup(content);
+				e.layer.bindPopup(content,{
+					minWidth : 155
+				});
 			}//end if(content)
 		});
 
@@ -554,7 +575,9 @@ component_geolocation.prototype.load_layer = function(layer){
 			// recalculate the popup
 			const content = self.get_popup_content(e.layer, layer_id);
 			if (content) {
-				e.layer.bindPopup(content);
+				e.layer.bindPopup(content,{
+					minWidth : 155
+				});
 			}//end if(content)
 		});
 
@@ -564,7 +587,9 @@ component_geolocation.prototype.load_layer = function(layer){
 			// recalculate the popup
 			const content = self.get_popup_content(e.layer, layer_id);
 			if (content) {
-				e.layer.bindPopup(content);
+				e.layer.bindPopup(content,{
+					minWidth : 155
+				});
 			}//end if(content)
 		});
 
@@ -784,7 +809,7 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 	}
 
 	const text_node		= render_popup_text(ar_mesures)
-	const color_node	= color_picker(self, layer, layer_id)
+	const color_node	= render_color_picker(self, layer, layer_id)
 	text_node.appendChild(color_node)
 
 	return text_node
@@ -862,7 +887,9 @@ component_geolocation.prototype.init_draw_editor = function() {
 			// recalculate the popup
 			const content = self.get_popup_content(e.layer, self.active_layer_id);
 			if (content) {
-				e.layer.bindPopup(content);
+				e.layer.bindPopup(content,{
+					minWidth : 155
+				});
 			}//end if(content)
 		});
 
@@ -926,7 +953,7 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		current_layer.layer_data.features = features
 
 	// value key
-		const key = self.map.getContainer().dataset.key
+		const key = parseInt(self.map.getContainer().dataset.key)
 
 	// current_layer.user_layer_name 	= current_layer.data.user_layer_name
 
@@ -945,6 +972,18 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 			})
 
 		self.current_value[key].lib_data = self.ar_layer_loaded
+
+
+	// track changes in self.data.changed_data
+		// changed_data
+			const changed_data_item = Object.freeze({
+				action		: 'update',
+				key			: key,
+				value		: self.current_value[key]
+			})
+		// fix instance changed_data
+			self.set_changed_data(changed_data_item)
+
 
 	return true
 }//end update_draw_data
@@ -1021,16 +1060,20 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 		// geolocation doesn't has multiple maps and the key of the data array is always 0
 		const key = 0
 		self.current_value = data[key].value
-		self.update_input_values(self.current_value[key], self.node.content_data[key].map_container)
+		self.update_input_values(
+			key,
+			self.current_value[key],
+			self.node.content_data[key].map_container
+		)
 		// move the map to the new point and zoom with the values
 		self.map.panTo(new L.LatLng(self.current_value[key].lat, self.current_value[key].lon));
 		self.map.setZoom(self.current_value[key].zoom);
 		// modify his own data with the new values
-		const changed_data = Object.freeze({
-				action		: 'update',
-				key			: key,
-				value		: self.current_value[key]
-			})
+		const changed_data = [Object.freeze({
+			action		: 'update',
+			key			: key,
+			value		: self.current_value[key]
+		})]
 		self.change_value({
 			changed_data	: changed_data,
 			refresh			: false
@@ -1077,15 +1120,16 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 				self.current_value[key].lib_data = self.ar_layer_loaded
 
-				const recover_changed_data = Object.freeze({
+				const recover_changed_data = [Object.freeze({
 					action		: 'update',
 					key			: key,
 					value		: self.current_value[key]
-				})
+				})]
 				self.change_value({
 					changed_data	: recover_changed_data,
 					refresh			: false
-				}).then(()=>{
+				})
+				.then(()=>{
 					self.db_data.value[key] = clone(self.current_value[key])
 				})
 			break;
@@ -1114,11 +1158,11 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 				self.current_value[key].lib_data = self.ar_layer_loaded
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action		: 'update',
 					key			: key,
 					value		: self.current_value[key]
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: false
@@ -1166,7 +1210,9 @@ const init_feature = function(options) {
 		// PopupContent. get the popup information
 			const content = self.get_popup_content(data_layer, layer_id);
 			if (content) {
-				data_layer.bindPopup(content);
+				data_layer.bindPopup(content,{
+					minWidth : 155
+				});
 			}//end if(content)
 		// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
 			data_layer.on('click', function(e) {
