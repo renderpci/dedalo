@@ -1,10 +1,11 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, L */
+/*global get_label, page_globals, SHOW_DEBUG, iro, L */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -25,12 +26,12 @@ export const render_edit_component_geolocation = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_component_geolocation.prototype.edit = async function(options={render_level:'full'}) {
+render_edit_component_geolocation.prototype.edit = async function(options) {
 
 	const self = this
 
 	// options
-		const render_level = options.render_level
+		const render_level = options.render_level || 'full'
 
 	// fix non value scenarios
 		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
@@ -86,15 +87,15 @@ render_edit_component_geolocation.prototype.edit = async function(options={rende
 */
 export const get_content_data_edit = async function(self) {
 
-	const value				= self.data.value
-	// const is_inside_tool	= self.is_inside_tool
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
+	// value
+		const value = self.data.value
+
 	// inputs - loop with the value array
-		const inputs_value = value//(value.length<1) ? [''] : value
-		const value_length = inputs_value.length
+		const inputs_value	= value //(value.length<1) ? [''] : value
+		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
@@ -136,14 +137,15 @@ export const get_input_element_edit = (i, current_value, self) =>{
 
 		// input field latitude
 			const lat_node = ui.create_dom_element({
-				element_type 	: 'input',
-				type 		 	: 'text',
-				class_name 		: 'geo_active_input lat',
-				dataset 	 	: { name : 'lat' },
-				value 		 	: current_value.lat,
-				parent 		 	: inputs_container
+				element_type	: 'input',
+				type			: 'text',
+				class_name		: 'geo_active_input lat',
+				dataset			: { name : 'lat' },
+				value			: current_value.lat,
+				parent			: inputs_container
 			})
 			lat_node.addEventListener('change', function() {
+				// format and set value
 				self.current_value[i].lat = (lat_node.value.length>0)
 					? JSON.parse(lat_node.value)
 					: null
@@ -169,8 +171,11 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				parent			: inputs_container
 			})
 			lon_node.addEventListener('change', function() {
-				self.current_value[i].lon = (lon_node.value.length>0) ? JSON.parse(lon_node.value) : null
-				//move the map to current value
+				// format and set value
+				self.current_value[i].lon = (lon_node.value.length>0)
+					? JSON.parse(lon_node.value)
+					: null
+				// move the map to current value
 				self.map.panTo(new L.LatLng(self.current_value[i].lat, self.current_value[i].lon));
 			})
 
@@ -192,6 +197,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				parent			: inputs_container
 			})
 			zoom_node.addEventListener('change', function() {
+				// format and set value
 				self.current_value[i].zoom = (zoom_node.value.length>0)
 					? JSON.parse(zoom_node.value)
 					: null
@@ -217,6 +223,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				parent			: inputs_container
 			})
 			alt_node.addEventListener('change', function() {
+				// format and set value
 				self.current_value[i].alt = (alt_node.value.length>0)
 					? JSON.parse(alt_node.value)
 					: null
@@ -225,7 +232,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 	// refresh
 		const refresh_node = ui.create_dom_element({
 			element_type	: 'span',
-			dataset			: { key : i },
+			// dataset		: { key : i },
 			parent			: inputs_container,
 			class_name		: 'map_reload'
 		})
@@ -239,12 +246,17 @@ export const get_input_element_edit = (i, current_value, self) =>{
 	 		self.map.setZoom(zoom)
 
 			// Update input values
-				self.update_input_values({
-					lat		: lat,
-					lon		: lon,
-					zoom	: zoom,
-					alt		: self.data.value[i].alt,
-				}, map_container)
+				self.update_input_values(
+					i,
+					{
+						lat		: lat,
+						lon		: lon,
+						zoom	: zoom,
+						alt		: self.data.value[i].alt
+					},
+					map_container
+				)
+
 			// load all layers
 				self.layers_loader({load:'full'})
 		})
@@ -256,32 +268,24 @@ export const get_input_element_edit = (i, current_value, self) =>{
 			dataset			: { key : i },
 			parent			: content_value
 		})
+		// set pointers
+		content_value.map_container = map_container
 
-	// init the map with the wrapper when container node is in DOM
-		// event_manager.when_in_viewport(map_container, draw_map)
-		// function draw_map() {
-		// 	self.get_map(map_container, current_value)
-		// }
+	// init the map with the wrapper when container node is in viewport
 		if (map_container) {
-			const observer = new IntersectionObserver(function(entries) {
-				// if(entries[0].isIntersecting === true) {}
-				const entry = entries[1] || entries[0]
-				if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-					observer.disconnect();
+			when_in_viewport(
+				map_container,
+				() => {
 					self.get_map(map_container, i)
 					.then(()=>{
 						self.layers_loader({
 							load: 'full'
 						})
 					})
-					// observer.unobserve(entry.target);
 				}
-			}, { threshold: [0] });
-
-			observer.observe(map_container);
+			)
 		}
 
-	content_value.map_container = map_container
 
 	return content_value
 }//end get_input_element_edit
@@ -367,17 +371,18 @@ const get_buttons = (self) => {
 
 
 /**
-* render_text
-* @return
+* RENDER_POPUP_TEXT
+* @param array ar_text_obj
+* @return DOM node text_container
 */
 export const render_popup_text = function(ar_text_obj) {
 
 	const text_container = ui.create_dom_element({
-		element_type	: 'div',
+		element_type : 'div'
 	})
 
 	const text_len = ar_text_obj.length
-	for (var i = 0; i < text_len; i++) {
+	for (let i = 0; i < text_len; i++) {
 		const current_obj	= ar_text_obj[i]
 		const label			= current_obj.label || ''
 		const messure		= current_obj.messure || ''
@@ -385,28 +390,33 @@ export const render_popup_text = function(ar_text_obj) {
 			? false
 			: true
 
-		const text = ui.create_dom_element({
-			element_type	: 'span',
-			inner_html		: label + ' ' +messure,
-			parent			: text_container
-		})
-
-		if(separator){
-			const separator = ui.create_dom_element({
-				element_type	: 'br',
-				parent 	: text_container
+		// text_node
+			ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: label + ' ' +messure,
+				parent			: text_container
 			})
-		}
+
+		// separator_node (br)
+			if(separator) {
+				ui.create_dom_element({
+					element_type	: 'br',
+					parent			: text_container
+				})
+			}
 	}
 
+
 	return text_container
-}
+}//end render_popup_text
+
+
 
 /**
-* COLOR_PICKER
-* @return
+* RENDER_COLOR_PICKER
+* @return DOM node color_container
 */
-export const color_picker = function(self, layer, layer_id) {
+export const render_color_picker = function(self, layer, layer_id) {
 
 	const layer_color = layer.options.color || '#31df25'
 
@@ -429,7 +439,7 @@ export const color_picker = function(self, layer, layer_id) {
 		class_name		: 'text_color',
 		parent			: color_container
 	})
-	text_color.addEventListener('change', function(e) {
+	text_color.addEventListener('change', function() {
 		button_color_picker.style.backgroundColor = text_color.value
 		layer.setStyle({color: text_color.value});
 		self.update_draw_data(layer_id)
@@ -441,7 +451,9 @@ export const color_picker = function(self, layer, layer_id) {
 		parent			: color_container
 	})
 
-	const color_picker = new iro.ColorPicker(color_wheel_contaniner, {
+	const color_picker = new iro.ColorPicker(
+		color_wheel_contaniner,
+		{
 			// Set the size of the color picker
 			width: 160,
 			// Set the initial color to paper project color
@@ -469,9 +481,9 @@ export const color_picker = function(self, layer, layer_id) {
 				// 	}
 				// },
 			]
-		})
-	button_color_picker.addEventListener("mouseup", (e) =>{
-
+		}
+	)//end new iro.ColorPicker
+	button_color_picker.addEventListener('mouseup', () =>{
 		color_wheel_contaniner.classList.toggle('hide')
 	})
 	// color:change event callback
@@ -492,7 +504,6 @@ export const color_picker = function(self, layer, layer_id) {
 	// listen to a color picker's color:change event
 	color_picker.on(["color:change"], color_selected);
 
+
 	return color_container
-};//end color_picker
-
-
+}//end render_color_picker
