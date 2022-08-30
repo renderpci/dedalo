@@ -215,7 +215,7 @@ const get_input_element = (i, current_value, self) => {
 			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
 			const changed_value	= (action==='insert') ? datalist_value : null
 
-			const changed_data = Object.freeze({
+			const changed_data_item = Object.freeze({
 				action	: action,
 				key		: changed_key,
 				value	: changed_value
@@ -231,7 +231,7 @@ const get_input_element = (i, current_value, self) => {
 				// })
 
 			// fix instance changed_data
-				self.set_changed_data(changed_data)
+				self.set_changed_data(changed_data_item)
 		})//end change event
 
 		// checked option set on match
@@ -306,20 +306,15 @@ const get_buttons = (self) => {
 				return true
 			}
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'remove',
 				key		: false,
 				value	: null
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				label			: 'All',
 				refresh			: true
-			})
-			.then((api_response)=>{
-				// rebuild and save the component
-				// event_manager.publish('reset_element_'+self.id, self)
-				// event_manager.publish('save_component_'+self.id, self)
 			})
 
 			return true

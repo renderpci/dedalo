@@ -88,11 +88,11 @@ const add_events = function(self, wrapper) {
 						}
 					}
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: (value===null) ? 'remove' : 'update',
 					key		: key_found,
 					value	: value
-				})
+				})]
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data)

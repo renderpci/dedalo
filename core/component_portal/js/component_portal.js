@@ -210,6 +210,8 @@ component_portal.prototype.build = async function(autoload=false) {
 			context	: []
 		}
 		self.data = self.data || {}
+		// changed_data. Set as empty array always
+		self.data.changed_data = []
 
 	// rqo
 		const generate_rqo = async function() {
@@ -402,6 +404,9 @@ component_portal.prototype.build = async function(autoload=false) {
 			//console.log("========= build self.pagination.total:",self.pagination.total);
 		}
 
+	// set the server data to preserve the data that is saved in DDBB
+		self.db_data = clone(self.data)
+
 	// status update
 		self.status = 'builded'
 
@@ -452,11 +457,11 @@ component_portal.prototype.add_value = async function(value) {
 
 	// changed_data
 		const key			= self.total || 0
-		const changed_data	= Object.freeze({
+		const changed_data	= [Object.freeze({
 			action	: 'insert',
 			key		: key,
 			value	: value
-		})
+		})]
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -834,12 +839,12 @@ component_portal.prototype.sort_data = function(options) {
 	const target_key	= options.target_key
 
 	// sort_data
-		const changed_data = Object.freeze({
+		const changed_data = [Object.freeze({
 			action		: 'sort_data',
 			source_key	: source_key,
 			target_key	: target_key,
 			value		: value
-		})
+		})]
 
 		self.change_value({
 			changed_data	: changed_data,

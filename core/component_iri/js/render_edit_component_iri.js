@@ -166,11 +166,11 @@ const get_content_value = (i, current_value, self) => {
 			// force possible input change before remove
 			document.activeElement.blur()
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'remove',
 				key		: i,
 				value	: null
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				label			: button_remove.previousElementSibling.value,
@@ -216,11 +216,11 @@ const update_value = function(self, i) {
 	return new Promise(function(resolve){
 
 		// change_value
-		const changed_data = Object.freeze({
+		const changed_data = [Object.freeze({
 			action	: 'update',
 			key		: i,
 			value	: full_value
-		})
+		})]
 		self.change_value({
 			changed_data	: changed_data,
 			refresh			: false
@@ -286,11 +286,11 @@ const get_buttons = (self) => {
 			button_add_input.addEventListener('click', function(e) {
 				e.stopPropagation()
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: self.data.value.length,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: true

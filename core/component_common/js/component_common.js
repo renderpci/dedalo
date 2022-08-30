@@ -414,11 +414,11 @@ export const init_events_subscription = function(self) {
 * SAVE
 *
 * @param object changed_data
-* 	{
+* 	[{
 * 		action : "update",
 * 		key : 0,
 * 		value : "XXX"
-* 	}
+* 	}]
 * @return promise save_promise
 */
 component_common.prototype.save = async function(changed_data) {
@@ -426,13 +426,14 @@ component_common.prototype.save = async function(changed_data) {
 	const self = this
 
 	// check data
-		if (typeof changed_data==='undefined') {
+		if (typeof changed_data==='undefined' || !Array.isArray(changed_data) || changed_data.length<1) {
 			if(SHOW_DEBUG===true) {
 				console.error("+++++ Invalid changed_data [stop save]:", changed_data)
 				console.trace()
 			}
-			const msg = "Error on save. changed_data is undefined!"
-			alert("Error on save. changed_data is undefined!")
+			const msg = "Error on save. changed_data is undefined or empty!"
+			console.error('msg:', msg);
+			alert("Error on save. changed_data is undefined or empty!")
 
 			// dispatch event save
 				event_manager.publish('save', {
@@ -444,13 +445,23 @@ component_common.prototype.save = async function(changed_data) {
 			return false
 		}
 
-	// check data is changed
-		if (changed_data.action==='update') {
-			const original_value	= self.db_data.value[changed_data.key]
-			const new_value			= changed_data.value
+	// check data is changed (only action=update items)
+		const update_items			= changed_data.filter(el => el.action==='update')
+		const update_items_length	= update_items.length
+		if (update_items_length>0) {
+			const ar_equals = []
+			for (let i = 0; i < update_items_length; i++) {
 
-			// console.log("original_value:", original_value, new_value, new_value==original_value);
-			if (is_equal(new_value, original_value)) {
+				const changed_data_item = update_items[i]
+
+				const original_value	= self.db_data.value[changed_data_item.key]
+				const new_value			= changed_data_item.value
+
+				if (is_equal(new_value, original_value)) {
+					ar_equals.push(changed_data_item)
+				}
+			}
+			if (ar_equals.length===update_items_length) {
 				// dispatch event save
 					event_manager.publish('save', {
 						instance		: self,
@@ -498,14 +509,18 @@ component_common.prototype.save = async function(changed_data) {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
-					dd_console(`component_common save api_response`, 'DEBUG', api_response)
+					dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
 
 				// debug
 					if(SHOW_DEBUG===true) {
 						if (api_response.result) {
 							// const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
 							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
-							console.log(`[component_common.save] action:'${changed_data.action}' lang:'${self.context.lang}', key:'${changed_data.key}'`);
+							const changed_data_length = changed_data.length
+							for (let i = 0; i < changed_data_length; i++) {
+								const item = changed_data[i]
+								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}'`);
+							}
 							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
 							console.log("[component_common.save] api_response:", api_response);
 						}else{
@@ -582,7 +597,12 @@ component_common.prototype.save = async function(changed_data) {
 
 			// page unload event set as false (reset)
 				set_before_unload(false)
-		}
+
+			// remove style modified to wrapper node
+				if (self.node && self.node.classList.contains('modified')) {
+					self.node.classList.remove('modified')
+				}
+			}
 
 		// dispatch save event
 			event_manager.publish('save', {
@@ -876,6 +896,10 @@ component_common.prototype.change_value = async function(options) {
 		const refresh				= typeof options.refresh!=='undefined' ? options.refresh : false
 		const build_autoload		= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
 		const custom_remove_dialog	= options.remove_dialog // undefined|function|bool
+
+		if (!Array.isArray(changed_data)) {
+			throw `Exception: changed_data is not as expected (array). ` + typeof changed_data;
+		}
 
 	// remove dialog. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
 		if (action==='remove') {
@@ -1198,8 +1222,8 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 
 	const self = this
 
-	// debug
-		console.log('+++++++++++++++++++++++++++++ self.data.changed_data:', self.data.changed_data);
+	// changed_data. Set as empty array always
+		self.data.changed_data = self.data.changed_data || []
 
 	// set changed_data item
 		const key = self.data.changed_data.findIndex(el => el.key===changed_data_item.key)
@@ -1213,6 +1237,14 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 
 	// prevents user navigate loosing changes without warning
 		set_before_unload(true)
+
+	// add style modified to wrapper node
+		if (!self.node.classList.contains('modified')) {
+			self.node.classList.add('modified')
+		}
+
+	// debug
+		console.log('+++++++++++++++++++++++++++++ self.data.changed_data:', clone(self.data.changed_data));
 
 
 	return true

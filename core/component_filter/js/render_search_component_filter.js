@@ -190,11 +190,11 @@ const get_input_element = (i, current_value, self) => {
 			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
 			const changed_value	= (action==='insert') ? datalist_value : null
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: action,
 				key		: changed_key,
 				value	: changed_value
-			})
+			})]
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data)

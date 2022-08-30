@@ -282,11 +282,11 @@ render_edit_view_line.render_column_remove = function(options) {
 			// unlink_record
 				const unlink_record = function() {
 					// changed_data
-					const changed_data = Object.freeze({
+					const changed_data = [Object.freeze({
 						action	: 'remove',
 						key		: paginated_key,
 						value	: null
-					})
+					})]
 					// change_value (implies saves too)
 					// remove the remove_dialog it's controlled by the event of the button that call
 					// prevent the double confirmation

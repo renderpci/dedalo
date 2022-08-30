@@ -766,7 +766,6 @@ export const ui = {
 						changed_data	: component.data.changed_data,
 						refresh			: false
 					})
-					set_before_unload(false)
 				}
 
 			// component active status

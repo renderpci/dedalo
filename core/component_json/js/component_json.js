@@ -175,11 +175,11 @@ component_json.prototype.save_sequence = async function(editor) {
 	// save sequence
 		return new Promise(function(resolve){
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'update',
 				key		: 0,
 				value	: current_value
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false

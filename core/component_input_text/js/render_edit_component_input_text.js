@@ -150,14 +150,14 @@ const get_content_value = (i, current_value, self) => {
 					}
 
 				// change data
-					const changed_data = Object.freeze({
+					const changed_data_item = Object.freeze({
 						action	: 'update',
 						key		: i,
 						value	: (this.value.length>0) ? this.value : null
 					})
 
 				// fix instance changed_data
-					self.set_changed_data(changed_data)
+					self.set_changed_data(changed_data_item)
 			})
 		// change event
 			// input.addEventListener('change', async function() {
@@ -173,11 +173,11 @@ const get_content_value = (i, current_value, self) => {
 			// 			}
 			// 		}
 			// 	// change data
-			// 		const changed_data = Object.freeze({
+			// 		const changed_data = [Object.freeze({
 			// 			action	: 'update',
 			// 			key		: i,
 			// 			value	: (input.value.length>0) ? input.value : null
-			// 		})
+			// 		})]
 			// 		self.change_value({
 			// 			changed_data	: changed_data,
 			// 			refresh			: false
@@ -199,11 +199,11 @@ const get_content_value = (i, current_value, self) => {
 
 				const current_value = input.value ? input.value : null
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: i,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					label			: current_value,
@@ -241,11 +241,11 @@ const get_buttons = (self) => {
 			button_add.addEventListener('click', function(e) {
 				e.stopPropagation()
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: self.data.value.length,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: true

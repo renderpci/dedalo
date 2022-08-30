@@ -91,11 +91,11 @@ export const add_events = function(self, wrapper) {
 					}
 					const label = ar_label.join(', ')
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: JSON.parse(e.target.dataset.key),
 					value	: null
-				})
+				})]
 
 				const changed = self.change_value({
 					changed_data	: changed_data,

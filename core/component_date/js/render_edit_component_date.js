@@ -118,11 +118,11 @@ const get_buttons = (self) => {
 			// event to insert new input
 			button_add_input.addEventListener('mouseup', function() {
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: self.data.value.length,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: true
@@ -211,11 +211,11 @@ export const get_input_element_edit = (i, current_value, self) => {
 
 				const current_value = input_node.value ? input_node.value : null
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: i,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					label			: current_value,
@@ -426,11 +426,11 @@ const input_element_period = (i, current_value, self) => {
 				value.period.day = new_day
 			}
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'update',
 				key		: i,
 				value	: value
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false
@@ -491,11 +491,11 @@ const input_element_time = (i, current_value, self) => {
 
 		const value = {start:response.result}
 
-		const changed_data = Object.freeze({
+		const changed_data = [Object.freeze({
 			action	: 'update',
 			key		: i,
 			value	: value
-		})
+		})]
 		self.change_value({
 			changed_data	: changed_data,
 			refresh			: false
@@ -508,7 +508,7 @@ const input_element_time = (i, current_value, self) => {
 			class_name		: 'input-group-addon button calendar hidden_button ',
 			parent			: input_wrap
 		})
-		button_calendar.addEventListener('mouseup', function(evy){
+		button_calendar.addEventListener('mouseup', function() {
 
 			const default_time		= input.value
 			const ar_time_format	= ['H','i','S']
@@ -591,11 +591,11 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 
 			value[mode] = new_value
 
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'update',
 				key		: i,
 				value	: value
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false

@@ -244,11 +244,11 @@ const get_content_value = function(i, current_value, self) {
 						? parseInt(this.value)
 						: null
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'update',
 					key		: i,
 					value	: current_value
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: false

@@ -111,11 +111,11 @@ const get_content_value = (i, current_value, self) => {
 				: null
 
 			// change data
-			const changed_data = Object.freeze({
+			const changed_data = [Object.freeze({
 				action	: 'update',
 				key		: i,
 				value	: safe_value
-			})
+			})]
 			self.change_value({
 				changed_data	: changed_data,
 				refresh			: false
@@ -148,11 +148,11 @@ const get_content_value = (i, current_value, self) => {
 
 				const current_value = input.value ? input.value : null
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: i,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					label			: current_value,
@@ -191,11 +191,11 @@ const get_buttons = (self) => {
 			})
 			button_add_input.addEventListener('mouseup', function() {
 
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: self.data.value.length,
 					value	: null
-				})
+				})]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: true

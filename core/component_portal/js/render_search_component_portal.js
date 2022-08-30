@@ -206,11 +206,11 @@ const render_column_remove = function(options) {
 
 			const unlink_record = function() {
 				// changed_data
-				const changed_data = Object.freeze({
+				const changed_data = [Object.freeze({
 					action	: 'remove',
 					key		: false,
 					value	: null
-				})
+				})]
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data)
 				// set data.changed_data. The change_data to the instance

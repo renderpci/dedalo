@@ -278,11 +278,11 @@ component_text_area.prototype.set_value = function(value) {
 
 	const self = this
 
-	const changed_data = Object.freeze({
+	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: value.key,
 		value	: value.value
-	})
+	})]
 	return self.change_value({
 		changed_data	: changed_data,
 		refresh			: true
@@ -309,11 +309,11 @@ component_text_area.prototype.save_value = function(key, value) {
 	// const old_data = self.data.value[key]
 	// if(string_value === old_data) return false
 
-	const changed_data = Object.freeze({
+	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: key,
 		value	: (new_data.length>0) ? new_data : null
-	})
+	})]
 	const js_promise = self.change_value({
 		changed_data	: changed_data,
 		refresh			: false
