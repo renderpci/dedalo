@@ -217,189 +217,222 @@ class ts_object extends Accessors {
 
 		# Global object
 		$childrens_data = new stdClass();
-			$childrens_data->section_tipo 	= $this->section_tipo;
-			$childrens_data->section_id		= $this->section_id;
-			$childrens_data->modo 			= 'edit';	//'list_thesaurus';
-			$childrens_data->lang 			= DEDALO_DATA_LANG;
-			$childrens_data->is_descriptor	= true;
-			$childrens_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);			
+			$childrens_data->section_tipo				= $this->section_tipo;
+			$childrens_data->section_id					= $this->section_id;
+			$childrens_data->modo						= 'edit';	//'list_thesaurus';
+			$childrens_data->lang						= DEDALO_DATA_LANG;
+			$childrens_data->is_descriptor				= true;
+			$childrens_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
 			$childrens_data->permissions_button_new		= $this->get_permissions_element('button_new');
-			$childrens_data->permissions_button_delete 	= $this->get_permissions_element('button_delete');
-			$childrens_data->permissions_indexation 	= $this->get_permissions_element('component_relation_index');
-			$childrens_data->permissions_structuration 	= $this->get_permissions_element('component_relation_struct');
-			$childrens_data->ar_elements 	= array();
+			$childrens_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
+			$childrens_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
+			$childrens_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
+			$childrens_data->ar_elements				= array();
 
 		$model = isset($this->options->model) ? $this->options->model : null;
-		
+
+		// short vars
+			$separator = ' ';
+
 		# ELEMENTS
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
-			#dump($ar_elements, ' $ar_elements ++ '.to_string($childrens_data));
+			// dump($ar_elements, ' $ar_elements ++ '.to_string($childrens_data));
 			#debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 		foreach ($ar_elements as $k_element_tipo => $current_object) {
 
-			$element_tipo= $current_object->tipo;
-			$render_vars = $current_object;
+			$current_element_tipo	= $current_object->tipo;
+			$render_vars			= $current_object;
 			#debug_log(__METHOD__."  ".to_string($render_vars), logger::DEBUG);
 
-			if (empty($element_tipo)) {
-				debug_log(__METHOD__." Error. Empty element_tipo in current_object: ".to_string($current_object), logger::DEBUG);
-				continue;
-			}
-
-			# No descriptors do not have children. Avoid calculate childrens
-			if ($childrens_data->is_descriptor===false && $render_vars->type==='link_childrens') {
-				continue;
-			}
-			
-			# Each element
-			$element_obj = new stdClass();
-				$element_obj->type = $render_vars->type;
-				$element_obj->tipo = $element_tipo;
-				
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-				$component 	 = component_common::get_instance($modelo_name,
-															  $element_tipo,
-															  $this->section_id,
-															  'list_thesaurus',
-															  DEDALO_DATA_LANG,
-															  $this->section_tipo);
-				$dato = $component->get_dato();
-				if ($modelo_name==='component_autocomplete_hi') {
-
-					$dato = $component->get_valor();
-
-				}else if ($modelo_name==='component_input_text') {
-					
-					$dato = $component->get_valor(0);
-						#debug_log(__METHOD__." $dato ".to_string($dato), logger::DEBUG);
-					#$dato = component_common::extract_component_value_fallback($component,DEDALO_DATA_LANG,true);
-				
-				}else if ($modelo_name==='component_relation_related') {
-
-					# Add inverse related (bidirectional only)
-					# dump($dato, ' dato ++ '.to_string($element_tipo));
-					$type_rel = $component->get_type_rel();
-
-					if($type_rel!==DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO){
-						$component_rel = $component->get_references(); //$component->relation_type_rel
-						#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
-						$dato = array_merge($dato, $component_rel);
-					}
-				}else if ($modelo_name==='component_svg'){						
-						# file exsists check
-						$file_path = $component->get_file_path();
-						if (file_exists($file_path)===true) {
-							# URL
-							$file_url  = $component->get_url();
-							# Force refresh always
-							$file_url .= '?' . start_time();
-						}else{
-							$file_url = "";
-						}
-
-						$dato = $file_url;
-						#debug_log(__METHOD__." dato ".to_string($dato), logger::DEBUG);
+			// empty case
+				if (empty($current_element_tipo)) {
+					debug_log(__METHOD__." Error. Empty element_tipo in current_object: ".to_string($current_object), logger::ERROR);
+					continue;
 				}
 
+			// No descriptors do not have children. Prevent to calculate children
+				if ($childrens_data->is_descriptor===false && $render_vars->type==='link_childrens') {
+					continue;
+				}
 
-				#if ($element_tipo==='hierarchy25') {
-				#	debug_log(__METHOD__." dato $modelo_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
-				#}
+			// allow array for terms
+				$ar_element_tipo = is_array($current_element_tipo) ? $current_element_tipo : [$current_element_tipo];
 
-				#if (isset($ar_elements[$k_element_tipo])) {
-					#dump($element_obj->type, ' $element_obj->type ++ '.to_string());
-				#debug_log(__METHOD__." render_vars ".to_string($render_vars), logger::DEBUG);
-				#}
-				#debug_log(__METHOD__." k_element_tipo ".to_string($k_element_tipo), logger::DEBUG);
-				#debug_log(__METHOD__." element_obj ".to_string($element_obj), logger::DEBUG);
-				#debug_log(__METHOD__." render_vars ".to_string($render_vars), logger::DEBUG);
+			// each element
+				$element_obj = new stdClass();
+					$element_obj->type = $render_vars->type;
+					$element_obj->tipo = $current_element_tipo;
 
-				switch (true) {
-					case ($element_obj->type==='term'):
-						# term Is traducible and uses lang fallback here						
-						// $value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null
-						if (empty($dato)) {
-							$modelo_name_term = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-							$element_value = $modelo_name_term::render_list_value(null, $element_tipo, $this->section_id, 'list_thesaurus', DEDALO_DATA_LANG, $this->section_tipo, $this->section_id);
-						}else{
-							$element_value = $dato;
-						}
-						$element_obj->value = $element_value;
-							#dump($element_obj->value, '$element_obj->value ++ '.to_string( $element_tipo));
-							#debug_log(__METHOD__." dato $modelo_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
-							#debug_log(__METHOD__." element_obj->value $element_tipo ".to_string($dato).' - '.DEDALO_DATA_LANG, logger::DEBUG);
-						break;
+				// element_tipo iterate tipo
+				foreach ($ar_element_tipo as $element_tipo) {
 
-					case ($element_obj->type==='icon'):
-	
-						if($render_vars->icon==='CH') {
-							continue 2;
-						}
+					// component
+						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+						$component		= component_common::get_instance(
+							$modelo_name,
+							$element_tipo,
+							$this->section_id,
+							'list_thesaurus',
+							DEDALO_DATA_LANG,
+							$this->section_tipo
+						);
 
-						// ND element can change term value when 'esdecriptor' value is 'no' (locator of 'no')
-							if($render_vars->icon==='ND') {
-								#debug_log(__METHOD__." childrens_data->ar_elements ".to_string($childrens_data->ar_elements), logger::DEBUG);
-								#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
-								if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
-									ts_object::set_term_as_nd($childrens_data->ar_elements);
-									$childrens_data->is_descriptor = false;
-								}
-								continue 2;
+					// dato
+						$dato = $component->get_dato();
+						if ($modelo_name==='component_autocomplete_hi') {
+
+							$dato = $component->get_valor();
+
+						}else if ($modelo_name==='component_input_text') {
+
+							$dato = $component->get_valor(0);
+								// debug_log(__METHOD__." $dato ".to_string($dato), logger::DEBUG);
+								// $dato = component_common::extract_component_value_fallback($component,DEDALO_DATA_LANG,true);
+
+						}else if ($modelo_name==='component_relation_related') {
+
+							# Add inverse related (bidirectional only)
+							# dump($dato, ' dato ++ '.to_string($element_tipo));
+							$type_rel = $component->get_type_rel();
+
+							if($type_rel!==DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO){
+								$component_rel = $component->get_references(); //$component->relation_type_rel
+								#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
+								$dato = array_merge($dato, $component_rel);
 							}
+						}else if ($modelo_name==='component_svg'){
+								# file exist check
+								$file_path = $component->get_file_path();
+								if (file_exists($file_path)===true) {
+									# URL
+									$file_url  = $component->get_url();
+									# Force refresh always
+									$file_url .= '?' . start_time();
+								}else{
+									$file_url = "";
+								}
 
-						# icon Not need more info. Value is property 'type'
-						$element_obj->value = $render_vars->icon;
-
-						// dato check
-							if(empty($dato)) continue 2; // Skip empty icon value links														
-
-						if ($modelo_name==='component_relation_index' || $modelo_name==='component_relation_struct') {
-							#dump($dato, ' dato ++ '.to_string($element_tipo));
-							$total = count($dato);
-							$element_obj->value .= ":$total";
+								$dato = $file_url;
+								#debug_log(__METHOD__." dato ".to_string($dato), logger::DEBUG);
 						}
-						break;
 
-					case ($element_obj->type==='link_childrens'):
-						
-						# D : Descriptors
-						if($this->have_children_of_type($dato, 'descriptor')===true) {
-							$element_obj->value = 'button show childrens';
-						}else{
-							$element_obj->value = 'button show childrens unactive';							
+					// des
+						#if ($element_tipo==='hierarchy25') {
+						#	debug_log(__METHOD__." dato $modelo_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
+						#}
+
+						#if (isset($ar_elements[$k_element_tipo])) {
+							#dump($element_obj->type, ' $element_obj->type ++ '.to_string());
+						#debug_log(__METHOD__." render_vars ".to_string($render_vars), logger::DEBUG);
+						#}
+						#debug_log(__METHOD__." k_element_tipo ".to_string($k_element_tipo), logger::DEBUG);
+						#debug_log(__METHOD__." element_obj ".to_string($element_obj), logger::DEBUG);
+						#debug_log(__METHOD__." render_vars ".to_string($render_vars), logger::DEBUG);
+
+					// value
+						switch (true) {
+							case ($element_obj->type==='term'):
+								# term Is translatable and uses lang fallback here
+								// sample render_list_value: $value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id=null, $current_locator=null, $caller_component_tipo=null
+								if (empty($dato)) {
+									$element_value = $modelo_name::render_list_value(
+										null, // string value
+										$element_tipo, // string tipo
+										$this->section_id, // string|int parent (section_id)
+										'list_thesaurus', // string modo
+										DEDALO_DATA_LANG, // string lang
+										$this->section_tipo, // string section_tipo
+										$this->section_id // string|int section_id
+									);
+								}else{
+									$element_value = $dato;
+								}
+								$element_obj->value = isset($element_obj->value)
+									? $element_obj->value . $separator . $element_value
+									: $element_value;
+									// dump($element_obj->value, '$element_obj->value ++ '.to_string( $element_tipo));
+									#debug_log(__METHOD__." dato $modelo_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
+									#debug_log(__METHOD__." element_obj->value $element_tipo ".to_string($dato).' - '.DEDALO_DATA_LANG, logger::DEBUG);
+								break;
+
+							case ($element_obj->type==='icon'):
+
+								if($render_vars->icon==='CH') {
+									continue 3;
+								}
+
+								// ND element can change term value when 'esdecriptor' value is 'no' (locator of 'no')
+									if($render_vars->icon==='ND') {
+										#debug_log(__METHOD__." childrens_data->ar_elements ".to_string($childrens_data->ar_elements), logger::DEBUG);
+										#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
+										if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
+											ts_object::set_term_as_nd($childrens_data->ar_elements);
+											$childrens_data->is_descriptor = false;
+										}
+										continue 3;
+									}
+
+								# icon Not need more info. Value is property 'type'
+								$element_obj->value = $render_vars->icon;
+
+								// dato check
+									if(empty($dato)) continue 3; // Skip empty icon value links
+
+								if ($modelo_name==='component_relation_index' || $modelo_name==='component_relation_struct') {
+									#dump($dato, ' dato ++ '.to_string($element_tipo));
+									$total = count($dato);
+									$element_obj->value .= ":$total";
+								}
+								break;
+
+							case ($element_obj->type==='link_childrens'):
+
+								# D : Descriptors
+								if($this->have_children_of_type($dato, 'descriptor')===true) {
+									$element_obj->value = 'button show childrens';
+								}else{
+									$element_obj->value = 'button show childrens unactive';
+								}
+
+								# ND : No descriptors case
+								if($this->have_children_of_type($dato, 'nd')===true) {
+
+									$nd_element = new stdClass();
+										$nd_element->type = 'link_childrens_nd';
+										$nd_element->tipo = $element_tipo;
+										$nd_element->value = 'ND';
+
+									$childrens_data->ar_elements[] = $nd_element;
+								}
+								break;
+
+							default:
+								$element_obj->value = $dato;
+								break;
 						}
-						
-						# ND : No descriptors case							
-						if($this->have_children_of_type($dato, 'nd')===true) {					
-							
-							$nd_element = new stdClass();
-								$nd_element->type = 'link_childrens_nd';
-								$nd_element->tipo = $element_tipo;
-								$nd_element->value = 'ND';
 
-							$childrens_data->ar_elements[] = $nd_element;
-						}
-						break;					
+					// set model. Only first element if more than one exists (multiple term cases with same model)
+					if (!isset($element_obj->model)) {
+						$element_obj->model = $modelo_name;
+					}
+				}//end foreach ($ar_element_tipo as $element_tipo) {
 
-					default:
-						$element_obj->value = $dato;
-						break;
-				}
 
-				$element_obj->model = $modelo_name;
-				
-			# Add			
+			# Add
 			$childrens_data->ar_elements[] = $element_obj;
-					
-		}
 
-		if(SHOW_DEBUG===true) {
-			$total=round( (microtime(1)-$start_time), 3 );	
-			#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-			$childrens_data->total_time = $total;	
-		}
-		#dump($childrens_data, ' $childrens_data ++ '.to_string());
-	
+		}//end foreach ($ar_elements as $k_element_tipo => $current_object)
+
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$total=round( (microtime(1)-$start_time), 3 );
+				#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+				$childrens_data->total_time = $total;
+				// dump($childrens_data, ' $childrens_data ++ '.to_string());
+			}
+
+
 		return (object)$childrens_data;
 	}//end get_childrens_data
 
