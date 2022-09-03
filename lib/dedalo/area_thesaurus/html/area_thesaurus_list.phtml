@@ -1,9 +1,9 @@
 <?php
-	
-	# VISUALIZADOR HTML	
-	
-	
-	print '<!-- '.__CLASS__.' [tipo:'.$tipo.'] -->';	
+
+	# VISUALIZADOR HTML
+
+
+	print '<!-- '.__CLASS__.' [tipo:'.$tipo.'] -->';
 	print '<div class="css_wrap_area css_wrap_area_thesaurus">';
 
 
@@ -19,35 +19,35 @@
 	$html .= '</div>';
 
 	#
-	# SEARCH FORM	
+	# SEARCH FORM
 	$html .= '<div class="search_form_container">';
 	$html .= $search_form_html;
 	$html .= '<div id="search_response"></div>';
 	$html .= '</div>';
 
-	
-	
+
+
 	$tipology_name_model_css = ($model_view===true) ? 'tipology_name_model' : null;
-	
+
 	$html .= '<table class="table_rows_list" data-search_options="'.encodeURIComponent($search_options_json).'"></table>';
-	
+
 	#
 	# TREE HTML
 	$html .= '<ul id="thesaurus_list_wrapper">';
 
 	$root_nodes 			= array();
-	$ar_hierarchy_selector  = array();	
+	$ar_hierarchy_selector  = array();
 	# dump($ar_sections_by_type, ' ar_sections_by_type ++ '.to_string());
 	foreach ($ar_sections_by_type as $tipology_section_id => $ar_items) {
-		
-		$tipology_name = reset($ar_items)->typology_name;		
+
+		$tipology_name = reset($ar_items)->typology_name;
 
 		$html .= "<li>";
 
 		#
 		# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
 		$html .= '<div class="tipology_name '.$tipology_name_model_css.'" onclick="area_thesaurus.toggle_tipology(this)" data-state="show" data-section_id="'.$tipology_section_id.'"><strong>'.trim($tipology_name).'</strong></div>';
-			
+
 			// sort alphabetically (take care of non translated names like <mark>Name</mark>)
 				usort($ar_items, function($a, $b) {
 					$hierarchy_target_section_name_a = strip_tags($a->hierarchy_target_section_name);
@@ -56,11 +56,11 @@
 				});
 
 			foreach ($ar_items as $item) {
-				
+
 				$hierarchy_section_id   		= $item->section_id;
 				$hierarchy_section_tipo 		= DEDALO_HIERARCHY_SECTION_TIPO;
 				$hierarchy_term_tipo 			= DEDALO_HIERARCHY_TERM_TIPO;
-				$hierarchy_name 				= $item->hierarchy_target_section_name;		
+				$hierarchy_name 				= $item->hierarchy_target_section_name;
 				$hierarchy_target_section_tipo  = $item->hierarchy_target_section_tipo;
 
 				// permissions
@@ -68,12 +68,12 @@
 					# dump($current_permissions, ' $current_permissions ++ '.to_string($hierarchy_target_section_tipo));
 					if ($current_permissions<2) {
 						continue;
-					}				
-				
+					}
+
 				// wrap_ts_object
-					$hierarchy_trigger_id = $hierarchy_section_tipo.'_'.$hierarchy_section_id;				
+					$hierarchy_trigger_id = $hierarchy_section_tipo.'_'.$hierarchy_section_id;
 					$html .= '<div class="wrap_ts_object hierarchy_root_node" data-node_type="hierarchy_node" data-section_tipo="'.$hierarchy_section_tipo.'" data-section_id="'.$hierarchy_section_id.'" data-target_section_tipo="'.$hierarchy_target_section_tipo.'">';
-									
+
 						$root_node_id = $hierarchy_trigger_id.'_root';
 						$root_nodes[] = $root_node_id;
 
@@ -82,20 +82,20 @@
 						// elements container
 							$html .= '<div class="elements_container">';
 							$html .= '<div id="'.$root_node_id.'" class="list_thesaurus_element" data-tipo="'.$hierarchy_childrens_tipo.'" data-type="link_childrens"></div>';
-							$html .= '</div>';//end elements_container	
+							$html .= '</div>';//end elements_container
 
-						// childrens_container						
-							$html .= '<div class="childrens_container" data-role="childrens_container" data-section_id="'.$hierarchy_section_id.'"></div>';					
-					
+						// childrens_container
+							$html .= '<div class="childrens_container" data-role="childrens_container" data-section_id="'.$hierarchy_section_id.'"></div>';
+
 					$html .= '</div>';//end wrap_ts_object
-				
+
 				// JS call to load nodes
 					#$ar_js_call[] = "ts_object.parse_ts_object(document.getElementById('{$hierarchy_trigger_id}'))";
 
 			}//end foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
 
 			// JS calls render
-			#$html .= "<script>".implode(';', $ar_js_call)."</script>";	
+			#$html .= "<script>".implode(';', $ar_js_call)."</script>";
 
 		#$section_rows = new section_records(DEDALO_HIERARCHY_SECTION_TIPO, $options);
 		#$html .= $section_rows->get_html();
@@ -106,7 +106,7 @@
 
 
 	// script
-		$html .= '<script>';		
+		$html .= '<script>';
 		$init_options = new stdClass();
 			$init_options->model_view 	  = $model_view;
 			$init_options->root_nodes 	  = $root_nodes;
@@ -129,7 +129,7 @@
 			$debug_html .= '</div>';
 			echo $debug_html;
 		}
-		
-	
-	
+
+
+
 	echo '</div><!-- /AREA ['.$tipo.'] -->'; //wrap
