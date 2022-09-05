@@ -50,7 +50,7 @@ function add_index($json_data) {
 													 'edit',
 													 DEDALO_DATA_NOLAN,
 													 $section_tipo);
-	
+
 
 	# Add fix custom data to locator
 	$locator->type 				  = DEDALO_RELATION_TYPE_INDEX_TIPO;
@@ -63,7 +63,7 @@ function add_index($json_data) {
 	}else{
 		$response->msg = "No element is added (maybe already exists). Term: $label, locator: ".json_encode($locator)." to 'component_relation_index' tipo:$tipo, section_tipo:$section_tipo, section_id:$section_id]";
 	}
-	
+
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -113,7 +113,7 @@ function remove_index($json_data) {
 													 $section_id,
 													 'edit',
 													 DEDALO_DATA_NOLAN,
-													 $section_tipo);	
+													 $section_tipo);
 
 
 	$response->result = $component->remove_locator($locator);
@@ -157,7 +157,7 @@ function fragment_info($json_data) {
 				return $response;
 			}
 		}
-	
+
 	#
 	# Fragment text
 	$component_obj  = component_common::get_instance('component_text_area',
@@ -165,7 +165,7 @@ function fragment_info($json_data) {
 													 $section_id,
 													 'list',
 													 $lang,
-													 $section_tipo); 	
+													 $section_tipo);
 	$raw_text		= $component_obj->get_dato();
 	$fragment_text	= component_text_area::get_fragment_text_from_tag($tag_id, 'index', $raw_text)[0];
 	#$fragment_text	= strip_tags($fragment_text);
@@ -179,15 +179,15 @@ function fragment_info($json_data) {
 	$data = str_replace("'", '"', $data);
 	if ($locator = json_decode($data)) {
 
-		$section = section::get_instance($locator->section_id, $locator->section_tipo);		
-		
+		$section = section::get_instance($locator->section_id, $locator->section_tipo);
+
 		// Section info
 		$section_info = new stdClass();
 			$section_info->modified_by_userID 	= $section->get_modified_by_userID();
 			$section_info->modified_date 		= $section->get_modified_date();
 			$section_info->created_by_userID 	= $section->get_created_by_userID();
 			$section_info->created_by_user_name = $section->get_created_by_user_name();
-			$section_info->created_date 		= $section->get_created_date();		
+			$section_info->created_date 		= $section->get_created_date();
 
 		// HTML
 		#$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section($modelo_name_required='component_', $resolve_virtual=false);
@@ -209,7 +209,7 @@ function fragment_info($json_data) {
 			$indexation_notes->section_info = $section_info;
 			$indexation_notes->html 	    = $html;
 	}
-	
+
 	#
 	# get the posterframe for the tag
 		$locator  = new locator();
@@ -236,7 +236,7 @@ function fragment_info($json_data) {
 			$quality			= $component_av->get_quality(); //DEDALO_AV_QUALITY_DEFAULT
 			$posterframe_path	= $component_av->get_posterframe_path();
 			$posterframe_dir	= $component_av->get_posterframe_dir();
-	
+
 	$response->result					= true;
 	$response->msg				= 'Request done successfully';
 	$response->fragment_text	= $fragment_text;
@@ -291,11 +291,11 @@ function indexations_list($json_data) {
 		$response->msg = 'Request done successfully. '. count($ar_indexations)." indexations";
 	}else{
 		$response->msg = 'Request done successfully. No current indexes have been created';
-	}	
+	}
 	$response->result 			= true;
 	$response->indexations_list = $ar_indexations;
 
-	
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -332,7 +332,7 @@ function delete_tag($json_data) {
 	$options = new stdClass();
 		$options->section_tipo 	= $section_tipo;
 		$options->section_id 	= $section_id;
-		$options->component_tipo= $component_tipo;		
+		$options->component_tipo= $component_tipo;
 		$options->tag_id 		= $tag_id;
 		$options->lang 			= $lang;
 
@@ -384,14 +384,14 @@ function delete_tag($json_data) {
 * @return object $response
 */
 function new_index_data_record($json_data) {
-	global $start_time;	
+	global $start_time;
 
 	$response 	= tool_indexation::new_index_data_record();
-	
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 		$response->debug = $debug;
 	}
