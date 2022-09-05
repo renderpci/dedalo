@@ -144,7 +144,7 @@ abstract class component_common extends common {
 				}
 				# Verify this section is a invalid resource call
 				$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
-				if (in_array($section_tipo, $ar_resources) && $tipo!=='rsc88') {
+				if ($modo!=='search' && in_array($section_tipo, $ar_resources) && $tipo!=='rsc88') {
 					debug_log(__METHOD__." ERROR - Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal".to_string(), logger::ERROR);
 					debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
 					trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");
