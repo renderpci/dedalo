@@ -237,7 +237,6 @@ class ts_object extends Accessors {
 		# ELEMENTS
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
 			// dump($ar_elements, ' $ar_elements ++ '.to_string($childrens_data));
-			#debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 		foreach ($ar_elements as $k_element_tipo => $current_object) {
 
 			$current_element_tipo	= $current_object->tipo;
@@ -409,7 +408,7 @@ class ts_object extends Accessors {
 							default:
 								$element_obj->value = $dato;
 								break;
-						}
+						}//end switch (true)
 
 					// set model. Only first element if more than one exists (multiple term cases with same model)
 					if (!isset($element_obj->model)) {

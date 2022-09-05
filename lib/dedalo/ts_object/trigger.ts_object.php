@@ -22,7 +22,7 @@ ignore_user_abort(true);
 
 /**
 * GET_CHILDRENS_DATA
-* Get json data of all childrens of current element
+* Get JSON data of all childrens of current element
 * @return object $response
 */
 function get_childrens_data($json_data) {
@@ -113,7 +113,9 @@ function get_childrens_data($json_data) {
 				}
 
 			$response->debug = $debug;
+			// dump($response, ' get_ar_childrens_data_real response +++++++++++++++++++ '.to_string());
 		}
+
 
 	return (object)$response;
 }//end get_ar_childrens_data_real

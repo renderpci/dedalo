@@ -217,7 +217,7 @@ class area_thesaurus extends area {
 														 DEDALO_DATA_NOLAN,
 														 $section_tipo);
 		$dato 	 = $component->get_dato();
-		
+
 		$locator = reset($dato);
 
 		return $locator;
