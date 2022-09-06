@@ -2724,6 +2724,7 @@
 		Added updates.php index matrix_rsc86_gin and matrix_rsc85_gin creation scripts ready to add in next update
 		Updated base structure.css and langs js files
 		Added thesaurus pagination feature
+		Added thesaurus search virtual sections tipo option. Now, real section tipo is calculated in class search_development2->get_components_from_section method
 
 
 	Queue build
@@ -2759,7 +2760,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-09-2022T09:54:00');
+	define('DEDALO_BUILD'	, '06-09-2022T12:43:00');
 
 
 
