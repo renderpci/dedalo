@@ -42,9 +42,7 @@ function get_components_from_section($json_data) {
 			}
 		}
 
-
 	$components_from_section = search_development2::get_components_from_section($section_tipo);
-
 
 	$response->result 	= $components_from_section->result;
 	$response->msg 		= $components_from_section->msg;

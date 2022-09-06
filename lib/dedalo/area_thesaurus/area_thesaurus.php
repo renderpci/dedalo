@@ -142,17 +142,17 @@
 				}//end if (isset($_GET['hierarchy_terms']))
 
 
-				$ar_sections_group = [];
-				foreach ($ar_section_tipos as $key => $current_tipo) {
-					$ar_related_by_model = common::get_ar_related_by_model('section', $current_tipo);
-					$section_obj = new stdClass();
-					if (!empty($ar_related_by_model[0])) {
-						$ar_sections_group[$ar_related_by_model[0]][] = $current_tipo;
-					}else{
-						$ar_sections_group[$current_tipo][] = $current_tipo;
-					}
-				}
-				#dump($ar_sections_group, ' ar_sections_group ++ '.to_string());
+				// des
+					// $ar_sections_group = [];
+					// foreach ($ar_section_tipos as $key => $current_tipo) {
+					// 	$ar_related_by_model = common::get_ar_related_by_model('section', $current_tipo);
+					// 	$section_obj = new stdClass();
+					// 	if (!empty($ar_related_by_model[0])) {
+					// 		$ar_sections_group[$ar_related_by_model[0]][] = $current_tipo;
+					// 	}else{
+					// 		$ar_sections_group[$current_tipo][] = $current_tipo;
+					// 	}
+					// }
 
 				#
 				# SEARCH FORM . ROWS_SEARCH
@@ -200,10 +200,11 @@
 
 					$search_form_html 	= '';
 					$records_search 	= new records_search($section, 'thesaurus'); // list
-						$records_search->ar_sections_by_type  = $ar_sections_by_type; // Inject ar_sections_by_type
-						$records_search->ar_real_section_tipo = array_keys($ar_sections_group); // Inject ar_sections_group
+						$records_search->ar_sections_by_type		= $ar_sections_by_type; // Inject ar_sections_by_type
+						// $records_search->ar_real_section_tipo	= array_keys($ar_sections_group); // Inject ar_sections_group
+						$records_search->ar_real_section_tipo		= $ar_section_tipos;
 					$search_form_html 	= $records_search->get_html();
-						#dump($records_search, ' $records_search ++ '.to_string());
+						// dump($records_search, ' $records_search ++ '.to_string());
 
 
 				#

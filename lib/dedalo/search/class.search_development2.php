@@ -3172,13 +3172,14 @@ class search_development2 {
 		}//if (empty($ar_components_exclude))
 
 		# Manage multiple sections
-		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
+		# section_tipo can be an array of section_tipo. For avoid duplicates, check and group similar sections (like es1, co1, ..)
 		#$ar_section_tipo = (array)$section_tipo;
 
 		$user_id_logged		 = navigator::get_user_id();
 		$ar_authorized_areas = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, 'full');
-		#dump($ar_authorized_areas, ' ar_authorized_areas ++ '.to_string());
+		// dump($ar_authorized_areas, ' ar_authorized_areas ++ '.to_string());
 
+		$real_tipo_parsed = [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
 			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
@@ -3188,11 +3189,39 @@ class search_development2 {
 				continue;
 			}
 
-			# section label
-			$section_label 	  = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG , true, true);
+			// real_tipo check
+				$ar_related_by_model = common::get_ar_related_by_model('section', $section_tipo);
+				$real_tipo = !empty($ar_related_by_model)
+					? $ar_related_by_model[0]
+					: $section_tipo;
 
-			$ar_children 	  = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
-			$ar_section_group = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['section_group','section_group_div','section_tab'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements);
+				if (in_array($real_tipo, $real_tipo_parsed)) {
+					// already calculated
+					continue;
+				}
+
+			# section label
+			$section_label = RecordObj_dd::get_termino_by_tipo($real_tipo, DEDALO_DATA_LANG , true, true);
+
+			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$real_tipo, // string section_tipo
+				['component'], // array ar_modelo_name_required
+				true, // bool from_cache
+				false, // bool resolve_virtual
+				true, // bool recursive
+				false, // bool search_exact
+				$ar_tipo_exclude_elements // array ar_tipo_exclude_elements
+			);
+
+			$ar_section_group = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$real_tipo, // string section_tipo
+				['section_group','section_group_div','section_tab'], // array ar_modelo_name_required
+				true, // bool from_cache
+				false, // bool resolve_virtual
+				true, // bool recursive
+				true, // bool search_exact
+				$ar_tipo_exclude_elements
+			);
 
 			// Add section common info
 			$ar_section_group[] = DEDALO_SECTION_INFO_SECTION_GROUP;
@@ -3266,7 +3295,7 @@ class search_development2 {
 								$element->section_group_tipo		= $section_group_tipo;
 								$element->section_group_model		= $section_group_model;
 								$element->section_group_label		= $section_group_label;
-								$element->section_tipo				= $section_tipo;
+								$element->section_tipo				= $real_tipo;
 								$element->section_label				= $section_label;
 								$element->component_tipo			= $component_tipo;
 								$element->component_label			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG , true, true);
@@ -3339,6 +3368,7 @@ class search_development2 {
 					}
 			}//end foreach ($ar_section_group_childrens as $component_tipo)
 
+			$real_tipo_parsed[] = $real_tipo;
 		}
 		// dump($ar_result, ' ar_result ++ '.to_string());
 
