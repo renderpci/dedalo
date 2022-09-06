@@ -1053,10 +1053,10 @@ function update_dedalo_code($json_data) {
 			}
 			$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
 			$zip->close();
-			debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);
 			$result->extract = [
 				"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
 			];
+			debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);
 
 		// rsync
 			$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
@@ -1071,8 +1071,9 @@ function update_dedalo_code($json_data) {
 				"command: " . $command,
 				"output: "  . str_replace(["\n","\r"], '<br>', $output),
 			];
+			debug_log(__METHOD__." RSYNC command done ". PHP_EOL .to_string($command), logger::DEBUG);
 
-		// remove used files and folders
+		// remove temp used files and folders
 			$command_rm_dir		= "rm -R -f $source";
 			$output_rm_dir		= shell_exec($command_rm_dir);
 			$result->remove_dir	= [
@@ -1085,6 +1086,24 @@ function update_dedalo_code($json_data) {
 				"command_rm_file: " . $command_rm_file,
 				"output_rm_file: "  . $output_rm_file
 			];
+			debug_log(__METHOD__." Removed temp used files and folders ".to_string(), logger::DEBUG);
+
+		// regenerate css files (maybe current installation structure.css file is never than git structure.css file)
+			$structure_css_response = (object)css::build_structure_css();
+			debug_log(__METHOD__." build_structure_css response ".to_string($structure_css_response), logger::DEBUG);
+
+		// regenerate js lang files
+			$ar_langs		= (array)unserialize(DEDALO_APPLICATION_LANGS);
+			$ar_lang_files	= [];
+			foreach ($ar_langs as $lang => $label) {
+				$label_path	= '/common/js/lang/' . $lang . '.js';
+				$ar_label	= label::get_ar_label($lang); // Get all properties
+				// write/overwrite file
+				file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'var get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+				$ar_lang_files[] = DEDALO_LIB_BASE_PATH.$label_path;
+			}
+			debug_log(__METHOD__." Generated js labels files: ". PHP_EOL. '  '. implode(PHP_EOL.'  ', $ar_lang_files), logger::DEBUG);
+
 
 		// response ok
 			$response->result	= $result;
