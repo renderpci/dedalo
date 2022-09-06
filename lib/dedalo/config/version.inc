@@ -2729,6 +2729,7 @@
 		Fixed tool_indexation css issue where component_text_area tag selection creates a unnecessary page scrollbar
 		Added trigger tool_administration update_dedalo_code function new features: regenerate css files (maybe current installation structure.css file is never than git structure.css file) and regenerate js lang labels files
 		Updated Dédalo base css and lang js files
+		Fixed error where no default temp preset is loaded in search init
 
 
 	Queue build
@@ -2764,7 +2765,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-09-2022T14:23:00');
+	define('DEDALO_BUILD'	, '06-09-2022T17:53:00');
 
 
 
