@@ -113,13 +113,17 @@ component_geolocation.prototype.init = async function(options) {
 			const load_promises = []
 
 			const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
-			load_promises.push( common.prototype.load_script(lib_js_file) )
+			const leaflet_promise = common.prototype.load_script(lib_js_file)
+			load_promises.push( leaflet_promise )
 
 			const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
 			load_promises.push( common.prototype.load_style(lib_css_file) )
 
-			const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
-			load_promises.push( common.prototype.load_script(geo_editor_lib_js_file) )
+			leaflet_promise
+			.then(function(){
+				const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
+				common.prototype.load_script(geo_editor_lib_js_file)
+			})
 
 			const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
 			load_promises.push( common.prototype.load_style(geo_editor_lib_css_file) )
@@ -321,27 +325,13 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				break;
 		}//end switch(self.context.geo_provider)
 
-
-	// init map editor
-		self.init_draw_editor()
-
 	// set active layer
 		self.map.on('overlayadd', function(e) {
 			self.active_layer_id = e.name
 		})
 		// self.map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
 
-	// set the lang of the tool
-		const json_langs	= self.json_langs || []
-		if (json_langs.length<1) {
-			console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
-		}
-		const dedalo_lang	= page_globals.dedalo_data_lang
-		const lang_obj		= json_langs.find(item => item.dd_lang===dedalo_lang)
-		const lang			= lang_obj
-			? lang_obj.tld2
-			: 'en'
-		self.map.pm.setLang(lang);
+
 
 	// disable zoom handlers
 	self.map.scrollWheelZoom.disable();
@@ -388,6 +378,21 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 	// map ready event
 		self.map.whenReady(function(){
+			// init map editor
+				self.init_draw_editor()
+
+			// set the lang of the tool
+				const json_langs	= self.json_langs || []
+				if (json_langs.length<1) {
+					console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
+				}
+				const dedalo_lang	= page_globals.dedalo_data_lang
+				const lang_obj		= json_langs.find(item => item.dd_lang===dedalo_lang)
+				const lang			= lang_obj
+					? lang_obj.tld2
+					: 'en'
+				self.map.pm.setLang(lang);
+
 			// check if the map has any layer loaded, if not create new one
 			const check_layer_loaded = self.FeatureGroup[self.active_layer_id]
 
