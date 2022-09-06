@@ -445,7 +445,6 @@ export const render_column_remove = function(options) {
 					// check if the caller has active a tag_id
 						if(self.active_tag){
 							// filter component data by tag_id and re-render content
-							console.log('++++++++++++++++++++++++++++++++++++++ self.active_tag:', self.active_tag);
 							self.filter_data_by_tag_id(self.active_tag)
 						}
 

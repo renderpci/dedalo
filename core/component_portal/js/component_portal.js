@@ -567,7 +567,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 		switch(action) {
 			case 'remove' :
 				// update pagination total
-				if(self.data.pagination.total && self.data.pagination.total>0) {
+				if(self.data.pagination && self.data.pagination.total && self.data.pagination.total>0) {
 					// self.data.pagination.total--
 					self.total--
 				}
