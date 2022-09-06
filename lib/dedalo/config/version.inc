@@ -2726,6 +2726,7 @@
 		Added thesaurus pagination feature
 		Added thesaurus search virtual sections tipo option. Now, real section tipo is calculated in class search_development2->get_components_from_section method
 		Fixed issue with component_input_text render_list_value resolution when 'with_lang_versions' is active in thesaurus_list mode
+		Fixed tool_indexation css issue where component_text_area tag selection creates a unnecessary page scrollbar
 
 
 	Queue build
@@ -2761,7 +2762,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-09-2022T13:11:00');
+	define('DEDALO_BUILD'	, '06-09-2022T13:33:00');
 
 
 
