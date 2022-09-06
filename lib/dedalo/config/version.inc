@@ -2717,6 +2717,13 @@
 		Fixed compare null values error on tool_ts_print
 		Fixed open_data_link inspector function issues with non Apache servers
 		Fixed ontology class wrong type definition
+		Updated swagger.json file from 1.0.22 to 1.0.23
+		Added class ts_object -> get_childrens_data method multi term option. Now, more than one term value can be used like name + surname cases
+		Added modo='search' exception to component_common get_instance section check (debug) to allow search thesaurus components list
+		Changed thesaurus default search limit from 10 to 100
+		Added updates.php index matrix_rsc86_gin and matrix_rsc85_gin creation scripts ready to add in next update
+		Updated base structure.css and langs js files
+		Added thesaurus pagination feature
 
 
 	Queue build
@@ -2752,7 +2759,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-07-2022T11:17:10');
+	define('DEDALO_BUILD'	, '06-09-2022T09:54:00');
 
 
 	/*
