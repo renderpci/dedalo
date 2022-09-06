@@ -330,8 +330,10 @@ function save_preset($json_data) {
 			$user_locator->set_section_id($user_id);
 			$user_locator->set_from_component_tipo($component_tipo);
 			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+
 		$component->set_dato( array($user_locator) );
-		$result[] = $component->Save();
+		// $result[] = $component->Save();
+		$component->Save();
 
 
 
@@ -405,7 +407,6 @@ function delete_preset($json_data) {
 
 	return (object)$response;
 }//end delete_preset
-
 
 
 
