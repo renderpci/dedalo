@@ -229,6 +229,7 @@ class ts_object extends Accessors {
 			$childrens_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
 			$childrens_data->ar_elements				= array();
 
+
 		$model = isset($this->options->model) ? $this->options->model : null;
 
 		// short vars
@@ -443,7 +444,14 @@ class ts_object extends Accessors {
 	*/
 	public function have_children_of_type( $ar_childrens, $type ) {
 
-		if (empty($ar_childrens)) return false;
+		if (empty($ar_childrens)) {
+
+			// options forced have_children cases (persons for example from trigger.ts_object.php)
+			if ($type==='descriptor') {
+				return $this->options->have_children ?? false;
+			}
+			return false;
+		}
 
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 

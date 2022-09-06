@@ -35,67 +35,169 @@ function get_childrens_data($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-		$vars = array('section_tipo','section_id','node_type','tipo');
+		$vars = array(
+			'section_tipo',
+			'section_id',
+			'node_type',
+			'tipo',
+			'pagination',
+			'target_section_tipo'
+		);
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			#if ($name==='dato') continue; # Skip non mandatory
+			if ($name==='pagination') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
 
+	// pagination
+		$current_pagination = !empty($pagination)
+			? $pagination
+			: (object)[
+				'limit'		=> 100,
+				'offset'	=> 0,
+				'total'		=> null // $childrens_length
+			];
+			// dump($current_pagination, ' current_pagination +++++++++++++++++++++++++++++++++ '.to_string());
+		$offset	= (int)$current_pagination->offset;
+		$limit	= (int)$current_pagination->limit;
+		$total	= (int)$current_pagination->total;
+		$resut_paginated = false;
+
+	// target_section_propiedades check
+		$RecordObj_dd				= new RecordObj_dd($target_section_tipo);
+		$target_section_propiedades	= $RecordObj_dd->get_propiedades(true);
+
+	// options
+		$options = new stdClass();
+		if (isset($_SESSION['dedalo4']['config']['thesaurus_view_mode']) && $_SESSION['dedalo4']['config']['thesaurus_view_mode']==='model') {
+			$options->model = true;
+		}
 
 	if($node_type==='hierarchy_node') {
 
-		// Childrens are the same current data
+		// hierarchy_node. root case
+
+		// children are the same current data
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
 			$locator->set_section_id($section_id);
 		$childrens = array($locator);
-			#dump($childrens, ' childrens ++ '.to_string());
+
+		if (!empty($target_section_propiedades) && isset($target_section_propiedades->children_search)) {
+			// options add to use as exception in check children
+			$options->have_children = true;
+		}
 
 	}else{
 
-		// Calculate childrens from parent
-		$modelo_name					= 'component_relation_children';
-		$modo							= 'list_thesaurus';
-		$lang							= DEDALO_DATA_NOLAN;
-		$component_relation_children	= component_common::get_instance($modelo_name,
-																		 $tipo,
-																		 $section_id,
-																		 $modo,
-																		 $lang,
-																		 $section_tipo);
-		$dato		= $component_relation_children->get_dato();
-		$childrens	= $dato;
+		// thesaurus_node. section case (from current term children, usually 'hierarchy45')
+
+		if (!empty($target_section_propiedades) && isset($target_section_propiedades->children_search)) {
+
+			// sqo. children_search
+			$sqo = $target_section_propiedades->children_search->sqo;
+			// add pagination
+			$sqo->limit		= $limit;
+			$sqo->offset	= $offset;
+
+			$search_development2	= new search_development2($sqo);
+			$rows_data				= $search_development2->search();
+
+			$childrens = [];
+			foreach ($rows_data->ar_records as $record) {
+
+				// create a locator for each record found
+				$locator = new stdClass();
+					$locator->section_tipo	= $record->section_tipo;
+					$locator->section_id	= $record->section_id;
+
+				$childrens[] = $locator;
+			}
+
+			// total records calculate if it's not already calculated
+			if (empty($current_pagination->total)) {
+				// calculate total for pagination
+				$count_sqo = clone($sqo);
+					$count_sqo->limit		= 1;
+					$count_sqo->offset		= 0;
+					$count_sqo->full_count	= true;
+				$search_count		= new search_development2($count_sqo);
+				$rows_data_count	= $search_count->search();
+
+				$total = $count_sqo->full_count; // updated from search
+				$current_pagination->total = $total;
+			}
+
+			$resut_paginated = true;
+
+		}else{
+
+			// calculate children from parent
+			$modelo_name					= 'component_relation_children';
+			$modo							= 'list_thesaurus';
+			$lang							= DEDALO_DATA_NOLAN;
+			$component_relation_children	= component_common::get_instance(
+				$modelo_name,
+				$tipo,
+				$section_id,
+				$modo,
+				$lang,
+				$section_tipo
+			);
+			$dato		= $component_relation_children->get_dato();
+			$childrens	= (array)$dato;
+
+			$resut_paginated = false;
+		}//end if (!empty($target_section_propiedades) && isset($target_section_propiedades->children_search))
 	}
 
-	$options = new stdClass();
-	if (isset($_SESSION['dedalo4']['config']['thesaurus_view_mode']) && $_SESSION['dedalo4']['config']['thesaurus_view_mode']==='model') {
-		$options->model = true;
-	}
 
-	try{
+	try {
 
-		$childrens_data = array();
-		foreach ((array)$childrens as $locator) {
-
-			$section_id		= $locator->section_id;
-			$section_tipo	= $locator->section_tipo;
-
-			$ts_object			= new ts_object( $section_id, $section_tipo, $options );
-			$childrens_object	= $ts_object->get_childrens_data();
-
-			# Add only descriptors
-			#if ($childrens_object->is_descriptor===true) {
-				$childrens_data[] 	= $childrens_object;
-			#}
+		$childrens_length = count($childrens);
+		if (empty($current_pagination->total)) {
+			$current_pagination->total = $childrens_length;
 		}
+			// dump($total, ' total ++ '.to_string());
+			// dump($offset, ' offset ++ '.to_string());
+			// dump($limit, ' limit ++ '.to_string());
 
-		$response->result 	= (array)$childrens_data;
-		$response->msg 		= 'Ok. Request done [get_childrens_data]';
+		// childrens_data
+			$childrens_data	= [];
+			for ($i=0; $i < $childrens_length; $i++) {
+
+				// paginate records
+				if ($resut_paginated===false) {
+					// offset skip
+					if ($i < $offset) {
+						continue;
+					}
+					// limit limit
+					if ($i >= ($limit + $offset)) {
+						break;
+					}
+				}
+
+				$locator		= $childrens[$i];
+				$section_id		= $locator->section_id;
+				$section_tipo	= $locator->section_tipo;
+
+				$ts_object			= new ts_object( $section_id, $section_tipo, $options );
+				$childrens_object	= $ts_object->get_childrens_data();
+
+				# Add only descriptors
+				#if ($childrens_object->is_descriptor===true) {
+					$childrens_data[] = $childrens_object;
+				#}
+			}
+
+		$response->result		= (array)$childrens_data;
+		$response->pagination	= $current_pagination;
+		$response->msg			= 'Ok. Request done [get_childrens_data]';
 
 	}catch(Exception $e) {
 

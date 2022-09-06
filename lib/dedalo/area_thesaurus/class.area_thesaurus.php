@@ -8,12 +8,12 @@ class area_thesaurus extends area {
 
 
 
-	static $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
-	static $typologies_name_tipo 	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
+	static $typologies_section_tipo	= DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
+	static $typologies_name_tipo	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
 	# Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
-	protected $model_view 				= false;
-	protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+	protected $model_view				= false;
+	protected $target_section_tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 	protected $hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_TIPO;
 
 
@@ -74,11 +74,11 @@ class area_thesaurus extends area {
 			}
 
 			$item = new stdClass();
-				$item->section_id 					 = $row->section_id;
-				$item->hierarchy_target_section_tipo = $target_section_tipo;
-				$item->hierarchy_target_section_name = $hierarchy_target_section_name;
-				$item->typology 					 = $tipology_data->section_id;
-				$item->typology_name 				 = $this->get_tipology_name( $tipology_data->section_id );
+				$item->section_id						= $row->section_id;
+				$item->hierarchy_target_section_tipo	= $target_section_tipo;
+				$item->hierarchy_target_section_name	= $hierarchy_target_section_name;
+				$item->typology							= $tipology_data->section_id;
+				$item->typology_name					= $this->get_tipology_name( $tipology_data->section_id );
 
 			$ar_items[] = $item;
 		}//end foreach ($ar_records as $key => $row)
@@ -387,68 +387,118 @@ class area_thesaurus extends area {
 
 
 	/**
+	* GET_ROOT_LOCATOR
+	* Builds a root locator from section_tipo
+	* searching hierarchy with target section tipo match
+	* and return a standard locator
+	* @param string $section_tipo
+	* @return object locator $root_locator
+	*/
+	public static function get_root_locator(string $section_tipo) : locator {
+
+		static $hierarchy_section_id = [];
+
+		// root locator. Calculate once from current section_tipo
+		if (!isset($hierarchy_section_id[$section_tipo])) {
+			$hierarchy_section_id[$section_tipo] = hierarchy::get_hierarchy_section(
+				$section_tipo,
+				DEDALO_HIERARCHY_TARGET_SECTION_TIPO
+			);
+		}
+
+		// root_locator
+		$root_locator = new locator();
+			$root_locator->section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // 'hierarchy1'
+			$root_locator->section_id	= $hierarchy_section_id[$section_tipo];
+
+
+		return $root_locator;
+	}//end get_root_locator
+
+
+
+	/**
 	* SEARCH_THESAURUS
 	* @return object $response
 	*/
 	public function search_thesaurus($search_options) {
-
 		$start_time=microtime(1);
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+			$response->result	= false;
+			$response->msg		= '';
 
 		$search_query_object = $search_options->search_query_object;
 
-		# Search records
-		$search_development2 = new search_development2($search_query_object);
-		$search_result 		 = $search_development2->search();
-		$ar_records 		 = $search_result->ar_records;
-			#dump($ar_records, ' ar_records ++ '.to_string()); die();
+		// search records
+			$search_development2	= new search_development2($search_query_object);
+			$search_result			= $search_development2->search();
+			$ar_records				= $search_result->ar_records;
 
 		# ar_path_mix . Calculate full path of each result
 		$ar_path_mix = array();
 		foreach ($ar_records as $key => $row) {
 
-			$section_tipo = $row->section_tipo;
-			$section_id   = $row->section_id;
+			$section_tipo	= $row->section_tipo;
+			$section_id		= $row->section_id;
 
-			$ar_parents = component_relation_parent::get_parents_recursive($section_id, $section_tipo, false);
-				#dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo")); die();
+			// properties children_search check (case rsc197 persons)
+			$RecordObj_dd			= new RecordObj_dd($section_tipo);
+			$section_propiedades	= $RecordObj_dd->get_propiedades(true);
+			switch (true) {
+				case (!empty($section_propiedades) && isset($section_propiedades->children_search)):
 
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
+					// defined section propiedades 'children_search' case
 
-			$ar_path   = array_reverse($ar_parents);
-			$ar_path[] = $locator; // add self at end
+					$ar_path = [];
+
+					// root locator
+					$root_locator	= self::get_root_locator($section_tipo);
+					$ar_path[]		= $root_locator;
+
+					// term locator
+					$locator = new locator();
+						$locator->set_section_tipo($section_tipo);
+						$locator->set_section_id($section_id);
+					$ar_path[]	= $locator; // add self at end
+					break;
+
+				default:
+
+					// default case
+
+					$ar_parents = component_relation_parent::get_parents_recursive($section_id, $section_tipo, false);
+						// dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo")); //die();
+
+					$locator = new locator();
+						$locator->set_section_tipo($section_tipo);
+						$locator->set_section_id($section_id);
+
+					$ar_path	= array_reverse($ar_parents);
+					$ar_path[]	= $locator; // add self at end
+					break;
+			}//end switch (true)
 
 			$ar_path_mix[] = $ar_path;
-		}
-		# Root parents
-		if(SHOW_DEBUG===true) {
-			#dump($ar_path_mix, ' ar_path_mix ++ '.to_string()); die();
-		}
+		}//end foreach ($ar_records as $key => $row)
 
-		# AR_DATA_COMBINED
-		$ar_data_combined = $this->combine_ar_data($ar_path_mix);
-			#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
+		// ar_data_combined
+			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
 
-		$result = self::walk_hierarchy_data($ar_data_combined);
-			#dump($result, ' result ++ '.json_encode($result));
+		// walk data result
+			$result = self::walk_hierarchy_data($ar_data_combined);
 
-		if(SHOW_DEBUG===true) {
-			$response->debug[] = exec_time($start_time," result");
-		}
+		// total
+			$total_records = count($ar_records);
 
-		$total_records = count($ar_records);
-
-		$response->msg 	  	= "Records found: $total_records";
-		$response->result 	= $result;
-		$response->total  	= $total_records;
-		if(SHOW_DEBUG===true) {
-			$response->strQuery = $search_result->strQuery;
-		}
+		// response
+			$response->msg		= "Records found: $total_records";
+			$response->result	= $result;
+			$response->total	= $total_records;
+			if(SHOW_DEBUG===true) {
+				$response->strQuery	= $search_result->strQuery;
+				$response->debug[]	= exec_time($start_time," result");
+			}
 
 
 		return (object)$response;
