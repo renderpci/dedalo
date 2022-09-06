@@ -1037,7 +1037,7 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 	const self = this
 
 	const caller		= options.caller
-	const changed_data	= options.changed_data
+	const changed_data	= options.changed_data[0]
 	// check if the data sent has value(a locator), if not stop
 	if(changed_data.value === null){
 		return
