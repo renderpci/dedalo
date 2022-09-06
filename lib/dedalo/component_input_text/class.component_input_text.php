@@ -146,48 +146,53 @@ class component_input_text extends component_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id=null, $current_locator=null, $caller_component_tipo=null) {
 
-		if (strpos($modo, 'edit')!==false) {
-			$component 			= component_common::get_instance(__CLASS__,
+		// with_lang_versions
+			$RecordObj_dd		= new RecordObj_dd($tipo);
+			$propiedades		= $RecordObj_dd->get_propiedades(true);
+			$with_lang_versions	= isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true;
+
+		// mode switch
+			if (strpos($modo, 'edit')!==false) {
+				$component 			= component_common::get_instance(__CLASS__,
+																	 $tipo,
+																	 $parent,
+																	 $modo,
+																	 $lang,
+																	 $section_tipo);
+				$value = $component->get_html();
+
+			}else{
+
+				# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
+				# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
+				# creamos el componente para pedirle el valor en el lenguaje principal.
+				# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
+				#
+				# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config
+				#
+				# FALLBACK TO MAIN_LANG
+				# dump($value, ' value ++ '.to_string());
+				$empty_list_value = "\n".' <span class="css_span_dato"></span>';
+				if (empty($value) || $value===$empty_list_value) {
+
+					$component 	= component_common::get_instance(__CLASS__,
 																 $tipo,
 																 $parent,
 																 $modo,
-																 $lang,
+																 DEDALO_DATA_LANG,
 																 $section_tipo);
-			$value = $component->get_html();
 
-		}else{
+					#$dato_full = $component->get_dato_full();
+					#$value = component_common::get_value_with_fallback_from_dato_full( $dato_full, true );
 
-			# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
-			# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
-			# creamos el componente para pedirle el valor en el lenguaje principal.
-			# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
-			#
-			# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config
-			#
-			# FALLBACK TO MAIN_LANG
-			# dump($value, ' value ++ '.to_string());
-			$empty_list_value = "\n".' <span class="css_span_dato"></span>';
-			if (empty($value) || $value===$empty_list_value) {
-
-				$component 	= component_common::get_instance(__CLASS__,
-															 $tipo,
-															 $parent,
-															 $modo,
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-
-				#$dato_full = $component->get_dato_full();
-				#$value = component_common::get_value_with_fallback_from_dato_full( $dato_full, true );
-				$value = component_common::extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-			}
-
-		}//end if (strpos($modo, 'edit')!==false)
+					$mark = !$with_lang_versions;
+					$value = component_common::extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+				}
+			}//end if (strpos($modo, 'edit')!==false)
 
 
 		# Add value of current lang to nolan data
-			$RecordObj_dd = new RecordObj_dd($tipo);
-			$propiedades  = $RecordObj_dd->get_propiedades(true);
-			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+			if ($with_lang_versions===true && $modo!=='list_thesaurus') {
 
 				$component 			= component_common::get_instance(__CLASS__,
 																	 $tipo,
