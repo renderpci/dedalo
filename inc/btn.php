@@ -153,9 +153,10 @@ date_default_timezone_set($myDateTimeZone);
 		case (strpos($text,'[person-')!==false):
 			$type = 'person';
 			# mode [person-0-name-data:locator_flat:data]
-			$pattern 	= "/\[(person)-([a-z])-([0-9]{1,6})-(\S{0,22})\]/";
+			$pattern 	= "/\[(person)-([a-z])-([0-9]{1,6})-(\D{0,22})\]/";
 			$text_original 	= $text;
 			preg_match_all($pattern, $text, $matches);
+
 			$text			= urldecode($matches[4][0]);
 			$state 			= $matches[2][0];
 			$imgBase 		= "../images/btn_base/person-{$state}-x2.png";
