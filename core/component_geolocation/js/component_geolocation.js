@@ -1194,6 +1194,19 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				})
 				.then(()=>{
 					self.db_data.value[key] = clone(self.current_value[key])
+					// when the ar_layer_loaded is empty, the user has delete all tags and is necessary reset the load_layer
+
+					if(self.ar_layer_loaded.length === 0){
+						// reset the load_layer to 1
+						self.layers_loader({
+							load 		: 'layer',
+							layer_id	: 1
+						})
+					}else{
+						// if the tag removed is not the last one, load the next layer that can be used
+						const next_layer = self.ar_layer_loaded[0]
+						self.load_layer(next_layer)
+					}
 				})
 
 			break;
