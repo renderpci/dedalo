@@ -14,6 +14,8 @@ $start_time=microtime(1);
 	require_once( SAML_SETTINGS_PATH );
 	require_once( TOOLKIT_PATH . '_toolkit_loader.php' );
 
+	error_log('SAML acs is calling ...........');
+
 // test
 	/*
 	$attributes['urn:oid:1.3.6.1.4.1.5923.1.1.1.6'] = ['33333333P']; // forced test
@@ -28,7 +30,7 @@ $start_time=microtime(1);
 		));
 
 		if ($response->result===true) {
-			
+
 			$total = exec_time_unit($start_time,'ms')." ms";
 			echo " User was saml logged successfully. ".$total;
 			debug_log(__METHOD__." User was saml logged successfully. ".$total, logger::ERROR);
@@ -152,13 +154,13 @@ $start_time=microtime(1);
 
 
 
-// login v2.14 
+// login v2.14
 	/*
 	try {
 		if (isset($_POST['SAMLResponse'])) {
-			
-			#$samlSettings = new OneLogin_Saml2_Settings();     
-			$samlSettings = new OneLogin_Saml2_Settings($saml_settings);        
+
+			#$samlSettings = new OneLogin_Saml2_Settings();
+			$samlSettings = new OneLogin_Saml2_Settings($saml_settings);
 			$samlResponse = new OneLogin_Saml2_Response($samlSettings, $_POST['SAMLResponse']);
 			if ($samlResponse->isValid()) {
 
@@ -183,26 +185,26 @@ $start_time=microtime(1);
 				}else{
 
 					// Login into Dédalo. Credentials are all correct, enter as registers logged user
-						
+
 						// Code. Is mapped from SAML response attribute name defined in config like 'code' => 'urn:oid:1.3.4.1.47.1.5.1.8'
 							$attributes 	= $samlResponse->getAttributes();
 							$code_attr_name = SAML_CONFIG['code'];
 							$code           = $attributes[$code_attr_name];
 							$client_ip 		= common::get_client_ip();
 							error_log("SAMLResponse code: ".print_r($code, true).", client_ip: ".print_r($client_ip, true));
-						
+
 						// Login_SAML
 							$response = login::Login_SAML(array(
 								'code' => $code
 							));
 
 							if ($response->result===true) {
-								
+
 								$total = exec_time_unit($start_time,'ms')." ms"; echo $total;
 								debug_log(__METHOD__." User was saml logged successfully.  ".$total, logger::ERROR);
 
 								header("Location: ".DEDALO_ROOT_WEB);
-								
+
 							}else{
 
 								echo $response->msg;
