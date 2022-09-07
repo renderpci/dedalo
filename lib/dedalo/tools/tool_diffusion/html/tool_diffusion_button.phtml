@@ -6,14 +6,14 @@
 
 	#
 	# GROUPS
-	foreach ($ar_diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {	
+	foreach ($ar_diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
 
 		$have_section_diffusion = tool_diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
-		if ($have_section_diffusion===false) {			
+		if ($have_section_diffusion===false) {
 			continue; # ignore
 		}
 
-		foreach ($ar_diffusion_element as $obj_value) {	
+		foreach ($ar_diffusion_element as $obj_value) {
 
 			$options = new stdClass();
 				$options->section_tipo				= $this->section_tipo;
@@ -22,24 +22,34 @@
 
 			$options_json = json_encode($options);
 
+			// button info
+				$diffusion_label	= RecordObj_dd::get_termino_by_tipo(
+					$obj_value->element_tipo, // string terminoID
+					DEDALO_DATA_LANG, // string lang
+					true, // bool from_cache
+					true // bool fallback
+				);
+				$database_name		= $obj_value->database_name ?? MYSQL_DEDALO_DATABASE_CONN;
+				$levels				= (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+				$span_title			= 'tipo:'.$obj_value->element_tipo.' - db:'.$database_name.' - name:'.$diffusion_label;
+
 			$html_tool .= '<div class="css_button_generic btn_inside_section_buttons_container tool_diffusion" ';
 			$html_tool .= "data-options='$options_json' ";
-			$html_tool .= 'onclick="tool_diffusion.export_list(this)" ';
+			$html_tool .= 'onclick="tool_diffusion.export_list(this, \''.$diffusion_label.'\',\''.$database_name.'\')" ';
 			$html_tool .= '>';
-			$html_tool .= '<span>';
-			$html_tool .= RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false);
+
+			$html_tool .= '<span title="'.$span_title.'">';
+			$html_tool .= $diffusion_label;
 			if(SHOW_DEVELOPER===true) {
-				$database_name	= isset($obj_value->database_name) ? $obj_value->database_name : MYSQL_DEDALO_DATABASE_CONN;
-				$levels			= (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
-				$html_tool .= ' <span class="notes">['. $levels .'-'. $database_name. ']</span>';
+				$html_tool .= ' <span class="notes">['. $obj_value->element_tipo .'-'. $levels .'-'. $database_name. ']</span>';;
 			}
 			$html_tool .= ' <input class="publication_level" type="text" value="'.DEDALO_DIFFUSION_RESOLVE_LEVELS.'" title="Diffusion resolve levels" onclick="event.stopPropagation()">';
 			$html_tool .= '</span>';
 			$html_tool .= '</div>';
 		}
 	}
-	
-	
+
+
 	# PRINT HTML
 	echo $html_tool;
 

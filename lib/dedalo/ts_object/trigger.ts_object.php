@@ -57,7 +57,7 @@ function get_childrens_data($json_data) {
 		$current_pagination = !empty($pagination)
 			? $pagination
 			: (object)[
-				'limit'		=> 100,
+				'limit'		=> 300,
 				'offset'	=> 0,
 				'total'		=> null // $childrens_length
 			];

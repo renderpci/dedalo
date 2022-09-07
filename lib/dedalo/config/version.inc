@@ -2730,6 +2730,11 @@
 		Added trigger tool_administration update_dedalo_code function new features: regenerate css files (maybe current installation structure.css file is never than git structure.css file) and regenerate js lang labels files
 		Updated Dédalo base css and lang js files
 		Fixed error where no default temp preset is loaded in search init
+		Revert "Added thesaurus search virtual sections tipo option. Now, real section tipo is calculated in class search_development2->get_components_from_section method"
+		Clean up code ImageMagick class
+		Added log message to SAML login sequence to easy track user login sequence
+		Improved button diffusion label name to able to identify publication target database
+		Changed default ts_object pagination limit from 100 to 300
 
 
 	Queue build
@@ -2765,7 +2770,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-09-2022T17:53:00');
+	define('DEDALO_BUILD'	, '07-09-2022T18:10:00');
 
 
 
