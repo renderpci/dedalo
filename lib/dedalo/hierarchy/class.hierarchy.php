@@ -1821,12 +1821,13 @@ class hierarchy {
 			}');
 
 		// search
-			$search_development2 = new search_development2($search_query_object);
-			$search_result 		 = $search_development2->search();
-			$record 		 	 = reset($search_result->ar_records);
+			$search_development2	= new search_development2($search_query_object);
+			$search_result			= $search_development2->search();
+			$record					= reset($search_result->ar_records);
 
 		// section id
 			$section_id = isset($record->section_id) ? $record->section_id : null;
+
 
 		return $section_id;
 	}//end get_hierarchy_section

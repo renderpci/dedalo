@@ -12,6 +12,8 @@ $updates = new stdClass();
 	// VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
 	// CREATE INDEX IF NOT EXISTS main_dd_tld ON public.main_dd USING btree (tld COLLATE pg_catalog."default" ASC NULLS LAST);
 	// CREATE INDEX IF NOT EXISTS matrix_counter_dd_tipo ON public.matrix_counter_dd USING btree (tipo ASC NULLS LAST);
+	// CREATE INDEX IF NOT EXISTS matrix_rsc86_gin ON matrix USING gin(f_unaccent(datos#>>'{components, rsc86, dato}') gin_trgm_ops);
+	// CREATE INDEX IF NOT EXISTS matrix_rsc85_gin ON matrix USING gin(f_unaccent(datos#>>'{components, rsc85, dato}') gin_trgm_ops);
 
 
 
@@ -40,13 +42,13 @@ $updates->$v = new stdClass();
 		$alert->notification	= 'V '.$v;
 		$alert->command			= 'Important! Before run this update, you must update your ontology version to 19-05-2021 or later';
 		$updates->$v->alert_update[] = $alert;
-		
+
 		debug_log(__METHOD__." ERROR 582. YOU MUST UPDATE YOUR ONTOLOGY VERSION TO THE LAST VERSION WITH DEFINED SECTION: rsc205", logger::ERROR);
-		
+
 		$updates->$v->show_button_run_update_version = false;
 
 	}else{
-		
+
 		# Update datos to section_data
 			$script_obj = new stdClass();
 				$script_obj->info			= "This update checks and updates the pdf files associated to publications";
@@ -58,7 +60,7 @@ $updates->$v = new stdClass();
 		# database updates
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
 				-- UPDATED COUNTERS COLUMN TIPO LENGTH TO ALLOW LONG TLD
-					
+
 				ALTER TABLE "matrix_counter"
 				ALTER "tipo" TYPE character varying(128),
 				ALTER "tipo" DROP DEFAULT,
@@ -111,7 +113,7 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 6;
 	$updates->$v->update_from_minor		= 1;
 
-	
+
 	$RecordObj_dd = new RecordObj_dd('dd1521');
 	$parent = $RecordObj_dd->get_parent();
 
@@ -121,13 +123,13 @@ $updates->$v = new stdClass();
 		$alert->notification	= 'V '.$v;
 		$alert->command			= 'Important! Before run this update, you must update your ontology version to 15-03-2021 or later';
 		$updates->$v->alert_update[] = $alert;
-		
+
 		debug_log(__METHOD__." ERROR 562. YOU MUST UPDATE YOUR ONTOLOGY VERSION TO THE LAST VERSION WITH DEFINED SECTION: dd1521", logger::ERROR);
-			
+
 		$updates->$v->show_button_run_update_version = false;
 
 	}else{
-		
+
 		# Update datos to section_data
 			$script_obj = new stdClass();
 				$script_obj->info			= "This update checks and updates the old values of table 'matrix_activity'. This action can take a long time on busy systems";
@@ -161,9 +163,9 @@ $updates->$v = new stdClass();
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 		DROP TABLE IF EXISTS \"matrix_stats\";
-		
+
 		CREATE TABLE IF NOT EXISTS \"matrix_stats\" ( like \"matrix_list\" INCLUDING CONSTRAINTS INCLUDING INDEXES );
-		
+
 		CREATE SEQUENCE IF NOT EXISTS public.matrix_stats_id_seq
 		INCREMENT 1
 		START 1
@@ -183,7 +185,7 @@ $updates->$v = new stdClass();
 		CREATE INDEX IF NOT EXISTS "jer_dd_parent_esdescriptor" ON "jer_dd" ("parent", "esdescriptor");
 		CREATE INDEX IF NOT EXISTS "matrix_descriptors_dd_dato_parent_tipo" ON "matrix_descriptors_dd" ("dato", "parent", "tipo");
 		CREATE INDEX IF NOT EXISTS "jer_dd_parent_esdescriptor_esmodelo" ON "jer_dd" ("parent", "esdescriptor", "esmodelo");
-	');	
+	');
 
 
 
@@ -202,7 +204,7 @@ $updates->$v = new stdClass();
 
 
 	$alert 				 = new stdClass();
-	$alert->notification = 'Attention. Key update. The ontology structure will be updated with new column for V6 compatibility! 
+	$alert->notification = 'Attention. Key update. The ontology structure will be updated with new column for V6 compatibility!
 								<br> Do not update the ontology, "Update structure" link above, before update to 5.6.0 version. You can lost the ontology data.';
 	$alert->command 	 = 'Follow this steps:
 							<br> 1 - Dédalo version. Verify that you are running version code >= 5.5.59 (if not, update to it).
@@ -326,7 +328,7 @@ $updates->$v = new stdClass();
 		(section_tipo COLLATE pg_catalog."default", section_id DESC)
 		TABLESPACE pg_default;
 	');
-	
+
 
 	# Update datos to section_data
 	$script_obj = new stdClass();

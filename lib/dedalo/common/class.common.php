@@ -5,14 +5,14 @@
 * declarar los métodos public
 */
 abstract class common {
-	
+
 	# permissions. int value from 0 to 3
 	public $permissions;
 
 	# ar_loaded_modelos_name. List of all components/sections modelo name used in current page (without duplicates). Used to determine
 	# the css and css files to load
 	static $ar_loaded_modelos_name = array();
-	
+
 	# identificador_unico. UID used to set dom elements id unic bsen on section_tipo, section_id, lang, modo, etc.
 	public $identificador_unico;
 	# variant. Modifier of identificador_unico
@@ -31,7 +31,7 @@ abstract class common {
 
 	# public propiedades
 	public $propiedades;
-	
+
 	# REQUIRED METHODS
 	#abstract protected function define_id($id);
 	#abstract protected function define_tipo();
@@ -40,7 +40,7 @@ abstract class common {
 
 	# ACCESSORS
 	final public function __call($strFunction, $arArguments) {
-		
+
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -56,16 +56,16 @@ abstract class common {
 	}
 	# SET
 	final protected function SetAccessor($strMember, $strNewValue) {
-		
+
 		if(property_exists($this, $strMember)) {
-			$this->$strMember = $strNewValue;			
+			$this->$strMember = $strNewValue;
 		}else{
 			return(false);
 		}
 	}
 	# GET
 	final protected function GetAccessor($strMember) {
-		
+
 		if(property_exists($this, $strMember)) {
 			$strRetVal = $this->$strMember;
 			# stripslashes text values
@@ -74,8 +74,8 @@ abstract class common {
 		}else{
 			return(false);
 		}
-	}	
-	
+	}
+
 
 
 	/**
@@ -84,7 +84,7 @@ abstract class common {
 	* @return int $permissions
 	*/
 	public static function get_permissions( $tipo=null, $sub_tipo=null ) {
-		
+
 		if(login::is_logged()!==true)
 			return 0;
 
@@ -96,7 +96,7 @@ abstract class common {
 			#die("Error Processing Request. get_permissions: tipo is empty");
 			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
 			return 0;
-		}		
+		}
 		if( empty($sub_tipo) ) {
 			if(SHOW_DEBUG===true) {
 				dump($sub_tipo,'sub_tipo');
@@ -126,21 +126,21 @@ abstract class common {
 	public function set_permissions( $number ) {
 		$this->permissions = (int)$number;
 	}
-	
-	
-	
+
+
+
 	/**
 	* LOAD STRUCTURE DATA
-	* Get data once from structure (tipo, modelo, norden, estraducible, etc.) 
+	* Get data once from structure (tipo, modelo, norden, estraducible, etc.)
 	*/
 	protected function load_structure_data() {
-		
+
 		if( empty($this->tipo) ) {
 			dump($this,"");
 			throw new Exception("Error (3): tipo is mandatory!", 1);
 		}
 
-		
+
 		if( !$this->bl_loaded_structure_data) {
 
 			/*
@@ -157,11 +157,11 @@ abstract class common {
 				# DEDALO_CACHE_MANAGER : Lo metemos en cache
 				if(DEDALO_CACHE_MANAGER) {
 					cache::set($cache_var, serialize($this->RecordObj_dd));
-					#error_log("Added cache: $cache_var ");					
+					#error_log("Added cache: $cache_var ");
 				}
-			}			
+			}
 			*/
-			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);		
+			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
 
 			# Fix vars
 			$this->modelo	= $this->RecordObj_dd->get_modelo();
@@ -186,7 +186,7 @@ abstract class common {
 			}
 			*/
 			$this->label = RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
-			
+
 
 			# TRADUCIBLE
 			$this->traducible = $this->RecordObj_dd->get_traducible();
@@ -202,11 +202,11 @@ abstract class common {
 			# MATRIX_TABLE
 			#if(!isset($this->matrix_table))
 			#$this->matrix_table = self::get_matrix_table_from_tipo($this->tipo);
-			
+
 			# NOTIFY : Notificamos la carga del elemento a common
-			$modelo_name = get_called_class();	
+			$modelo_name = get_called_class();
 			common::notify_load_lib_element_tipo($modelo_name, $this->modo);
-			
+
 			# BL_LOADED_STRUCTURE_DATA
 			$this->bl_loaded_structure_data = true;
 		}
@@ -219,7 +219,7 @@ abstract class common {
 	* Get data once from matrix about parent, dato, lang
 	*//*
 	protected function load_matrix_data() {
-		
+
 		if( empty($this->id) || intval($this->id)<1 ) {
 
 			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin id)
@@ -227,14 +227,14 @@ abstract class common {
 
 			return NULL;
 		}
-		
+
 		if( !$this->bl_loaded_matrix_data ) {
 		# Experimental (si ya se ha intentado cargar pero con sin id, y ahora se hace con id, lo volvemos a intentar)
 		#if( !$this->bl_loaded_matrix_data || ($this->bl_loaded_matrix_data && intval($this->id)<1) ) {
-			
+
 			$matrix_table 		= common::get_matrix_table_from_tipo($this->section_tipo);
 			$RecordObj_matrix	= new RecordObj_matrix($matrix_table,$this->id);
-						
+
 			$this->parent 		= $RecordObj_matrix->get_parent();
 			$this->dato 		= $RecordObj_matrix->get_dato();
 			$this->lang 		= $RecordObj_matrix->get_lang();
@@ -252,8 +252,8 @@ abstract class common {
 	* @return string $matrix_table
 	*/
 	public static function get_matrix_table_from_tipo($tipo) {
-		
-		if (empty($tipo)) {			
+
+		if (empty($tipo)) {
 			trigger_error("Error Processing Request. tipo is empty");
 			return false;
 		}elseif ($tipo==='matrix') {
@@ -262,12 +262,12 @@ abstract class common {
 		}
 
 		static $matrix_table_from_tipo;
-		
+
 		if(isset($matrix_table_from_tipo[$tipo])) {
 			return($matrix_table_from_tipo[$tipo]);
 		}
-		
-		#if(SHOW_DEBUG===true) $start_time = start_time();		
+
+		#if(SHOW_DEBUG===true) $start_time = start_time();
 
 		# Default value:
 		$matrix_table = 'matrix';
@@ -290,7 +290,7 @@ abstract class common {
 				case ($tipo===DEDALO_SECTION_USERS_TIPO):
 					$matrix_table = 'matrix_users';
 					#error_log("Error. Table for section users tipo is not defined. Unsing default table: '$matrix_table'");
-					break;			
+					break;
 
 				default:
 					$table_is_resolved = false;
@@ -298,18 +298,18 @@ abstract class common {
 					# SECTION : If section have TR of model name 'matrix_table' takes its matrix_table value
 					$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 					if ( isset($ar_related[0]) ) {
-						// REAL OR VIRTUAL SECTION						
+						// REAL OR VIRTUAL SECTION
 						# Set custom matrix table
 						$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
 							#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
-						$table_is_resolved = true;				
+						$table_is_resolved = true;
 					}
 					// CASE VIRTUAL SECTION
 					if ($table_is_resolved===false) {
 						$tipo 		= section::get_section_real_tipo_static($tipo);
 						$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 						if ( isset($ar_related[0]) ) {
-							// REAL SECTION			
+							// REAL SECTION
 							# Set custom matrix table
 							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],null,true);
 								#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
@@ -318,20 +318,20 @@ abstract class common {
 					}
 					break;
 			}//end switch
-			
+
 		}else{
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
 			}
 			error_log('modelo_name: '.json_encode($modelo_name));
 			throw new Exception("Error Processing Request. Don not use component tipo:'$tipo', model:'$modelo_name' to calculate matrix_table. Use always section_tipo", 1);
-			
+
 			/*
 			# COMPONENT CASE
 			# Heredamos la tabla de la sección parent (si la hay)
 			$ar_parent_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name='section', $relation_type='parent');
 			if (isset($ar_parent_section[0])) {
-				$parent_section_tipo = $ar_parent_section[0];			
+				$parent_section_tipo = $ar_parent_section[0];
 				$ar_related = common::get_ar_related_by_model('matrix_table', $parent_section_tipo);
 				if ( isset($ar_related[0]) ) {
 					# Set custom matrix table
@@ -366,10 +366,10 @@ abstract class common {
 		}
 
 		$ar_tables = [];
-		
+
 		# Tables
 		# define('DEDALO_TABLES_LIST_TIPO', 'dd627'); // Matrix tables box elements
-		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');				
+		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
 		foreach ($ar_children_tables as $table_tipo) {
 			$RecordObj_dd = new RecordObj_dd( $table_tipo );
 			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
@@ -381,7 +381,7 @@ abstract class common {
 				$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			}
 		}
-		
+
 		if (empty($ar_tables)) {
 			trigger_error("Error on read structure tables list. Old structure version < 26-01-2018 !");
 			$ar_tables = [
@@ -391,8 +391,8 @@ abstract class common {
 				"matrix_hierarchy"
 			];
 		}
-		
-		
+
+
 		return $ar_tables;
 	}//end get_matrix_tables_with_relations
 
@@ -422,9 +422,9 @@ abstract class common {
 
 		#if($lang!==DEDALO_DATA_LANG) {
 
-			# FORCE reload dato from database when dato is requested again 
+			# FORCE reload dato from database when dato is requested again
 			$this->set_to_force_reload_dato();
-		#}		
+		#}
 
 		$this->lang = $lang;
 	}//end set_lang
@@ -435,14 +435,14 @@ abstract class common {
 	* SET_TO_FORCE_RELOAD_DATO
 	*/
 	public function set_to_force_reload_dato() {
-		
+
 		# UNSET previous calculated valor
 		unset($this->valor);
 
 		#$this->dato_resolved = false;
 		#unset($this->dato);
 
-		# FORCE reload dato from database when dato is requested again 
+		# FORCE reload dato from database when dato is requested again
 		$this->bl_loaded_matrix_data = false;
 	}//end set_to_force_reload_dato
 
@@ -486,8 +486,8 @@ abstract class common {
 					# dump($lang_code, ' lang_code ++ '.to_string());
 					$main_lang = $lang_code;
 				 }
-			}			
-		
+			}
+
 		}else{
 
 			#$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
@@ -498,9 +498,9 @@ abstract class common {
 
 			# If current section is virtual of DEDALO_THESAURUS_SECTION_TIPO, search main lang in self hierarchy
 			$ar_related_section_tipo = common::get_ar_related_by_model('section', $section_tipo);
-			
+
 			switch (true) {
-				
+
 				# Thesaurus virtuals
 				case (isset($ar_related_section_tipo[0]) && $ar_related_section_tipo[0]===DEDALO_THESAURUS_SECTION_TIPO):
 					$main_lang = hierarchy::get_main_lang($section_tipo);
@@ -510,13 +510,13 @@ abstract class common {
 						$main_lang = DEDALO_DATA_LANG_DEFAULT;
 					}
 					break;
-				
+
 				default:
 					$main_lang = DEDALO_DATA_LANG_DEFAULT;
 					break;
 			}
 		}
-		#debug_log(__METHOD__." main_lang ".to_string($main_lang), logger::DEBUG);		
+		#debug_log(__METHOD__." main_lang ".to_string($main_lang), logger::DEBUG);
 
 		$current_main_lang[$uid] = $main_lang;
 
@@ -537,8 +537,8 @@ abstract class common {
 
 	/**
 	* GET IDENTIFICADOR UNICO
-	* Se fija al hacer la primera llamada. 
-	* Para sobreescribirlo, simplemente llamarlo inicialmente pasándo un string 
+	* Se fija al hacer la primera llamada.
+	* Para sobreescribirlo, simplemente llamarlo inicialmente pasándo un string
 	*/
 	public function get_identificador_unico() {
 
@@ -546,7 +546,7 @@ abstract class common {
 		if (isset($this->identificador_unico) && $this->get_modo()==='tool_time_machine') {
 			return $this->identificador_unico;
 		}
-		
+
 		$id 			= $this->get_id();
 		$tipo 			= $this->get_tipo();
 		$parent 		= $this->get_parent();
@@ -556,7 +556,7 @@ abstract class common {
 		$section_tipo 	= $this->get_section_tipo();
 
 		$this->identificador_unico = $id.'_'.$tipo.'_'.$parent.'_'.$lang.'_'.$modo.'_'.$variant.'_'.$section_tipo;
-				
+
 		// Allow show more than one component with same tipo in search mode creating unique uid for each one
 		if ($modo==='search') {
 			$time_suffix = microtime(false);
@@ -570,14 +570,14 @@ abstract class common {
 
 	/**
 	* SET IDENTIFICADOR UNICO
-	* Se fija al hacer la primera llamada. 
+	* Se fija al hacer la primera llamada.
 	*/
 	public function set_identificador_unico($string) {
 		$this->identificador_unico = $string;
 	}
 
-	
-	
+
+
 	/**
 	* GET_AR_LOADED_MODELOS
 	*//*
@@ -598,20 +598,20 @@ abstract class common {
 	* @return array $debug
 	*//*
 	public static function show_loaded_modelos() {
-		
+
 		$debug = array();
 		#$ar_all_loaded_modelos = common::get_ar_all_loaded_modelos();
-		$ar_all_loaded_modelos = common::$ar_loaded_modelos;		
+		$ar_all_loaded_modelos = common::$ar_loaded_modelos;
 		foreach((array)$ar_all_loaded_modelos as $modeloID) {
 			$modelo_name = RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
 			$debug[] 	 = " $modeloID - $modelo_name ";
 		}
-		
+
 		# DEBUG
 		if(SHOW_DEBUG===true) {
 			$_SESSION['debug_content'][__METHOD__] = to_string($debug);
 		}
-		
+
 		return $debug;
 	}//end show_loaded_modelos
 	*/
@@ -626,15 +626,15 @@ abstract class common {
 		#if ($modo!=='edit') {
 		#	return false;
 		#}
-			
+
 		if (empty($modelo_name) || in_array($modelo_name, common::$ar_loaded_modelos_name)) {
 			return false;
-		}				
+		}
 		common::$ar_loaded_modelos_name[] = $modelo_name;
-		
+
 		return true;
 	}//end notify_load_lib_element_tipo
-	
+
 
 
 	/**
@@ -649,30 +649,30 @@ abstract class common {
 
 		return $tipo_name;
 	}
-	
-	
-	
+
+
+
 	# __TOSTRING
 	public function __toString() {
 		return 'Obj: '.get_called_class();
 	}
-	
-	
-	
+
+
+
 	/**
 	* SETVAR
 	*/
 	public static function setVar($name, $default=false) {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVar]: Name 'name' is invalid", 1);
-		
-		$$name = $default; 
+
+		$$name = $default;
 		if(isset($_REQUEST[$name])) $$name = $_REQUEST[$name];
-		
+
 		if(isset($$name)) {
-			
+
 			$$name = safe_xss($$name);
-						
+
 			return $$name;
 		}
 
@@ -689,75 +689,75 @@ abstract class common {
 	public static function setVarData($name, $data_obj, $default=false) {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVarData]: Name 'name' is invalid", 1);
-		
-		$$name = $default; 
+
+		$$name = $default;
 		if(isset($data_obj->{$name})) $$name = $data_obj->{$name};
-		
+
 		if(isset($$name)) {
 			# Not sanitize here (can loose some transcriptions tags) !
 			#$$name = safe_xss($$name);
-						
+
 			return $$name;
-		}			
+		}
 
 		return false;
 	}//end setVar
-	
-	
+
+
 
 	/**
 	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
 	*/
 	public static function get_page_query_string($remove_optional_vars=true) {
-		
+
 		$queryString = $_SERVER['QUERY_STRING']; # like max=10
 		$queryString = safe_xss($queryString);
-		
+
 		if($remove_optional_vars === false) return $queryString;
-		
+
 		$qs 				= false ;
 		$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
-		
+
 		$search  		= array('&&',	'&=',	'=&',	'??',	'==');
 		$replace 		= array('&',	'&',	'&',	'?',	'=' );
 		$queryString 	= str_replace($search, $replace, $queryString);
-		
+
 		$posAND 	= strpos($queryString, '&');
 		$posEQUAL 	= strpos($queryString, '=');
-		
+
 		# go through and rebuild the query without the optional variables
 		if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
-			
-			$ar_pares = explode('&', $queryString);		
+
+			$ar_pares = explode('&', $queryString);
 			if(is_array($ar_pares)) foreach ($ar_pares as $key => $par){
-				
+
 				#echo " <br> $key - $par ";
 				if(strpos($par,'=')!==false) {
-							
+
 					$troz		= explode('=',$par) ;
-						
+
 					$varName 	= false;	if(isset($troz[0])) $varName  = $troz[0];
 					$varValue 	= false;	if(isset($troz[1])) $varValue = $troz[1];
-										
+
 					if(!in_array($varName, $ar_optional_vars)) {
 						$qs .= $varName . '=' . $varValue .'&';
-					}					
+					}
 				}
 			}
-			
+
 		}else if($posAND === false && $posEQUAL !== false) { # query tipo ?captacionID=1
-		
-			$qs = $queryString ;						
+
+			$qs = $queryString ;
 		}
-		
+
 		$qs = str_replace($search, $replace, $qs);
-		
+
 		# if last char is & delete it
-		if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);		
+		if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);
 
 		return $qs;
 	}//end get_page_query_string
-	
+
 
 
 	/**
@@ -768,9 +768,9 @@ abstract class common {
 	*/
 	public function get_html() {
 
-		if(SHOW_DEBUG===true) $start_time = start_time();		
-		
-			# Class name is called class (ex. component_input_text), not this class (common)	
+		if(SHOW_DEBUG===true) $start_time = start_time();
+
+			# Class name is called class (ex. component_input_text), not this class (common)
 			ob_start();
 			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
 			$html = ob_get_clean();
@@ -779,7 +779,7 @@ abstract class common {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-		
+
 		return (string)$html;
 	}//end get_html
 
@@ -801,26 +801,26 @@ abstract class common {
 		// Check if is a invalid string (only objects are accepted)
 		if (is_string($context)) {
 			dump($context, ' context ++ '.to_string($context));
-			throw new Exception("Error Processing Request. context must be an object or null (current is string)", 1);			
+			throw new Exception("Error Processing Request. context must be an object or null (current is string)", 1);
 		}
-		
+
 		// When no is fixed in current object, search in request vars for one
 		if (empty($context)) {
-			
+
 			if ($context_req = common::get_request_var('context')) {
 				// Get context object from url get or input vars
 				if (is_string($context_req)) {
 					if(!$context = json_decode()){
-						throw new Exception("Error Processing Request, Invalid context request", 1);						
+						throw new Exception("Error Processing Request, Invalid context request", 1);
 					}
-				}			
+				}
 			}else{
 				// Default context object
 				$context = new stdClass();
 					$context->context_name = 'default';
 			}
 
-		}//end if (empty($context))		
+		}//end if (empty($context))
 
 
 		return (object)$context;
@@ -847,7 +847,7 @@ abstract class common {
 		}
 
 		$this->context = (object)$context;
-	
+
 		return true;
 	}//end set_context
 
@@ -860,9 +860,9 @@ abstract class common {
 	*/
 	public static function get_ar_all_langs() {
 
-		$ar_all_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);		
+		$ar_all_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
 
-		return (array)$ar_all_langs;		
+		return (array)$ar_all_langs;
 	}//end get_ar_all_langs
 
 
@@ -874,14 +874,14 @@ abstract class common {
 	* @return array $ar_all_langs_resolved
 	*/
 	public static function get_ar_all_langs_resolved( $lang=DEDALO_DATA_LANG ) {
-		
+
 		$ar_all_langs = common::get_ar_all_langs();
-	
+
 		$ar_all_langs_resolved=array();
-		foreach ((array)$ar_all_langs as $current_lang) {			
-			
+		foreach ((array)$ar_all_langs as $current_lang) {
+
 			$lang_name = lang::get_name_from_code( $current_lang, $lang );
-			$ar_all_langs_resolved[$current_lang] = $lang_name;					
+			$ar_all_langs_resolved[$current_lang] = $lang_name;
 		}
 
 		return $ar_all_langs_resolved;
@@ -934,7 +934,7 @@ abstract class common {
 				$tipo = reset($value);
 				$ar_related_component_tipo[] = $tipo;
 			}
-		}		
+		}
 
 		return (array)$ar_related_component_tipo;
 	}//end get_ar_related_component_tipo
@@ -958,7 +958,7 @@ abstract class common {
 
 		$ar_related_by_model=array();
 		foreach ((array)$relaciones as $relation) foreach ((array)$relation as $modelo_tipo => $current_tipo) {
-			
+
 			# Calcularlo desde el modelo_tipo no es seguro, ya que el modelo de un componente pude cambiar y esto no actualiza el modelo_tipo de la relación
 			#$related_terms[$tipo] = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);	//$terminoID, $lang=NULL, $from_cache=false, $fallback=true
 			# Calcular siempre el modelo por seguridad
@@ -973,7 +973,7 @@ abstract class common {
 					$ar_related_by_model[] = $current_tipo;
 				}
 			}
-			
+
 		}
 		#debug_log(__METHOD__." ar_related_by_model - modelo_name:$modelo_name - tipo:$tipo - ar_related_by_model:".json_encode($ar_related_by_model), logger::DEBUG);
 
@@ -1004,11 +1004,11 @@ abstract class common {
 			$options->to_find 				= false;
 			$options->matrix_table 			= 'matrix';
 			$options->filter_by_modelo_name = false;
-			$options->tipo 					= false;		
+			$options->tipo 					= false;
 
 		# NEW_OPTIONS : overwrite options defaults
 		foreach ((object)$new_options as $key => $value) {
-			# Si la propiedad recibida en el array new_options existe en options, la sobreescribimos			
+			# Si la propiedad recibida en el array new_options existe en options, la sobreescribimos
 			if (property_exists($options, $key)) {
 				$options->$key = $value;
 				#dump($value, "key: $key changed from ", array());
@@ -1016,7 +1016,7 @@ abstract class common {
 		}
 		#dump($options,"options"); dump($new_options,"new_options");die();
 
-		# TO_FIND : madatory		
+		# TO_FIND : madatory
 		if (!$options->to_find) {
 			trigger_error("Error: get_references property 'to_find' is mandatory");
 			if(SHOW_DEBUG===true) {
@@ -1024,7 +1024,7 @@ abstract class common {
 			}
 			return $ar_references;
 		}
-		
+
 		# TIPO : mandatory
 		if (!$options->tipo) {
 			trigger_error("Error: get_references property 'tipo' is mandatory");
@@ -1037,10 +1037,10 @@ abstract class common {
 		$matrix_table = common::get_matrix_table_from_tipo($options->section_tipo);
 		*/
 		#$matrix_table = $options->matrix_table;
-		
+
 
 			#
-			# REFERENCES 
+			# REFERENCES
 			switch ($options->filter_by_modelo_name) {
 				case 'component_portal':
 					#$ar_portales 	 = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('component_portal');
@@ -1077,7 +1077,7 @@ abstract class common {
 			#$strQuery='-- '.__METHOD__."\nSELECT id, datos#>>'{section_tipo}' as section_tipo \nFROM matrix WHERE \n";
 			$strQuery='-- '.__METHOD__."\nSELECT id, section_tipo \nFROM matrix WHERE \n";
 			foreach ($ar_search_tipos as $current_tipo) {
-				
+
 				$strQuery.= "datos@>'{\"components\":{\"$current_tipo\":{\"dato\":{\"lg-nolan\":[{\"section_id\":\"{$options->to_find}\"}]}}}}'::jsonb ";
 
 				if($current_tipo!=end($ar_search_tipos)) $strQuery.= "OR \n"; else $strQuery.= "\n";
@@ -1085,18 +1085,18 @@ abstract class common {
 				/*
 				$indexes_code .= "
 				CREATE INDEX matrix_dedalo_portal_{$current_tipo}_2
-				  ON matrix						  
+				  ON matrix
 				  ((datos #>> '{components, $current_tipo,dato,lg-nolan}'));
-				  ";				
+				  ";
 				 $indexes_code .= "
 				--drop INDEX matrix_dedalo_portal_{$current_tipo}_2 ; ";
 				*/
 			}
 			if(SHOW_DEBUG===true) {
-				#dump($options->to_find,"strQuery total: total ".round(microtime(1)-$star_time,3).print_r($strQuery,true));	
+				#dump($options->to_find,"strQuery total: total ".round(microtime(1)-$star_time,3).print_r($strQuery,true));
 				#dump(null,"indexes_code ".print_r($indexes_code,true));
-				#dump($strQuery,"strQuery ".print_r($strQuery,true));die();	
-			}			
+				#dump($strQuery,"strQuery ".print_r($strQuery,true));die();
+			}
 			$result	= JSON_RecordObj_matrix::search_free($strQuery);
 			$ar_id=array();
 			while ($rows = pg_fetch_assoc($result)) {
@@ -1104,15 +1104,15 @@ abstract class common {
 				# AR_REFERENCES
 				$id				= $rows['id'];
 				$section_tipo	= $rows['section_tipo'];
-				
+
 				$ar_references[$id] = $section_tipo;
 			}//end while
-			
-		
+
+
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 		}
-		
+
 		return (array)$ar_references;
 	}//end get_references
 
@@ -1124,7 +1124,7 @@ abstract class common {
 	* @return array $allowed_relations
 	*/
 	public static function get_allowed_relation_types() {
-		
+
 		# For speed, we use constants now
 		$ar_allowed = array(DEDALO_RELATION_TYPE_CHILDREN_TIPO,
 							DEDALO_RELATION_TYPE_PARENT_TIPO,
@@ -1146,10 +1146,10 @@ abstract class common {
 		$ar_allowed   = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=true);
 		*/
 
-		return (array)$ar_allowed;		
+		return (array)$ar_allowed;
 	}//end get_allowed_relation_types
-	
-	
+
+
 
 	/**
 	* TRIGGER_MANAGER
@@ -1163,12 +1163,12 @@ abstract class common {
 			$options->source 	 = 'php://input';
 			if($request_options!==false) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-			}			
+			}
 
 		# Set JSON headers for all responses
 		#header('Content-Type: application/json');
 		header('Content-Type: application/json; charset=utf-8');
-		
+
 		# JSON_DATA
 		# javascript common.get_json_data sends a stringify json object
 		# this object is getted here and decoded with all ajax request vars
@@ -1190,18 +1190,18 @@ abstract class common {
 				debug_log(__METHOD__." $response->msg . str_json: ".to_string($str_json), logger::ERROR);
 			return false;
 		}
-		
+
 		# DEDALO_MAINTENANCE_MODE
 		$mode = $json_data->mode;
 		if ($mode!=="Save" && $mode!=="Login") {
 			if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
 				debug_log(__METHOD__." Kick user ".to_string(), logger::DEBUG);
-	
+
 				# Unset user session login
 				# Delete current Dédalo session
 				unset($_SESSION['dedalo4']['auth']);
 
-				# maintenance check		
+				# maintenance check
 				$response = new stdClass();
 					$response->result 	= true;
 					$response->msg 		= "Sorry, this site is under maintenace now";
@@ -1209,8 +1209,8 @@ abstract class common {
 				#exit();
 				return false;
 			}
-		}			
-	
+		}
+
 
 		# LOGGED USER CHECK. Can be disabled in options (login case)
 		if($options->test_login===true && login::is_logged()!==true) {
@@ -1221,7 +1221,7 @@ abstract class common {
 			#exit();
 			return false;
 		}
-		
+
 
 		# MODE Verify
 		if(empty($json_data->mode)) {
@@ -1233,7 +1233,6 @@ abstract class common {
 			return false;
 		}
 
-		
 		# CALL FUNCTION
 		if ( function_exists($json_data->mode) ) {
 			$response = (object)call_user_func($json_data->mode, $json_data);
@@ -1255,7 +1254,7 @@ abstract class common {
 	* Alias of core function get_request_var
 	* @return mixed string | bool $var_value
 	*/
-	public static function get_request_var($var_name) {	
+	public static function get_request_var($var_name) {
 
 		return get_request_var($var_name);
 	}//end get_request_var
@@ -1268,7 +1267,7 @@ abstract class common {
 	* Calculate safe cookie properties to use on set/delete http cookies
 	*/
 	public static function get_cookie_properties() {
-		
+
 		# Cookie properties
 		$domain 	= $_SERVER['SERVER_NAME'] ?? '';
 		$secure 	= stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'true' : 'false';
@@ -1318,7 +1317,7 @@ abstract class common {
 	* @return string $result
 	*/
 	public static function build_element_json_output($context, $data=[]) {
-		
+
 		$element = new stdClass();
 			$element->context = $context;
 			$element->data 	  = $data;
@@ -1337,7 +1336,7 @@ abstract class common {
 
 	/**
 	* GET_JSON
-	* @return ogject $json 
+	* @return ogject $json
 	*/
 	public function get_json() {
 
@@ -1349,7 +1348,7 @@ abstract class common {
 
 		// controller include
 			$json = include( $path );
-					
+
 			#ob_start();
 			#include( $path );
 			#$json = ob_get_clean();
@@ -1357,7 +1356,7 @@ abstract class common {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$exec_time = exec_time_unit($start_time,'ms')." ms";
-				
+
 				#$element = json_decode($json);
 				#	$element->debug = new stdClass();
 				#	$element->debug->exec_time = $exec_time;
@@ -1367,7 +1366,7 @@ abstract class common {
 			}
 			#dump($json, ' json ++ '.to_string());
 
-		return $json;		
+		return $json;
 	}//end get_json
 
 
@@ -1388,10 +1387,10 @@ abstract class common {
 				$type = 'grouper';
 			}else{
 				debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
-				throw new Exception("Error Processing Request", 1);				
+				throw new Exception("Error Processing Request", 1);
 				return false;
 			}
-			
+
 		// build context item
 			$item = new stdClass();
 				$item->type 			= $type; // like 'component_info';
@@ -1401,7 +1400,7 @@ abstract class common {
 				$item->section_tipo		= $this->get_section_tipo();
 				$item->lang				= $this->get_lang();
 				$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;
-				
+
 				$item->properties 		= $this->get_propiedades();
 				$item->parent 			= $this->RecordObj_dd->get_parent();
 				$item->related 			= $this->get_ar_related_component_tipo();
@@ -1409,9 +1408,9 @@ abstract class common {
 		// section_list optional for get related_list
 			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
 			if (isset($ar_section_list[0])) {
-				
+
 				$related_list_tipo 	= $ar_section_list[0];
-				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
+				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);
 				$item->related_list = $ar_components;
 			}
 
@@ -1502,8 +1501,8 @@ abstract class common {
 				{
 					// This is a closing tag.
 					$openingTag = array_pop($tags);
-				   
-					// assert($openingTag === $tagName); // check that tags are properly nested.	               
+
+					// assert($openingTag === $tagName); // check that tags are properly nested.
 					// $full_text .= $tag;
 
 					if ($openingTag!==$tagName) {
@@ -1537,7 +1536,7 @@ abstract class common {
 			$full_text .= substr($html, $position, $maxLength - $printedLength);
 
 		// Close any open tags.
-		while (!empty($tags)) {	    	
+		while (!empty($tags)) {
 			#printf('</%s>', array_pop($tags));
 			$full_text .= sprintf('</%s>', array_pop($tags));
 		}

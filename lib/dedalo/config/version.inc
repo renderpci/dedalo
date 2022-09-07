@@ -2717,6 +2717,19 @@
 		Fixed compare null values error on tool_ts_print
 		Fixed open_data_link inspector function issues with non Apache servers
 		Fixed ontology class wrong type definition
+		Updated swagger.json file from 1.0.22 to 1.0.23
+		Added class ts_object -> get_childrens_data method multi term option. Now, more than one term value can be used like name + surname cases
+		Added modo='search' exception to component_common get_instance section check (debug) to allow search thesaurus components list
+		Changed thesaurus default search limit from 10 to 100
+		Added updates.php index matrix_rsc86_gin and matrix_rsc85_gin creation scripts ready to add in next update
+		Updated base structure.css and langs js files
+		Added thesaurus pagination feature
+		Added thesaurus search virtual sections tipo option. Now, real section tipo is calculated in class search_development2->get_components_from_section method
+		Fixed issue with component_input_text render_list_value resolution when 'with_lang_versions' is active in thesaurus_list mode
+		Fixed tool_indexation css issue where component_text_area tag selection creates a unnecessary page scrollbar
+		Added trigger tool_administration update_dedalo_code function new features: regenerate css files (maybe current installation structure.css file is never than git structure.css file) and regenerate js lang labels files
+		Updated Dédalo base css and lang js files
+		Fixed error where no default temp preset is loaded in search init
 
 
 	Queue build
@@ -2752,7 +2765,8 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '03-09-2022T17:30:10');
+	define('DEDALO_BUILD'	, '06-09-2022T17:53:00');
+
 
 
 	/*

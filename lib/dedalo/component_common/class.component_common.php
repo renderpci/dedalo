@@ -105,8 +105,8 @@ abstract class component_common extends common {
 			if ( !empty($component_name) && strpos($component_name, 'component_')===false ) {
 				dump($tipo," tipo");
 				$bt = debug_backtrace();
-				debug_log(__METHOD__." DEBUG WARNING: TRIGGERED section or ($component_name) intented to load as component: bt : ".to_string($bt), logger::ERROR);
-				throw new Exception("Error Processing Request. section or ($component_name) intented to load as component", 1);
+				debug_log(__METHOD__." DEBUG WARNING: TRIGGERED section or ($component_name) intended to load as component: bt : ".to_string($bt), logger::ERROR);
+				throw new Exception("Error Processing Request. section or ($component_name) intended to load as component", 1);
 			}
 			if ( is_numeric($tipo) || !is_string($tipo) || !RecordObj_dd::get_prefix_from_tipo($tipo) ) {
 				dump($tipo," tipo");
@@ -144,7 +144,7 @@ abstract class component_common extends common {
 				}
 				# Verify this section is a invalid resource call
 				$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
-				if (in_array($section_tipo, $ar_resources) && $tipo!=='rsc88') {
+				if ($modo!=='search' && in_array($section_tipo, $ar_resources) && $tipo!=='rsc88') {
 					debug_log(__METHOD__." ERROR - Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal".to_string(), logger::ERROR);
 					debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
 					trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");

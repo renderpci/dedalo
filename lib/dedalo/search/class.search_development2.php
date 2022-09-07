@@ -2815,6 +2815,7 @@ class search_development2 {
 	*/
 	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset=false, $count=false ) {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
+		// $start_time=microtime(1);
 
 		# compare
 		$compare = json_encode($reference_locator);
@@ -2827,52 +2828,48 @@ class search_development2 {
 		#	return $ar_inverse_locators_data[$uid];
 		#}
 
-		$ar_tables_to_search = common::get_matrix_tables_with_relations();
-		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
+		// tables
+			$ar_tables_to_search = common::get_matrix_tables_with_relations();
+				// debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
+			$ar_query = array();
+			foreach ($ar_tables_to_search as $table) {
 
-		$ar_query=array();
-		foreach ($ar_tables_to_search as $table) {
+				$query = '';
+				$query .= ($count===true)
+						? PHP_EOL . 'SELECT COUNT(*)'
+						: PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
+				$query .= PHP_EOL . 'FROM "'.$table.'"';
+				$query .= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 
-			$query   = '';
-			if($count === true){
-				$query  .= PHP_EOL . 'SELECT COUNT(*)';
-			}else{
-				$query  .= PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
+				$ar_query[] = $query;
 			}
-			$query  .= PHP_EOL . 'FROM "'.$table.'"';
-			$query  .= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
-			#$query  .= PHP_EOL . 'WHERE datos @> \'{"relations":['.$compare.']}\'::jsonb';
 
-			$ar_query[] = $query;
-		}
+		// strQuery
+			$strQuery  = '';
+			$strQuery .= implode(' UNION ALL ', $ar_query);
+			// Set order to maintain results stable
 
-		$strQuery  = '';
-		$strQuery .= implode(' UNION ALL ', $ar_query);
-		// Set order to maintain results stable
-
-		if($count === false){
-			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC';
-			if($limit !== false){
-				$strQuery .= PHP_EOL . 'LIMIT '.$limit;
-				if($offset !== false){
-					$strQuery .= PHP_EOL . 'OFFSET '.$offset;
+			if($count === false){
+				$strQuery .= PHP_EOL . 'ORDER BY section_id ASC';
+				if($limit !== false){
+					$strQuery .= PHP_EOL . 'LIMIT '.$limit;
+					if($offset !== false){
+						$strQuery .= PHP_EOL . 'OFFSET '.$offset;
+					}
 				}
 			}
-		}
 
-		$strQuery .= ';';
+			$strQuery .= ';';
 
-		if(SHOW_DEBUG===true) {
-			//debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
-		}
+		// exec search
+			$result	= JSON_RecordObj_matrix::search_free($strQuery);
+			if ($result===false) {
+				trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
+				return null;
+			}
 
-		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		if ($result===false) {
-			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-			return null;
-		}
 		$ar_inverse_locators = array();
-		if($count === false){
+		if($count===false) {
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
 
@@ -2898,7 +2895,6 @@ class search_development2 {
 					}
 				}
 			}
-			#debug_log(__METHOD__." ar_inverse_locators ".to_string($ar_inverse_locators), logger::DEBUG);
 
 		}else{
 			while ($rows = pg_fetch_assoc($result)) {
@@ -2908,6 +2904,10 @@ class search_development2 {
 
 		# Cache
 		#$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
+
+		// $total = exec_time_unit($start_time,'ms')." ms";
+		// dump($total, ' search_development2 calculate_inverse_locators total ms +++++++++++++++++++ '.to_string(count($ar_inverse_locators)));
+
 
 
 		return (array)$ar_inverse_locators;
