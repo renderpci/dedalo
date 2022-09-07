@@ -444,8 +444,25 @@ abstract class diffusion  {
 			#
 			# DIFFUSION_ELEMENT
 			# Search inside current diffusion_group and iterate all diffusion_element
-			$ar_diffusion_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element', $relation_type='children', $search_exact=true);
-				#dump($ar_diffusion_element_tipo, ' ar_diffusion_element_tipo ++ '.to_string());
+			$ar_diffusion_elements = [];
+
+			// 1 get the diffusion element alias
+			$ar_diffusion_element_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element_alias', $relation_type='children', $search_exact=true);
+
+			if(!empty($ar_diffusion_element_alias_tipo)){
+				foreach ($ar_diffusion_element_alias_tipo as $element_alias) {
+					$ar_real_diffusion_element = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_alias, 'diffusion_element', 'termino_relacionado', false);
+					$ar_diffusion_elements[] = reset($ar_real_diffusion_element);
+				}
+			}
+			// 2 get direct diffusion element
+			$direct_diffusion_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element', $relation_type='children', $search_exact=true);
+
+			// 3 mix to final array of diffusion_elements
+			$ar_diffusion_element_tipo = !empty($ar_diffusion_elements)
+				? array_merge($ar_diffusion_elements, $direct_diffusion_elements)
+				: $direct_diffusion_elements;
+
 			foreach ($ar_diffusion_element_tipo as $element_tipo) {
 
 				$RecordObj_dd = new RecordObj_dd($element_tipo);
