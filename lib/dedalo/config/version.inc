@@ -2735,6 +2735,9 @@
 		Added log message to SAML login sequence to easy track user login sequence
 		Improved button diffusion label name to able to identify publication target database
 		Changed default ts_object pagination limit from 100 to 300
+		Add diffusion_element_alias to diffusion
+		Fix regex to get tag with spaces
+		Added notes to sample.config file
 
 
 	Queue build
@@ -2770,7 +2773,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-09-2022T18:10:00');
+	define('DEDALO_BUILD'	, '07-09-2022T19:32:00');
 
 
 
