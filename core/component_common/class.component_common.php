@@ -1480,7 +1480,7 @@ abstract class component_common extends common {
 			$response->msg		= __METHOD__ . ' Error. Request failed';
 
 		// short vars
-			$divisor = ', ';
+			$value_separator = ', ';
 
 		// cases
 			switch (true) {
@@ -1604,7 +1604,7 @@ abstract class component_common extends common {
 				$value->section_id		= $current_row->section_id;
 				$value->section_tipo	= $current_row->section_tipo;
 
-			// get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $divisor=', '
+			// get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $value_separator=', '
 			// $label = component_relation_common::get_locator_value(
 			// 	$value, // object locator
 			// 	$lang, // string lang
@@ -1629,7 +1629,7 @@ abstract class component_common extends common {
 							true // bool include_self
 						);
 						$current_label = !empty($ar_current_label)
-							? implode($divisor, $ar_current_label)
+							? implode($value_separator, $ar_current_label)
 							: $ar_current_label; // null case
 					}elseif ($model_name==='component_section_id') {
 						$current_label = $current_row->{$related_tipo};

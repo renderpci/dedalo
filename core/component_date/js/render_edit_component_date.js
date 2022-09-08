@@ -267,10 +267,10 @@ const input_element_range = (i, current_value, self) => {
 		const node_start = get_input_date_node(i, 'start', input_value_start, self)
 		fragment.appendChild(node_start)
 
-	// divisor node
+	// value_separator node
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'divisor',
+			class_name		: 'value_separator',
 			text_content	: '<>',
 			parent			: fragment
 		})
@@ -512,7 +512,7 @@ const input_element_time = (i, current_value, self) => {
 
 			const default_time		= input.value
 			const ar_time_format	= ['H','i','S']
-			const time_format		= ar_time_format.join(self.separator_time)
+			const time_format		= ar_time_format.join(self.time_separator)
 
 			const datePicker = flatpickr(button_calendar, {
 				enableTime		: true,
@@ -618,7 +618,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 					: (dd_date_format === 'mdy')
 						? ['m','d','Y']
 						: ''
-			const date_format = ar_date_format.join(self.separator)
+			const date_format = ar_date_format.join(self.date_separator)
 			const default_date = input.value
 
 			const datePicker = flatpickr(button_calendar, {

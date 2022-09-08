@@ -290,7 +290,7 @@ component_portal.prototype.build = async function(autoload=false) {
 					self.datum.data		= api_response.result.data
 				}
 
-			// // context. update instance properties from context (type, label, tools, divisor, permissions)
+			// // context. update instance properties from context (type, label, tools, value_separator, permissions)
 			// 	self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 			// 	self.datum.context	= api_response.result.context
 
@@ -513,7 +513,7 @@ component_portal.prototype.add_value = async function(value) {
 		// set context and data to current instance
 			await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
 
-		// context. update instance properties from context (type, label, tools, divisor, permissions)
+		// context. update instance properties from context (type, label, tools, value_separator, permissions)
 			self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 			self.datum.context	= api_response.result.context
 

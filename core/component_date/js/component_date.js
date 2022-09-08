@@ -35,8 +35,8 @@ export const component_date = function(){
 
 	this.tools			= null
 
-	this.separator		= '/'
-	this.separator_time	= ':'
+	this.date_separator	= '/'
+	this.time_separator	= ':'
 
 
 	return true
@@ -192,8 +192,8 @@ component_date.prototype.date_to_string = function (date) {
 		}
 	}
 
-	// join the order array of date with the separator '/'
-	const string_date = ar_date.join(self.separator)
+	// join the order array of date with the date_separator '/'
+	const string_date = ar_date.join(self.date_separator)
 
 
 	return string_date
@@ -212,7 +212,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 	const self	= this
 
 	const date_order		= page_globals.DEDALO_DATE_ORDER || 'dmy'
-	const ar_date_values	= string_date.split(self.separator)
+	const ar_date_values	= string_date.split(self.date_separator)
 
 	if(ar_date_values.length === 1){
 		const check_regex = /[-.]/g;
@@ -224,8 +224,8 @@ component_date.prototype.parse_string_date = function(string_date) {
 			// replace the // with the /- for negative years
 			const regex2 = /\/\//g;
 			const second_replace = first_replace.replace(regex2, '/-')
-			// split as normal separator
-			const optional_ar_date_values	= second_replace.split(self.separator)
+			// split as normal date_separator
+			const optional_ar_date_values	= second_replace.split(self.date_separator)
 			// empty the ar_date_values and push the new values
 			ar_date_values.splice(0, ar_date_values.length)
 			ar_date_values.push(...optional_ar_date_values)
@@ -446,13 +446,13 @@ component_date.prototype.get_placeholder_value = function() {
 	// placeholder_value
 	// set the order of the placeholder by the date_format
 		const placeholder_value = (date_mode==='time')
-			? ''.concat('HH',self.separator_time,'MM',self.separator_time,'SS')
+			? ''.concat('HH',self.time_separator,'MM',self.time_separator,'SS')
 			: (dd_date_format === 'dmy')
-				? ''.concat('DD',self.separator,'MM',self.separator,'YYYY')
+				? ''.concat('DD',self.date_separator,'MM',self.date_separator,'YYYY')
 				: (dd_date_format === 'ymd')
-					? ''.concat('YYYY',self.separator,'MM',self.separator,'DD')
+					? ''.concat('YYYY',self.date_separator,'MM',self.date_separator,'DD')
 					: (dd_date_format === 'mdy')
-						? ''.concat('MM',self.separator,'DD',self.separator,'YYYY')
+						? ''.concat('MM',self.date_separator,'DD',self.date_separator,'YYYY')
 						: ''
 
 	return placeholder_value
@@ -483,7 +483,7 @@ component_date.prototype.time_to_string = function(time) {
 		: '000'
 
 	const ar_time		= [hour, minute, second]
-	const string_time	= ar_time.join(self.separator_time)
+	const string_time	= ar_time.join(self.time_separator)
 
 
 	return string_time
@@ -500,7 +500,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 
 	const self	= this
 
-	const ar_time_values	= string_time.split(self.separator_time)
+	const ar_time_values	= string_time.split(self.time_separator)
 
 	const hour = (ar_time_values[0])
 		 ? parseInt(ar_time_values[0])
