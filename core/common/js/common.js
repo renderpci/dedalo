@@ -250,50 +250,55 @@ common.prototype.render = async function (options={}) {
 						self.node.content_data = new_content_data_node
 
 					/*
-					// replace old_content_data_node from parent wrapper. Note that in portals and sections, a 'list_body'
-					// could be the parent of the content_data_node instead the self wrapper
-						const content_data_parent = wrapper.list_body
-							? wrapper.list_body // wrapper.querySelector(":scope >.list_body")
-							: wrapper
+						// replace old_content_data_node from parent wrapper. Note that in portals and sections, a 'list_body'
+						// could be the parent of the content_data_node instead the self wrapper
+							const content_data_parent = wrapper.list_body
+								? wrapper.list_body // wrapper.querySelector(":scope >.list_body")
+								: wrapper
 
-						if (!content_data_parent.contains( old_content_data_node )) {
+							if (!content_data_parent.contains( old_content_data_node )) {
 
-							// error. not found case
-							console.warn("------------- Ignored replaceChild. old_content_data_node is not found in content_data_parent")
-							console.warn("------------- content_data_parent:", content_data_parent);
-							console.warn("------------- old_content_data_node:", old_content_data_node);
+								// error. not found case
+								console.warn("------------- Ignored replaceChild. old_content_data_node is not found in content_data_parent")
+								console.warn("------------- content_data_parent:", content_data_parent);
+								console.warn("------------- old_content_data_node:", old_content_data_node);
 
-							// old_content_data_node.remove()
-							// content_data_parent.appendChild(new_content_data_node)
-						}else{
+								// old_content_data_node.remove()
+								// content_data_parent.appendChild(new_content_data_node)
+							}else{
 
-							// success. found case
-							// replace child for the new one
-							content_data_parent.replaceChild(new_content_data_node, old_content_data_node)
-							// update the wrapper pointer to the new content_data node
-							self.node.content_data = new_content_data_node
-						}
+								// success. found case
+								// replace child for the new one
+								content_data_parent.replaceChild(new_content_data_node, old_content_data_node)
+								// update the wrapper pointer to the new content_data node
+								self.node.content_data = new_content_data_node
+							}
+						*/
 
-					// return the first edited node
+					// return created node
 					result = self.node
 					break;
 
 				case 'full':
 				default:
 					// set
-						// replace dom node if the node exist,
+						// replaces DOM node if the node exist,
 						// ex: when it's called by event that need change data in component (update_data event) and the component need to be rendered in full as in list mode
 						if(self.node) {
 							const parent = self.node.parentNode
 							if (!parent) {
-								console.warn('++++++++++++++ NO parent found for self.node:', self, self.node, render_level);
+								console.warn('++++++++++++++ NO parent found for self.node:', self.node, ' render_level:', render_level);
+								console.warn('++++++++++++++ NO parent found for self:', self);
 							}else{
-								parent.replaceChild(
-									node, // new node
-									self.node // old node
-								)
+								// replace
+								// parent.replaceChild(
+								// 	node, // new node
+								// 	self.node // old node
+								// )
+								self.node.replaceWith(node);
 							}
 						}
+						// set/update instance node pointer
 						self.node = node
 
 					// return the new created node
