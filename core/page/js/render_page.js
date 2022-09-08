@@ -49,7 +49,8 @@ render_page.prototype.edit = async function(options) {
 
 	// events
 		// page click
-			wrapper.addEventListener('click', fn_deactivate_components)
+			// wrapper.addEventListener('click', fn_deactivate_components)
+			window.addEventListener('click', fn_deactivate_components)
 			function fn_deactivate_components() {
 				if (page_globals.component_active) {
 					ui.component.deactivate(page_globals.component_active)
