@@ -2738,6 +2738,7 @@
 		Add diffusion_element_alias to diffusion
 		Fix regex to get tag with spaces
 		Added notes to sample.config file
+		Fixed publication API incoherence about charset encoding. Now, all connections will be use charset=utf8mb4
 
 
 	Queue build
@@ -2773,7 +2774,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-09-2022T19:32:00');
+	define('DEDALO_BUILD'	, '08-09-2022T13:52:00');
 
 
 
