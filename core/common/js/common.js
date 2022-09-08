@@ -226,63 +226,47 @@ common.prototype.render = async function (options={}) {
 			switch(render_level) {
 
 				case 'content':
-					// replace content_data node in each element dom node
 
-					// dom_select_list_body. Check if DOM structure contains list_body (sections and portals in table mode)
-						// const wrapper_children		= self.node[0] ? self.node[0].children : [];
-						// const dom_select_list_body	= await [...wrapper_children].find(el => el.classList.contains('list_body'))
-						// console.log("---- dom_select_list_body:",dom_select_list_body);
+					// replace instance content_data node
+						const wrapper = self.node
 
-					// replace instance node
-						// const nodes_length = self.node.length
-						// for (let i = nodes_length - 1; i >= 0; i--) {
+					// current instance content_data node
+						const old_content_data_node	= wrapper.content_data
+						// warning if not found
+						if (typeof old_content_data_node==='undefined' || !old_content_data_node) {
+							console.error("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
+						}
 
-							const wrapper = self.node
-							// console.log("result_node wrapper:", i, wrapper, wrapper);
+					// new content data node
+						const new_content_data_node = node
+							? node // use already calculated node
+							: await self[render_mode]({
+								render_level : render_level
+							  });
 
-							const wrapper_children		= wrapper ? wrapper.children : [];
-							const dom_select_list_body	= await [...wrapper_children].find(el => el.classList.contains('list_body'))
+					// replace old_content_data_node from parent wrapper. Note that in portals and sections, a 'list_body'
+					// could be the parent of the content_data_node instead the self wrapper
+						const content_data_parent = wrapper.list_body
+							? wrapper.list_body // wrapper.querySelector(":scope >.list_body")
+							: wrapper
 
-							// old content_data node
-								const old_content_data_node = typeof dom_select_list_body!=='undefined'
-									// ? wrapper.querySelector(":scope >.list_body >.content_data")
-									? dom_select_list_body.querySelector(":scope >.content_data")
-									: wrapper.querySelector(":scope >.content_data")
-								// warning if not found
-									if (typeof old_content_data_node==='undefined' || !old_content_data_node) {
-										console.error("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
-									}
-								// console.log("typeof old_content_data_node:",typeof old_content_data_node, old_content_data_node);
-								// console.log("-----------------old_node:", old_content_data_node, self.model);
+						if (!content_data_parent.contains( old_content_data_node )) {
 
-							// new content data node (first is new rendered node, others are clones of it)
-								// const new_content_data_node = (i===(nodes_length-1)) ? node : node.cloneNode(true) (!) Removed 25-03-2020
-								// Note : In some context like dd-tiny, it is necessary to generate a fresh DOM node for each
-								// component node like text_area in a time machine refresh scenario
-								const new_content_data_node = node
-									? node // use already calculated node
-									: await self[render_mode]({render_level : render_level}); // content
+							// error. not found case
+							console.warn("------------- Ignored replaceChild. old_content_data_node is not found in content_data_parent")
+							console.warn("------------- content_data_parent:", content_data_parent);
+							console.warn("------------- old_content_data_node:", old_content_data_node);
 
-							// replace child from parent wrapper
-								const base_container = typeof dom_select_list_body!=='undefined'
-									? dom_select_list_body // wrapper.querySelector(":scope >.list_body")
-									: wrapper
+							// old_content_data_node.remove()
+							// content_data_parent.appendChild(new_content_data_node)
+						}else{
 
-								if (!base_container.contains( old_content_data_node )) {
-									// error. not found case
-									console.warn("------------- Ignored replaceChild. old_content_data_node is not found in base_container")
-									console.warn("------------- base_container:", base_container);
-									console.warn("------------- old_content_data_node:", old_content_data_node);
-
-									// old_content_data_node.remove()
-									// base_container.appendChild(new_content_data_node)
-								}else{
-									// ok found case
-									base_container.replaceChild(new_content_data_node, old_content_data_node)
-									// set pointer to new content data in instance
-									self.node.content_data = new_content_data_node
-								}
-						// }//end for (let i = nodes_length - 1; i >= 0; i--)
+							// success. found case
+							// replace child for the new one
+							content_data_parent.replaceChild(new_content_data_node, old_content_data_node)
+							// update the wrapper pointer to the new content_data node
+							self.node.content_data = new_content_data_node
+						}
 
 					// return the first edited node
 					result = self.node
@@ -295,10 +279,14 @@ common.prototype.render = async function (options={}) {
 						// ex: when it's called by event that need change data in component (update_data event) and the component need to be rendered in full as in list mode
 						if(self.node) {
 							const parent = self.node.parentNode
-							parent.replaceChild(
-								node, // new node
-								self.node // old node
-							)
+							if (!parent) {
+								console.warn('++++++++++++++ NO parent found for self.node:', self, self.node, render_level);
+							}else{
+								parent.replaceChild(
+									node, // new node
+									self.node // old node
+								)
+							}
 						}
 						self.node = node
 
