@@ -91,10 +91,10 @@ component_common.prototype.init = async function(options) {
 		// self.type	= self.context.type 	// typology of current instance, usually 'component'
 		// self.label	= self.context.label // label of current component like 'summary'
 		// self.tools	= self.context.tools || [] //set the tools of the component
-		// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
+		// self.value_separator	= (self.context.properties && self.context.properties.value_separator) ? self.context.properties.value_separator : ' | '
 
 	// set_context_vars. context vars re-updated after new build
-		set_context_vars(self, self.context)
+		// set_context_vars(self, self.context)
 
 	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
 		self.change_value_pool = []

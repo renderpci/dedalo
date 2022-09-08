@@ -152,7 +152,7 @@
 
 						$locator_terms = [];
 
-						// self include. $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
+						// self include. $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $value_separator=', ', $include_self=true
 							// current_value array|null
 							$current_value = component_relation_common::get_locator_value(
 								$current_locator, // object locator

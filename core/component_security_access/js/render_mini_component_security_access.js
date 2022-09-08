@@ -34,7 +34,7 @@ render_mini_component_security_access.prototype.mini = async function() {
 		const data = self.data
 
 	// Value as string
-		const value_string = data.value.join(self.divisor)
+		const value_string = data.value.join(self.value_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

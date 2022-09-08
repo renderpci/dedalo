@@ -59,10 +59,10 @@
 
 		$ar_values = array();
 
-		// $divisor   = $this->get_divisor();
+		// $value_separator   = $this->get_value_separator();
 
-		$divisor = (isset($propiedades->source->divisor))
-			? $propiedades->source->divisor
+		$value_separator = (isset($propiedades->source->value_separator))
+			? $propiedades->source->value_separator
 			: ' | ';
 
 		foreach ($dato as $current_locator) {
@@ -108,7 +108,7 @@
 					$ar_current_values_clean[] = $value_obj->value;
 				}
 			}
-			$value = implode($divisor, $ar_current_values_clean);
+			$value = implode($value_separator, $ar_current_values_clean);
 
 			// search_list_add . Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity
 				if ($search_list_add!==false) {
@@ -127,7 +127,7 @@
 						}
 					}
 					if (!empty($ar_dd_value)) {
-						$value .= $divisor . implode($divisor, $ar_dd_value); // Add string to existing value
+						$value .= $value_separator . implode($value_separator, $ar_dd_value); // Add string to existing value
 					}
 				}
 
@@ -141,11 +141,11 @@
 		if ($format==='array') {
 			$valor = $ar_values;
 		}else{
-			#$valor = implode($divisor, $ar_values);
+			#$valor = implode($value_separator, $ar_values);
 			$ar_labels = array_map(function($element){
 				return $element->label;
 			}, $ar_values);
-			$valor = implode($divisor, $ar_labels);
+			$valor = implode($value_separator, $ar_labels);
 		}
 
 
@@ -188,7 +188,7 @@
 		// force recalculate for each lang
 			unset($this->valor);
 
-		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ')
+		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $value_separator='<br> ')
 		$value = $this->get_valor($lang, 'array');
 
 		// is_publicable from propiedades. case Bibliography 'rsc368'

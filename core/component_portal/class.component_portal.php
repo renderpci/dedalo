@@ -86,7 +86,7 @@ class component_portal extends component_relation_common {
 		// 			],
 		// 		    "section_to_search": '.((isset($properties->source->hierarchy_sections) && !empty($properties->source->hierarchy_sections)) ? json_encode($properties->source->hierarchy_sections) : '[]').',
 		// 		    "filter_by_list": [],
-		// 		    "divisor": " | ",
+		// 		    "value_separator": " | ",
 		// 		    "type_map": {},
 		// 		    "operator": "or",
 		// 		    "records_mode": "list"
@@ -429,7 +429,7 @@ class component_portal extends component_relation_common {
 		include $path;
 
 		// $_get_valor = Closure::bind($_get_valor, $this);
-		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> '
+		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $value_separator='<br> '
 
 		$valor =  Closure::bind($_get_valor, $this)($lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor');
 

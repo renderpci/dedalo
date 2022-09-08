@@ -803,9 +803,9 @@ export const service_autocomplete = function() {
 		// get dd objects from the context that will be used to build the lists in correct order
 		const rqo_search =  await self.rqo_search
 
-		// get the divisor between columns
-		const divisor = (rqo_search.show.divisor)
-			? rqo_search.show.divisor
+		// get the value_separator between columns
+		const value_separator = (rqo_search.show.value_separator)
+			? rqo_search.show.value_separator
 			: ' | '
 
 		const columns = rqo_search.show.columns
@@ -937,7 +937,7 @@ export const service_autocomplete = function() {
 			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
 				const current_dd_info = current_row.find((item)=> item.tipo==='ddinfo')
 				if(current_dd_info){
-					const current_dd_info_value = "- " + current_dd_info.value.join(divisor)
+					const current_dd_info_value = "- " + current_dd_info.value.join(value_separator)
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'attenuated',
@@ -965,7 +965,7 @@ export const service_autocomplete = function() {
 	/**
 	* AUTOCOMPLETE_SEARCH
 	* @param object options {
-	* 	component_tipo, section_tipo, divisor, search_query_object
+	* 	component_tipo, section_tipo, value_separator, search_query_object
 	* }
 	*/
 	this.autocomplete_search = function(search_value){
@@ -1235,7 +1235,7 @@ export const service_autocomplete = function() {
 						}
 
 						// value
-							// const divisor = self.caller.divisor || ' | '
+							// const value_separator = self.caller.value_separator || ' | '
 							const value = ar_value.join("")
 
 
