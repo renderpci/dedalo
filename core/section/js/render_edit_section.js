@@ -110,6 +110,8 @@ render_edit_section.prototype.edit = async function(options) {
 		}
 		// append fragment
 		wrapper.appendChild(fragment)
+		// set pointers
+		wrapper.content_data = content_data
 
 	// css v6
 		if (self.context.css) {
