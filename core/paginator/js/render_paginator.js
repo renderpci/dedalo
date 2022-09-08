@@ -22,6 +22,7 @@ export const render_paginator = function() {
 /**
 * EDIT
 * Render node for use in edit
+* @param object options
 * @return DOM node wrapper
 */
 render_paginator.prototype.edit = async function(options) {
@@ -32,9 +33,10 @@ render_paginator.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// refresh case. Only content data is returned
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			await self.get_total()
-			return get_content_data(self)
+			// await self.get_total()
+			return content_data
 		}
 
 	// wrapper
@@ -42,13 +44,10 @@ render_paginator.prototype.edit = async function(options) {
 			element_type	: 'div',
 			class_name		: 'wrapper_paginator paginator edit full_width css_wrap_rows_paginator text_unselectable'
 		})
+		wrapper.appendChild(content_data)
+		// set pointers
+		wrapper.content_data = content_data
 
-	// content data. Added when total is ready
-		self.get_total()
-		.then(function(){
-			const content_data_node = get_content_data(self)
-			wrapper.appendChild(content_data_node)
-		})
 
 	return wrapper
 }//end edit
@@ -59,7 +58,9 @@ render_paginator.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = function(self) {
+const get_content_data = async function(self) {
+
+	await self.get_total()
 
 	// short vars
 		const total				= self.caller.total
