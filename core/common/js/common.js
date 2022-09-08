@@ -244,12 +244,6 @@ common.prototype.render = async function (options={}) {
 								render_level : render_level
 							  });
 
-					// replace
-						old_content_data_node.replaceWith(new_content_data_node);
-					// update the wrapper pointer to the new content_data node
-						self.node.content_data = new_content_data_node
-
-					/*
 					// replace old_content_data_node from parent wrapper. Note that in portals and sections, a 'list_body'
 					// could be the parent of the content_data_node instead the self wrapper
 						const content_data_parent = wrapper.list_body
@@ -661,15 +655,13 @@ export const create_source = function (self, action) {
 /**
 * LOAD_STYLE
 * @param object self
-* @return promise
-* 	Resolve string src
 */
 common.prototype.load_style = function (src) {
 
 	return new Promise(function(resolve, reject) {
 
 		// check already loaded
-			const links 	= document.getElementsByTagName('link');
+			const links 	= document.getElementsByTagName("link");
 			const links_len = links.length
 			for (let i = links_len - 1; i >= 0; i--) {
 				if(links[i].getAttribute('href')===src) {
@@ -679,18 +671,10 @@ common.prototype.load_style = function (src) {
 			}
 
 		// DOM tag
-			// const element	= document.createElement("link")
-			// 	  element.rel	= "stylesheet"
-
-			// non blocking load
-			// Sample: <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-			const element		= document.createElement('link')
-				  element.rel	= 'preload'
-				  element.as	= 'style'
+			const element 	  = document.createElement("link")
+				  element.rel = "stylesheet"
 
 			element.onload = function() {
-				element.onload=null
-				element.rel='stylesheet'
 				resolve(src);
 			};
 			element.onerror = function() {
@@ -699,7 +683,7 @@ common.prototype.load_style = function (src) {
 
 			element.href = src
 
-			document.getElementsByTagName('head')[0].appendChild(element)
+			document.getElementsByTagName("head")[0].appendChild(element)
 	})
 	.catch(err => { console.error(err) });
 }//end load_style
@@ -709,8 +693,6 @@ common.prototype.load_style = function (src) {
 /**
 * LOAD_SCRIPT
 * @param object self
-* @return promise
-* 	Resolve string src
 */
 common.prototype.load_script = async function(src) {
 
