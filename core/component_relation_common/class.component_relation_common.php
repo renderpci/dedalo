@@ -1054,7 +1054,7 @@ class component_relation_common extends component_common {
 				$ar_values_clean[] = $element_value;
 			}
 
-			// $locator_value = implode($divisor, $ar_values_clean);
+			// $locator_value = implode($value_separator, $ar_values_clean);
 			$ar_value = array_merge($ar_value, $ar_values_clean);
 		}else{
 
@@ -1080,7 +1080,7 @@ class component_relation_common extends component_common {
 					}
 				}
 
-				// $locator_value = implode($divisor, $ar_current_values);
+				// $locator_value = implode($value_separator, $ar_current_values);
 				$ar_value = array_merge($ar_value, $ar_current_values);
 
 			}else{

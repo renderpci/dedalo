@@ -46,7 +46,7 @@ class calculation extends widget_common {
 	*              },
 	*              {
 	*                "tipo": "test140",
-	*                "var_name": "divisor"
+	*                "var_name": "value_separator"
 	*              }
 	*            ]
 	*          },

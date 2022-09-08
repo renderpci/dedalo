@@ -33,7 +33,7 @@ output_component_input_text.prototype.get_raw_string = async function() {
 		const value				= data.value || []
 		const fallback_value	= data.fallback_value || []
 		const fallback			= get_fallback_value(value, fallback_value)
-		const value_string		= fallback.join(self.divisor)
+		const value_string		= fallback.join(self.value_separator)
 
 	return value_string
 }//end get_raw_string
