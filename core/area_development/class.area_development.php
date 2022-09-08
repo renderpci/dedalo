@@ -467,8 +467,8 @@ class area_development extends area_common {
 				$item->parent	= $this->tipo;
 				$item->label	= 'TEST';
 				$item->info		= null;
-				$item->body		= '<a href="../unit_test" target="_blank">Open alpha unit test</a>';
-				$item->body		.= '<hr><a href="../unit_test/test.php" target="_blank">Open clean_component_dato script</a>';
+				$item->body		= '<button class="light" onclick="window.open(\'../unit_test\')">Open alpha unit test</button>';
+				// $item->body		.= '<hr><a href="../unit_test/test.php" target="_blank">Open clean_component_dato script</a>';
 				// $item->body		.= '<hr><a href="javascript:open_tool_import_dedalo_csv()">Tool import Dedalo CSV</a>';
 				// $item->script	= '
 				// 	function open_tool_import_dedalo_csv(){

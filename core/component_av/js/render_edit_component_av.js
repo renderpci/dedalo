@@ -147,7 +147,7 @@ const get_content_value = (i, current_value, self) => {
 			// observer. Set video node only when it is in viewport (to save browser resources)
 			when_in_viewport(
 				content_value, // node to observe
-				() => { // callback function
+				() => { // callback function returns int timestamp
 					posterframe.remove()
 					video.src		= video_url
 					video.classList.remove('hide')

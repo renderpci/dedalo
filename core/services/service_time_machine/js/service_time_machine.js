@@ -411,7 +411,7 @@ service_time_machine.prototype.tm = async function(options) {
 	const self = this
 
 	// view (is injected by the caller)
-		const view	= self.view || null
+		const view = self.view || null
 		if (!view) {
 			console.error("Error. self view is not defined:", self);
 			return false
