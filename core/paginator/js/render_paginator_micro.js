@@ -32,9 +32,9 @@ render_paginator_micro.prototype.micro = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// refresh case. Only content data is returned
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			await self.get_total()
-			return get_content_data(self)
+			return content_data
 		}
 
 	// wrapper
@@ -42,13 +42,9 @@ render_paginator_micro.prototype.micro = async function(options) {
 			element_type	: 'div',
 			class_name		: 'wrapper_paginator paginator micro css_wrap_rows_paginator text_unselectable'
 		})
-
-	// content data. Added when total is ready
-		self.get_total()
-		.then(function(response){
-			const content_data_node = get_content_data(self)
-			wrapper.appendChild(content_data_node)
-		})
+		wrapper.appendChild(content_data)
+		// set pointers
+		wrapper.content_data = content_data
 
 	// events
 		add_events(wrapper, self)
@@ -84,7 +80,9 @@ const add_events = (wrapper, self) => {
 * GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data = function(self) {
+const get_content_data = async function(self) {
+
+	await self.get_total()
 
 	// build vars
 		const total				= self.caller.total
