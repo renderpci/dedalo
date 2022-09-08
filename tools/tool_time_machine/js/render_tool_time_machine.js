@@ -42,15 +42,17 @@ render_tool_time_machine.prototype.edit = async function (options) {
 		// const ar_section_record = await get_ar_instances(self.time_machine)
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.tool.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
+		// set pointer
+		wrapper.content_data = content_data
 
 	// tool_container
 		//const tool_container = document.getElementById('tool_container')
@@ -92,10 +94,13 @@ render_tool_time_machine.prototype.edit = async function (options) {
 
 
 /**
-* CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
+* Renders the whole content_data node
+* @param instance self
+* 	Tool instance pointer
 * @return DOM node content_data
 */
-const content_data_edit = async function(self) {
+const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -212,19 +217,30 @@ const content_data_edit = async function(self) {
 
 
 	return content_data
-}//end content_data_edit
+}//end get_content_data
 
 
 
 /**
 * ADD_COMPONENT
+*
+* @param instance self
+* 	Instance pointer of tool_time_machine
+* @param DOM node component_container
+* @param string lang_value
+* 	Sample: 'lg-spa'
+* @param string label
+* @param string mode
+* @param string|int matrix_id = null
+*
+* @return bool
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
 
 	// user select blank lang_value case
 		if (!lang_value) {
 			while (component_container.firstChild) {
-				// remove node from dom (not component instance)
+				// remove node from DOM (not component instance)
 				component_container.removeChild(component_container.firstChild)
 			}
 			return false

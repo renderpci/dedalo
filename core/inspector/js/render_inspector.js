@@ -791,6 +791,7 @@ const render_relation_list = function(self) {
 			default_state		: 'closed'
 		})
 		async function load_relation_list( instance ) {
+
 			self.section_id	= self.caller.section_id
 
 			relation_list_head.classList.add('up')
@@ -875,33 +876,39 @@ const render_time_machine_list = function(self) {
 			expose_callback		: load_time_machine_list,
 			default_state		: 'closed'
 		})
-		async function load_time_machine_list( instance ) {
-			self.section_id	= self.caller.section_id
 
-			const time_machine_list	= (instance && instance.model==='time_machine_list')
-				? instance // pagination case do not need to init time_machine_list
-				: await instances.get_instance({
+		// (!) Note that load_time_machine_list is called on each section pagination, whereby must be generated
+		// even if user close and re-open the time_machine_list inspector tab
+		async function load_time_machine_list() {
+
+			// updates list_head icon
+				time_machine_list_head.classList.add('up')
+
+			// create and render a time_machine_list instance
+				const time_machine_list	= await instances.get_instance({
 					model			: 'time_machine_list',
-					tipo			: self.caller.context['time_machine_list'],
+					tipo			: self.caller.context.time_machine_list,
 					section_tipo	: self.section_tipo,
 					section_id		: self.section_id,
+					section_id		: self.caller.section_id,
 					mode			: self.mode
 				})
+				await time_machine_list.build()
+				const time_machine_list_wrap = await time_machine_list.render()
 
-			await time_machine_list.build()
-			const time_machine_list_wrap = await time_machine_list.render()
-			while (time_machine_list_body.firstChild) {
-				time_machine_list_body.removeChild(time_machine_list_body.firstChild)
-			}
-			await time_machine_list_body.appendChild(time_machine_list_wrap)
-			time_machine_list_head.classList.add('up')
+			// remove previous node if exists pointer
+				if (time_machine_list_body.time_machine_list_wrap) {
+					time_machine_list_body.time_machine_list_wrap.remove()
+				}
+
+			// append node
+				time_machine_list_body.appendChild(time_machine_list_wrap)
+				// set pointers
+				time_machine_list_body.time_machine_list_wrap = time_machine_list_wrap
+
+			return true
 		}
 		function unload_time_machine_list() {
-			self.section_id = self.caller.section_id
-
-			while (time_machine_list_body.firstChild) {
-				time_machine_list_body.removeChild(time_machine_list_body.firstChild);
-			}
 			time_machine_list_head.classList.remove('up')
 		}
 
