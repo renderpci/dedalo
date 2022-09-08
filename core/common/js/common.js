@@ -699,6 +699,8 @@ common.prototype.load_style = function (src) {
 /**
 * LOAD_SCRIPT
 * @param object self
+* @return promise
+* 	Resolve string src
 */
 common.prototype.load_script = async function(src) {
 
