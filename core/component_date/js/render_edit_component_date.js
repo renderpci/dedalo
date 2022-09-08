@@ -267,10 +267,10 @@ const input_element_range = (i, current_value, self) => {
 		const node_start = get_input_date_node(i, 'start', input_value_start, self)
 		fragment.appendChild(node_start)
 
-	// divisor node
+	// value_separator node
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'divisor',
+			class_name		: 'value_separator',
 			text_content	: '<>',
 			parent			: fragment
 		})

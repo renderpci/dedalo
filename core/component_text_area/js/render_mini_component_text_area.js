@@ -37,7 +37,7 @@ render_mini_component_text_area.prototype.mini = async function() {
 		const value	= data.value || []
 
 	// Value as string
-		const value_string = tr.add_tag_img_on_the_fly( value.join(self.divisor) )
+		const value_string = tr.add_tag_img_on_the_fly( value.join(self.value_separator) )
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

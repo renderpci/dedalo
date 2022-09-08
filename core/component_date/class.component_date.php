@@ -409,8 +409,8 @@ class component_date extends component_common {
 			}//end foreach ($ar_dato as $key => $current_dato)
 
 		// valor
-			$divisor	= $properties->divisor ?? ' | ';
-			$valor		= implode($divisor, $ar_valor);
+			$value_separator	= $properties->value_separator ?? ' | ';
+			$valor				= implode($value_separator, $ar_valor);
 
 
 		return $valor;

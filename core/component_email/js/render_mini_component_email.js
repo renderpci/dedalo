@@ -38,7 +38,7 @@ render_mini_component_email.prototype.mini = async function() {
 		})
 
 	// Value as string
-		const value_string = data.value.join(self.divisor)
+		const value_string = data.value.join(self.value_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
