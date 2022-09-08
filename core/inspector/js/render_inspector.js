@@ -69,12 +69,15 @@ render_inspector.prototype.edit = async function(options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'inspector',
-			class_name		: 'wrapper_inspector inspector',
+			class_name		: 'wrapper_inspector inspector'
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// add elements
 		wrapper.appendChild(label)
 		wrapper.appendChild(content_data)
+
 
 	return wrapper
 }//end edit
@@ -84,6 +87,9 @@ render_inspector.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* Renders the whole content_data node
+* @param instance self
+* 	Tool instance pointer
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
