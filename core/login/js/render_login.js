@@ -24,13 +24,15 @@ export const render_login = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @param object options
+* @return DOM node wrapper
 */
-render_login.prototype.edit = async function(options={render_level:'full'}) {
+render_login.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	// options
+		const render_level = options.render_level || 'full'
 
 	// content_data
 		const content_data = get_content_data(self)
@@ -41,25 +43,30 @@ render_login.prototype.edit = async function(options={render_level:'full'}) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "login"
+			class_name		: 'login'
 		})
 		wrapper.appendChild(content_data)
+		// set pointers
+		wrapper.content_data = content_data
 
 	// validate browser version
 		validate_browser()
 
-	// autofocus username
-	setTimeout(()=>{
-		const username = wrapper.querySelector("#username")
-		username.focus()
-	},600)
+	// auto-focus username
+		setTimeout(()=>{
+			const username = wrapper.querySelector('#username')
+			username.focus()
+		},600)
+
 
 	return wrapper
 }//end edit
 
 
+
 /**
 * GET_CONTENT_DATA
+* @param instance self
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
@@ -135,18 +142,6 @@ const get_content_data = function(self) {
 			class_name		: 'warning',
 			parent			: form
 		})
-		const button_enter_loading = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'preload display_none',
-			parent			: button_enter
-		})
-		const button_enter_label = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button_label',
-			inner_html		: strip_tags(login_item_enter.label),
-			parent			: button_enter
-		})
-
 		button_enter.addEventListener('click', function(e) {
 			e.preventDefault()
 
@@ -169,7 +164,7 @@ const get_content_data = function(self) {
 				button_enter_loading.classList.remove("display_none")
 
 			// data_manager API call
-			const api_response = data_manager.request({
+			data_manager.request({
 				body : {
 					action	: 'login',
 					dd_api	: 'dd_utils_api',
@@ -178,7 +173,8 @@ const get_content_data = function(self) {
 						auth		: auth
 					}
 				}
-			}).then((response)=>{
+			})
+			.then((response)=>{
 
 				// hide spinner and show button label
 					button_enter_label.classList.remove("display_none")
@@ -199,6 +195,18 @@ const get_content_data = function(self) {
 					}
 				}
 			})
+		})//end button_enter.addEventListener('click', function(e)
+
+		const button_enter_loading = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'preload display_none',
+			parent			: button_enter
+		})
+		const button_enter_label = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button_label',
+			inner_html		: strip_tags(login_item_enter.label),
+			parent			: button_enter
 		})
 
 	// info
@@ -280,8 +288,8 @@ const get_browser_info = function() {
 	}
 
 	return {
-	  name: M[0],
-	  version: M[1]
+		name	: M[0],
+		version	: M[1]
 	};
 }//end get_browser_info
 
@@ -339,5 +347,3 @@ const validate_browser = function() {
 
 	return true;
 }//end validate_browser
-
-
