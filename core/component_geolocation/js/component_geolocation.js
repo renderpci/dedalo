@@ -112,42 +112,40 @@ component_geolocation.prototype.init = async function(options) {
 		// load dependencies js/css
 			const load_promises = []
 
-			const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
-			const leaflet_promise = common.prototype.load_script(lib_js_file)
-			load_promises.push( leaflet_promise )
+			// leaflet. (!) It's necessary to be loaded fully before 'geoman'
+				const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
+				await common.prototype.load_script(lib_js_file)
 
-			const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
-			load_promises.push( common.prototype.load_style(lib_css_file) )
+			// another loads in parallel
+				const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
+				load_promises.push( common.prototype.load_style(lib_css_file) )
 
-			leaflet_promise
-			.then(function(){
 				const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
-				common.prototype.load_script(geo_editor_lib_js_file)
-			})
+				load_promises.push( common.prototype.load_script(geo_editor_lib_js_file) )
 
-			const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
-			load_promises.push( common.prototype.load_style(geo_editor_lib_css_file) )
+				const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
+				load_promises.push( common.prototype.load_style(geo_editor_lib_css_file) )
 
-			const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
-			load_promises.push( common.prototype.load_script(geo_messure_lib_js_file) )
+				const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
+				load_promises.push( common.prototype.load_script(geo_messure_lib_js_file) )
 
-			const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
-			load_promises.push( common.prototype.load_script(color_picker_lib_js_file) )
+				const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
+				load_promises.push( common.prototype.load_script(color_picker_lib_js_file) )
 
 			// load and set JSON langs file
-			load_promises.push(
-				new Promise(function(resolve){
-					data_manager.request({
-						url		: '../common/js/lang.json',
-						method	: 'GET'
+				load_promises.push(
+					new Promise(function(resolve){
+						data_manager.request({
+							url		: '../common/js/lang.json',
+							method	: 'GET'
+						})
+						.then(function(response){
+							// set json_langs
+							self.json_langs = response
+							resolve(response)
+						})
 					})
-					.then(function(response){
-						// set json_langs
-						self.json_langs = response
-						resolve(response)
-					})
-				})
-			)
+				)
 
 			await Promise.all(load_promises)
 			.then(async function(response){
