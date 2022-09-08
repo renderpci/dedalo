@@ -28,13 +28,14 @@ export const render_inspector = function() {
 /**
 * EDIT
 * Render node for use in edit
+* @param object options
 * @return DOM node wrapper
 */
 render_inspector.prototype.edit = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content data
@@ -68,12 +69,15 @@ render_inspector.prototype.edit = async function(options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'inspector',
-			class_name		: 'wrapper_inspector inspector',
+			class_name		: 'wrapper_inspector inspector'
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// add elements
 		wrapper.appendChild(label)
 		wrapper.appendChild(content_data)
+
 
 	return wrapper
 }//end edit
@@ -83,6 +87,9 @@ render_inspector.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* Renders the whole content_data node
+* @param instance self
+* 	Tool instance pointer
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
@@ -94,7 +101,7 @@ const get_content_data = function(self) {
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_data inspector_content_data hide',
+			class_name		: 'content_data inspector_content_data hide'
 		})
 
 	// paginator container
@@ -200,17 +207,17 @@ const get_content_data = function(self) {
 			parent			: content_data
 		})
 
-		// data_link . Open window to full seciton JSON data
+		// data_link . Open window to full section JSON data
 			const data_link = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light eye data_link',
 				text_content	: 'View record data',
 				parent			: buttons_bottom_container
 			})
-			data_link.addEventListener("click", (e)=>{
+			data_link.addEventListener('click', (e)=>{
 				e.preventDefault()
 
-				// read from Dédlo API
+				// read from Dédalo API
 				const rqo = {
 					action	: 'read_raw',
 					source	: create_source(self.caller)
@@ -262,7 +269,7 @@ const get_content_data = function(self) {
 							return false
 						}
 
-					// read from Dédlo API
+					// read from Dédalo API
 						const rqo = {
 							action	: 'read_raw',
 							source	: create_source(self.caller)
@@ -278,7 +285,7 @@ const get_content_data = function(self) {
 									return
 								}
 
-							// donwload blob as JSON file
+							// download blob as JSON file
 								const data = api_response.result;
 								download_data(data, file_name)
 						})
@@ -388,13 +395,12 @@ export const render_section_info = function(self) {
 			parent			: fragment
 		})
 
-
-	// clean container
+	// clean and set container
 		while (container.firstChild) {
 			container.removeChild(container.firstChild);
 		}
+		container.appendChild(fragment)
 
-	container.appendChild(fragment)
 
 	return fragment
 }//end render_section_info

@@ -235,7 +235,6 @@ export const add_component = async (self, component_container, lang_value, label
 			? self.main_element // self.caller
 			: await self.load_component(lang_value, mode, matrix_id)
 
-
 	// render node
 		const node = await component.render({
 			render_mode : 'edit'
@@ -259,5 +258,3 @@ export const add_component = async (self, component_container, lang_value, label
 
 	return true
 }//end add_component
-
-
