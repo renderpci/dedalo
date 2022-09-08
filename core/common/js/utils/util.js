@@ -417,18 +417,26 @@ export function  object_equals (o1, o2){
 */
 export function is_equal(el1, el2) {
 
-	// if (el1==el2) {
-	// 	return true
-	// }
-
+	// direct check
+	if (el1===el2) {
+		return true
+	}
+	// check the typo of elements object != string
+	// Note: this check could fail when check objects because null === object in js
 	if (typeof el1!==typeof el2) {
 		return false
 	}
 
+	// check null or undefined case
+	const chek_null_obj = o => o === null || o === undefined;
+	if(chek_null_obj(el1) !== chek_null_obj(el2)){
+		return false
+	}
+	// check if new element is array
 	if (Array.isArray(el1)) {
 		return array_equals(el1, el2)
 	}
-
+	// check if new element is object
 	if (typeof el1==="object" && el1!==null) {
 		return object_equals(el1, el2)
 	}
