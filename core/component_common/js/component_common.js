@@ -94,7 +94,7 @@ component_common.prototype.init = async function(options) {
 		// self.divisor	= (self.context.properties && self.context.properties.divisor) ? self.context.properties.divisor : ' | '
 
 	// set_context_vars. context vars re-updated after new build
-		set_context_vars(self, self.context)
+		// set_context_vars(self, self.context)
 
 	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
 		self.change_value_pool = []
