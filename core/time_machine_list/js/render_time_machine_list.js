@@ -31,21 +31,23 @@ render_time_machine_list.prototype.edit = async function (options) {
 	const self = this
 
 	// options
-		const render_level 	= options.render_level || 'full'
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await get_content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
-			element_type	: 'section',
-			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			element_type	: 'div',
+			class_name		: 'wrapper_' + self.model + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 		})
-		wrapper.appendChild(current_content_data)
+		wrapper.appendChild(content_data)
+		// set pointers
+		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end render_time_machine_list
@@ -65,5 +67,3 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
-
-
