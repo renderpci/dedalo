@@ -149,6 +149,9 @@ render_list_section.prototype.list = async function(options) {
 			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} list`
 		})
 		wrapper.appendChild(fragment)
+		// set pointers
+		wrapper.content_data	= content_data
+		wrapper.list_body		= list_body
 
 
 
