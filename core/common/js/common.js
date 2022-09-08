@@ -661,13 +661,15 @@ export const create_source = function (self, action) {
 /**
 * LOAD_STYLE
 * @param object self
+* @return promise
+* 	Resolve string src
 */
 common.prototype.load_style = function (src) {
 
 	return new Promise(function(resolve, reject) {
 
 		// check already loaded
-			const links 	= document.getElementsByTagName("link");
+			const links 	= document.getElementsByTagName('link');
 			const links_len = links.length
 			for (let i = links_len - 1; i >= 0; i--) {
 				if(links[i].getAttribute('href')===src) {
@@ -677,10 +679,18 @@ common.prototype.load_style = function (src) {
 			}
 
 		// DOM tag
-			const element 	  = document.createElement("link")
-				  element.rel = "stylesheet"
+			// const element	= document.createElement("link")
+			// 	  element.rel	= "stylesheet"
+
+			// non blocking load
+			// Sample: <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+			const element		= document.createElement('link')
+				  element.rel	= 'preload'
+				  element.as	= 'style'
 
 			element.onload = function() {
+				element.onload=null
+				element.rel='stylesheet'
 				resolve(src);
 			};
 			element.onerror = function() {
@@ -689,7 +699,7 @@ common.prototype.load_style = function (src) {
 
 			element.href = src
 
-			document.getElementsByTagName("head")[0].appendChild(element)
+			document.getElementsByTagName('head')[0].appendChild(element)
 	})
 	.catch(err => { console.error(err) });
 }//end load_style
