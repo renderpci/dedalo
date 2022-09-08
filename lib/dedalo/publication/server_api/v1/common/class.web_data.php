@@ -133,7 +133,7 @@ class web_data {
 				$ar_dsn[] = 'unix_socket='.$socket;
 			}
 			// utf8 charset
-			$ar_dsn[] = 'charset=utf8';
+			$ar_dsn[] = 'charset=utf8mb4';
 
 			$dsn = 'mysql:' . implode(';', $ar_dsn);
 
