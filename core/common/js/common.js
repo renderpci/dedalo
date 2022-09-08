@@ -244,6 +244,12 @@ common.prototype.render = async function (options={}) {
 								render_level : render_level
 							  });
 
+					// replace
+						old_content_data_node.replaceWith(new_content_data_node);
+					// update the wrapper pointer to the new content_data node
+						self.node.content_data = new_content_data_node
+
+					/*
 					// replace old_content_data_node from parent wrapper. Note that in portals and sections, a 'list_body'
 					// could be the parent of the content_data_node instead the self wrapper
 						const content_data_parent = wrapper.list_body
