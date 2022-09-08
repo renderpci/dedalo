@@ -12,6 +12,7 @@
 	import {render_list_component_input_text} from '../../component_input_text/js/render_list_component_input_text.js'
 	import {render_search_component_input_text} from '../../component_input_text/js/render_search_component_input_text.js'
 	import {render_mini_component_input_text} from '../../component_input_text/js/render_mini_component_input_text.js'
+	import {output_component_input_text} from '../../component_input_text/js/output_component_input_text.js'
 
 
 
@@ -75,6 +76,9 @@ export const component_input_text = function(){
 	component_input_text.prototype.edit_in_list			= render_edit_component_input_text.prototype.edit
 
 	component_input_text.prototype.change_mode			= component_common.prototype.change_mode
+
+	//output
+	component_input_text.prototype.get_raw_string		= output_component_input_text.prototype.get_raw_string
 
 
 
