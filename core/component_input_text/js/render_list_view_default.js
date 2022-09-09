@@ -41,6 +41,5 @@ render_list_view_default.render = async function(self, options) {
 			value_string	: value_string
 		})
 
-
 	return wrapper
 }//end list

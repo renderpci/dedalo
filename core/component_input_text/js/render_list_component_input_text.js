@@ -4,11 +4,9 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-	import {get_fallback_value} from '../../common/js/common.js'
 	import {render_list_view_default} from './render_list_view_default.js'
 	import {render_view_mini} from './render_view_mini.js'
+	import {render_view_text} from './render_view_text.js'
 
 /**
 * RENDER_LIST_COMPONENT_INPUT_TEXT
