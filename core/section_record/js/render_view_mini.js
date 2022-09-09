@@ -12,13 +12,13 @@
 
 
 /**
-* RENDER_MINI_SECTION_RECORD
+* RENDER_VIEW_MINI
 * Manage the components logic and appearance in client side
 */
-export const render_mini_section_record = function() {
+export const render_view_mini = function() {
 
 	return true
-}//end render_mini_section_record
+}//end render_view_mini
 
 
 
@@ -28,9 +28,7 @@ export const render_mini_section_record = function() {
 * @param array ar_instances
 * @return DOM node wrapper
 */
-render_mini_section_record.prototype.mini = async function(options={}) {
-
-	const self = this
+render_view_mini.render = async function(self, options) {
 
 	const render_level = options.render_level || 'full'
 
@@ -162,7 +160,7 @@ render_mini_section_record.prototype.mini = async function(options={}) {
 
 
 	return wrapper
-}//end render_mini_section_record.prototype.list
+}//end render_view_mini.prototype.list
 
 
 

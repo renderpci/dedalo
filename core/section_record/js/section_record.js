@@ -9,10 +9,7 @@
 	import {clone} from '../../common/js/utils/index.js'
 	import {render_list_section_record} from '../../section_record/js/render_list_section_record.js'
 	import {render_edit_section_record} from '../../section_record/js/render_edit_section_record.js'
-	import {render_mini_section_record} from '../../section_record/js/render_mini_section_record.js'
 	import * as instances from '../../common/js/instances.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	//import {context_parser} from '../../common/js/context_parser.js'
 
 
 
@@ -70,7 +67,6 @@ export const section_record = function() {
 	section_record.prototype.list		= render_list_section_record.prototype.list
 	section_record.prototype.search		= render_list_section_record.prototype.list
 	section_record.prototype.edit		= render_edit_section_record.prototype.edit
-	section_record.prototype.mini		= render_mini_section_record.prototype.mini
 
 
 
