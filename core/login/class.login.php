@@ -15,42 +15,35 @@ class login extends common {
 	protected $tipo_active_account	= 'dd131';
 	protected $tipo_button_login	= 'dd259';
 
+	# STRUCTURE DATA
+	public $RecordObj_dd;	// obj ts
+	protected $model;		// fixed on common->load_structure_data
+
 	protected static $login_matrix_table = 'matrix';
 
 	const SU_DEFAULT_PASSWORD = '';
 
+
+
 	/**
 	* __CONSTRUCT
+	* @param string $modo = 'edit'
 	*/
-	public function __construct($modo='edit') {
+	public function __construct(string $modo='edit') {
 
-		$this->is_logged = self::is_logged();
+		// removed is_logged verification because it's necessary to get the context of login
+		// in test environments like unit_test
 
-		# CARGAMOS EL COMPONENTE
-		if($this->is_logged === false) {
+		$id		= null;
+		$tipo	= self::get_login_tipo();
 
-			$id 	= NULL;
-			$tipo	= self::get_login_tipo();
+		$this->set_id($id);
+		$this->set_tipo($tipo);
+		$this->set_lang(DEDALO_DATA_LANG);
+		$this->set_modo($modo);
 
-			$this->define_id($id);
-			$this->define_tipo($tipo);
-			$this->define_lang(DEDALO_DATA_LANG);
-			$this->define_modo($modo);
-
-			parent::load_structure_data();
-		}
+		parent::load_structure_data();
 	}//end __construct
-
-
-
-	# define id
-	protected function define_id($id) {	$this->id = $id ; }
-	# define tipo
-	protected function define_tipo($tipo) {	$this->tipo = $tipo ; }
-	# define lang
-	protected function define_lang($lang) {	$this->lang = $lang ; }
-	# define modo
-	protected function define_modo($modo) {	$this->modo = $modo ; }
 
 
 
@@ -59,9 +52,9 @@ class login extends common {
 	* @param object $request_options
 	* @see Mandatory vars: 'username','password'
 	* Get post vars and search received user/password in db
-	* @return 'ok' / Error text
+	* @return object $response
 	*/
-	public static function Login( $request_options ) : object {
+	public static function Login( object $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
