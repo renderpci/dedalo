@@ -4,8 +4,9 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
-
+	import {render_list_view_default} from './render_list_view_default.js'
+	import {render_view_mini} from './render_view_mini.js'
+	import {render_view_text} from './render_view_text.js'
 
 
 /**
@@ -24,22 +25,25 @@ export const render_list_component_date = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_date.prototype.list = async function() {
+render_list_component_date.prototype.list = async function(options) {
 
 	const self = this
 
-	// short vars
-		const data			= self.data || {}
-		const value			= data.value || ''
-		const value_string	= value
+	// view
+		const view	= self.context.view || 'default'
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			// autoload. On true, load data from API when user dblclick to edit inline
-			autoload		: true,
-			value_string	: value_string
-		})
+	switch(view) {
 
+		case 'mini':
+			return render_view_mini.render(self, options)
 
-	return wrapper
+		case 'text':
+			return render_view_text.render(self, options)
+
+		case 'default':
+		default:
+			return render_list_view_default.render(self, options)
+	}
+
+	return null
 }//end list

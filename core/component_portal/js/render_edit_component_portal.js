@@ -17,6 +17,7 @@
 	import {render_edit_view_tree} from './render_edit_view_tree.js'
 	import {render_edit_view_mosaic} from './render_edit_view_mosaic.js'
 	import {render_edit_view_indexation} from './render_edit_view_indexation.js'
+	import {render_view_text} from './render_view_text.js'
 	import {
 		on_dragstart,
 		on_dragover,
@@ -52,15 +53,16 @@ render_edit_component_portal.prototype.edit = async function(options) {
 
 	const self = this
 
-	// options
-		// const render_level = options.render_level
-
 	// view
 		const view	= self.context.view || 'table'
 
 	// wrapper
 		let wrapper
 		switch(view) {
+
+			case 'text':
+				wrapper = render_view_text.render(self, options)
+				break;
 
 			case 'line':
 				wrapper = render_edit_view_line.render(self, options)

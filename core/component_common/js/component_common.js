@@ -1041,7 +1041,7 @@ component_common.prototype.get_ar_instances = async function(options={}){
 		const mode			= options.mode || self.mode || 'list'
 		const columns_map	= options.columns_map || self.columns_map
 		const id_variant	= options.id_variant || self.id_variant || null
-
+		const view			= options.view || 'default'
 	// self data verification
 		// 	if (typeof self.data==="undefined") {
 		// 		self.data = {
@@ -1071,9 +1071,9 @@ component_common.prototype.get_ar_instances = async function(options={}){
 			// console.log("current_section_tipo:",current_section_tipo, current_section_id, self.data.row_section_id);
 
 			// const current_context = self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
-			const current_context = (typeof self.datum.context!=="undefined")
-				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
-				: []
+			// const current_context = (typeof self.datum.context!=="undefined")
+			// 	? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+			// 	: []
 
 			const instance_options = {
 				model			: 'section_record',
@@ -1082,7 +1082,8 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				section_id		: current_section_id,
 				mode			: mode,
 				lang			: lang,
-				context			: current_context,
+				context 		: {view: view},
+				// context			: current_context,
 				// data			: current_data,
 				datum			: self.datum,
 				row_key			: i,
