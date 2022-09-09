@@ -475,7 +475,8 @@ export const ui = {
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
-					element_type	: 'span'
+					element_type	: 'span',
+					class_name		: 'mini_' +instance.model
 				})
 
 			// value_string
