@@ -15,7 +15,6 @@
 	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
 	import {render_list_component_portal} from '../../component_portal/js/render_list_component_portal.js'
 	import {render_search_component_portal} from '../../component_portal/js/render_search_component_portal.js'
-	import {render_mini_component_portal} from '../../component_portal/js/render_mini_component_portal.js'
 
 
 /**
@@ -87,7 +86,6 @@ export const component_portal = function() {
 	component_portal.prototype.build_rqo_choose		= common.prototype.build_rqo_choose
 
 	// render
-	component_portal.prototype.mini					= render_mini_component_portal.prototype.mini
 	component_portal.prototype.list					= render_list_component_portal.prototype.list
 	component_portal.prototype.edit					= render_edit_component_portal.prototype.edit
 	component_portal.prototype.tm					= render_edit_component_portal.prototype.edit
