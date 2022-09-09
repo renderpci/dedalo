@@ -30,7 +30,7 @@ export const render_edit_component_input_text = function() {
 render_edit_component_input_text.prototype.edit = async function(options) {
 
 	const self = this
-
+	
 	// view
 		const view	= self.context.view || 'default'
 
