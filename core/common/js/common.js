@@ -793,7 +793,8 @@ export const get_columns_map = function(context, datum_context) {
 			? context.columns_map
 			: false
 	// view
-		const view = context.view
+		const view			= context.view
+		const children_view	= context.children_view || null
 
 	// storage of all ddo_map in flat array, without hierarchy, to find the components easily.
 		const full_ddo_map = []
@@ -822,7 +823,7 @@ export const get_columns_map = function(context, datum_context) {
 
 				const dd_object = ar_first_level_ddo[j]
 				// set the view if it is defined in ontology set it else get the parent view
-				dd_object.view 		= dd_object.view || view
+				dd_object.view 	= dd_object.view || children_view || view || 'default'
 
 				// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
 				if (dd_object.column_id && source_columns_map.length >0){
