@@ -7,8 +7,8 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-
-
+	import {render_list_view_default} from './render_list_view_default.js'
+	import {render_view_mini} from './render_view_mini.js'
 
 /**
 * RENDER_LIST_COMPONENT_INPUT_TEXT
@@ -26,23 +26,25 @@ export const render_list_component_input_text = function() {
 * Render component node to use in list
 * @return DOM node wrapper
 */
-render_list_component_input_text.prototype.list = async function() {
+render_list_component_input_text.prototype.list = async function(options) {
 
 	const self = this
 
-	// short vars
-		const data				= self.data
-		const value				= data.value || []
-		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(value, fallback_value)
-		const value_string		= fallback.join(self.value_separator)
+	// view
+		const view	= self.context.view || 'default'
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload		: false,
-			value_string	: value_string
-		})
+	switch(view) {
 
+		case 'mini':
+			return render_view_mini.render(self, options)
 
-	return wrapper
+		case 'text':
+			return render_view_text.render(self, options)
+
+		case 'default':
+		default:
+			return render_list_view_default.render(self, options)
+	}
+
+	return null
 }//end list

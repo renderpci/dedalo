@@ -11,13 +11,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_INPUT_TEXT
+* RENDER_VIEW_MINI
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_input_text = function() {
+export const render_view_mini = function() {
 
 	return true
-}//end render_mini_component_input_text
+}//end render_view_mini
 
 
 
@@ -26,9 +26,7 @@ export const render_mini_component_input_text = function() {
 * Render node to be used in current mode
 * @return DOM node wrapper
 */
-render_mini_component_input_text.prototype.mini = async function() {
-
-	const self = this
+render_view_mini.render = async function(self, options) {
 
 	// short vars
 		const data				= self.data
