@@ -39,12 +39,10 @@ render_list_view_default.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// view
-		const view	= self.context.view === 'line'
-			? 'mini'
-			: 'default'
+		const children_view	= self.context.children_view || self.context.view || 'default'
 
 		const ar_section_record	= await self.get_ar_instances({
-			view : view
+			view : children_view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)

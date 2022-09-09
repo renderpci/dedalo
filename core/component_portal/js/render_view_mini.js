@@ -24,12 +24,14 @@ export const render_view_mini = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_view_mini.prototype.mini = async function() {
-
-	const self = this
+render_view_mini.render = async function(self, options) {
 
 	// ar_section_record
-		const ar_section_record = await self.get_ar_instances()
+		const children_view	= self.context.children_view || self.context.view || 'default'
+
+		const ar_section_record	= await self.get_ar_instances({
+			view : children_view
+		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
