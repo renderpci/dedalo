@@ -9,24 +9,22 @@
 
 
 /**
-* OUTPUT_COMPONENT_INPUT_TEXT
+* RENDER_VIEW_TEXT
 * Manages the component's logic to get the values of the data without DOM elements or structure
 */
-export const output_component_input_text = function() {
+export const render_view_text = function() {
 
 	return true
-}//end output_component_input_text
+}//end render_view_text
 
 
 
 /**
 * GET_RAW_STRING
 * Output component value to use as raw text
-* @return string value_string
+* @return DOM text node text_node
 */
-output_component_input_text.prototype.get_raw_string = async function() {
-
-	const self = this
+render_view_text.render = async function(self, options) {
 
 	// short vars
 		const data				= self.data
@@ -35,5 +33,7 @@ output_component_input_text.prototype.get_raw_string = async function() {
 		const fallback			= get_fallback_value(value, fallback_value)
 		const value_string		= fallback.join(self.value_separator)
 
-	return value_string
-}//end get_raw_string
+		const text_node = document.createTextNode(value_string)
+
+	return text_node
+}//end get_text
