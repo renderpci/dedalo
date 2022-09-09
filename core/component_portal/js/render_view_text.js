@@ -9,13 +9,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_PORTAL
+* RENDER_VIEW_TEXT
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_portal = function() {
+export const render_view_text = function() {
 
 	return true
-}//end render_mini_component_portal
+}//end render_view_text
 
 
 
@@ -24,24 +24,32 @@ export const render_mini_component_portal = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_mini_component_portal.prototype.mini = async function() {
-
-	const self = this
+render_view_text.render = async function(self, options) {
 
 	// ar_section_record
-		const ar_section_record = await self.get_ar_instances()
+		const ar_section_record = await self.get_ar_instances({
+			mode : 'list',
+			view : self.context.view
+		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
+
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// add all nodes
 		const length = ar_section_record.length
 		for (let i = 0; i < length; i++) {
 			const child_item = await ar_section_record[i].render()
-			wrapper.appendChild(child_item)
+
+			fragment.appendChild(child_item)
+
+			if(i < length-1){
+				const node_value_separator = document.createTextNode(self.value_separator)
+				fragment.appendChild(node_value_separator)
+			}
 		}
 
-	return wrapper
+	return fragment
 }//end  mini
