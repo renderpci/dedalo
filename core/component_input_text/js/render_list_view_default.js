@@ -11,24 +11,22 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_INPUT_TEXT
+* RENDER_LIST_VIEW_DEFAULT
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_input_text = function() {
+export const render_list_view_default = function() {
 
 	return true
-}//end render_mini_component_input_text
+}//end render_list_view_default
 
 
 
 /**
-* MINI
-* Render node to be used in current mode
+* LIST
+* Render component node to use in list
 * @return DOM node wrapper
 */
-render_mini_component_input_text.prototype.mini = async function() {
-
-	const self = this
+render_list_view_default.render = async function(self, options) {
 
 	// short vars
 		const data				= self.data
@@ -38,10 +36,10 @@ render_mini_component_input_text.prototype.mini = async function() {
 		const value_string		= fallback.join(self.value_separator)
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
-			value_string : value_string
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload		: false,
+			value_string	: value_string
 		})
 
-
 	return wrapper
-}//end mini
+}//end list
