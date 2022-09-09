@@ -18,7 +18,6 @@
 * the tool assign the name of this method when it create the time_machine instance in self.time_machine.view
 * the time_machine call here when the render() is fired
 *
-*
 * @param instance self
 * 	The time_machine instance (here the instance is not the tool)
 * @param instance options
@@ -103,6 +102,9 @@ export const render_time_machine_list_view = async function(self, options) {
 			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode}`
 		})
 		wrapper.appendChild(fragment)
+		// set pointers
+		wrapper.list_body		= list_body
+		wrapper.content_data	= content_data
 
 
 	return wrapper
