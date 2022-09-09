@@ -8,8 +8,8 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_iri} from '../../component_iri/js/render_edit_component_iri.js'
 	import {render_list_component_iri} from '../../component_iri/js/render_list_component_iri.js'
-	import {render_mini_component_iri} from '../../component_iri/js/render_mini_component_iri.js'
 	import {render_search_component_iri} from '../../component_iri/js/render_search_component_iri.js'
+	import {output_component_iri} from '../../component_iri/js/output_component_iri.js'
 
 
 export const component_iri = function(){
@@ -57,7 +57,6 @@ export const component_iri = function(){
 	component_iri.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_iri.prototype.mini				= render_mini_component_iri.prototype.mini
 	component_iri.prototype.list				= render_list_component_iri.prototype.list
 	component_iri.prototype.edit				= render_edit_component_iri.prototype.edit
 	component_iri.prototype.edit_in_list		= render_edit_component_iri.prototype.edit

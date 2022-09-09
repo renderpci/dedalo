@@ -4,28 +4,27 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
+	import {get_fallback_value} from '../../common/js/common.js'
 
 
 
 /**
-* render_mini_component_iri
-* Manage the components logic and appearance in client side
+* OUTPUT_COMPONENT_IRI
+* Manages the component's logic to get the values of the data without DOM elements or structure
 */
-export const render_mini_component_iri = function() {
+export const output_component_iri = function() {
 
 	return true
-}//end render_mini_component_iri
+}//end output_component_iri
 
 
 
 /**
-* MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* GET_RAW_STRING
+* Output component value to use as raw text
+* @return string value_string
 */
-render_mini_component_iri.prototype.mini = async function() {
+output_component_iri.prototype.get_raw_string = async function() {
 
 	const self = this
 
@@ -51,15 +50,10 @@ render_mini_component_iri.prototype.mini = async function() {
 				ar_value_string.push(ar_line.join(' | '))
 			}
 		}
+
 		const value_string = (ar_value_string && ar_value_string.length)
-			? ar_value_string.join(' - ')
+			? ar_value_string.join(self.value_separator)
 			: ''
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
-			value_string : value_string
-		})
-
-
-	return wrapper
-}//end mini
+	return value_string
+}//end get_raw_string
