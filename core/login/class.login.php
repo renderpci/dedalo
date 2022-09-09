@@ -15,42 +15,35 @@ class login extends common {
 	protected $tipo_active_account	= 'dd131';
 	protected $tipo_button_login	= 'dd259';
 
+	# STRUCTURE DATA
+	public $RecordObj_dd;	// obj ts
+	protected $model;		// fixed on common->load_structure_data
+
 	protected static $login_matrix_table = 'matrix';
 
 	const SU_DEFAULT_PASSWORD = '';
 
+
+
 	/**
 	* __CONSTRUCT
+	* @param string $modo = 'edit'
 	*/
-	public function __construct($modo='edit') {
+	public function __construct(string $modo='edit') {
 
-		$this->is_logged = self::is_logged();
+		// removed is_logged verification because it's necessary to get the context of login
+		// in test environments like unit_test
 
-		# CARGAMOS EL COMPONENTE
-		if($this->is_logged === false) {
+		$id		= null;
+		$tipo	= self::get_login_tipo();
 
-			$id 	= NULL;
-			$tipo	= self::get_login_tipo();
+		$this->set_id($id);
+		$this->set_tipo($tipo);
+		$this->set_lang(DEDALO_DATA_LANG);
+		$this->set_modo($modo);
 
-			$this->define_id($id);
-			$this->define_tipo($tipo);
-			$this->define_lang(DEDALO_DATA_LANG);
-			$this->define_modo($modo);
-
-			parent::load_structure_data();
-		}
+		parent::load_structure_data();
 	}//end __construct
-
-
-
-	# define id
-	protected function define_id($id) {	$this->id = $id ; }
-	# define tipo
-	protected function define_tipo($tipo) {	$this->tipo = $tipo ; }
-	# define lang
-	protected function define_lang($lang) {	$this->lang = $lang ; }
-	# define modo
-	protected function define_modo($modo) {	$this->modo = $modo ; }
 
 
 
@@ -59,9 +52,9 @@ class login extends common {
 	* @param object $request_options
 	* @see Mandatory vars: 'username','password'
 	* Get post vars and search received user/password in db
-	* @return 'ok' / Error text
+	* @return object $response
 	*/
-	public static function Login( $request_options ) : object {
+	public static function Login( object $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -93,10 +86,10 @@ class login extends common {
 			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
 			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
 
-			$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+			$matrix_table			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
 			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
 			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
-			$user_count 			= count($ar_result);
+			$user_count				= count($ar_result);
 
 		// user found in db check
 			if( !is_array($ar_result) || empty($ar_result[0]) ) {
@@ -104,8 +97,8 @@ class login extends common {
 				#
 				# STOP: USERNAME NOT EXISTS
 				#
-				$activity_datos['result'] 	= "deny";
-				$activity_datos['cause'] 	= "user not exist";
+				$activity_datos['result']	= "deny";
+				$activity_datos['cause']	= "user not exist";
 				$activity_datos['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
@@ -129,17 +122,17 @@ class login extends common {
 				#
 				# STOP: USERNAME DUPLICATED
 				#
-				$activity_datos['result'] 	= "deny";
-				$activity_datos['cause'] 	= "user duplicated in database";
+				$activity_datos['result']	= "deny";
+				$activity_datos['cause']	= "user duplicated in database";
 				$activity_datos['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 				self::login_activity_report(
-					"Denied login attempted by: $username. This user exist more than once in the database ".$user_count,
+					"Denied login attempted by : $username. This user exist more than once in the database ".$user_count,
 					NULL,
 					'LOG IN',
 					$activity_datos
-					);
+				);
 				# delay failed output after 2 seconds to prevent brute force attacks
 		        sleep(2);
 				#exit("Error: User $username not exists !");
@@ -152,14 +145,16 @@ class login extends common {
 			$user_id = $section_id = reset($ar_result);
 
 			# Search password
-			$password_encrypted = component_password::encrypt_password($password);
-			$component_password = component_common::get_instance('component_password',
-																 DEDALO_USER_PASSWORD_TIPO,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);
-			$ar_password_dato = $component_password->get_dato();
-			$password_dato = $ar_password_dato[0];
+			$password_encrypted	= component_password::encrypt_password($password);
+			$component_password	= component_common::get_instance(
+				'component_password',
+				DEDALO_USER_PASSWORD_TIPO,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO
+			);
+			$ar_password_dato	= $component_password->get_dato();
+			$password_dato		= $ar_password_dato[0];
 
 			// password match check
 				if( $password_encrypted!==$password_dato ) {
@@ -167,8 +162,8 @@ class login extends common {
 					#
 					# STOP : PASSWORD IS WRONG
 					#
-					$activity_datos['result'] 	= "deny";
-					$activity_datos['cause'] 	= "wrong password";
+					$activity_datos['result']	= "deny";
+					$activity_datos['cause']	= "wrong password";
 					$activity_datos['username']	= $username;
 
 					# LOGIN ACTIVITY REPORT
@@ -274,7 +269,7 @@ class login extends common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function Login_SAML($request_options) : object {
+	public static function Login_SAML(object $request_options) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -436,7 +431,7 @@ class login extends common {
 
 	/**
 	* GET_USERNAME
-	* @param int $section_id (is user section id)
+	* @param string|int $section_id (is user section id)
 	* @return string $full_username
 	*/
 	public static function get_username($section_id) : string {
@@ -458,7 +453,7 @@ class login extends common {
 
 	/**
 	* GET_FULL_USERNAME
-	* @param int $section_id (is user section id)
+	* @param string|int $section_id (is user section id)
 	* @return string $full_username
 	*/
 	public static function get_full_username($section_id) : string {
@@ -480,25 +475,26 @@ class login extends common {
 
 	/**
 	* ACTIVE_ACCOUNT_CHECK
-	* @param int $section_id
+	* @param string|int $section_id
 	* @return bool
 	*/
 	public static function active_account_check($section_id) : bool {
 
 		$active_account = false; // Default false
 
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
-		$component_radio_button = component_common::get_instance($modelo_name,
-																 DEDALO_CUENTA_ACTIVA_TIPO,
-																 $section_id,
-																 'edit',
-																 DEDALO_DATA_NOLAN,
-																 DEDALO_SECTION_USERS_TIPO);
-		$cuenta_activa_dato 	= $component_radio_button->get_dato();
+		$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
+		$component_radio_button	= component_common::get_instance(
+			$modelo_name,
+			DEDALO_CUENTA_ACTIVA_TIPO,
+			$section_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$cuenta_activa_dato = $component_radio_button->get_dato();
 
-		# OJO: El valor válido sólo puede ser 1 que es 'Si' en la lista de valores referenciada y se asigna como constante en config 'NUMERICAL_MATRIX_VALUE_YES'
+		// NOTE: The valid value can only be 1, which is 'Yes' in the referenced list of values and is assigned as a constant in config 'NUMERICAL_MATRIX_VALUE_YES'
 		if (isset($cuenta_activa_dato[0]) && isset($cuenta_activa_dato[0]->section_id) && $cuenta_activa_dato[0]->section_id==NUMERICAL_MATRIX_VALUE_YES) {
-
 			$active_account = true;
 		}
 
@@ -509,7 +505,7 @@ class login extends common {
 
 	/**
 	* USER_HAVE_PROFILE_CHECK
-	* @param int $section_id
+	* @param string|int $section_id
 	* @return bool
 	*/
 	public static function user_have_profile_check($section_id) : bool {
@@ -518,12 +514,14 @@ class login extends common {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
 
-		$component_profile 		  = component_common::get_instance($model,
-																	DEDALO_USER_PROFILE_TIPO,
-																	$section_id,
-																	'list',
-																	DEDALO_DATA_NOLAN,
-																	DEDALO_SECTION_USERS_TIPO);
+		$component_profile = component_common::get_instance(
+			$model,
+			DEDALO_USER_PROFILE_TIPO,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
 		$profile_dato = $component_profile->get_dato();
 		if (!empty($profile_dato)) {
 
@@ -537,22 +535,23 @@ class login extends common {
 
 	/**
 	* USER_HAVE_PROJECTS_CHECK
-	* @param int $section_id
+	* @param string|int $section_id
 	* @return bool
 	*/
 	public static function user_have_projects_check($section_id) : bool {
 
 		$user_have_projects = false; // Default false
 
-		$component_filter_master 	= component_common::get_instance('component_filter_master',
-																	 DEDALO_FILTER_MASTER_TIPO,
-																	 $section_id,
-																	 'list',
-																	 DEDALO_DATA_LANG,
-																	 DEDALO_SECTION_USERS_TIPO);
-		$filter_master_dato 		= (array)$component_filter_master->get_dato();
+		$component_filter_master = component_common::get_instance(
+			'component_filter_master',
+			DEDALO_FILTER_MASTER_TIPO,
+			$section_id,
+			'list',
+			DEDALO_DATA_LANG,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$filter_master_dato = (array)$component_filter_master->get_dato();
 		if (!empty($filter_master_dato) && count($filter_master_dato)>0) {
-
 			$user_have_projects = true;
 		}
 
@@ -642,11 +641,11 @@ class login extends common {
 	/**
 	* INIT_USER_LOGIN_SEqUENCE
 	* Init login sequence when all is OK
-	* @param int $user_id
+	* @param string|int $user_id
 	* @param string $username
 	* @return object $response
 	*/
-	private static function init_user_login_sequence($user_id, $username, $full_username, $init_test=true, $login_type='default') : object {
+	private static function init_user_login_sequence($user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
 		$start_time=start_time();
 
 		$response = new stdClass();
@@ -764,23 +763,23 @@ class login extends common {
 	* INIT_COOKIE_AUTH
 	* @return bool true
 	*/
-	private static function init_cookie_auth() {
+	private static function init_cookie_auth() : bool {
 
 		$cookie_name  = self::get_auth_cookie_name();
 		$cookie_value = self::get_auth_cookie_value();
 
-		$current = '';
-		$previous= '';
+		$current	= '';
+		$previous	= '';
 
-		$ktoday 	= date("Y_m_d");
-		$kyesterday = date("Y_m_d",strtotime("-1 day"));
+		$ktoday		= date("Y_m_d");
+		$kyesterday	= date("Y_m_d",strtotime("-1 day"));
 
-		$cookie_file 		= DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
-		$cookie_file_exists = file_exists($cookie_file);
+		$cookie_file		= DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
+		$cookie_file_exists	= file_exists($cookie_file);
 		if ($cookie_file_exists===true) {
 
-			$current_file = file_get_contents($cookie_file);
-			$ar_data 	  = json_decode($current_file);
+			$current_file	= file_get_contents($cookie_file);
+			$ar_data		= json_decode($current_file);
 		}
 
 		if ( $cookie_file_exists===true && isset($ar_data->$ktoday) && isset($ar_data->$kyesterday) ) {
@@ -793,8 +792,8 @@ class login extends common {
 			$data = new stdClass();
 
 			$ktoday_data = new stdClass();
-				$ktoday_data->cookie_name  = $cookie_name;
-				$ktoday_data->cookie_value = $cookie_value;
+				$ktoday_data->cookie_name	= $cookie_name;
+				$ktoday_data->cookie_value	= $cookie_value;
 
 			$data->$ktoday = $ktoday_data;
 
@@ -803,41 +802,40 @@ class login extends common {
 			}else{
 
 				$kyesterday_data = new stdClass();
-					$kyesterday_data->cookie_name  = self::get_auth_cookie_name();
-					$kyesterday_data->cookie_value = self::get_auth_cookie_value();
+					$kyesterday_data->cookie_name	= self::get_auth_cookie_name();
+					$kyesterday_data->cookie_value	= self::get_auth_cookie_value();
 
 				$data->$kyesterday = $kyesterday_data;
 			}
-			# File cookie data
+			// File cookie data
 			if( !file_put_contents($cookie_file, json_encode($data)) ){
 				throw new Exception("Error Processing Request. Media protection error on create cookie_file", 1);
 			}
 
 			debug_log(__METHOD__." data 2 New data ".to_string($data), logger::DEBUG);
 
-			# APACHE 2.2
-				# $htaccess_text  = '';
+			// APACHE 2.2
+				// 	$htaccess_text  = '';
 
-				# $htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
-				# $htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
-	  			# $htaccess_text .= 'Order allow,deny'.PHP_EOL;
-				# $htaccess_text .= '</FilesMatch>'.PHP_EOL;
+				// 	$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
+				// 	$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
+				// 	$htaccess_text .= 'Order allow,deny'.PHP_EOL;
+				// 	$htaccess_text .= '</FilesMatch>'.PHP_EOL;
 
-				# $htaccess_text .= '# Protect media files with realm'.PHP_EOL;
-				# $htaccess_text .= 'AuthType Basic'.PHP_EOL;
-				# $htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
-				# $htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
-				# $htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
-				# $htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
-				# $htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
-				# $htaccess_text .= 'Order deny,allow'.PHP_EOL;
-				# $htaccess_text .= 'Deny from all'.PHP_EOL;
-				# $htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
-				# $htaccess_text .= 'Require valid-user'.PHP_EOL;
-				# $htaccess_text .= 'Satisfy any'.PHP_EOL;
+				// 	$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
+				// 	$htaccess_text .= 'AuthType Basic'.PHP_EOL;
+				// 	$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
+				// 	$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
+				// 	$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
+				// 	$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
+				// 	$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
+				// 	$htaccess_text .= 'Order deny,allow'.PHP_EOL;
+				// 	$htaccess_text .= 'Deny from all'.PHP_EOL;
+				// 	$htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
+				// 	$htaccess_text .= 'Require valid-user'.PHP_EOL;
+				// 	$htaccess_text .= 'Satisfy any'.PHP_EOL;
 
-
-			# APACHE 2.4
+			// APACHE 2.4
 			$htaccess_text  = '';
 
 			$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
@@ -852,7 +850,7 @@ class login extends common {
 			$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
 			$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
 			$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
-			# Require any sentence
+			// Require any sentence
 			$htaccess_text .= '<RequireAny>'.PHP_EOL;
 			$htaccess_text .= 'Require env PASS'.PHP_EOL;
 			$htaccess_text .= 'Require valid-user'.PHP_EOL;
@@ -874,9 +872,9 @@ class login extends common {
 			# File .htaccess
 			$htaccess_file = DEDALO_MEDIA_PATH.'/.htaccess';
 			if( !file_put_contents($htaccess_file, $htaccess_text) ){
-				# Remove cookie file (cookie_file.php)
+				// Remove cookie file (cookie_file.php)
 				unlink($cookie_file);
-				# Launch Exception
+				// Launch Exception
 				throw new Exception("Error Processing Request. Media protecction error on create access file", 1);
 			}
 		}
@@ -885,7 +883,7 @@ class login extends common {
 
 		// set cookie
 			$cookie_properties = common::get_cookie_properties();
-			#setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
+			// setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
 			$cookie_values = (object)[
 				'name'		=> $data->{$ktoday}->cookie_name,
 				'value'		=> $data->{$ktoday}->cookie_value,
@@ -914,7 +912,7 @@ class login extends common {
 	* GET_AUTH_COOKIE_NAME
 	* @return string $cookie_name
 	*/
-	private static function get_auth_cookie_name() {
+	private static function get_auth_cookie_name() : string {
 		$date = getdate();
 		#$cookie_name = md5( 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. mt_rand() );
 		$cookie_name = hash('sha512', 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. random_bytes(8));
@@ -935,7 +933,7 @@ class login extends common {
 	*    [month]   => June
 	* @return string $cookie_value
 	*/
-	private static function get_auth_cookie_value() {
+	private static function get_auth_cookie_value() : string {
 		$date = getdate();
 		#$cookie_value = md5( 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. mt_rand() );
 		$cookie_value = hash('sha512', 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. random_bytes(8) );
@@ -1011,8 +1009,9 @@ class login extends common {
 
 	/**
 	* GET_LOGIN_TIPO
+	* @return string|null
 	*/
-	private static function get_login_tipo() {
+	private static function get_login_tipo() : ?string {
 
 		$ar_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='login', $prefijo='dd');
 
@@ -1027,8 +1026,10 @@ class login extends common {
 	/**
 	* QUIT
 	* Made logout
+	* @param object $request_options
+	* @return bool
 	*/
-	public static function Quit($request_options) {
+	public static function Quit(object $request_options) {
 
 		$options = new stdClass();
 			$options->mode	= null;
@@ -1102,8 +1103,9 @@ class login extends common {
 
 	/**
 	* LOGIN ACTIVITY REPORT
+	* @return void
 	*/
-	public static function login_activity_report(string $msg, $projects=NULL, $login_label='LOG IN', $activity_datos=NULL) {
+	public static function login_activity_report(string $msg, $projects=null, string $login_label='LOG IN', array $activity_datos=null) {
 
 		$datos = array("msg" => $msg);
 
@@ -1126,8 +1128,8 @@ class login extends common {
 
 	/**
 	* TEST_SU_DEFAULT_PASSWORD
-	* Check if admin user password default has ben changed or not
-	* If is fefault password returns true, else false
+	* Check if admin user password default has been changed or not
+	* If is default password returns true, else false
 	* @return bool true/false
 	*/
 	public function test_su_default_password() : bool {
@@ -1154,7 +1156,7 @@ class login extends common {
 	/**
 	* IS_DEVELOPER
 	* Test if received user is developer
-	* @param $user_id
+	* @param string|int $user_id
 	*	Normally current logged user id
 	* @return bool
 	*/
@@ -1176,12 +1178,14 @@ class login extends common {
 		#}
 
 		# Resolve from component
-		$component 	 = component_common::get_instance('component_radio_button',
-													   DEDALO_USER_DEVELOPER_TIPO,
-													   $user_id,
-													   'edit',
-													   DEDALO_DATA_NOLAN,
-													   DEDALO_SECTION_USERS_TIPO);
+		$component = component_common::get_instance(
+			'component_radio_button',
+			DEDALO_USER_DEVELOPER_TIPO,
+			$user_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
 		$dato = $component->get_dato();
 
 		if (empty($dato)) {
@@ -1207,14 +1211,14 @@ class login extends common {
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false, callable $callback=null) : object {
 
 		// short vars
-			$model			= 'login';
-			$tipo			= $this->get_tipo();
-			$mode			= $this->get_modo();
-			$label			= $this->get_label();
-			$lang			= $this->get_lang();
+			$model	= 'login';
+			$tipo	= $this->get_tipo();
+			$mode	= $this->get_modo();
+			$label	= $this->get_label();
+			$lang	= $this->get_lang();
 
 		// properties
-			$properties   = $this->get_properties();
+			$properties = $this->get_properties();
 			if (empty($properties)) {
 				$properties = new stdClass();
 			}
@@ -1319,5 +1323,3 @@ class login extends common {
 
 
 }//end login class
-
-

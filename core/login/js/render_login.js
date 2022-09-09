@@ -54,9 +54,9 @@ render_login.prototype.edit = async function(options) {
 
 	// auto-focus username
 		setTimeout(()=>{
-			const username = wrapper.querySelector('#username')
+			const username = content_data.querySelector('#username')
 			username.focus()
-		},600)
+		}, 600)
 
 
 	return wrapper
@@ -339,6 +339,7 @@ const validate_browser = function() {
 
 			default:
 				alert("Sorry. Your browser is not verified to work with Dédalo. \n\nOnly Webkit browsers are tested by now. \n\nPlease download the last version of official Dédalo browser (Google Chrome - Safari) to sure a good experience.")
+				break;
 		}
 
 	}catch (e) {
