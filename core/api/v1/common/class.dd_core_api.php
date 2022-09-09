@@ -997,6 +997,11 @@ final class dd_core_api {
 					$element = new $model($section_id, $section_tipo);
 					break;
 
+				case $model==='login':
+
+					$element = new $model($mode);
+					break;
+
 				default:
 					#throw new Exception("Error Processing Request", 1);
 					$response->msg = 'Error. model not found: '.$model;
