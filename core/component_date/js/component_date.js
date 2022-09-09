@@ -11,8 +11,6 @@
 	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
 	import {render_search_component_date} from '../../component_date/js/render_search_component_date.js'
 	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
-	import {render_mini_component_date} from '../../component_date/js/render_mini_component_date.js'
-
 
 
 export const component_date = function(){
@@ -69,13 +67,11 @@ export const component_date = function(){
 	component_date.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_date.prototype.mini				= render_mini_component_date.prototype.mini
 	component_date.prototype.list				= render_list_component_date.prototype.list
 	component_date.prototype.edit				= render_edit_component_date.prototype.edit
 	component_date.prototype.edit_in_list		= render_edit_component_date.prototype.edit
 	component_date.prototype.search				= render_search_component_date.prototype.search
 	component_date.prototype.change_mode		= component_common.prototype.change_mode
-
 
 
 /**
