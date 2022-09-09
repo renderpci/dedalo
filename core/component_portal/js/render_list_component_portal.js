@@ -9,6 +9,7 @@
 	import {render_list_view_default} from './render_list_view_default.js'
 	import {render_view_mini} from './render_view_mini.js'
 	import {render_view_text} from './render_view_text.js'
+	import {render_edit_view_line} from './render_edit_view_line.js'
 
 
 
@@ -37,6 +38,9 @@ render_list_component_portal.prototype.list = async function(options) {
 		const view	= self.context.view || 'default'
 
 	switch(view) {
+
+		case 'line':
+			return render_edit_view_line.render(self, options)
 
 		case 'mini':
 			return render_view_mini.render(self, options)
