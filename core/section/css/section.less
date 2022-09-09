@@ -50,11 +50,16 @@
 			overflow: auto;
 			height: 100%;
 			width: @inspector_width;
-			background-color: @color_grey_untralight;
+			// background-color: @color_grey_untralight;
+			// outline: 1px solid @color_grey_light;
 			position: fixed;
 			// top: @top_distance;
 			left: calc(100vw - 16.4rem);
-			outline: 1px solid @color_grey_light;
+
+
+			// prevent content from shifting left when the vertical scrollbar appears
+			overflow-y: overlay;
+			padding-right: 13px;
 
 			@media screen and (max-width: @width_break_point_0) {
 				display: contents;

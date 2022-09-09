@@ -667,7 +667,7 @@ export const ui = {
 						console.log('Ignored already self active:', self.id);
 					}else{
 						// deactivate active component
-						console.log('Deactivating self active:', self.id);
+						console.log('Deactivating active component (self):', self.id);
 						await ui.component.deactivate(self)
 					}
 					return false
@@ -724,6 +724,7 @@ export const ui = {
 					self.activate(true)
 				}
 
+				console.log('Activating component:', self.id);
 
 			return true
 		},//end activate
@@ -745,7 +746,7 @@ export const ui = {
 
 			// check already inactive
 				if (component.active!==true) {
-					console.log('Ignored component already active:', component.id);
+					console.log('Ignored component not active: ', component.id);
 					return false
 				}
 
@@ -768,7 +769,9 @@ export const ui = {
 				component.active = false
 
 			// fix component_active as null
-				page_globals.component_active = null
+				if (page_globals.component_active && page_globals.component_active.id===component.id) {
+					page_globals.component_active = null
+				}
 
 			// custom component deactivate callbacks
 				if (typeof component.deactivate==='function') {
@@ -1154,7 +1157,7 @@ export const ui = {
 
 			// const id			= instance.id || 'id is not set'
 			const model			= instance.model 	// like component_input_text
-			const type			= instance.type 	// like 'component'
+			const type			= instance.type || 'tool' 	// like 'component'
 			// const tipo		= instance.tipo 	// like 'rsc26'
 			const mode			= instance.mode 	// like 'edit'
 			const context		= instance.context || {}

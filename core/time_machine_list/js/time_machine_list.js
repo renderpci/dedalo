@@ -59,7 +59,8 @@ export const time_machine_list = function() {
 
 /**
 * INIT
-* @return bool true
+* @param object options
+* @return bool common_init
 */
 time_machine_list.prototype.init = function(options) {
 
@@ -71,13 +72,15 @@ time_machine_list.prototype.init = function(options) {
 	// status update
 	self.status = 'initiated'
 
-	return true
+	return common_init
 }//end init
 
 
 
 /**
 * BUILD
+* Creates service_time_machine instance and build it
+* @param bool autoload = true
 * @return bool true
 */
 time_machine_list.prototype.build = async function(autoload=true){
@@ -87,7 +90,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 	// status update
 		self.status = 'building'
 
-	// time_machine. Create, build and assign the time machine service to the instance
+	// service_time_machine. Create, build and assign the time machine service to the instance
 		self.time_machine = await get_instance({
 			// model		: 'time_machine',
 			model			: 'service_time_machine',
