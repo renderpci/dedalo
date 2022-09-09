@@ -5,7 +5,9 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
+	import {render_list_view_default} from './render_list_view_default.js'
+	import {render_view_mini} from './render_view_mini.js'
+	import {render_view_text} from './render_view_text.js'
 
 
 
@@ -25,43 +27,25 @@ export const render_list_component_iri = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_iri.prototype.list = async function() {
+render_list_component_iri.prototype.list = async function(options) {
 
 	const self = this
 
-	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+	// view
+		const view	= self.context.view || 'default'
 
-	// Value as string
-		const ar_value_string	= [];
-		const value_length		= value.length
-		for (let i = 0; i < value_length; i++) {
+	switch(view) {
 
-			const ar_line = []
+		case 'mini':
+			return render_view_mini.render(self, options)
 
-			if (value[i].title) {
-				ar_line.push(value[i].title)
-			}
-			if (value[i].iri) {
-				ar_line.push(value[i].iri)
-			}
+		case 'text':
+			return render_view_text.render(self, options)
 
-			if (ar_line.length>0) {
-				ar_value_string.push(ar_line.join(' | '))
-			}
-		}
+		case 'default':
+		default:
+			return render_list_view_default.render(self, options)
+	}
 
-		const value_string = (ar_value_string && ar_value_string.length)
-			? ar_value_string.join('<br>')
-			: null
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload		: false,
-			value_string	: value_string
-		})
-
-
-	return wrapper
+	return null
 }//end list
