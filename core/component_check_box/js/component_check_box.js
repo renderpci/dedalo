@@ -8,8 +8,8 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_check_box} from '../../component_check_box/js/render_edit_component_check_box.js'
 	import {render_list_component_check_box} from '../../component_check_box/js/render_list_component_check_box.js'
-	import {render_mini_component_check_box} from '../../component_check_box/js/render_mini_component_check_box.js'
 	import {render_search_component_check_box} from '../../component_check_box/js/render_search_component_check_box.js'
+	// import {output_component_check_box} from '../../component_check_box/js/output_component_check_box.js'
 
 
 
@@ -56,12 +56,12 @@ export const component_check_box = function(){
 	component_check_box.prototype.build_rqo_show	= common.prototype.build_rqo_show
 
 	// render
-	component_check_box.prototype.mini				= render_mini_component_check_box.prototype.mini
 	component_check_box.prototype.list				= render_list_component_check_box.prototype.list
 	component_check_box.prototype.edit				= render_edit_component_check_box.prototype.edit
 	component_check_box.prototype.edit_in_list		= render_edit_component_check_box.prototype.edit
 	component_check_box.prototype.search			= render_search_component_check_box.prototype.search
 	component_check_box.prototype.change_mode		= component_common.prototype.change_mode
+
 
 
 

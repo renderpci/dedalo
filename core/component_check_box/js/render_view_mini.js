@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_CHECK_BOX
+* RENDER_VIEW_MINI
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_check_box = function() {
+export const render_view_mini = function() {
 
 	return true
-}//end render_mini_component_check_box
+}//end render_view_mini
 
 
 
@@ -25,9 +25,8 @@ export const render_mini_component_check_box = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_check_box.prototype.mini = async function() {
+render_view_mini.render = async function(self, options) {
 
-	const self = this
 
 	// Options vars
 		const data	= self.data
