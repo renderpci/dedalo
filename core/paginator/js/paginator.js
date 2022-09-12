@@ -167,7 +167,7 @@ paginator.prototype.destroy = async function(){
 	// get the events that the instance was created
 		const events_tokens = self.events_tokens
 
-	// delete the registred events
+	// delete the registered events
 		const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
 	result.delete_self = delete_events

@@ -31,7 +31,7 @@ export const login = function() {
 	this.data
 
 	this.node
-	//this.ar_instances
+	this.ar_instances = []
 
 	this.status
 
