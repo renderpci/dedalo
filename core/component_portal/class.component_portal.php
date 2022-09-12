@@ -540,19 +540,24 @@ class component_portal extends component_relation_common {
 
 			}else{
 
-				$first_item	= $show->ddo_map[0];
+				$first_item	= $show->ddo_map[0] ?? null;
 
-				// target component
-				$path[] = (object)[
-					'component_tipo'	=> $first_item->tipo,
-					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($first_item->tipo,true),
-					'name'				=> RecordObj_dd::get_termino_by_tipo($first_item->tipo),
-					// note that section_tipo is used only to give a name to the join item.
-					// results are not really filtered by this section_tipo
-					'section_tipo'		=> is_array($first_item->section_tipo)
-						? reset($first_item->section_tipo)
-						: $first_item->section_tipo
-				];
+				if (empty($first_item)) {
+					debug_log(__METHOD__." Ignored show empty first_item (mode:$this->modo) [$this->section_tipo - $this->tipo]", logger::ERROR);
+					dump($show, ' show empty first_item ++++++++ '.to_string($this->tipo));
+				}else{
+					// target component
+					$path[] = (object)[
+						'component_tipo'	=> $first_item->tipo,
+						'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($first_item->tipo,true),
+						'name'				=> RecordObj_dd::get_termino_by_tipo($first_item->tipo),
+						// note that section_tipo is used only to give a name to the join item.
+						// results are not really filtered by this section_tipo
+						'section_tipo'		=> is_array($first_item->section_tipo)
+							? reset($first_item->section_tipo)
+							: $first_item->section_tipo
+					];
+				}
 			}
 
 
