@@ -232,7 +232,13 @@ render_edit_view_line.render_column_id = function(options){
 					menu			: false
 				}
 				const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-				const current_window	= window.open(url, 'av_viewer', 'width=1025,height=720')
+				const width = window.screen.width < 1168
+					? window.screen.width
+					: 1168
+				const height = window.screen.height < 740
+					? window.screen.height
+					: 720
+				const current_window	= window.open(url, 'record_view', `width=${width},height=${height}`)
 				current_window.focus()
 		})
 
