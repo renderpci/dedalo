@@ -689,6 +689,12 @@
 			// grey line left and down of wrapper
 			// box-shadow: -1px 1px 0 @color_grey_medium;
 			box-shadow: -1px 1px 0 @color_grey_medium, inset -1px 1px 0 @color_grey_medium;
+			// inside column, remove shadow
+			.column & {
+				&:not(.active) {
+					box-shadow: none;
+				}
+			}
 
 			@media screen and (max-width: @width_break_point_1) {
 				flex: 0 0 100% !important;
