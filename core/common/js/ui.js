@@ -10,7 +10,7 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 	import '../../common/js/dd-modal.js'
 
 
@@ -20,14 +20,21 @@
 */
 export const ui = {
 
-	message_timeout : null,
+
+
 	/**
 	* SHOW_MESSAGE
-	* @param element wrapper
+	* @param DOM node wrapper
 	*	component wrapper where message is placed
-	* @param text message
+	* @param string message
 	*	Text message to show inside message container
+	* @param string msg_type = 'error'
+	* @param string message_node = 'component_message'
+	* @param bool clean = false
+	*
+	* @return DOM node message_wrap
 	*/
+	message_timeout : null,
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
 
 		// message_wrap. always check if already exists
@@ -106,10 +113,12 @@ export const ui = {
 		* BUILD_WRAPPER_EDIT
 		* Component wrapper unified builder
 		* @param object instance (self component instance)
-		* @param object items
+		* @param object items = {}
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
+		* @return DOM node wrapper
 		*/
 		build_wrapper_edit : (instance, items={}) => {
+
 			if(SHOW_DEBUG===true) {
 				// console.log("[ui.build_wrapper_edit] instance:",instance)
 				// console.log(`build_wrapper_edit items ${instance.tipo}:`,items);
@@ -131,8 +140,7 @@ export const ui = {
 
 			// wrapper
 				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					// parent		: fragment
+					element_type : 'div'
 				})
 				// CSS
 					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
@@ -336,7 +344,8 @@ export const ui = {
 
 		/**
 		* BUILD_CONTENT_DATA
-		* @param object component instance
+		* @param object instance
+		* @param object options = {}
 		* @return DOM node content_data
 		*/
 		build_content_data : (instance, options={}) => {
@@ -390,6 +399,9 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_LIST
+		* @param object instance
+		* @param object options = {}
+		* @return DOM node wrapper
 		*/
 		build_wrapper_list : (instance, options={}) => {
 			if(SHOW_DEBUG===true) {
@@ -446,12 +458,12 @@ export const ui = {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					wrapper.addEventListener("click", function(e){
+					wrapper.addEventListener('click', function(e){
 						if (e.altKey) {
 							e.stopPropagation()
 							e.preventDefault()
 							// common.render_tree_data(instance, document.getElementById('debug'))
-							console.log("/// selected instance:", instance);
+							console.log('/// selected instance:', instance);
 						}
 					})
 					wrapper.classList.add('_'+instance.id)
@@ -464,6 +476,9 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_MINI
+		* @param object instance
+		* @param object options = {}
+		* @return DOM node wrapper
 		*/
 		build_wrapper_mini : (instance, options={}) => {
 
@@ -492,6 +507,7 @@ export const ui = {
 		* @param object instance (self component instance)
 		* @param object items
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
+		* @return DOM node wrapper
 		*/
 		build_wrapper_search : (instance, items={}) => {
 			if(SHOW_DEBUG===true) {
