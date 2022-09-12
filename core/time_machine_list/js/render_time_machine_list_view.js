@@ -54,12 +54,12 @@ export const render_time_machine_list_view = async function(self, options) {
 		// change paginator mode on the fly
 		// (!) Note that by default, is initied with the caller mode (time_machine))
 		self.paginator.mode = 'mini'
-		self.paginator.build()
-		.then(function(){
-			self.paginator.render().then(paginator_wrapper =>{
-				paginator_div.appendChild(paginator_wrapper)
-			})
+		await self.paginator.build()
+		self.paginator.render()
+		.then(paginator_wrapper =>{
+			paginator_div.appendChild(paginator_wrapper)
 		})
+
 
 	// list_body
 		const list_body = ui.create_dom_element({
