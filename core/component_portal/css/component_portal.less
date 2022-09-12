@@ -130,6 +130,13 @@
 		}
 	}
 
+	// service autocomplete hide
+	&:not(.active) {
+		>.autocomplete_search_container {
+			display: none;
+		}
+	}
+
 	// @import "./layout/patata.less";
 	&.view_autocomplete {
 		background-color: #83e1ee;
@@ -276,9 +283,17 @@
 	}
 
 	&.view_line {
+
+		// hide label when is inside a column (another portal)
+		.column & {
+			.label {
+				display: none;
+			}
+		}
+
 		>.content_data {
 			// background-color: #f0c2fe !important;
-			display: grid;
+			// display: grid;
 			display: block;
 
 			.section_record.list {
