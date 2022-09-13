@@ -444,3 +444,40 @@ export function is_equal(el1, el2) {
 
 	return false
 }//end is_equal
+
+
+
+/**
+* OPEN_WINDOW
+* Unified open window function
+* @return object new_window
+*/
+export function open_window(options) {
+
+	// defaults
+		const default_width		= 1280
+		const default_height	= 740
+
+	// options
+		const url		= options.url
+		const name		= options.name || 'New window'
+		const features	= options.features || null
+		const width	= options.width && options.width < window.screen.width
+			? options.width
+			: (default_width < window.screen.width ? default_width : window.screen.width)
+		const height = options.height && options.height < window.screen.height
+			? options.height
+			: (default_height < window.screen.height ? default_height : window.screen.height)
+
+		const final_features = `width=${width},height=${height}` + (features ? ','+features : '')
+
+		const new_window = window.open(
+			url,
+			name,
+			final_features
+		)
+		new_window.focus()
+
+
+	return new_window
+}//end open_window
