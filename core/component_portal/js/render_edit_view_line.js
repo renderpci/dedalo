@@ -10,7 +10,7 @@
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-	import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {
 		render_column_component_info,
 		activate_autocomplete,
@@ -46,8 +46,8 @@ render_edit_view_line.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map = rebuild_columns_map(self)
-		self.columns_map = columns_map
+		const columns_map	= rebuild_columns_map(self)
+		self.columns_map	= columns_map
 
 	// ar_section_record
 		const ar_section_record	= await self.get_ar_instances({
@@ -224,22 +224,38 @@ render_edit_view_line.render_column_id = function(options){
 				// }
 				// event_manager.publish('user_navigation', user_navigation_rqo)
 			// open a new window
-				const url_vars = {
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: section_tipo,
 					section_tipo	: section_tipo,
 					id				: section_id,
 					mode			: 'edit',
 					menu			: false
-				}
-				const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-				const width = window.screen.width < 1168
-					? window.screen.width
-					: 1168
-				const height = window.screen.height < 740
-					? window.screen.height
-					: 720
-				const current_window	= window.open(url, 'record_view', `width=${width},height=${height}`)
-				current_window.focus()
+				})
+				const new_window = open_window({
+					url		: url,
+					name	: 'record_view',
+					width	: 1280,
+					height	: 740
+				})
+				new_window.addEventListener('blur', function() {
+
+					// (!) NOTE: temporal ugly solution 13-09-2022. Work in progress
+						// edit caller. Looking for first caller in edit mode
+						function get_edit_caller(instance) {
+							if(instance.caller && instance.caller.mode==='edit') {
+								return instance.caller
+							}else if(instance.caller) {
+								return get_edit_caller(instance.caller)
+							}
+							return null
+						}
+						const edit_caller = get_edit_caller(self)
+						if (edit_caller) {
+							edit_caller.refresh({
+								build_autoload : true
+							})
+						}
+				})
 		})
 
 	// edit icon

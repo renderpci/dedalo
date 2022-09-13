@@ -4,7 +4,7 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
 
 
 
@@ -20,11 +20,14 @@ export const render_view_text = function() {
 
 
 /**
-* MINI
-* Render node for use in list
+* RENDER
+* Render node as text view
 * @return DOM node wrapper
 */
 render_view_text.render = async function(self, options) {
+
+	// options
+		const render_level = options.render_level || 'full'
 
 	// ar_section_record
 		const ar_section_record = await self.get_ar_instances({
@@ -52,4 +55,4 @@ render_view_text.render = async function(self, options) {
 		}
 
 	return fragment
-}//end  mini
+}//end render
