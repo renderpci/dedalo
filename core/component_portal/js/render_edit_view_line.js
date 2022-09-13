@@ -51,7 +51,8 @@ render_edit_view_line.render = async function(self, options) {
 
 	// ar_section_record
 		const ar_section_record	= await self.get_ar_instances({
-			mode : 'list'
+			mode	: 'list',
+			view	: self.context.view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
@@ -78,6 +79,7 @@ render_edit_view_line.render = async function(self, options) {
 		wrapper.addEventListener('click', function() {
 			activate_autocomplete(self, wrapper)
 		})
+
 
 	return wrapper
 }//end render
@@ -112,7 +114,6 @@ const get_content_data = async function(self, ar_section_record) {
 				  for (let i = 0; i < ar_section_record_length; i++) {
 
 					const section_record = values[i]
-
 					fragment.appendChild(section_record)
 				  }
 				});
