@@ -37,18 +37,19 @@ render_view_text.render = async function(self, options) {
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-
 	// fragment
 		const fragment = new DocumentFragment()
 
 	// add all nodes
-		const length = ar_section_record.length
-		for (let i = 0; i < length; i++) {
-			const child_item = await ar_section_record[i].render()
+		const ar_section_record_length = ar_section_record.length
+		for (let i = 0; i < ar_section_record_length; i++) {
 
+			// child.
+			const child_item = await ar_section_record[i].render()
 			fragment.appendChild(child_item)
 
-			if(i < length-1){
+			// value_separator
+			if(i < ar_section_record_length-1) {
 				const node_value_separator = document.createTextNode(self.value_separator)
 				fragment.appendChild(node_value_separator)
 			}

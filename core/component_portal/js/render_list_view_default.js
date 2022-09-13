@@ -152,8 +152,8 @@ const get_content_data = async function(self, ar_section_record) {
 		}//end if (ar_section_record_length===0)
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type)
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)
 
 

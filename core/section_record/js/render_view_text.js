@@ -21,10 +21,11 @@ export const render_view_text = function() {
 
 
 /**
-* MINI
-* Render node for use in list
-* @param array ar_instances
-* @return DOM node wrapper
+* RENDER
+* Render as text nodes
+* @param object self
+* @param object options
+* @return DocumentFragment
 */
 render_view_text.render = async function(self, options) {
 
@@ -34,15 +35,15 @@ render_view_text.render = async function(self, options) {
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
 		const columns_map = await self.columns_map
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// section_record wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			id				: self.id,
-			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
-		})
-
+		// const wrapper = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	id				: self.id,
+		// 	class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
+		// })
 
 	// render the columns
 		const columns_map_length = columns_map.length
@@ -80,7 +81,7 @@ render_view_text.render = async function(self, options) {
 				await Promise.all(ar_promises)// render work done safely
 
 			// create the column nodes and assign the instances nodes to it.
-				const ar_column_nodes = []
+				// const ar_column_nodes = []
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
@@ -134,5 +135,4 @@ render_view_text.render = async function(self, options) {
 
 
 	return fragment
-}//end render_view_text.prototype.list
-
+}//end render
