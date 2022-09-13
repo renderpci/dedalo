@@ -21,7 +21,7 @@ export const render_view_text = function() {
 /**
 * GET_RAW_STRING
 * Output component value to use as raw text
-* @return string value_string
+* @return DOM textNode text_node
 */
 render_view_text.render = async function(self, options) {
 
