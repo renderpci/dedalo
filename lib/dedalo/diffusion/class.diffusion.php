@@ -325,7 +325,7 @@ abstract class diffusion  {
 
 	/**
 	* GET_SINGLE_DIFFUSION_MAP
-	* Get diffusion mapa of current only one section
+	* Get diffusion map of current only one section
 	* @return
 	*//* NOT USED
 	public function get_single_diffusion_map( $section_tipo ) {
@@ -571,10 +571,10 @@ abstract class diffusion  {
 
 		// options
 			$options = new stdClass();
-				$options->section_tipo 			= null;
-				$options->section_id   			= null;
-				$options->diffusion_element_tipo= null;
-				$options->lang 					= null;
+				$options->section_tipo				= null;
+				$options->section_id				= null;
+				$options->diffusion_element_tipo	= null;
+				$options->lang						= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 					#dump($options, ' options ++ '.to_string());
 
@@ -639,7 +639,7 @@ abstract class diffusion  {
 	/**
 	* GET_FIELD_VALUE
 	* @param string $tipo
-	*	Tipo of diffusion 'field' like 'oh111'
+	*	tipo of diffusion 'field' like 'oh111'
 	* @param string $section_tipo
 	*	Current working section tipo like 'oh1'
 	* @param int $section_id
@@ -647,7 +647,7 @@ abstract class diffusion  {
 	* @param string $lang
 	*	Current lang like 'lg-eng'
 	* @param object $request_options
-	*	Is passthrough update record request_options param
+	*	Is pass-through update record request_options param
 	*
 	* @return mixed $field_value
 	*	Is the diffusion value of component called by field. Can be null, array, string, int
@@ -737,13 +737,13 @@ abstract class diffusion  {
 				case (is_object($propiedades) && property_exists($propiedades, 'process_dato')):
 					# Process dato with function
 					$options = $request_options;
-						$options->propiedades 	= $propiedades;
-						$options->tipo 			= $tipo;
-						$options->component_tipo= $component_tipo;
-						$options->section_id 	= $section_id;
+						$options->propiedades		= $propiedades;
+						$options->tipo				= $tipo;
+						$options->component_tipo	= $component_tipo;
+						$options->section_id		= $section_id;
 
-					$function_name 	= $propiedades->process_dato;
-					$field_value 	= call_user_func($function_name, $options, $dato);
+					$function_name	= $propiedades->process_dato;
+					$field_value	= call_user_func($function_name, $options, $dato);
 					break;
 
 				default:
@@ -760,7 +760,7 @@ abstract class diffusion  {
 
 	/**
 	* RESOLVE_COMPONENT_VALUE
-	* Intermediathe method to call component methods from diffusion
+	* Intermediate method to call component methods from diffusion
 	* @return mixed $value
 	*/
 	public static function resolve_component_value( $options, $dato ) {
@@ -788,9 +788,9 @@ abstract class diffusion  {
 	    #     )
 	    # [diffusion_element_tipo] => mdcat353
 
-		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
-		$method 				= $process_dato_arguments->component_method;
-		$custom_arguments 		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];
+		$process_dato_arguments	= (object)$options->propiedades->process_dato_arguments;
+		$method					= $process_dato_arguments->component_method;
+		$custom_arguments		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];
 
 
 		$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
@@ -843,7 +843,7 @@ abstract class diffusion  {
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
 		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
 
-		# Add childrens from table alias too
+		# Add children from table alias too
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
 				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
@@ -965,13 +965,15 @@ abstract class diffusion  {
 		}
 
 		// Locate component_publication in current section
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$section_tipo,
-																				'component_publication',
-																				$from_cache=true,
-																				$resolve_virtual=true,
-																				$recursive=true,
-																				$search_exact=true,
-																				$ar_tipo_exclude_elements=false);
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$section_tipo, // string section_tipo
+			['component_publication'], // array ar_modelo_name_required
+			true, // bool from_cache
+			true, // bool resolve_virtual
+			true, // bool recursive
+			true, // bool search_exact
+			false // array|false ar_tipo_exclude_elements
+		);
 		// Check list of values cases (returns is_publicable true by default)
 		if (empty($ar_children)) {
 			return true;
@@ -993,7 +995,7 @@ abstract class diffusion  {
 	/**
 	* GET_COMPONENT_PUBLICATION_TIPO
 	* @param array $ar_fields_tipo
-	* @return string | bool false
+	* @return string|bool false
 	*/
 	public static function get_component_publication_tipo($ar_fields_tipo) {
 
@@ -1023,13 +1025,15 @@ abstract class diffusion  {
 	*/
 	public static function get_component_publication_bool_value( $component_publication_tipo, $section_id, $section_tipo ) {
 
-		$component_publication = component_common::get_instance( 'component_publication',
-																  $component_publication_tipo,
-																  $section_id,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo,
-																  false);
+		$component_publication = component_common::get_instance(
+			'component_publication',
+			$component_publication_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo,
+			false
+		);
 		$dato = $component_publication->get_dato();
 			#dump($dato, ' dato ++ '.to_string());
 
@@ -1054,23 +1058,25 @@ abstract class diffusion  {
 
 		// options parse from request_options
 			$options = new stdClass();
-				$options->component_tipo 		 = null;
-				$options->section_tipo 	 		 = null;
-				$options->section_id 	 		 = null;
-				$options->lang 			 		 = null;
-				$options->model 		 		 = null;
-				$options->diffusion_element_tipo = null;
+				$options->component_tipo			= null;
+				$options->section_tipo				= null;
+				$options->section_id				= null;
+				$options->lang						= null;
+				$options->model						= null;
+				$options->diffusion_element_tipo	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		switch ($options->model) {
 			case 'component_text_area':
 				// Check component index tags
-				$component 	= component_common::get_instance($options->model,
-															 $options->component_tipo,
-															 $options->section_id,
-															 'list',
-															 $options->lang,
-															 $options->section_tipo);
+				$component 	= component_common::get_instance(
+					$options->model,
+					$options->component_tipo,
+					$options->section_id,
+					'list',
+					$options->lang,
+					$options->section_tipo
+				);
 				$ar_indexations = $component->get_component_indexations(DEDALO_RELATION_TYPE_INDEX_TIPO); # dd96
 					#dump($ar_indexations, ' ar_indexations ++ '." section_id: $options->section_id - lang: $options->lang - dato:".$component->get_dato());
 
@@ -1092,10 +1098,10 @@ abstract class diffusion  {
 							# }
 
 						$options_update_record = new stdClass();
-							$options_update_record->section_tipo 			= $current_locator->from_section_tipo;
-							$options_update_record->section_id 	 			= $current_locator->from_section_id;
-							$options_update_record->recursion_level 		= 0;
-							$options_update_record->diffusion_element_tipo 	= $options->diffusion_element_tipo;
+							$options_update_record->section_tipo			= $current_locator->from_section_tipo;
+							$options_update_record->section_id				= $current_locator->from_section_id;
+							$options_update_record->recursion_level			= 0;
+							$options_update_record->diffusion_element_tipo	= $options->diffusion_element_tipo;
 
 						$ar_found = array_filter(diffusion::$update_record_actions, function($item) use($options_update_record){
 							return ($item->section_tipo===$options_update_record->section_tipo && $item->section_id===$options_update_record->section_id);
@@ -1129,15 +1135,15 @@ abstract class diffusion  {
 	public static function delete_record($section_tipo, $section_id) {
 
 		$response = new stdClass();
-			$response->result 		= false;
-			$response->msg 			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
-			$response->ar_deleted 	= [];
+			$response->result		= false;
+			$response->msg			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
+			$response->ar_deleted	= [];
 
 		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
 		foreach ($ar_diffusion_element as $diffusion_element) {
 
-			$diffusion_element_tipo = $diffusion_element->element_tipo;
-			$class_name 			= $diffusion_element->class_name;
+			$diffusion_element_tipo	= $diffusion_element->element_tipo;
+			$class_name				= $diffusion_element->class_name;
 
 			switch ($class_name) {
 				case 'diffusion_mysql':
@@ -1198,12 +1204,12 @@ abstract class diffusion  {
 								$response->result 		= true;
 								$response->msg 			= "Deleted record successful ($table_name - $section_id) in db $database_name (all langs)";
 								$response->ar_deleted[] = (object)[
-									"section_id" 			 => $section_id,
-									"section_tipo" 			 => $section_tipo,
-									"database_name" 		 => $database_name,
-									"table_name" 			 => $table_name,
-									"diffusion_element_tipo" => $diffusion_element_tipo,
-									"class_name" 			 => $class_name
+									"section_id"				=> $section_id,
+									"section_tipo"				=> $section_tipo,
+									"database_name"				=> $database_name,
+									"table_name"				=> $table_name,
+									"diffusion_element_tipo"	=> $diffusion_element_tipo,
+									"class_name"				=> $class_name
 								];
 							}else{
 								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in db ($database_name)";
@@ -1233,10 +1239,10 @@ abstract class diffusion  {
 	public static function update_publication_data($section_tipo, $section_id) {
 
 		// tipos
-			$publication_first_tipo 		= diffusion::$publication_first_tipo;
-			$publication_last_tipo 			= diffusion::$publication_last_tipo;
-			$publication_first_user_tipo 	= diffusion::$publication_first_user_tipo;
-			$publication_last_user_tipo 	= diffusion::$publication_last_user_tipo;
+			$publication_first_tipo			= diffusion::$publication_first_tipo;
+			$publication_last_tipo			= diffusion::$publication_last_tipo;
+			$publication_first_user_tipo	= diffusion::$publication_first_user_tipo;
+			$publication_last_user_tipo		= diffusion::$publication_last_user_tipo;
 
 		// current date in dd_date format (usable as dato)
 			$current_date_dato = new stdClass();
@@ -1248,13 +1254,15 @@ abstract class diffusion  {
 
 		// first . component publication first. save if not exist
 			// date
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $publication_first_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
+				$component		= component_common::get_instance(
+					$modelo_name,
+					$publication_first_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$dato = $component->get_dato();
 				if (empty($dato)) {
 					$component->set_dato($current_date_dato);
@@ -1267,13 +1275,15 @@ abstract class diffusion  {
 			// user
 				if (isset($save_first)) {
 
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
-																	 $publication_first_user_tipo,
-																	 $section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $section_tipo);
+					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
+					$component		= component_common::get_instance(
+						$modelo_name,
+						$publication_first_user_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 					$locator = new locator();
 						$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 						$locator->set_section_id($user_id);
@@ -1289,13 +1299,15 @@ abstract class diffusion  {
 
 		// last . publication last. save updated date always
 			// date
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $publication_last_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
+				$component		= component_common::get_instance(
+					$modelo_name,
+					$publication_last_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$component->set_dato($current_date_dato);
 				// section avoid save_modified by user in diffusion
 					$section = $component->get_my_section();
@@ -1303,13 +1315,15 @@ abstract class diffusion  {
 				$component->Save();
 
 			// user
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $publication_last_user_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
+				$component		= component_common::get_instance(
+					$modelo_name,
+					$publication_last_user_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$locator = new locator();
 					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 					$locator->set_section_id($user_id);
@@ -1354,7 +1368,7 @@ abstract class diffusion  {
 	* @param array $ar_table_tipo
 	* 	Current list of tables tipo resolved from target database element
 	* @param string $database_alias_tipo
-	* 	Tipo of current database alias
+	* 	tipo of current database alias
 	* @return array $ar_table_tipo_edit
 	* 	Modified version of the original table list
 	*/
@@ -1399,12 +1413,12 @@ abstract class diffusion  {
 					if (false!==$found_key) {
 						// debug only
 						$replaced_list[] = (object)[
-							'from' => $value,
-							'from_model' => RecordObj_dd::get_modelo_name_by_tipo($value,true),
-							'from_label' => RecordObj_dd::get_termino_by_tipo($value),
-							'to' => $replacement,
-							'to_model' => RecordObj_dd::get_modelo_name_by_tipo($replacement,true),
-							'to_label' => RecordObj_dd::get_termino_by_tipo($replacement),
+							'from'			=> $value,
+							'from_model'	=> RecordObj_dd::get_modelo_name_by_tipo($value,true),
+							'from_label'	=> RecordObj_dd::get_termino_by_tipo($value),
+							'to'			=> $replacement,
+							'to_model'		=> RecordObj_dd::get_modelo_name_by_tipo($replacement,true),
+							'to_label'		=> RecordObj_dd::get_termino_by_tipo($replacement),
 						];
 						$ar_table_tipo_edit[$found_key] = $replacement;
 					}
