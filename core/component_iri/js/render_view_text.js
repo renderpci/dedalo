@@ -21,9 +21,10 @@ export const render_view_text = function() {
 
 
 /**
-* MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* RENDER
+* get_raw_string
+* Output component value to use as raw text
+* @return DOM text node text_node
 */
 render_view_text.render = async function(self, options) {
 
@@ -53,11 +54,9 @@ render_view_text.render = async function(self, options) {
 			? ar_value_string.join(' - ')
 			: ''
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
-			value_string : value_string
-		})
+	// text_node
+		const text_node = document.createTextNode(value_string)
 
 
-	return wrapper
+	return text_node
 }//end mini
