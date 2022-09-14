@@ -2739,6 +2739,9 @@
 		Fix regex to get tag with spaces
 		Added notes to sample.config file
 		Fixed publication API incoherence about charset encoding. Now, all connections will be use charset=utf8mb4
+		Clean up class diffusion code
+		Fixed minor PHP8.1 component_date issues and code clean up
+
 
 
 	Queue build
@@ -2774,7 +2777,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-09-2022T13:52:00');
+	define('DEDALO_BUILD'	, '14-09-2022T11:03:00');
 
 
 
