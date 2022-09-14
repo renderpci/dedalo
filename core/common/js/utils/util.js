@@ -368,38 +368,34 @@ export function array_equals(source, array) {
 * * The reason this nested helper function is necessary is that
 *   `typeof null` is still "object" in JS, a major "gotcha" to watch out for.
 */
-export function object_equals_DES(obj1, obj2) {
+	// export function object_equals_DES(obj1, obj2) {
 
-	if (obj1 === obj2) {
-		return true;
-	}else if (isObject(obj1) && isObject(obj2)) {
-		if (Object.keys(obj1).length !== Object.keys(obj2).length) {
-			return false
-		}
-		for (const prop in obj1) {
-			if (!object_equals(obj1[prop], obj2[prop])) {
-				return false;
-			}
-		}
-		return true;
-	}
-	return false;
+	// 	if (obj1 === obj2) {
+	// 		return true;
+	// 	}else if (isObject(obj1) && isObject(obj2)) {
+	// 		if (Object.keys(obj1).length !== Object.keys(obj2).length) {
+	// 			return false
+	// 		}
+	// 		for (const prop in obj1) {
+	// 			if (!object_equals(obj1[prop], obj2[prop])) {
+	// 				return false;
+	// 			}
+	// 		}
+	// 		return true;
+	// 	}
+	// 	return false;
 
-	// Private
-	function isObject(obj) {
-		if (typeof obj === "object" && obj != null) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-}//end object_equals
-
-
+	// 	// Private
+	// 	function isObject(obj) {
+	// 		if (typeof obj === "object" && obj != null) {
+	// 			return true;
+	// 		} else {
+	// 			return false;
+	// 		}
+	// 	}
+	// }//end object_equals
 export function  object_equals (o1, o2){
 
-		// console.log("o1:",JSON.parse(JSON.stringify(o1)));
-		// console.log("o2:",JSON.parse(JSON.stringify(o2)));
 	const equal = typeof o1 === 'object' && Object.keys(o1).length > 0
 		? Object.keys(o1).length === Object.keys(o2).length
 			&& Object.keys(o1).every(p => object_equals(o1[p], o2[p]))
@@ -407,6 +403,7 @@ export function  object_equals (o1, o2){
 
 	return equal
 }//end object_equals
+
 
 
 /**
@@ -444,3 +441,40 @@ export function is_equal(el1, el2) {
 
 	return false
 }//end is_equal
+
+
+
+/**
+* OPEN_WINDOW
+* Unified open window function
+* @return object new_window
+*/
+export function open_window(options) {
+
+	// defaults
+		const default_width		= 1280
+		const default_height	= 740
+
+	// options
+		const url		= options.url
+		const name		= options.name || 'New window'
+		const features	= options.features || null
+		const width	= options.width && options.width < window.screen.width
+			? options.width
+			: (default_width < window.screen.width ? default_width : window.screen.width)
+		const height = options.height && options.height < window.screen.height
+			? options.height
+			: (default_height < window.screen.height ? default_height : window.screen.height)
+
+		const final_features = `width=${width},height=${height}` + (features ? ','+features : '')
+
+		const new_window = window.open(
+			url,
+			name,
+			final_features
+		)
+		new_window.focus()
+
+
+	return new_window
+}//end open_window

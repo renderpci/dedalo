@@ -4,7 +4,7 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
 
 
 
@@ -20,11 +20,14 @@ export const render_view_text = function() {
 
 
 /**
-* MINI
-* Render node for use in list
+* RENDER
+* Render node as text view
 * @return DOM node wrapper
 */
 render_view_text.render = async function(self, options) {
+
+	// options
+		const render_level = options.render_level || 'full'
 
 	// ar_section_record
 		const ar_section_record = await self.get_ar_instances({
@@ -34,22 +37,23 @@ render_view_text.render = async function(self, options) {
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-
 	// fragment
 		const fragment = new DocumentFragment()
 
 	// add all nodes
-		const length = ar_section_record.length
-		for (let i = 0; i < length; i++) {
-			const child_item = await ar_section_record[i].render()
+		const ar_section_record_length = ar_section_record.length
+		for (let i = 0; i < ar_section_record_length; i++) {
 
+			// child.
+			const child_item = await ar_section_record[i].render()
 			fragment.appendChild(child_item)
 
-			if(i < length-1){
+			// value_separator
+			if(i < ar_section_record_length-1) {
 				const node_value_separator = document.createTextNode(self.value_separator)
 				fragment.appendChild(node_value_separator)
 			}
 		}
 
 	return fragment
-}//end  mini
+}//end render

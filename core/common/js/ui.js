@@ -10,7 +10,7 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 	import '../../common/js/dd-modal.js'
 
 
@@ -20,14 +20,21 @@
 */
 export const ui = {
 
-	message_timeout : null,
+
+
 	/**
 	* SHOW_MESSAGE
-	* @param element wrapper
+	* @param DOM node wrapper
 	*	component wrapper where message is placed
-	* @param text message
+	* @param string message
 	*	Text message to show inside message container
+	* @param string msg_type = 'error'
+	* @param string message_node = 'component_message'
+	* @param bool clean = false
+	*
+	* @return DOM node message_wrap
 	*/
+	message_timeout : null,
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
 
 		// message_wrap. always check if already exists
@@ -45,7 +52,7 @@ export const ui = {
 					text_content	: ' x ',
 					parent			: new_message_wrap
 				})
-				close_button.addEventListener("click", (e) => {
+				close_button.addEventListener('click', (e) => {
 					e.stopPropagation()
 					message_wrap.remove()
 				})
@@ -60,7 +67,7 @@ export const ui = {
 		// clean messages
 			if (clean===true) {
 				// clean
-				const items = message_wrap.querySelectorAll(".text")
+				const items = message_wrap.querySelectorAll('.text')
 				for (let i = items.length - 1; i >= 0; i--) {
 					items[i].remove()
 				}
@@ -75,7 +82,7 @@ export const ui = {
 			})
 
 		// adjust height
-			message_wrap.style.top = "-" + message_wrap.offsetHeight + "px"
+			message_wrap.style.top = '-' + message_wrap.offsetHeight + 'px'
 
 		// close button move to bottom when height is too much
 			if (message_wrap.offsetHeight>120) {
@@ -106,40 +113,40 @@ export const ui = {
 		* BUILD_WRAPPER_EDIT
 		* Component wrapper unified builder
 		* @param object instance (self component instance)
-		* @param object items
+		* @param object items = {}
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
+		* @return DOM node wrapper
 		*/
 		build_wrapper_edit : (instance, items={}) => {
-			if(SHOW_DEBUG===true) {
-				// console.log("[ui.build_wrapper_edit] instance:",instance)
-				// console.log(`build_wrapper_edit items ${instance.tipo}:`,items);
-				// console.log("instance:",instance);
-			}
 
 			// short vars
-				// const id			= instance.id || 'id is not set'
 				const model			= instance.model 	// like component_input-text
 				const type			= instance.type 	// like 'component'
 				const tipo			= instance.tipo 	// like 'rsc26'
 				const section_tipo	= instance.section_tipo 	// like 'rsc26'
 				const mode			= instance.mode 	// like 'edit'
-				const view			= instance.view || null
+				const view			= instance.view || instance.context.view || null
 				const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
 
-			const fragment = new DocumentFragment()
+			// fragment
+				const fragment = new DocumentFragment()
 
 			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					// parent		: fragment
-				})
-				// CSS
-					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-					const ar_css = ['wrapper_'+type, model, tipo, section_tipo+'_'+tipo, mode, ...wrapper_structure_css]
-					if (view) {ar_css.push(view)}
-					if (mode==="search") ar_css.push("tooltip_toggle")
-					if (mode==="tm") ar_css.push("edit")
+				const wrapper = document.createElement('div')
+				// css
+					const wrapper_structure_css = typeof element_css.wrapper!=='undefined' ? element_css.wrapper : []
+					const ar_css = [
+						'wrapper_' + type,
+						model,
+						tipo,
+						section_tipo +'_'+ tipo,
+						mode,
+						...wrapper_structure_css
+					]
+					if (view) {ar_css.push('view_'+view)}
+					if (mode==='search') ar_css.push('tooltip_toggle')
+					if (mode==='tm') ar_css.push('edit')
 					wrapper.classList.add(...ar_css)
 
 				// legacy CSS
@@ -188,15 +195,12 @@ export const ui = {
 
 				// read only. Disable events on permissions <2
 					if (instance.permissions<2) {
-						wrapper.classList.add("disabled_component")
+						wrapper.classList.add('disabled_component')
 					}
 
 				// event click . Activate component on event
 					wrapper.addEventListener('click', (e) => {
 						e.stopPropagation()
-						if (mode.indexOf('edit')===-1) {
-							return
-						}
 						event_manager.publish('activate_component', instance)
 					})
 
@@ -212,15 +216,15 @@ export const ui = {
 					// default
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
-						inner_html		: label // + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+						inner_html		: label
 					})
 					wrapper.appendChild(component_label)
 					// set pointer
 					wrapper.label = component_label
 					// css
-						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
-						const ar_css = ['label', ...label_structure_css]
-						component_label.classList.add(...ar_css)
+					const label_structure_css = typeof element_css.label!=='undefined' ? element_css.label : []
+					const ar_css = ['label', ...label_structure_css]
+					component_label.classList.add(...ar_css)
 				}
 
 			// top
@@ -229,7 +233,7 @@ export const ui = {
 				}
 
 			// buttons
-				if (items.buttons && instance.permissions>1) { // && instance.permissions>1
+				if (items.buttons && instance.permissions>1) {
 					wrapper.appendChild(items.buttons)
 				}
 
@@ -259,11 +263,6 @@ export const ui = {
 					})
 				}
 
-			// header
-				// if (items.header) {
-				// 	wrapper.appendChild(items.header)
-				// }
-
 			// list_body
 				if (items.list_body) {
 					wrapper.appendChild(items.list_body)
@@ -273,15 +272,15 @@ export const ui = {
 				if (items.content_data) {
 					// const content_data = items.content_data
 					// // css
-					// 	const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
-					// 	const ar_css = ["content_data", type, ...content_data_structure_css]
+					// 	const content_data_structure_css = typeof element_css.content_data!=='undefined' ? element_css.content_data : []
+					// 	const ar_css = ['content_data', type, ...content_data_structure_css]
 					// 	content_data.classList.add(...ar_css)
 					wrapper.appendChild(items.content_data)
 				}
 
 			// tooltip
-				// if (mode==="search" && instance.context.search_options_title) {
-				// 	//fragment.classList.add("tooltip_toggle")
+				// if (mode==='search' && instance.context.search_options_title) {
+				// 	//fragment.classList.add('tooltip_toggle')
 				// 	const tooltip = ui.create_dom_element({
 				// 		element_type	: 'div',
 				// 		class_name		: 'tooltip hidden_tooltip',
@@ -290,7 +289,6 @@ export const ui = {
 				// 	})
 				// }
 
-
 			// debug
 				if(SHOW_DEBUG===true) {
 					wrapper.addEventListener('click', function(e){
@@ -298,38 +296,38 @@ export const ui = {
 							e.stopPropagation()
 							e.preventDefault()
 							// common.render_tree_data(instance, document.getElementById('debug'))
-							console.log("/// selected instance:", instance);
+							console.log('/// selected instance:', instance);
 						}
 					})
-				}
 
-			// test css
-				// const my_css = {
-				//    '.cssinjs-btn': {
-				//       "color": "white",
-				//       "background": "black"
-				//     }
-				// }
-				// const toCssString = css => {
-				//   let result = ''
-				//   for (const selector in css) {
-				//     result += selector + ' {' // .cssinjs-btn {
-				//     for (const property in css[selector]) {
-				//       // color: white;
-				//       result += property + ': ' + css[selector][property] + ';'
-				//     }
-				//     result += '}'
-				//   }
-				//   return result
-				// }
-				// // Render styles.
-				// let style = document.querySelector("#el_id_del_style")
-				// if (!style) {
-				// 	style = document.createElement('style')
-				// 	style.id = 'el_id_del_style'
-				// 	document.head.appendChild(style)
-				// }
-				// style.textContent += toCssString(my_css) + '\n'
+					// test css
+						// const my_css = {
+						//    '.cssinjs-btn': {
+						//       "color": "white",
+						//       "background": "black"
+						//     }
+						// }
+						// const toCssString = css => {
+						//   let result = ''
+						//   for (const selector in css) {
+						//     result += selector + ' {' // .cssinjs-btn {
+						//     for (const property in css[selector]) {
+						//       // color: white;
+						//       result += property + ': ' + css[selector][property] + ';'
+						//     }
+						//     result += '}'
+						//   }
+						//   return result
+						// }
+						// // Render styles.
+						// let style = document.querySelector("#el_id_del_style")
+						// if (!style) {
+						// 	style = document.createElement('style')
+						// 	style.id = 'el_id_del_style'
+						// 	document.head.appendChild(style)
+						// }
+						// style.textContent += toCssString(my_css) + '\n'
+				}
 
 
 			return wrapper
@@ -339,7 +337,8 @@ export const ui = {
 
 		/**
 		* BUILD_CONTENT_DATA
-		* @param object component instance
+		* @param object instance
+		* @param object options = {}
 		* @return DOM node content_data
 		*/
 		build_content_data : (instance, options={}) => {
@@ -354,7 +353,7 @@ export const ui = {
 
 			// css
 				const content_data_structure_css = typeof component_css.content_data!=="undefined" ? component_css.content_data : []
-				const ar_css = ["content_data", type, ...content_data_structure_css]
+				const ar_css = ['content_data', type, ...content_data_structure_css]
 				content_data.classList.add(...ar_css)
 
 			// button close
@@ -364,7 +363,7 @@ export const ui = {
 						class_name		: 'button close',
 						parent			: content_data
 					})
-					button_close.addEventListener("click", function(){
+					button_close.addEventListener('click', function(){
 						instance.change_mode('list', autoload)
 					})
 				}
@@ -393,35 +392,41 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_LIST
+		* @param object instance
+		* @param object options = {}
+		* @return DOM node wrapper
 		*/
 		build_wrapper_list : (instance, options={}) => {
-			if(SHOW_DEBUG===true) {
-				// console.log("[ui.build_wrapper_list] instance:",instance)
-			}
-
-			// const id			= instance.id || 'id is not set'
-			// const mode		= instance.mode 	// like 'edit'
-			const model			= instance.model 	// like component_input-text
-			const type			= instance.type 	// like 'component'
-			const tipo			= instance.tipo 	// like 'rsc26'
-			const section_tipo	= instance.section_tipo 	// like 'oh1'
-			const edit_in_list	= (
-					instance.section_tipo==='dd542' // dd542-> activity section
-				|| 	(instance.caller && instance.caller.id_variant && instance.caller.id_variant.indexOf('tool_')===0) // inside tool like tool_time_machime
-				)
-				? false
-				: true
-				// console.log("instance.caller:",instance.caller.id_variant);
 
 			// options
-				const autoload		= typeof options.autoload!=="undefined" ? options.autoload : false
+				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : false
 				const value_string	= options.value_string
 
+			// short vars
+				const model			= instance.model 	// like component_input-text
+				const type			= instance.type 	// like 'component'
+				const tipo			= instance.tipo 	// like 'rsc26'
+				const section_tipo	= instance.section_tipo 	// like 'oh1'
+				const view			= instance.view || instance.context.view || null
+				const edit_in_list	= (
+						instance.section_tipo==='dd542' // dd542-> activity section
+					|| 	(instance.caller && instance.caller.id_variant && instance.caller.id_variant.indexOf('tool_')===0) // inside tool like tool_time_machime
+					)
+					? false
+					: true
+
 			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: `wrapper_${type} ${model} ${tipo} ${section_tipo+'_'+tipo} list` //  + mode
-				})
+				const wrapper = document.createElement('div')
+				// css
+					const ar_css = [
+						'wrapper_' + type,
+						model,
+						tipo,
+						section_tipo +'_'+ tipo,
+						'list'
+					]
+					if (view) {ar_css.push('view_'+view)}
+					wrapper.classList.add(...ar_css)
 
 			// span value. Add span if value_string is received
 				if (value_string) {
@@ -449,16 +454,17 @@ export const ui = {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					wrapper.addEventListener("click", function(e){
+					wrapper.addEventListener('click', function(e){
 						if (e.altKey) {
 							e.stopPropagation()
 							e.preventDefault()
 							// common.render_tree_data(instance, document.getElementById('debug'))
-							console.log("/// selected instance:", instance);
+							console.log('/// selected instance:', instance);
 						}
 					})
 					wrapper.classList.add('_'+instance.id)
 				}
+
 
 			return wrapper
 		},//end build_wrapper_list
@@ -467,6 +473,9 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_MINI
+		* @param object instance
+		* @param object options = {}
+		* @return DOM node wrapper
 		*/
 		build_wrapper_mini : (instance, options={}) => {
 
@@ -474,10 +483,12 @@ export const ui = {
 				const value_string = options.value_string
 
 			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'mini_' +instance.model
-				})
+				const wrapper = document.createElement('span')
+				// css
+					const ar_css = [
+						'mini_' + instance.model
+					]
+					wrapper.classList.add(...ar_css)
 
 			// value_string
 				if (value_string) {
@@ -495,13 +506,9 @@ export const ui = {
 		* @param object instance (self component instance)
 		* @param object items
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
+		* @return DOM node wrapper
 		*/
 		build_wrapper_search : (instance, items={}) => {
-			if(SHOW_DEBUG===true) {
-				// console.log("[ui.build_wrapper_search] instance:",instance)
-				// console.log(`build_wrapper_search items ${instance.tipo}:`,items);
-				// console.log("instance:",instance);
-			}
 
 			// short vars
 				const id			= instance.id || 'id is not set'
@@ -586,46 +593,20 @@ export const ui = {
 				}
 
 			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					id				: id // (!) set id
-				})
-				// CSS
+				const wrapper = document.createElement('div')
+					  wrapper.id = id
+				// css
 					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-					const ar_css = ['wrapper_'+type, model, tipo, mode, ...wrapper_structure_css]
-					if (view) {ar_css.push(view)}
-					if (mode==="search") ar_css.push("tooltip_toggle")
+					const ar_css = [
+						'wrapper_' + type,
+						model,
+						tipo,
+						mode,
+						...wrapper_structure_css
+					]
+					if (view) {ar_css.push('view_'+view)}
+					if (mode==='search') ar_css.push('tooltip_toggle')
 					wrapper.classList.add(...ar_css)
-
-				// legacy CSS
-					// if (mode==='edit') {
-					// 	const legacy_selector = '.wrap_component'
-					// 	if (element_css[legacy_selector]) {
-					// 		// mixin
-					// 			if (element_css[legacy_selector].mixin){
-					// 				// width from mixin
-					// 				const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
-					// 				if (found) { //  && found!=='.width_50'
-					// 					// wrapper.style['flex-basis'] = found.substring(7) + '%'
-					// 					// wrapper.style['--width'] = found.substring(7) + '%'
-					// 					wrapper.style.setProperty('--component_width', found.substring(7) + '%');
-					// 				}
-					// 			}
-					// 		// style
-					// 			if (element_css[legacy_selector].style) {
-					// 				// width from style
-					// 				if (element_css[legacy_selector].style.width) {
-					// 					// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
-					// 					// wrapper.style['--width'] = element_css[legacy_selector].style.width
-					// 					wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
-					// 				}
-					// 				// display none from style
-					// 				if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
-					// 					wrapper.classList.add('display_none')
-					// 				}
-					// 			}
-					// 	}
-					// }
 
 				// event click . Activate component on event
 					wrapper.addEventListener('click', e => {
@@ -936,7 +917,7 @@ export const ui = {
 			// 	const main_context 	= instance.context
 			// 	const element_css 	= main_context.css || {}
 
-		// const fragment = new DocumentFragment()
+			// const fragment = new DocumentFragment()
 
 			// 	// label
 			// 		if (label===null || items.label===null) {
@@ -1041,19 +1022,19 @@ export const ui = {
 		* @return DOM node wrapper
 		*/
 		build_wrapper_edit : (instance, items={}) => {
-			if(SHOW_DEBUG===true) {
-				//console.log("[ui.build_wrapper_edit] instance:",instance)
-			}
 
-			const model			= instance.model 	// like component_input-text
-			const type			= instance.type 	// like 'component'
-			const tipo			= instance.tipo 	// like 'rsc26'
-			const section_tipo	= instance.section_tipo 	// like 'rsc26'
-			const mode			= instance.mode 	// like 'edit'
-			const label			= instance.label 	// instance.context.label
-			const content_data	= items.content_data || null
+			// short vars
+				const model			= instance.model 	// like component_input-text
+				const type			= instance.type 	// like 'component'
+				const tipo			= instance.tipo 	// like 'rsc26'
+				const section_tipo	= instance.section_tipo 	// like 'rsc26'
+				const mode			= instance.mode 	// like 'edit'
+				const view			= instance.view || instance.context.view || null
+				const label			= instance.label 	// instance.context.label
+				const content_data	= items.content_data || null
 
-			const fragment = new DocumentFragment()
+			// fragment
+				const fragment = new DocumentFragment()
 
 			// label
 				if (label===null || items.label===null) {
@@ -1103,42 +1084,49 @@ export const ui = {
 				}
 
 			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					// class_name		: 'wrapper_' + type + ' ' + model + ' area' + ' ' + tipo + ' ' + mode
-					class_name		: `${'wrapper_'+type} ${model} ${tipo} ${section_tipo+'_'+tipo} ${mode}`
-				})
-				wrapper.appendChild(fragment)
+				const wrapper = document.createElement('div')
+				// css
+					const ar_css = [
+						'wrapper_' + type,
+						model,
+						tipo,
+						section_tipo +'_'+ tipo,
+						mode
+					]
+					if (view) {ar_css.push('view_'+view)}
+					wrapper.classList.add(...ar_css)
 
-			// css new way v6
-				if (instance.context.css) {
-					const selector = `${section_tipo}_${tipo}.edit`
-					set_element_css(selector, instance.context.css)
-					// add_class
-						// sample
-						// "add_class": {
-						// "wrapper": [
-						// 	"bg_warning"
-						// ]
-						// }
-						if (instance.context.css.add_class) {
+				// context css new way v6
+					if (instance.context.css) {
+						const selector = `${section_tipo}_${tipo}.edit`
+						set_element_css(selector, instance.context.css)
+						// add_class
+							// sample
+							// "add_class": {
+							// "wrapper": [
+							// 	"bg_warning"
+							// ]
+							// }
+							if (instance.context.css.add_class) {
 
-							for(const selector in instance.context.css.add_class) {
-								const values = instance.context.css.add_class[selector]
-								const element = selector==='wrapper'
-									? wrapper
-									: selector==='content_data'
-										? content_data
-										: null
+								for(const selector in instance.context.css.add_class) {
+									const values = instance.context.css.add_class[selector]
+									const element = selector==='wrapper'
+										? wrapper
+										: selector==='content_data'
+											? content_data
+											: null
 
-								if (element) {
-									element.classList.add(values)
-								}else{
-									console.warn("Invalid css class selector was ignored:", selector);
+									if (element) {
+										element.classList.add(values)
+									}else{
+										console.warn("Invalid css class selector was ignored:", selector);
+									}
 								}
 							}
-						}
-				}
+					}
+				// append fragment
+					wrapper.appendChild(fragment)
 
 
 			return wrapper
@@ -1156,22 +1144,30 @@ export const ui = {
 
 		build_wrapper_edit : (instance, items={})=>{
 
-			// const id			= instance.id || 'id is not set'
-			const model			= instance.model 	// like component_input_text
-			const type			= instance.type || 'tool' 	// like 'component'
-			// const tipo		= instance.tipo 	// like 'rsc26'
-			const mode			= instance.mode 	// like 'edit'
-			const context		= instance.context || {}
-			const label			= context.label || ''
-			const description	= context.description || ''
-			const name			= instance.constructor.name
+			// short vars
+				const model			= instance.model 	// like component_input_text
+				const type			= instance.type || 'tool' 	// like 'component'
+				// const tipo		= instance.tipo 	// like 'rsc26'
+				const mode			= instance.mode 	// like 'edit'
+				const view			= instance.view || instance.context.view || null
+				const context		= instance.context || {}
+				const label			= context.label || ''
+				const description	= context.description || ''
+				const name			= instance.constructor.name
 
-			const wrapper = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'wrapper_' + type + ' ' + model + ' ' + mode
-			})
+			// wrapper
+				const wrapper = document.createElement('div')
+				// css
+					const ar_css = [
+						'wrapper_' + type,
+						model,
+						mode
+					]
+					if (view) {ar_css.push('view_'+view)}
+					wrapper.classList.add(...ar_css)
 
-			const fragment = new DocumentFragment()
+			// fragment
+				const fragment = new DocumentFragment()
 
 			if (mode!=='mini') {
 				// header
@@ -1266,7 +1262,6 @@ export const ui = {
 				// 		buttons.appendChild(items.buttons[i])
 				// 	}
 				// }
-
 
 			// content_data
 				if (items.content_data) {
@@ -1401,9 +1396,6 @@ export const ui = {
 
 			return tool_button
 		}//build_component_tool_button
-
-
-
 	},//end tool
 
 
@@ -1414,12 +1406,14 @@ export const ui = {
 
 		build_wrapper_edit : (instance, items)=>{
 
-			const id	= instance.id || 'id is not set'
-			const mode	= instance.mode 	// like 'edit'
-			const type	= "widget"
-			const name	= instance.constructor.name
+			// short vars
+				// const id	= instance.id || 'id is not set'
+				const mode	= instance.mode 	// like 'edit'
+				const type	= "widget"
+				const name	= instance.constructor.name
 
-			const fragment = new DocumentFragment()
+			// fragment
+				const fragment = new DocumentFragment()
 
 			// content_data
 				if (items.content_data) {
@@ -1429,10 +1423,15 @@ export const ui = {
 				}
 
 			// wrapper
-				const wrapper = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'wrapper_' + type + ' ' + name + ' ' + mode
-				})
+				const wrapper = document.createElement('div')
+				// css
+					const ar_css = [
+						'wrapper_' + type,
+						name,
+						mode
+					]
+					wrapper.classList.add(...ar_css)
+				// append fragment
 				wrapper.appendChild(fragment)
 
 
@@ -1616,6 +1615,7 @@ export const ui = {
 	},//end create_dom_element
 
 
+
 	/**
 	* INSIDE_TOOL
 	* Check if instance is inside tool
@@ -1635,7 +1635,9 @@ export const ui = {
 	/**
 	* ADD_TOOLS
 	* Adds all the existent tools for the selected component
-	* @return bool
+	* @param object self
+	* @param DOM node buttons_container
+	* @return array tools
 	*/
 	add_tools : function(self, buttons_container) {
 
@@ -1668,26 +1670,28 @@ export const ui = {
 	* PLACE_ELEMENT
 	* Place DOM element inside target instance nodes
 	* Used in section_record to send component_filter to inspector
-	* @return bool | string tool name
+	* @param object options
+	* @return bool
 	*/
 	place_element : function(options) {
 
-		const source_node			= options.source_node // like node of component_filter
-		const source_instance		= options.source_instance // like section
-		const target_instance		= options.target_instance // like inspector instance
-		const container_selector	= options.container_selector // like .project_container
-		const target_selector		= options.target_selector // like .wrapper_component.component_filter
-		const place_mode			= options.place_mode || 'replace' // like 'add' | 'replace'
+		// options
+			const source_node			= options.source_node // like node of component_filter
+			const source_instance		= options.source_instance // like section
+			const target_instance		= options.target_instance // like inspector instance
+			const container_selector	= options.container_selector // like .project_container
+			const target_selector		= options.target_selector // like .wrapper_component.component_filter
+			const place_mode			= options.place_mode || 'replace' // like 'add' | 'replace'
 
 		if (!target_instance) {
 			console.error("[ui.place_element] Error on get target instance:", options);
 			return false
 		}
 
-		if (target_instance.status==="rendered") {
+		if (target_instance.status==='rendered') {
 
 			if (target_instance.node===null) {
-				console.error("Error. Instance node not found:", target_instance);
+				console.error('Error. Instance node not found:', target_instance);
 			}
 
 			// instance node already exists case
@@ -1730,10 +1734,11 @@ export const ui = {
 
 	/**
 	* TOGGLE_INSPECTOR
+	* @return void
 	*/
 	toggle_inspector : () => {
 
-		const inspector_wrapper = document.querySelector(".inspector")
+		const inspector_wrapper = document.querySelector('.inspector')
 		if (inspector_wrapper) {
 
 			const wrapper_section = document.querySelector(".wrapper_section.edit")
@@ -1746,8 +1751,6 @@ export const ui = {
 				wrapper_section.classList.add("full_width")
 			}
 		}
-
-		return true
 	},//end toggle_inspector
 
 
@@ -1963,6 +1966,7 @@ export const ui = {
 
 	/**
 	* GET_CONTENTEDITABLE_BUTTONS
+	* @return DOM node contenteditable_buttons
 	*/
 	get_contenteditable_buttons : () => {
 
@@ -2050,7 +2054,7 @@ export const ui = {
 	* 	size	: string
 	* 	remove_overlay : bool
 	* }
-	* @return DOM element modal_container
+	* @return DOM node modal_container
 	*/
 	attach_to_modal : (options) => {
 
@@ -2221,23 +2225,18 @@ export const ui = {
 	* Unfinished function (!)
 	*/
 	do_search : (search_text, contenteditable) =>{
-		//get the regext
 
-		const regext_text = search_text.replace(/([.*+?^=!:${}()|[\]\/\\])/g, '\\$1');
-		const regext = RegExp(regext_text, 'g')
+		// get the regex
+		const regext_text	= search_text.replace(/([.*+?^=!:${}()|[\]\/\\])/g, '\\$1');
+		const regext		= RegExp(regext_text, 'g')
 
-
-		//const regext_text = search_text.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&').replace(/\s/g, '[^\\S\\r\\n]');
-
-		//const regext_text = search_text.replace(/([.*+?^=!:${}()|[\]\/\\])/g, '\\$1');
-
-		//const regext = new RegExp(regext_text)
+		// const regext_text = search_text.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&').replace(/\s/g, '[^\\S\\r\\n]');
+		// const regext_text = search_text.replace(/([.*+?^=!:${}()|[\]\/\\])/g, '\\$1');
+		// const regex = new RegExp(regext_text)
 
 		const text = getText(contenteditable)
 
 		let match = regext.exec(text)
-
-		console.log(match[0])
 
 			const endIndex = match.index + match[0].length;
 			const startIndex = match.index;
@@ -2293,118 +2292,6 @@ export const ui = {
 
 
 	/**
-	* CREATE_DIALOG
-	* (!) REMOVED -> Use ui.attach_to_modal instead
-	* format:
-	* dialog_options =
-	*	{
-	*		title			: 'Delete...',
-	*		msg				: 'Are you sure?',
-	*		header_class	: 'light',
-	*		body_class 		: 'light',
-	*		footer_class 	: 'light',
-	*		user_options	:[{
-	*			id 			: 1,
-	*			label 		: 'Yes',
-	*			class_name 	: 'success'
-	*		},{
-	*			id 			: 2,
-	*			label 		: 'No',
-	*			class_name 	: 'warning'
-	*		},{
-	*			id 			:3,
-	*			label 		: 'Cancel',
-	*			class_name 	: 'light'
-	*		}]
-	*	}
-	*/
-		// create_dialog : (options) =>{
-
-		// 	const element_id	= options.element_id
-		// 	const title			= options.title 		|| ''
-		// 	const msg			= options.msg 			|| ''
-		// 	const header_class	= options.header_class 	|| 'light'
-		// 	const body_class	= options.body_class 	|| 'light'
-		// 	const body_content	= options.body_content
-		// 	const footer_class	= options.footer_class 	|| 'light'
-		// 	const user_options	= options.user_options 	|| [{
-		// 								id			: 1,
-		// 								label		: get_label.ok,
-		// 								class_name	: 'light'
-		// 							}]
-
-		// 	// header
-		// 		const header = ui.create_dom_element({
-		// 			element_type	: 'div',
-		// 			class_name		: 'header ' + header_class,
-		// 		})
-		// 		// title
-		// 			const title_dialog = ui.create_dom_element({
-		// 				element_type	: 'div',
-		// 				class_name		: 'title',
-		// 				parent			: header,
-		// 				text_node		: title
-		// 			})
-
-		// 	// body
-		// 		const body = ui.create_dom_element({
-		// 			element_type	: 'div',
-		// 			class_name		: 'body ' + body_class,
-		// 		})
-		// 		// msg
-		// 			const msg_dialog = ui.create_dom_element({
-		// 				element_type	: 'div',
-		// 				class_name		: 'msg',
-		// 				parent			: body,
-		// 				text_node		: msg
-		// 			})
-		// 		// body_content
-		// 			if(body_content){
-		// 				body_content.classList.add('body_content')
-		// 				body.appendChild(body_content)
-		// 			}
-
-		// 	// footer
-		// 		const footer = ui.create_dom_element({
-		// 			element_type	: 'div',
-		// 			class_name		: 'footer ' + footer_class
-		// 		})
-		// 		const on_option_mouseup = function (e){
-		// 			event_manager.publish('user_option_'+element_id, this.option_id)
-		// 			// modal.remove()
-		// 			modal._closeModal()
-		// 		}
-		// 		const user_options_len = user_options.length
-		// 		for (let i = 0; i < user_options_len; i++) {
-
-		// 			const option = user_options[i]
-
-		// 			//user_option
-		// 				const user_option = ui.create_dom_element({
-		// 					element_type	: 'button',
-		// 					class_name		: 'user_option ' + option.class_name,
-		// 					inner_html		: option.label,
-		// 					parent			: footer
-		// 				})
-		// 				// add option_id property
-		// 				user_option.option_id = option.id
-		// 				user_option.addEventListener("mouseup", on_option_mouseup);
-		// 		}
-
-		// 	// modal open
-		// 		const modal = ui.attach_to_modal({
-		// 			header	: header,
-		// 			body	: body,
-		// 			footer	: footer
-		// 		})
-
-
-		// 	return footer
-		// },//end create_dialog
-
-
-
-	/**
 	* RENDER_LIST_HEADER
 	* Creates the header nodes needed for portal and section in the same unified way
 	* @param array columns_map
@@ -2417,8 +2304,8 @@ export const ui = {
 
 		// header_wrapper
 			const header_wrapper = ui.create_dom_element({
-				element_type	: "div",
-				class_name		: "header_wrapper_list " + self.model
+				element_type	: 'div',
+				class_name		: 'header_wrapper_list ' + self.model
 			})
 
 		const ar_nodes				= []
@@ -2738,6 +2625,9 @@ export const ui = {
 
 	/**
 	* SET_BACKGROUND_IMAGE
+	* @param DOM node image
+	* @param DOM node target_node
+	* @return DOMnode image
 	*/
 	set_background_image : (image, target_node) => {
 
@@ -2785,6 +2675,8 @@ export const ui = {
 
 	/**
 	* MAKE_COLUMN_RESPONSIVE
+	* Used in section_record to add responsive CSS
+	* @param object options
 	* @return bool
 	*/
 	make_column_responsive : function(options) {
@@ -2868,7 +2760,7 @@ export const ui = {
 
 	/**
 	* HILITE
-	* Hilite/unhilite and element (ussually a component) in the DOM
+	* Hilite/unhilite and element (usually a component) in the DOM
 	* @param object options
 	* @return bool
 	*/
