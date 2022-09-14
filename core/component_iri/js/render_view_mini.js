@@ -39,7 +39,7 @@ render_view_mini.render = async function(self, options) {
 			// create the new URL of the IRI
 			const url = (value[i].iri)
 				? new URL(value[i].iri)
-				: null;
+				: {};
 			// create the link node
 			const link_node = ui.create_dom_element({
 				element_type	: url
@@ -49,7 +49,7 @@ render_view_mini.render = async function(self, options) {
 					? 'link_iri'
 					: 'text_iri',
 				href 			: value[i].iri || null,
-				text_content	: value[i].title || url.hostname,
+				text_content	: value[i].title || url.hostname || '',
 				title 			: value[i].iri,
 				parent			: fragment
 			})
