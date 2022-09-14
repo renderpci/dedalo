@@ -81,7 +81,7 @@ render_view_text.render = async function(self, options) {
 				await Promise.all(ar_promises)// render work done safely
 
 			// create the column nodes and assign the instances nodes to it.
-				// const ar_column_nodes = []
+				const text_node = document.createElement('span')
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
@@ -96,31 +96,25 @@ render_view_text.render = async function(self, options) {
 							console.error("current_instance column_id not found:", current_instance);
 						}else{
 
-							// const ar_sub_columns_map = current_instance.columns_map || ar_instances
-
-							// column. If column already exists, place the component node into the column.
-								// Else, creates a new column and place it into the fragment
-								// const found_node	= ar_column_nodes.find(el => el.id === current_instance.column_id)
-								// const column_node	= found_node
-								// 	? found_node
-								// 	: (()=>{
-								// 		const new_column_node = build_column_node(current_instance, self, ar_sub_columns_map)
-								// 		ar_column_nodes.push(new_column_node)
-								// 		fragment.appendChild(new_column_node)
-								// 		return new_column_node
-								// 	  })()
-
 							// add node
 								const current_instance_node	= current_instance.node
-								fragment.appendChild(current_instance_node)
+							// check the view of the instance to get the correct content, if the instance has text convert to html else get the node
+								if(current_instance.context.view === 'text'){
+									text_node.innerHTML += current_instance_node.textContent
+
+								}else{
+									text_node.appendChild(current_instance_node)
+								}
 
 							// add value_separator
-								// if(j === ar_instances_length-1) continue
-								// const node_value_separator = document.createTextNode(' | ')
-								// fragment.appendChild(node_value_separator)
+								if(j === ar_instances_length-1 || current_instance_node.textContent.length < 1) continue
+								const node_value_separator = document.createTextNode(' | ')
+								text_node.appendChild(node_value_separator)
 
 						}
 				}//end for (let j = 0; j < ar_instances_length; j++) {
+
+				fragment.appendChild(text_node)
 
 			if(i < columns_map_length-1) {
 				const node_value_separator = document.createTextNode(', ')
