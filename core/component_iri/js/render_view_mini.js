@@ -31,33 +31,42 @@ render_view_mini.render = async function(self, options) {
 		const data	= self.data || {}
 		const value	= data.value || []
 
-	// Value as string
-		const ar_value_string	= [];
+	// DOM fragment
+		const fragment = new DocumentFragment()
+
 		const value_length		= value.length
 		for (let i = 0; i < value_length; i++) {
+			// create the new URL of the IRI
+			const url = (value[i].iri)
+				? new URL(value[i].iri)
+				: null;
+			// create the link node
+			const link_node = ui.create_dom_element({
+				element_type	: url
+					? 'a'
+					: 'span',
+				class_name 		: url
+					? 'link_iri'
+					: 'text_iri',
+				href 			: value[i].iri || null,
+				text_content	: value[i].title || url.hostname,
+				title 			: value[i].iri,
+				parent			: fragment
+			})
 
-			const ar_line = []
-
-			if (value[i].title) {
-				ar_line.push(value[i].title)
-			}
-			if (value[i].iri) {
-				ar_line.push(value[i].iri)
-			}
-
-			if (ar_line.length>0) {
-				ar_value_string.push(ar_line.join(' | '))
+			if(i < value_length-1){
+				const value_separator_node = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'value_separator',
+					text_content	: self.value_separator,
+					parent			: fragment
+				})
 			}
 		}
-		const value_string = (ar_value_string && ar_value_string.length)
-			? ar_value_string.join(' - ')
-			: ''
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
-			value_string : value_string
-		})
-
+		const wrapper = ui.component.build_wrapper_mini(self, {})
+		wrapper.appendChild(fragment)
 
 	return wrapper
 }//end mini
