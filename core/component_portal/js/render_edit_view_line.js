@@ -71,7 +71,7 @@ render_edit_view_line.render = async function(self, options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-		wrapper.classList.add('portal', 'view_line')
+		wrapper.classList.add('portal')
 		// set pointers
 		wrapper.content_data = content_data
 
