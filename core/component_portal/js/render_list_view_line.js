@@ -58,7 +58,7 @@ render_list_view_line.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data
 		})
-		wrapper.classList.add('portal', 'list_view_line')
+		wrapper.classList.add('portal')
 		// set pointers
 		wrapper.content_data = content_data
 
