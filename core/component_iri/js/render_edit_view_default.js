@@ -134,16 +134,26 @@ const get_content_value = (i, current_value, self) => {
 	if((mode==='edit' || mode==='edit_in_list')) {
 
 		// input iri field
+		//    const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
+
 			const input_iri = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'url',
 				class_name		: 'input_value url',
 				placeholder		: 'http://',
-				pattern			: '(https?)?:\/\/.*\..+',
 				value			: iri,
 				parent			: content_value
 			})
 			input_iri.addEventListener('change', function() {
+
+				const regex = /(https?)?:\/\/.*\..+/;
+				const value = input_iri.value
+
+				if(value && !value.match(regex)){
+					input_iri.classList.add('error')
+					return false
+				}
+				input_iri.classList.remove('error')
 				update_value(self, i)
 			})
 			//end change
