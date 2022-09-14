@@ -39,9 +39,6 @@
 		// value
 			switch ($modo) {
 				case 'list':
-					$value = $this->get_list_value();
-					break;
-
 				case 'edit':
 				default:
 					$value = $this->get_dato();
