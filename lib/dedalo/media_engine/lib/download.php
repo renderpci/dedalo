@@ -28,14 +28,14 @@ define('LOG_DOWNLOADS',true);
 define('LOG_FILE', DEDALO_LOGS_DIR .'/dedalo_file_downloads.log');
 
 // Allowed extensions list in format 'extension' => 'mime type'
-// If myme type is set to empty string then script will try to detect mime type 
+// If myme type is set to empty string then script will try to detect mime type
 // itself, which would only work if you have Mimetype or Fileinfo extensions
 // installed on server.
 $allowed_ext = array (
-	
-	/*	
+
+	/*
 	// executables
-	'exe' => 'application/octet-stream',	
+	'exe' => 'application/octet-stream',
 	*/
 
 	// documents
@@ -48,20 +48,20 @@ $allowed_ext = array (
 	'gif' => 'image/gif',
 	'png' => 'image/png',
 	'tif' => 'image/jpeg',
-	'jpeg'=> 'image/jpeg', 
+	'jpeg'=> 'image/jpeg',
 
 	// audio
 	'mp3' => 'audio/mpeg',
 	'wav' => 'audio/x-wav',
-	
+
 	// video
 	'mpeg'=> 'video/mpeg',
 	'mpg' => 'video/mpeg',
 	'mpe' => 'video/mpeg',
 	'avi' => 'video/x-msvideo',
-	'mov' => 'video/quicktime',	
+	'mov' => 'video/quicktime',
 	'mp4' => 'video/mp4',
-	
+
 	// images
 	'jpg' => 'image/jpeg',
 	'jpeg'=> 'image/jpeg',
@@ -69,11 +69,18 @@ $allowed_ext = array (
 	'gif' => 'image/gif',
 	'tif' => 'image/tif',
 	'psd' => 'image/psd',
-	'bmp' => 'image/bmp',  
-	'pdf' => 'application/pdf',
+	'bmp' => 'image/bmp',
+
+	// documents
+	'pdf'	=> 'application/pdf',
+	'doc'	=> 'application/msword',
+	'docx'	=> 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+	'odp'	=> 'application/vnd.oasis.opendocument.presentation',
+	'odt'	=> 'application/vnd.oasis.opendocument.text',
+	'pages' => 'application/vnd.apple.pages',
 
 	// archives
-	'zip' => 'application/zip',
+	'zip' => 'application/zip'
 );
 
 
@@ -141,7 +148,7 @@ if(isset($video_id) && is_dir(BASE_DIR.$video_id)){
 	$file_name_showed = 'media_downloaded_' . substr(strrchr($fname, "_"), 1);
 
 	if (!is_file($file_path)) {
-		die("File does not exist. Make sure you specified correct file name."); 
+		die("File does not exist. Make sure you specified correct file name.");
 	}
 }
 
@@ -149,13 +156,13 @@ if(isset($video_id) && is_dir(BASE_DIR.$video_id)){
 
 
 // file size in bytes
-$fsize = filesize($file_path); 
+$fsize = filesize($file_path);
 // file extension
 $fext = strtolower(substr(strrchr($fname,"."),1));
 
 	// check if allowed extension
 if (!array_key_exists($fext, $allowed_ext)) {
-	die("Not allowed file type."); 
+	die("Not allowed file type.");
 }
 
 
@@ -169,7 +176,7 @@ if ($allowed_ext[$fext] == '') {
 	else if (function_exists('finfo_file')) {
 		$finfo = finfo_open(FILEINFO_MIME); // return mime type
 		$mtype = finfo_file($finfo, $file_path);
-		finfo_close($finfo);  
+		finfo_close($finfo);
 	}
 	if ($mtype == '') {
 		$mtype = "application/force-download";
