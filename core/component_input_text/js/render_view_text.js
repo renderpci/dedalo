@@ -20,7 +20,8 @@ export const render_view_text = function() {
 
 
 /**
-* GET_RAW_STRING
+* RENDER
+* get_raw_string
 * Output component value to use as raw text
 * @return DOM text node text_node
 */
