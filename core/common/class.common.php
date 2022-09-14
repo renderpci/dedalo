@@ -1822,25 +1822,46 @@ abstract class common {
 																					 $mode,
 																					 $current_lang,
 																					 $current_section_tipo);
+
 								// virtual request_config, create new request config to be injected to the current_ddo.
 								// the current component has the configuration to all children components,
 								// and it's necessary calculate the new request_config that will be use in the next loop
-								// the main component has all config, his children has specific config (only his part)
-									$new_request_config = [];
+								// the main component has all config, his children has specific config (only his own part)
+
+									// get the component rqo to be updated with the current config
+									$component_rqo_config = $related_element->build_request_config();
 									foreach ($request_config as $request_config_item) {
-										$children = get_children_recursive($request_config_item->show->ddo_map, $dd_object);
-										if (!empty($children)) {
+										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
+										$api_engine			= $request_config_item->api_engine;
+										$children_show		= isset($request_config_item->show)
+											? get_children_recursive($request_config_item->show->ddo_map, $dd_object)
+											: null;
+										$children_search	= isset($request_config_item->search)
+											? get_children_recursive($request_config_item->search->ddo_map, $dd_object)
+											: null;
+										$children_choose	= isset($request_config_item->choose)
+											? get_children_recursive($request_config_item->choose->ddo_map, $dd_object)
+											: null;
+										// select the current api_engine
+										$new_rqo_config = array_find($component_rqo_config, function($el) use($api_engine){
+											return $el->api_engine===$api_engine;
+										});
 
-											$new_rqo_config = unserialize(serialize($request_config_item));
-											$new_rqo_config->show->ddo_map = $children;
+										// set the ddo_map with the new config
+										if (!empty($children_show)) {
+											$new_rqo_config->show->ddo_map  = $children_show;
 
-											$new_request_config[] = $new_rqo_config;
+										}
+										if (!empty($children_search)) {
+											$new_rqo_config->search->ddo_map  = $children_search;
+										}
+										if (!empty($children_choose)) {
+											$new_rqo_config->choose->ddo_map  = $children_choose;
 										}
 									}
+								// Inject the request_config inside the component
+									$related_element->request_config = $component_rqo_config;
 
-									if (!empty($new_request_config)) {
-										$related_element->request_config = $new_request_config;
-									}
 
 								// Inject this tipo as related component from_component_tipo
 									$source_model = get_called_class();
