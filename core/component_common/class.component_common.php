@@ -3346,13 +3346,13 @@ abstract class component_common extends common {
 			return null;
 		}
 
-		$list_value = [];
-		foreach ($dato as $item) {
+		$list_value = $dato;
+		// foreach ($dato as $item) {
 
-			$list_value[] = !is_scalar($item)
-				? (!empty($item) ? json_encode($item) : $item) // array, object, resource, null
-				: $item; //  int, float, string, bool
-		}
+		// 	$list_value[] = !is_scalar($item)
+		// 		? (!empty($item) ? json_encode($item) : $item) // array, object, resource, null
+		// 		: $item; //  int, float, string, bool
+		// }
 
 		return $list_value;
 	}//end get_list_value
