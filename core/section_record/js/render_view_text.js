@@ -21,10 +21,11 @@ export const render_view_text = function() {
 
 
 /**
-* MINI
-* Render node for use in list
-* @param array ar_instances
-* @return DOM node wrapper
+* RENDER
+* Render as text nodes
+* @param object self
+* @param object options
+* @return DocumentFragment
 */
 render_view_text.render = async function(self, options) {
 
@@ -34,15 +35,15 @@ render_view_text.render = async function(self, options) {
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
 		const columns_map = await self.columns_map
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// section_record wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			id				: self.id,
-			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
-		})
-
+		// const wrapper = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	id				: self.id,
+		// 	class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
+		// })
 
 	// render the columns
 		const columns_map_length = columns_map.length
@@ -80,7 +81,7 @@ render_view_text.render = async function(self, options) {
 				await Promise.all(ar_promises)// render work done safely
 
 			// create the column nodes and assign the instances nodes to it.
-				const ar_column_nodes = []
+				// const ar_column_nodes = []
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
@@ -91,37 +92,41 @@ render_view_text.render = async function(self, options) {
 							continue;
 						}
 						// check if the current_instance has column_id, if not, a error was done by the common creating the columns.
-						if (current_instance.column_id) {
+						if (!current_instance.column_id) {
+							console.error("current_instance column_id not found:", current_instance);
+						}else{
 
-							const ar_sub_columns_map = current_instance.columns_map || ar_instances
+							// const ar_sub_columns_map = current_instance.columns_map || ar_instances
 
 							// column. If column already exists, place the component node into the column.
-							// Else, creates a new column and place it into the fragment
-							// const found_node	= ar_column_nodes.find(el => el.id === current_instance.column_id)
-							// const column_node	= found_node
-							// 	? found_node
-							// 	: (()=>{
-							// 		const new_column_node = build_column_node(current_instance, self, ar_sub_columns_map)
-							// 		ar_column_nodes.push(new_column_node)
-							// 		fragment.appendChild(new_column_node)
+								// Else, creates a new column and place it into the fragment
+								// const found_node	= ar_column_nodes.find(el => el.id === current_instance.column_id)
+								// const column_node	= found_node
+								// 	? found_node
+								// 	: (()=>{
+								// 		const new_column_node = build_column_node(current_instance, self, ar_sub_columns_map)
+								// 		ar_column_nodes.push(new_column_node)
+								// 		fragment.appendChild(new_column_node)
+								// 		return new_column_node
+								// 	  })()
 
-							// 		return new_column_node
-							// 	  })()
+							// add node
+								const current_instance_node	= current_instance.node
+								fragment.appendChild(current_instance_node)
 
-							const current_instance_node	= current_instance.node
-							fragment.appendChild(current_instance_node)
+							// add value_separator
+								// if(j === ar_instances_length-1) continue
+								// const node_value_separator = document.createTextNode(' | ')
+								// fragment.appendChild(node_value_separator)
 
-							if(j === ar_instances_length-1) continue
-							const node_value_separator = document.createTextNode(' | ')
-
-							fragment.appendChild(node_value_separator)
-
-						}else{
-							console.error("current_instance column_id not found:",current_instance);
 						}
-				}//end for (let i = 0; i < ar_instances_length; i++)
+				}//end for (let j = 0; j < ar_instances_length; j++) {
 
-		}
+			if(i < columns_map_length-1) {
+				const node_value_separator = document.createTextNode(', ')
+				fragment.appendChild(node_value_separator)
+			}
+		}//end for (let i = 0; i < columns_map_length; i++)
 
 
 	// component_info
@@ -134,5 +139,4 @@ render_view_text.render = async function(self, options) {
 
 
 	return fragment
-}//end render_view_text.prototype.list
-
+}//end render
