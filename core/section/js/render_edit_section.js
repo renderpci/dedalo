@@ -35,7 +35,7 @@ render_edit_section.prototype.edit = async function(options) {
 
 	const render_level = options.render_level || 'full'
 
-	// ar_section_record. section_record instances (initied and builded)
+	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_ar_instances(self)

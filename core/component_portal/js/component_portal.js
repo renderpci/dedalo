@@ -406,7 +406,7 @@ component_portal.prototype.build = async function(autoload=false) {
 		self.db_data = clone(self.data)
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 
 	return true
@@ -675,7 +675,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 			: []
 
 	// reset status to enable re-render
-		self.status = 'builded'
+		self.status = 'built'
 
 	// re-render always the content
 		return self.render({
@@ -701,12 +701,12 @@ component_portal.prototype.reset_filter_data = function() {
 		self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
 
 	// reset status to able re-render
-		self.status = 'builded'
+		self.status = 'built'
 
 	// reset instances status
 		// self.ar_instances = null
 		// for (let i = 0; i < self.ar_instances.length; i++) {
-		// 	self.ar_instances[i].status = 'builded'
+		// 	self.ar_instances[i].status = 'built'
 		// }
 
 	// re-render content

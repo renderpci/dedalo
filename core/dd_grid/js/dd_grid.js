@@ -72,7 +72,7 @@ dd_grid.prototype.build	= async function(autoload=true){
 
 	self.data = api_response.result || null
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 	return
 }//end build

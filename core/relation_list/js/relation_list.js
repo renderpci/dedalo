@@ -251,7 +251,7 @@ relation_list.prototype.build = async function(autoload=true){
 		}
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 	return true
 }//end build

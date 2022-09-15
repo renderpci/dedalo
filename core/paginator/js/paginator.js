@@ -141,11 +141,11 @@ paginator.prototype.build = async function(){
 		}
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 
 	// event publish
-		event_manager.publish('builded_'+self.id)
+		event_manager.publish('built_'+self.id)
 
 
 	return true

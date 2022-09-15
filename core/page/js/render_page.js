@@ -125,7 +125,7 @@ const get_content_data = async function(self) {
 						continue;
 					}
 
-				// container placeholder until page element is builded and rendered
+				// container placeholder until page element is built and rendered
 					const label = current_context.label || current_context.model
 					const container_placeholder = ui.create_dom_element({
 						element_type	: 'div',

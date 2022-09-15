@@ -89,7 +89,7 @@ common.prototype.build = async function () {
 		self.permissions = self.context.permissions
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 
 	return true
@@ -138,7 +138,7 @@ common.prototype.render = async function (options={}) {
 	// status check to prevent duplicated actions
 		switch(self.status) {
 
-			case 'builded':
+			case 'built':
 				// all is as expected. Continue executing normally
 				break;
 
@@ -169,7 +169,7 @@ common.prototype.render = async function (options={}) {
 				// if render mode is equal than current already rendered node, return node 0
 				if (self.render_level===render_level) {
 					if (self.node) {
-						console.warn(`Render unexpected status. Returning already rendered node 0. Expected status is 'builded' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
+						console.warn(`Render unexpected status. Returning already rendered node 0. Expected status is 'built' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
 						return self.node
 					}else{
 						console.warn(`Render unexpected status. Node already rendered node not found but status is rendered:`, self.node, self.id);
@@ -180,8 +180,8 @@ common.prototype.render = async function (options={}) {
 
 			default:
 				if (self.render_level===render_level) {
-					// event_manager.subscribe('builded_'+self.id, self.render.edit(options))
-					console.warn(`Render illegal status '${self.status}'. Returning 'false'. Expected 'builded' current is:`, clone(self.status), render_level, self.model, self.id);
+					// event_manager.subscribe('built_'+self.id, self.render.edit(options))
+					console.warn(`Render illegal status '${self.status}'. Returning 'false'. Expected 'built' current is:`, clone(self.status), render_level, self.model, self.id);
 					return false
 				}
 				break;
@@ -379,7 +379,7 @@ common.prototype.refresh = async function(options={}) {
 
 	// build. Update the instance with new data
 		//if (self.status==='destroyed') {
-		const builded = await self.build( build_autoload ) // default value is true
+		const built = await self.build( build_autoload ) // default value is true
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false
@@ -397,13 +397,13 @@ common.prototype.refresh = async function(options={}) {
 
 	// render. Only render content_data, not the whole element wrapper
 		let result
-		if (self.status==='builded') {
+		if (self.status==='built') {
 			await self.render({
 				render_level : render_level // Default value is 'content'
 			})
 			result = true
 		}else{
-			console.warn(`[common.refresh] Ignored render '${self.model}' (expected status 'builded') with status:`, self.status);
+			console.warn(`[common.refresh] Ignored render '${self.model}' (expected status 'built') with status:`, self.status);
 			result = false
 		}
 
@@ -1448,7 +1448,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		? sqo_config.value_separator
 		: ', '
 
-	// optional configuration to use when the serach will be builded
+	// optional configuration to use when the serach will be built
 		const sqo_options = {
 			filter_free		: filter_free,
 			fixed_filter	: fixed_filter,
@@ -2020,7 +2020,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 			// const sqo	= rqo_show_original.sqo
 			// const request_pre	= ui.create_dom_element({
 			// 	element_type	: 'pre',
-			// 	text_content	: "dd_request sent to API: \n\n" + JSON.stringify(rqo_show_original, null, "  ") + "\n\n\n\n" + "dd_request new builded: \n\n" + JSON.stringify(dd_request, null, "  "),
+			// 	text_content	: "dd_request sent to API: \n\n" + JSON.stringify(rqo_show_original, null, "  ") + "\n\n\n\n" + "dd_request new built: \n\n" + JSON.stringify(dd_request, null, "  "),
 			// 	parent			: fragment
 			// })
 

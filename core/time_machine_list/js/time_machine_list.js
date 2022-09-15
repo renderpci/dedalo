@@ -114,7 +114,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 		self.ar_instances.push(self.time_machine)
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 
 	return true
