@@ -1558,10 +1558,14 @@ abstract class common {
 						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
 					}
 				}
-			// view, used only by portals
-				// if($model==='component_portal' || strpos($model, 'component_relation_')===0 || $model==='component_semantic_node'){
-					$dd_object->view = $this->get_view();
-				// }
+			// view, all components has view, used to change the render view. the default value is "default" except in component_portal
+				$dd_object->view = $this->get_view();
+
+			// sometimes the component define the view of his children (see rsc368)
+				if (isset($properties->children_view)) {
+					$dd_object->children_view = $this->get_children_view();
+				}
+
 			// relation_list // time_machine_list
 				if($model==='section'){
 					$dd_object->relation_list		= $this->get_relation_list();
@@ -3839,6 +3843,26 @@ abstract class common {
 		return $view;
 	}//end get_view
 
+
+	/**
+	* GET_CHILDREN_VIEW
+	* @return string $view
+	*/
+	public function get_children_view() : string {
+
+		// When view is injected by ddo_map
+			if(isset($this->children_view)){
+				return $this->children_view;
+			}
+
+		// properties defined case
+			$properties = $this->get_properties();
+			if(isset($properties->children_view)){
+				return $properties->children_view;
+			}
+
+		return null;
+	}//end get_children_view
 
 
 }//end class common
