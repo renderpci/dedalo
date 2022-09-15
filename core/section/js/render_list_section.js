@@ -41,7 +41,7 @@ render_list_section.prototype.list = async function(options) {
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
-	// ar_section_record. section_record instances (initied and builded)
+	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_ar_instances(self)
@@ -166,7 +166,7 @@ render_list_section.prototype.list = async function(options) {
 */
 const get_content_data = async function(ar_section_record, self) {
 
-	// section_record instances (initied and builded)
+	// section_record instances (initied and built)
 	// const ar_section_record = await self.get_ar_instances()
 
 	const fragment = new DocumentFragment()

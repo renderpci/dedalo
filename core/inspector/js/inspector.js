@@ -117,7 +117,7 @@ inspector.prototype.build = async function() {
 	// Noting to do here. Only for live cycle compatibility
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 	return true
 }//end build

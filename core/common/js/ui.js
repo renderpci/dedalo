@@ -2093,7 +2093,7 @@ export const ui = {
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
 
-		// modal container select from DOM (created hidden when page is builded)
+		// modal container select from DOM (created hidden when page is built)
 			// const modal_container = document.querySelector('dd-modal')
 		// modal container build new DOM on each call and remove on close
 			// const previous_modal  	= document.querySelector('dd-modal')

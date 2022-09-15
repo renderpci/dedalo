@@ -352,11 +352,11 @@ page.prototype.build = async function() {
 
 	const self = this
 
-	// instances (like section). Instances are returned init and builded
+	// instances (like section). Instances are returned init and built
 		// await self.get_ar_instances() // (!) processed directly from render to allow async
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 	return true
 }//end build

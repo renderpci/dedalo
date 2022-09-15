@@ -113,7 +113,7 @@ area.prototype.build = async function(autoload=true) {
 		}
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 
 	return true

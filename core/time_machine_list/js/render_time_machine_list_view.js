@@ -35,7 +35,7 @@ export const render_time_machine_list_view = async function(self, options) {
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
-	// ar_section_record. section_record instances (initied and builded)
+	// ar_section_record. section_record instances (initied and built)
 		const ar_section_record	= await get_ar_instances(self)
 		self.ar_instances		= ar_section_record
 

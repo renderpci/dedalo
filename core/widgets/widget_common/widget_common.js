@@ -75,7 +75,7 @@ widget_common.prototype.build = async function(autoload=false) {
 		}
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 
 	return true

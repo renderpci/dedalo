@@ -288,7 +288,7 @@ search.prototype.build = async function(){
 
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 	return true
 }//end build

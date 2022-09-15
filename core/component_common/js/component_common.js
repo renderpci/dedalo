@@ -239,7 +239,7 @@ component_common.prototype.build = async function(autoload=false){
 		self.is_inside_tool = ui.inside_tool(self)
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
 

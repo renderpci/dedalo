@@ -216,7 +216,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		self.columns_map = get_columns_map(self.context)
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 	return true
 }//end build

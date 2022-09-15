@@ -35,7 +35,7 @@ export const section_record = function() {
 	this.paginated_key	= null
 	this.row_key 		= null
 	// control
-	//this.builded		= false
+	//this.built		= false
 
 	this.node			= null
 
@@ -265,7 +265,7 @@ section_record.prototype.get_ar_instances_edit = async function(){
 				ar_promises.push(current_promise)
 		}//end for (let i = 0; i < items_length; i++) {
 
-	// instances. Await all instances are parallel builded and fix
+	// instances. Await all instances are parallel built and fix
 		await Promise.all(ar_promises).then(function(ar_instances){
 			// sort by instance_order_key asc to guarantee original order
 			// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
@@ -551,7 +551,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 	// 		}//end for loop
 
-	// 		// instances. Await all instances are parallel builded and fix
+	// 		// instances. Await all instances are parallel built and fix
 	// 			await Promise.all(ar_promises).then(function(ar_instances){
 	// 				// sort by instance_order_key asc to guarantee original order
 	// 				// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
@@ -725,7 +725,7 @@ section_record.prototype.get_component_info = function(){
 	// 	//const groupers 	 = self.load_groupers()
 
 	// 	return Promise.all([components]).then(function(){
-	// 		self.builded = true
+	// 		self.built = true
 	// 	})
 	// }//end build
 

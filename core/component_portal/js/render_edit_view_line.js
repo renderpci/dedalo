@@ -505,9 +505,9 @@ render_edit_view_line.render_column_remove = function(options) {
 	// 					source.build_options = {
 	// 						get_dato_external : true
 	// 					}
-	// 					const builded = await self.build(true)
+	// 					const built = await self.build(true)
 	// 					// render
-	// 					if (builded) {
+	// 					if (built) {
 	// 						self.render({render_level : 'content'})
 	// 					}
 	// 				})

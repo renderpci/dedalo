@@ -1078,7 +1078,7 @@ export const service_autocomplete = function() {
 						}
 					}
 
-				// filter re-builded
+				// filter re-built
 					self.sqo.filter = {
 						'$and' : [new_filter]
 						// '$and' : [filter_free]

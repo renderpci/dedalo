@@ -337,7 +337,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 		}
 
 	// status update
-		self.status = 'builded'
+		self.status = 'built'
 
 
 	return true

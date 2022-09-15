@@ -712,9 +712,9 @@ export const get_buttons = (self) => {
 					source.build_options = {
 						get_dato_external : true
 					}
-					const builded = await self.build(true)
+					const built = await self.build(true)
 					// render
-					if (builded) {
+					if (built) {
 						self.render({render_level : 'content'})
 					}
 				})

@@ -92,7 +92,7 @@ describe("OTHERS LIFE-CYCLE", function() {
 
 			it(`${element.model} BUILD (autoload=true)`, async function() {
 
-				const expected = 'builded'
+				const expected = 'built'
 
 				// init instance
 					await new_instance.build(true)
