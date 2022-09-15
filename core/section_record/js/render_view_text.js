@@ -6,7 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-
+	import {render_column_node_callback} from './render_list_view_default.js'
 
 
 /**
@@ -39,20 +39,47 @@ render_view_text.render = async function(self, options) {
 		const fragment = new DocumentFragment()
 
 	// section_record wrapper
-		// const wrapper = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	id				: self.id,
-		// 	class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
-		// })
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			id				: self.id,
+			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '') + ' view_'+self.context.view
+		})
 
 	// render the columns
 		const columns_map_length = columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
-			const current_colum = columns_map[i]
+			const current_column = columns_map[i]
+
+			// callback column case
+			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
+				if(current_column.callback && typeof current_column.callback==='function'){
+
+					// column_node (standard section_record empty column to be filled with content_node)
+						const column_node = render_column_node_callback(current_column, self)
+
+					// content_node
+						const content_node = current_column.callback({
+							section_tipo		: self.section_tipo,
+							section_id			: self.section_id,
+							row_key				: self.row_key,
+							paginated_key		: self.paginated_key,
+							offset				: self.offset,
+							caller				: self.caller,
+							matrix_id			: self.matrix_id, // tm var
+							modification_date	: self.modification_date || null, // tm var
+							locator				: self.locator
+						})
+						if (content_node) {
+							column_node.appendChild(content_node)
+						}
+
+					wrapper.appendChild(column_node)
+					continue;
+				}
 
 			// instances.get the specific instances for the current column
-				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_colum.id)
+				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_column.id)
 
 			// loop the instances for select the parent node
 				const ar_instances_length = ar_instances.length
@@ -81,7 +108,6 @@ render_view_text.render = async function(self, options) {
 				await Promise.all(ar_promises)// render work done safely
 
 			// create the column nodes and assign the instances nodes to it.
-				const text_node = document.createElement('span')
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
@@ -100,25 +126,32 @@ render_view_text.render = async function(self, options) {
 								const current_instance_node	= current_instance.node
 							// check the view of the instance to get the correct content, if the instance has text convert to html else get the node
 								if(current_instance.context.view === 'text'){
-									text_node.innerHTML += current_instance_node.textContent
+									wrapper.innerHTML += current_instance_node.textContent
 
 								}else{
-									text_node.appendChild(current_instance_node)
+									wrapper.appendChild(current_instance_node)
 								}
 
 							// add value_separator
-								if(j === ar_instances_length-1 || current_instance_node.textContent.length < 1) continue
-								const node_value_separator = document.createTextNode(' | ')
-								text_node.appendChild(node_value_separator)
+								if(j < ar_instances_length-1) {
+									const next_node_text = ar_instances[j+1].node
+									if(next_node_text.textContent.length > 1){
+										const node_value_separator = document.createTextNode(' | ')
+										wrapper.appendChild(node_value_separator)
+									}
+								}
+
 
 						}
 				}//end for (let j = 0; j < ar_instances_length; j++) {
 
-				fragment.appendChild(text_node)
+				// fragment.appendChild(wrapper)
 
-			if(i < columns_map_length-1) {
+
+			// columns separator (between components inside the same column)
+			if(i < columns_map_length-1 && columns_map[i+1].id!=='remove') {
 				const node_value_separator = document.createTextNode(', ')
-				fragment.appendChild(node_value_separator)
+				wrapper.appendChild(node_value_separator)
 			}
 		}//end for (let i = 0; i < columns_map_length; i++)
 
@@ -128,9 +161,9 @@ render_view_text.render = async function(self, options) {
 		if (component_info){
 			const info_value = component_info.value.join('')
 			const info = document.createTextNode(info_value)
-			fragment.appendChild(info)
+			wrapper.appendChild(info)
 		}
 
 
-	return fragment
+	return wrapper
 }//end render

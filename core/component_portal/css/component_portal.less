@@ -297,7 +297,8 @@
 			display: block;
 
 			.section_record.list {
-				display: flex;
+				display: block;
+				height: unset;
 				// @media screen and (max-width: @width_break_point_1) {
 				// 	flex-wrap: wrap;
 				// }
@@ -309,7 +310,7 @@
 
 					&.column_section_id, &.column_remove{
 						background-color: unset;
-
+						display: inline-block;
 						>button.button_edit, >button.button_remove{
 							.delete_bold{
 								margin-left:0.3em ;
