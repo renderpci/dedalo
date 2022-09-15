@@ -4,7 +4,6 @@
 
 
 // imports
-	// import * as dd from '../../common/js/dd.common.funtions.js'
 	import {clone, dd_console, is_equal} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {set_before_unload} from '../../common/js/events.js'
@@ -23,13 +22,10 @@ export const component_common = function(){
 
 
 
-// component_common.prototype.build_rqo_show = common.prototype.build_rqo_show
-
-
-
 /**
 * INIT
 * Common init prototype to use in components as default
+* @param object options
 * @return bool true
 */
 component_common.prototype.init = async function(options) {
@@ -53,33 +49,32 @@ component_common.prototype.init = async function(options) {
 		self.section_lang	= options.section_lang // current section lang like 'lg-eng'
 		self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
 
-		// Optional vars
+	// optional vars
 		self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
 		self.data			= options.data		|| null // current specific data of this component
 		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 
-		// DOM
+	// DOM
 		self.node			= null // node place in light DOM
 
+	// var containers
 		self.events_tokens	= [] // array of events of current component
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 		self.tools			= []
 		//rqo
 		// self.rqo 		= {}
 
-		self.init_events_subscribed = false // initial value (false) is changed on build
-
-		// caller
+	// caller pointer
 		self.caller = options.caller
 
-		// Standalone
+	// standalone
 		// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum
 		// if the property is set to false, the component will use datum to get his data and is forced to update datum to share his data with others
 		// false option is used to reduce the calls to API server and database, section use to load all data with 1 call and components load his data from datum
 		// true options is used to call directly to API and manage his data, used by tools or services that need components standalone.
 		self.standalone = true
 
-		// pagination info
+	// pagination info
 		// self.pagination = (self.data && self.data.pagination)
 		// 	? self.data.pagination
 		// 	: { // pagination info (used in portals, etc.)
@@ -88,12 +83,7 @@ component_common.prototype.init = async function(options) {
 		// 		limit	: 0
 		// 	}
 
-		// self.type	= self.context.type 	// typology of current instance, usually 'component'
-		// self.label	= self.context.label // label of current component like 'summary'
-		// self.tools	= self.context.tools || [] //set the tools of the component
-		// self.value_separator	= (self.context.properties && self.context.properties.value_separator) ? self.context.properties.value_separator : ' | '
-
-	// set_context_vars. context vars re-updated after new build
+	// set_context_vars. Common context vars re-updated after new build
 		// set_context_vars(self, self.context)
 
 	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
@@ -103,6 +93,7 @@ component_common.prototype.init = async function(options) {
 		self.is_data_changed = false
 
 	// events subscription
+		self.init_events_subscribed = false // initial value (false) is changed on build
 		// Two calls:
 		// first; set the component_common events, the call is not in the instance and assign the self in the call
 		// second; set the specific events of the components, they are part of the instance
@@ -164,7 +155,9 @@ component_common.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param object value (locator)
+* Set the main component properties.
+* Could be from database context and data or injected by caller section, tools, etc.
+* @param bool autoload = false
 * @return bool
 */
 component_common.prototype.build = async function(autoload=false){
@@ -189,27 +182,27 @@ component_common.prototype.build = async function(autoload=false){
 	// when the auto-load if false the data will be injected by the caller (as section_record or others)
 		if (autoload===true) {
 
-			// rqo
+			// rqo. Request Query Object
 				const rqo = {
 					source	: create_source(self, 'get_data'),
 					action	: 'read'
 				}
 
-			// get context and data
+			// data_manager get context and data from the database
 				const api_response = await data_manager.request({
 					body : rqo
 				})
 				// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
 				dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
 
-			// Context
+			// context
 				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 				if (!context) {
 					console.error("context not found in api_response:", api_response);
 				}
 				self.context = context
 
-			// Data
+			// data
 				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
@@ -218,8 +211,10 @@ component_common.prototype.build = async function(autoload=false){
 
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
 				if(!self.standalone){
+					// update shared datum
 					await self.update_datum(api_response.result.data)
 				}else{
+					// set 'private' datum
 					self.datum.context	= api_response.result.context
 					self.datum.data		= api_response.result.data
 				}
@@ -230,18 +225,14 @@ component_common.prototype.build = async function(autoload=false){
 				// }
 		}
 
-	// update instance properties from context
+	// update instance properties from context:
+	// 	type, label, tools, value_separator, permissions
 		set_context_vars(self, self.context)
 
 	// subscribe to the observer events (important: only once)
 		init_events_subscription(self)
 
-	// build_custom optional
-		// if (typeof self.build_custom==='function') {
-		// 	await self.build_custom()
-		// }
-
-	// set the server data to preserve the data that is saved in DDBB
+	// set the server data to preserve the data that is already saved in DDBB
 		self.db_data = clone(self.data)
 
 	// is_inside_tool
@@ -254,87 +245,6 @@ component_common.prototype.build = async function(autoload=false){
 
 	return true
 }//end component_common.prototype.build
-
-
-
-/**
-* BUILD_OLD
-* @param object value (locator)
-* @return bool
-*/
-	// component_common.prototype.build_OLD = async function(autoload=false){
-	// 	const t0 = performance.now()
-
-	// 	const self = this
-
-	// 	// status update
-	// 		self.status = 'building'
-
-	// 	// self.datum. On building, if datum is not created, creation is needed
-	// 		if (!self.datum) self.datum = {data:[]}
-
-	// 	// load data on auto-load true
-	// 		if (autoload===true) {
-
-	// 			// console.log("++++ self.rqo.show:", clone(self.rqo.show));
-	// 			// console.log("self.context:",self.context);
-	// 			// alert("Loading component " + self.model + " - " + self.tipo);
-
-	// 			// set rqo if not exists
-	// 				// if(!self.rqo.show){
-	// 				// 	const request_config = self.context.request_config || null
-	// 				// 	self.rqo.show = self.build_rqo('show', request_config, 'get_data')
-	// 				// }
-	// 				// const request_config	= self.context.request_config || null
-	// 				const rqo = {
-	// 					source	: create_source(self, 'get_data'),
-	// 					action	: 'read'
-	// 				}
-
-	// 			// load data
-	// 				const api_response			= await data_manager.request({body : rqo})
-
-	// 			// debug
-	// 				if(SHOW_DEBUG===true) {
-	// 					console.log(`[component_common.build] + api_response (${Math.round(performance.now()-t0)} ms) :`, api_response);
-	// 				}
-
-	// 			// set context and data to current instance
-	// 				await self.update_datum(api_response.result.data)
-	// 				self.context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-
-	// 			// rqo. build again rqo with updated request_config if exists
-	// 				if (self.context.request_config) {
-	// 					self.rqo.show = self.build_rqo('show', self.context.request_config, 'get_data')
-	// 				}
-	// 		}
-
-	// 	// update instance properties from context
-	// 		set_context_vars(self, self.context)
-
-	// 	// permissions. calculate and set (used by section records later)
-	// 		// self.permissions = self.context.permissions
-
-	// 	// debug
-	// 		if(SHOW_DEBUG===true) {
-	// 			// console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
-	// 		}
-
-	// 	// build_custom optional
-	// 		// if (typeof self.build_custom==='function') {
-	// 		// 	await self.build_custom()
-	// 		// }
-
-	// 	// is_inside_tool
-	// 		self.is_inside_tool = ui.inside_tool(self)
-
-	// 	// status update
-	// 		self.status = 'builded'
-
-	// 	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
-
-	// 	return true
-	// }//end component_common.prototype.build
 
 
 
@@ -372,11 +282,12 @@ export const init_events_subscription = function(self) {
 		if(observe){
 			const l = observe.length
 			for (let i = l - 1; i >= 0; i--) {
+
 				const component_tipo	= observe[i].component_tipo // target event component tipo
 				const event_name		= observe[i].event
 				const perform			= observe[i].perform || null
 
-				if(perform && typeof self[perform]==="function"){
+				if(perform && typeof self[perform]==='function'){
 					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
 					// the id_base is built when the component is instantiated
 					// this event can be fired by:
@@ -391,7 +302,7 @@ export const init_events_subscription = function(self) {
 
 				}else{
 
-					// event_name is defin ed but not perform case
+					// event_name is defined but not perform case
 					if (event_name) {
 						console.group(`Invalid observe ${self.tipo} - ${self.model}`);
 						console.warn(`Invalid observe perform. Target function '${perform}' does not exists in ${self.model}:`, observe[i], typeof self[perform]);
@@ -412,23 +323,24 @@ export const init_events_subscription = function(self) {
 
 /**
 * SAVE
-*
+* Exec a save action calling the API
+* Returns the updated data after save (useful to re-assign data value array keys)
 * @param object changed_data
-* 	[{
-* 		action : "update",
-* 		key : 0,
-* 		value : "XXX"
-* 	}]
+* [{
+* 	action : "update",
+* 	key : 0,
+* 	value : "XXX"
+* }]
 * @return promise save_promise
 */
 component_common.prototype.save = async function(changed_data) {
 
 	const self = this
 
-	// check data
+	// check changed_data format
 		if (typeof changed_data==='undefined' || !Array.isArray(changed_data) || changed_data.length<1) {
 			if(SHOW_DEBUG===true) {
-				console.error("+++++ Invalid changed_data [stop save]:", changed_data)
+				console.error("Invalid changed_data [stop save]:", changed_data)
 				console.trace()
 			}
 			const msg = "Error on save. changed_data is undefined or empty!"
@@ -445,7 +357,7 @@ component_common.prototype.save = async function(changed_data) {
 			return false
 		}
 
-	// check data is changed (only action=update items)
+	// check if data is actually changed (only action=update items)
 		const update_items			= changed_data.filter(el => el.action==='update')
 		const update_items_length	= update_items.length
 		if (update_items_length>0) {
@@ -477,7 +389,7 @@ component_common.prototype.save = async function(changed_data) {
 			}
 		}
 
-	// remove previous success/error css class if exists
+	// remove previous success/error CSS class if exists
 		if (self.node) {
 			if (self.node.classList.contains("error")) {
 				self.node.classList.remove("error")
@@ -487,11 +399,11 @@ component_common.prototype.save = async function(changed_data) {
 			}
 		}
 
-	// send_data
+	// send_data function
 		const send_data = async () => {
 			try {
 
-				// data. isolated cloned var
+				// data. isolated cloned var and set received changed_data
 					const data = clone(self.data)
 					data.changed_data = changed_data
 
@@ -505,7 +417,7 @@ component_common.prototype.save = async function(changed_data) {
 						data	: data
 					}
 
-				// data_manager
+				// data_manager API request
 					const api_response = await data_manager.request({
 						body : rqo
 					})
@@ -522,9 +434,9 @@ component_common.prototype.save = async function(changed_data) {
 								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}'`);
 							}
 							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
-							console.log("[component_common.save] api_response:", api_response);
+							console.log('[component_common.save] api_response:', api_response);
 						}else{
-							console.error("[component_common.save] api_response ERROR:",api_response);
+							console.error('[component_common.save] api_response ERROR:',api_response);
 						}
 					}
 
@@ -552,16 +464,16 @@ component_common.prototype.save = async function(changed_data) {
 
 			// error case
 
-			self.node.classList.add("error")
+			self.node.classList.add('error')
 
 			if (response.error) {
 				console.error(response.error)
 			}
 			if (response.msg) {
-				alert("Error on save self "+self.model+" data: \n" + response.msg)
+				alert('Error on save self '+self.model+' data: \n' + response.msg)
 			}
 
-			console.error("ERROR response:",response);
+			console.error('ERROR response:',response);
 
 		}else{
 
@@ -570,7 +482,7 @@ component_common.prototype.save = async function(changed_data) {
 			// data
 				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
 				if(!data){
-					console.warn("data not found in result:", result);
+					console.warn('data not found in result:', result);
 				}
 				self.data = data || {}
 
@@ -610,7 +522,7 @@ component_common.prototype.save = async function(changed_data) {
 				api_response	: response
 			})
 
-		// remove acive
+		// remove active
 			// ui.component.inactive(self)
 
 		// blur selection
@@ -638,7 +550,7 @@ component_common.prototype.get_value = function() {
 
 /**
 * SET_VALUE
-* Update component data value with DOM node actual value
+* Update component data value (usually with with DOM node actual value)
 * @return bool true
 */
 component_common.prototype.set_value = function(value) {
@@ -668,7 +580,7 @@ component_common.prototype.update_datum = async function(new_data) {
 
 	// (!) Note that component datum is shared with section datum. BUT! Portals have specific datum
 
-	// new_data
+	// new_data check
 		if (!new_data || !Array.isArray(new_data)) {
 			console.error(`component_common.update_datum received new_data is invalid! Expected array. Received:`, typeof new_data, new_data);
 			return false
@@ -854,9 +766,9 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			//console.log("***** update_data_value data_key:",clone(data_key));
-			//console.log("======= update_data_value:",clone(self.data.value));
-			console.log("======= [component_common] update_data_value POST CHANGE:", clone(self.data.value), self.id);
+			//console.log('***** update_data_value data_key:',clone(data_key));
+			//console.log('======= update_data_value:',clone(self.data.value));
+			console.log('======= [component_common] update_data_value POST CHANGE:', clone(self.data.value), self.id);
 		}
 
 
@@ -987,6 +899,7 @@ component_common.prototype.change_value = async function(options) {
 *	Name of the function to store
 * @param object options
 *	Argument to send to function
+* @return
 */
 const function_queue = function(context, pool, fn, options) {
 
@@ -999,7 +912,6 @@ const function_queue = function(context, pool, fn, options) {
 
 	pool.push( fun )
 
-
 	return fun
 }//end function_queue
 
@@ -1008,6 +920,8 @@ const function_queue = function(context, pool, fn, options) {
 /**
 * UPDATE_NODE_CONTENTS
 * Static function. Replaces old DOM node by new node
+* @param DOM node current_node
+* @param DOM node new_node
 */
 component_common.prototype.update_node_contents = async (current_node, new_node) => {
 
@@ -1031,6 +945,7 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 * GET_AR_INSTANCES (COMPONENT)
 * Create (init and build) a section_record for each component value
 * Used by portals to get all rows for render
+* @param object options = {}
 * @return array of objects (section_record instances)
 */
 component_common.prototype.get_ar_instances = async function(options={}){
@@ -1082,8 +997,8 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				section_id		: current_section_id,
 				mode			: mode,
 				lang			: lang,
-				context 		: {view: view},
-				// context			: current_context,
+				context			: {view: view},
+				// context		: current_context,
 				// data			: current_data,
 				datum			: self.datum,
 				row_key			: i,
@@ -1149,6 +1064,9 @@ component_common.prototype.get_ar_instances = async function(options={}){
 * Render a fresh full element node in the new mode
 * Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
+* @param string new_node
+* @param bool autoload
+* @return bool true
 */
 component_common.prototype.change_mode = async function(new_mode, autoload) {
 
