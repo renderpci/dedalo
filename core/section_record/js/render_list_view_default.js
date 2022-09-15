@@ -602,7 +602,7 @@ const render_column_node = function(component_instance, self, ar_instances){
 * @param object column from the columns_map
 * @return DOM element column
 */
-const render_column_node_callback = function(column_obj, self){
+export const render_column_node_callback = function(column_obj, self){
 
 	const column_id	= column_obj.id
 	const model		= 'callback'

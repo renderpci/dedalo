@@ -49,10 +49,13 @@ render_edit_view_line.render = async function(self, options) {
 		const columns_map	= rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
+	// view
+		const children_view	= self.context.children_view || self.context.view || 'default'
+
 	// ar_section_record
 		const ar_section_record	= await self.get_ar_instances({
 			mode	: 'list',
-			view	: self.context.view
+			view	: children_view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
