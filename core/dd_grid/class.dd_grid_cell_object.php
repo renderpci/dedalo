@@ -13,7 +13,7 @@
 *	    {
 *	      "class_list": "head grey",
 *	      "column": "portal",
-*	      "separator_fields": ", ",
+*	      "fields_separator": ", ",
 *	      "separator_rows": "<br>",
 *	      "total_rows":3,
 *	      "data": [
@@ -43,7 +43,7 @@
 *	    {
 *	      "class_list": "head grey",
 *	      "column": "input_x",
-*	      "separator_fields": null,
+*	      "fields_separator": null,
 *	      "separator_rows": "<br>",
 *	      "data": [
 *	        {
@@ -59,7 +59,7 @@
 *	    {
 *	      "class_list": "head grey",
 *	      "column": "portal",
-*	      "separator_fields": ", ",
+*	      "fields_separator": ", ",
 *	      "separator_rows": "<br>",
 *	      "data": [
 *	        {
@@ -88,7 +88,7 @@
 *	    {
 *	      "class_list": "head grey",
 *	      "column": "input_x",
-*	      "separator_fields": null,
+*	      "fields_separator": null,
 *	      "separator_rows": "<br>",
 *	      "data": [
 *	        {
@@ -115,7 +115,7 @@ class dd_grid_cell_object {
 	// 		row_count 			: number - total rows of the component, used by portals to define the rows that could be separated individually.
 	//		column_count 		: number - total columns of the component, used by portals to define the columns that could be separated individually.
 	// 		column_labels 		: array of strings - name of the columns that will use the portal to define sub columns names
-	// 		separator_fields 	: string -  ", " - with the glue of the fields
+	// 		fields_separator 	: string -  ", " - with the glue of the fields
 	//		separator_rows 		: string -  "<br>" - with the glue of the rows
 	//    	cell_type   		: string - type of the element to represent in the cell
 	//    	action				: object - used but buttons to define the action will done by the user
@@ -128,7 +128,7 @@ class dd_grid_cell_object {
 
 	// public $class_list;
 	// public $column;
-	// public $separator_fields;
+	// public $fields_separator;
 	// public $separator_rows;
 	// public $type;
 	// public $action;
@@ -228,10 +228,10 @@ class dd_grid_cell_object {
 	}
 
 	/**
-	* SET_SEPARATOR_FIELDS
+	* SET_fields_separator
 	*/
-	public function set_separator_fields(string $value) {
-		$this->separator_fields = $value;
+	public function set_fields_separator(string $value) {
+		$this->fields_separator = $value;
 	}
 
 	/**

@@ -98,7 +98,7 @@ class component_relation_related extends component_relation_common {
 
 		$dato		= $this->get_dato();
 		$properties	= $this->get_properties();
-		$value_separator	= (isset($show->value_separator)) ?  $show->value_separator : ' | ';
+		$fields_separator	= (isset($show->fields_separator)) ?  $show->fields_separator : ' | ';
 		$ar_values	= array();
 
 		foreach ((array)$dato as $key => $current_locator) {
@@ -113,14 +113,14 @@ class component_relation_related extends component_relation_common {
 				$ar_componets_related // array|null ar_components_related
 			);
 			$current_value = !empty($current_ar_value)
-				? implode($value_separator, $current_ar_value)
+				? implode($fields_separator, $current_ar_value)
 				: $current_ar_value; // null case
 			$ar_values[$current_locator_json] = $current_value;
 		}//end if (!empty($dato))
 
 		$valor = ($format==='array')
 			? $ar_values
-			: implode($value_separator, $ar_values);
+			: implode($fields_separator, $ar_values);
 
 
 		return $valor;
@@ -230,9 +230,9 @@ class component_relation_related extends component_relation_common {
 			return $ddo->tipo;
 		}, $show->ddo_map);
 
-		$value_separator = (isset($show->value_separator)) ?  $show->value_separator : ' | ';
+		$fields_separator = (isset($show->fields_separator)) ?  $show->fields_separator : ' | ';
 
-		$references = array_map(function($locator) use($ar_componets_related, $value_separator) {
+		$references = array_map(function($locator) use($ar_componets_related, $fields_separator) {
 
 			$ar_current_label = self::get_locator_value(
 				$locator, // object locator
@@ -242,7 +242,7 @@ class component_relation_related extends component_relation_common {
 				true // bool include_self
 			);
 			$current_label = !empty($ar_current_label)
-				? implode($value_separator, $ar_current_label)
+				? implode($fields_separator, $ar_current_label)
 				: $ar_current_label; // null case
 
 			$item = new stdClass();
@@ -524,18 +524,18 @@ class component_relation_related extends component_relation_common {
 
 				if ($key==='custom_parents') {
 
-					$value_separator 	= $this->get_value_separator();
+					$fields_separator 	= $this->get_fields_separator();
 
 					if (!empty($diffusion_value)) {
 						$array_values = array_values($diffusion_value);
 						foreach ($array_values as $key => $current_term) {
-							$ar_terms[] = explode($value_separator, $current_term);
+							$ar_terms[] = explode($fields_separator, $current_term);
 						}
 					}
 
 					if (!empty($calculated_references)) {
 						foreach ($calculated_references as $key => $ref_obj) {
-							$ar_terms[] = explode($value_separator, $ref_obj->label);
+							$ar_terms[] = explode($fields_separator, $ref_obj->label);
 						}
 					}
 
@@ -553,7 +553,7 @@ class component_relation_related extends component_relation_common {
 									array_splice($term, $splice_values[0]);
 								}
 							}
-							$final_term[] = implode($value_separator, $term);
+							$final_term[] = implode($fields_separator, $term);
 
 						}
 					}

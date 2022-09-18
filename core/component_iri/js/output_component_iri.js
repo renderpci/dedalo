@@ -52,7 +52,7 @@ output_component_iri.prototype.get_raw_string = async function() {
 		}
 
 		const value_string = (ar_value_string && ar_value_string.length)
-			? ar_value_string.join(self.value_separator)
+			? ar_value_string.join(self.context.fields_separator)
 			: ''
 
 	return value_string

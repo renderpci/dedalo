@@ -3416,7 +3416,7 @@ class diffusion_sql extends diffusion  {
 
 		#$measurements = $component->get_valor($lang);
 		#$measurements = $component->get_valor_export( $valor=null, $lang, $quotes=null, $add_id=null );
-		#$measurements = $component->get_valor( $lang, $data_to_be_used='valor_list', $separator_rows='<br>', $separator_fields=', ' );
+		#$measurements = $component->get_valor( $lang, $data_to_be_used='valor_list', $separator_rows='<br>', $fields_separator=', ' );
 		#$measurements = strip_tags( $measurements );
 
 		$dato = $component->get_dato();

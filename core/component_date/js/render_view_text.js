@@ -27,7 +27,7 @@ render_view_text.render = async function(self, options) {
 
 		const ar_value = get_ar_raw_data_value(self)
 
-		const value_string = ar_value.join(self.value_separator)
+		const value_string = ar_value.join(self.context.fields_separator)
 
 		const text_node = document.createTextNode(value_string)
 

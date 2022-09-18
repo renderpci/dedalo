@@ -49,8 +49,9 @@
 	$data		= [];
 
 	// context get and fix
-		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
-		$context[]		= $this->context;
+		$this->context					= $this->get_structure_context($permissions, $add_request_config=true);
+
+		$context[] = $this->context;
 
 	if($permissions>0) {
 

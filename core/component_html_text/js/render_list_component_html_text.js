@@ -33,7 +33,7 @@ render_list_component_html_text.prototype.list = async function() {
 	// short vars
 		const data			= self.data || {}
 		const value			= data.value || []
-		const value_string	= value.join(self.value_separator)
+		const value_string	= value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
