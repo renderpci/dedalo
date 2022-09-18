@@ -120,9 +120,9 @@ render_view_mini.render = async function(self, options) {
 							column_node.appendChild(current_instance_node)
 
 							if(j === ar_instances_length-1) continue
-							const node_value_separator = ui.create_dom_element({
+							const node_fields_separator = ui.create_dom_element({
 								element_type	: 'span',
-								inner_html		: self.caller.value_separator || ' | ',
+								inner_html		: self.caller.fields_separator || ' | ',
 								parent			: column_node
 							})
 

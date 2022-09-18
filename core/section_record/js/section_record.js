@@ -326,6 +326,9 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 							? request_config_item.search.ddo_map
 							: request_config_item.show.ddo_map
 
+					// fields_separator
+					self.context.fields_separator = self.caller.context.fields_separator || ' + '
+
 					// get the direct components of the caller (component or section)
 					const ar_first_level_ddo = ddo_map.filter(item => item.parent === self.tipo)
 
@@ -388,9 +391,13 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								if(current_ddo.view){
 									new_context.view = current_ddo.view
 								}
-
+								// set the children_view when the ddo has defined it, this param will be used to be render the children of the portals
 								if(current_ddo.children_view){
 									new_context.children_view = current_ddo.children_view
+								}
+								// set the fields_separator to be assigned to join the components inside the component_portal
+								if(current_ddo.fields_separator){
+									new_context.fields_separator = current_ddo.fields_separator
 								}
 								// set the hover of the column when is defined in ddo, hover could be defined in properties of the portals
 								// hover define the instance not be render as normal only when the mouse will hover of normal nodes (information hover mosaic views)

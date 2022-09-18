@@ -132,12 +132,12 @@ render_view_text.render = async function(self, options) {
 									wrapper.appendChild(current_instance_node)
 								}
 
-							// add value_separator
+							// add fields_separator
 								if(j < ar_instances_length-1) {
 									const next_node_text = ar_instances[j+1].node
 									if(next_node_text.textContent.length > 1){
-										const node_value_separator = document.createTextNode(' | ')
-										wrapper.appendChild(node_value_separator)
+										const node_fields_separator = document.createTextNode(self.context.fields_separator)
+										wrapper.appendChild(node_fields_separator)
 									}
 								}
 
@@ -150,8 +150,8 @@ render_view_text.render = async function(self, options) {
 
 			// columns separator (between components inside the same column)
 			if(i < columns_map_length-1 && columns_map[i+1].id!=='remove') {
-				const node_value_separator = document.createTextNode(', ')
-				wrapper.appendChild(node_value_separator)
+				const node_fields_separator = document.createTextNode(', ')
+				wrapper.appendChild(node_fields_separator)
 			}
 		}//end for (let i = 0; i < columns_map_length; i++)
 
