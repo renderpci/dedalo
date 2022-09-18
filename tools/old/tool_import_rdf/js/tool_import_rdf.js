@@ -218,9 +218,9 @@ var tool_import_rdf = new function() {
 				select_data_wrapper.appendChild(node)
 			}
 
-			const dd_data_value_separator = common.create_dom_element({
+			const dd_data_fields_separator = common.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'dd_data_value_separator',
+						class_name		: 'dd_data_fields_separator',
 						parent			: fragment,
 					})
 

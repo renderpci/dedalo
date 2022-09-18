@@ -38,7 +38,7 @@ render_list_component_text_area.prototype.list = async function() {
 		const value				= data.value || []
 		const fallback_value	= data.fallback_value || []
 		const fallback			= get_fallback_value(value, fallback_value)
-		const value_string		= fallback.join(self.value_separator)
+		const value_string		= fallback.join(self.context.fields_separator)
 
 	// Value as string
 		const value_string_with_tags = tr.add_tag_img_on_the_fly( value_string )

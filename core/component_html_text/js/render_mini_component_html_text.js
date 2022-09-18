@@ -40,7 +40,7 @@ render_mini_component_html_text.prototype.mini = async function() {
 		})
 
 	// Value as string
-		const value_string = value.join(self.value_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 	// Set value
 		wrapper.innerHTML = value_string

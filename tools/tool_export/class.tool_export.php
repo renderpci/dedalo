@@ -282,7 +282,7 @@ class tool_export extends tool_common {
 			$ddo		= ($first_path->section_tipo===$locator->section_tipo) ? $first_path : null;
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-				$separator_fields	= $ddo->separator_fields ?? null;
+				$fields_separator	= $ddo->fields_separator ?? null;
 				$separator_rows		= $ddo->separator_rows ?? null;
 				$format_columns		= $ddo->format_columns ?? null;
 				$class_list			= $ddo->class_list ?? null;

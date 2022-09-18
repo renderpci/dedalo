@@ -192,7 +192,7 @@ class indexation_grid {
 		foreach ($ar_children_ddo as $ddo) {
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-				$separator_fields	= $ddo->separator_fields ?? null;
+				$fields_separator	= $ddo->fields_separator ?? null;
 				$separator_rows		= $ddo->separator_rows ?? null;
 				$format_columns		= $ddo->format_columns ?? null;
 				$class_list			= $ddo->class_list ?? null;

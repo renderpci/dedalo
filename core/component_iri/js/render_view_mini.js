@@ -55,10 +55,10 @@ render_view_mini.render = async function(self, options) {
 			})
 
 			if(i < value_length-1){
-				const value_separator_node = ui.create_dom_element({
+				const fields_separator_node = ui.create_dom_element({
 					element_type	: 'span',
-					class_name		: 'value_separator',
-					text_content	: self.value_separator,
+					class_name		: 'fields_separator',
+					text_content	: self.context.fields_separator,
 					parent			: fragment
 				})
 			}
