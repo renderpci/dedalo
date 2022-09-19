@@ -12,7 +12,7 @@
 * 	"mode"					: "list",
 * 	"label"					: "catalog",*
 * 	"value_with_parents"	: true
-* 	"separator_fields"		: " | "
+* 	"fields_separator"		: " | "
 * }
 */
 class ddo_map_object {
@@ -29,7 +29,7 @@ class ddo_map_object {
 		// $mode; // string like 'edit'
 		// $label; // string like 'Surname'
 		// $value_with_parents; // bool like 'true'
-		// $separator_fields; // string like ' | '
+		// $fields_separator; // string like ' | '
 
 
 
@@ -137,11 +137,11 @@ class ddo_map_object {
 
 
 	/**
-	* SET_SEPARATOR_FIELDS
+	* SET_fields_separator
 	*/
-	public function set_separator_fields(string $value) : void {
+	public function set_fields_separator(string $value) : void {
 
-		$this->separator_fields = $value;
+		$this->fields_separator = $value;
 	}
 
 

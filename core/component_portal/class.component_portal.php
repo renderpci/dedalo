@@ -86,7 +86,7 @@ class component_portal extends component_relation_common {
 		// 			],
 		// 		    "section_to_search": '.((isset($properties->source->hierarchy_sections) && !empty($properties->source->hierarchy_sections)) ? json_encode($properties->source->hierarchy_sections) : '[]').',
 		// 		    "filter_by_list": [],
-		// 		    "value_separator": " | ",
+		// 		    "fields_separator": " | ",
 		// 		    "type_map": {},
 		// 		    "operator": "or",
 		// 		    "records_mode": "list"
@@ -416,7 +416,7 @@ class component_portal extends component_relation_common {
 	* GET_VALOR
 	* @return
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
 
@@ -429,9 +429,9 @@ class component_portal extends component_relation_common {
 		include $path;
 
 		// $_get_valor = Closure::bind($_get_valor, $this);
-		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $value_separator='<br> '
+		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> '
 
-		$valor =  Closure::bind($_get_valor, $this)($lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor');
+		$valor =  Closure::bind($_get_valor, $this)($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor');
 
 		return $valor;
 	}//end get_valor

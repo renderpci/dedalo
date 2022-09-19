@@ -673,7 +673,7 @@ abstract class component_common extends common {
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$separator_fields	= $ddo->separator_fields ?? null;
+			$fields_separator	= $ddo->fields_separator ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
@@ -692,10 +692,10 @@ abstract class component_common extends common {
 
 		$properties = $this->get_properties();
 
-		$separator_fields = isset($separator_fields)
-			? $separator_fields
-			: (isset($properties->separator_fields)
-				? $properties->separator_fields
+		$fields_separator = isset($fields_separator)
+			? $fields_separator
+			: (isset($properties->fields_separator)
+				? $properties->fields_separator
 				: ', ');
 
 		$separator_rows = isset($separator_rows)
@@ -712,7 +712,7 @@ abstract class component_common extends common {
 		if(isset($class_list)){
 			$value->set_class_list($class_list);
 		}
-		$value->set_separator_fields($separator_fields);
+		$value->set_fields_separator($fields_separator);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($data);
 
@@ -1480,7 +1480,7 @@ abstract class component_common extends common {
 			$response->msg		= __METHOD__ . ' Error. Request failed';
 
 		// short vars
-			$value_separator = ', ';
+			$fields_separator = ', ';
 
 		// cases
 			switch (true) {
@@ -1604,7 +1604,7 @@ abstract class component_common extends common {
 				$value->section_id		= $current_row->section_id;
 				$value->section_tipo	= $current_row->section_tipo;
 
-			// get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $value_separator=', '
+			// get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $fields_separator=', '
 			// $label = component_relation_common::get_locator_value(
 			// 	$value, // object locator
 			// 	$lang, // string lang
@@ -1629,7 +1629,7 @@ abstract class component_common extends common {
 							true // bool include_self
 						);
 						$current_label = !empty($ar_current_label)
-							? implode($value_separator, $ar_current_label)
+							? implode($fields_separator, $ar_current_label)
 							: $ar_current_label; // null case
 					}elseif ($model_name==='component_section_id') {
 						$current_label = $current_row->{$related_tipo};

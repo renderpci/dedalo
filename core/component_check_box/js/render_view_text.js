@@ -32,7 +32,7 @@ render_view_text.render = async function(self, options) {
 		const value	= data.value || []
 
 	// Value as string
-		const value_string = value.join(self.value_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 		const text_node = document.createTextNode(value_string)
 

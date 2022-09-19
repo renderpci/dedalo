@@ -813,9 +813,9 @@ export const service_autocomplete = function() {
 		// get dd objects from the context that will be used to build the lists in correct order
 		const rqo_search =  await self.rqo_search
 
-		// get the value_separator between columns
-		const value_separator = (rqo_search.show.value_separator)
-			? rqo_search.show.value_separator
+		// get the fields_separator between columns
+		const fields_separator = (rqo_search.show.fields_separator)
+			? rqo_search.show.fields_separator
 			: ' | '
 
 		const columns = rqo_search.show.columns
@@ -947,7 +947,7 @@ export const service_autocomplete = function() {
 			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
 				const current_dd_info = current_row.find((item)=> item.tipo==='ddinfo')
 				if(current_dd_info){
-					const current_dd_info_value = '- ' + current_dd_info.value.join(value_separator)
+					const current_dd_info_value = '- ' + current_dd_info.value.join(fields_separator)
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'attenuated',
@@ -1251,7 +1251,7 @@ export const service_autocomplete = function() {
 						}
 
 						// value
-							// const value_separator = self.caller.value_separator || ' | '
+							// const fields_separator = self.caller.fields_separator || ' | '
 							const value = ar_value.join('')
 
 

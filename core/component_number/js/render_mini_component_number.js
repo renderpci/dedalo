@@ -33,7 +33,7 @@ render_mini_component_number.prototype.mini = async function() {
 		const data = self.data
 
 	// Value as string
-		const value_string = data.value.join(self.value_separator)
+		const value_string = data.value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

@@ -32,7 +32,7 @@ render_view_text.render = async function(self, options) {
 		const value				= data.value || []
 		const fallback_value	= data.fallback_value || []
 		const fallback			= get_fallback_value(value, fallback_value)
-		const value_string		= fallback.join(self.value_separator)
+		const value_string		= fallback.join(self.context.fields_separator)
 
 		const text_node = document.createTextNode(value_string)
 

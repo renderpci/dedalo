@@ -99,16 +99,15 @@ common.prototype.build = async function () {
 
 /**
 * SET_CONTEXT_VARS
-* type, label, tools, value_separator, permissions
+* type, label, tools, fields_separator, permissions
 */
 export const set_context_vars = function(self) {
 
 	if (self.context) {
-		self.type				= self.context.type // typology of current instance, usually 'component'
-		self.label				= self.context.label // label of current component like 'summary'
-		self.tools				= self.context.tools || [] //set the tools of the component
-		self.value_separator	= (self.context.properties && self.context.properties.value_separator) ? self.context.properties.value_separator : ' | '
-		self.permissions		= self.context.permissions || null
+		self.type						= self.context.type // typology of current instance, usually 'component'
+		self.label						= self.context.label // label of current component like 'summary'
+		self.tools						= self.context.tools || [] //set the tools of the component
+		self.permissions				= self.context.permissions || null
 	}
 
 	return true
@@ -1292,6 +1291,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		delete sqo.generated_time
 		delete sqo.parsed
 
+
 	// build the rqo
 		const rqo = {
 			id		: self.id,
@@ -1443,9 +1443,9 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// 	? sqo_config.value_with_parents
 	// 	: false
 
-	//value_separator
-	const value_separator = sqo_config.value_separator
-		? sqo_config.value_separator
+	//fields_separator
+	const fields_separator = sqo_config.fields_separator
+		? sqo_config.fields_separator
 		: ', '
 
 	// optional configuration to use when the serach will be built
@@ -1475,7 +1475,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			show		: {
 				ddo_map					: ddo_map,
 				// value_with_parents	: value_with_parents,
-				value_separator			: value_separator,
+				fields_separator			: fields_separator,
 				columns					: columns
 			},
 			sqo			: sqo,
@@ -1557,11 +1557,11 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// 							})
 	// 						}
 
-	// 					// value_separator
-	// 						if(show.value_separator){
+	// 					// fields_separator
+	// 						if(show.fields_separator){
 	// 							dd_request.push({
-	// 								typo	: 'value_separator',
-	// 								value	: show.value_separator
+	// 								typo	: 'fields_separator',
+	// 								value	: show.fields_separator
 	// 							})
 	// 						}
 	// 				}
@@ -1630,11 +1630,11 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// 					})
 	// 				}
 
-	// 				//value_separator
-	// 				if(show.value_separator){
+	// 				//fields_separator
+	// 				if(show.fields_separator){
 	// 					dd_request.push({
-	// 						typo : 'value_separator',
-	// 						value : show.value_separator
+	// 						typo : 'fields_separator',
+	// 						value : show.fields_separator
 	// 					})
 	// 				}
 	// 			}
@@ -1835,11 +1835,11 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// 			})
 	// 		}
 
-	// 		//value_separator
-	// 		if(search.value_separator){
+	// 		//fields_separator
+	// 		if(search.fields_separator){
 	// 			sqo_search.push({
-	// 				typo : 'value_separator',
-	// 				value : search.value_separator
+	// 				typo : 'fields_separator',
+	// 				value : search.fields_separator
 	// 			})
 	// 		}
 
@@ -1957,11 +1957,11 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// 				})
 	// 			}
 
-	// 			//value_separator
-	// 			if(select.value_separator){
+	// 			//fields_separator
+	// 			if(select.fields_separator){
 	// 				dd_request.push({
-	// 					typo : 'value_separator',
-	// 					value : select.value_separator
+	// 					typo : 'fields_separator',
+	// 					value : select.fields_separator
 	// 				})
 	// 			}
 	// 		}

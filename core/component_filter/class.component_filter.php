@@ -218,7 +218,7 @@ class component_filter extends component_relation_common {
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$separator_fields	= $ddo->separator_fields ?? null;
+			$fields_separator	= $ddo->fields_separator ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$class_list 		= $ddo->class_list ?? null;
 
@@ -257,10 +257,10 @@ class component_filter extends component_relation_common {
 		$properties = $this->get_properties();
 
 		// set the separator text that will be used to render the column
-		$separator_fields = isset($separator_fields)
-			? $separator_fields
-			: (isset($properties->separator_fields)
-				? $properties->separator_fields
+		$fields_separator = isset($fields_separator)
+			? $fields_separator
+			: (isset($properties->fields_separator)
+				? $properties->fields_separator
 				: ', ');
 
 		$separator_rows = isset($separator_rows)
@@ -277,7 +277,7 @@ class component_filter extends component_relation_common {
 		if(isset($class_list)){
 			$value->set_class_list($class_list);
 		}
-		$value->set_separator_fields($separator_fields);
+		$value->set_fields_separator($fields_separator);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($ar_values);
 

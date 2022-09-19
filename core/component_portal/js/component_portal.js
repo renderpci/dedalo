@@ -288,7 +288,7 @@ component_portal.prototype.build = async function(autoload=false) {
 					self.datum.data		= api_response.result.data
 				}
 
-			// // context. update instance properties from context (type, label, tools, value_separator, permissions)
+			// // context. update instance properties from context (type, label, tools, fields_separator, permissions)
 			// 	self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 			// 	self.datum.context	= api_response.result.context
 
@@ -405,6 +405,11 @@ component_portal.prototype.build = async function(autoload=false) {
 	// set the server data to preserve the data that is saved in DDBB
 		self.db_data = clone(self.data)
 
+	// set fields_separator
+		self.context.fields_separator = self.context.fields_separator
+									|| self.rqo_config.show.fields_separator
+									|| ' | '
+
 	// status update
 		self.status = 'built'
 
@@ -511,7 +516,7 @@ component_portal.prototype.add_value = async function(value) {
 		// set context and data to current instance
 			await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
 
-		// context. update instance properties from context (type, label, tools, value_separator, permissions)
+		// context. update instance properties from context (type, label, tools, fields_separator, permissions)
 			self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 			self.datum.context	= api_response.result.context
 

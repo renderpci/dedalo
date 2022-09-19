@@ -37,7 +37,7 @@ render_mini_component_info.prototype.mini = async function() {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(self.value_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)

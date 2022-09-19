@@ -25,14 +25,14 @@ export const render_view_text = function() {
 * @return DOM node wrapper
 */
 render_view_text.render = async function(self, options) {
-
+	console.log("self----------------:",self);
 	// options
 		const render_level = options.render_level || 'full'
 
 	// ar_section_record
 		const ar_section_record = await self.get_ar_instances({
-			mode : 'list',
-			view : self.context.view
+			mode			: 'list',
+			view			: self.context.view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
@@ -48,10 +48,10 @@ render_view_text.render = async function(self, options) {
 			const child_item = await ar_section_record[i].render()
 			fragment.appendChild(child_item)
 
-			// value_separator
+			// fields_separator
 			if(i < ar_section_record_length-1) {
-				const node_value_separator = document.createTextNode(self.value_separator)
-				fragment.appendChild(node_value_separator)
+				const node_fields_separator = document.createTextNode(self.context.fields_separator)
+				fragment.appendChild(node_fields_separator)
 			}
 		}
 
