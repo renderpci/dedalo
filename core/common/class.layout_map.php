@@ -12,7 +12,7 @@ class layout_map {
 	* GET_LAYOUT_MAP
 	* Calculate display items to generate portal html
 	* Cases:
-	*	1. Modo 'list' : Uses childrens to build layout map
+	*	1. Modo 'list' : Uses children to build layout map
 	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
 	* @return array $layout_map
 	*/

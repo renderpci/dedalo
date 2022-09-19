@@ -2059,7 +2059,7 @@ abstract class component_common extends common {
 			if ($current_locator->section_tipo===$locator_section_tipo && $current_locator->section_id==$locator_section_id) {
 			#if ( locator::compare_locators($current_locator, $locator, array('section_tipo','section_id')) ) {
 
-				# new ds locator is builded from termino_id temporarily
+				# new ds locator is built from termino_id temporarily
 				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
 
 				# ds container add if not exits in current locator
@@ -2113,7 +2113,7 @@ abstract class component_common extends common {
 					return $respose;
 				}
 
-				# new ds locator is builded from termino_id temporarily
+				# new ds locator is built from termino_id temporarily
 				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
 
 				# add ds locator to current portal locator removing duplicates
