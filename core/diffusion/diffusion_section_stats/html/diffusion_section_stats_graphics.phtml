@@ -1,34 +1,34 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
-	
+	# VISUALIZADOR HTML
+
+
 	print "<!-- DIFFUSION_SECTION_STATS_GRAPHICS -->";
 	print "<div class=\"css_wrap_diffusion_section_stats_graphics\">";
-	
+
 		# Close button
 		#echo "<div class=\"close_stats\" onclick=\"diffusion_section_stats.hide_stats_content(this)\"> ".label::get_label('cerrar')." </div>";
 		echo "<div class=\"close_stats\" onclick=\"$('.css_button_stats:first').trigger('click');\"> ".label::get_label('cerrar')." </div>";
-		
+
 		# Stats container div
 		echo "<div id=\"stats_container\" >";
 
 			# Iterate all stats elements
-			foreach ((array)$ar_js_obj as $key => $ar_value) {		
+			foreach ((array)$ar_js_obj as $key => $ar_value) {
 				# Current_stats_item div
 				echo "<div class=\"current_stats_item\" id=\"current_stats_item_$key\">";
 
 					#
-					# SVG GRAPHIC BUILDED BY JS
+					# SVG GRAPHIC BUILT BY JS
 					echo "<script>";
-					echo "diffusion_section_stats.build_charts(".json_handler::encode($ar_value).", '$key');";					
+					echo "diffusion_section_stats.build_charts(".json_handler::encode($ar_value).", '$key');";
 					echo "</script>";
 
-					
+
 					#
 					# INFO DROP DOWN
 					echo "<div class=\"current_stats_item_info\">";
-					
+
 						#
 						# TABLE INFO
 						$column_title 	= $ar_value->title;
@@ -61,7 +61,7 @@
 							#dump($this->diffusion_map_object->$caller_section_tipo->$current_component_tipo->debug, 'debug', array());
 							if (isset($this->diffusion_map_object->$caller_section_tipo->$current_component_tipo->debug)) {
 							echo "<pre>".print_r($this->diffusion_map_object->$caller_section_tipo->$current_component_tipo->debug,true)."</pre>";
-							}							
+							}
 						}
 
 					echo "</div>";#end current_stats_item_info
@@ -70,15 +70,15 @@
 				echo "</div>";#end current_stats_item
 			}#end foreach ((array)$ar_js_obj as $key => $value)
 
-		echo "</div>";#end stats_container	
+		echo "</div>";#end stats_container
 
-	
-	
+
+
 	print "</div><!-- /css_wrap_diffusion_section_stats_graphics -->"; //wrap
 
-	
-	
-	
+
+
+
 
 
 ?>

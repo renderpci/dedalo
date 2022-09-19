@@ -113,10 +113,8 @@ render_edit_view_table.render = async function(self, options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			// content_data	: content_data,
-			buttons			: buttons,
-			list_body		: list_body
-			// top			: top
+			buttons		: buttons,
+			list_body	: list_body
 		})
 		wrapper.classList.add('portal', 'view_'+self.context.view)
 

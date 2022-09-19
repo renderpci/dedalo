@@ -25,7 +25,7 @@
 
 // dedalo paths
 	// xx_PATH is absolute system path like '/user/httpdocs/dedalo/core'
-	// xx_WEB is relative url path (to current dedalo url dir, ussually 'dedalo') like '/dedalo/core'
+	// xx_WEB is relative url path (to current dedalo url dir, often 'dedalo') like '/dedalo/core'
 
 	// host
 		define('DEDALO_HOST',		$_SERVER['HTTP_HOST']);
@@ -452,7 +452,7 @@
 // media entity menu config
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
-	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...
+	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the children, used for groupings that don't want see into the menu "Oral History" "list of values"...
 	define('DEDALO_ENTITY_MENU_SKIP_TIPOS', []);
 
 

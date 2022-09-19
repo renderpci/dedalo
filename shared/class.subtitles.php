@@ -234,10 +234,8 @@ abstract class subtitles {
 
 	/**
 	* GET_AR_LINES
-	* @param string $tcin
-	* @param string $tcout
-	*
-	* @return array $ar_final
+	* @param string $text
+	* @return array $ar_final_formatted
 	*/
 	public static function get_ar_lines(string $text) : array {
 
@@ -290,7 +288,7 @@ abstract class subtitles {
 							# Format as tc like '00:01:03'
 							$next_tcout_formated 	= OptimizeTC::seg2tc($next_tcout_secs);
 
-							# Rebuilded tc out
+							# Re-build tc out
 							$tcout = '[TC_'. $next_tcout_formated .'_TC]';
 
 								#echo " Changed tcout: $tcout from tcin $tcin <br>";
@@ -316,16 +314,16 @@ abstract class subtitles {
 		}
 		#dump($ar_final,'ar_final en get_ar_lines'); die();
 
-		# Plain formated
-		$ar_final_formated = array();
+		# Plain formatted
+		$ar_final_formatted = array();
 		foreach ($ar_final as $key => $ar_value) {
 			foreach ($ar_value as $key2 => $value) {
-				$ar_final_formated[] = $value;
+				$ar_final_formatted[] = $value;
 			}
 		}
-		#dump($ar_final_formated,'$ar_final_formated');
 
-		return (array)$ar_final_formated;
+
+		return (array)$ar_final_formatted;
 	}//end get_ar_lines
 
 
@@ -347,10 +345,10 @@ abstract class subtitles {
 		$refPos					= 0;
 		$offsetSecs 			= OptimizeTC::TC2seg($tcin); 	#dump($offsetSecs, ' offsetSecs');
 		$maxCharLine 			= subtitles::$maxCharLine;
-		$current_charTime 		= subtitles::$charTime; // miliseconds
+		$current_charTime 		= subtitles::$charTime; // milliseconds
 
 		# calculate duration of char (secs)
-		# hay un cálculo general, pero para optimizar la aproximación se calcula con los tc's de fragmento actual si tiene tc's
+		# there is a general calculation, but to optimize the approximation it is calculated with the current fragment tc's if it has tc's
 		#dump($current_charTime, 'current_charTime GLOBAL', array());
 		if(!empty($tcin) && !empty($tcout)) {
 
@@ -403,11 +401,11 @@ abstract class subtitles {
 					$spacePos = strrpos($current_line, '. ')+1;
 					#$spacePos 	= mb_strlen($current_line) - $last_appear;
 				}else{
-					$spacePos = strrpos($current_line, ' '); # Localiza el último espacio
+					$spacePos = strrpos($current_line, ' '); # Locate the last space
 					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
 				}
 				*/
-				$spacePos = mb_strrpos($current_line, ' '); # Localiza el último espacio
+				$spacePos = mb_strrpos($current_line, ' '); # Locate the last space
 					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
 			}
 
@@ -427,7 +425,6 @@ abstract class subtitles {
 				$numero_br = str_replace('</b>', '</b>', $current_line_cut, $br_out);
 
 				if ($br_in>$br_out){
-					//echo "necesita un br $br_in $br_out";
 					$current_line_cut .= '</b>';
 					$siguiente_linea_add_b = '<b>';
 				}else{
@@ -560,7 +557,7 @@ abstract class subtitles {
 
 	/**
 	* CLEAN_TEXT_FOR_SUBTITLES
-	* Limpia el fragmento del texto
+	* Clear the text snippet
 	* @param string $string (Transcription)
 	* @return string $string (removed marks and extras)
 	* @see class.TR.php deleteMarks
@@ -593,7 +590,7 @@ abstract class subtitles {
 
 	/**
 	* TRUNCATE_TEXT
-	* Multibyte truncate text
+	* Multi-byte truncate text
 	*/
 	public static function truncate_text(string $string, int $limit, string $break=' ', string $pad='...') : string {
 
@@ -620,7 +617,7 @@ abstract class subtitles {
 
 	/**
 	* TRIM_TEXT
-	* Trim firts and last return of type \n and \r
+	* Trim first and last return of type \n and \r
 	* @return string
 	*/
 	public static function trim_text(string $string=null) : string {
@@ -642,7 +639,7 @@ abstract class subtitles {
 
 	/**
 	* TEXT_LENGHT
-	* Get multibyte text lenght
+	* Get multi-byte text length
 	* @return int | false $text_lenght
 	*/
 	public static function text_lenght(string $text) : string {
