@@ -22,36 +22,28 @@
 	$html_content = '';
 	switch(true) {
 
-		case $permissions===0:	$html_content .= "";
-					break;
+		case ($permissions===0) :
+			$html_content = '';
+			break;
 
-		case $permissions===1:
-					foreach ($dato as $key => $value) {
-						$html_content .= " <span class=\"css_span_dato \">".htmlentities($value)."</span>";
-					}
-					break;
+		case ($permissions===1) :
+			$value = json_encode($dato, JSON_PRETTY_PRINT);
+			$html_content .= '<span class="css_span_dato">'.$value.'</span>';
+			break;
 
-		case ($permissions>=2):
+		case ($permissions>=2) :
+			$key		='full';
+			$value		= !empty($dato)
+				? json_encode($dato, JSON_PRETTY_PRINT)
+				: '';
+			$editor_id	= $identificador_unico.'_'.$key;
+			$read_only	= (isset($propiedades->read_only) && $propiedades->read_only===true);
 
-				if(SHOW_DEBUG) {
-					#dump($dato, ' $dato');
-				}
-				$key  ='full';
-					#dump($dato, " dato ".to_string());
-				$value= (string)json_encode($dato,JSON_PRETTY_PRINT);
-
-				$editor_id = $identificador_unico.'_'.$key;
-
-				$read_only = (isset($propiedades->read_only) && $propiedades->read_only===true);
-
-				##
-				# Text area
+			// text area
 				$html_content .= "<textarea class=\"css_input_text_json\" ";
-				if ($read_only===true) {
-					$html_content .= " readonly ";
-				}else{
-					$html_content .= "onchange=\"component_json.Save(this)\" ";
-				}
+				$html_content .= ($read_only===true)
+					? " readonly "
+					: "onchange=\"component_json.Save(this)\" ";
 				$html_content .= "id=\"{$editor_id}\"  ";
 				$html_content .= "name=\"{$input_name}\" ";
 				$html_content .= "title=\"$html_title\" ";
@@ -63,56 +55,27 @@
 				$html_content .= "data-context_name=\"$context_name\" ";
 				$html_content .= ">$value</textarea>";
 
-
-				#
-				# JSON EDITOR
+			// JSON editor
 				// button save
 					if ($read_only!==true) {
 						$html_content .= "<div id=\"{$editor_id}_save_document\" class=\"saveDocument\">Save</div>";
 					}
+
 				// editor container
 					$html_content .= "<div id=\"{$editor_id}_container\" class=\"editor_json\"></div>";
-				/*
-				$html_content .= "<script>
-				  $('#$editor_id').hide()
-				  var options = {
-				    mode: 'code',
-				    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-				    error: function (err) {
-				      alert('Error json: ' + err.toString());
-				    }
-				  };
-				  // create the editor
-				  var container = document.getElementById('editor_json');
-				  var editor = new JSONEditor(container,options, $value);
-				  // Send JSON text to input and force save
-				  document.getElementById('saveDocument').onclick = function () {
-				    $('#$editor_id')
-				    	.val(editor.getText())
-				    	.trigger('change');
-				  	};
-				</script>";
-				*/
-				#$html_content .= "<script>";
-				#$html_content .= "component_json.init({\"editor_id\":\"{$editor_id}\"})";
-				#$html_content .= "</script>";
 
-				#
-				# JS Init component
-				$html_content .= '<script>';
-				# Init component
-				$init_options = new stdClass();
-					$init_options->component_name 	= $component_name;
-					$init_options->wrapper_id 		= $id_wrapper;
-					$init_options->editor_id 		= $editor_id;
-					$init_options->read_only 		= $read_only;
-				$html_content .= 'component_common.init('.json_encode($init_options).');';
-				$html_content .= '</script>';
-				break;
+				// init component
+					$html_content .= '<script>';
+					# Init component
+					$init_options = new stdClass();
+						$init_options->component_name	= $component_name;
+						$init_options->wrapper_id		= $id_wrapper;
+						$init_options->editor_id		= $editor_id;
+						$init_options->read_only		= $read_only;
+					$html_content .= 'component_common.init('.json_encode($init_options).');';
+					$html_content .= '</script>';
+			break;
 	}
-
-	# INIT : Init text editor
-	#$html_content .= "<script>component_html_text.init('$identificador_unico','$modo','$propiedades_json');</script>";
 
 
 	# Prepare content to show in page
@@ -124,10 +87,7 @@
 	print $html_content;
 
 
-	print "</div>"; //wrap
+	print '</div>'; //wrap
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
-
-
-?>
