@@ -2742,6 +2742,7 @@
 		Clean up class diffusion code
 		Fixed minor PHP8.1 component_date issues and code clean up
 		Added component_pdf and tool_pdf_versions original quality feature. Now, a source document (non PDF) can be added as original quality. Added download mimes doc,docx,odp,odt,pages to manage this documents. Remember to add configuration new constant 'DEDALO_PDF_QUALITY_ORIGINAL' and the allowed extensions in constant 'DEDALO_PDF_EXTENSIONS_SUPPORTED'
+		Fixed error in component_json edit mode where read only mode (permissions <2) shows data wrongly. Cleanup code too
 
 
 
@@ -2778,7 +2779,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-09-2022T18:41:00');
+	define('DEDALO_BUILD'	, '19-09-2022T17:56:00');
 
 
 
