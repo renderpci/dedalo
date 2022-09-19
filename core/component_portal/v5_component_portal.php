@@ -9,14 +9,14 @@
 	* Get resolved string representation of current values (locators)
 	* @return string | null
 	*/
-	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
+	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
 		$start_time = start_time();
 
 		$options = new stdClass();
 			$options->lang 				= $lang;
 			$options->data_to_be_used 	= $data_to_be_used;
 			$options->separator_rows 	= $separator_rows;
-			$options->separator_fields 	= $separator_fields;
+			$options->fields_separator 	= $fields_separator;
 
 		/**
 		* GET_VALOR_FROM_AR_LOCATORS
@@ -32,9 +32,9 @@
 			$options = new stdClass();
 				$options->lang 				= DEDALO_DATA_LANG;
 				$options->data_to_be_used 	= 'valor';
-				$options->separator_fields 	= ', ';
+				$options->fields_separator 	= ', ';
 				$options->separator_rows 	= '<br>';
-				$options->separator_fields 	= ', ';
+				$options->fields_separator 	= ', ';
 				$options->ar_locators 		= false;
 				foreach ($request_options as $key => $value) {
 					if (property_exists($options, $key)) $options->$key = $value;
@@ -129,7 +129,7 @@
 				$string ='';
 				foreach ($fields as $current_tipo) {
 					$string .= (string)$rows[$current_tipo];
-					if($current_tipo !== end($fields)) $string .= $options->separator_fields;
+					if($current_tipo !== end($fields)) $string .= $options->fields_separator;
 				}
 				$ar_final[] = $string;
 			}//end while
@@ -279,7 +279,7 @@
 		switch ($data_to_be_used) {
 
 			case 'valor_list':
-				$diffusion_value = $this->get_valor( $lang, $format='string', $separator_fields=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used );
+				$diffusion_value = $this->get_valor( $lang, $format='string', $fields_separator=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used );
 				break;
 
 			case 'valor':

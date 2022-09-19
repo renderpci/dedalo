@@ -46,7 +46,7 @@ class calculation extends widget_common {
 	*              },
 	*              {
 	*                "tipo": "test140",
-	*                "var_name": "value_separator"
+	*                "var_name": "fields_separator"
 	*              }
 	*            ]
 	*          },
@@ -279,7 +279,7 @@ class calculation extends widget_common {
 					// 	$options->data_to_be_used 	= 'valor';
 					// 	$options->ar_locators 		= $ar_locators;
 					// 	$options->separator_rows 	= isset($data->true->separator_rows) ? $data->true->separator_rows : false;
-					// 	$options->separator_fields 	= isset($data->true->separator_fields) ? $data->true->separator_fields : false;
+					// 	$options->fields_separator 	= isset($data->true->fields_separator) ? $data->true->fields_separator : false;
 					//
 					// 	$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
 					// 		#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
@@ -300,7 +300,7 @@ class calculation extends widget_common {
 					// 	$options->data_to_be_used 	= 'valor';
 					// 	$options->ar_locators 		= $ar_locators;
 					// 	$options->separator_rows 	= isset($data->false->separator_rows) ? $data->false->separator_rows : false;
-					// 	$options->separator_fields 	= isset($data->false->separator_fields) ? $data->false->separator_fields : false;
+					// 	$options->fields_separator 	= isset($data->false->fields_separator) ? $data->false->fields_separator : false;
 					//
 					// $valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
 					// 		#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result

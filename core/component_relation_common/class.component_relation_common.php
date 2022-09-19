@@ -241,7 +241,7 @@ class component_relation_common extends component_common {
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$separator_fields	= $ddo->separator_fields ?? null;
+			$fields_separator	= $ddo->fields_separator ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
@@ -460,10 +460,10 @@ class component_relation_common extends component_common {
 		// separator will be the "glue" to join data in the client and can be set by caller or could be defined in preferences of the component.
 		$properties = $this->get_properties();
 
-		$separator_fields = isset($separator_fields)
-			? $separator_fields
-			: (isset($properties->separator_fields)
-				? $properties->separator_fields
+		$fields_separator = isset($fields_separator)
+			? $fields_separator
+			: (isset($properties->fields_separator)
+				? $properties->fields_separator
 				: ', ');
 
 		$separator_rows = isset($separator_rows)
@@ -480,7 +480,7 @@ class component_relation_common extends component_common {
 		if(isset($class_list)){
 			$value->set_class_list($class_list);
 		}
-		$value->set_separator_fields($separator_fields);
+		$value->set_fields_separator($fields_separator);
 		$value->set_separator_rows($separator_rows);
 		$value->set_value($ar_cells);
 
@@ -1054,7 +1054,7 @@ class component_relation_common extends component_common {
 				$ar_values_clean[] = $element_value;
 			}
 
-			// $locator_value = implode($value_separator, $ar_values_clean);
+			// $locator_value = implode($fields_separator, $ar_values_clean);
 			$ar_value = array_merge($ar_value, $ar_values_clean);
 		}else{
 
@@ -1080,7 +1080,7 @@ class component_relation_common extends component_common {
 					}
 				}
 
-				// $locator_value = implode($value_separator, $ar_current_values);
+				// $locator_value = implode($fields_separator, $ar_current_values);
 				$ar_value = array_merge($ar_value, $ar_current_values);
 
 			}else{

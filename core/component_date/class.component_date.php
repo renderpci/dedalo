@@ -208,7 +208,7 @@ class component_date extends component_common {
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// ddo. set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$separator_fields	= $ddo->separator_fields ?? null;
+			$fields_separator	= $ddo->fields_separator ?? null;
 			$separator_rows		= $ddo->separator_rows ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
@@ -238,11 +238,11 @@ class component_date extends component_common {
 				$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
 			}//end foreach ($data as $key => $current_dato)
 
-		// separator_fields
-			$separator_fields = isset($separator_fields)
-				? $separator_fields
-				: (isset($properties->separator_fields)
-					? $properties->separator_fields
+		// fields_separator
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
 					: ' <> ');
 
 		// separator_rows
@@ -261,7 +261,7 @@ class component_date extends component_common {
 				if(isset($class_list)){
 					$value->set_class_list($class_list);
 				}
-				$value->set_separator_fields($separator_fields);
+				$value->set_fields_separator($fields_separator);
 				$value->set_separator_rows($separator_rows);
 				$value->set_value($ar_values);
 
@@ -409,8 +409,8 @@ class component_date extends component_common {
 			}//end foreach ($ar_dato as $key => $current_dato)
 
 		// valor
-			$value_separator	= $properties->value_separator ?? ' | ';
-			$valor				= implode($value_separator, $ar_valor);
+			$fields_separator	= $properties->fields_separator ?? ' | ';
+			$valor				= implode($fields_separator, $ar_valor);
 
 
 		return $valor;
