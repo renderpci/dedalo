@@ -107,7 +107,7 @@ render_view_text.render = async function(self, options) {
 				// nodes. Await all instances are parallel rendered
 				await Promise.all(ar_promises)// render work done safely
 
-			// create the column nodes and assign the instances nodes to it.
+			// create the column nodes (fields) and assign the instances nodes to it.
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
@@ -148,9 +148,9 @@ render_view_text.render = async function(self, options) {
 				// fragment.appendChild(wrapper)
 
 
-			// columns separator (between components inside the same column)
+			// fields separator (between components inside the same column)
 			if(i < columns_map_length-1 && columns_map[i+1].id!=='remove') {
-				const node_fields_separator = document.createTextNode(', ')
+				const node_fields_separator = document.createTextNode(self.context.fields_separator)
 				wrapper.appendChild(node_fields_separator)
 			}
 		}//end for (let i = 0; i < columns_map_length; i++)

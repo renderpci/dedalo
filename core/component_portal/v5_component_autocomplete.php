@@ -9,7 +9,7 @@
 	* @return array $this->valor
 	*/
 
-	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=' | ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
+	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=' | ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {

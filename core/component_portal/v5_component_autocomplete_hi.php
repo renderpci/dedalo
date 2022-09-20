@@ -9,7 +9,7 @@
 	* GET VALOR
 	* Get resolved string representation of current tesauro value
 	*/
-	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $separator_rows='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
+	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		// load data
 			$dato = $this->get_dato();
@@ -50,7 +50,7 @@
 		// set value based on format
 			$valor = ($format==='array')
 				? $ar_valor
-				: implode($separator_rows, $ar_valor);
+				: implode($records_separator, $ar_valor);
 
 
 		return $valor;
