@@ -96,10 +96,10 @@ class component_relation_related extends component_relation_common {
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
 
-		$dato		= $this->get_dato();
-		$properties	= $this->get_properties();
+		$dato				= $this->get_dato();
+		$properties			= $this->get_properties();
 		$fields_separator	= (isset($show->fields_separator)) ?  $show->fields_separator : ' | ';
-		$ar_values	= array();
+		$ar_values			= array();
 
 		foreach ((array)$dato as $key => $current_locator) {
 

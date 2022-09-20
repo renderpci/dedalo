@@ -174,9 +174,9 @@ class component_text_area extends component_common {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator		= $ddo->records_separator ?? null;
+			$records_separator	= $ddo->records_separator ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
-			$class_list 		= $ddo->class_list ?? null;
+			$class_list			= $ddo->class_list ?? null;
 
 			if(isset($this->column_obj)){
 				$column_obj = $this->column_obj;
