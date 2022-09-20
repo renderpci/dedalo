@@ -713,8 +713,8 @@ component_common.prototype.update_datum = async function(new_data) {
 
 /**
 * UPDATE_DATA_VALUE
-* Updates component data value with changed_data sent by the DOM element
-* @param object changed_data
+* Updates component data value with changed_data_item sent by the DOM element
+* @param object changed_data_item
 * Sample data:
 * {
 *	key		: 0,

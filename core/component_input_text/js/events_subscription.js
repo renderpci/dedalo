@@ -29,7 +29,9 @@ export const events_subscription = function() {
 				return
 			}
 
-			self.update_data_value(options.changed_data)
+			const changed_data_item = options.changed_data
+
+			self.update_data_value(changed_data_item)
 			self.refresh({
 				build_autoload	: self.mode==='edit'
 					? false
