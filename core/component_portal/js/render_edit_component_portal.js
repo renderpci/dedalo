@@ -8,8 +8,8 @@
 	import {when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
-	import {clone} from '../../common/js/utils/index.js'
-	import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {clone, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {render_edit_view_table} from './render_edit_view_table.js'
@@ -106,7 +106,7 @@ export const render_column_id = function(options){
 		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
-		const total_records = self.total
+		const total_records	= self.total
 
 
 	const fragment = new DocumentFragment()
@@ -114,32 +114,54 @@ export const render_column_id = function(options){
 	// button_edit. component portal caller (link)
 		const button_edit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'button_edit',
+			class_name		: 'button_edit button_view_' + self.context.view,
 			parent			: fragment
 		})
-		button_edit.addEventListener('click', function(){
+		button_edit.addEventListener('click', function(e){
+			e.stopPropagation()
+
 			// user_navigation event
-				const user_navigation_rqo = {
-					caller_id	: self.id,
-					source		: {
-						action			: 'search',
-						model			: 'section',
-						tipo			: section_tipo,
-						section_tipo	: section_tipo,
-						mode			: 'edit',
-						lang			: self.lang
-					},
-					sqo : {
-						section_tipo		: [{tipo : section_tipo}],
-						filter				: null,
-						limit				: 1,
-						filter_by_locators	: [{
-							section_tipo	: section_tipo,
-							section_id		: section_id
-						}]
-					}
-				}
-				event_manager.publish('user_navigation', user_navigation_rqo)
+				// const user_navigation_rqo = {
+				// 	caller_id	: self.id,
+				// 	source		: {
+				// 		action			: 'search',
+				// 		model			: 'section',
+				// 		tipo			: section_tipo,
+				// 		section_tipo	: section_tipo,
+				// 		mode			: 'edit',
+				// 		lang			: self.lang
+				// 	},
+				// 	sqo : {
+				// 		section_tipo		: [{tipo : section_tipo}],
+				// 		filter				: null,
+				// 		limit				: 1,
+				// 		filter_by_locators	: [{
+				// 			section_tipo	: section_tipo,
+				// 			section_id		: section_id
+				// 		}]
+				// 	}
+				// }
+				// event_manager.publish('user_navigation', user_navigation_rqo)
+
+			// open a new window
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: section_tipo,
+					section_tipo	: section_tipo,
+					id				: section_id,
+					mode			: 'edit',
+					menu			: false
+				})
+				const new_window = open_window({
+					url		: url,
+					name	: 'record_view',
+					width	: 1280,
+					height	: 740
+				})
+				new_window.addEventListener('blur', function() {
+					self.refresh({
+						build_autoload : true
+					})
+				})
 
 			// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
 				event_manager.publish('button_edit_click', this)
@@ -225,7 +247,7 @@ export const render_column_id = function(options){
 				const button_ok = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'button_sort_order success',
-					text_content 	: 'OK',
+					text_content	: 'OK',
 					parent			: body
 				})
 
@@ -308,15 +330,18 @@ export const render_column_component_info = function(options) {
 	const fragment = new DocumentFragment()
 
 	// component_info
-		const component_info = self.datum.data.find( item => item.tipo==='ddinfo' &&
-															 item.section_id===section_id &&
-															 item.section_tipo===section_tipo)
+		const component_info = self.datum.data.find(
+			item => item.tipo==='ddinfo' &&
+					item.section_id===section_id &&
+					item.section_tipo===section_tipo
+		)
 		if (component_info) {
 
-			const info_value = component_info.value.join('')
+			const info_value = component_info.value.join(' ')
 
 			ui.create_dom_element({
 				element_type	: 'span',
+				class_name		: 'ddinfo_value',
 				inner_html		: info_value,
 				parent			: fragment
 			})
