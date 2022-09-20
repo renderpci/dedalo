@@ -233,7 +233,7 @@ common.prototype.render = async function (options={}) {
 						const old_content_data_node	= wrapper.content_data
 						// warning if not found
 						if (typeof old_content_data_node==='undefined' || !old_content_data_node) {
-							console.error("Invalid node found in render:", typeof old_content_data_node, old_content_data_node, self);
+							console.error("Invalid content_data pointer node found in render:", typeof old_content_data_node, old_content_data_node, self);
 						}
 
 					// new content data node
