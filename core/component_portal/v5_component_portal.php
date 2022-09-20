@@ -34,7 +34,6 @@
 				$options->data_to_be_used	= 'valor';
 				$options->fields_separator	= ', ';
 				$options->records_separator	= '<br>';
-				$options->fields_separator	= ', ';
 				$options->ar_locators		= false;
 				foreach ($request_options as $key => $value) {
 					if (property_exists($options, $key)) $options->$key = $value;
