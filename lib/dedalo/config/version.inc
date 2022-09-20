@@ -2211,7 +2211,7 @@
 		Created css 'grid_2_columns' class to display debug info in inspector (for example about Publication details)
 		Fixed issue when table_map->from-alias vars is empty (when creating global table)
 		Added static cache to iget_s_publicable result
-		Commented debug info 'Skipped locator not publicable'
+		Commented debug info 'Skipped locator not public-able'
 		Added inspector development info about diffusion
 		Fix edit_in_list mode in component_date
 		Fix original copy calculation get_archive_weights widgets
@@ -2265,7 +2265,7 @@
 		Fixed error in component_relation_parent search tipos that causes search from component parent do not works
 		Added lib htmLawed
 		Added lib tcpdf
-		Updated .gitignore file to apped some libraries (htmLawed,tcpdf)
+		Updated .gitignore file to append some libraries (htmLawed,tcpdf)
 		Fixed verification duplicates in component_autocomplete and component_relation_common
 		Added section trigger error message info when section is not saved
 		Fixed error on free_node when find_word_in_text give error on word position not found
@@ -2426,7 +2426,7 @@
 		Added component_pdf control to diffusion value. Now only existing files generates output value (prevent empty files issues in publication)
 		Minor fixes in updates.php file to prevent issues updating Dédalo from old versions
 		Fixed issue when DEDALO_DIFFUSION_RESOLVE_LEVELS is not defined in config. Now a value of 2 levels is used as default
-		Fixed error in component_text_area where geolocation tags were not updated correctly causing a failure to save (besides, refactorized update_tag function)
+		Fixed error in component_text_area where geolocation tags were not updated correctly causing a failure to save (besides, re-factorized update_tag function)
 		16-07-2021
 		Fixed issue on updates when matrix_stats already exists cases
 		Fixed error in publication web_data when lang 'lg-vlca' don't pass the security verification regex
@@ -2564,7 +2564,7 @@
 		Fixed PHP 8.1 deprecated and more strict code issues
 		Fixed error in Ontology RecordObj_dd->get_properties. Now default param 'json_decode' is restored to true
 		01-12-2021
-		Fixed error in web_data ar_fields check that do not it did not contemplate unicode characters like 'ñ'
+		Fixed error in web_data ar_fields check that do not it did not contemplate Unicode characters like 'ñ'
 		Fixed error in publication class free_node::get_free_fragments where marks were erased before indexation tags calculation
 		Added missing property 'fragment_terms' on publication method get_fragment_from_index_locator
 		Updated Publication API swagger JSON file to 1.0.19
@@ -2631,7 +2631,7 @@
 		Revert jquery ui from 1.13.0 to 1.11.4 because drag and drop compatibility issues
 		18-01-2022
 		Add posterframe for indexation tags
-		Changed from 6 secs to 180 secs the sleep time in autobackup
+		Changed from 6 secs to 180 secs the sleep time in auto-backup
 		02-02-2022
 		Fixed get_diffusion_value_as_geojson issues on json decode when data is empty
 		Added tool_import_dedalo_csv bad JSON notification on preview list
@@ -2743,7 +2743,10 @@
 		Fixed minor PHP8.1 component_date issues and code clean up
 		Added component_pdf and tool_pdf_versions original quality feature. Now, a source document (non PDF) can be added as original quality. Added download mimes doc,docx,odp,odt,pages to manage this documents. Remember to add configuration new constant 'DEDALO_PDF_QUALITY_ORIGINAL' and the allowed extensions in constant 'DEDALO_PDF_EXTENSIONS_SUPPORTED'
 		Fixed error in component_json edit mode where read only mode (permissions <2) shows data wrongly. Cleanup code too
-
+		20-09-2022
+		Add publication info components in section to be searchable
+		Fix permissions check for section publication components
+		Released version 5.9.0
 
 
 	Queue build
@@ -2773,13 +2776,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.8.6';
+	$DEDALO_VERSION = '5.9.0';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-09-2022T17:56:00');
+	define('DEDALO_BUILD'	, '20-09-2022T19:30:00');
 
 
 
