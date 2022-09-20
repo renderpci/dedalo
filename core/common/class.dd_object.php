@@ -31,6 +31,7 @@ class dd_object {
 		# ar_sections_tipo	: ['oh1']
 		# columns_map		: array
 		# view				: string like 'table'
+		# children_view		: string like "text"
 		# fixed_mode		: string like 'edit'
 		# section_id		: int like 1 // Used by tools
 		# name				: string like 'tool_lang' // Used by tools
@@ -40,6 +41,8 @@ class dd_object {
 		# show_in_component	: bool // Used by tools
 		# config			: object // Used by tools
 		# sortable			: bool // Used by components (columns)
+		# fields_separator	: string like ", " // used by portal to join different fields
+		# records_separator	: string like " | " // used by portal to join different records (rows)
 
 
 
@@ -385,6 +388,16 @@ class dd_object {
 
 
 	/**
+	* SET_CHILDREN_VIEW
+	*/
+	public function set_children_view(string $value) : void {
+
+		$this->children_view = $value;
+	}//end set_view
+
+
+
+	/**
 	* SET_FIXED_MODE
 	*/
 	public function set_fixed_mode(string $value) : void {
@@ -479,6 +492,28 @@ class dd_object {
 
 		$this->sortable = $value;
 	}//end set_sortable
+
+
+
+	/**
+	* SET_FIELDS_SEPARATOR
+	* Used by tools
+	*/
+	public function set_fields_separator(string $value) : void {
+
+		$this->fields_separator = $value;
+	}//end set_fields_separator
+
+
+
+	/**
+	* SET_RECORDS_SEPARATOR
+	* Used by tools
+	*/
+	public function set_records_separator(string $value) : void {
+
+		$this->records_separator = $value;
+	}//end set_records_separator
 
 
 
