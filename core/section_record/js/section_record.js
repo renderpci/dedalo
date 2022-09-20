@@ -209,9 +209,11 @@ const build_instance = async (self, context, section_id, current_data, column_id
 /**
 * GET_AR_INSTANCES_EDIT (USED IN EDIT MODE)
 * @see render_section get_content_data
-* @return array ar_instances
+* @return promise
+* 	Resolve: array ar_instances
+* 	Initialized and built instances
 */
-section_record.prototype.get_ar_instances_edit = async function(){
+section_record.prototype.get_ar_instances_edit = async function() {
 
 	const self = this
 
