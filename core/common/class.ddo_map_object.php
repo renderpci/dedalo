@@ -11,8 +11,11 @@
 * 	"model"					: "component_input_text",
 * 	"mode"					: "list",
 * 	"label"					: "catalog",*
-* 	"value_with_parents"	: true
-* 	"fields_separator"		: " | "
+* 	"value_with_parents"	: true,
+* 	"fields_separator"		: ", ",
+*  	"records_separator"		: " | ",
+* 	"view"					: "line"
+* 	"children_view"			: "text"
 * }
 */
 class ddo_map_object {
@@ -29,7 +32,10 @@ class ddo_map_object {
 		// $mode; // string like 'edit'
 		// $label; // string like 'Surname'
 		// $value_with_parents; // bool like 'true'
-		// $fields_separator; // string like ' | '
+		// $fields_separator; // string like ', '
+		// $records_separator; // string like ' | '
+		// $view; // string like 'mini', options: ('default', 'line', 'mosaic', 'mini', 'text',...) it deepens of the supported view of the component
+		// $children_view; // string like 'line' options: ('default', 'line', 'mosaic', 'mini', 'text',...) it deepens of the views of the children components
 
 
 
@@ -137,11 +143,33 @@ class ddo_map_object {
 
 
 	/**
-	* SET_fields_separator
+	* SET_FIELDS_SEPARATOR
+	* Used by portals to join different fields
 	*/
 	public function set_fields_separator(string $value) : void {
 
 		$this->fields_separator = $value;
+	}
+
+
+	/**
+	* SET_RECORDS_SEPARATOR
+	* Used by portals to join different records(rows)
+	*/
+	public function set_records_separator(string $value) : void {
+
+		$this->records_separator = $value;
+	}
+
+
+
+	/**
+	* SET_CHILDREN_VIEW
+	* Used by portals to get his children with different view that itself
+	*/
+	public function set_children_view(string $value) : void {
+
+		$this->children_view = $value;
 	}
 
 
