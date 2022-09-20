@@ -777,8 +777,10 @@ final class dd_core_api {
 				if ($mode==='search') {
 
 					// force same changed_data (whole dato)
-						$changed_data_item	= reset($changed_data) ?? null;
-						$value				= $changed_data_item ?? null;
+						$changed_data_item	= $changed_data[0] ?? null;
+						$value				= !empty($changed_data_item) && isset($changed_data_item->value)
+							? $changed_data_item->value
+							: null;
 						$component->set_dato([$value]);
 
 				}else{
