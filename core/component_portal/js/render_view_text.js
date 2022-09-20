@@ -48,10 +48,10 @@ render_view_text.render = async function(self, options) {
 			const child_item = await ar_section_record[i].render()
 			fragment.appendChild(child_item)
 
-			// fields_separator
+			// records_separator
 			if(i < ar_section_record_length-1) {
-				const node_fields_separator = document.createTextNode(self.context.fields_separator)
-				fragment.appendChild(node_fields_separator)
+				const node_records_separator = document.createTextNode(self.context.records_separator)
+				fragment.appendChild(node_records_separator)
 			}
 		}
 

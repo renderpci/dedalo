@@ -219,8 +219,8 @@ class component_filter extends component_relation_common {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
-			$separator_rows		= $ddo->separator_rows ?? null;
-			$class_list 		= $ddo->class_list ?? null;
+			$records_separator	= $ddo->records_separator ?? null;
+			$class_list			= $ddo->class_list ?? null;
 
 			if(isset($this->column_obj)){
 				$column_obj = $this->column_obj;
@@ -263,10 +263,10 @@ class component_filter extends component_relation_common {
 				? $properties->fields_separator
 				: ', ');
 
-		$separator_rows = isset($separator_rows)
-			? $separator_rows
-			: (isset($properties->separator_rows)
-				? $properties->separator_rows
+		$records_separator = isset($records_separator)
+			? $records_separator
+			: (isset($properties->records_separator)
+				? $properties->records_separator
 				: ' | ');
 
 
@@ -278,7 +278,7 @@ class component_filter extends component_relation_common {
 			$value->set_class_list($class_list);
 		}
 		$value->set_fields_separator($fields_separator);
-		$value->set_separator_rows($separator_rows);
+		$value->set_records_separator($records_separator);
 		$value->set_value($ar_values);
 
 		return $value;

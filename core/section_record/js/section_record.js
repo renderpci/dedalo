@@ -401,6 +401,10 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								if(current_ddo.fields_separator){
 									new_context.fields_separator = current_ddo.fields_separator
 								}
+								// set the records_separator to be assigned to join the every record(row) inside the component_portal
+								if(current_ddo.records_separator){
+									new_context.records_separator = current_ddo.records_separator
+								}
 								// set the hover of the column when is defined in ddo, hover could be defined in properties of the portals
 								// hover define the instance not be render as normal only when the mouse will hover of normal nodes (information hover mosaic views)
 								if(current_ddo.hover){
