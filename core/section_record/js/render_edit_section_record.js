@@ -4,10 +4,10 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance} from '../../common/js/instances.js'
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
 	import {render_edit_view_default} from './render_edit_view_default.js'
 	import {render_view_text} from './render_view_text.js'
 	import {render_view_mini} from './render_view_mini.js'
@@ -27,11 +27,11 @@ export const render_edit_section_record = function() {
 
 /**
 * EDIT
-* Render the node to use in edit mode
+* Render the node to use in edit mode using current context view
 * @param object options
 * @return DOM node
 */
-render_edit_section_record.prototype.edit = async function(options={}) {
+render_edit_section_record.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -50,7 +50,5 @@ render_edit_section_record.prototype.edit = async function(options={}) {
 		default:
 			return render_edit_view_default.render(self, options)
 	}
-
-	return null
 }//end edit
 
