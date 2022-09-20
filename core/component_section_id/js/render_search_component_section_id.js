@@ -82,7 +82,12 @@ const get_content_data_search = function(self) {
 /**
 * GET_INPUT_ELEMENT_SEARCH
 * Note that this component it's editable only in search mode
-* @return dom element input
+* @param int i
+* 	Value key number
+* @param string current_value
+* @param object self
+* 	Current component instance pointer
+* @return DOM element input
 */
 const get_input_element_search = (i, current_value, self) => {
 
