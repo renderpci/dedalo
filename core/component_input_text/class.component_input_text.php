@@ -80,7 +80,7 @@ class component_input_text extends component_common {
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$separator_rows	= $ddo->separator_rows ?? null;
+			$records_separator	= $ddo->records_separator ?? null;
 			$class_list		= $ddo->class_list ?? null;
 
 			if(isset($this->column_obj)){
@@ -98,10 +98,10 @@ class component_input_text extends component_common {
 
 		$properties = $this->get_properties();
 
-     	$separator_rows = isset($separator_rows)
-			? $separator_rows
-			: (isset($properties->separator_rows)
-				? $properties->separator_rows
+     	$records_separator = isset($records_separator)
+			? $records_separator
+			: (isset($properties->records_separator)
+				? $properties->records_separator
 				: ' | ');
 
 		$value->set_type('column');
@@ -112,7 +112,7 @@ class component_input_text extends component_common {
 		if(isset($class_list)){
 			$value->set_class_list($class_list);
 		}
-		$value->set_separator_rows($separator_rows);
+		$value->set_records_separator($records_separator);
 		$value->set_value($dato);
 		$value->set_fallback_value($fallback_value);
 

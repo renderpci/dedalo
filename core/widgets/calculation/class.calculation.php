@@ -278,7 +278,7 @@ class calculation extends widget_common {
 					// 	$options->lang 				= DEDALO_DATA_LANG;
 					// 	$options->data_to_be_used 	= 'valor';
 					// 	$options->ar_locators 		= $ar_locators;
-					// 	$options->separator_rows 	= isset($data->true->separator_rows) ? $data->true->separator_rows : false;
+					// 	$options->records_separator 	= isset($data->true->records_separator) ? $data->true->records_separator : false;
 					// 	$options->fields_separator 	= isset($data->true->fields_separator) ? $data->true->fields_separator : false;
 					//
 					// 	$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
@@ -299,7 +299,7 @@ class calculation extends widget_common {
 					// 	$options->lang 				= DEDALO_DATA_LANG;
 					// 	$options->data_to_be_used 	= 'valor';
 					// 	$options->ar_locators 		= $ar_locators;
-					// 	$options->separator_rows 	= isset($data->false->separator_rows) ? $data->false->separator_rows : false;
+					// 	$options->records_separator 	= isset($data->false->records_separator) ? $data->false->records_separator : false;
 					// 	$options->fields_separator 	= isset($data->false->fields_separator) ? $data->false->fields_separator : false;
 					//
 					// $valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
