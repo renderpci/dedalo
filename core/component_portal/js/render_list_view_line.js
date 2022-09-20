@@ -5,7 +5,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {
 		activate_autocomplete,
 		render_references
@@ -34,7 +34,7 @@ export const render_list_view_line = function() {
 * 	DOM node wrapper
 */
 render_list_view_line.render = async function(self, options) {
-	console.log("self:-----------------",self);
+
 	// options
 		const render_level = options.render_level || 'full'
 

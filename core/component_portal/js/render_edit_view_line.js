@@ -41,7 +41,7 @@ export const render_edit_view_line = function() {
 * 	DOM node wrapper
 */
 render_edit_view_line.render = async function(self, options) {
-console.log("self***----------------:",self);
+
 	// options
 		const render_level = options.render_level || 'full'
 
@@ -201,10 +201,12 @@ render_edit_view_line.render_column_id = function(options){
 	// button_edit
 		const button_edit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'button_edit',
+			class_name		: 'button_edit button_view_' + self.context.view,
 			parent			: fragment
 		})
-		button_edit.addEventListener('click', function(){
+		button_edit.addEventListener('click', function(e) {
+			e.stopPropagation()
+
 			// user navigation
 				// const user_navigation_rqo = {
 				// 	caller_id	: self.id,
@@ -243,15 +245,15 @@ render_edit_view_line.render_column_id = function(options){
 				})
 				new_window.addEventListener('blur', function() {
 
-					// (!) NOTE: temporal ugly solution 13-09-2022. Work in progress
-						// edit caller. Looking for first caller in edit mode
+					// refresh. Get the proper element to refresh based on some criteria.
+					// Note that portals in text view are not self refresh able
 						function get_edit_caller(instance) {
-							if(instance.caller && instance.caller.mode==='edit') {
+							if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
 								return instance.caller
 							}else if(instance.caller) {
 								return get_edit_caller(instance.caller)
 							}
-							return null
+							return self
 						}
 						const edit_caller = get_edit_caller(self)
 						if (edit_caller) {

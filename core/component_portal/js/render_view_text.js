@@ -25,14 +25,14 @@ export const render_view_text = function() {
 * @return DOM node wrapper
 */
 render_view_text.render = async function(self, options) {
-	console.log("self----------------:",self);
+
 	// options
 		const render_level = options.render_level || 'full'
 
 	// ar_section_record
 		const ar_section_record = await self.get_ar_instances({
-			mode			: 'list',
-			view			: self.context.view
+			mode	: 'list',
+			view	: self.context.view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
