@@ -14,7 +14,7 @@
 *	      "class_list": "head grey",
 *	      "column": "portal",
 *	      "fields_separator": ", ",
-*	      "separator_rows": "<br>",
+*	      "records_separator": "<br>",
 *	      "total_rows":3,
 *	      "data": [
 *	        {
@@ -44,7 +44,7 @@
 *	      "class_list": "head grey",
 *	      "column": "input_x",
 *	      "fields_separator": null,
-*	      "separator_rows": "<br>",
+*	      "records_separator": "<br>",
 *	      "data": [
 *	        {
 *	          "column": "my input",
@@ -60,7 +60,7 @@
 *	      "class_list": "head grey",
 *	      "column": "portal",
 *	      "fields_separator": ", ",
-*	      "separator_rows": "<br>",
+*	      "records_separator": "<br>",
 *	      "data": [
 *	        {
 *	          "column": "id",
@@ -89,7 +89,7 @@
 *	      "class_list": "head grey",
 *	      "column": "input_x",
 *	      "fields_separator": null,
-*	      "separator_rows": "<br>",
+*	      "records_separator": "<br>",
 *	      "data": [
 *	        {
 *	          "column": "my input",
@@ -116,7 +116,7 @@ class dd_grid_cell_object {
 	//		column_count 		: number - total columns of the component, used by portals to define the columns that could be separated individually.
 	// 		column_labels 		: array of strings - name of the columns that will use the portal to define sub columns names
 	// 		fields_separator 	: string -  ", " - with the glue of the fields
-	//		separator_rows 		: string -  "<br>" - with the glue of the rows
+	//		records_separator 		: string -  "<br>" - with the glue of the rows
 	//    	cell_type   		: string - type of the element to represent in the cell
 	//    	action				: object - used but buttons to define the action will done by the user
 	//			method 			: string - name of the method will be used by the element
@@ -129,7 +129,7 @@ class dd_grid_cell_object {
 	// public $class_list;
 	// public $column;
 	// public $fields_separator;
-	// public $separator_rows;
+	// public $records_separator;
 	// public $type;
 	// public $action;
 	// public $value;
@@ -235,10 +235,10 @@ class dd_grid_cell_object {
 	}
 
 	/**
-	* SET_SEPARATOR_ROWS
+	* SET_records_separator
 	*/
-	public function set_separator_rows(string $value) {
-		$this->separator_rows = $value;
+	public function set_records_separator(string $value) {
+		$this->records_separator = $value;
 	}
 
 	/**

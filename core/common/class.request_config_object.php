@@ -90,7 +90,7 @@
 					],
 
 					"fields_separator" : " | ",
-					"separator_rows" : "<br>",
+					"records_separator" : "<br>",
 					"sqo_config": {
 						 "operator": "$or",
 						 "limit" : 5

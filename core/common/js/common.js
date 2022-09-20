@@ -1475,7 +1475,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			show		: {
 				ddo_map					: ddo_map,
 				// value_with_parents	: value_with_parents,
-				fields_separator			: fields_separator,
+				fields_separator		: fields_separator,
 				columns					: columns
 			},
 			sqo			: sqo,

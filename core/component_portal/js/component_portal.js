@@ -410,6 +410,11 @@ component_portal.prototype.build = async function(autoload=false) {
 									|| self.rqo_config.show.fields_separator
 									|| ' | '
 
+	// set records_separator
+		self.context.records_separator = self.context.records_separator
+									|| self.rqo_config.show.records_separator
+									|| ' | '
+
 	// status update
 		self.status = 'built'
 
