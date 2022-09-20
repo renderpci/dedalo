@@ -23,8 +23,9 @@ export const render_edit_view_default = function() {
 
 
 /**
-* EDIT
+* RENDER
 * Render the node to use in edit mode
+* @param object self
 * @param object options
 * @return DOM node
 */
@@ -62,13 +63,18 @@ render_edit_view_default.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node get_content_data_edit
+* Iterates the received instances rendering each of them into the content_data container node
+* @param object self
+* 	Component instance pointer
+* @param array ar_instances
+* 	Initialized and built instances
+* @return DOM node content_data
 */
 const get_content_data_edit = async function(self, ar_instances) {
 
@@ -106,7 +112,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 	// hierarchize nodes. Distribute nodes to parents
 		for (let i = 0; i < ar_instances_length; i++) {
 
-			if (typeof ar_instances[i]==="undefined") {
+			if (typeof ar_instances[i]==='undefined') {
 				console.warn(`Skipped undefined instance key ${i} from ar_instances:`, ar_instances);
 				console.log("self:",self);
 				continue;
@@ -136,9 +142,11 @@ const get_content_data_edit = async function(self, ar_instances) {
 			}else{
 
 				// get the parent instance like section group or others
-				const parent_instance = ar_instances.find(instance =>  instance.tipo===parent_grouper
-																	&& instance.section_id===current_instance.section_id
-																	&& instance.section_tipo===current_instance.section_tipo)
+				const parent_instance = ar_instances.find(
+					instance => instance.tipo===parent_grouper
+							&&  instance.section_id==current_instance.section_id
+							&&  instance.section_tipo===current_instance.section_tipo
+				)
 				// if parent_istance exist, go to append the current instance to it.
 				if(typeof parent_instance!=='undefined') {
 
@@ -166,7 +174,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
 
-	// content_data
+	// content_data (section_record)
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)

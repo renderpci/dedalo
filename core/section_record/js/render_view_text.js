@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_column_node_callback} from './render_list_view_default.js'
 
@@ -35,15 +35,19 @@ render_view_text.render = async function(self, options) {
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
 		const columns_map = await self.columns_map
 
-	// fragment
-		const fragment = new DocumentFragment()
-
 	// section_record wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			id				: self.id,
-			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '') + ' view_'+self.context.view
+			id				: self.id
 		})
+		const ar_css = [
+			self.model,
+			self.tipo,
+			self.mode,
+			// (self.mode==='tm' ? ' list' : ''),
+			'view_'+self.context.view
+		]
+		wrapper.classList.add(...ar_css)
 
 	// render the columns
 		const columns_map_length = columns_map.length
@@ -125,42 +129,47 @@ render_view_text.render = async function(self, options) {
 							// add node
 								const current_instance_node	= current_instance.node
 							// check the view of the instance to get the correct content, if the instance has text convert to html else get the node
-								if(current_instance.context.view === 'text'){
-									wrapper.innerHTML += current_instance_node.textContent
+								if(current_instance.context.view==='text') {
 
+									// (!) Do not use here 'innerHTML +=' because removes the edit button events
+									// extract text content from current_instance_node and add to the wrapper
+									// this allow to remove on-the-fly intermediate section_record non necessary containers
+									const temp_container		= document.createElement('span')
+									temp_container.innerHTML	= current_instance_node.textContent
+									const children				= temp_container.childNodes;
+									const children_length		= children.length
+									for (let c = 0; c < children_length; c++) {
+										const current_child = children[c];
+										wrapper.appendChild(current_child)
+									}
 								}else{
 									wrapper.appendChild(current_instance_node)
 								}
 
 							// add fields_separator
-								if(j < ar_instances_length-1) {
+								if(j>0 && j < ar_instances_length-1) {
 									const next_node_text = ar_instances[j+1].node
 									if(next_node_text.textContent.length > 1){
 										const node_fields_separator = document.createTextNode(self.context.fields_separator)
 										wrapper.appendChild(node_fields_separator)
 									}
 								}
-
-
 						}
-				}//end for (let j = 0; j < ar_instances_length; j++) {
-
-				// fragment.appendChild(wrapper)
-
+				}//end for (let j = 0; j < ar_instances_length; j++)
 
 			// columns separator (between components inside the same column)
-			if(i < columns_map_length-1 && columns_map[i+1].id!=='remove') {
-				const node_fields_separator = document.createTextNode(', ')
-				wrapper.appendChild(node_fields_separator)
-			}
+				if(i>0 && i < columns_map_length-1 && columns_map[i+1].id!=='remove') {
+					const node_fields_separator = document.createTextNode(', ')
+					wrapper.appendChild(node_fields_separator)
+				}
 		}//end for (let i = 0; i < columns_map_length; i++)
 
 
 	// component_info
 		const component_info = self.get_component_info()
 		if (component_info){
-			const info_value = component_info.value.join('')
-			const info = document.createTextNode(info_value)
+			const info_value	= component_info.value.join('')
+			const info			= document.createTextNode(info_value)
 			wrapper.appendChild(info)
 		}
 
