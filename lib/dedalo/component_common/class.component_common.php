@@ -3886,6 +3886,10 @@ abstract class component_common extends common {
 
 			}elseif ( true===in_array($this->tipo, section::get_modified_section_tipos_basic()) ) {
 
+				$this->permissions = 2; // Allow all users to search with section publication info components
+
+			}elseif ( true===in_array($this->tipo, section::get_publication_section_tipos_basic()) ) {
+
 				$this->permissions = 2; // Allow all users to search with section info components
 
 			}else{

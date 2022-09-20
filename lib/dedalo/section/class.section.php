@@ -3369,6 +3369,22 @@ class section extends common {
 		return $ar_tipos;
 	}//end get_modified_section_tipos_basic
 
+	/**
+	* GET_publication_SECTION_TIPOS_BASIC
+	* @return
+	*/
+	public static function get_publication_section_tipos_basic() {
+
+		$ar_tipos = array(
+			'dd271',
+			'dd1223',
+			'dd1224',
+			'dd1225'
+		);
+
+		return $ar_tipos;
+	}//end get_publication_section_tipos_basic
+
 
 
 	/**
