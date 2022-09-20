@@ -64,16 +64,16 @@ const add_events = function(self, wrapper) {
 					const parsed_value = (input.value.length>0) ? input.value : null
 
 				// changed_data
-					const changed_data = [Object.freeze({
+					const changed_data_item = Object.freeze({
 						action	: 'update',
 						key		: JSON.parse(input.dataset.key),
 						value	: parsed_value
-					})]
+					})
 
 				// update the instance data (previous to save)
-					self.update_data_value(changed_data)
+					self.update_data_value(changed_data_item)
 				// set data.changed_data. The change_data to the instance
-					self.data.changed_data = changed_data
+					// self.data.changed_data = changed_data
 				// publish search. Event to update the dom elements of the instance
 					event_manager.publish('change_search_element', self)
 
