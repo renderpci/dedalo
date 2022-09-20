@@ -364,15 +364,27 @@ class component_pdf extends component_common {
 
 	/**
 	* GET_FILE_EXISTS
+	* @param string|
+	* @return string|null $quality = null
 	*/
-	public function get_file_exists($quality=false) {
+	public function get_file_exists($quality=null) {
 
-		if(!$quality)
-		$quality 	= $this->get_quality();
-		$pdf_id 	= $this->get_pdf_id();
-		$PdfObj 	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+		if($quality===null) {
+			$quality = $this->get_quality();
+		}
 
-		return $PdfObj->get_file_exists();
+		// dump($this->aditional_path, ' this->aditional_path ++ '.to_string());
+		// dump($this->initial_media_path, ' this->initial_media_path ++ '.to_string());
+
+		$pdf_id	= $this->get_pdf_id();
+		$PdfObj	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+
+		$file_exists = $PdfObj->get_file_exists();
+
+		// dump($file_exists, ' file_exists ++ '.to_string($quality));
+		// dump($PdfObj, ' PdfObj ++ '.to_string());
+
+		return $file_exists;
 	}//end get_file_exists
 
 
@@ -594,7 +606,7 @@ class component_pdf extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
@@ -626,6 +638,94 @@ class component_pdf extends component_common {
 
 		return $related_component_text_area_tipo;
 	}//end get_related_component_text_area_tipo
+
+
+
+	/**
+	* SET_QUALITY
+	* Sync this / ImageObj quality value
+	*/
+	public function set_quality($quality) {
+		$this->quality = $quality;
+		$this->PdfObj->set_quality($quality);
+
+		return true;
+	}//end set_quality
+
+
+
+	/**
+	* GET_ORIGINAL
+	* Si se sube un archivo de extensión distinta a DEDALO_PDF_EXTENSION, se convierte a DEDALO_PDF_EXTENSION.
+	* Se usa esta función para localizarlos comprobando si hay mas de uno.
+	* @return bool|string $result
+	* 	full file name as "rsc37_rsc176_2.docx" if found
+	*/
+	public function get_original( $quality=null, $exclude_converted=true ) {
+
+		$result = false;
+
+		// quality
+			if (empty($quality)) {
+				$quality = $this->get_quality();
+			}
+			$initial_quality = $this->get_quality();
+			$this->set_quality($quality); // change current component quality temporally
+
+		// target_dir
+			$target_dir 	= $this->get_target_dir();
+			if(!file_exists($target_dir)) {
+				debug_log(__METHOD__." PDF target directory do not exists ".to_string($target_dir), logger::ERROR);
+				return false;
+			}
+
+		// ar_originals
+			$ar_originals = [];
+			if ($handle = opendir($target_dir)) {
+				$findme = $this->get_pdf_id() . '.';
+				while (false !== ($file = readdir($handle))) {
+					// note that '.' and '..' is returned even
+					if( strpos($file, $findme) !== false ) {
+						if ($exclude_converted) {
+							# Verify too that extension is different to dedalo extension (like .tiff)
+							if (strpos($file, $this->get_target_filename()) === false) {
+								$ar_originals[] = $file;
+							}
+						}else{
+							# Included all originals (with all extensions)
+							$ar_originals[] = $file;
+						}
+					}
+				}
+				closedir($handle);
+			}
+			// dump($ar_originals, ' target_dir ++ '.to_string($target_dir));
+
+		$n = count($ar_originals);
+		if ($n===0) {
+			$result = false;
+		}elseif($n===1) {
+			$ext	= pathinfo($ar_originals[0], PATHINFO_EXTENSION);
+			$result	= $ar_originals[0];
+		}else{
+			foreach ($ar_originals as $current_original) {
+				$ext = pathinfo($current_original, PATHINFO_EXTENSION);
+				if(strtolower($ext)!==strtolower(DEDALO_PDF_EXTENSION)) {
+					$result = $current_original;
+				}
+			}
+			if(!isset($ext)) {
+				trigger_error("Error Processing Request. Too much original files found ($n)");
+				#throw new Exception("Error Processing Request. Too much original files found", 1);
+			}
+		}
+
+		// return current component quality
+		$this->set_quality($initial_quality);
+
+
+		return $result;
+	}//end get_original
 
 
 

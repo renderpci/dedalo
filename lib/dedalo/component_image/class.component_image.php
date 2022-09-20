@@ -857,38 +857,43 @@ class component_image extends component_common {
 	*/
 	public function get_original( $quality=false, $exclude_converted=true ) {
 
-		if (!$quality) {
-			$quality = $this->get_quality();
-		}
 		$result = false;
-		$initial_quality = $this->get_quality();
 
-		$this->set_quality($quality); // change current component quality temporally
-		$ar_originals 	= array();
-		$target_dir 	= $this->get_target_dir();
+		// quality
+			if (empty($quality)) {
+				$quality = $this->get_quality();
+			}
+			$initial_quality = $this->get_quality();
+			$this->set_quality($quality); // change current component quality temporally
 
-		if(!file_exists($target_dir)) return false;
+		// target_dir
+			$target_dir = $this->get_target_dir();
+			if(!file_exists($target_dir)) {
+				debug_log(__METHOD__." IMAGE target directory do not exists ".to_string($target_dir), logger::ERROR);
+				return false;
+			}
 
-		if ($handle = opendir($target_dir)) {
-		    while (false !== ($file = readdir($handle))) {
-
-		        // note that '.' and '..' is returned even
-		        $findme = $this->get_image_id() . '.';
-		        if( strpos($file, $findme) !== false ) {
-		        	if ($exclude_converted) {
-		        		# Verify too that extension is different to dedalo extension (like .tiff)
-		        		if (strpos($file, $this->get_target_filename()) === false) {
-		        			$ar_originals[] = $file;
-		        		}
-		        	}else{
-		        		# Included all originals (witl all extensions)
-		        		$ar_originals[] = $file;
-		        	}
-		        }
-		    }
-		    closedir($handle);
-		}
-		#dump($ar_originals, ' target_dir ++ '.to_string($target_dir));
+		// ar_originals
+			$ar_originals = [];
+			if ($handle = opendir($target_dir)) {
+				$findme = $this->get_image_id() . '.';
+				while (false !== ($file = readdir($handle))) {
+					// note that '.' and '..' is returned even
+					if( strpos($file, $findme) !== false ) {
+						if ($exclude_converted) {
+							# Verify too that extension is different to dedalo extension (like .tiff)
+							if (strpos($file, $this->get_target_filename()) === false) {
+								$ar_originals[] = $file;
+							}
+						}else{
+							# Included all originals (with all extensions)
+							$ar_originals[] = $file;
+						}
+					}
+				}
+				closedir($handle);
+			}
+			// dump($ar_originals, ' target_dir ++ '.to_string($target_dir));
 
 		$n = count($ar_originals);
 		if ($n===0) {
@@ -911,10 +916,11 @@ class component_image extends component_common {
 		}
 
 		// return current component quality
-		$this->quality 	= $initial_quality;
+		$this->set_quality($initial_quality);
+
 
 		return $result;
-	}//end get_original_file_path
+	}//end get_original
 
 
 

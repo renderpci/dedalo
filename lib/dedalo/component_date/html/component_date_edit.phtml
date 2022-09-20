@@ -39,7 +39,7 @@
 			case 1	:
 				$html_content .= "<ul>";
 				foreach ($ar_dato as $key => $dato) {
-					
+
 					$html_content .= "<li>";
 
 					switch ($date_mode) {
@@ -65,11 +65,10 @@
 						case 'date':
 						default:
 							// Single date case (end date)
-							$add_class='';
-							if ( !empty($propiedades) &&
-								 isset($propiedades->method->get_valor_local) &&
-								 reset($propiedades->method->get_valor_local)==true
-								) $add_class = 'full';
+							$add_class = ($get_valor_local===true)
+								? 'full'
+								: '';
+
 							$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
 							$html_content .= "<span class=\"css_span_dato\">".$value_start."</span>";
 							// PREVIOUS 4.9.1
@@ -82,7 +81,7 @@
 				break;
 
 			case ($permissions>=2) :
-				#change the edit mode of the componet
+				#change the edit mode of the component
 
 				if($from_modo !== 'edit'){
 					$html_content .= "<div class=\"css_date_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
@@ -96,7 +95,7 @@
 				}
 				$html_content .= "<ul>";
 				foreach ($ar_dato as $key => $dato) {
-					
+
 					$html_content .= "<li>";
 
 					switch ($date_mode) {
@@ -192,7 +191,7 @@
 							}else{
 								$html_content .= '<span class="css_date label_range label_range_34">'.label::get_label('mes').'</span>';
 							}
-							
+
 							# DAY
 							$value_day = isset($valor_day[$key]) ? $valor_day[$key] : '';
 							$html_content .= "<input type=\"text\" class=\"css_date period_day\" id=\"".$uid_day[$key]."\" ";
@@ -216,6 +215,7 @@
 								$html_content .= '<span class="css_date label_range">'.label::get_label('dia').'</span>';
 							}
 							break;
+
 						case 'time':
 							# TIME
 							$value = isset($valor[$key]) ? $valor[$key] : '';
@@ -235,14 +235,13 @@
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/>";
 							break;
+
 						case 'date':
 						default:
 							// Single date case (end date)
-							$add_class='';
-							if ( !empty($propiedades) &&
-								 isset($propiedades->method->get_valor_local) &&
-								 reset($propiedades->method->get_valor_local)==true
-								) $add_class = 'full';
+							$add_class = ($get_valor_local===true)
+								? 'full'
+								: '';
 
 							$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
 							$html_content .= "<div class=\"css_date_imput_twice_date\">";
@@ -301,7 +300,7 @@
 				$html_content .= "</ul>";
 
 				#$html_content .= "<div>$date_mode</div>";
-				
+
 
 				#$html_content .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";
 
@@ -316,8 +315,8 @@
 				$html_content .= '<script>';
 				# Init component
 				$init_options = new stdClass();
-					$init_options->component_name 	= $component_name;
-					$init_options->wrapper_id 		= $id_wrapper;
+					$init_options->component_name	= $component_name;
+					$init_options->wrapper_id		= $id_wrapper;
 				$html_content .= 'component_common.init('.json_encode($init_options).');';
 				$html_content .= '</script>';
 
@@ -348,5 +347,3 @@
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
-
-

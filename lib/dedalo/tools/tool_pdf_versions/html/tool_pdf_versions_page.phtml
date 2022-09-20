@@ -1,18 +1,18 @@
 <?php
-	
+
 
 	# VISUALIZADOR HTML
-	
 
 
-	$html    = "\n<!-- TOOL PAGE [tipo:$tipo] -->";	
+
+	$html    = "\n<!-- TOOL PAGE [tipo:$tipo] -->";
 	$html   .= "\n<div class=\"wrap_tool wrap_tool_pdf_versions_page\" >";
 	$html   .= "\n<div class=\"content_data text_shadow_inset\" >";
 
 
 		$html   .= "\n<script>
 					var media_base_path = '$media_base_path',
-						media_extension = '$media_extension'									
+						media_extension = '$media_extension'
 					</script>";
 
 
@@ -23,24 +23,24 @@
 
 		# VERSIONS
 		$html .= "\n<table class=\"table_versions\">";
-    
-    	
+
+
 			#
 			# QUALITY ROW
-		    $html .= "\n <tr>";
-		    $html .= "\n <th>". label::get_label('calidad'). "</th>" ;
-		    foreach ($ar_quality as $quality) {
-		    	$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    	$html .= "\n <th class=\"$td_style\">";
-		    	$html .= $quality;
-		    	if ($quality==DEDALO_PDF_QUALITY_DEFAULT) {
-		    		$html .= " <span class=\"pdf_info\">[Default]</span>";
-		    	}
-		    	$html .= "\n </th>";
-		    }
-		    $html .= "\n </tr>";
+			$html .= "\n <tr>";
+			$html .= "\n <th>". label::get_label('calidad'). "</th>" ;
+			foreach ($ar_quality as $quality) {
+				$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+				$html .= "\n <th class=\"$td_style\">";
+				$html .= $quality;
+				if ($quality==DEDALO_PDF_QUALITY_DEFAULT) {
+					$html .= " <span class=\"pdf_info\">[Default]</span>";
+				}
+				$html .= "\n </th>";
+			}
+			$html .= "\n </tr>";
 
-		    
+
 			#
 			# FILE ROW
 			$html .= "\n <tr>";
@@ -48,174 +48,206 @@
 			foreach ($ar_quality as $quality) {
 				$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
 				$html .= "\n <td class=\"$td_style\">";
-			
+
 				if( $this->component_obj->get_file_exists($quality) ) {
-	    		
-			    	$html .= "<div class=\"icon_bs link pdf_icon\"
-			    	data-pdf_id=\"$pdf_id\"
-			    	data-quality=\"$quality\"
-			    	data-tipo=\"$tipo\"
-			    	data-parent=\"$parent\"
-			    	data-section_tipo=\"$section_tipo\"
-			    	data-aditional_path=\"$aditional_path\"
-			    	data-initial_media_path=\"$initial_media_path\"
-			    	onclick=\"tool_pdf_versions.change_media_quality(this)\"
-			    	></div>";
+
+					$html .= "<div class=\"icon_bs link pdf_icon\"
+					data-pdf_id=\"$pdf_id\"
+					data-quality=\"$quality\"
+					data-tipo=\"$tipo\"
+					data-parent=\"$parent\"
+					data-section_tipo=\"$section_tipo\"
+					data-aditional_path=\"$aditional_path\"
+					data-initial_media_path=\"$initial_media_path\"
+					onclick=\"tool_pdf_versions.change_media_quality(this)\"
+					></div>";
 				}
 
 				$html .= "\n </td>";
 			}
-		    $html .= "\n </tr>";
-			
-		    
-		    #
-		    # SIZE ROW
-		    $html .= "\n <tr>";
+			$html .= "\n </tr>";
+
+
+			#
+			# SIZE ROW
+			$html .= "\n <tr>";
 			$html .= "\n <td>". label::get_label('tamano')."</td>" ;
 			foreach ($ar_quality as $quality) {
 				$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
 				$html .= "\n <td class=\"$td_style\">";
-			
-				if( $this->component_obj->get_file_exists($quality) ) {	    			    	
-					$html .= "<div class=\"pdf_size_info\" >";
-			    	$html .= $this->component_obj->get_pdf_size() ;
-			    	$html .= "</div>";
-			    }
 
-		    	$html .= "\n </td>";
-		 	}
-		    $html .= "\n </tr>";
-		   
-			
+				if( $this->component_obj->get_file_exists($quality) ) {
+					$html .= "<div class=\"pdf_size_info\" >";
+					$html .= $this->component_obj->get_pdf_size() ;
+					$html .= "</div>";
+				}
+
+				$html .= "\n </td>";
+			}
+			$html .= "\n </tr>";
+
+
 			#
 			# UPLOAD ROW
-			if ($permissions>=2) {	    	
+			if ($permissions>=2) {
 
 				$html .= "\n <tr>";
 				$html .= "\n <td>". label::get_label('subir')."</td>" ;
 				foreach ($ar_quality as $quality) {
 					$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+					$html .= "\n <td class=\"$td_style\">";
 
 					$html .= "<div class=\"icon_bs link tool_upload_icon\"
 					data-pdf_id=\"$pdf_id\"
 					data-quality=\"$quality\"
-				 	data-parent=\"$parent\"
-				 	data-section_tipo=\"$section_tipo\"
-				 	data-tipo=\"$tipo\"
-				 	data-aditional_path=\"$aditional_path\"
-			    	data-initial_media_path=\"$initial_media_path\"
+					data-parent=\"$parent\"
+					data-section_tipo=\"$section_tipo\"
+					data-tipo=\"$tipo\"
+					data-aditional_path=\"$aditional_path\"
+					data-initial_media_path=\"$initial_media_path\"
 					onclick=\"tool_common.open_tool_upload(this)\"
-					></div>";	    		    	
+					></div>";
 					$html .= "\n </td>";
 				}
 				$html .= "\n </tr>";
-		    }
-			
-		    
-		    #
-		    # DOWNLOAD ROW
-		    if ($permissions>=2) {
-
-			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('descargar')."</td>" ;
-			    foreach ($ar_quality as $quality) {
-			    	$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
-
-		    		if( $this->component_obj->get_file_exists($quality) ) {
-		    		
-				    	$html .= "<div class=\"icon_bs link image_download_icon\"
-				    	data-pdf_id=\"$pdf_id\"
-				    	data-quality=\"$quality\"
-				     	data-parent=\"$parent\"
-				     	data-section_tipo=\"$section_tipo\"
-				     	data-tipo=\"$tipo\"
-				     	data-aditional_path=\"$aditional_path\"
-			    		data-initial_media_path=\"$initial_media_path\"
-				    	onclick=\"tool_pdf_versions.download_file(this)\"
-				    	></div>";
-					}
-			    	    	
-			    	$html .= "\n </td>";
-			    }
-			    $html .= "\n </tr>";
 			}
 
 
-		    # VIEW ROW
-		    if ($permissions>=1) {
+			#
+			# DOWNLOAD ROW
+			if ($permissions>=2) {
+
+				$html .= "\n <tr>";
+				$html .= "\n <td>". label::get_label('descargar')."</td>" ;
+				foreach ($ar_quality as $quality) {
+					$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+					$html .= "\n <td class=\"$td_style\">";
+
+					if( $this->component_obj->get_file_exists($quality) ) {
+
+						$html .= "<div class=\"icon_bs link image_download_icon\"
+						data-pdf_id=\"$pdf_id\"
+						data-quality=\"$quality\"
+						data-parent=\"$parent\"
+						data-section_tipo=\"$section_tipo\"
+						data-tipo=\"$tipo\"
+						data-aditional_path=\"$aditional_path\"
+						data-initial_media_path=\"$initial_media_path\"
+						onclick=\"tool_pdf_versions.download_file(this)\"
+						></div>";
+					}
+
+					// original  (doc, docx, pages, etc..)
+					if (defined('DEDALO_PDF_QUALITY_ORIGINAL') && $quality===DEDALO_PDF_QUALITY_ORIGINAL) {
+						$original = $this->component_obj->get_original(DEDALO_PDF_QUALITY_ORIGINAL);
+						if (!empty($original)) {
+
+							$original_ext = pathinfo($original, PATHINFO_EXTENSION);
+
+							$html .= "<div class=\"icon_bs link image_download_icon original_icon\" title=\"original $original_ext version\"
+							data-pdf_id=\"$pdf_id\"
+							data-quality=\"$quality\"
+							data-tipo=\"$tipo\"
+							data-parent=\"$parent\"
+							data-section_tipo=\"$section_tipo\"
+							data-aditional_path=\"$aditional_path\"
+							data-initial_media_path=\"$initial_media_path\"
+							data-extension=\"$original_ext\"
+							onclick=\"tool_pdf_versions.download_file(this)\"
+							>$original_ext</div>";
+						}
+					}
+
+					$html .= "\n </td>";
+				}
+				$html .= "\n </tr>";
+			}
+
+
+			# VIEW ROW
+			if ($permissions>=1) {
 
 			   $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('visualizar')."</td>" ;
-			    foreach ($ar_quality as $quality) {
-			    	$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+				$html .= "\n <td>". label::get_label('visualizar')."</td>" ;
+				foreach ($ar_quality as $quality) {
+					$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+					$html .= "\n <td class=\"$td_style\">";
 
-		    		#if( $this->component_obj->get_file_exists($quality) ) {
-		    		if( file_exists($this->component_obj->get_pdf_path($quality)) ) {
+					#if( $this->component_obj->get_file_exists($quality) ) {
+					if( file_exists($this->component_obj->get_pdf_path($quality)) ) {
 
-				    	$html .= "<div class=\"icon_bs link image_zoom_in_icon\"
-				    	data-pdf_id=\"$pdf_id\"
-				    	data-quality=\"$quality\"
-				     	data-parent=\"$parent\"
-				     	data-section_tipo=\"$section_tipo\"
-				     	data-tipo=\"$tipo\"
-				     	data-aditional_path=\"$aditional_path\"
-			    		data-initial_media_path=\"$initial_media_path\"
-				    	onclick=\"tool_pdf_versions.view_pdf(this)\"
-				    	></div>";
+						$html .= "<div class=\"icon_bs link image_zoom_in_icon\"
+						data-pdf_id=\"$pdf_id\"
+						data-quality=\"$quality\"
+						data-parent=\"$parent\"
+						data-section_tipo=\"$section_tipo\"
+						data-tipo=\"$tipo\"
+						data-aditional_path=\"$aditional_path\"
+						data-initial_media_path=\"$initial_media_path\"
+						onclick=\"tool_pdf_versions.view_pdf(this)\"
+						></div>";
 					}
 
-			    	$html .= "\n </td>";
-			    }
-			    $html .= "\n </tr>";
+					$html .= "\n </td>";
+				}
+				$html .= "\n </tr>";
 			}
-			
-			
+
+
 			#
-		    # DELETE ROW
-		    if ($permissions>=2) {
+			# DELETE ROW
+			if ($permissions>=2) {
 
-			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('borrar')."</td>" ;
-			    foreach ($ar_quality as $quality) {
-			    	$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
-			    	
-		    		if( $this->component_obj->get_file_exists($quality) ) {
-		    			
-				    	$html .= "<div class=\"icon_bs link image_delete_icon\"
-				    	data-pdf_id=\"$pdf_id\"
-				    	data-quality=\"$quality\"
-				    	data-parent=\"$parent\"
-				    	data-section_tipo=\"$section_tipo\"
-				    	data-aditional_path=\"$aditional_path\"
-				    	data-initial_media_path=\"$initial_media_path\"
-				    	onclick=\"tool_pdf_versions.delete_version(this)\"
-				    	></div>";
-			    	  }
+				$html .= "\n <tr>";
+				$html .= "\n <td>". label::get_label('borrar')."</td>" ;
+				foreach ($ar_quality as $quality) {
+					$td_style = null; if($quality==DEDALO_PDF_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+					$html .= "\n <td class=\"$td_style\">";
 
-			    	$html .= "\n </td>";
-			    }
-			    $html .= "\n </tr>";
+					// original  (doc, docx, pages, etc..)
+					if (defined('DEDALO_PDF_QUALITY_ORIGINAL') && $quality===DEDALO_PDF_QUALITY_ORIGINAL) {
+
+						$original		= $this->component_obj->get_original(DEDALO_PDF_QUALITY_ORIGINAL);
+						$file_exists	= !empty($original);
+
+					}else{
+
+						$file_exists = $this->component_obj->get_file_exists($quality);
+					}
+
+					if ($file_exists===true) {
+						$html .= "<div class=\"icon_bs link image_delete_icon\"
+						data-pdf_id=\"$pdf_id\"
+						data-quality=\"$quality\"
+						data-parent=\"$parent\"
+						data-tipo=\"$tipo\"
+						data-section_tipo=\"$section_tipo\"
+						data-aditional_path=\"$aditional_path\"
+						data-initial_media_path=\"$initial_media_path\"
+						onclick=\"tool_pdf_versions.delete_version(this)\"
+						></div>";
+					}
+
+					$html .= "\n </td>";
+				}
+				$html .= "\n </tr>";
 			}
-			
-			
-			
-		
+
+
+
+
 
 		$html .= "\n</table><!-- /table_versions -->";
 
 
-	
+
 	$html .= "\n</div><!-- /content_data -->";
 	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
 
-	
+
 	# INSPECTOR LOG TOOL
 	$html .= "\n<div id=\"inspector_log\" class=\"tool_pdf_inspector_log\"> </div>";
 
 	print $html;
-		
+
 ?>

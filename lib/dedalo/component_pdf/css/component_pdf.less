@@ -1,8 +1,7 @@
 // Variables
-@common_css: "../../common/css";
 
 // Usage
-@import "@{common_css}/library.less"; 
+@import '../../common/css/library';
 
 
 /*-- WRAP DIV CONTAINER --*/
@@ -24,13 +23,13 @@ div.pdf_thumb_icon {
 	background-repeat: no-repeat;
 	background-position: center;
 	cursor: pointer;
-	}	
-	div.pdf_thumb_icon:hover {		
+	}
+	div.pdf_thumb_icon:hover {
 	}
 
 .no_pdf_file {
-	width: 52px;
 	height: 56px;
+	width: 52px;
 	display: inline-block;
 	background-image: url('../../themes/default/pdf_icon.png');
 	background-repeat: no-repeat;
@@ -41,15 +40,39 @@ div.pdf_thumb_icon {
 	cursor: pointer;
 	opacity: 0.4;
 	margin-bottom: 10px;
+
+	&:hover {
+		opacity: 1;
 	}
-	.no_pdf_file:hover {
-		opacity: 0.2
+}
+
+.no_document_file {
+	height: 56px;
+	width: 52px;
+	display: inline-block;
+	background-image: url('../../themes/default/file-word-regular.svg');
+	background-repeat: no-repeat;
+	background-position: left;
+	padding-left: 56px;
+	padding-top: 19px;
+	font-size: 1.0em;
+	cursor: pointer;
+	opacity: 0.4;
+	margin-bottom: 10px;
+	margin-left: 4px;
+
+	&:hover {
+		opacity: 1;
 	}
+}
+
+
+
 
 div.pdf_thumb_icon_default {
 	width: 52px;
 	height: 56px;
-	
+
 	background-image: url('../../themes/default/logo_dedalo_720x404.jpg');
 	background-repeat: no-repeat;
 	background-position: center;
@@ -89,7 +112,7 @@ div.pdf_text_no_file {
 	margin: 10px;
 	margin-top: 5px;
 	margin-left: 5PX;
-	padding: 0px;	
+	padding: 0px;
 }
 
 
@@ -126,7 +149,7 @@ iframe.pdf_viewer_frame {
 
 
 // pdf_viewer_full
-	.pdf_viewer_full {		
+	.pdf_viewer_full {
 
 		iframe {
 			position: fixed;
@@ -134,7 +157,7 @@ iframe.pdf_viewer_frame {
 			left: 0;
 			width: 100% !important;
 			height: 100% !important;
-			z-index: 9999;		
+			z-index: 9999;
 			margin: 0;
 			padding: 0;
 		}

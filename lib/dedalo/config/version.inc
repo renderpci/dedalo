@@ -2735,6 +2735,15 @@
 		Added log message to SAML login sequence to easy track user login sequence
 		Improved button diffusion label name to able to identify publication target database
 		Changed default ts_object pagination limit from 100 to 300
+		Add diffusion_element_alias to diffusion
+		Fix regex to get tag with spaces
+		Added notes to sample.config file
+		Fixed publication API incoherence about charset encoding. Now, all connections will be use charset=utf8mb4
+		Clean up class diffusion code
+		Fixed minor PHP8.1 component_date issues and code clean up
+		Added component_pdf and tool_pdf_versions original quality feature. Now, a source document (non PDF) can be added as original quality. Added download mimes doc,docx,odp,odt,pages to manage this documents. Remember to add configuration new constant 'DEDALO_PDF_QUALITY_ORIGINAL' and the allowed extensions in constant 'DEDALO_PDF_EXTENSIONS_SUPPORTED'
+		Fixed error in component_json edit mode where read only mode (permissions <2) shows data wrongly. Cleanup code too
+
 
 
 	Queue build
@@ -2770,7 +2779,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-09-2022T18:10:00');
+	define('DEDALO_BUILD'	, '19-09-2022T17:56:00');
 
 
 
