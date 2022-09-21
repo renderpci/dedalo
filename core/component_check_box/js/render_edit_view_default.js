@@ -136,9 +136,9 @@ const get_input_element_edit = (i, current_value, self) => {
 			const changed_value	= (action==='insert') ? datalist_value : null
 
 			const changed_data = [Object.freeze({
-				action  : action,
-				key 	: changed_key,
-				value 	: changed_value
+				action	: action,
+				key		: changed_key,
+				value	: changed_value
 			})]
 			// force to save on every change
 				self.change_value({
