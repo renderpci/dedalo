@@ -2540,58 +2540,58 @@ abstract class common {
 
 						// ddo_map
 							$final_ddo_map = [];
-							foreach ($ar_ddo_map as $current_ddo_map) {
+							foreach ($ar_ddo_map as $current_ddo) {
 
 								// check without tipo case
-									if (!isset($current_ddo_map->tipo)) {
-										debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
-										dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
+									if (!isset($current_ddo->tipo)) {
+										debug_log(__METHOD__.  ' ERROR. Ignored current_ddo don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
+										dump($current_ddo, ' ERROR. Ignored current_ddo don\'t have tipo: ++ '.to_string($tipo));
 										continue;
 									}
 
 								// label. Add to all ddo_map items
-									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+									$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 								// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
-									$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+									$current_ddo->section_tipo = $current_ddo->section_tipo==='self'
 										? $ar_section_tipo
-										: $current_ddo_map->section_tipo;
+										: $current_ddo->section_tipo;
 
 								// parent. Set the default "self" value to the current tipo (the parent)
-									$current_ddo_map->parent = $current_ddo_map->parent==='self'
+									$current_ddo->parent = $current_ddo->parent==='self'
 										? $tipo
-										: $current_ddo_map->parent;
+										: $current_ddo->parent;
 
 								// when the mode is set in properties or is set by tool or user templates
 								// set the fixed_mode to true, to maintenance the mode across changes in render process
-									if(isset($current_ddo_map->mode)){
-										$current_ddo_map->fixed_mode = true;
+									if(isset($current_ddo->mode)){
+										$current_ddo->fixed_mode = true;
 									}
 
 								// mode
-									$current_ddo_map->mode = isset($current_ddo_map->mode)
-										? $current_ddo_map->mode
+									$current_ddo->mode = isset($current_ddo->mode)
+										? $current_ddo->mode
 										: ($model !== 'section'
 											? 'list'
 											: $mode);
 
 								//fields_map; used by components external to map to different API format, defined in the component, when this property is present and true, get the component fields_map
-									if(isset($current_ddo_map->fields_map) && $current_ddo_map->fields_map===true){
-										$RecordObj_dd	= new RecordObj_dd($current_ddo_map->tipo);
+									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
+										$RecordObj_dd	= new RecordObj_dd($current_ddo->tipo);
 										$properties		= $RecordObj_dd->get_properties();
-										$current_ddo_map->properties = $properties;
-										$current_ddo_map->fields_map = isset($properties->fields_map)
+										$current_ddo->properties = $properties;
+										$current_ddo->fields_map = isset($properties->fields_map)
 											? $properties->fields_map
 											: [];
-										$current_ddo_map->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-										$current_ddo_map->model			= $RecordObj_dd->get_modelo_name();
-										// $current_ddo_map->parent		= $current_ddo_map->section_tipo;
-										$current_ddo_map->permissions	= common::get_permissions($current_ddo_map->section_tipo, $current_ddo_map->tipo);
+										$current_ddo->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+										$current_ddo->model			= $RecordObj_dd->get_modelo_name();
+										// $current_ddo->parent		= $current_ddo->section_tipo;
+										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);
 									}
 
 
-								$final_ddo_map[] = $current_ddo_map;
-							}//end foreach ($ar_ddo_map as $current_ddo_map)
+								$final_ddo_map[] = $current_ddo;
+							}//end foreach ($ar_ddo_map as $current_ddo)
 
 						$parsed_item->show->ddo_map = $final_ddo_map;
 
