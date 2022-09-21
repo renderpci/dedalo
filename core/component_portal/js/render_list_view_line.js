@@ -63,9 +63,9 @@ render_list_view_line.render = async function(self, options) {
 		wrapper.content_data = content_data
 
 	// autocomplete
-		wrapper.addEventListener('click', function() {
-			activate_autocomplete(self, wrapper)
-		})
+		// wrapper.addEventListener('click', function() {
+		// 	activate_autocomplete(self, wrapper)
+		// })
 
 
 	return wrapper
