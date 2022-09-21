@@ -136,16 +136,16 @@ const get_content_value = (i, current_value, self) => {
 
 			const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
 
-			const changed_data = [Object.freeze({
+			const changed_data_item = Object.freeze({
 				action	: (parsed_value != null) ? 'update' : 'remove',
 				key		: (parsed_value != null) ? i : false,
 				value	: parsed_value
-			})]
+			})
 
 			// update the instance data (previous to save)
-				self.update_data_value(changed_data)
+				self.update_data_value(changed_data_item)
 			// set data.changed_data. The change_data to the instance
-				self.data.changed_data = changed_data
+				// self.data.changed_data = changed_data
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
 		})//end event change

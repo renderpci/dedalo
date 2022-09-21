@@ -5,12 +5,13 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {when_in_viewport} from '../../common/js/events.js'
+	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		// render_column_remove,
 		activate_autocomplete,
 	} from './render_edit_component_portal.js'
+
 
 
 /**
@@ -27,6 +28,7 @@ export const render_search_component_portal = function() {
 /**
 * SEARCH
 * Render node for use in search
+* @param object options
 * @return DOM node wrapper
 */
 render_search_component_portal.prototype.search = async function(options) {
@@ -53,24 +55,25 @@ render_search_component_portal.prototype.search = async function(options) {
 			content_data : content_data
 		})
 		wrapper.classList.add('portal', 'view_line')
-
-	// events
-		// add_events(self, wrapper)
+		// set pointers
+		wrapper.content_data = content_data
 
 	// autocomplete
 		wrapper.addEventListener('click', function() {
-			activate_autocomplete(self, wrapper).then(function(){
+			activate_autocomplete(self, wrapper)
+			// .then(function(){
 				// if (e.target.matches('input[type="text"].q_operator')) {
 				// 	// prevent activate component on click inside q_operator input
 				// 	return true
 				// }
 				// self.autocomplete.search_input.focus()
-			})
-
+			// })
 		})
+
 
 	return wrapper
 }//end search
+
 
 
 /**
@@ -186,11 +189,11 @@ const rebuild_columns_map = async function(self) {
 const render_column_remove = function(options) {
 
 	// options
-		const self			= options.caller
-		const row_key		= options.row_key
-		const paginated_key	= options.paginated_key
-		const section_id 	= options.section_id
-		const section_tipo	= options.section_tipo
+		const self				= options.caller
+		// const row_key		= options.row_key
+		// const paginated_key	= options.paginated_key
+		// const section_id		= options.section_id
+		// const section_tipo	= options.section_tipo
 		// const locator		= options.locator
 
 	const fragment = new DocumentFragment()
@@ -206,15 +209,15 @@ const render_column_remove = function(options) {
 
 			const unlink_record = function() {
 				// changed_data
-				const changed_data = [Object.freeze({
+				const changed_data_item = Object.freeze({
 					action	: 'remove',
 					key		: false,
 					value	: null
-				})]
+				})
 				// update the instance data (previous to save)
-					self.update_data_value(changed_data)
+					self.update_data_value(changed_data_item)
 				// set data.changed_data. The change_data to the instance
-					self.data.changed_data = changed_data
+					// self.data.changed_data = changed_data
 				// publish search. Event to update the dom elements of the instance
 					event_manager.publish('change_search_element', self)
 

@@ -111,15 +111,15 @@ const get_input_element = (i, current_value, self) => {
 			// update_data_value. key is the position in the data array, the value is the new value
 			const value = (input.value.length>0) ? input.value : null
 			// set the changed_data for update the component data and send it to the server for change when save
-			const changed_data = {
+			const changed_data_item = Object.freeze({
 				action	: 'update',
 				key		: i,
 				value	: value
-			}
+			})
 			// update the data in the instance previous to save
-			self.update_data_value(changed_data)
+			self.update_data_value(changed_data_item)
 			// set the change_data to the instance
-			self.data.changed_data = changed_data
+			// self.data.changed_data = changed_data
 			// event to update the dom elements of the instance
 			event_manager.publish('change_search_element', self)
 		})
