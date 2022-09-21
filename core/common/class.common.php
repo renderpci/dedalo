@@ -2844,6 +2844,13 @@ abstract class common {
 						? 'list'
 						: $mode;
 
+				// view
+					$tipo_RecordObj_dd	= new RecordObj_dd($tipo);
+					$tipo_properties	= $tipo_RecordObj_dd->get_properties();
+					$children_view = isset($tipo_properties->children_view)
+						? $tipo_properties->children_view
+						: null;
+
 				// auth. Check each element permissions
 					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
 						// check each element permissions
@@ -2859,9 +2866,20 @@ abstract class common {
 					})();
 
 				// ddo_map
-					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode){
+					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$current_tipo_RecordObj_dd	= new RecordObj_dd($current_tipo);
+						$current_tipo_properties	= $current_tipo_RecordObj_dd->get_properties();
+						$own_view = isset($current_tipo_properties->view)
+							? $current_tipo_properties->view
+							: ($model === 'component_portal'
+								? 'line'
+								: 'default');
+
+						$view = isset($children_view)
+							? $children_view
+							: $own_view;
 
 						// component_semantic_node.The semantic node has his own section_tipo to be assigned
 							if($model==='component_semantic_node'){
@@ -2889,6 +2907,7 @@ abstract class common {
 							$ddo->set_section_tipo($target_section_tipo);
 							$ddo->set_parent($tipo);
 							$ddo->set_mode($current_mode);
+							$ddo->set_view($view);
 							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
 							// fixed_mode. Used by component_semantic_node for force the render mode
 							if(isset($current_fixed_mode)){
