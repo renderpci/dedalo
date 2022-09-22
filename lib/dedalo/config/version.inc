@@ -2751,6 +2751,9 @@
 
 	Queue build
 
+		Valencia 22-09-2022T18:45:00
+		Added Full-Text Search literal options to web_data::get_global_search_json method into query parameter
+
 
 
 	[/HISTORY]
@@ -2782,7 +2785,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-09-2022T19:30:00');
+	define('DEDALO_BUILD'	, '22-09-2022T18:45:00');
 
 
 
