@@ -68,7 +68,7 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
-			button_close : null
+			button_close : null // set to null to prevent it from being created
 		})
 		content_data.classList.add('nowrap')
 
