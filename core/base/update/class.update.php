@@ -58,6 +58,8 @@ class update {
 
 	/**
 	* UPDATE_VERSION
+	* Updates Dédalo data version.
+	* Allow change components data format or add new tables or index
 	* @return object $response
 	*/
 	public static function update_version() : object {
@@ -66,17 +68,16 @@ class update {
 			$response->result 	= false;
 			$response->msg 		= '';
 
-		$updates 		 = update::get_updates();
-		$current_version = get_current_version_in_db();
-
-		$msg = array();
+		// short vars
+			$updates			= update::get_updates();
+			$current_version	= get_current_version_in_db();
+			$msg				= array();
 
 		// Disable log and time machine save for all update process (from v4.9.1 24-05-2018)
 			logger_backend_activity::$enable_log = false;
 			#RecordObj_time_machine::$save_time_machine_version  = false;
 
-
-		// Select the correct update from file updates
+		// update. Select the correct update object from the file 'updates.php'
 			foreach ($updates as $key => $version_to_update) {
 				if($current_version[0] == $version_to_update->update_from_major){
 					if($current_version[1] == $version_to_update->update_from_medium){
@@ -100,8 +101,9 @@ class update {
 					$msg[] = "Updated sql: ".to_string($cmsg);
 
 					if ($SQL_update->result===false) {
-						$response->result = false ;
-						$response->msg 	  = "Error on SQL_update. <br>".implode('<br>', $msg);
+						array_push($msg, "Error on SQL_update");
+						$response->result	= false ;
+						$response->msg		= $msg;
 						return $response;
 					}
 				}
@@ -109,10 +111,14 @@ class update {
 
 		// components_update
 			if(isset($update->components_update)){
-				foreach ($update->components_update as $modelo_name) {
-					$components_update[] = update::components_update($modelo_name, $current_version, $update_version);
-					$msg[] = "Updated component: ".to_string($modelo_name);
-					debug_log(__METHOD__." Updated component ".to_string($modelo_name), logger::DEBUG);
+				foreach ((array)$update->components_update as $current_model) {
+					$components_update[] = update::components_update(
+						$current_model,
+						$current_version,
+						$update_version
+					);
+					$msg[] = "Updated component: ".to_string($current_model);
+					debug_log(__METHOD__." Updated component ".to_string($current_model), logger::DEBUG);
 				}
 			}
 
@@ -124,8 +130,9 @@ class update {
 					$msg[] = "Updated run scripts: ".to_string($cmsg);
 
 					if ($run_scripts->result===false) {
-						$response->result = false ;
-						$response->msg 	  = "Error on run_scripts. <br>".implode('<br>', $msg);
+						array_push($msg, "Error on run_scripts");
+						$response->result	= false;
+						$response->msg		= $msg;
 						return $response;
 					}
 				}
@@ -135,14 +142,13 @@ class update {
 			$version_to_update			= update::get_update_version();
 			$version_to_update_string	= implode(".", $version_to_update);
 			$new_version				= update::update_dedalo_data_version($version_to_update_string);
-			$msg[] = "Updated Dédalo data version: ".to_string($version_to_update_string);
+			$msg[]						= "Updated Dédalo data version: ".to_string($version_to_update_string);
 
+		// response
+			array_push($msg, "Updated version successfully");
+			$response->result	= true ;
+			$response->msg		= $msg;
 
-		$result = isset($components_update) ? $components_update : null;
-
-
-		$response->result = true ;
-		$response->msg 	  = "Update version is done. <br>".implode('<br>', $msg);
 
 		return (object)$response;
 	}//end update_version
