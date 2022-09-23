@@ -6,73 +6,78 @@
 .component_date {
 	// background-color: #fea7e5;
 
-	&.edit {
-		.calendar {
-			height: 1.3em;
-		}
+	// calendar
+	.calendar {
+		height: 1.3em;
+	}
 
-		>.content_data {
+	// content data
+	>.content_data {
 
-			>.content_value {
+		>.content_value {
+			display: flex;
+			flex-wrap: wrap;
+			width: 100%;
+			align-items: center;
+
+			>.input-group {
+				position: relative;
+				width: 8.75rem;
 				display: flex;
-				flex-wrap: wrap;
-				width: 100%;
 				align-items: center;
-
-				>.input-group {
-					position: relative;
-					width: 8.75rem;
-					display: flex;
-					align-items: center;
-					>a { // icon calendar
-						position: absolute;
-						right: 0.5rem;
-						top: 0.33rem;
-						opacity: 0.6;
-						z-index: 1;
-					}
-					.input_period{
-						width: 3.5em;
-						>label{
-							margin-right: 0.1em;
-						}
-
-					}
-					.input_date {
-						letter-spacing: 0.05em;
-						font-family: 'date_separator', apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-					}
-					.input_time{
-						letter-spacing: 0.1em;
+				>a { // icon calendar
+					position: absolute;
+					right: 0.5rem;
+					top: 0.33rem;
+					opacity: 0.6;
+					z-index: 1;
+				}
+				.input_period{
+					width: 3.5em;
+					>label{
+						margin-right: 0.1em;
 					}
 
-	  				@font-face {
-						font-family: 'date_separator';
-						// src: local("Times New Roman");
-						src: local("Helvetica Neue UltraLight"),
-							 local("HelveticaNeue-UltraLight");
-						unicode-range	: U+002F;
-					}
+				}
+				.input_date {
+					letter-spacing: 0.05em;
+					font-family: 'date_separator', apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+				}
+				.input_time{
+					letter-spacing: 0.1em;
 				}
 
-				>.dates_separator {
-					padding-right: 0.5rem;
+  				@font-face {
+					font-family: 'date_separator';
+					// src: local("Times New Roman");
+					src: local("Helvetica Neue UltraLight"),
+						 local("HelveticaNeue-UltraLight");
+					unicode-range	: U+002F;
 				}
-
-				>.remove {
-					// margin-left: 0.75rem;
-					position: initial;
-				}
-
 			}
 
-			input::placeholder {
-				// color: blue;
-				font-size: 0.86rem;
-				font-style: normal;
+			>.dates_separator {
+				padding-right: 0.5rem;
 			}
+
+			>.remove {
+				// margin-left: 0.75rem;
+				position: initial;
+			}
+
 		}
-	}//end .edit
+
+		input::placeholder {
+			// color: blue;
+			font-size: 0.86rem;
+			font-style: normal;
+		}
+	}
+
+
+	&.list {
+		padding: 0.33rem;
+	}
 
 	&.search {
 		.remove {
