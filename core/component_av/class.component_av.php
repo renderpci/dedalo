@@ -408,52 +408,55 @@ class component_av extends component_media_common {
 		// store initial_quality
 			$initial_quality = $this->get_quality();
 
-		// quakity. Changes current component quality temporally
+		// quality. Changes current component quality temporally
 			$this->set_quality($quality);
 
-		// file do not esits case
+		// file do not exists case
 			$target_dir = $this->get_target_dir();
 			if(!file_exists($target_dir)) {
 				return $result;
 			}
 
-		$ar_originals = array();
-		if ($handle = opendir($target_dir)) {
+		// ar_originals
+			$ar_originals	= [];
+			$findme			= $this->get_video_id() . '.';
+			if ($handle = opendir($target_dir)) {
 
-		    while (false !== ($file = readdir($handle))) {
+				while (false !== ($file = readdir($handle))) {
 
-		    	if($this->get_video_id() == $file && is_dir($target_dir.'/'.$file)){
+					// is dir case (DVD files)
+					if($this->get_video_id() == $file && is_dir($target_dir.'/'.$file)){
 
-		    		// DES
-						// $dvd_folder = $target_dir.'/'.$file;
-						// # dvd_folder dir set permissions 0777
+						// DES
+							// $dvd_folder = $target_dir.'/'.$file;
+							// # dvd_folder dir set permissions 0777
 
-						// $stat = stat($dvd_folder);
-						// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
+							// $stat = stat($dvd_folder);
+							// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
 
-						// if(posix_geteuid() != $stat['uid']){
-						// 	chown($dvd_folder, posix_geteuid());
-						// }
+							// if(posix_geteuid() != $stat['uid']){
+							// 	chown($dvd_folder, posix_geteuid());
+							// }
 
-						// $wantedPerms = 0777;
-						// $actualPerms = fileperms($dvd_folder);
-						// if($actualPerms < $wantedPerms) {
-						// 	$chmod = chmod($dvd_folder, $wantedPerms);
-						// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
-						// }
+							// $wantedPerms = 0777;
+							// $actualPerms = fileperms($dvd_folder);
+							// if($actualPerms < $wantedPerms) {
+							// 	$chmod = chmod($dvd_folder, $wantedPerms);
+							// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
+							// }
 
-		    		$ar_originals[] = $file;
-		    		continue;
-		    	}
-		        // note that '.' and '..' is returned even
-		        $findme = $this->get_video_id() . '.';
+						$ar_originals[] = $file;
+						continue;
+					}
 
-		        if( strpos($file, $findme)!==false ) {  // && strpos($file, $this->get_target_filename())===false
-		        	$ar_originals[] = $file;
-		        }
-		    }
-		    closedir($handle);
-		}
+					// note that '.' and '..' is returned even
+					if( strpos($file, $findme)!==false ) {
+						$ar_originals[] = $file;
+					}
+				}
+				closedir($handle);
+			}
+
 		$n = count($ar_originals);
 		if ($n===0) {
 			// nothing found case
@@ -470,8 +473,8 @@ class component_av extends component_media_common {
 			}
 		}
 
-		// restore initial_quality
-			$this->quality 	= $initial_quality;
+		// restore component quality
+			$this->set_quality($initial_quality);
 
 
 		return $result;
@@ -506,17 +509,17 @@ class component_av extends component_media_common {
 			if(is_dir($filename.'/VIDEO_TS')){
 
 				$handle = opendir($filename.'/VIDEO_TS');
-			  		 while (false !== ($file = readdir($handle))) {
-			  		 	$extension = pathinfo($file,PATHINFO_EXTENSION);
-			  		 	if($extension === 'VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize){
-			  		 		#dump($file,'$file: '.filesize($filename.'/VIDEO_TS/'.$file));
+					 while (false !== ($file = readdir($handle))) {
+						$extension = pathinfo($file,PATHINFO_EXTENSION);
+						if($extension === 'VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize){
+							#dump($file,'$file: '.filesize($filename.'/VIDEO_TS/'.$file));
 
-			  		 		//reset the size of the vob (for the end files of the video)
-			  		 		$vob_filesize = 0;
-			  		 		$size += filesize($filename.'/VIDEO_TS/'.$file);
-			  		 	}
-			  		 }
-			  	}
+							//reset the size of the vob (for the end files of the video)
+							$vob_filesize = 0;
+							$size += filesize($filename.'/VIDEO_TS/'.$file);
+						}
+					 }
+				}
 		}else{
 			try {
 				$size		= @filesize($filename) ;
@@ -898,8 +901,8 @@ class component_av extends component_media_common {
 
 			if(strpos($current_filename,'VIDEO_TS')!==false){
 
-			  	$current_fileinfo = pathinfo($current_filename);
-			  	# Don't copy the original VIDEO_TS in the zip file
+				$current_fileinfo = pathinfo($current_filename);
+				# Don't copy the original VIDEO_TS in the zip file
 				if ($current_fileinfo['basename']==='VIDEO_TS') {
 					continue;
 				}
@@ -1445,6 +1448,144 @@ class component_av extends component_media_common {
 
 		return true;
 	}//end delete_posterframe
+
+
+
+	/**
+	* UPDATE_DATO_VERSION
+	* @param object $request_options
+	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*/
+	public static function update_dato_version(object $request_options) : object {
+
+		$options = new stdClass();
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version	= $options->update_version;
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
+
+		$update_version = implode(".", $update_version);
+		switch ($update_version) {
+
+			case '6.0.0':
+				if (	$dato_unchanged===null
+					|| is_object($dato_unchanged)===true
+					|| (isset($dato_unchanged[0]) && isset($dato_unchanged[0]->section_id))
+					) {
+
+					// note that old dato could be a locator object as:
+						// {
+						// 	"section_id": "54",
+						// 	"section_tipo": "test38",
+						// 	"component_tipo": "test207"
+						// }
+
+					// data model target sample
+						// [
+						//   {
+						// 	"user_id": -1,
+						// 	"upload_date": {
+						// 	  "day": 23,
+						// 	  "hour": 9,
+						// 	  "time": 65012058295,
+						// 	  "year": 2022,
+						// 	  "month": 9,
+						// 	  "minute": 4,
+						// 	  "second": 55
+						// 	},
+						// 	"original_file_name": "rsc35_rsc167_13.mp4"
+						//   }
+						// ]
+
+					// create the component
+						$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+						$component	= component_common::get_instance(
+							$model,
+							$options->tipo,
+							$options->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$options->section_tipo
+						);
+
+					// get the upload data
+						$id					= $component->get_id();
+						$source_quality		= DEDALO_AV_QUALITY_ORIGINAL;
+						$aditional_path		= $component->get_aditional_path();
+						$initial_media_path	= $component->get_initial_media_path();
+						$original_extension	= $component->get_original($source_quality, false) ?? 'mp4';
+
+						$base_path	= DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $source_quality . $aditional_path;
+						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $id . '.' . $original_extension;
+
+						if(file_exists($file)) {
+
+							$upload_date_timestamp = date("Y-m-d H:i:s", filemtime($file));
+							$dd_date = new dd_date();
+							$original_upload_date		= $dd_date->get_date_from_timestamp($upload_date_timestamp);
+							$original_upload_date->time	= dd_date::convert_date_to_seconds($original_upload_date);
+
+							$original_file_name = $id . '.' . $original_extension;
+
+							// create new dato. Note that user_id is unknown here and upload_date is obtained from file date
+								$dato_item = new stdClass();
+									$dato_item->original_file_name	= $original_file_name;
+									$dato_item->upload_date			= $original_upload_date;
+									$dato_item->user_id				= null;
+
+							// fix final dato with new format as array
+								$new_dato = [$dato_item];
+
+							$response = new stdClass();
+								$response->result	= 1;
+								$response->new_dato	= $new_dato;
+								$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						}else{
+
+							if (!empty($dato_unchanged)) {
+								// reset dato when original file do not exits
+								$new_dato = null;
+
+								$response = new stdClass();
+									$response->result	= 1;
+									$response->new_dato	= $new_dato;
+									$response->msg		= "[$reference_id] Dato is changed (RESET) from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+							}else{
+								$response = new stdClass();
+									$response->result	= 2;
+									$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+								return $response;
+							}
+						}
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}
+				break;
+
+			default:
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
+				break;
+		}//end switch ($update_version)
+
+
+		return $response ;
+	}//end update_dato_version
 
 
 
