@@ -287,9 +287,13 @@ class component_date extends component_common {
 	*        "second": 32
 	*    }
 	* }
+	* @param string $date_mode
+	* 	Sample: 'range'
+	* @param string $sep = '-'
+	* 	Sample '/'
 	* @return string $item_value
 	*/
-	public static function data_item_to_value(object $data_item, string $date_mode) : string {
+	public static function data_item_to_value(object $data_item, string $date_mode, string $sep='-') : string {
 
 		$item_value = '';
 
@@ -301,10 +305,10 @@ class component_date extends component_common {
 				if(isset($data_item->start)) {
 					$dd_date = new dd_date($data_item->start);
 					if(isset($data_item->start->day)) {
-						$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
+						$valor_start = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
 					}else{
 						$valor_start = isset($data_item->start->month)
-							? $dd_date->get_dd_timestamp('Y-m')
+							? $dd_date->get_dd_timestamp('Y'.$sep.'m')
 							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
 					$item_value .= $valor_start;
@@ -314,11 +318,11 @@ class component_date extends component_common {
 				if(isset($data_item->end)) {
 					$dd_date = new dd_date($data_item->end);
 					if(isset($data_item->end->day)) {
-						$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
+						$valor_end = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
 					}else{
 						$valor_end = isset($data_item->end->month)
-							? $dd_date->get_dd_timestamp("Y-m")
-							: $dd_date->get_dd_timestamp("Y", $padding=false);
+							? $dd_date->get_dd_timestamp('Y'.$sep.'m')
+							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
 					$item_value .= ' <> '. $valor_end;
 				}
@@ -356,7 +360,7 @@ class component_date extends component_common {
 			case 'date_time':
 				if(isset($data_item->start)) {
 					$dd_date	= new dd_date($data_item->start);
-					$item_value	= $dd_date->get_dd_timestamp('Y-m-d H:i:s', true);
+					$item_value	= $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d H:i:s', true);
 				}
 				break;
 
@@ -367,10 +371,10 @@ class component_date extends component_common {
 				if(isset($data_item->start)) {
 					$dd_date = new dd_date($data_item->start);
 					if(isset($data_item->start->day)) {
-						$valor_start = $dd_date->get_dd_timestamp('Y-m-d');
+						$valor_start = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
 					}else{
 						$valor_start = isset($data_item->start->month)
-							? $dd_date->get_dd_timestamp('Y-m')
+							? $dd_date->get_dd_timestamp('Y'.$sep.'m')
 							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
 					$item_value .= $valor_start;
@@ -385,7 +389,7 @@ class component_date extends component_common {
 
 	/**
 	* GET VALOR (Ojo: Se usa para ordenar, por lo que mantiene el formato DB. Para visualizar usar 'get_valor_local()')
-	* Dato formated as timestamp '2012-11-07 17:33:49'
+	* Dato formatted as timestamp '2012-11-07 17:33:49'
 	* @return string $valor
 	*/
 	public function get_valor() : string {
@@ -1366,7 +1370,7 @@ class component_date extends component_common {
 		$list_value = [];
 		foreach ($dato as $data_item) {
 			$list_value[] = !empty($data_item)
-				? self::data_item_to_value($data_item, $date_mode)
+				? self::data_item_to_value($data_item, $date_mode, '/')
 				: null;
 		}
 
