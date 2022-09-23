@@ -84,6 +84,7 @@ const get_content_data_edit = function(self) {
 }//end get_content_data_edit
 
 
+
 /**
 * GET_CONTENT_VALUE
 * @return DOM node content_value
@@ -101,18 +102,19 @@ const get_content_value = function(i, value, self) {
 			class_name		: 'content_value'
 		})
 
-	// url
-		let url
+	// file_info
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
-		url = file_info
+
+	// url
+		let url =file_info.url
 			? file_info.url
 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
 
 		// fallback to default (when not already in default)
 		if (!url && quality!==self.context.default_quality) {
-			const file_info	= datalist.find(el => el.quality===self.context.default_quality && el.file_exist===true)
-			url = file_info
-				? file_info.url
+			const file_info_dq	= datalist.find(el => el.quality===self.context.default_quality && el.file_exist===true)
+			url = file_info_dq
+				? file_info_dq.url
 				: null
 			if (url) {
 				// change the quality
@@ -162,7 +164,7 @@ const get_content_value = function(i, value, self) {
 		}
 		self.object_node = object_node
 
-		// autochange url the first time
+		// auto-change url the first time
 		object_node.onload = async function() {
 			if (quality!==self.context.default_quality) {
 				await fn_img_quality_change(url)
@@ -194,8 +196,13 @@ const get_content_value = function(i, value, self) {
 					content_value.classList.remove('loading')
 				})
 
+				// no load case (example: original tiff files)
+				image_node.addEventListener('error', function(){
+					content_value.classList.remove('loading')
+				})
+
 				// set the new source to the image node into the svg
-				await image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', img_src)
+				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', img_src)
 			}
 
 			return true
