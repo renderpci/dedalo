@@ -504,7 +504,7 @@ final class dd_utils_api {
 
 
 	/**
-	* BUILD_STRUCTURE_CSS
+	* BUILD_STRUCTURE_CSS *DEPERECATED*
 	* @return object $response
 	*/
 	public static function build_structure_css(object $request_options=null) : object {
@@ -535,12 +535,15 @@ final class dd_utils_api {
 
 	/**
 	* UPDATE_VERSION
+	* Updates Dédalo data version.
+	* Allow change components data format or add new tables or index
+	* Triggered by Area Development button 'UPADTE DATA'
+	* Sample: Current data version: 5.8.2 -----> 6.0.0
+	* @param object@null $request_options
 	* @return object $response
 	*/
 	public static function update_version(object $request_options=null) : object {
 		$start_time = start_time();
-
-		// session_write_close();
 
 		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
 
@@ -548,9 +551,11 @@ final class dd_utils_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
+		// exec update_version. return object response
+			$update_version_response = update::update_version();
 
-		$response->result = update::update_version();
-		$response->msg 	  = 'Ok. Request done';
+		$response->result	= $update_version_response->result ?? false;
+		$response->msg		= $update_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
@@ -559,6 +564,8 @@ final class dd_utils_api {
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
+			// error_log('--> update_version response:' .PHP_EOL. json_encode($response, JSON_PRETTY_PRINT));
+
 
 		return $response;
 	}//end update_version
