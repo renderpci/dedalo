@@ -87,7 +87,6 @@ $updates->$v = new stdClass();
 			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 		$updates->$v->run_scripts[] = $script_obj;
 
-
 	// component_relation_index. Update 'datos' with relation_index
 		require_once dirname(dirname(__FILE__)) .'/upgrade/class.relation_index_v5_to_v6.php';
 		$script_obj = new stdClass();
@@ -97,14 +96,13 @@ $updates->$v = new stdClass();
 			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 		$updates->$v->run_scripts[] = $script_obj;
 
-
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_text_area',
 			'component_json',
-			'component_image'
+			'component_image',
+			'component_av'
 		];	// Force convert from string to array
-
 
 	// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
@@ -145,5 +143,3 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "convert_table_data_activity";
 				$script_obj->script_vars	= json_encode(['component_autocomplete_ts']); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
-
-
