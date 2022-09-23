@@ -478,3 +478,33 @@ export function open_window(options) {
 
 	return new_window
 }//end open_window
+
+
+
+/**
+* FIND_UP_NODE
+* Search parent node recursively until reach the target
+* @param DOM node el
+* @param string target_tag
+* 	Sample: 'div'
+* @param function compare
+* @return DOM node|null
+*/
+export function find_up_node(el, target_tag, compare) {
+
+	let r = el
+	while (r.parentNode) {
+		r = r.parentNode;
+		if (compare) {
+			if (compare(r)===true) {
+				return r
+			}
+		}else{
+			if (r.tagName===target_tag) {
+				return r;
+			}
+		}
+	}
+
+	return null;
+}//end find_up_node
