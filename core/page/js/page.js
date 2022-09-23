@@ -8,7 +8,7 @@
 	// import '../../common/js/dd-modal.js'
 	import '../../services/service_tinymce/js/dd-tiny.js'
 	// others
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone, dd_console, find_up_node} from '../../common/js/utils/index.js'
 	// import {menu} from '../../menu/js/menu.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import {set_before_unload} from '../../common/js/events.js'
@@ -378,7 +378,7 @@ page.prototype.add_events = function() {
 			switch(true) {
 
 				case evt.key==='Escape':
-					// unactive user activated component
+					// inactive user activated component
 						if (ui.component.component_active) {
 							ui.component.deactivate(ui.component.component_active)
 							ui.component.component_active = null
@@ -386,6 +386,18 @@ page.prototype.add_events = function() {
 					break;
 
 				case evt.key==='Enter':
+					// parent recursive check on document.activeElement
+						if (document.activeElement) {
+							// find_up_node returns node|null
+							const top_node = find_up_node(
+								document.activeElement, // DOM node selected
+								'DD-MODAL' // only capital letters
+							)
+							// we are inside modal. Stop actions
+							if (top_node) {
+								return
+							}
+						}
 					// search with current section filter
 						const section = self.ar_instances.find(el => el.model==='section')
 						if (section && section.mode==='list' && section.filter) {
