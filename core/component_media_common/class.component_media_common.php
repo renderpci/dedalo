@@ -12,6 +12,24 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_MEDIA_COMPONENTS
+	* Return array with model names of defined as 'media components'.
+	* Add future media components here
+	* @return array
+	*/
+	public static function get_media_components() : array {
+
+		return [
+			'component_av',
+			'component_image',
+			'component_pdf',
+			'component_svg'
+		];
+	}//end get_media_components
+
+
+
+	/**
 	* ADD_FILE
 	* Receive a file info object from tool upload with data properties as:
 	* {

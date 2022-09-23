@@ -1176,7 +1176,7 @@ class section extends common {
 						'component_section_id'
 					];
 
-					$ar_models_of_media_components = section::get_media_components_modelo_name();
+					$ar_models_of_media_components = section::get_components_with_media_content();
 
 					$ar_deleted_tipos = [];
 					foreach ($ar_component_tipo as $current_component_tipo) {
@@ -2450,19 +2450,22 @@ class section extends common {
 
 
 	/**
-	* GET_MEDIA_COMPONENTS_MODELO_NAME
-	* Return array with modelo names of defined as 'media components'. Add future media components here
+	* GET_COMPONENTS_WITH_MEDIA_CONTENT
+	* Return array with model names of defined as 'media components'.
+	* Used to locate components to remove media content
 	* @return array
 	*/
-	public static function get_media_components_modelo_name() : array {
+	public static function get_components_with_media_content() : array {
 
-		return array(
-			'component_av',
-			'component_image',
-			'component_pdf',
-			'component_html_file' // Not remove nothing for now
+		$components_with_media_content = array_merge(
+			component_media_common::get_media_components(), // 'component_av','component_image','component_pdf','component_svg'
+			[
+				'component_html_file' // component_html_file. Could include user uploaded files
+			]
 		);
-	}//end get_media_components_modelo_name
+
+		return $components_with_media_content;
+	}//end get_components_with_media_content
 
 
 
@@ -2481,7 +2484,7 @@ class section extends common {
 			$section_tipo		= $this->tipo;
 			$section_id			= $this->section_id;
 			$section_dato		= $this->get_dato();
-			$ar_media_elements	= section::get_media_components_modelo_name();
+			$ar_media_elements	= section::get_components_with_media_content();
 
 		// section components property empty case
 			if (!isset($section_dato->components) || empty($section_dato->components)) {
@@ -2537,7 +2540,7 @@ class section extends common {
 			$section_tipo		= $this->tipo;
 			$section_id			= $this->section_id;
 			$section_dato		= $this->get_dato();
-			$ar_media_elements	= section::get_media_components_modelo_name();
+			$ar_media_elements	= section::get_components_with_media_content();
 
 		// section components property empty case
 			if (!isset($section_dato->components) || empty($section_dato->components)) {
