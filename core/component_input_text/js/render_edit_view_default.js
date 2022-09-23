@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -136,8 +136,10 @@ const get_content_value = (i, current_value, self) => {
 
 				// Enter key force to save changes
 					if (e.key==='Enter') {
+						e.preventDefault()
+
 						// force to save current input if changed
-						if (self.data.changed_data.length>0) {
+						if (self.data.changed_data && self.data.changed_data.length>0) {
 							// change_value (save data)
 							self.change_value({
 								changed_data	: self.data.changed_data,

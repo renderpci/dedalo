@@ -106,7 +106,7 @@ const get_content_value = function(i, value, self) {
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 
 	// url
-		let url =file_info.url
+		let url = file_info && file_info.url
 			? file_info.url
 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
 

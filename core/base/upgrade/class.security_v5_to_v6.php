@@ -106,7 +106,7 @@ class security_v5_to_v6 {
 					unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
 
 				}else{
-					debug_log(__METHOD__." 'security_acces_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($security_acces_dato).' - value: '.to_string($security_acces_dato), logger::ERROR);
+					debug_log(__METHOD__." 'security_acces_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($security_acces_dato).' - value: '.to_string($security_acces_dato), logger::WARNING);
 				}
 
 			// security tools
