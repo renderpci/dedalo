@@ -26,7 +26,7 @@ final class dd_manager {
 	/**
 	* MANAGE_REQUEST
 	* @param object $rqo
-	* @return object $reponse
+	* @return object $response
 	*/
 	final public function manage_request( object $rqo ) : object {
 		$api_manager_start_time = start_time();
@@ -74,7 +74,7 @@ final class dd_manager {
 
 		// actions
 			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
-			$dd_api			= new $dd_api_type();
+			$dd_api			= $dd_api_type; // new $dd_api_type(); // class selected
 			if ( !method_exists($dd_api, $rqo->action) ) {
 				// error
 				$response = new stdClass();
