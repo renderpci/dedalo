@@ -26,7 +26,8 @@ export const render_area_development = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @param object options
+* @return DOM node wrapper
 */
 render_area_development.prototype.edit = async function(options) {
 
@@ -48,6 +49,8 @@ render_area_development.prototype.edit = async function(options) {
 			content_data : content_data,
 			// buttons 	 : current_buttons
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -105,8 +108,8 @@ const get_content_data = function(self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.type)
 			  content_data.appendChild(fragment)
 
 
@@ -117,15 +120,20 @@ const get_content_data = function(self) {
 
 /**
 * BUILD_WIDGET
+*
+* @param object item
+* @param object self
+* 	Instance of current area
 */
 const build_widget = (item, self) => {
 
-	const container = ui.create_dom_element({
-		id				: item.id,
-		element_type	: 'div',
-		dataset			: {},
-		class_name		: 'widget_container ' + (item.class || '')
-	})
+	// container
+		const container = ui.create_dom_element({
+			id				: item.id,
+			element_type	: 'div',
+			dataset			: {},
+			class_name		: 'widget_container ' + (item.class || '')
+		})
 
 	// label
 		const label = ui.create_dom_element({
@@ -143,13 +151,6 @@ const build_widget = (item, self) => {
 		})
 
 	// collapse_toggle_track
-		function collapse() {
-			label.classList.remove('up')
-		}
-		function expose() {
-			label.classList.add('up')
-		}
-
 		when_in_viewport(label, ()=>{
 			ui.collapse_toggle_track({
 				header				: label,
@@ -159,6 +160,12 @@ const build_widget = (item, self) => {
 				expose_callback		: expose
 			})
 		})
+		function collapse() {
+			label.classList.remove('up')
+		}
+		function expose() {
+			label.classList.add('up')
+		}
 
 
 		// item info
@@ -182,11 +189,11 @@ const build_widget = (item, self) => {
 						widget_info.classList.add('lock')
 
 						// spinner
-						const spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner'
-						})
-						body_response.prepend(spinner)
+							const spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner'
+							})
+							body_response.prepend(spinner)
 
 						// data_manager
 							// const api_response = await data_manager.request({
@@ -211,6 +218,7 @@ const build_widget = (item, self) => {
 								options	: item.trigger.options
 							});
 							current_worker.onmessage = function(e) {
+
 								const api_response = e.data.api_response
 
 								print_response(body_response, api_response)
@@ -242,8 +250,8 @@ const build_widget = (item, self) => {
 		// body response
 			const body_response = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: "body_response",
-				parent			: body,
+				class_name		: 'body_response',
+				parent			: body
 			})
 
 	// run widget scripts
@@ -272,6 +280,11 @@ const build_widget = (item, self) => {
 
 /**
 * PRINT_RESPONSE
+* Render API response result message and result
+* Note that api_response is returned by the delegated worker
+* @param DOM node container
+* @param object api_response
+* @return DON node container
 */
 const print_response = (container, api_response) => {
 
@@ -280,13 +293,13 @@ const print_response = (container, api_response) => {
 			container.removeChild(container.firstChild);
 		}
 
-	// clean (eraser)
-		const eraser = ui.create_dom_element({
+	// button_eraser
+		const button_eraser = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: "button reset eraser",
+			class_name		: 'button reset eraser',
 			parent			: container
 		})
-		eraser.addEventListener("mouseup", function(e){
+		button_eraser.addEventListener('mouseup', function(e){
 			e.stopPropagation();
 
 			while (container.firstChild) {
@@ -295,14 +308,17 @@ const print_response = (container, api_response) => {
 		})
 
 	// msg
-		const msg = ui.create_dom_element({
+		const api_msg = api_response && api_response.msg
+			? api_response.msg.replace(/\\n/g, '<br>')
+			: 'Unknown API response error'
+		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "",
+			class_name		: '',
 			parent			: container,
-			inner_html		: api_response.msg.replace(/\\n/g, "<br>")
+			inner_html		: api_msg
 		})
 
-	// json response result
+	// JSON response result
 		const result = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'pre',
@@ -310,8 +326,6 @@ const print_response = (container, api_response) => {
 		})
 		render_tree_data(api_response, result)
 
-
-	// container.classList.remove("preload")
 
 	return container
 }//end print_response
@@ -322,17 +336,20 @@ const print_response = (container, api_response) => {
 * BUTTONS
 * @return DOM node buttons
 */
-const buttons = async function(self) {
+	// const buttons = async function(self) {
 
-	const buttons = []
+	// 	const buttons = []
 
-	return buttons
-}//end buttons
+	// 	return buttons
+	// }//end buttons
 
 
 
 /**
 * BUILD_FORM
+* Render a form for given widget_object
+* @param object widget_object
+* @return DOM node form_container
 */
 export const build_form = function(widget_object) {
 
