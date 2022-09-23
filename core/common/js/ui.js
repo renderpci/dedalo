@@ -4,7 +4,7 @@
 
 
 // imports
-	import {strip_tags, clone} from '../../common/js/utils/index.js'
+	import {strip_tags, find_up_node} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -345,25 +345,34 @@ export const ui = {
 
 			// options
 				const button_close	= options.button_close
-				const autoload		= typeof options.autoload!=="undefined" ? options.autoload : false
+				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : false
 				const type			= instance.type
 				const component_css	= instance.context.css || {}
 
-			const content_data = document.createElement("div")
+			const content_data = document.createElement('div')
 
 			// css
-				const content_data_structure_css = typeof component_css.content_data!=="undefined" ? component_css.content_data : []
-				const ar_css = ['content_data', type, ...content_data_structure_css]
+				const content_data_structure_css = typeof component_css.content_data!=='undefined' ? component_css.content_data : []
+				const ar_css = [
+					'content_data',
+					type,
+					...content_data_structure_css
+				]
 				content_data.classList.add(...ar_css)
 
 			// button close
-				if(button_close!==null && instance.mode==='edit_in_list' && !instance.is_inside_tool){
-					const button_close = ui.create_dom_element({
+				if(		button_close!==null // if null is received instead undefined, avoid to add the button
+					&&	instance.mode==='edit_in_list' // only in list mode
+					&&	!instance.is_inside_tool // prevent add the button when component is into a tool
+					){
+					const button_close_node = ui.create_dom_element({
 						element_type	: 'span',
-						class_name		: 'button close',
+						class_name		: 'button close build_content_data',
 						parent			: content_data
 					})
-					button_close.addEventListener('click', function(){
+					button_close_node.addEventListener('click', function(e){
+						e.stopPropagation()
+						// change mode destroy current instance and render a fresh full element node in the new mode
 						instance.change_mode('list', autoload)
 					})
 				}
@@ -440,15 +449,26 @@ export const ui = {
 			// event dblclick change component mode
 				if(edit_in_list) {
 
-					wrapper.addEventListener('dblclick', function(e){
+					wrapper.addEventListener('click', function(e){
+
+						// check level
+							const is_first_level = function(wrapper){
+								const parent_list_body = wrapper.parentNode.parentNode.parentNode.parentNode
+								return (parent_list_body && parent_list_body.classList.contains('list_body'))
+							}
+							if (!is_first_level(wrapper)) {
+								// ignore click and continue bubble event
+								return
+							}
+
 						e.stopPropagation()
 
 						// change mode (from 'list' to 'edit_in_list')
-						if (instance.change_mode) {
-							instance.change_mode('edit_in_list', autoload)
-						}else{
-							console.warn('WARNING: change_mode method its not available for instance: ', instance)
-						}
+							if (instance.change_mode) {
+								instance.change_mode('edit_in_list', autoload)
+							}else{
+								console.warn('WARNING: change_mode method its not available for instance: ', instance)
+							}
 					})
 				}
 
@@ -662,7 +682,6 @@ export const ui = {
 
 			// match . Add wrapper css active
 				// component.node.map(function(item_node) {
-					self.node.classList.add('active')
 
 					// event mouse out add to component wrapper
 						// const wrapper = item_node
@@ -678,6 +697,8 @@ export const ui = {
 			// inspector. fix nearby inspector overlapping
 				const wrapper = self.node
 				if (wrapper) {
+					wrapper.classList.add('active')
+
 					const el_rect	= wrapper.getBoundingClientRect();
 					const inspector	= document.getElementById('inspector')
 					if (inspector) {
@@ -1266,6 +1287,8 @@ export const ui = {
 			// content_data
 				if (items.content_data) {
 					fragment.appendChild(items.content_data)
+					// set pointers
+					wrapper.content_data = items.content_data
 				}
 
 			// wrapper
