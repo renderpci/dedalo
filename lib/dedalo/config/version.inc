@@ -2750,10 +2750,11 @@
 
 
 	Queue build
-
 		Valencia 22-09-2022T18:45:00
 		Added Full-Text Search literal options to web_data::get_global_search_json method into query parameter
-
+		Valencia 23-09-2022T14:08:00
+		Fixed trigger autocomplete PHP8 deprecation issues
+		Fixed section_tab issue when infinite loop is created on paginate records or creating a new one in mdcat2949
 
 
 	[/HISTORY]
@@ -2785,7 +2786,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-09-2022T18:45:00');
+	define('DEDALO_BUILD'	, '23-09-2022T14:08:00');
 
 
 
