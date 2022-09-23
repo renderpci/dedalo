@@ -20,23 +20,23 @@ abstract class component_common extends common {
 		// string lang. Component's lang code as 'lg-eng'
 		protected ?string $lang;
 
-		protected $valor_lang;				# string Idioma del valor final del componente (si es una lista de valor, el idioma del campo al que apunta que puede ser traducible aunque el componente no lo sea dato"1" valor:"Si" o "yes")
-		protected $traducible;				# string definido en tesauro (si/no)
-		protected $modo;					# string default edit
-		protected $dato;					# object dato (json ecoded in db)
-		protected $valor;					# string usually dato
-		protected $dataframe;				# object dataframe
-		public $version_date;				# date normalmente despejado de time machine y asignado al component actual
-		public $locator;					# full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
+		protected $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
+		protected $traducible;				// string defined in thesaurus (si/no)
+		protected $modo;					// string default edit
+		protected $dato;					// object dato (JSON encoded in db)
+		protected $valor;					// string usually dato
+		protected $dataframe;				// object dataframe
+		public $version_date;				// date normally resolved from time machine and assigned to current component
+		public $locator;					// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
 
-		# STRUCTURE DATA
-		public $RecordObj_dd;				# obj ts
+		// structure data
+		public $RecordObj_dd;				// obj ts
 		protected $model;					// fixed on common->load_structure_data
 		protected $norden;
-		protected $label;					# component label in current lang like 'Transcription'
+		protected $label;					// component label in current lang like 'Transcription'
 
-		protected $required;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
-		protected $debugger;				# info for admin
+		protected $required;				// field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
+		protected $debugger;				// info for admin
 		// ar_tools_name. Default list of tools for every component. Override if component don't need this minimum tools
 		protected $ar_tools_name = [
 			'tool_time_machine',
@@ -50,34 +50,34 @@ abstract class component_common extends common {
 		protected $exists_dato_in_any_lan = false;
 		protected $dato_resolved;
 
-		# Idioma esperado para este componente (usado para verificar que la estrucutra está bien formada)
+		// expected language for this component (used to verify that the structure is well formed)
 		protected $expected_lang;
 
-		# parent section obj (optional, util for component_av...)
+		// parent section obj (optional, useful for component_av...)
 		public $section_obj;
 
-		# referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (properties) - aditional to referenced component tipo (TR)- )
+		// referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (properties) - aditional to referenced component tipo (TR)- )
 		public $referenced_section_tipo;
 
-		# CACHE COMPONENTS INTANCES
-		#public static $ar_component_instances = array();	# array chache of called instances of components
+		// cache components instances
+		// public static $ar_component_instances = array(); // array cache of called instances of components
 
 		public $render_vars;
 
-		# search_input_name. injected for records search
+		// search_input_name. injected for records search
 		public $search_input_name;
 
-		# generate_json component
+		// generate_json component
 		public $generate_json_element = false;
 
-		# diffusion_properties
+		// diffusion_properties
 		public $diffusion_properties;
 
-		# update_diffusion_info_propagate_changes bool
-		# To optimize save process in scripts of importation, you can dissable (false) this option if is not really necessary
+		// update_diffusion_info_propagate_changes bool
+		// To optimize save process in scripts of importation, you can dissable (false) this option if is not really necessary
 		public $update_diffusion_info_propagate_changes;
 
-		# Component definition. Used in component label
+		// Component definition. Used in component label
 		public $def;
 
 		// changed_data . Fixed when DD_API save call to component update_data_value()
@@ -363,7 +363,7 @@ abstract class component_common extends common {
 
 		// lang
 			if(isset($this->lang)) {
-				// lang : Overwrite var '$lang' with previous component declatarion of '$this->lang'
+				// lang : Overwrite var '$lang' with previous component declaration of '$this->lang'
 				$lang = $this->lang;
 			}elseif ( empty($lang) ) {
 				$msg = __METHOD__.' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
@@ -383,20 +383,20 @@ abstract class component_common extends common {
 			$this->section_tipo = $section_tipo;
 
 		// structure data
-		// Fijamos el tipo recibido y cargamos la estructura previamente para despejar si este tipo es traducible o no
-		// y fijar de nuevo el lenguaje en caso de no ser traducible
+		// We set the received type and load the structure previously to determine if this type is translatable
+		// or not and set the language again if it is not translatable
 			parent::load_structure_data();
 
 		// properties
 			$properties = $this->get_properties();
 
 		// lang : Check lang again after structure data is loaded
-		// Establecemos el lenguaje preliminar a partir de la carga de la estructura
+		// We establish the preliminary language from the load of the structure
 			if ($this->traducible==='no') {
 				if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
 					# Allow tool lang on non translatable components
 				}else{
-					# Force nolan
+					# Force no lang
 					$this->lang = DEDALO_DATA_NOLAN;
 				}
 			}
@@ -720,38 +720,44 @@ abstract class component_common extends common {
 	}//end get_value
 
 
+
 	/**
 	* GET_RAW_VALUE
 	* Get the raw value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* The direct components can set the value with the dato directly
 	* The relation components will separate the locator in rows
-	* @return object $value
+	* @return dd_grid_cell_object $raw_value
 	* 	dd_grid_cell_object
 	*/
-	public function get_raw_value() : object {
+	public function get_raw_value() : dd_grid_cell_object {
 
-		if(isset($this->column_obj)){
-			$column_obj = $this->column_obj;
-		}else{
-			$column_obj = new stdClass();
-				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-		}
+		// column_obj
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 
-		$raw_value = new dd_grid_cell_object();
+		// dato_full
+			$data = $this->get_dato_full();
 
-		$data	= $this->get_dato_full();
 		// get the total of locators of the data, it will be use to render the rows separated.
-			$row_count = 1;//sizeof($data);
+			$row_count = 1; // sizeof($data);
 
-		$label	= $this->get_label();
+		// label
+			$label = $this->get_label();
 
-		$raw_value->set_type('column');
-		$raw_value->set_label($label);
-		$raw_value->set_cell_type('json');
-		$raw_value->set_ar_columns_obj([$column_obj]);
-		$raw_value->set_row_count($row_count);
-		$raw_value->set_value($data);
+		// raw_value
+			$raw_value = new dd_grid_cell_object();
+				$raw_value->set_type('column');
+				$raw_value->set_label($label);
+				$raw_value->set_cell_type('json');
+				$raw_value->set_ar_columns_obj([$column_obj]);
+				$raw_value->set_row_count($row_count);
+				$raw_value->set_value($data);
+
 
 		return $raw_value;
 	}//end get_raw_value
@@ -865,24 +871,30 @@ abstract class component_common extends common {
 		// dataframe mode. Save caller and stop
 			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
 
-				#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
+				// debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
 
-				$new_tipo 			= $this->caller_dataset->component_tipo;
-				$new_section_tipo 	= $this->caller_dataset->section_tipo;
-				$new_section_id 	= $this->caller_dataset->section_id;
-				$new_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
-				$new_component 		= component_common::get_instance( $new_modelo_name,
-																	  $new_tipo,
-																	  $new_section_id,
-																	  'edit',
-																	  $lang,
-																	  $new_section_tipo);
+				$new_tipo			= $this->caller_dataset->component_tipo;
+				$new_section_tipo	= $this->caller_dataset->section_tipo;
+				$new_section_id		= $this->caller_dataset->section_id;
+				$new_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+				$new_component		= component_common::get_instance(
+					$new_modelo_name,
+					$new_tipo,
+					$new_section_id,
+					'edit',
+					$lang,
+					$new_section_tipo
+				);
 
 				# Force load current db dato to avoid loose it
 				$new_component->get_dato();
 
 				# Set dataframe data
-				$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
+				$new_component->update_dataframe_element(
+					$this->dato,
+					$this->caller_dataset->caller_key,
+					$this->caller_dataset->type
+				);
 
 				if (isset($this->save_to_database) && $this->save_to_database===false) {
 					debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->section_id : $new_section_id ".to_string(), logger::WARNING);
@@ -973,16 +985,17 @@ abstract class component_common extends common {
 					logger::INFO,
 					$this->tipo,
 					null,
-					array(	"msg"			=> "Saved component data",
-							"tipo"			=> $this->tipo,
-							"section_id"	=> $this->section_id,
-							"lang"			=> $this->lang,
-							"top_id"		=> (TOP_ID ? TOP_ID : $this->section_id),
-							"top_tipo"		=> (TOP_TIPO ? TOP_TIPO : $this->section_tipo),
-							"component_name"=> get_called_class(),
-							"table"			=> $matrix_table,
-							"section_tipo"	=> $this->section_tipo
-						 )
+					array(
+						'msg'				=> 'Saved component data',
+						'tipo'				=> $this->tipo,
+						'section_id'		=> $this->section_id,
+						'lang'				=> $this->lang,
+						'top_id'			=> (TOP_ID ? TOP_ID : $this->section_id),
+						'top_tipo'			=> (TOP_TIPO ? TOP_TIPO : $this->section_tipo),
+						'component_name'	=> get_called_class(),
+						'table'				=> $matrix_table,
+						'section_tipo'		=> $this->section_tipo
+					)
 				);
 			} catch (Exception $e) {
 				if(SHOW_DEBUG===true) {
@@ -997,7 +1010,7 @@ abstract class component_common extends common {
 
 	/**
 	* PROPAGATE_TO_OBSERVERS
-	* is used by calculations or compoment_info (with widgets) that show sums, or other calculations dependents of others compoments
+	* is used by calculations or compoment_info (with widgets) that show sums, or other calculations dependents of others components
 	* the observers of the component are defined by the own component in properties that say: This component in this section is watching me:
 	* {
 	*  "observers": [
@@ -1011,7 +1024,7 @@ abstract class component_common extends common {
 	*/
 	public function propagate_to_observers() : ?array {
 
-		// get all observers defined in proporties
+		// get all observers defined in properties
 			$properties = $this->get_properties();
 
 		// if the component don't has observers stop the process.
@@ -1039,7 +1052,7 @@ abstract class component_common extends common {
 				$observers_data = array_merge($observers_data, $current_observer_data);
 			}
 
-		// store data to accces later in api
+		// store data to access later in api
 			$this->observers_data = $observers_data;
 
 		return $observers_data;
@@ -1089,13 +1102,13 @@ abstract class component_common extends common {
 				$sqo->filter		= $current_observer->filter;
 
 			// search the sections that has reference to the observable component, the component that had changed
-			$search = search::get_instance($sqo);
-			$result = $search->search();
-			$ar_section = $result->ar_records;
+				$search		= search::get_instance($sqo);
+				$result		= $search->search();
+				$ar_section	= $result->ar_records;
 		}else{
 			// if observer don't has filter to get the sections to be updated, get the observable section to use
 			// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
-			$ar_section = [$locator];
+				$ar_section = [$locator];
 		}
 
 		// get the dato of the observable component to be used to create the observer component
@@ -1108,22 +1121,25 @@ abstract class component_common extends common {
 
 
 		// ar_data. Collect all observer components data
-		// with all locators collected by the differents methods, it will create the observable components to be updated.
+		// with all locators collected by the different methods, it will create the observable components to be updated.
 			$ar_data = [];
 			foreach ($ar_section as $current_section) {
 				// create the observer component that will be update
-				$component = component_common::get_instance($component_name,
-															$observer->component_tipo,
-															$current_section->section_id,
-															'list',
-															DEDALO_DATA_LANG,
-															$current_section->section_tipo);
+				$component = component_common::get_instance(
+					$component_name,
+					$observer->component_tipo,
+					$current_section->section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$current_section->section_tipo
+				);
 				// get the specific event function in preferences to be fired (instead the default get_dato)
 				if(isset($current_observer->server_event)){
+
 					$function	= $current_observer->server_event->function;
 					$params		= $current_observer->server_event->params;
-
 					call_user_func_array(array($component, $function), $params);
+
 				}else{
 
 					// force to update the dato of the observer component
@@ -1137,7 +1153,7 @@ abstract class component_common extends common {
 				// this section is the section that user is changed and need to be update width the new data
 				// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
 				if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
-					// get the json of the component to send witht the save of the observable component data
+					// get the JSON of the component to send with the save of the observable component data
 					$component_json = $component->get_json();
 					$ar_data = array_merge($ar_data, $component_json->data);
 				}
@@ -1167,15 +1183,17 @@ abstract class component_common extends common {
 	*/
 	public function load_tools( bool $check_lang_tools=true ) : array {
 
-		if(strpos($this->modo, 'edit')===false ){
-			if(SHOW_DEBUG===true) {
-				#trigger_error("Innecesario cargar los tools aquí. Modo: $this->modo");
+		// other modes than 'edit' do not need tools
+			if(	strpos($this->modo, 'edit')===false
+				|| login::is_logged()!==true
+				) {
+				return [];
 			}
-			return [];
-		}
 
-		# Si no estamos logeados, no es necesario cargar los tools
-		if(login::is_logged()!==true) return [];
+		// if we are not logged in, it is not necessary to load the tools
+			if(login::is_logged()!==true) {
+				return [];
+			}
 
 		# Load all tools of current component
 		$ar_tools_name = $this->get_ar_tools_name();
@@ -1300,7 +1318,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -1417,21 +1435,23 @@ abstract class component_common extends common {
 		foreach ($ar_filtered_by_search_dynamic->filter_elements as $current_element) {
 
 			// source
-				$q 					= $current_element->q;
-				$source 			= $q->source;
-				$component_tipo 	= $source->component_tipo;
-				$section_id 		= $resolve_section_id($source->section_id);
-				$section_tipo 		= $resolve_section_tipo($source->section_tipo);
+				$q				= $current_element->q;
+				$source			= $q->source;
+				$component_tipo	= $source->component_tipo;
+				$section_id		= $resolve_section_id($source->section_id);
+				$section_tipo	= $resolve_section_tipo($source->section_tipo);
 
-				$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$component 			= component_common::get_instance($model_name,
-																	 $component_tipo,
-																	 $section_id,
-																	 'list',
-																	 DEDALO_DATA_LANG,
-																	 $section_tipo);
+				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component		= component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo
+				);
+
 				$dato = $component->get_dato();
-
 				if(!empty($dato)){
 
 					// resolve base_value object
@@ -1445,8 +1465,8 @@ abstract class component_common extends common {
 
 				// filter item
 					$item = new stdClass();
-						$item->q 	= $base_value;
-						$item->path = $current_element->path;
+						$item->q	= $base_value;
+						$item->path	= $current_element->path;
 
 			$ar_filter_items[] = $item;
 		}
@@ -1457,7 +1477,6 @@ abstract class component_common extends common {
 		// filter object
 			$filter = new stdClass();
 				$filter->{$operator} = $ar_filter_items;
-
 
 
 		return $filter;
@@ -1667,7 +1686,7 @@ abstract class component_common extends common {
 					});
 				}
 			}else{
-				// Default. Alphabetic ascendent
+				// Default. Alphabetic ascendant
 				usort($result, function($a,$b){
 					return strnatcmp($a->label, $b->label);
 				});
@@ -1988,10 +2007,10 @@ abstract class component_common extends common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		# Default behaviour is get value
+		# Default behavior is get value
 		$diffusion_value = $this->get_valor( $lang );
 
-		# strip_tags all values (remove untranslate mark elements)
+		# strip_tags all values (remove untranslated mark elements)
 		$diffusion_value = !empty($diffusion_value)
 			? preg_replace("/<\/?mark>/", "", $diffusion_value)
 			: null;
@@ -2081,7 +2100,7 @@ abstract class component_common extends common {
 				break;
 			}
 
-		}//endforeach ((array)$dato as $current_locator) {
+		}//end foreach ((array)$dato as $current_locator) {
 
 		return (object)$response;
 	}//end add_index_semantic
@@ -2127,7 +2146,8 @@ abstract class component_common extends common {
 				break;
 			}
 
-		}//endforeach ((array)$dato as $current_locator) {
+		}//end foreach ((array)$dato as $current_locator)
+
 
 		return (object)$response;
 	}//end remove_index_semantic
@@ -2324,7 +2344,7 @@ abstract class component_common extends common {
 		# Declare as false
 		$is_fallback  = false;
 
-		# Try directe value
+		# Try direct value
 		$lang 	= DEDALO_DATA_LANG;
 		$value	= isset($decoded_obj->$lang) ? $decoded_obj->$lang : null;
 
