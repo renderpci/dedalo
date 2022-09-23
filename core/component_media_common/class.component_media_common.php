@@ -404,7 +404,7 @@ class component_media_common extends component_common {
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
 	* "Remove" (rename and move files to deleted folder) all media file vinculated to current component (all quality versions)
-	* Is triggered wen section tha contain media elements is deleted
+	* Is triggered wen section that contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
 	public function remove_component_media_files(array $ar_quality=[]) : bool {
@@ -458,6 +458,73 @@ class component_media_common extends component_common {
 
 		return false;
 	}//end get_sortable
+
+
+
+	/**
+	* GET_ORIGINAL_FILES
+	* Returns the full path of the original file/s found
+	* The original files are saved renamed but keeping the extension.
+	* @return array $original_files
+	* 	Array of full path files found
+	*/
+	public function get_original_files() : array {
+
+		$original_files = [];
+
+		// quality
+			$initial_quality = $this->get_quality();
+			// change current component quality temporally
+			$original_quality = $this->get_original_quality();
+			$this->set_quality($original_quality);
+
+		// target_dir
+			$target_dir = $this->get_target_dir();
+			if(!file_exists($target_dir)) {
+				return $original_files; // empty array
+			}
+
+		// ar_originals. list of original found files
+			$ar_originals	= [];
+			$findme			= $this->get_id() . '.';
+			if ($handle = opendir($target_dir)) {
+
+				while( false!==($file = readdir($handle)) ) {
+
+					// note that '.' and '..' are returned even
+					if( strpos($file, $findme)!==false ) {
+						$ar_originals[] = $file;
+					}
+				}
+
+				closedir($handle);
+			}
+
+		// check found files
+			$n = count($ar_originals);
+			if ($n===0) {
+
+				// no file found. Return empty array
+
+			}elseif($n===1) {
+
+				// all is OK, found 1 file as expected
+				$original_files[] = $target_dir . '/' . $ar_originals[0];
+
+			}else{
+
+				// more than one file are found
+				foreach ($ar_originals as $current_file) {
+					$original_files[] = $target_dir . '/' . $current_file;
+				}
+			}
+
+		// restore component quality
+			$this->set_quality($initial_quality);
+
+
+		return $original_files;
+	}//end get_original_files
 
 
 
