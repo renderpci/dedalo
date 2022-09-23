@@ -74,7 +74,7 @@
 		min-width: 1em;
 		opacity: 1;
 		user-select: none;
-		vertical-align: middle;
+		// vertical-align: middle;
 		width: 1em;
 
 		// height: fit-content;
@@ -256,16 +256,12 @@
 
 // generic recyclable icons for buttons
 	.delete {
-		// @icon_name : 'delete.svg';
 		@icon_name : 'trash.svg';
-
-		// @icon_name : 'trash_bold.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.delete_light {
 		@icon_name : 'delete.svg';
-		// @icon_name : 'trash_bold.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -276,7 +272,6 @@
 	}
 	.remove {
 		@icon_name : 'trash.svg';
-		// @icon_name : 'trash_bold.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
