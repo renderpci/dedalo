@@ -54,11 +54,13 @@ render_list_view_line.render = async function(self, options) {
 			return content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data	: content_data
+	// wrapper. ui build_edit returns component wrapper.
+	// Note: Use 'build_wrapper_list' instead 'build_wrapper_edit' because allow user to change mode on dblclick
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : true // bool set autoload when change mode is called (close button)
 		})
 		wrapper.classList.add('portal')
+		wrapper.appendChild(content_data)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -113,8 +115,10 @@ const get_content_data = async function(self, ar_section_record) {
 			}
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
+		const content_data = ui.component.build_content_data(self, {
+			autoload : true
+		})
+		content_data.appendChild(fragment)
 
 
 	return content_data

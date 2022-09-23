@@ -103,7 +103,9 @@ render_list_view_default.render = async function(self, options) {
 			// 	//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
 			// 	class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' portal ' + self.mode
 			// })
-			const wrapper = ui.component.build_wrapper_list(self, {})
+			const wrapper = ui.component.build_wrapper_list(self, {
+				autoload : true // bool set build autoload param on mode change (close button)
+			})
 			wrapper.classList.add('portal')
 			wrapper.appendChild(fragment)
 			// set pointers
