@@ -309,7 +309,7 @@ const print_response = (container, api_response) => {
 
 	// msg
 		const api_msg = api_response && api_response.msg
-			? api_response.msg.replace(/\\n/g, '<br>')
+			? api_response.msg.join('<br>') // 	api_response.msg.replace(/\\n/g, '<br>')
 			: 'Unknown API response error'
 		ui.create_dom_element({
 			element_type	: 'div',
