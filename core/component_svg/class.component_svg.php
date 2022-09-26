@@ -13,11 +13,10 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET DATO
-	* @return array|null $dato
+	*
 	* Sample data:
-	* [
-	*  {
-	*    "user_id": -1,
+	* [{
+	* 	 "original_file_name": "icon_link.svg",
 	*    "upload_date": {
 	*      "day": 27,
 	*      "hour": 17,
@@ -27,13 +26,13 @@ class component_svg extends component_media_common {
 	*      "minute": 58,
 	*      "second": 59
 	*    },
-	*    "original_file_name": "icon_link.svg"
-	*  }
-	* ]
+	*    "user_id": -1
+	* }]
+	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
-		$dato = parent::get_dato();
 
+		$dato = parent::get_dato();
 		if (!empty($dato) && !is_array($dato)) {
 			$dato = [$dato];
 		}

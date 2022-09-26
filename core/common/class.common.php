@@ -37,7 +37,7 @@ abstract class common {
 	// parent_grouper
 	public $parent_grouper;
 
-	// build options sended by the client into show ddo to modify the standard get data.
+	// build options sent by the client into show ddo to modify the standard get data.
 	// in area_thesaurus it send if the thesaurus need get models or terms.
 	// in component_portal it send if the source external need to be updated.
 	public $build_options = null;

@@ -7,13 +7,14 @@
 class area_common extends common  {
 
 
-# VARS
-	#protected $tipo;
-	#protected $lang;
-	#protected $modo;
+
+// VARS
+	protected $tipo;
+	protected $modo;
+	protected $lang;
 
 	# STRUCTURE DATA
-	#protected $RecordObj_dd ;
+	protected $RecordObj_dd ;
 	#protected $modelo;
 	#protected $norden;
 	#protected $label;
