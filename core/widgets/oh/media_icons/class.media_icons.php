@@ -120,7 +120,9 @@ class media_icons extends widget_common {
 								break;
 
 							case 'tc':
-								$value = $component->get_duration_seconds('timecode');
+								$duration_seconds	= $component->get_duration();
+								$tc					= OptimizeTC::seg2tc($duration_seconds);
+								$value				= $tc;
 								break;
 
 							case 'transcription':

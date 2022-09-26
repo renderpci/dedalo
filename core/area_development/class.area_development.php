@@ -35,7 +35,7 @@ class area_development extends area_common {
 	/**
 	* GET_AR_WIDGETS
 	* @return array $data_items
-	*	Array of objects
+	*	Array of widgets object
 	*/
 	public function get_ar_widgets() : array {
 
@@ -65,7 +65,8 @@ class area_development extends area_common {
 					'action'	=> 'make_backup',
 					'options'	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// regenerate_relations . Delete and create again table relations records
@@ -96,7 +97,8 @@ class area_development extends area_common {
 					'action'	=> 'regenerate_relations',
 					'options'	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// update_structure
@@ -144,8 +146,8 @@ class area_development extends area_common {
 						'options'	=> null
 					];
 				}
-			$ar_widgets[] = $item;
-
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// export_structure_to_json
@@ -182,7 +184,8 @@ class area_development extends area_common {
 					'action'	=> 'structure_to_json',
 					'options'	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// import_structure_from_json
@@ -220,7 +223,8 @@ class area_development extends area_common {
 					'action'	=> 'import_structure_from_json',
 					'options'	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// register_tools
@@ -258,7 +262,8 @@ class area_development extends area_common {
 					'action' 	=> 'register_tools',
 					'options' 	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// build_structure_css
@@ -280,7 +285,8 @@ class area_development extends area_common {
 					'action'	=> 'build_structure_css',
 					'options'	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// update data version
@@ -299,7 +305,9 @@ class area_development extends area_common {
 					$item->body		= '<span style="color:green">Data format is updated: '.implode(".", get_current_version_in_db()).'</span>';
 					$item->trigger	= (object)[
 					];
-				$ar_widgets[] = $item;
+
+				$widget = $this->widget_factory($item);
+				$ar_widgets[] = $widget;
 
 			}else{
 
@@ -343,7 +351,9 @@ class area_development extends area_common {
 						'action'	=> 'update_version',
 						'options'	=> null
 					];
-				$ar_widgets[] = $item;
+
+				$widget = $this->widget_factory($item);
+				$ar_widgets[] = $widget;
 			}
 
 
@@ -371,7 +381,8 @@ class area_development extends area_common {
 					'action' 	=> 'get_input_value:dd_api_fn',
 					'options' 	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// search query object test environment
@@ -394,7 +405,8 @@ class area_development extends area_common {
 					'action' 	=> 'convert_search_object_to_sql_query',
 					'options' 	=> null
 				];
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// dedalo version
@@ -407,7 +419,8 @@ class area_development extends area_common {
 				$item->info 	= null;
 				$item->body 	= 'Version '.DEDALO_VERSION;
 				$item->body    .= '<pre>v '.DEDALO_VERSION .' | Build: '.DEDALO_BUILD.'</pre>';
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// database_info
@@ -422,7 +435,8 @@ class area_development extends area_common {
 				$item->info 	= null;
 				$item->body 	= 'Database '.$info['IntervalStyle']. " ". $info['server']. " ".DEDALO_HOSTNAME_CONN;
 				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// php_user
@@ -456,7 +470,8 @@ class area_development extends area_common {
 					$item->body	= 'PHP user '. $info['name'];
 					$item->body	.= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
 				}
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// unit test (alpha)
@@ -485,7 +500,8 @@ class area_development extends area_common {
 
 				// 	}
 				// ';
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// sequences_state
@@ -500,7 +516,8 @@ class area_development extends area_common {
 				$item->label 	= 'DB SEQUENCES STATE';
 				$item->info 	= null;
 				$item->body     = $response->msg;
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// counters_state
@@ -513,7 +530,8 @@ class area_development extends area_common {
 				$item->label 	= 'DEDALO COUNTERS STATE';
 				$item->info 	= null;
 				$item->body     = $response->msg;
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// php info
@@ -526,7 +544,8 @@ class area_development extends area_common {
 				$item->info 	= null;
 				// $item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px;\'"></iframe>';
 				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php"></iframe>';
-			$ar_widgets[] = $item;
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		return $ar_widgets;
@@ -535,16 +554,43 @@ class area_development extends area_common {
 
 
 	/**
+	* WIDGET_FACTORY
+	* Unified way to create an area-development widget
+	* @param object $item
+	* @return object $widget
+	*/
+	public function widget_factory(object $item) : object {
+
+		// widget
+			$widget = new stdClass();
+				$widget->id			= $item->id;
+				$widget->typo		= 'widget';
+				$widget->tipo		= $item->tipo ?? $this->tipo;
+				$widget->parent		= $item->parent ?? $this->tipo;
+				$widget->label		= $item->label ?? 'Undefined label for: '.$this->tipo;
+				$widget->info		= $item->info ?? null;
+				$widget->body		= $item->body  ?? null;
+				$widget->run		= $item->run ?? [];
+				$widget->trigger	= $item->trigger ?? null;
+
+		return $widget;
+	}//end widget_factory
+
+
+
+	/**
 	* GENERATE_RELATIONS_TABLE_DATA
-	*
+	* Re-creates relationships between components in given tables (or all of then)
+	* All relationships pointers are stored in table 'relations' for easy search. This function
+	* deletes the data in that table and and rebuild it from component's locators
 	* @param string $tables = '*'
-	* @return object
+	* @return object $response
 	*/
 	public static function generate_relations_table_data(string $tables='*') : object {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= array('Error. Request failed '.__METHOD__);
+			$response->msg		= ['Error. Request failed '.__METHOD__];
 
 
 		// tables to propagate
@@ -678,9 +724,9 @@ class area_development extends area_common {
 		}//end foreach ($ar_tables as $key => $table)
 
 		// response
-			$response->result = true;
-			$response->msg[0] = "OK. All data is propagated successfully"; // Override first message
-			$response->msg    = implode('<br>', $response->msg);
+			$response->result	= true;
+			$response->msg[0]	= 'OK. All data is propagated successfully'; // Override first message
+			$response->msg		= $response->msg; // array
 
 
 		return $response;

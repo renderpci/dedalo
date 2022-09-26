@@ -789,7 +789,7 @@ final class Ffmpeg {
 
 	/**
 	* GET_MEDIA_ATTRIBUTES
-	* @return object json mixed file info like:
+	* @return object JSON mixed file info like:
 	* stdClass Object
 	*	(
 	*	    [format] => stdClass Object

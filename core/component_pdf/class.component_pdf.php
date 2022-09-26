@@ -144,9 +144,9 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_DATO
+	*
 	* Sample data:
 	* [{
-	*	 "offset": 4,
     *    "original_file_name": "rsc209_rsc205_524_lg-spa.pdf",
     *    "original_upload_date": {
     *      "day": 21,
@@ -156,8 +156,9 @@ class component_pdf extends component_media_common {
     *      "month": 8,
     *      "minute": 56,
     *      "second": 1
-    *    }
-    *  }]
+    *    },
+    * 	"offset": 4
+    * }]
 	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
