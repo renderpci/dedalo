@@ -542,53 +542,56 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_DURATION_SECONDS
-	* @return int|string $duration_seconds OR string $timecode
+	* GET_DURATION
+	*
+	* @return int $seconds
 	*/
-	public function get_duration_seconds(?string $format=null) {
+	public function get_duration() : int {
 
 		$duration_seconds = 0;
 
-		# Input text av_duration
-		# NOTE : This component store seconds as timecode like 00:09:52 . When you call to obtain stored duration
-		# 		 you need convert stored data to seconds (and viceversa for save)
-		$component 	= component_common::get_instance('component_input_text',
-													DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO,
-													$this->get_parent(),
-													'list',
-													DEDALO_DATA_NOLAN,
-													$this->get_section_tipo());
-		$tc = $component->get_dato();
+		// DES
+			// // short vars
+			// 	$section_tipo	= $this->get_section_tipo();
+			// 	$section_id		= $this->get_section_id();
 
-		#if(SHOW_DEBUG===true) {
-		if (empty($tc[0])) {
-			# Read file once
-			$duration_seconds = 0;
+			// // check valid
+			// 	if ($section_tipo!==DEDALO_SECTION_RESOURCES_AV_TIPO) {
+			// 		debug_log(__METHOD__." Inconsistent resolution from section different from expected: ".DEDALO_SECTION_RESOURCES_AV_TIPO.to_string(), logger::ERROR);
+			// 	}
 
-			$video_path 	  = $this->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
-			$media_attributes = ffmpeg::get_media_attributes($video_path);
-				#dump($media_attributes, ' media_attributes ++ '.to_string());
+			// # Input text av_duration
+			// # NOTE : This component store seconds as time code like 00:09:52 . When you call to obtain stored duration
+			// # 		 you need convert stored data to seconds (and vice-versa for save)
+			// $av_duration_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO,true);
+			// $component = component_common::get_instance(
+			// 	$av_duration_model, // string expected: 'component_input_text',
+			// 	DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO, // string expected 'rsc54'
+			// 	$section_id,
+			// 	'list',
+			// 	DEDALO_DATA_NOLAN,
+			// 	$section_tipo
+			// );
+			// $tc = $component->get_dato();
+
+		// short vars
+			$quality = DEDALO_AV_QUALITY_DEFAULT;
+
+		// read file
+			$video_path			= $this->get_video_path($quality);
+			$media_attributes	= ffmpeg::get_media_attributes($video_path);
 			if (isset($media_attributes->format->duration) && !empty($media_attributes->format->duration)) {
+
 				$duration_seconds = $media_attributes->format->duration;
 
-				# Save data to component as time code
-				$tc[0] = OptimizeTC::seg2tc($duration_seconds);
-				$component->set_dato($tc);
-				$component->Save();
+				// Save data to component as time code
+					// $tc[0] = OptimizeTC::seg2tc($duration_seconds);
+					// $component->set_dato($tc);
+					// $component->Save();
 			}
-		}else{
 
-			# Calculate seconds from tc
-			$duration_seconds = OptimizeTC::TC2seg($tc[0]);
-		}
-
-		# For fast access from oh list only
-		if ($format==='timecode') {
-			return (string)$tc[0];
-		}
-
-		return (int)$duration_seconds;
-	}//end get_duration_seconds
+		return $duration_seconds;
+	}//end get_duration
 
 
 

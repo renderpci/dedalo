@@ -161,25 +161,29 @@ class tool_tr_print extends tool_common {
 	/**
 	* GET_AV_DURATION
 	* @return string $av_duration
-	*	Timecode like '00:01:55.680'
+	*	Time code like '00:01:55.680'
 	*/
 	public function get_av_duration() {
 
 		# Actually rsc35
 		$related_component_av_tipo = $this->component_obj->get_related_component_av_tipo();
 
-		$modelo_name  	= RecordObj_dd::get_modelo_name_by_tipo($related_component_av_tipo,true);
-		$parent 		= $this->component_obj->get_parent();
-		$section_tipo 	= $this->component_obj->get_section_tipo();
-		$component_av 	= component_common::get_instance($modelo_name,
-														 $related_component_av_tipo,
-														 $parent,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($related_component_av_tipo,true);
+		$parent			= $this->component_obj->get_parent();
+		$section_tipo	= $this->component_obj->get_section_tipo();
+		$component_av	= component_common::get_instance(
+			$modelo_name,
+			$related_component_av_tipo,
+			$parent,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
 
+		$duration_seconds	= $component_av->get_duration();
+		$tc					= OptimizeTC::seg2tc($duration_seconds);
+		$av_duration		= $tc;
 
-		$av_duration = $component_av->get_duration_seconds('timecode');
 
 		return $av_duration;
 	}//end get_av_duration
