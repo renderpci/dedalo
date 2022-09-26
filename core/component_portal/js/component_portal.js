@@ -462,9 +462,8 @@ component_portal.prototype.add_value = async function(value) {
 			console.log("[add_value] Data limit is surpass!");
 			// notify to user about the limit
 			const data_limit_label = (get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit =') + ' ' + data_limit
-			// if yes, delete the note section in the server
 			window.alert(data_limit_label)
-
+			// stop the process
 			return false
 		}
 
