@@ -769,9 +769,11 @@ export const get_buttons = (self) => {
 
 
 /**
-* activate_autocomplete
+* ACTIVATE_AUTOCOMPLETE
 * Shared across views
 * Activate service autocomplete. Enable the service_autocomplete when the user do click
+* @param object self
+* @param DOM node wrapper
 * @return bool
 */
 export const activate_autocomplete = async function(self, wrapper) {
@@ -779,7 +781,7 @@ export const activate_autocomplete = async function(self, wrapper) {
 	if(self.autocomplete!==false && self.autocomplete_active!==undefined && self.autocomplete_active===false){
 
 		// set rqo
-			self.rqo_search	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
+			self.rqo_search	= self.rqo_search || await self.build_rqo_search(self.rqo_config, 'search')
 
 		self.autocomplete = new service_autocomplete()
 		await self.autocomplete.init({

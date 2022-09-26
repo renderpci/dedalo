@@ -39,12 +39,11 @@ class component_av extends component_media_common {
 
 	/**
 	* GET DATO
-	* @return array|null $dato
+	*
 	* Sample data:
-	* [
-	*  {
-	*    "user_id": -1,
-	*    "upload_date": {
+	* [{
+	*	 "original_file_name": "interview2.mp4",
+	*	 "upload_date": {
 	*      "day": 27,
 	*      "hour": 12,
 	*      "time": 65009738806,
@@ -53,13 +52,13 @@ class component_av extends component_media_common {
 	*      "minute": 46,
 	*      "second": 46
 	*    },
-	*    "original_file_name": "interview2.mp4"
-	*  }
-	* ]
+	*	 "user_id": -1
+	* }]
+	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
-		$dato = parent::get_dato();
 
+		$dato = parent::get_dato();
 		if (!empty($dato) && !is_array($dato)) {
 			$dato = [$dato];
 		}
@@ -116,11 +115,12 @@ class component_av extends component_media_common {
 
 	/**
 	* GET VALOR
-	* LIST:
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	* Get value . default is get dato . overwrite in every different specific component
+	* @return string id|null
 	*/
-	public function get_valor() {
-		return $this->get_video_id();
+	public function get_valor() : ?string {
+
+		return $this->get_id();
 	}//end get_valor
 
 
@@ -135,21 +135,18 @@ class component_av extends component_media_common {
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
 		$av_file_path = $this->get_valor() . '.' . $this->get_extension();
 
-		$test_file 		= true;	// output dedalo image placeholder when not file exists
-		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
+		$test_file	= true;	// output dedalo image placeholder when not file exists
+		$absolute	= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
 
 		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
 
 		$valor_export = $av_file_path .",".$posterframe_file_path;
 
-		if(SHOW_DEBUG===true) {
-			#return "AV: ".$valor_export;
-		}
 
 		return $valor_export;
 	}//end get_valor_export
@@ -543,12 +540,12 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_DURATION
-	*
-	* @return int $seconds
+	* Get file av duration from metadata reading attributes
+	* @return float $duration
 	*/
-	public function get_duration() : int {
+	public function get_duration() : float {
 
-		$duration_seconds = 0;
+		$duration = 0;
 
 		// DES
 			// // short vars
@@ -582,15 +579,15 @@ class component_av extends component_media_common {
 			$media_attributes	= ffmpeg::get_media_attributes($video_path);
 			if (isset($media_attributes->format->duration) && !empty($media_attributes->format->duration)) {
 
-				$duration_seconds = $media_attributes->format->duration;
+				$duration = $media_attributes->format->duration;
 
 				// Save data to component as time code
-					// $tc[0] = OptimizeTC::seg2tc($duration_seconds);
+					// $tc[0] = OptimizeTC::seg2tc($duration);
 					// $component->set_dato($tc);
 					// $component->Save();
 			}
 
-		return $duration_seconds;
+		return $duration;
 	}//end get_duration
 
 
