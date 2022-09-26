@@ -555,8 +555,7 @@ export const render_component_info = function(self, component) {
 			const value = component.data && component.data.value
 				? JSON.stringify(component.data.value, null, 1)
 				: ''
-			value_node.innerHTML = ''
-			value_node.insertAdjacentHTML('afterbegin', value)
+			value_node.textContent = value
 		}, 50)
 
 		// track collapse toggle state of content
