@@ -1549,8 +1549,8 @@ const render_reference = async function(options) {
 			? JSON.parse(data)
 			: null
 
-		const references_section_tipo	= self.context.references_section_tipo
-		const references_component_tipo	= self.context.references_component_tipo
+		const references_section_tipo		= self.context.references_section_tipo
+		const references_component_tipo		= self.context.references_component_tipo
 		const references_component_model	= self.context.references_component_model
 
 		// const reference_section_id		= locator.section_id
@@ -1569,7 +1569,6 @@ const render_reference = async function(options) {
 		}
 		// get the instance, built and render
 			const reference_component 		=	await instances.get_instance(instance_options)
-			reference_component.save_mode 	= 'discard'
 												await reference_component.build(true)
 			const reference_component_node	=	await reference_component.render()
 
@@ -1600,6 +1599,7 @@ const render_reference = async function(options) {
 			class_name		: 'footer'
 		})
 
+
 		// button remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
@@ -1619,24 +1619,6 @@ const render_reference = async function(options) {
 					// remove the tag of the note in the component_text_area
 					text_editor.delete_tag(view_tag)
 					.then(function(){
-						// Delete the server note data in the DDBB
-							// create sqo the the filter_by_locators of the section to be deleted
-							// const sqo = {
-							// 	section_tipo		: [note_section.section_tipo],
-							// 	filter_by_locators	: [{
-							// 		section_tipo	: note_section.section_tipo,
-							// 		section_id		: note_section.section_id
-							// 	}],
-							// 	limit				: 1
-							// }
-							// // create the request to delete the record
-							// // telling the section to do the action
-							// note_section.delete_section({
-							// 	sqo			: sqo,
-							// 	delete_mode	: 'delete_record'
-							// })
-							// // destroy the instance of the note section
-							// note_section.destroy(true,true,true)
 
 						// text_area. Prepare the text_editor to save setting it in dirty mode and save the change
 							text_editor.set_dirty(true)
@@ -1646,6 +1628,14 @@ const render_reference = async function(options) {
 							modal.remove()
 					})
 				}
+			})
+
+		// button Apply reference
+			const button_apply = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'success apply',
+				text_content	: get_label.apply || 'Apply',
+				parent			: footer
 			})
 
 	// save editor changes to prevent conflicts with modal components changes
@@ -1660,7 +1650,21 @@ const render_reference = async function(options) {
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = () => {
-			note_section.destroy(true,true,true)
+
+			// change data to set empty value in the component (it saved in Session instead DDBB)
+				const changed_data = [Object.freeze({
+					action	: 'update',
+					key		: 0,
+					value	: null
+				})]
+
+			// fix instance changed_data
+				reference_component.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+			// destroy all of the component, it and his own subcontext instances
+				reference_component.destroy(true,true,true)
 		}
 
 
