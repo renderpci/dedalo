@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -340,28 +340,43 @@ export const render_section_info = function(self) {
 
 	// tipo
 		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.tipo || 'Tipo',
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.tipo || 'Tipo',
+				parent			: fragment
+			})
 		// value
-		const tipo_info = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: section_tipo,
-			parent			: fragment
-		})
-		const docu_link = ui.create_dom_element({
-			element_type	: 'a',
-			class_name		: 'button link',
-			title			: 'Documentation',
-			parent			: tipo_info
-		})
-		docu_link.addEventListener("click", function(){
-			open_ontology_window(section_tipo)
-		})
+			const tipo_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: section_tipo,
+				parent			: fragment
+			})
+		// docu_link
+			const docu_link = ui.create_dom_element({
+				element_type	: 'a',
+				class_name		: 'button link',
+				title			: 'Documentation',
+				parent			: tipo_info
+			})
+			docu_link.addEventListener('click', function(){
+				open_ontology_window(section_tipo)
+			})
+		// local_ontology
+			if (SHOW_DEVELOPER===true) {
+				const local_ontology = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button pen',
+					title			: 'Local Ontology',
+					parent			: tipo_info
+				})
+				local_ontology.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + section_tipo
+					open_ontology_window(section_tipo, custom_url)
+				})
+			}
 
 	// section created
 		// label
@@ -434,41 +449,58 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html	: get_label.componente || 'Component',
+			inner_html		: get_label.componente || 'Component',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html	: label,
+			inner_html		: label,
 			parent			: fragment
 		})
 
 	// tipo
 		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html	: get_label.tipo || 'Tipo',
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.tipo || 'Tipo',
+				parent			: fragment
+			})
 		// value
-		const tipo_info = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html	: tipo,
-			parent			: fragment
-		})
-		const docu_link = ui.create_dom_element({
-			element_type	: 'a',
-			class_name		: 'button link',
-			title			: 'Documentation',
-			parent			: tipo_info
-		})
-		docu_link.addEventListener("click", function(){
-			open_ontology_window(tipo)
-		})
+			const tipo_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: tipo,
+				parent			: fragment
+			})
+		// docu_link. Link to dedalo.dev Ontology info
+			const docu_link = ui.create_dom_element({
+				element_type	: 'a',
+				class_name		: 'button link',
+				title			: 'Documentation',
+				parent			: tipo_info
+			})
+			docu_link.addEventListener('click', function(e){
+				e.stopPropagation()
+				open_ontology_window(tipo)
+			})
+		// local_ontology
+			if (SHOW_DEVELOPER===true) {
+				const local_ontology = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button pen',
+					title			: 'Local Ontology',
+					parent			: tipo_info
+				})
+				local_ontology.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
+					open_ontology_window(tipo, custom_url)
+				})
+			}
+
 
 	// model
 		// label
@@ -977,15 +1009,21 @@ const render_activity_info = function(self) {
 
 /**
 * OPEN_ONTOLOGY_WINDOW
-* @return
+*
+* @param string tipo
+* @param string|null custom_url
+* @return bool
 */
-const open_ontology_window = function(tipo) {
+const open_ontology_window = function(tipo, custom_url) {
 
 	window.docu_window = window.docu_window || null
 
 	// case online documentation window https://dedalo.dev/ontology
 
-	const url = 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
+	const url = custom_url
+		? custom_url
+		: 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
+
 	if (window.docu_window && !window.docu_window.closed) {
 		window.docu_window.location = url
 		window.docu_window.focus()
@@ -1002,5 +1040,4 @@ const open_ontology_window = function(tipo) {
 
 	return true
 }//end open_ontology_window
-
 
