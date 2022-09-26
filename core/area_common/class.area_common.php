@@ -7,13 +7,14 @@
 class area_common extends common  {
 
 
-# VARS
-	#protected $tipo;
-	#protected $lang;
-	#protected $modo;
+
+// VARS
+	protected $tipo;
+	protected $modo;
+	protected $lang;
 
 	# STRUCTURE DATA
-	#protected $RecordObj_dd ;
+	protected $RecordObj_dd ;
 	#protected $modelo;
 	#protected $norden;
 	#protected $label;
@@ -23,7 +24,10 @@ class area_common extends common  {
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
-	* @returns array array of section objects by key
+	* @param string|null $model = null
+	* @param string|null $tipo = null
+	* @param string $modo = 'list'
+	* @return object $area_instance
 	*/
 	public static function get_instance(string $model=null, string $tipo=null, string $modo='list') : object {
 
@@ -44,28 +48,19 @@ class area_common extends common  {
 
 	/**
 	* __CONSTRUCT
+	* @param string $tipo
+	* @param string $modo
 	*/
-	private function __construct(string $tipo, string $modo='list') {
+	private function __construct(string $tipo, string $modo) {
 
-		$this->define_tipo($tipo);
-		$this->define_lang(DEDALO_DATA_LANG);
-		$this->define_modo($modo);
+		// fix main vars
+		$this->set_tipo($tipo);
+		$this->set_modo($modo);
+		$this->set_lang(DEDALO_DATA_LANG);
 
-
-		# common load thesaurus data of current obj
+		// common load thesaurus data of current obj
 		parent::load_structure_data();
-
-		return true;
 	}//end __construct
-
-
-
-	# define tipo
-	protected function define_tipo(string $tipo) {	$this->tipo = $tipo ; }
-	# define lang
-	protected function define_lang(string $lang) {	$this->lang = $lang ; }
-	# define modo
-	protected function define_modo(string $modo) {	$this->modo = $modo ; }
 
 
 
@@ -85,6 +80,7 @@ class area_common extends common  {
 	/**
 	* GET SECTION ID
 	* Overwrites common method
+	* @return null
 	*/
 	public function get_section_id() {
 

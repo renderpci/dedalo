@@ -11,6 +11,23 @@ class component_media_common extends component_common {
 
 
 
+	// Unified data sample:
+	// [{
+	// 	 "original_file_name": "icon_link.svg",
+	//    "upload_date": {
+	//      "day": 27,
+	//      "hour": 17,
+	//      "time": 65009757539,
+	//      "year": 2022,
+	//      "month": 8,
+	//      "minute": 58,
+	//      "second": 59
+	//    },
+	//    "custom property": "xxx"
+	// }]
+
+
+
 	/**
 	* GET_MEDIA_COMPONENTS
 	* Return array with model names of defined as 'media components'.
@@ -31,7 +48,9 @@ class component_media_common extends component_common {
 
 	/**
 	* ADD_FILE
-	* Receive a file info object from tool upload with data properties as:
+	* Receive a file info object from tool upload
+	* and move/rename the file to the proper target
+	* @param object $file_data
 	* {
 	* 	"name": "montaje3.jpg",
 	*	"type": "image/jpeg",
@@ -40,6 +59,11 @@ class component_media_common extends component_common {
 	*	"size": 132898
 	* }
 	* @return object $response
+	* {
+	* 	"original_file_name" : $name,
+	*	"full_file_name"	 : $full_file_name,
+	*	"full_file_path"	 : $full_file_path
+	* }
 	*/
 	public function add_file(object $file_data) : object {
 
@@ -230,7 +254,7 @@ class component_media_common extends component_common {
 
 		$response = new stdClass();
 			$response->result	= true;
-			$response->msg		= 'Ok. Request done';
+			$response->msg		= 'OK. Request done';
 
 		return $response;
 	}//end process_uploaded_file
@@ -391,9 +415,9 @@ class component_media_common extends component_common {
 
 	/**
 	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
+	* Remove quality version moving the file to a deleted files directory
 	* @see component_image->remove_component_media_files
-	*
+	* @param string $quality
 	* @return object $response
 	*/
 	public function delete_file(string $quality) : object {
@@ -421,9 +445,12 @@ class component_media_common extends component_common {
 
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file vinculated to current component (all quality versions)
+	* "Remove" (rename and move files to deleted folder) all media file linked
+	* to current component (all quality versions)
 	* Is triggered wen section that contain media elements is deleted
 	* @see section:remove_section_media_files
+	* @param array $ar_quality = []
+	* @return bool
 	*/
 	public function remove_component_media_files(array $ar_quality=[]) : bool {
 
@@ -441,7 +468,7 @@ class component_media_common extends component_common {
 					$media_path = $this->get_path($current_quality);
 					if (!file_exists($media_path)) continue; # Skip
 
-				// delete dir
+				// delete directory
 					$folder_path_del = $this->get_target_dir() . 'deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0777,true) ) {

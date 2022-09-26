@@ -1,7 +1,7 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	$html ='';	
+	# VISUALIZADOR HTML
+	$html ='';
 
 	$link_target = false;	// options: 'process', false
 
@@ -10,14 +10,14 @@
 
 	$html .= "<ul class=\"widget_media_icons\">";
 	foreach ($ar_locators as $current_locator) {
-		
+
 		$key_resolved = $current_locator->section_tipo.'_'.$current_locator->section_id;
 		if (in_array($key_resolved, $ar_locators_resolved)) {
 			continue;
 		}
 
 		#
-		# MEDIA COMPONENT		
+		# MEDIA COMPONENT
 		$media_component 	= component_common::get_instance( $media_component_modelo_name,
 															  $media_component_tipo,
 															  $current_locator->section_id,
@@ -43,13 +43,14 @@
 			switch ($media_component_modelo_name) {
 				case 'component_av':
 					$video_path = $media_component->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
-					
+
 					#$cache_key = $current_locator->section_tipo.'_'.$current_locator->section_id;
 
 					if (file_exists( $video_path = $media_component->get_video_path(DEDALO_AV_QUALITY_DEFAULT) )) {
 						# av duration
-						$tc 		= $media_component->get_duration_seconds('timecode');					
-						$video_id 	= $media_component->get_video_id();
+						$duration_seconds	= $media_component->get_duration();
+						$tc					= OptimizeTC::seg2tc($duration_seconds);
+						$video_id			= $media_component->get_id();
 						$title = label::get_label('abrir');
 						$html .= "<a href=\"javascript:;\" class=\"icon_bs icon_video link\" onclick=\"tool_common.open_player(this,{'type':'component_av','reelID':'$video_id'})\" title=\"$title\"></a>";
 					}else{
@@ -57,7 +58,7 @@
 						$html .= "<a class=\"icon_bs icon_video link\" style=\"visibility:hidden\"></a>";
 					}
 					break;
-				
+
 				default:
 					$icon_name = 'file_icon';
 					break;
@@ -71,9 +72,9 @@
 				case 'process':
 					$url   = "?t={$this->transcription->process_section_tipo}&top_tipo=".TOP_TIPO."&auto_search=1&{$this->transcription->search_section_id}={$current_locator->section_id}";
 					$html .= "<a href=\"$url\" class=\"icon_bs icon_transcription link\" title=\"$title\"></a>";
-					break;					
+					break;
 				default:
-					// icon_bs icon_transcription 
+					// icon_bs icon_transcription
 					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
 					$html .= "data-tipo=\"{$this->transcription->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
@@ -94,7 +95,7 @@
 					$html .= "<a href=\"$url\" class=\"icon_bs icon_indexation link\" title=\"$title\"></a>";
 					break;
 				default:
-					// icon_bs icon_indexation 
+					// icon_bs icon_indexation
 					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
 					$html .= "data-tipo=\"{$this->indexation->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
@@ -114,7 +115,7 @@
 					$html .= "<a href=\"$url\" class=\"icon_bs icon_indexation link\" title=\"$title\"></a>";
 					break;
 				default:
-					// icon_bs icon_structuration 
+					// icon_bs icon_structuration
 					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
 					$html .= "data-tipo=\"{$this->structuration->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
@@ -132,9 +133,9 @@
 				case 'process':
 					$url   = "?t={$this->translation->section_tipo}&top_tipo=".TOP_TIPO."&auto_search=1&{$this->translation->search_section_id}={$current_locator->section_id}";
 					$html .= "<a href=\"$url\" class=\"icon_bs icon_translation link\" title=\"$title\"></a>";
-					break;				
+					break;
 				default:
-					// icon_bs icon_translation 
+					// icon_bs icon_translation
 					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
 					$html .= "data-tipo=\"{$this->translation->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
@@ -143,16 +144,16 @@
 					$html .= "data-top_id=\"$parent\" ";
 					$html .= "onclick=\"tool_common.open_tool_lang(this)\">";
 					$html .= "TL";
-					$html .= "</a>";	
+					$html .= "</a>";
 			}}
 
 			#
 			# TC DURATION
 			switch ($media_component_modelo_name) {
-				case 'component_av':					
+				case 'component_av':
 					$html .= "<div class=\"duration_tc\">". str_replace('.000', '', $tc) ."</div>";
 					break;
-				
+
 				default:
 					break;
 			}

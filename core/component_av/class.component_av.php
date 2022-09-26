@@ -39,12 +39,11 @@ class component_av extends component_media_common {
 
 	/**
 	* GET DATO
-	* @return array|null $dato
+	*
 	* Sample data:
-	* [
-	*  {
-	*    "user_id": -1,
-	*    "upload_date": {
+	* [{
+	*	 "original_file_name": "interview2.mp4",
+	*	 "upload_date": {
 	*      "day": 27,
 	*      "hour": 12,
 	*      "time": 65009738806,
@@ -53,13 +52,13 @@ class component_av extends component_media_common {
 	*      "minute": 46,
 	*      "second": 46
 	*    },
-	*    "original_file_name": "interview2.mp4"
-	*  }
-	* ]
+	*	 "user_id": -1
+	* }]
+	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
-		$dato = parent::get_dato();
 
+		$dato = parent::get_dato();
 		if (!empty($dato) && !is_array($dato)) {
 			$dato = [$dato];
 		}
@@ -116,11 +115,12 @@ class component_av extends component_media_common {
 
 	/**
 	* GET VALOR
-	* LIST:
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	* Get value . default is get dato . overwrite in every different specific component
+	* @return string id|null
 	*/
-	public function get_valor() {
-		return $this->get_video_id();
+	public function get_valor() : ?string {
+
+		return $this->get_id();
 	}//end get_valor
 
 
@@ -135,21 +135,18 @@ class component_av extends component_media_common {
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
 		$av_file_path = $this->get_valor() . '.' . $this->get_extension();
 
-		$test_file 		= true;	// output dedalo image placeholder when not file exists
-		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
+		$test_file	= true;	// output dedalo image placeholder when not file exists
+		$absolute	= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
 
 		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
 
 		$valor_export = $av_file_path .",".$posterframe_file_path;
 
-		if(SHOW_DEBUG===true) {
-			#return "AV: ".$valor_export;
-		}
 
 		return $valor_export;
 	}//end get_valor_export
@@ -542,53 +539,56 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_DURATION_SECONDS
-	* @return int|string $duration_seconds OR string $timecode
+	* GET_DURATION
+	* Get file av duration from metadata reading attributes
+	* @return float $duration
 	*/
-	public function get_duration_seconds(?string $format=null) {
+	public function get_duration() : float {
 
-		$duration_seconds = 0;
+		$duration = 0;
 
-		# Input text av_duration
-		# NOTE : This component store seconds as timecode like 00:09:52 . When you call to obtain stored duration
-		# 		 you need convert stored data to seconds (and viceversa for save)
-		$component 	= component_common::get_instance('component_input_text',
-													DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO,
-													$this->get_parent(),
-													'list',
-													DEDALO_DATA_NOLAN,
-													$this->get_section_tipo());
-		$tc = $component->get_dato();
+		// DES
+			// // short vars
+			// 	$section_tipo	= $this->get_section_tipo();
+			// 	$section_id		= $this->get_section_id();
 
-		#if(SHOW_DEBUG===true) {
-		if (empty($tc[0])) {
-			# Read file once
-			$duration_seconds = 0;
+			// // check valid
+			// 	if ($section_tipo!==DEDALO_SECTION_RESOURCES_AV_TIPO) {
+			// 		debug_log(__METHOD__." Inconsistent resolution from section different from expected: ".DEDALO_SECTION_RESOURCES_AV_TIPO.to_string(), logger::ERROR);
+			// 	}
 
-			$video_path 	  = $this->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
-			$media_attributes = ffmpeg::get_media_attributes($video_path);
-				#dump($media_attributes, ' media_attributes ++ '.to_string());
+			// # Input text av_duration
+			// # NOTE : This component store seconds as time code like 00:09:52 . When you call to obtain stored duration
+			// # 		 you need convert stored data to seconds (and vice-versa for save)
+			// $av_duration_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO,true);
+			// $component = component_common::get_instance(
+			// 	$av_duration_model, // string expected: 'component_input_text',
+			// 	DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO, // string expected 'rsc54'
+			// 	$section_id,
+			// 	'list',
+			// 	DEDALO_DATA_NOLAN,
+			// 	$section_tipo
+			// );
+			// $tc = $component->get_dato();
+
+		// short vars
+			$quality = DEDALO_AV_QUALITY_DEFAULT;
+
+		// read file
+			$video_path			= $this->get_video_path($quality);
+			$media_attributes	= ffmpeg::get_media_attributes($video_path);
 			if (isset($media_attributes->format->duration) && !empty($media_attributes->format->duration)) {
-				$duration_seconds = $media_attributes->format->duration;
 
-				# Save data to component as time code
-				$tc[0] = OptimizeTC::seg2tc($duration_seconds);
-				$component->set_dato($tc);
-				$component->Save();
+				$duration = $media_attributes->format->duration;
+
+				// Save data to component as time code
+					// $tc[0] = OptimizeTC::seg2tc($duration);
+					// $component->set_dato($tc);
+					// $component->Save();
 			}
-		}else{
 
-			# Calculate seconds from tc
-			$duration_seconds = OptimizeTC::TC2seg($tc[0]);
-		}
-
-		# For fast access from oh list only
-		if ($format==='timecode') {
-			return (string)$tc[0];
-		}
-
-		return (int)$duration_seconds;
-	}//end get_duration_seconds
+		return $duration;
+	}//end get_duration
 
 
 

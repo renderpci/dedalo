@@ -127,10 +127,9 @@ class component_image extends component_media_common {
 
 	/**
 	* GET DATO
-	* @return array|null $dato
+	*
 	* Sample data:
-	* [
-	*  {
+	* [{
     *    "original_file_name": "poblado_raspa.jpg",
     *    "original_upload_date": {
     *      "day": 20,
@@ -141,12 +140,12 @@ class component_image extends component_media_common {
     *      "minute": 54,
     *      "second": 46
     *    }
-    *  }
-	* ]
+    * }]
+    * @return array|null $dato
 	*/
 	public function get_dato() : ?array {
-		$dato = parent::get_dato();
 
+		$dato = parent::get_dato();
 		if (!empty($dato) && !is_array($dato)) {
 			$dato = [$dato];
 		}
