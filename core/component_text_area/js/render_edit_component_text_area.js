@@ -455,7 +455,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 						text_editor	: text_editor
 					})
 					// create the new tag for the reference
-					const tag_type		='reference'
+					const tag_type		='referenceIn'
 					const last_tag_id	= self.get_last_tag_id(tag_type, text_editor)
 					const note_number	= parseInt(last_tag_id) + 1
 					const reference_tag		= {
@@ -1636,6 +1636,24 @@ const render_reference = async function(options) {
 				class_name		: 'success apply',
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
+			})
+			button_apply.addEventListener('mouseup',function(evt) {
+				const new_locator = reference_component.data.value
+				// create the new tag for the reference, it's necessary to change the referenceIn tag only
+					const tag_type		='referenceIn'
+
+				const reference_in_tag = {
+					type	: tag_type,
+					label	: view_tag.label,
+					tag_id	: view_tag.tag_id,
+					state	: view_tag.state,
+					data	: new_locator // object format
+					}
+				text_editor.update_tag({
+					type			: tag_type,
+					tag_id			: view_tag.tag_id,
+					new_data_obj	: reference_in_tag
+				})
 			})
 
 	// save editor changes to prevent conflicts with modal components changes
