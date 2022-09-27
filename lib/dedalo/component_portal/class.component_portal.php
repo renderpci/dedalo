@@ -2061,7 +2061,6 @@ class component_portal extends component_relation_common {
 							# $column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
 							$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : null;
 
-
 							# Detect and avoid structure errors (portal list with deprecated elements for example)
 							if (strpos($modelo_name, 'component_')===false) {
 								dump($modelo_name, ' SKIPPED wrong modelo_name ++ column_tipo: '.to_string($column_tipo));
@@ -2071,30 +2070,30 @@ class component_portal extends component_relation_common {
 								continue;
 							}
 
-							$render_list_mode = 'portal_list';
-							// Verificar este supuesto !!!
+							// render_list_mode default
+								$render_list_mode = 'portal_list'; // Verificar este supuesto !!!
+								switch (true) {
 
-							switch ($edit_view) {
-								case 'view_mosaic':
-									$render_list_mode = 'portal_list_view_mosaic';
-									if ($modelo_name!=='component_image' && $modelo_name!=='component_av' && $modelo_name!=='component_portal') {
-										# Only accept component_image as column
-										debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image/component_av/component_portal are valid in mosaic mode ", logger::DEBUG);
-										continue 2;
-									}
-									break;
-								case strrpos($edit_view, 'view_tool_description'):
-									if ($modelo_name==='component_portal') {
+									case ($edit_view==='view_mosaic') :
 										$render_list_mode = 'portal_list_view_mosaic';
-									}else{
-										$render_list_mode = 'edit';
-									}
-									break;
-								default:
-									#$render_list_mode = 'edit';
-									break;
-							}
-							#debug_log(__METHOD__." ++++++++++++++++++++++++++ render_list_mode ".to_string($render_list_mode), logger::ERROR);
+										if ($modelo_name!=='component_image' && $modelo_name!=='component_av' && $modelo_name!=='component_portal') {
+											# Only accept component_image as column
+											debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image/component_av/component_portal are valid in mosaic mode ", logger::DEBUG);
+											continue 2;
+										}
+										break;
+
+									case (strpos($edit_view, 'view_tool_description')!==false) :
+										$render_list_mode = ($modelo_name==='component_portal')
+											? 'portal_list_view_mosaic'
+											: 'edit';
+										break;
+
+									default:
+										#$render_list_mode = 'edit';
+										break;
+								}
+								#debug_log(__METHOD__." ++++++++++++++++++++++++++ render_list_mode ".to_string($render_list_mode), logger::ERROR);
 
 
 							# Overwrite default list mode when need. Set component propiedades 'elements_list_mode' as you want, like edit..

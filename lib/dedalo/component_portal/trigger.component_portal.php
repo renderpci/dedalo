@@ -29,8 +29,8 @@ function save($json_data) {
 				return $response;
 			}
 		}
-	
-	
+
+
 	# Verify vars
 	if( $dato===false ) {
 		$response->msg .= 'Trigger Error: ('.__FUNCTION__.') Empty dato (is mandatory)';
@@ -84,10 +84,10 @@ function save($json_data) {
 	$component_portal->Save();
 	#debug_log(__METHOD__." Saved component portal $section_tipo $portal_tipo $portal_parent with values: ".to_string($dato), logger::DEBUG);
 
-	
+
 	$response->result 	= true;
 	$response->msg 		= "Ok. Request done. Saved $section_tipo $portal_tipo $portal_parent. Received elements: $dato_count. [save]";
-	
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -138,7 +138,7 @@ function add_new_element($json_data) {
 				return $response;
 			}
 		}
-		
+
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 	$component 		= component_common::get_instance($modelo_name,
 													 $portal_tipo,
@@ -151,8 +151,8 @@ function add_new_element($json_data) {
 		$add_options->top_tipo 				= $top_tipo;
 		$add_options->top_id 				= $top_id;
 
-	$response = $component->add_new_element($add_options);	
-	
+	$response = $component->add_new_element($add_options);
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -200,7 +200,7 @@ function remove_element($json_data) {
 													 'edit',
 													 DEDALO_DATA_NOLAN,
 													 $section_tipo);
-	
+
 	$remove_options = new stdClass();
 		$remove_options->locator 	 = $locator;
 		$remove_options->remove_mode = $remove_mode;
@@ -226,13 +226,13 @@ function remove_element($json_data) {
 
 /**
 * BUILD_COMPONENT_JSON_DATA
-* @return object $response 
+* @return object $response
 */
 function build_component_json_data($json_data) {
 	global $start_time;
 
 	// session_write_close();
-	
+
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -248,7 +248,7 @@ function build_component_json_data($json_data) {
 				return $response;
 			}
 		}
-	#debug_log(__METHOD__." Portal trigger ** build_options ".to_string($build_options), logger::DEBUG); #die();
+	// debug_log(__METHOD__." Portal trigger ** json_data ".to_string($json_data), logger::DEBUG); #die();
 
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 	$component   	= component_common::get_instance($modelo_name,
@@ -277,7 +277,7 @@ function build_component_json_data($json_data) {
 				}else{
 					// actual component
 					$dato = $component->get_dato();
-				}				
+				}
 			}
 			$component->set_dato($dato);
 		}
@@ -331,12 +331,12 @@ function remove_locator_from_portal($json_data) {
 			}
 		}
 
-	# Verify vars	
+	# Verify vars
 	if( !$rel_locator = json_decode($rel_locator) ) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') rel_locator is invalid !';
 		return $response;
-	}		
-	
+	}
+
 	$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 	$component_portal = component_common::get_instance( $modelo_name,
 														$portal_tipo,
@@ -353,7 +353,7 @@ function remove_locator_from_portal($json_data) {
 	#DELETE AND UPDATE the state of this section and his parents
 	$state = $component_portal->remove_state_from_locator($rel_locator);
 
-	
+
 	if ($result===true) {
 		$response->result 	= true;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
@@ -401,12 +401,12 @@ function remove_resource_from_portal($json_data) {
 			}
 		}
 
-	
+
 	if(!$rel_locator = json_decode($rel_locator)) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid rel_locator';
 		return $response;
 	}
-	
+
 	$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 	$component_portal = component_common::get_instance( $modelo_name ,
 														$portal_tipo,
@@ -417,8 +417,8 @@ function remove_resource_from_portal($json_data) {
 
 	# Return 'ok' / 'Sorry. You can not delete this resource because it is used in other records..'
 	$msg = $component_portal->remove_resource_from_portal((object)$rel_locator, (string)$portal_tipo);
-	
-	if ($msg==true || $msg=='ok') {	
+
+	if ($msg==true || $msg=='ok') {
 
 		#DELETE AND UPDATE the state of this section and his parents
 		$state = $component_portal->remove_state_from_locator($rel_locator);
@@ -426,7 +426,7 @@ function remove_resource_from_portal($json_data) {
 		$response->result 	= true;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
-	
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -459,7 +459,7 @@ function show_more() {
 		$response->msg 		= 'Error. Request failed [save]';
 
 	# Verify vars
-	if( empty($portal_tipo) ) {	
+	if( empty($portal_tipo) ) {
 		$response->msg .= "<span class='error'> Error: 'portal_tipo' is mandatory</span>"; return $response;
 	}
 	if( empty($portal_parent) ) {
@@ -468,7 +468,7 @@ function show_more() {
 	if( empty($section_tipo) ) {
 		$response->msg .= "<span class='error'> Error: 'section_tipo' is mandatory</span>"; return $response;
 	}
-	
+
 	#$modelo_name 	  = 'component_portal';
 	$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 	$component_portal = component_common::get_instance($modelo_name,
