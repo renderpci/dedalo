@@ -189,7 +189,7 @@ const get_input_element = (i, current_value, self) => {
 						toolbar.push(...self.context.toolbar_buttons)
 					}
 				// toolbar add standard buttons
-					toolbar.push(...['button_lang','|','button_save'])
+					toolbar.push(...['button_lang','button_reference','|','button_save'])
 
 			// editor_config
 				const editor_config = {
@@ -448,10 +448,36 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add reference',
-				image	: '../../core/themes/default/icons/reference.svg',
+				image	: '../../core/themes/default/icons/link.svg',
 				onclick	: function(evt) {
-					alert("Adding reference !");
-					// component_text_area.create_new_reference(ed, evt, text_area_component)
+					event_manager.publish('create_reference_'+ self.id_base + '_' + i, {
+						caller		: self,
+						text_editor	: text_editor
+					})
+					// create the new tag for the reference
+					const tag_type		='referenceIn'
+					const last_tag_id	= self.get_last_tag_id(tag_type, text_editor)
+					const note_number	= parseInt(last_tag_id) + 1
+					const reference_tag		= {
+						type	: tag_type,
+						label	: 'reference ' + note_number,
+						tag_id	: String(note_number),
+						state	: 'n',
+						data	: ''
+					}
+
+					render_reference({
+						self		: self,
+						text_editor	: text_editor,
+						i			: i,
+						tag			: reference_tag
+					})
+
+					// self.create_reference({
+					// 	text_editor	: text_editor
+					// }).then((locator)=>{
+
+					// })
 				}
 			}
 		})
@@ -1497,4 +1523,169 @@ const render_langs_list = function(self, text_editor, i) {
 
 	return true
 }//end render_langs_list
+
+
+
+/**
+* RENDER_REFERENCE
+*
+* @param object options
+* @return DOM node fragment
+*/
+const render_reference = async function(options) {
+
+	// options
+		const self				= options.self
+		const text_editor		= options.text_editor
+		const i					= options.i
+		const view_tag			= options.tag
+
+	// short vars
+		const data_string		= view_tag.data
+		// convert the data_tag form string to json*-
+		// replace the ' to " stored in the html data to JSON "
+		const data				= data_string.replace(/\'/g, '"')
+		const locator			= data && data.length > 0
+			? JSON.parse(data)
+			: null
+
+		const references_section_tipo		= self.context.references_section_tipo
+		const references_component_tipo		= self.context.references_component_tipo
+		const references_component_model	= self.context.references_component_model
+
+		// const reference_section_id		= locator.section_id
+		// const reference_section_tipo	= locator.section_tipo
+
+	// section
+		// create the instance of the note section, it will render without inspector or filter and with edit mode
+		const instance_options = {
+			model			: references_component_model,
+			tipo			: references_component_tipo,
+			section_tipo	: references_section_tipo,
+			section_id		: 'tmp',
+			mode			: 'edit',
+			lang			: page_globals.dedalo_data_nolan,
+			caller			: self,
+		}
+		// get the instance, built and render
+			const reference_component 		=	await instances.get_instance(instance_options)
+												await reference_component.build(true)
+			const reference_component_node	=	await reference_component.render()
+
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'header'
+		})
+		// header_label. created label with Title case (first letter to uppercase)
+			const header_label		= (view_tag.label || 'Reference')
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				inner_html		: header_label,
+				parent			: header
+			})
+
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body'
+		})
+		body.appendChild(reference_component_node)
+
+	// footer
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'footer'
+		})
+
+
+		// button remove
+			const button_remove = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'danger remove',
+				text_content	: get_label.delete || 'Delete',
+				parent			: footer
+			})
+			// When the user click on remove button, two actions happens:
+			// first, delete the section in the server
+			// second, remove the tag from the text_area
+			button_remove.addEventListener("click", function(e){
+				e.stopPropagation()
+				// ask to user if really want delete the note
+				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ view_tag.tag_id
+				// if yes, delete the note section in the server
+				if(window.confirm(delete_label)) {
+					// remove the tag of the note in the component_text_area
+					text_editor.delete_tag(view_tag)
+					.then(function(){
+
+						// text_area. Prepare the text_editor to save setting it in dirty mode and save the change
+							text_editor.set_dirty(true)
+							// text_editor.save()
+
+						// remove the modal
+							modal.remove()
+					})
+				}
+			})
+
+		// button Apply reference
+			const button_apply = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'success apply',
+				text_content	: get_label.apply || 'Apply',
+				parent			: footer
+			})
+			button_apply.addEventListener('mouseup',function(evt) {
+				const new_locator = reference_component.data.value
+				// create the new tag for the reference, it's necessary to change the referenceIn tag only
+					const tag_type		='referenceIn'
+
+				const reference_in_tag = {
+					type	: tag_type,
+					label	: view_tag.label,
+					tag_id	: view_tag.tag_id,
+					state	: view_tag.state,
+					data	: new_locator // object format
+					}
+				text_editor.update_tag({
+					type			: tag_type,
+					tag_id			: view_tag.tag_id,
+					new_data_obj	: reference_in_tag
+				})
+			})
+
+	// save editor changes to prevent conflicts with modal components changes
+		// text_editor.save()
+
+	// modal. Create a standard modal with the note information
+		const modal = ui.attach_to_modal({
+			header	: header,
+			body	: body,
+			footer	: footer,
+			size	: 'normal' // string size big|normal
+		})
+		// when the modal is closed the section instance of the note need to be destroyed with all events and components
+		modal.on_close = () => {
+
+			// change data to set empty value in the component (it saved in Session instead DDBB)
+				const changed_data = [Object.freeze({
+					action	: 'update',
+					key		: 0,
+					value	: null
+				})]
+
+			// fix instance changed_data
+				reference_component.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+			// destroy all of the component, it and his own subcontext instances
+				reference_component.destroy(true,true,true)
+		}
+
+
+	return true
+}//end render_note
 

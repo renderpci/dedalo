@@ -15,7 +15,6 @@
 	import {render_list_component_text_area} from '../../component_text_area/js/render_list_component_text_area.js'
 	import {render_mini_component_text_area} from '../../component_text_area/js/render_mini_component_text_area.js'
 	import {render_search_component_text_area} from '../../component_text_area/js/render_search_component_text_area.js'
-	//import '../../../prosemirror/dist/prosemirror.js';
 	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
 	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 
@@ -984,3 +983,40 @@ component_text_area.prototype.updated_layer_data= function(options) {
 		const inserted_tag = text_editor.set_content(geo_view_tag)
 
 	}
+
+
+/*	References
+----------------------------------------------------------------------------------------- */
+
+	/**
+	* CREATE_REFERENCE
+	* Build a new virtual section of reference when user clicks on text editor button
+	* @param object options
+	* @return string|null note_section_id
+	*/
+	component_text_area.prototype.create_reference = async function(options) {
+
+		const self = this
+
+		// options
+			const text_editor = options.text_editor // get the text_editor sent by the event (button_note event)
+
+		// short vars
+			const references_section_tipo	= self.context.references_section_tipo
+			const references_component_tipo	= self.context.references_component_tipo
+
+		// Create the new note in the server, it will send the section_id created in the database
+			const rqo = {
+				action	: 'create',
+				source	: {
+					section_tipo : notes_section_tipo
+				}
+			}
+			const api_response = await data_manager.request({
+				body:rqo
+			})
+			const note_section_id = api_response.result || null;
+
+
+		return note_section_id;
+	}//end create_reference
