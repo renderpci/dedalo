@@ -214,7 +214,7 @@ class tool_import_files extends tool_common {
 		switch ($model) {
 			case 'component_image':
 
-				// component_image (Is autosaved with defaults on create)
+				// component_image (Is auto saved with defaults on create)
 					$component = component_common::get_instance(
 						$model,
 						$target_component_tipo,
@@ -224,9 +224,9 @@ class tool_import_files extends tool_common {
 						$target_section_tipo
 					);
 				// get_image_id
-					$image_id		= $component->get_image_id();
-					$image_path		= $component->get_image_path();
-					$aditional_path	= $component->get_aditional_path();
+					$image_id			= $component->get_image_id();
+					$image_path			= $component->get_image_path();
+					$additional_path	= $component->get_additional_path();
 
 				// file vars
 					# Path of file like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/'
@@ -252,8 +252,8 @@ class tool_import_files extends tool_common {
 					}
 
 				// original image desired store
-					$original_path 		= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path;
-					$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension);
+					$original_path		= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $additional_path;
+					$original_file_path	= $original_path .'/'. $image_id . '.'.strtolower($extension);
 					if( !is_dir($original_path) ) {
 						if(!mkdir($original_path, 0777,true)) {
 							throw new Exception(" Error on read or create directory. Permission denied $original_path");
@@ -273,7 +273,7 @@ class tool_import_files extends tool_common {
 
 				// extension unify. convert JPG to jpg
 					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
-						$original_file_path_jpg = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+						$original_file_path_jpg = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $additional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
 						ImageMagick::convert($original_file_path, $original_file_path_jpg );
 					}
 
@@ -303,6 +303,7 @@ class tool_import_files extends tool_common {
 				trigger_error("Error. Media type not allowed");
 				break;
 		}
+
 
 		return true;
 	}//end set_media_file
