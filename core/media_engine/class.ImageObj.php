@@ -17,7 +17,7 @@ class ImageObj extends MediaObj {
 
 
 
-	function __construct(string $image_id, ?string $quality=null, ?string $aditional_path=null, string $initial_media_path='', ?string $external_source=null) {
+	function __construct(string $image_id, ?string $quality=null, ?string $additional_path=null, string $initial_media_path='', ?string $external_source=null) {
 
 		# SPECIFIC VARS
 		$this->set_image_id($image_id);
@@ -25,13 +25,13 @@ class ImageObj extends MediaObj {
 		$this->set_quality($quality);
 
 		/*
-		if( is_null($aditional_path) ) {
-			dump($aditional_path,'$aditional_path');
-			throw new Exception("Error Processing Request. Mandatory aditional_path", 1);
+		if( is_null($additional_path) ) {
+			dump($additional_path,'$additional_path');
+			throw new Exception("Error Processing Request. Mandatory additional_path", 1);
 		}
 		*/
 		$this->initial_media_path = $initial_media_path;
-		$this->aditional_path 	  = $aditional_path;
+		$this->additional_path 	  = $additional_path;
 		$this->external_source 	  = $external_source;
 
 		parent::__construct($image_id);
@@ -71,7 +71,7 @@ class ImageObj extends MediaObj {
 			$media_path = $external_parts['dirname'];
 			return $media_path;
 		}else{
-			return DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path;
+			return DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->additional_path;
 		}
 	}
 	public function get_media_path_abs() : string {
@@ -80,13 +80,13 @@ class ImageObj extends MediaObj {
 			$media_path = $external_parts['dirname'];
 			return $media_path;
 		}else{
-			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . $this->quality . $this->aditional_path;
+			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . $this->quality . $this->additional_path;
 		}
 	}
 
 	public function get_media_path_server() : string {
 
-		return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path;
+		return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->additional_path;
 	}
 
 	# GET DEFAULT QUALITY
@@ -156,7 +156,7 @@ class ImageObj extends MediaObj {
 
 		if(is_array($ar_quality)) foreach($ar_quality as $quality) {
 
-			$obj = new ImageObj($this->image_id, $quality, $this->aditional_path, $this->initial_media_path);
+			$obj = new ImageObj($this->image_id, $quality, $this->additional_path, $this->initial_media_path);
 
 			if($obj->get_file_exists()) {
 
@@ -176,13 +176,13 @@ class ImageObj extends MediaObj {
 		$m 					= 'image';
 		$quality 			= $this->quality;
 		$initial_media_path = $this->initial_media_path;
-		$aditional_path 	= $this->aditional_path;
+		$additional_path 	= $this->additional_path;
 		$SID 				= $this->image_id;
 		$external_source 	= $this->external_source;
 		$w 					= $maxWidht;
 		$h 					= $maxHeight;
 		# 'm','quality','SID','w','h','fx','p','prop'
-		$thumb_url = DEDALO_CORE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&aditional_path=' .$aditional_path. '&SID=' .$SID. '&external_source='.$external_source. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;
+		$thumb_url = DEDALO_CORE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&additional_path=' .$additional_path. '&SID=' .$SID. '&external_source='.$external_source. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;
 			#dump($thumb_url,'thumb_url');
 
 		return $thumb_url;

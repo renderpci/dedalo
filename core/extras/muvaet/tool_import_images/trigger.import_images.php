@@ -253,7 +253,7 @@ if ($mode=='renum_digital') {
 			$ar_locators = array_merge( (array)$imagen_identificativa_dato, (array)$imagenes_adicionales_dato );
 				#dump($ar_locators, " ar_locators ".to_string()); continue;
 
-			#$aditional_path 	= tool_import_images::numero_to_local_path($current_section_id,2);
+			#$additional_path 	= tool_import_images::numero_to_local_path($current_section_id,2);
 
 			$i=1;
 			foreach ((array)$ar_locators as $current_locator) {
@@ -277,7 +277,7 @@ if ($mode=='renum_digital') {
 
 				# FICHERO RENAME
 				$codigo 		 = $component_dato;
-				$aditional_path  = '/'.$current_section_id;
+				$additional_path  = '/'.$current_section_id;
 
 				# IMAGEN
 				# Calcula todos los posibles ficheros de a mover/renombrar (en todas las calidades)
@@ -295,7 +295,7 @@ if ($mode=='renum_digital') {
 				# Modifica el dato del directorio de la imagen actual a la nueva nomenclatura
 				/* INNECESARIO YA QUE NO CAMBIA
 				$path_tipo 				= MUPREVA_COMPONENT_TIPO_DIRECTORIO;	// 'rsc33';	//"dd1110";
-				$component_dato 		= (string)$aditional_path;
+				$component_dato 		= (string)$additional_path;
 				$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($path_tipo,true);
 				$current_component 		= component_common::get_instance($modelo_name, $path_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
 				$current_component->set_dato($component_dato);
@@ -325,12 +325,12 @@ if ($mode=='renum_digital') {
 					if (!file_exists($file_path)) continue;
 
 					$target_file_path = $component_image->get_image_path($quality);
-						#dump($file_path, " source file_path ".to_string($aditional_path));
-						#dump($target_file_path, " target_file_path ".to_string($aditional_path));
+						#dump($file_path, " source file_path ".to_string($additional_path));
+						#dump($target_file_path, " target_file_path ".to_string($additional_path));
 
 					# IMAGE COPY FOLDER VERIFY
 					/* INNECESARIO YA QUE NO CAMBIA
-					$target_dir = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $aditional_path ;
+					$target_dir = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $additional_path ;
 					if (!in_array($target_dir, $ar_verified_paths)) {
 						if( !is_dir($target_dir) ) {
 							if( !mkdir($target_dir, 0777,true) ) throw new Exception(" Error on read or create directory. Permission denied \"$target_dir\" (2)");

@@ -41,15 +41,15 @@ class component_pdf extends component_media_common {
 				// initial_media_path set
 					$this->initial_media_path = $this->get_initial_media_path();
 
-				// aditional_path : Set and fix current additional image path
-					$this->aditional_path = $this->get_aditional_path();
+				// additional_path : Set and fix current additional image path
+					$this->additional_path = $this->get_additional_path();
 
 				// PdfObj : Add a PdfObj obj
 					if ($this->pdf_id) {
 						$this->PdfObj = new PdfObj(
 							$this->pdf_id,
 							$this->quality,
-							$this->aditional_path,
+							$this->additional_path,
 							$this->initial_media_path
 						);
 					}
@@ -62,22 +62,22 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_ADITIONAL_PATH
+	* GET_ADDITIONAL_PATH
 	* Calculate image additional path from 'properties' JSON config.
 	* @return
 	*/
-	public function get_aditional_path() {
+	public function get_additional_path() {
 
-		static $ar_aditional_path;
+		static $ar_additional_path;
 
-		#if(isset($ar_aditional_path[$this->pdf_id])) return $ar_aditional_path[$this->pdf_id];
-		if(isset($this->aditional_path)) return $this->aditional_path;
+		#if(isset($ar_additional_path[$this->pdf_id])) return $ar_additional_path[$this->pdf_id];
+		if(isset($this->additional_path)) return $this->additional_path;
 
 		$properties = $this->get_properties();
 
-		if (isset($properties->aditional_path)) {
+		if (isset($properties->additional_path)) {
 
-			$component_tipo 	= $properties->aditional_path;
+			$component_tipo 	= $properties->additional_path;
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
@@ -93,27 +93,27 @@ class component_pdf extends component_media_common {
 				$dato = substr($dato, 0, -1);
 			}
 
-			$ar_aditional_path[$this->pdf_id] = $dato;
+			$ar_additional_path[$this->pdf_id] = $dato;
 
 			if(isset($properties->max_items_folder) && empty($dato)) {
 
 				$max_items_folder  = $properties->max_items_folder;
 				$parent_section_id = $this->parent;
 
-				$ar_aditional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+				$ar_additional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
-				$component->set_dato( $ar_aditional_path[$this->pdf_id] );
+				$component->set_dato( $ar_additional_path[$this->pdf_id] );
 				if (!empty($parent_section_id)) {
 					$component->Save();
 				}
 			}
 
 		}else{
-			$ar_aditional_path[$this->pdf_id] = false;
+			$ar_additional_path[$this->pdf_id] = false;
 		}
 
-		return $this->aditional_path = $ar_aditional_path[$this->pdf_id];
-	}//end get_aditional_path
+		return $this->additional_path = $ar_additional_path[$this->pdf_id];
+	}//end get_additional_path
 
 
 
@@ -384,7 +384,7 @@ class component_pdf extends component_media_common {
 		}
 
 		$pdf_id	= $this->get_pdf_id();
-		$PdfObj	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+		$PdfObj	= new PdfObj($pdf_id, $quality, $this->additional_path, $this->initial_media_path);
 		$size	= $PdfObj->get_size();
 
 		return $size;
@@ -404,7 +404,7 @@ class component_pdf extends component_media_common {
 		}
 
 		$pdf_id	= $this->get_pdf_id();
-		$PdfObj	= new PdfObj($pdf_id, $quality, $this->aditional_path, $this->initial_media_path);
+		$PdfObj	= new PdfObj($pdf_id, $quality, $this->additional_path, $this->initial_media_path);
 
 		$file_exists = $PdfObj->get_file_exists();
 
