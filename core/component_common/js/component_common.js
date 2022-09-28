@@ -786,6 +786,12 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 * 	Publish event 'update_value_'+self.id_base
 *
 * @param object options
+* {
+* 	array changed_data
+* 	string label
+* 	bool|undefined refresh
+* 	undefined|function|bool remove_dialog
+* }
 * @return promise
 * 	Resolve bool|object (API response)
 */
