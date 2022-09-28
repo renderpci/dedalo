@@ -418,20 +418,25 @@ export const service_ckeditor = function() {
 		const editor = self.editor
 
 		// convert the html to the model of ck_editor
-		// const view_fragment		= editor.data.processor.toView( html );
+		// const view_fragment	= editor.data.processor.toView( html );
 		// const model_tag_node	= editor.data.toModel( view_fragment );
 
 		editor.model.change( writer => {
+			if(tag_obj.type==='reference'){
+				const model_tag_node = writer.createElement( 'reference', tag_obj) ;
+				// set the element to enclose the selection range
+				writer.wrap( editor.model.document.selection.getFirstRange(), model_tag_node )
+			}else{
+				// get the end position of the selection
+				const position = editor.model.document.selection.getLastPosition()
+				// create the tag_node
+				const model_tag_node = writer.createElement( 'imageInline', tag_obj) ;
 
-			// get the end position of the selection
-			const position = editor.model.document.selection.getLastPosition()
-			// create the tag_node
-			const model_tag_node = writer.createElement( 'imageInline', tag_obj) ;
-
-			// Insert the html in the current selection location.
-			editor.model.insertContent( model_tag_node, position );
-			// Put the selection on the inserted element.
-			writer.setSelection( model_tag_node, 'on' );
+				// Insert the html in the current selection location.
+				editor.model.insertContent( model_tag_node, position );
+				// Put the selection on the inserted element.
+				writer.setSelection( model_tag_node, 'on' );
+			}
 		});
 
 		self.is_dirty = true;
@@ -496,7 +501,7 @@ export const service_ckeditor = function() {
 						// }
 						const attributes = item._attrs
 
-						if(item._attrs && item._attrs.size > 0) {
+						if(attributes && attributes.size > 0) {
 
 							const current_att_type		= attributes.get('type')
 							const current_att_tag_id	= attributes.get('tag_id')
@@ -505,7 +510,12 @@ export const service_ckeditor = function() {
 
 								// remove
 									editor.model.change( writer => {
-										writer.remove( item )
+										if(current_att_type==='reference'){
+											writer.unwrap( item )
+										}else{
+											writer.remove( item )
+										}
+
 									});
 
 								// set dirty state
@@ -740,7 +750,7 @@ export const service_ckeditor = function() {
 
 				const attributes = parent_item._attrs
 
-				if(parent_item._attrs && parent_item._attrs.size > 0) {
+				if(attributes && attributes.size > 0) {
 
 					const current_type		= attributes.get('data-type')
 					const current_tag_id	= attributes.get('data-tag_id')
@@ -799,7 +809,7 @@ export const service_ckeditor = function() {
 				// const htmlAttributes = item.getAttributes()
 				const attributes = item._attrs
 
-				if(item._attrs && item._attrs.size > 0) {
+				if(attributes && attributes.size > 0) {
 
 					const current_type		= attributes.get('type')
 					const current_tag_id	= attributes.get('tag_id')
@@ -865,7 +875,7 @@ export const service_ckeditor = function() {
 					// }
 					const attributes = item._attrs
 
-					if(item._attrs && item._attrs.size > 0) {
+					if(attributes && attributes.size > 0) {
 
 						const current_type		= attributes.get('type')
 						const current_tag_id	= attributes.get('tag_id')
@@ -906,13 +916,16 @@ export const service_ckeditor = function() {
 								const new_id	= new_tag.id
 								edit_attributes.set('src_id' , new_id)
 
-							// image_url. Replace url var id with updated id tag
-								const image_url = current_src.split('?')[0] + '?id=' + new_id
+
 
 							// set to model
 								editor.model.change( writer => {
 									writer.setAttributes( edit_attributes, item );
-									writer.setAttribute( 'src', image_url, item );
+									if(data_tag.type !=='reference'){
+										// image_url. Replace url var id with updated id tag
+										const image_url = current_src.split('?')[0] + '?id=' + new_id
+										writer.setAttribute( 'src', image_url, item );
+									}
 								});
 
 							// set dirty state
@@ -982,6 +995,7 @@ export const service_ckeditor = function() {
 	this.build_toolbar = function(editor_config) {
 
 		const self = this
+		const editor = self.editor
 
 		const toolbar_container = self.toolbar_container
 
@@ -1008,6 +1022,19 @@ export const service_ckeditor = function() {
 				if(button_config.manager_editor === true){
 					self.factory_events_for_buttons(button_config)
 				}
+				// if(button_config.name === 'reference'){
+
+					// editor.listenTo( editor.model.document, 'change', () => {
+					// 	const model = editor.model;
+					// 	const doc = model.document;
+
+					// 	const value = self._getValueFromFirstAllowedNode();
+					// 	const isEnabled = model.schema.checkAttributeInSelection( doc.selection, 'italic' );
+
+					// 		console.log("isEnabled:----------",isEnabled);
+					// } );
+				// }
+
 				toolbar_container.appendChild(button_node)
 
 				toolbar_container.addEventListener('mousedown', function(evt){
@@ -1039,6 +1066,33 @@ export const service_ckeditor = function() {
 		return toolbar_container
 	}//end this.build_toolbar
 
+
+	/**
+	 * Checks the attribute value of the first node in the selection that allows the attribute.
+	 * For the collapsed selection returns the selection attribute.
+	 *
+	 * @private
+	 * @returns {Boolean} The attribute value.
+	 */
+	this._getValueFromFirstAllowedNode = function() {
+		const model = this.editor.model;
+		const schema = model.schema;
+		const selection = model.document.selection;
+
+		if ( selection.isCollapsed ) {
+			return selection.hasAttribute( this.attributeKey );
+		}
+
+		for ( const range of selection.getRanges() ) {
+			for ( const item of range.getItems() ) {
+				if ( schema.checkAttribute( item, this.attributeKey ) ) {
+					return item.hasAttribute( this.attributeKey );
+				}
+			}
+		}
+
+		return false;
+	}
 
 
 	/**
