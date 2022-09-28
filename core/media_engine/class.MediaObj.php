@@ -12,7 +12,7 @@ abstract class MediaObj {
 	protected $extension ;			# like 'mp4'
 	protected $media_path ;			# relative path like '../media/av/mid/'
 	protected $media_path_abs ;		# absolute path like '/Users/dedalo/Sites/site_dedalo/media/av/mid/'
-	protected $aditional_path;
+	protected $additional_path;
 	protected $initial_media_path;
 	protected $mime_type ;			# like 'video/mp4'
 	protected $file_size ;			# like '630MB'

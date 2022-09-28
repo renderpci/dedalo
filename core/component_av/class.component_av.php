@@ -16,7 +16,7 @@ class component_av extends component_media_common {
 	public $target_filename;
 	public $target_dir;
 
-	public $aditional_path;
+	public $additional_path;
 
 
 

@@ -71,7 +71,7 @@ class PosterFrameObj extends MediaObj {
 
 
 	public function get_media_path_server() {
-			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
+			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->additional_path . '/';
 	}
 
 	public function set_posterframe($tc) {

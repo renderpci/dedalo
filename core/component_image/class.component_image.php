@@ -15,7 +15,7 @@ class component_image extends component_media_common {
 	public $target_filename;
 	public $target_dir;
 
-	public $aditional_path;
+	public $additional_path;
 	public $initial_media_path;	# A optional file path to files to conform path as /media/images/my_initial_media_path/<1.5MB/..
 	public $external_source;
 
@@ -50,10 +50,10 @@ class component_image extends component_media_common {
 				// initial media path set
 					$this->initial_media_path = $this->get_initial_media_path();
 
-				// aditional_path : set and fix current additional image path
-					$this->aditional_path = $this->get_aditional_path();
+				// additional_path : set and fix current additional image path
+					$this->additional_path = $this->get_additional_path();
 
-				// aditional_path : set and fix current additional image path
+				// additional_path : set and fix current additional image path
 					$this->external_source = $this->get_external_source();
 
 				// ImageObj : Add a ImageObj obj
@@ -61,7 +61,7 @@ class component_image extends component_media_common {
 						$this->ImageObj = new ImageObj(
 							$this->image_id,
 							$this->quality,
-							$this->aditional_path,
+							$this->additional_path,
 							$this->initial_media_path,
 							$this->external_source
 						);
@@ -317,26 +317,26 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_ADITIONAL_PATH
+	* GET_AdDITIONAL_PATH
 	* Calculate image additional path from 'properties' json config.
 	*/
-	public function get_aditional_path() {
+	public function get_additional_path() {
 
-		static $ar_aditional_path;
+		static $ar_additional_path;
 
 		// already set case
-			if(isset($this->aditional_path)) {
-				return $this->aditional_path;
+			if(isset($this->additional_path)) {
+				return $this->additional_path;
 			}
 
 		$properties = $this->get_properties();
-		if ( isset($properties->aditional_path) && !empty($this->get_parent()) ) {
+		if ( isset($properties->additional_path) && !empty($this->get_parent()) ) {
 
 			switch (true) {
 
-				case (is_string($properties->aditional_path)):
+				case (is_string($properties->additional_path)):
 
-					$component_tipo		= $properties->aditional_path;
+					$component_tipo		= $properties->additional_path;
 					$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$component			= component_common::get_instance(
 						$component_modelo,
@@ -360,17 +360,17 @@ class component_image extends component_media_common {
 							$valor = substr($valor, 0, -1);
 						}
 
-					$ar_aditional_path[$this->image_id] = $valor;
+					$ar_additional_path[$this->image_id] = $valor;
 
 					if(isset($properties->max_items_folder) && empty($valor)) {
 
 						$max_items_folder  = $properties->max_items_folder;
 						$parent_section_id = $this->parent;
 
-						$ar_aditional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+						$ar_additional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
 						# Final dato must be an array to saved into component_input_text
-						$final_dato = array( $ar_aditional_path[$this->image_id] );
+						$final_dato = array( $ar_additional_path[$this->image_id] );
 						$component->set_dato( $final_dato );
 
 						if ($this->modo==='edit') {
@@ -380,13 +380,13 @@ class component_image extends component_media_common {
 					break;
 
 				/*
-				case (is_object($properties->aditional_path) ):
-					//dump(gettype($properties->aditional_path),'$properties->aditional_path');
-					if(isset($properties->aditional_path->max_items_folder)){
-						$max_items_folder = $properties->aditional_path->max_items_folder;
+				case (is_object($properties->additional_path) ):
+					//dump(gettype($properties->additional_path),'$properties->additional_path');
+					if(isset($properties->additional_path->max_items_folder)){
+						$max_items_folder = $properties->additional_path->max_items_folder;
 						$parent_section_id = $this->parent;
 
-						$ar_aditional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+						$ar_additional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 					}
 
 					break;
@@ -395,12 +395,12 @@ class component_image extends component_media_common {
 
 
 		}else{
-			$ar_aditional_path[$this->image_id] = false;
+			$ar_additional_path[$this->image_id] = false;
 		}
 
 
-		return $this->aditional_path = $ar_aditional_path[$this->image_id];
-	}//end get_aditional_path
+		return $this->additional_path = $ar_additional_path[$this->image_id];
+	}//end get_additional_path
 
 
 
@@ -640,7 +640,7 @@ class component_image extends component_media_common {
 
 		// vars
 			$image_id			= $this->get_image_id();
-			$aditional_path		= $this->get_aditional_path();
+			$additional_path		= $this->get_additional_path();
 			$initial_media_path	= $this->get_initial_media_path();
 
 		// original_file check (normalized Dédalo original viewable). If not exist, create it
@@ -648,7 +648,7 @@ class component_image extends component_media_common {
 			if ($original_file===false) {
 
 				# source data (default quality is source)
-				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $additional_path, $initial_media_path);
 				$original_image_path = $source_ImageObj->get_local_full_path();
 
 				$path = pathinfo($original_image_path);
@@ -661,7 +661,7 @@ class component_image extends component_media_common {
 			}
 
 		// Image source
-			$source_ImageObj		= new ImageObj($image_id, $source_quality, $aditional_path, $initial_media_path);
+			$source_ImageObj		= new ImageObj($image_id, $source_quality, $additional_path, $initial_media_path);
 			$source_image			= $source_ImageObj->get_local_full_path();
 			$image_dimensions		= $source_ImageObj->get_image_dimensions();
 
@@ -673,7 +673,7 @@ class component_image extends component_media_common {
 				// dump($source_image, "source_image - pixels_width: $source_pixels_width x pixels_height: $source_pixels_height");
 
 		// Image target
-			$target_ImageObj		= new ImageObj($image_id, $target_quality, $aditional_path, $initial_media_path);
+			$target_ImageObj		= new ImageObj($image_id, $target_quality, $additional_path, $initial_media_path);
 			$target_image			= $target_ImageObj->get_local_full_path();
 			$ar_target				= ImageObj::get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality);
 			$target_pixels_width	= $ar_target[0];
@@ -714,13 +714,13 @@ class component_image extends component_media_common {
 
 		// vars
 			$image_id 			 = $this->get_id();
-			$aditional_path 	 = $this->get_aditional_path();
+			$additional_path 	 = $this->get_additional_path();
 			$initial_media_path  = $this->get_initial_media_path();
 
 		// quality retouched
 			if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
 				# source data (modified is source)
-				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $aditional_path, $initial_media_path);
+				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $additional_path, $initial_media_path);
 				$original_image_path = $source_ImageObj->get_local_full_path();
 				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
 			}
@@ -728,7 +728,7 @@ class component_image extends component_media_common {
 		// quality original
 			if (!isset($original_image_path) || !file_exists($original_image_path)) {
 				# source data (default quality is source)
-				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $additional_path, $initial_media_path);
 				$original_image_path = $source_ImageObj->get_local_full_path();
 				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
 			}
@@ -739,7 +739,7 @@ class component_image extends component_media_common {
 			}
 
 		// quality default
-			$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+			$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $additional_path, $initial_media_path);
 			$image_default_path  = $ImageObj->get_local_full_path();
 			// overwrite or create default quality image version
 			if ($overwrite===true || !file_exists($image_default_path)) {
@@ -759,11 +759,11 @@ class component_image extends component_media_common {
 
 		# common data
 		$image_id 			 = $this->get_image_id();
-		$aditional_path 	 = $this->get_aditional_path();
+		$additional_path 	 = $this->get_additional_path();
 		$initial_media_path  = $this->get_initial_media_path();
 
 		# source data (default quality is source)
-		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $additional_path, $initial_media_path);
 		$original_image_path = $source_ImageObj->get_local_full_path();
 
 		$path = pathinfo($original_image_path);
@@ -779,7 +779,7 @@ class component_image extends component_media_common {
 		}
 
 		# target data (target quality is thumb)
-		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $additional_path, $initial_media_path);
 		$image_default_path  = $ImageObj->get_local_full_path();
 
 		if ($overwrite===true ) { //|| !file_exists($image_default_path)
@@ -797,17 +797,17 @@ class component_image extends component_media_common {
 	* GENERATE_THUMB
 	* Called on save
 	* @return object|null $result
-	* 	url	path of thumb file path OR null if default quality file do not exists
+	* 	url	path of thumb file path OR null if default quality file does not exists
 	*/
 	public function generate_thumb() : ?object {
 
 		// common data
 			$image_id			= $this->get_image_id();
-			$aditional_path		= $this->get_aditional_path();
+			$additional_path		= $this->get_additional_path();
 			$initial_media_path	= $this->get_initial_media_path();
 
 		// source data (default quality is source)
-			$source_ImageObj	= new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+			$source_ImageObj	= new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $additional_path, $initial_media_path);
 			$default_image_path	= $source_ImageObj->get_local_full_path();
 
 		// check default quality image
@@ -817,7 +817,7 @@ class component_image extends component_media_common {
 			}
 
 		// old thumb rename
-			$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+			$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $additional_path, $initial_media_path);
 			$image_thumb_path	= $ImageObj->get_local_full_path();
 			$image_thumb_url	= $ImageObj->get_url();	//$this->get_image_url($quality=DEDALO_IMAGE_THUMB_DEFAULT);
 			if(file_exists($image_thumb_path)) {
@@ -851,11 +851,11 @@ class component_image extends component_media_common {
 	public function get_thumb_url() : string {
 		# common data
 		$image_id			= $this->get_image_id();
-		$aditional_path		= $this->get_aditional_path();
+		$additional_path	= $this->get_additional_path();
 		$initial_media_path	= $this->get_initial_media_path();
 
 		# target data (target quality is thumb)
-		$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+		$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $additional_path, $initial_media_path);
 		$image_thumb_url	= $ImageObj->get_url();
 
 		return $image_thumb_url;
@@ -870,11 +870,11 @@ class component_image extends component_media_common {
 	public function get_thumb_path() : string {
 		# common data
 		$image_id 			 = $this->get_image_id();
-		$aditional_path 	 = $this->get_aditional_path();
+		$additional_path 	 = $this->get_additional_path();
 		$initial_media_path  = $this->get_initial_media_path();
 
 		# target data (target quality is thumb)
-		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $additional_path, $initial_media_path);
 		$image_thumb_path 	 = $ImageObj->get_local_full_path();
 
 		return $image_thumb_path;
@@ -1505,10 +1505,10 @@ class component_image extends component_media_common {
 	public function get_base_svg_url(bool $test_file=false, bool $absolute=false, bool $default_add=false) : string {
 
 		$image_id 		 	= $this->get_image_id();
-		$aditional_path  	= $this->get_aditional_path();
+		$additional_path  	= $this->get_additional_path();
 		$initial_media_path = $this->get_initial_media_path();
 
-		$base_path = DEDALO_IMAGE_FOLDER . $initial_media_path . '/svg' . $aditional_path;
+		$base_path = DEDALO_IMAGE_FOLDER . $initial_media_path . '/svg' . $additional_path;
 
 		// default
 			$image_url = DEDALO_MEDIA_URL . $base_path . '/' . $image_id . '.svg';
@@ -1566,18 +1566,18 @@ class component_image extends component_media_common {
 	public function get_file_content() : string {
 
 		$image_id			= $this->get_image_id();
-		$aditional_path		= $this->get_aditional_path();
+		$additional_path		= $this->get_additional_path();
 		$initial_media_path	= $this->get_initial_media_path();
 
-		$aditional_path = $this->get_aditional_path();
+		$additional_path = $this->get_additional_path();
 
 		$svg_file_name 	= $image_id .'.'. DEDALO_SVG_EXTENSION;
-		$svg_file_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_SVG_EXTENSION . $aditional_path . '/' . $svg_file_name;
+		$svg_file_path 	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_SVG_EXTENSION . $additional_path . '/' . $svg_file_name;
 
 		$svg_data = file_get_contents($svg_file_path);
 
 		$img_file_name	= $image_id .'.'. $this->get_extension();
-		$img_file_path	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_IMAGE_QUALITY_DEFAULT . $aditional_path . '/' . $img_file_name;
+		$img_file_path	= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' .DEDALO_IMAGE_QUALITY_DEFAULT . $additional_path . '/' . $img_file_name;
 
 		$type	= pathinfo($img_file_path, PATHINFO_EXTENSION);
 		$data	= file_get_contents($img_file_path);
@@ -1834,7 +1834,7 @@ class component_image extends component_media_common {
 			$source_quality	= $this->get_source_quality_to_build($quality);
 			$target_quality = $quality;
 
-			// $source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+			// $source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $additional_path, $initial_media_path);
 			// $original_image_path = $source_ImageObj->get_local_full_path();
 			// $real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
 

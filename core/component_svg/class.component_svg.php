@@ -170,26 +170,26 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_ADITIONAL_PATH
+	* GET_ADDITIONAL_PATH
 	* Calculate image additional path from 'properties' JSON config.
-	* @return string|null $aditional_path
+	* @return string|null $additional_path
 	*/
-	public function get_aditional_path() : ?string {
+	public function get_additional_path() : ?string {
 
 		# Already resolved
-		if(isset($this->aditional_path)) {
-			return $this->aditional_path;
+		if(isset($this->additional_path)) {
+			return $this->additional_path;
 		}
 
-		$aditional_path	= false;
+		$additional_path	= false;
 		$svg_id			= $this->get_svg_id();
 		$parent			= $this->get_parent();
 		$section_tipo	= $this->get_section_tipo();
 
 		$properties = $this->get_properties();
-		if (isset($properties->aditional_path) && !empty($parent) ) {
+		if (isset($properties->additional_path) && !empty($parent) ) {
 
-			$component_tipo		= $properties->aditional_path;
+			$component_tipo		= $properties->additional_path;
 			$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component			= component_common::get_instance(
 				$component_modelo,
@@ -210,20 +210,20 @@ class component_svg extends component_media_common {
 				$dato = substr($dato, 0, -1);
 			}
 
-			# User defined aditional_path path
-			$aditional_path = $dato;
+			# User defined additional_path path
+			$additional_path = $dato;
 
-			# Auto filled aditional_path path
+			# Auto filled additional_path path
 			# If the user not enter component dato, dato is filled by auto value when properties->max_items_folder is defined
 			if(empty($dato) && isset($properties->max_items_folder)) {
 
 				$max_items_folder  = $properties->max_items_folder;
 				$parent_section_id = $parent;
 
-				$aditional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+				$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
 				# Final dato must be an array to saved into component_input_text
-				$final_dato = array( $aditional_path );
+				$final_dato = array( $additional_path );
 				$component->set_dato( $final_dato );
 				$component->Save();
 			}
@@ -233,16 +233,16 @@ class component_svg extends component_media_common {
 			$max_items_folder  = $properties->max_items_folder;
 			$parent_section_id = $parent;
 
-			$aditional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+			$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
-		}//end if (isset($properties->aditional_path) && !empty($parent) )
+		}//end if (isset($properties->additional_path) && !empty($parent) )
 
 		# Fix
-		$this->aditional_path = $aditional_path;
+		$this->additional_path = $additional_path;
 
 
-		return $aditional_path;
-	}//end get_aditional_path
+		return $additional_path;
+	}//end get_additional_path
 
 
 
@@ -294,10 +294,10 @@ class component_svg extends component_media_common {
 			$quality = $this->get_quality();
 		}
 
-		$aditional_path = $this->get_aditional_path();
+		$additional_path = $this->get_additional_path();
 
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . $quality . $aditional_path . '/' . $file_name;
+		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . $quality . $additional_path . '/' . $file_name;
 
 		return $file_path;
 	}//end get_path
@@ -330,10 +330,10 @@ class component_svg extends component_media_common {
 			$this->quality = $this->get_quality();
 		}
 
-		$aditional_path 	= $this->get_aditional_path();
+		$additional_path 	= $this->get_additional_path();
 		$initial_media_path = $this->get_initial_media_path();
 
-		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $this->initial_media_path. '/' . $this->quality . $aditional_path . '/';
+		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $this->initial_media_path. '/' . $this->quality . $additional_path . '/';
 
 		return $target_dir;
 	}//end get_target_dir
@@ -361,10 +361,10 @@ class component_svg extends component_media_common {
 	*/
 		// public function get_url($absolute=false) {
 
-		// 	$aditional_path = $this->get_aditional_path();
+		// 	$additional_path = $this->get_additional_path();
 
 		// 	$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		// 	$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+		// 	$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $additional_path . '/' . $file_name;
 
 		// 	# ABSOLUTE (Default false)
 		// 	if ($absolute) {
@@ -399,10 +399,10 @@ class component_svg extends component_media_common {
 			$image_id 	= $this->get_svg_id();
 
 		// url
-			$aditional_path		= $this->get_aditional_path();
+			$additional_path		= $this->get_additional_path();
 			$initial_media_path	= $this->get_initial_media_path();
 			$file_name			= $image_id .'.'. DEDALO_SVG_EXTENSION;
-			$image_url			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $aditional_path . '/' . $file_name;
+			$image_url			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $additional_path . '/' . $file_name;
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {

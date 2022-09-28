@@ -1,6 +1,8 @@
 <?php
-/*
+/**
 * CLASS ImageMagick
+* Manages image files process with ImageMagick lib
+* https://imagemagick.org
 */
 require_once(dirname(dirname(dirname(__FILE__))).'/config/config.php');
 require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
@@ -8,11 +10,13 @@ require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 final class ImageMagick {
 
 
+
 	/**
 	* TEST_IMAGE_MAGICK
+	* @param bool $info = false
 	* @return true (or info about) / throw error
 	*/
-	public static function test_image_magick(bool $info=false) {
+	public static function test_image_magick( bool $info=false ) {
 		return true;
 
 		# Print the return code: 0 if OK, nonzero if error.
@@ -39,17 +43,22 @@ final class ImageMagick {
 				return true;
 			}
 		}
-	}
+	}//end test_image_magick
 
 
 
 	/**
 	* GET_THUMB
-	* @param $mode (str 'edit,list,..')
-	* @param $f (str filename)
+	* @param string $mode
+	* 	'edit, list, ..'
+	* @param string $f
+	* 	filename
+	* @param bool $verify
+	* @param string $initial_media_path = ''
+	*
 	* @return string $thumb_file_url
 	*/
-	public static function get_thumb(string $mode, string $f, bool $verify=true, string $initial_media_path='') : string {
+	public static function get_thumb( string $mode, string $f, bool $verify=true, string $initial_media_path='' ) : string {
 
 		if(empty($f)) {
 			throw new Exception("Error Processing Request. Few arguments", 1);
@@ -65,7 +74,6 @@ final class ImageMagick {
 				return $thumb_file_url;
 			}
 
-
 		# THUMB FILE EXISTS TEST : Redirect to real existing image thumb
 		if (!file_exists( $thumb_file_path )) {
 
@@ -80,8 +88,8 @@ final class ImageMagick {
 			if (file_exists( $source )) {
 
 				# Target folder exists test
-				$aditional_path = substr($f, 0, strrpos($f,'/'));
-				$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$aditional_path;	#dump( $target_folder_path, $f  );return null;
+				$additional_path = substr($f, 0, strrpos($f,'/'));
+				$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$additional_path;	#dump( $target_folder_path, $f  );return null;
 				if( !is_dir($target_folder_path) ) {
 					if(!mkdir($target_folder_path, 0777,true)) {
 						throw new Exception(" Error on read or create directory. Permission denied $target_folder_path");
@@ -118,12 +126,16 @@ final class ImageMagick {
 
 	/**
 	* DD_THUMB
-	* @param $mode ('edit,list,..')
-	* @param $source_file (full sourcefile path)
-	* @param $target_file (full target thumb file path)
-	* @return
+	* Creates the thumb version file using the ImageMagick command line
+	* @param string $mode ('edit,list,..')
+	* @param string $source_file (full source file path)
+	* @param string $target_file (full target thumb file path)
+	* @param mixed $dimensions = false
+	* @param string $initial_media_path = ''
+	*
+	* @return string|null $result
 	*/
-	public static function dd_thumb(string $mode, string $source_file, string $target_file, $dimensions=false, string $initial_media_path='') : ?string {
+	public static function dd_thumb( string $mode, string $source_file, string $target_file, $dimensions=false, string $initial_media_path='' ) : ?string {
 
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -211,21 +223,18 @@ final class ImageMagick {
 
 
 
-
 	/**
 	* CREATE ALTERNATE VIDEO OR AUDIO VERSION WITH RECEIVED SETTINGS
-	* @param $AVObj
-	*	AVObj object
-	* @param $setting
-	*	ffmpeg_settings to apply like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
+	* @param string $source_file
+	* @param string $target_file
+	* @param string $flags = ''
 	*
-	* @return $av_alternate_command_exc
+	* @return string|null $result
 	*	Terminal command response
-	*
 	*/
-	public static function convert(string $source_file, string $target_file, string $flags='') : ?string {
+	public static function convert( string $source_file, string $target_file, string $flags='' ) : ?string {
 
-		# Valid path verify
+		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0777,true)) {
@@ -241,7 +250,7 @@ final class ImageMagick {
 			// dump($colorspace_info,'colorspace_info '.to_string($colorspace_command));
 
 		# Layers info
-		# get thumbail identification
+		# get thumbnail identification
 		$layers_file_info = (array)self::get_layers_file_info( $source_file );
 		$ar_valid_layers  = array();
 		foreach ($layers_file_info as $layer_key => $layer_type) {
@@ -326,6 +335,7 @@ final class ImageMagick {
 
 	/**
 	* GET_LAYERS_FILE_INFO
+	* @param string $source_file
 	* @return array $ar_layers
 	*/
 	public static function get_layers_file_info( string $source_file ) : array {
@@ -334,7 +344,7 @@ final class ImageMagick {
 
 		// tiff info. Get the type of TIFF format:
 			// 1 single image
-			// 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT OAND CONVERT
+			// 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT AND CONVERT
 			// 3 true layer tiff
 			$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
 			$tiff_format	= shell_exec($command);
@@ -361,7 +371,7 @@ final class ImageMagick {
 				}
 			}
 
-		return (array)$ar_layers;
+		return $ar_layers;
 	}//end get_layers_file_info
 
 
@@ -370,10 +380,12 @@ final class ImageMagick {
 	* ROTATE
 	* 	Rotate and save source image to target (self or other)
 	* @param string $source
-	* @param string
+	* @param string $degrees
+	* @param bool $target = false
+	*
 	* @return string|null $result
 	*/
-	public static function rotate(string $source, $degrees, $target=false) : ?string {
+	public static function rotate( string $source, $degrees, $target=false ) : ?string {
 
 		// fallback target to source (overwrite file)
 			$target = $target
