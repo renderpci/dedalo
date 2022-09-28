@@ -33,7 +33,7 @@ export const vector_editor = function() {
 */
 vector_editor.prototype.init_canvas = async function(self) {
 
-	// init with the dom svg object
+	// init with the DOM svg object
 		//object node with the save svg into the server
 		const object 	= self.object_node
 		// svg document inside the object tag
@@ -49,20 +49,18 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 	// fix image source (URI)
 		// we need the uri of the image inside svg,
-		// for select the attribute is necesary use the namespace of the attribute
+		// for select the attribute is necessary use the namespace of the attribute
 		// xlink:href ; namespace for xlink = http://www.w3.org/1999/xlink, atribute href
 		self.img_src = image.getAttributeNS('http://www.w3.org/1999/xlink','href')
 
 	// set the self specific libraries and variables not defined by the generic init
-		// load dependences js/css
+		// load dependencies js/css
 			const load_promises = []
-			// load paperjs library
+			// load paper js library
 			const lib_js_file = DEDALO_ROOT_WEB + '/lib/paper/dist/paper-full.min.js'
 			load_promises.push( common.prototype.load_script(lib_js_file) )
 
-
-			await Promise.all(load_promises).then(async function(response){
-			})
+			await Promise.all(load_promises)
 
 	// canvas. create the base canvas
 		self.canvas_node = ui.create_dom_element({
@@ -101,7 +99,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 		document.addEventListener('paste', function(event) {
 			// get the clipboard data
 				const clipboard = event.clipboardData.getData('text/plain')
-			// chck if the clipboard is a svg data
+			// check if the clipboard is a svg data
 				if ( clipboard.indexOf('<svg version="')!=-1 ) {
 
 					const pasted_svg = self.current_paper.project.importSVG( clipboard )
@@ -146,7 +144,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 			self.current_paper.project.deselectAll();
 			main_canvas_area.name = 'main_area'
 
-	// subscription to the full_sreen change event
+	// subscription to the full_screen change event
 	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
 		self.events_tokens.push(
 			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
@@ -202,11 +200,11 @@ vector_editor.prototype.init_tools = function(self) {
 		const Raster	= self.current_paper.Raster
 
 		this.active_fill_color = new Color({
-					hue: 360,
-					saturation: 1,
-					brightness: 1,
-					alpha: 0.3,
-				});
+			hue			: 360,
+			saturation	: 1,
+			brightness	: 1,
+			alpha		: 0.3
+		});
 
 	// rectangle
 		this.rectangle = new Tool();
@@ -445,7 +443,6 @@ vector_editor.prototype.init_tools = function(self) {
 
 					switch(hitResult.type) {
 						case ('bounds'):
-
 							// this.path.bounds.selected = true;
 							if (event.modifiers.option) {
 								this.path.data.state		= 'rotate'
@@ -454,7 +451,7 @@ vector_editor.prototype.init_tools = function(self) {
 								this.path.data.bounds		= this.path.bounds.clone();
 								this.path.data.scale_base	= event.point.subtract(this.path.bounds.center)
 							}
-						break;
+							break;
 
 						case ('segment'):
 						case ('fill'):
@@ -563,8 +560,8 @@ vector_editor.prototype.init_tools = function(self) {
 								this.segment.selected	= true;
 								this.segment			= '';
 							}
-
 							break;
+
 						case ('segment'):
 							project.deselectAll();
 
@@ -717,9 +714,10 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				const layer_selector_button = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button open_layer_selector',
-					parent			: buttons_container,
+					parent			: buttons_container
 				})
-				layer_selector_button.addEventListener('mouseup', () =>{
+				layer_selector_button.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
 					// clean
 						while (layer_selector_container.firstChild) {
 							layer_selector_container.removeChild(layer_selector_container.firstChild)
@@ -745,7 +743,8 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name 		: 'button pointer_alt',
 					parent 			: buttons_container
 				})
-				pointer.addEventListener('mouseup', () =>{
+				pointer.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
 					this.pointer.activate()
 					activate_status(pointer)
 				})
@@ -757,7 +756,8 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name 		: 'button pointer',
 					parent 			: buttons_container
 				})
-				transform.addEventListener('mouseup', () =>{
+				transform.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
 					this.transform.activate()
 					activate_status(transform)
 				})
@@ -769,7 +769,8 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name 		: 'button rectangle',
 					parent 			: buttons_container
 				})
-				rectangle.addEventListener('mouseup', () =>{
+				rectangle.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
 					this.rectangle.activate()
 					activate_status(rectangle)
 				})
@@ -781,7 +782,8 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name 		: 'button circle',
 					parent 			: buttons_container
 				})
-				circle.addEventListener('mouseup', () =>{
+				circle.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
 					this.circle.activate()
 					activate_status(circle)
 				})
@@ -793,7 +795,8 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name 		: 'button vector',
 					parent 			: buttons_container
 				})
-				vector.addEventListener('mouseup', () =>{
+				vector.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
 					this.vector.activate()
 					activate_status(vector)
 				})
@@ -805,21 +808,22 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name 		: 'button tool zoom',
 					parent 			: buttons_container
 				})
-				zoom.addEventListener('mouseup', () =>{
+				zoom.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
 					this.zoom.activate()
 					activate_status(zoom)
 				})
 				zoom.addEventListener('dblclick', () =>{
 
 					const ratio = self.node.classList.contains('fullscreen')
-						? (self.canvas_node.clientHeight  / self.canvas_height) * 0.8
+						? 1(self.canvas_node.clientHeight / self.canvas_height) * 0.8
 						: 1
 
-						self.current_paper.view.setScaling(ratio)
+					self.current_paper.view.setScaling(ratio)
 
-						const delta_x	= self.canvas_width /2
-						const delta_y	= self.canvas_height /2
-						self.current_paper.view.setCenter(delta_x, delta_y)
+					const delta_x	= self.canvas_width / 2
+					const delta_y	= self.canvas_height / 2
+					self.current_paper.view.setCenter(delta_x, delta_y)
 				})
 
 				// zoom.addEventListener('wheel', (e) =>{
@@ -850,7 +854,9 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name		: 'button tool save',
 					parent			: buttons_container
 				})
-				save.addEventListener('mouseup', () =>{
+				save.addEventListener('mouseup', (e) =>{
+					e.stopPropagation()
+
 					self.node.classList.remove('fullscreen')
 					event_manager.publish('full_screen_'+self.id, false)
 					// update the instance with the new layer information, prepared to save
@@ -931,10 +937,12 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 			const activate_status = (button) =>{
 				const buttons_lenght = buttons.length
 				for (let i = 0; i < buttons_lenght; i++) {
-					const current_buton = buttons[i]
-					current_buton.classList.remove('vector_tool_active')
+					if (buttons[i].classList.contains('vector_tool_active')) {
+						buttons[i].classList.remove('vector_tool_active')
+					}
 				}
-				button ? button.classList.add('vector_tool_active') : null
+				// button ? button.classList.add('vector_tool_active') : null
+				button.classList.add('vector_tool_active')
 			}
 
 		// first load activate pointer
