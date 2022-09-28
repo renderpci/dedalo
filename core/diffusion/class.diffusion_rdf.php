@@ -455,10 +455,10 @@ class diffusion_rdf extends diffusion {
 																			DEDALO_DATA_NOLAN,
 																			$locator->section_tipo,
 																			false);
-						$aditional_path = $component_obj->get_aditional_path();
+						$additional_path = $component_obj->get_additional_path();
 						$image_id = $component_obj->get_target_filename();
 
-						$media_uri_string = $quality . $aditional_path . '/' . $image_id ;
+						$media_uri_string = $quality . $additional_path . '/' . $image_id ;
 
 					}else{
 

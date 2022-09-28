@@ -749,8 +749,8 @@ final class Ffmpeg {
 
 	/**
 	* CONVERT_TO_DEDALO_AV
-	* Transcode any media to dedalo standar quality (usually 404)
-	* Not return nothing, open terminal proccess and send resutl to /dev/null
+	* Trans-code any media to dedalo standard quality (usually 404)
+	* Not return nothing, open terminal process and send result to /dev/null
 	*/
 	public static function convert_to_dedalo_av( string $source_file, string $target_file, bool $async=true ) : void {
 
@@ -771,7 +771,7 @@ final class Ffmpeg {
 		#$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
 		$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=-2:{$heigth}\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
 		$command .= "&& mv $temp_target_file $target_file ";
-		# Comando procesado sólo fast start
+		# Processed command only fast start
 		#$command = "nice $qt_faststart_path $source_file $target_file";
 
 		debug_log(__METHOD__." command: $command ", logger::DEBUG);
@@ -790,29 +790,26 @@ final class Ffmpeg {
 	/**
 	* GET_MEDIA_ATTRIBUTES
 	* @return object JSON mixed file info like:
-	* stdClass Object
-	*	(
-	*	    [format] => stdClass Object
-	*	        (
-	*	            [filename] => /Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/media_test/media_192.168.1.7/av/404/rsc35_rsc167_15.mp4
-	*	            [nb_streams] => 2
-	*	            [nb_programs] => 0
-	*	            [format_name] => mov,mp4,m4a,3gp,3g2,mj2
-	*	            [format_long_name] => QuickTime / MOV
-	*	            [start_time] => -0.001333
-	*	            [duration] => 4237.866667
-	*	            [size] => 545314647
-	*	            [bit_rate] => 1029413
-	*	            [probe_score] => 100
-	*	            [tags] => stdClass Object
-	*	                (
-	*	                    [major_brand] => mp42
-	*	                    [minor_version] => 1
-	*	                    [compatible_brands] => mp42mp41
-	*	                    [creation_time] => 2012-07-11 12:10:32
-	*	                )
-	*	        )
-	*	)
+	* {
+	* 	"format": {
+	* 		"filename": "/../dedalo/media/av/404/rsc35_rsc167_1.mp4",
+	* 		"nb_streams": 3,
+	* 		"nb_programs": 0,
+	* 		"format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+	* 		"format_long_name": "QuickTime / MOV",
+	* 		"start_time": "0.000000",
+	* 		"duration": "172.339000",
+	* 		"size": "22126087",
+	* 		"bit_rate": "1027095",
+	* 		"probe_score": 100,
+	* 		"tags": {
+	* 			"major_brand": "isom",
+	* 			"minor_version": "512",
+	* 			"compatible_brands": "isomiso2avc1mp41",
+	* 			"encoder": "Lavf59.16.100"
+	* 		}
+	* 	}
+	* }
 	*/
 	public static function get_media_attributes( string $source_file ) {
 

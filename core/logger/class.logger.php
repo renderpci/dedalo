@@ -8,8 +8,8 @@ class logger {
 	private $h_log_file;
 	private $log_level;
 
-	// Niveles de registro. A mayor número, menor importancia
-	// Se dejan huecos en la numeración para poder añadir posteriormente otros niveles
+	// Logging levels. The higher the number, the less important.
+	// Gaps are left in the numbering so that other levels can be added later
 	const DEBUG		= 100;
 	const INFO		= 75;
 	const NOTICE	= 50;
@@ -20,7 +20,11 @@ class logger {
 	# global logger obj array to store instances of logger
 	static $obj;
 
-	# PRIVATE CONSTRUCT . Constructor privado (Patrón único)
+
+
+	/**
+	* __CONSTRUCT
+	*/
 	private function __construct() {
 	}
 
@@ -63,19 +67,18 @@ class logger {
 	public static function register(string $log_name, string $connection_string) : bool {
 
 		$url_data = parse_url($connection_string);
-			#var_dump($url_data);
 
 		# Verify connection_string
 		if (!isset($url_data['scheme'])) {
 			throw new Exception("Invalid log connection string ", 1);
 		}
 
-		# Include backend loger
+		# Include back end logger
 		$class_name = 'logger_backend_'.$url_data['scheme'];
 		include_once( DEDALO_CORE_PATH .'/logger/class.' . $class_name . '.php' );
 
 		if (!class_exists($class_name)) {
-			throw new Exception("No loggin backend available for ".$url_data['scheme'], 1);
+			throw new Exception("No login backend available for ".$url_data['scheme'], 1);
 		}
 
 		$obj_back = new $class_name($url_data);

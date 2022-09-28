@@ -1,8 +1,8 @@
 <?php
 	/*
-	
+
 		IMPORT IMÁGENES GENERICO .PHP
-	
+
 	*/
 
 
@@ -73,7 +73,7 @@
 "process_script":"/extras/mupreva/tool_import_images/import_imagenes_generico.php",
 "quality":"original",
 "initial_media_path":"/dibujos_catalogo",
-"aditional_path":"numero_to_local_path"
+"additional_path":"numero_to_local_path"
 }
 
 {
@@ -95,7 +95,7 @@
 "process_script":"/extras/mupreva/tool_import_images/import_imagenes_generico.php",
 "quality":"original",
 "initial_media_path":"/diapositivas",
-"aditional_path":"numero_to_local_path"
+"additional_path":"numero_to_local_path"
 }
 
 
@@ -118,10 +118,10 @@
 "process_script":"/extras/mupreva/tool_import_images/import_imagenes_generico.php",
 "quality":"original",
 "initial_media_path":"/restauracion",
-"aditional_path":"numero_to_local_path"
+"additional_path":"numero_to_local_path"
 }
 */
-	
+
 	#dump($button_import_obj,'$button_import_obj'); die();
 
 
@@ -130,29 +130,29 @@
 	# VARIABLES ESPECÍFICAS DEL SCRIPT DE IMPORTACIÓN
 	#
 	if (!defined('MAIN_SECTION_TIPO')) {
-		
+
 		#
 		# SECCIÓN 'NODRIZA' (1 POR GRUPO)
 		define('MAIN_SECTION_TIPO' 					, $properties->MAIN_SECTION_TIPO);  # Ficha (Agrupador)
 		define('MAIN_PORTAL_IDENTIFY_IMAGE'			, $properties->MAIN_PORTAL_IDENTIFY_IMAGE);  # Imagen/es identificativas
-		define('MAIN_PORTAL_ADITIONAL_IMAGES'		, $properties->MAIN_PORTAL_ADITIONAL_IMAGES);  # Imágenes adicionales	
-		
+		define('MAIN_PORTAL_ADITIONAL_IMAGES'		, $properties->MAIN_PORTAL_ADITIONAL_IMAGES);  # Imágenes adicionales
+
 		#
 		# SECCIÓN 'RECURSO' (1 POR IMAGEN)
-		define('RESOURCE_SECTION_TIPO' 				, $properties->RESOURCE_SECTION_TIPO);	
-		define('RESOURCE_COMPONENT_TIPO_IMAGE'		, $properties->RESOURCE_COMPONENT_TIPO_IMAGE);	
-		define('RESOURCE_COMPONENT_TIPO_DIRECTORY'	, $properties->RESOURCE_COMPONENT_TIPO_DIRECTORY);	
+		define('RESOURCE_SECTION_TIPO' 				, $properties->RESOURCE_SECTION_TIPO);
+		define('RESOURCE_COMPONENT_TIPO_IMAGE'		, $properties->RESOURCE_COMPONENT_TIPO_IMAGE);
+		define('RESOURCE_COMPONENT_TIPO_DIRECTORY'	, $properties->RESOURCE_COMPONENT_TIPO_DIRECTORY);
 		define('RESOURCE_COMPONENT_TIPO_FILENAME'	, $properties->RESOURCE_COMPONENT_TIPO_FILENAME);
 		define('RESOURCE_COMPONENT_TIPO_CODE'		, $properties->RESOURCE_COMPONENT_TIPO_CODE);
 		define('RESOURCE_COMPONENT_TIPO_CODE_OLD'	, $properties->RESOURCE_COMPONENT_TIPO_CODE_OLD);
-		define('RESOURCE_COMPONENT_TIPO_PROJECT'	, $properties->RESOURCE_COMPONENT_TIPO_PROJECT);	
+		define('RESOURCE_COMPONENT_TIPO_PROJECT'	, $properties->RESOURCE_COMPONENT_TIPO_PROJECT);
 		define('RESOURCE_COMPONENT_DATE_CAPTURE'	, $properties->RESOURCE_COMPONENT_DATE_CAPTURE);
 		define('RESOURCE_COMPONENT_TIPO_AUTHOR'		, $properties->RESOURCE_COMPONENT_TIPO_AUTHOR);
 
 		# Verify file name pattern like "1-2"
 		define('VERIFY_FILE_NAME_PATTERN'			, "/(^[0-9]+)-([0-9]+).([a-zA-Z]{3,4})\z/");
-	}	
-	
+	}
+
 
 	######################################################################################################
 
@@ -163,10 +163,10 @@
 
 	# Help
 	$import_help='';
-	$import_help .= "<div class=\"info_line import_help\">";	
+	$import_help .= "<div class=\"info_line import_help\">";
 	$import_help .= "Seleccione en su disco duro los archivos a importar";
 	$import_help .= "
-	- La imágenes deben estar nombradas en formato secuencial de tipo 1-1,1-2,1-3,… donde el primer número será el ID de la ficha de inventario o galería que agrupa los recursos, 
+	- La imágenes deben estar nombradas en formato secuencial de tipo 1-1,1-2,1-3,… donde el primer número será el ID de la ficha de inventario o galería que agrupa los recursos,
 	y el segundo número será la secuencia de recursos asociados al la ficha “nodriza”. Ficheros que no sigan este formato generarán un error en la importación.
 	";
 	$import_help .= "</div>"; //
@@ -180,8 +180,8 @@
 	# @param int current_id
 	# @return string html
 	#
-	if(!function_exists('get_aditional_form_elements')) { function get_aditional_form_elements() {	
-		# pasada al fichero get_aditional_form_elements.php para poder acceder via ajax	
+	if(!function_exists('get_aditional_form_elements')) { function get_aditional_form_elements() {
+		# pasada al fichero get_aditional_form_elements.php para poder acceder via ajax
 		# Preview html
 		ob_start();
 		include('get_aditional_form_elements_author.php');
@@ -192,7 +192,7 @@
 
 	#
 	# VERIFY_FILE_NAME : Defined in button import properties
-	if(!function_exists('verify_file_name')) { function verify_file_name($full_file_name) {	
+	if(!function_exists('verify_file_name')) { function verify_file_name($full_file_name) {
 		$pattern = VERIFY_FILE_NAME_PATTERN;
 		preg_match($pattern, $full_file_name, $ar);
 			#dump($ar, ' ar '.$full_file_name);
@@ -202,18 +202,18 @@
 			if ( empty($ar[1]) ) {
 				echo "<div class=\"error\">Nombre no válido ($full_file_name). Use un formato de nombre secuencial de tipo '1-2.jpg'. El fichero será ignorado.</div>";
 				return false;
-			}			
+			}
 		}
 		return true;
 	}}
 
 
 	/**
-	* GET_ADITIONAL_PATH
-	* Usado para crear 'aditional_path' en archivos que agrupan sus archivos en subcarpetas tipo 45000/45100
+	* GET_additional_path
+	* Usado para crear 'additional_path' en archivos que agrupan sus archivos en subcarpetas tipo 45000/45100
 	*/
 	if(!function_exists('numero_to_local_path')) { function numero_to_local_path($numero) {
-		return tool_import_images::numero_to_local_path( $numero, $levels=2 );		
+		return tool_import_images::numero_to_local_path( $numero, $levels=2 );
 	}}
 
 
@@ -230,17 +230,17 @@
 	$custom_tool_label  = $button_import_obj->get_label();
 
 
-	
+
 
 /**
 * USER FORM CALL
 * Action called by user when submit preview form
 * @see tool_import_images.php $context_name=form
 */
-if ( isset($user_form_call) && $user_form_call==1 ) { //isset($_REQUEST['process']) && $_REQUEST['process']==1 && 
+if ( isset($user_form_call) && $user_form_call==1 ) { //isset($_REQUEST['process']) && $_REQUEST['process']==1 &&
 
 	#dump($_REQUEST, ' _REQUEST');#die();
-	$options = new stdClass();				
+	$options = new stdClass();
 		#$options->folder_name 		 	= $folder_name;
 		$options->all_image_files 	 	= $this->find_all_image_files(TOOL_IMPORT_IMAGES_UPLOAD_DIR);
 		$options->import_image_checkbox = $_REQUEST['import_image_checkbox'];
@@ -265,7 +265,7 @@ if ( isset($user_form_call) && $user_form_call==1 ) { //isset($_REQUEST['process
 #
 # PROCESS POST REQUEST
 if(!function_exists('process_folder')){ function process_folder( $request_options ) {
-		
+
 		if(SHOW_DEBUG) {
 			$start_time= start_time();
 		}
@@ -321,20 +321,20 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 		# Set special php global options
 		#ob_implicit_flush(true);
 		set_time_limit ( 259200 );  // 3 dias
-		
+
 		# Disable logging activity and time machine # !IMPORTANT
 		#logger_backend_activity::$enable_log = false;
 		#RecordObj_time_machine::$save_time_machine_version = false;
 
-		
+
 
 		$html .= "<div class=\"wrap_response_import\">";
-		
+
 		$i=0;
-		if( isset($all_image_files) && is_array($all_image_files) ) foreach ($all_image_files as $ar_group_value) {		
+		if( isset($all_image_files) && is_array($all_image_files) ) foreach ($all_image_files as $ar_group_value) {
 			#dump($ar_group_value);
 
-			
+
 			# vars
 			# Fichero en la carpeta temporal uploads like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
 			$source_full_path 	= $ar_group_value['file_path'];
@@ -347,7 +347,7 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 			# Nombre del fichero sin extensión
 			$nombre_fichero 	= $ar_group_value['nombre_fichero'];
 				#dump($nombre_fichero, ' nombre_fichero '.$source_full_path); continue;
-			
+
 			# VERIFY FILE NAME ALWAYS
 			if( !verify_file_name($image_name) ) {
 				echo "Fichero ignorado ".$image_name." (nombre no válido)";
@@ -361,39 +361,39 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 				}
 			}else{
 				$ar = array( (int)$nombre_fichero, 1);	// En casos como '1' se formatea a '1-1'
-			}	
-			
+			}
+
 			$section_general_id = (int)$ar[0];
 			$disparo_number 	= (int)$ar[1];
-			$codigo 			= (int)$ar[0].'-'.(int)$ar[1];			
-			#dump((int)$section_general_id, '$section_general_id');die();		
-			
-			// Se asegura de que la sección existe. Si no, la crea			
+			$codigo 			= (int)$ar[0].'-'.(int)$ar[1];
+			#dump((int)$section_general_id, '$section_general_id');die();
+
+			// Se asegura de que la sección existe. Si no, la crea
 			$section_general = section::get_instance($section_general_id,MAIN_SECTION_TIPO);
 			$section_general->forced_create_record();
 
 
-			# 
-			# ADITIONAL_PATH : aditional_path de la imagen.			
+			#
+			# additional_path : additional_path de la imagen.
 				switch (true) {
-					case (isset($button_import_obj->properties->aditional_path) && $button_import_obj->properties->aditional_path=='numero_to_local_path') :
-						$aditional_path = numero_to_local_path($section_general_id);						
-						break;				
+					case (isset($button_import_obj->properties->additional_path) && $button_import_obj->properties->additional_path=='numero_to_local_path') :
+						$additional_path = numero_to_local_path($section_general_id);
+						break;
 					default:
 						# Por defecto
-						$aditional_path	= null;	// '/'.$section_general_id;					
+						$additional_path	= null;	// '/'.$section_general_id;
 				}
-				#dump($button_import_obj->properties->aditional_path, ' button_import_obj->aditional_path');
-				#dump($aditional_path, ' aditional_path - '.$section_general_id); die();
-				echo "aditional_path: $aditional_path";	
+				#dump($button_import_obj->properties->additional_path, ' button_import_obj->additional_path');
+				#dump($additional_path, ' additional_path - '.$section_general_id); die();
+				echo "additional_path: $additional_path";
 
 
 
-				
-			$html .= "<div class=\"caption cabecera_ficha\"><span>Ficha $section_general_id</span> - Imagen $image_name - Procesada: ".($i+1)." de ".count($all_image_files)."</div>";			
-			
-			
-			# Link to inventory file				
+
+			$html .= "<div class=\"caption cabecera_ficha\"><span>Ficha $section_general_id</span> - Imagen $image_name - Procesada: ".($i+1)." de ".count($all_image_files)."</div>";
+
+
+			# Link to inventory file
 				if (!empty($section_general_id)) {
 					$url='?t='.MAIN_SECTION_TIPO.'&id='.$section_general_id;
 					$html .="<div class=\"btn_inside_section_buttons_container div_caption\" >";
@@ -404,22 +404,22 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					$html .="</a>";
 					$html .="</div>";
 				}
-			
 
-			$html .= "<div class=\"wrap_response_ficha\">";			
-			
-			
+
+			$html .= "<div class=\"wrap_response_ficha\">";
+
+
 			#
 			# RECURSO SECTION : Creamos la nueva sección para obtener el parent de los componentes (section_id)
 				# Section tipo (mupreva21) . Sección virtual 'Imágenes catálogo' que es filtrada por dd1116 = 233, y por "dd1131":"12" {"filtered_by":{"dd1116":"233","dd1131":"12"}}
-				#				
-					$current_section_tipo	 = RESOURCE_SECTION_TIPO; 
-					$current_componente_tipo = RESOURCE_COMPONENT_TIPO_CODE;	
-					$matrix_table			 = common::get_matrix_table_from_tipo($current_section_tipo);		
+				#
+					$current_section_tipo	 = RESOURCE_SECTION_TIPO;
+					$current_componente_tipo = RESOURCE_COMPONENT_TIPO_CODE;
+					$matrix_table			 = common::get_matrix_table_from_tipo($current_section_tipo);
 					$strQuery=" -- import_images_generic
 					SELECT section_id FROM \"$matrix_table\"
 					WHERE
-					section_tipo = '$current_section_tipo' AND 
+					section_tipo = '$current_section_tipo' AND
 					datos #> '{components,$current_componente_tipo,dato,lg-nolan}' @> '\"$codigo\"'::jsonb
 					LIMIT 1
 					";
@@ -435,7 +435,7 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 						$recurso_section_id = $section->get_section_id();
 						$is_new_resource_section = true;
 					}else{
-						// Se asegura de que la sección existe. Si no, la crea			
+						// Se asegura de que la sección existe. Si no, la crea
 						$section = section::get_instance($section_id,RESOURCE_SECTION_TIPO);
 						//$section->forced_create_record();
 						$recurso_section_id = $section->get_section_id();
@@ -445,10 +445,10 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 
 				# COMPONENTES : Creamos / salvamos los compoenentes que albergan los datos necesarios
 				#
-					if ($is_new_resource_section) {					
-						# COMPONENT : Filtro 
+					if ($is_new_resource_section) {
+						# COMPONENT : Filtro
 						$component_tipo 		= RESOURCE_COMPONENT_TIPO_PROJECT;	//'rsc28';	//"dd364";
-						#$component_dato 		= array(DEDALO_DEFAULT_PROJECT=>"2");	# section_id del proyecto 'Catalogación' component_filter 
+						#$component_dato 		= array(DEDALO_DEFAULT_PROJECT=>"2");	# section_id del proyecto 'Catalogación' component_filter
 						$filter_locator = new locator();
 							$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
 							$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
@@ -458,7 +458,7 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); //'component_filter';
 						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
-						$current_component->Save();					
+						$current_component->Save();
 
 						# CÓDIGO : Tipo '73-1'
 						$component_tipo 		= RESOURCE_COMPONENT_TIPO_CODE;
@@ -467,23 +467,23 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
 						$current_component->Save();
-					}				
+					}
 
 					# CÓDIGO ANTERIOR : Tipo '00281_01_Empuries_Colgante_AD_ORIG.JPG'
 					$component_tipo 		= RESOURCE_COMPONENT_TIPO_CODE_OLD; 	//'rsc22'; 	//"dd345";
 					$component_dato 		= (string)$image_name;
-					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);				
+					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 					$current_component->set_dato($component_dato);
-					$current_component->Save();					
+					$current_component->Save();
 
 					# PATH . Directorio tipo '/23000/23100'
 					$path_tipo 				= RESOURCE_COMPONENT_TIPO_DIRECTORY;	// 'rsc33';	//"dd1110";
-					$component_dato 		= (string)$aditional_path;
+					$component_dato 		= (string)$additional_path;
 					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($path_tipo,true);
 					$current_component 		= component_common::get_instance($modelo_name, $path_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 					$current_component->set_dato($component_dato);
-					$current_component->Save();					
+					$current_component->Save();
 
 					# FILE NAME . nombre del fichero Tipo '73-1'
 					$file_name_tipo 		= RESOURCE_COMPONENT_TIPO_FILENAME;	//'rsc34';	//"dd851";
@@ -491,47 +491,47 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($file_name_tipo,true);
 					$current_component 		= component_common::get_instance($modelo_name, $file_name_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 					$current_component->set_dato($component_dato);
-					$current_component->Save();					
+					$current_component->Save();
 
 					/*
 					# IMAGE. (Auto save when is called first time)
 					$component_tipo 		= RESOURCE_COMPONENT_TIPO_IMAGE; //'rsc29'; 	//"dd750";
 					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);				
-					*/			
+					$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+					*/
 
-		
+
 
 				#
 				# UPDATE DATA ALWAYS
 				#
-					
+
 					# AUTOR / FOTOGRAFO / DIBUJANTE : Tipo '24'
 					if (!empty($options->author)) {
-						$component_tipo 		= RESOURCE_COMPONENT_TIPO_AUTHOR; 	//'rsc52';  # component_autocomplete (Media recursos : Fotógrafo)				
+						$component_tipo 		= RESOURCE_COMPONENT_TIPO_AUTHOR; 	//'rsc52';  # component_autocomplete (Media recursos : Fotógrafo)
 						$component_dato 		= json_decode($author); # IMPORTANTE: Fotógrafo es un objeto locator codificado como string json que viene del request del formulario
-						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);	
+						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
-						$current_component->Save();						
+						$current_component->Save();
 					}
 
 
 					# CODIGO_ANTERIOR : rsc22
 					if (!empty($options->codigo_anterior)) {
-						$component_tipo 		= "rsc22";  # component_input_text		
+						$component_tipo 		= "rsc22";  # component_input_text
 						$component_dato 		= trim($codigo_anterior);
-						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);	
+						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
-						$current_component->Save();	
+						$current_component->Save();
 					}
 
-					
+
 					#
-					# FECHA : Fecha de la foto a partir del metadata del fichero			
+					# FECHA : Fecha de la foto a partir del metadata del fichero
 					$DateTimeOriginal=false;
-						try {							
+						try {
 							$command 		 = MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .$source_full_path;
 							$DateTimeOriginal= shell_exec($command);	//
 							/*
@@ -543,21 +543,21 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 							*/
 						} catch (Exception $e) {
 							$html .= "<br>Error on get DateTimeOriginal from image metadata | ";
-						}					
-						#dump($DateTimeOriginal, " $DateTimeOriginal ".to_string($command));	
+						}
+						#dump($DateTimeOriginal, " $DateTimeOriginal ".to_string($command));
 						if ($DateTimeOriginal && !empty($DateTimeOriginal)) {
 							$dd_date 			= new dd_date();
 
-							$component_tipo 	= RESOURCE_COMPONENT_DATE_CAPTURE; //'rsc44';  # component_date (Media recursos : Fecha de captación)				
-							$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);	
+							$component_tipo 	= RESOURCE_COMPONENT_DATE_CAPTURE; //'rsc44';  # component_date (Media recursos : Fecha de captación)
+							$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 							$current_component 	= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
-							
+
 							$original_dato 		= (string)$DateTimeOriginal;
 
 							$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
-							preg_match($regex, $original_dato, $matches);    
+							preg_match($regex, $original_dato, $matches);
 							  #dump($matches, ' matches');
-							if( isset($matches[1])) $dd_date->set_year((int)$matches[1]); 
+							if( isset($matches[1])) $dd_date->set_year((int)$matches[1]);
 							if(!empty($matches[2])) $dd_date->set_month((int)$matches[2]);
 							if(!empty($matches[3])) $dd_date->set_day((int)$matches[3]);
 							if(!empty($matches[4])) $dd_date->set_hour((int)$matches[4]);
@@ -568,17 +568,17 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 							$current_component->Save();
 						}
 
-			
-					
+
+
 
 			#
 			#
 			# IMAGE COPY FILE
-				$target_dir = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $aditional_path ;
+				$target_dir = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .$initial_media_path. '/'.$quality. $additional_path ;
 				if (!in_array($target_dir, $ar_verified_paths)) {
 					if( !is_dir($target_dir) ) {
 						$create_dir 	= mkdir($target_dir, 0777,true);
-						if(!$create_dir) throw new Exception(" Error on read or create directory. Permission denied \"$target_dir\" (2)");						
+						if(!$create_dir) throw new Exception(" Error on read or create directory. Permission denied \"$target_dir\" (2)");
 					}
 					$ar_verified_paths[] = $target_dir;
 					chmod($target_dir, 0777);
@@ -603,7 +603,7 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					if (!copy($source_full_path, $path_copia)) {
 					    throw new Exception( "<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$path_copia."</div>" );
 					}
-					$orginal_jpg_path = $path_copia;					
+					$orginal_jpg_path = $path_copia;
 				}
 				#dump($source_full_path, ' source_full_path - '.$path_copia);
 				chmod($orginal_jpg_path, 0777);
@@ -612,10 +612,10 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 			#
 			#
 			# COPIA ADEMÁS, LA IMAGEN ORIGINAL (JPG) A MODIFICADA. Esto sirve de punto de partida para editarla
-				$target_dir = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/modificada'. $aditional_path ;
+				$target_dir = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/modificada'. $additional_path ;
 				if (!in_array($target_dir, $ar_verified_paths)) {
-					if( !is_dir($target_dir) ) {						
-						if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory. Permission denied \"$target_dir\" (2)");						
+					if( !is_dir($target_dir) ) {
+						if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory. Permission denied \"$target_dir\" (2)");
 					}
 					$ar_verified_paths[] = $target_dir;
 					chmod($target_dir, 0777);
@@ -629,28 +629,28 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 
 			#
 			#
-			# DEFAULT : Creamos la versión 'default'				
+			# DEFAULT : Creamos la versión 'default'
 
-				# DEFAULT 
-				$ImageObj				= new ImageObj($codigo, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+				# DEFAULT
+				$ImageObj				= new ImageObj($codigo, DEDALO_IMAGE_QUALITY_DEFAULT, $additional_path, $initial_media_path);
 				$image_default_path 	= $ImageObj->get_local_full_path();
 					#dump($image_default_path, ' image_default_path');
-				
+
 				# MODIFICADA : Si ya existe image modificada, NO generaremos la versión default
-				#$ImageObj				= new ImageObj($codigo, 'modificada', $aditional_path, $initial_media_path);
+				#$ImageObj				= new ImageObj($codigo, 'modificada', $additional_path, $initial_media_path);
 				#$image_modificada_path 	= $ImageObj->get_local_full_path();
 
-				if( 
+				if(
 					($quality!=DEDALO_IMAGE_QUALITY_DEFAULT ) # No estamos en 1.5MB y no existe la original //&& !file_exists($image_modificada_path)
 					|| !file_exists($image_default_path) # Ó no existe la default
 				) {
-					
+
 					$source_image 	= $target_dir .'/'. $codigo.'.'.DEDALO_IMAGE_EXTENSION ;		#dump($source_image, ' source_image');
 					$source_quality = $quality;
 					$target_quality = DEDALO_IMAGE_QUALITY_DEFAULT;
 
 					# Image source
-					$ImageObj				= new ImageObj($codigo, $source_quality, $aditional_path, $initial_media_path);
+					$ImageObj				= new ImageObj($codigo, $source_quality, $additional_path, $initial_media_path);
 					$source_image 			= $ImageObj->get_local_full_path();		#dump($source_image, ' source_image');
 					$source_pixels_width	= $ImageObj->get_image_width();
 					$source_pixels_height	= $ImageObj->get_image_height();
@@ -658,23 +658,23 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 						#dump($source_image,"source_image $source_pixels_width x $source_pixels_height");
 
 					# Image target
-					$ImageObj				= new ImageObj($codigo, $target_quality, $aditional_path, $initial_media_path);
+					$ImageObj				= new ImageObj($codigo, $target_quality, $additional_path, $initial_media_path);
 					$target_image 			= $ImageObj->get_local_full_path();
 					$ar_target 				= ImageObj::get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality);
 					$target_pixels_width 	= $ar_target[0];
 					$target_pixels_height 	= $ar_target[1];
 						#dump($target_image,"target_image $target_pixels_width x $target_pixels_height");
 
-					# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)				
+					# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)
 					$target_dir = $ImageObj->get_media_path_abs() ;
 					if (!in_array($target_dir, $ar_verified_paths)) {
 						if( !is_dir($target_dir) ) {
-							if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");							
+							if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
 						}
 						$ar_verified_paths[] = $target_dir;
 						chmod($target_dir, 0777);
 					}
-					
+
 					#
 					# Thumb
 					#if (file_exists($target_image)) {
@@ -690,7 +690,7 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					#shell_exec( MAGICK_PATH . "convert \"$source_image\" $flags \"$target_image\" ");
 					chmod($source_image, 0777);
 					chmod($target_image, 0777);
-					
+
 					if(SHOW_DEBUG) {
 						#$partial_time 	= exec_time_unit($continue_time, $unit='sec');
 						#echo "Partial time 4.5 $partial_time <br>";
@@ -701,9 +701,9 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					usleep(120000);
 
 					# THUMB RECREATE
-					if (file_exists($target_image)) {		
+					if (file_exists($target_image)) {
 
-						$ImageObj			= new ImageObj($codigo, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+						$ImageObj			= new ImageObj($codigo, DEDALO_IMAGE_THUMB_DEFAULT, $additional_path, $initial_media_path);
 						$image_thumb_path 	= $ImageObj->get_local_full_path();
 						try {
 							if(file_exists($image_thumb_path)) {
@@ -718,9 +718,9 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					}else{
 						$html .= "ERROR: La imagen default no existe. NO puedo hacer la miniatura...";
 					}#end if (file_exists($target_image))
-					
 
-				
+
+
 				#
 				# IMAGE. (Auto save when is called without id)
 				# Save now image for get proper thumb image in valor_list
@@ -729,33 +729,33 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 				$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 				$current_component->Save();
-				
 
-				$html .= "<div class=\"info_line \">Creada la imagen de calidad por defecto (".DEDALO_IMAGE_QUALITY_DEFAULT.") desde '$source_quality'</div>";		
+
+				$html .= "<div class=\"info_line \">Creada la imagen de calidad por defecto (".DEDALO_IMAGE_QUALITY_DEFAULT.") desde '$source_quality'</div>";
 
 			}else{
-				$html .= "<div class=\"info_line \">No se creó imagen de calidad por defecto (".DEDALO_IMAGE_QUALITY_DEFAULT.") puesto que ya existe</div>";	
+				$html .= "<div class=\"info_line \">No se creó imagen de calidad por defecto (".DEDALO_IMAGE_QUALITY_DEFAULT.") puesto que ya existe</div>";
 			}#end if($quality!=DEDALO_IMAGE_QUALITY_DEFAULT)
 
-			
+
 			#
 			#
-			# PORTAL : Si se ha creado un registro de portal porque no existía, 
+			# PORTAL : Si se ha creado un registro de portal porque no existía,
 			# buscamos la sección de inventario, sus portales y enlazamos el recurso al portal correspondiente
 			#
 				$add_element_to_portal=true;
 
-				# Vemos si ya está incluida de una importación anterior	
-				$component_tipo   = MAIN_PORTAL_IDENTIFY_IMAGE;	
-				$modelo_name 	  = 'component_portal';							
-				$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);					
+				# Vemos si ya está incluida de una importación anterior
+				$component_tipo   = MAIN_PORTAL_IDENTIFY_IMAGE;
+				$modelo_name 	  = 'component_portal';
+				$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 				$component_dato1  = $component_portal->get_dato();
 
-				$component_tipo   = MAIN_PORTAL_ADITIONAL_IMAGES;	
-				$modelo_name 	  = 'component_portal';							
-				$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);					
+				$component_tipo   = MAIN_PORTAL_ADITIONAL_IMAGES;
+				$modelo_name 	  = 'component_portal';
+				$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 				$component_dato2  = $component_portal->get_dato();
-				
+
 				$ar_locators = array_merge( (array)$component_dato1, (array)$component_dato2 );
 				foreach ($ar_locators as $key => $current_locator) {
 					if (isset($current_locator->section_id) && $current_locator->section_id==$recurso_section_id) {
@@ -768,61 +768,61 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 				if ( $disparo_number<=$max_indentify_items_number && $add_element_to_portal) {
 					# DOCUMENTACIÓN ASOCIADA -> IMAGEN IDENTIFICATIVA  (PORTAL)
 					# COMPONENT : portal de Documemntación asociada / imagenes 'dd1125'
-					$component_tipo   = MAIN_PORTAL_IDENTIFY_IMAGE;	//'mupreva17';	//"dd1125";			
+					$component_tipo   = MAIN_PORTAL_IDENTIFY_IMAGE;	//'mupreva17';	//"dd1125";
 					$modelo_name 	  = 'component_portal';
 					# Locator
 					$locator = new locator();
 						$locator->set_section_id($recurso_section_id);
-						$locator->set_section_tipo(RESOURCE_SECTION_TIPO);			
+						$locator->set_section_tipo(RESOURCE_SECTION_TIPO);
 					$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 					$component_portal->add_locator($locator);
-					$component_dato = $component_portal->get_dato();		
-					$component_portal->Save();					
-					
-					$html .= "<div class=\"info_line\">Añadido recurso $recurso_section_id de Imagen identificativa </div>";					
+					$component_dato = $component_portal->get_dato();
+					$component_portal->Save();
 
-				# OTRAS IMÁGENES		
+					$html .= "<div class=\"info_line\">Añadido recurso $recurso_section_id de Imagen identificativa </div>";
+
+				# OTRAS IMÁGENES
 				}else if ($add_element_to_portal) {
 					# DOCUMENTACIÓN ASOCIADA -> IMÁGENES  (PORTAL)
 					# COMPONENT : portal de Documemntación asociada / imagenes 'dd1125'
-					$component_tipo   = MAIN_PORTAL_ADITIONAL_IMAGES;	//'mupreva17';	//"dd1125";			
+					$component_tipo   = MAIN_PORTAL_ADITIONAL_IMAGES;	//'mupreva17';	//"dd1125";
 					$modelo_name 	  = 'component_portal';
 					# Locator
 					$locator = new locator();
 						$locator->set_section_id($recurso_section_id);
-						$locator->set_section_tipo(RESOURCE_SECTION_TIPO);			
+						$locator->set_section_tipo(RESOURCE_SECTION_TIPO);
 					$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 					$component_portal->add_locator($locator);
-					$component_dato = $component_portal->get_dato();		
+					$component_dato = $component_portal->get_dato();
 					$component_portal->Save();
-					
-					$html .= "<div class=\"info_line\">Añadido recurso $recurso_section_id de Imagen adicional </div>";					
-				}		
-		
-			
 
-			
+					$html .= "<div class=\"info_line\">Añadido recurso $recurso_section_id de Imagen adicional </div>";
+				}
+
+
+
+
 			# DELETE AFTER
 			if ($delete_after=='si') {
 				unlink($source_full_path);
 				$html .= "<div class=\"info_line\">Eliminada la imagen de partida ".$image_name." de la carpeta de importación</div>";
 			}
 
-			
+
 			#
 			# INFORMACIÓN DE LA IMPORTACIÓN DE ESTA IMAGEN
-				$ImageObj		= new ImageObj($codigo, 'original', $aditional_path, $initial_media_path);
-				$img_url		= $ImageObj->get_url();				
-				$img   			= "<a href=\"$img_url\" target=\"_blank\"><img src=\"".$img_url."\" class=\"image_preview\" /></a> ";				
+				$ImageObj		= new ImageObj($codigo, 'original', $additional_path, $initial_media_path);
+				$img_url		= $ImageObj->get_url();
+				$img   			= "<a href=\"$img_url\" target=\"_blank\"><img src=\"".$img_url."\" class=\"image_preview\" /></a> ";
 				$html 		   .= $img;
 				$html 		   .= "<hr>";
-				
+
 			$html .= "</div>"; #end wrap_response_ficha
-			
+
 			$i++; # IMPORTANTE
 		}#end foreach ($all_image_files as $ar_group_value)
-		
-		
+
+
 		# VOLVER BUTTON
 		#$html .= "\n <div class=\"css_button_generic button_back link\" onclick=\"window.history.back();\">";
 		#$html .= label::get_label('volver') ;
@@ -861,14 +861,14 @@ if(!empty($_REQUEST['import_folder'])) {
 	$folder_name = $_REQUEST['dir'];
 	$folder   	 = '';// isset($_REQUEST['folder']) ? '/'.trim($_REQUEST['folder']) : '';
 	$dir 	  	 = $base_dir . $folder .'/'. $folder_name.''; # Like '718_2009_04_28_Inaguracion_Sala_Numismatica_AD'
-	
+
 	$root = scandir($dir);
 		#dump($root, ' root '.$dir);
 		if (!$root) {
 			die("Acceso de negado al directorio $dir");
 		}
-	natsort($root);	
-	$new_root = $root;	
+	natsort($root);
+	$new_root = $root;
 	/**/
 	$n=1;
 	foreach ($root as $key => $value) {
@@ -876,9 +876,9 @@ if(!empty($_REQUEST['import_folder'])) {
 		if(is_dir("$dir/$value") && $value!='.' && $value!='..') {
 
 			echo "<hr><h1>$n - $value </h1><br>";
-			
+
 			$folder_name = $value;
-			
+
 			$new_root = scandir("$dir/$value");
 			if (!$new_root) {
 				echo "Acceso denegado al directorio $dir . Ignorado el directorio ($folder_name)";
@@ -890,13 +890,13 @@ if(!empty($_REQUEST['import_folder'])) {
 				echo "Excluido el directorio $folder_name . Ignorado el directorio ($folder_name) ".to_string($exclude_folders);
 				continue;
 			}
-		
+
 			$valid_extensions = array('jpg','jpeg','tif','tiff','psd','bmp','png','psd');
 			$a=1;
 			foreach($new_root as $current_value) {
 				# Skip non valid extensions
-				$file_parts = pathinfo($current_value);					
-				if(empty($file_parts['extension']) || !in_array(strtolower($file_parts['extension']), $valid_extensions)) continue;		
+				$file_parts = pathinfo($current_value);
+				if(empty($file_parts['extension']) || !in_array(strtolower($file_parts['extension']), $valid_extensions)) continue;
 				# Case file
 					#scandir(directory)dump(is_file("$dir/$folder_name/$current_value"), " $dir/$folder_name/$current_value ".to_string());
 				if(is_file("$dir/$folder_name/$current_value")) {
@@ -908,7 +908,7 @@ if(!empty($_REQUEST['import_folder'])) {
 			$all_image_files 		= $ar_data;
 			$import_image_checkbox  = array_keys($all_image_files);
 				#dump($all_image_files, " all_image_files for $dir/$folder_name".to_string());die();
-			
+
 			# Section id
 			#preg_match($regex, $_REQUEST['dir'], $output_array); 	#dump($output_array, " output_array ".to_string());
 			preg_match($regex, $folder_name, $output_array);
@@ -937,17 +937,17 @@ if(!empty($_REQUEST['import_folder'])) {
 			if(SHOW_DEBUG) {
 				echo " <br>Galería id $section_general_id que va... ";	;
 			}
-			
+
 			if ($_REQUEST['import_folder']=='real') {
 				echo "process_folder working.. <hr>";
-				process_folder( $options );		
+				process_folder( $options );
 			}else{
 				echo "Preview only (set import_folder=real to exec)<hr>";
-			}						
+			}
 
 		$n++;
 		}//end if(is_dir("$dir/$value") && $value!='.' && $value!='..') {
-		
+
 	}//end foreach ($root as $key => $value) {
 	echo "<br><br><h1 style=\"color:green\">THE END</h1><br><br>";
 

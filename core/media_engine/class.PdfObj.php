@@ -12,7 +12,7 @@ class PdfObj extends MediaObj {
 
 
 
-	function __construct(?string $pdf_id, $quality=false, $aditional_path=false, $initial_media_path=false) {
+	function __construct(?string $pdf_id, $quality=false, $additional_path=false, $initial_media_path=false) {
 
 		# specific vars
 		$this->set_pdf_id($pdf_id);
@@ -20,7 +20,7 @@ class PdfObj extends MediaObj {
 		$this->set_quality($quality);
 
 		$this->initial_media_path	= $initial_media_path; // No usada de momento
-		$this->aditional_path		= $aditional_path;
+		$this->additional_path		= $additional_path;
 
 		parent::__construct($pdf_id);
 	}//end __construct
@@ -51,14 +51,14 @@ class PdfObj extends MediaObj {
 	}
 
 	public function get_media_path() {
-		return DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path;
+		return DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->additional_path;
 	}
 	public function get_media_path_abs() {
-		return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->aditional_path;
+		return DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->additional_path;
 	}
 
 	public function get_media_path_server() {
-		return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path;
+		return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->additional_path;
 	}
 
 	# GET DEFAULT QUALITY
@@ -123,7 +123,7 @@ class PdfObj extends MediaObj {
 			$obj = new PdfObj(
 				$this->pdf_id,
 				$quality,
-				$this->aditional_path,
+				$this->additional_path,
 				$this->initial_media_path
 			);
 

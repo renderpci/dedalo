@@ -147,30 +147,32 @@
 		$cookie_secure		= (DEDALO_PROTOCOL==='https://');
 		$cookie_samesite	= (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
 		session_start_manager([
-			'save_handler'		=> 'files',
-			'timeout_seconds'	=> $timeout_seconds,
-			'session_name'		=> 'dedalo_'.DEDALO_ENTITY,
+			'save_handler'				=> 'files',
+			'timeout_seconds'			=> $timeout_seconds,
+			// 'save_path'				=> '/tmp', string optional
+			// 'aditional_save_path'	=> false, bool optional
+			'prevent_session_lock'		=> defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
+			'session_name'				=> 'dedalo_'.DEDALO_ENTITY,
 			// cookie params
-			'cookie_secure'		=> $cookie_secure, // Only https (true | false)
-			'cookie_samesite'	=> $cookie_samesite // (None | Lax | Strict)
+			'cookie_secure'				=> $cookie_secure, // Only https (true | false)
+			'cookie_samesite'			=> $cookie_samesite // (None | Lax | Strict)
 		]);
-
 	}//end if (session_status()!==PHP_SESSION_ACTIVE)
 
 
 
 // show_debug
-	// Application debug config
+	// Application debug config. When user is DEDALO_SUPERUSER is active by default, else is not
 	define('SHOW_DEBUG',
 		(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
 			? true
-			: false // false
+			: false
 	);
 
 
 
 // is_developer
-	// Logged user is developer value
+	// Logged user is developer value. Depends of user config 'is_developer' value from database
 	define('SHOW_DEVELOPER',
 		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
 			? true
@@ -188,9 +190,9 @@
 // backup : Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false
 	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
-	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+	# DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
 	define('DEDALO_BACKUP_TIME_RANGE', 4);
-	// backups paths
+	// backups paths. Try to keep backups directory out of httpdocs scope for security
 	define('DEDALO_BACKUP_PATH' 	 		, dirname(DEDALO_ROOT_PATH) . '/backups');
 	define('DEDALO_BACKUP_PATH_TEMP' 	 	, DEDALO_BACKUP_PATH . '/temp');
 	define('DEDALO_BACKUP_PATH_DB' 	 		, DEDALO_BACKUP_PATH . '/db');
@@ -237,32 +239,32 @@
 
 	# APPLICATION LANG : Dedalo application lang
 	define('DEDALO_APPLICATION_LANGS', [
+		'lg-eng'	=> 'English',
 		'lg-spa'	=> 'Castellano',
 		'lg-cat'	=> 'Català',
 		'lg-eus'	=> 'Euskara',
-		'lg-eng'	=> 'English',
-		'lg-fra'	=> 'French',
+		'lg-fra'	=> 'French'
 	]);
 	// dedalo_application_langs_default
-	define('DEDALO_APPLICATION_LANGS_DEFAULT'	, 'lg-spa');
+	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
 	// dedalo_application_lang. Current Dédalo application lang (cascade calculate from get, post, session vars, default)
-	define('DEDALO_APPLICATION_LANG'		, fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
+	define('DEDALO_APPLICATION_LANG',			fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 	// dedalo_data_lang
-	define('DEDALO_DATA_LANG_DEFAULT'		, 'lg-spa');
-	define('DEDALO_DATA_LANG'				, fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
+	define('DEDALO_DATA_LANG_DEFAULT',			'lg-eng');
+	define('DEDALO_DATA_LANG',					fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
 	// dedalo_data_lang_selector. Show/hide menu data lang selector. bool default true
-	define('DEDALO_DATA_LANG_SELECTOR' 		, true);
+	define('DEDALO_DATA_LANG_SELECTOR',			true);
 	// dedalo_data_nolan. string default 'lg-nolan'. Do not change this
-	define('DEDALO_DATA_NOLAN'				, 'lg-nolan');
+	define('DEDALO_DATA_NOLAN',					'lg-nolan');
 	// Projects langs
-	define('DEDALO_PROJECTS_DEFAULT_LANGS'	, [
+	define('DEDALO_PROJECTS_DEFAULT_LANGS',		[
 		'lg-spa',
 		'lg-cat',
 		'lg-eng',
 		'lg-fra'
 	]);
 	// dedalo_diffusion_langs. Default value is the same as project langs. Change for custom diffusion langs
-	define('DEDALO_DIFFUSION_LANGS'				, DEDALO_PROJECTS_DEFAULT_LANGS);
+	define('DEDALO_DIFFUSION_LANGS', DEDALO_PROJECTS_DEFAULT_LANGS);
 	// translator
 	// define('DEDALO_TRANSLATOR_URL' , [
 	// 	'babel' => 'https://babel.render.es/babel_engine/'
@@ -316,7 +318,7 @@
 		define('DEDALO_AV_TYPE'						, 'h264/AAC');
 		// dedalo_av_quality_original. string default 'original'
 		define('DEDALO_AV_QUALITY_ORIGINAL'			, 'original');
-		// quality default normally '404' (estándar dedalo 72x404)
+		// quality default normally '404' (standard dedalo 72x404)
 		define('DEDALO_AV_QUALITY_DEFAULT'			, '404');
 		// quality folders array normally '404','audio' (sort desc quality)
 		define('DEDALO_AV_AR_QUALITY'				, [DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']);
@@ -379,8 +381,8 @@
 		// color_profiles_path
 		define('COLOR_PROFILES_PATH'				, DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
 		// thumbs dedalo_image_thumb sizes. Integer as pixels
-		define('DEDALO_IMAGE_THUMB_WIDTH'			, 102);	// Default 102
-		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 57);	// Default 57
+		define('DEDALO_IMAGE_THUMB_WIDTH'			, 224);	// int Default 102 | 224
+		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 149);	// int Default 57 | 149
 		// image_web_folder normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
 
@@ -558,7 +560,9 @@
 
 
 
-// api (publication)
+// api (publication). This definition is used in administration panels to auto-fill main vars
+	// Note that in the public server config file, you need to define again this values because
+	// the public API files could be place in another location/server as independent files
 	define('API_WEB_USER_CODE_MULTIPLE' , [
 		[
 			'db_name'	=> '', // like web_my_entity
@@ -587,7 +591,7 @@
 	// maintenance mode active / inactive
 	$maintenance_mode = false;
 	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
-	if (DEDALO_MAINTENANCE_MODE) {
+	if (DEDALO_MAINTENANCE_MODE===true) {
 		include(DEDALO_CORE_PATH.'/maintenance/maintenance.php');
 	}
 

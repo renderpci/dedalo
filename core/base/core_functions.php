@@ -419,8 +419,8 @@ function exec_time($start, string $method=null, $result=null) : string {
 /**
 * EXEC_TIME
 * @param float $start
-* 	time in nanaseconds from function start_time()
-* @param string $unit = 'ms' (miliseconds)
+* 	time in nanoseconds from function start_time()
+* @param string $unit = 'ms' (milliseconds)
 * 	possible values: ns|ms|sec
 * @param int $round = 3
 * 	Math total rounded to value
