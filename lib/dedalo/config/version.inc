@@ -2757,6 +2757,9 @@
 		Fixed section_tab issue when infinite loop is created on paginate records or creating a new one in mdcat2949
 		Valencia 27-09-2022T16:59:00
 		Fixed component_portal error where tool_description portals was show as list mode instead portal_list_view_mosaic (small images issue in tool_description of numistada case)
+		Valencia 29-09-2022T18:07:00
+		Fixed bug in component_portal where on add new record to the portal and intermediately later sort the rows, the last row locator is removed from the component dato (in portals with propiedades.portal_link_open=false)
+
 
 
 	[/HISTORY]
@@ -2788,7 +2791,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '27-09-2022T16:59:00');
+	define('DEDALO_BUILD'	, '29-09-2022T18:07:00');
 
 
 
