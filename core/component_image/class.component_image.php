@@ -73,18 +73,20 @@ class component_image extends component_media_common {
 
 	/**
 	* SAVE
-	* @return int|null $section_id
+	* @return int|null $result
+	* 	section_id
 	*/
 	public function Save() : ?int {
 
 		$dato = $this->dato;
 
+		// create_svg_file from dato item temporal container
 		if (!empty($dato)) {
-			foreach ($dato as $current_value) {
-				if(isset($current_value->svg_file_data)){
-					$svg_file_data = $current_value->svg_file_data;
-					$this->create_svg_file($svg_file_data);
-					unset($current_value->svg_file_data);
+			foreach ($dato as $dato_item) {
+				if(isset($dato_item->svg_file_data)) {
+					$this->create_svg_file($dato_item->svg_file_data);
+					// remove property, its only temporal
+					unset($dato_item->svg_file_data);
 				}
 			}
 		}
@@ -225,16 +227,12 @@ class component_image extends component_media_common {
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
-
-		#$valor = $this->get_valor();
-		#$valor .= '.'.DEDALO_IMAGE_EXTENSION;
-
-		$image_quality  = DEDALO_IMAGE_QUALITY_DEFAULT;	// DEDALO_IMAGE_THUMB_DEFAULT
-		$test_file 		= true;	// output dedalo image placeholder when not file exists
-		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
-
-		$valor 			= $this->get_image_url($image_quality, $test_file, $absolute);
-
+		$image_quality	= $this->get_default_quality();
+		$valor			= $this->get_image_url(
+			$image_quality,
+			true, // bool test_file, output dedalo image placeholder when not file exists
+			true // bool absolute, otuput absolute path like 'http://myhost/mypath/myimage.jpg'
+		);
 
 		return $valor;
 	}//end get_valor_export
@@ -419,7 +417,9 @@ class component_image extends component_media_common {
 		$ImageObj = $this->ImageObj;
 		$ImageObj->set_quality($quality);
 
-		return $ImageObj->get_local_full_path();
+		$image_path = $ImageObj->get_local_full_path();
+
+		return $image_path;
 	}//end get_image_path
 
 
@@ -935,7 +935,7 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_ORIGINAL_EXTENSION
+	* GET_ORIGINAL_EXTENSION ( ! MOVED TO MEDIA_COMMON !)
 	* Search the original file into the original path and returns the file extension if is found
 	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.
 	* The original files are saved renamed but keeping the ending.
@@ -944,117 +944,117 @@ class component_image extends component_media_common {
 	* @return string|null $result
 	* 	File extensions like 'jpg'
 	*/
-	public function get_original_extension(bool $exclude_converted=true) : ?string {
+		// public function get_original_extension(bool $exclude_converted=true) : ?string {
 
-		$result = null;
+		// 	$result = null;
 
-		// original_files (from component_media_common)
-			$original_files	= $this->get_original_files(); // return array
+		// 	// original_files (from component_media_common)
+		// 		$original_files	= $this->get_original_files(); // return array
 
-		// ar_originals
-			$ar_originals = [];
-			foreach ($original_files as $current_file) {
-				if ($exclude_converted===true) {
-					// Besides, verify that extension is different to dedalo extension (like .tiff)
-					if (strpos($current_file, $this->get_target_filename())===false) {
-						$ar_originals[] = $current_file;
-					}
-				}else{
-					// Included all originals (with all extensions)
-					$ar_originals[] = $current_file;
-				}
-			}
+		// 	// ar_originals
+		// 		$ar_originals = [];
+		// 		foreach ($original_files as $current_file) {
+		// 			if ($exclude_converted===true) {
+		// 				// Besides, verify that extension is different to dedalo extension (like .tiff)
+		// 				if (strpos($current_file, $this->get_target_filename())===false) {
+		// 					$ar_originals[] = $current_file;
+		// 				}
+		// 			}else{
+		// 				// Included all originals (with all extensions)
+		// 				$ar_originals[] = $current_file;
+		// 			}
+		// 		}
 
-		// check found files
-			$n = count($ar_originals);
-			if ($n===0) {
+		// 	// check found files
+		// 		$n = count($ar_originals);
+		// 		if ($n===0) {
 
-				// no file found. Return null
+		// 			// no file found. Return null
 
-			}elseif($n===1) {
+		// 		}elseif($n===1) {
 
-				// all is OK, found 1 file as expected
-				$ext	= pathinfo($ar_originals[0], PATHINFO_EXTENSION);
-				$result	= $ext;
+		// 			// all is OK, found 1 file as expected
+		// 			$ext	= pathinfo($ar_originals[0], PATHINFO_EXTENSION);
+		// 			$result	= $ext;
 
-			}else{
+		// 		}else{
 
-				// ! more than one file are found
-				foreach ($ar_originals as $current_original) {
+		// 			// ! more than one file are found
+		// 			foreach ($ar_originals as $current_original) {
 
-					$ext				= pathinfo($current_original, PATHINFO_EXTENSION);
-					$default_extension	= $this->get_extension();
-					if( strtolower($ext)!==strtolower($default_extension) ) {
-						$result = $ext;
-						break;
-					}
-				}
-				if(!isset($ext)) {
-					trigger_error("Error Processing Request. Too much original files found and all have invalid extension ($n)");
-					#throw new Exception("Error Processing Request. Too much original files found", 1);
-				}
-			}
+		// 				$ext				= pathinfo($current_original, PATHINFO_EXTENSION);
+		// 				$default_extension	= $this->get_extension();
+		// 				if( strtolower($ext)!==strtolower($default_extension) ) {
+		// 					$result = $ext;
+		// 					break;
+		// 				}
+		// 			}
+		// 			if(!isset($ext)) {
+		// 				trigger_error("Error Processing Request. Too much original files found and all have invalid extension ($n)");
+		// 				#throw new Exception("Error Processing Request. Too much original files found", 1);
+		// 			}
+		// 		}
 
 
-		return $result;
-	}//end get_original_extension
+		// 	return $result;
+		// }//end get_original_extension
 
 
 
 	/**
-	* GET_ORIGINAL_FILE_PATH
+	* GET_ORIGINAL_FILE_PATH ( ! MOVED TO MEDIA_COMMON !)
 	* Returns the full path of the original file (with no default extension) if exists
 	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.
 	* The original files are saved renamed but keeping the ending. This function is used to locate them by checking if there is more than one.
 	* @param string $quality
 	* @return string|null $result
 	*/
-	public function get_original_file_path(string $quality) : ?string {
+		// public function get_original_file_path(string $quality) : ?string {
 
-		$result = null;
+		// 	$result = null;
 
-		// original_files (from component_media_common)
-			$original_files	= $this->get_original_files(); // return array
-			$ar_originals	= $original_files;
+		// 	// original_files (from component_media_common)
+		// 		$original_files	= $this->get_original_files(); // return array
+		// 		$ar_originals	= $original_files;
 
-		// remove conversions if exists
-			$n = count($ar_originals);
-			if ($n>1) {
-				foreach ($ar_originals as $file) {
+		// 	// remove conversions if exists
+		// 		$n = count($ar_originals);
+		// 		if ($n>1) {
+		// 			foreach ($ar_originals as $file) {
 
-					$ext				= pathinfo($file, PATHINFO_EXTENSION);
-					$default_extension	= $this->get_extension();
-					if(strtolower($ext)!==strtolower($default_extension)) {
-						// overwrite ar_originals with only one value
-						$ar_originals = [$file];
-						break;
-					}
-				}
-			}
+		// 				$ext				= pathinfo($file, PATHINFO_EXTENSION);
+		// 				$default_extension	= $this->get_extension();
+		// 				if(strtolower($ext)!==strtolower($default_extension)) {
+		// 					// overwrite ar_originals with only one value
+		// 					$ar_originals = [$file];
+		// 					break;
+		// 				}
+		// 			}
+		// 		}
 
-		// check found files
-			$n = count($ar_originals);
-			if ($n===0) {
+		// 	// check found files
+		// 		$n = count($ar_originals);
+		// 		if ($n===0) {
 
-				// no file found. Return null
+		// 			// no file found. Return null
 
-			}elseif($n===1) {
+		// 		}elseif($n===1) {
 
-				// all is OK, found 1 file as expected
-				$result = $ar_originals[0];
+		// 			// all is OK, found 1 file as expected
+		// 			$result = $ar_originals[0];
 
-			}else{
+		// 		}else{
 
-				// ! more than one file are found
-				if(SHOW_DEBUG===true) {
-					dump($ar_originals, "ar_originals ".to_string($ar_originals));
-					trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
-				}
-			}
+		// 			// ! more than one file are found
+		// 			if(SHOW_DEBUG===true) {
+		// 				dump($ar_originals, "ar_originals ".to_string($ar_originals));
+		// 				trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
+		// 			}
+		// 		}
 
 
-		return $result;
-	}//end get_original_file_path
+		// 	return $result;
+		// }//end get_original_file_path
 
 
 
@@ -1343,8 +1343,8 @@ class component_image extends component_media_common {
 	public function process_uploaded_file(object $file_data) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// vars
 			$original_file_name	= $file_data->original_file_name; 	// kike "my photo785.jpg"
@@ -1355,7 +1355,7 @@ class component_image extends component_media_common {
 			try {
 
 				// default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
-				// and original file is conserved (like myfilename.tif and myfilename.jpg)
+				// and original file is conserved (like myfilename.tiff and myfilename.jpg)
 					$standard_file_path = self::build_standard_image_format($full_file_path);
 
 				// target_filename. Save original file name in a component_input_text if defined
@@ -1737,7 +1737,7 @@ class component_image extends component_media_common {
 		}//end switch ($update_version)
 
 
-		return $response ;
+		return $response;
 	}//end update_dato_version
 
 

@@ -587,6 +587,7 @@ class component_av extends component_media_common {
 					// $component->Save();
 			}
 
+
 		return $duration;
 	}//end get_duration
 
@@ -1584,7 +1585,7 @@ class component_av extends component_media_common {
 		}//end switch ($update_version)
 
 
-		return $response ;
+		return $response;
 	}//end update_dato_version
 
 

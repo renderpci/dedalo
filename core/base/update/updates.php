@@ -72,8 +72,6 @@ $updates->$v = new stdClass();
 				REINDEX TABLE public.matrix_descriptors_dd;
 			");
 
-
-
 		// vacuum table
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
@@ -100,8 +98,10 @@ $updates->$v = new stdClass();
 		$updates->$v->components_update = [
 			'component_text_area',
 			'component_json',
+			'component_av',
 			'component_image',
-			'component_av'
+			'component_pdf',
+			'component_svg'
 		];	// Force convert from string to array
 
 	// DATA INSIDE DATABASE UPDATES
