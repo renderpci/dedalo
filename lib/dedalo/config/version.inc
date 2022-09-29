@@ -2759,7 +2759,7 @@
 		Fixed component_portal error where tool_description portals was show as list mode instead portal_list_view_mosaic (small images issue in tool_description of numistada case)
 		Valencia 29-09-2022T18:07:00
 		Fixed bug in component_portal where on add new record to the portal and intermediately later sort the rows, the last row locator is removed from the component dato (in portals with propiedades.portal_link_open=false)
-
+		Fixed error on 'propiedades' js trigger where changes of radio button (mdcat3047) were not saved
 
 
 	[/HISTORY]
@@ -2791,7 +2791,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-09-2022T18:07:00');
+	define('DEDALO_BUILD'	, '29-09-2022T21:40:00');
 
 
 
