@@ -2659,7 +2659,7 @@ class section extends common {
 			if(!$result) {
 				debug_log(__METHOD__."Error Processing Save Insert Request: strQuery section_id:$section_id, section_tipo:$this->tipo ".to_string($strQuery), logger::DEBUG);
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Save Insert Request ". pg_last_error(), 1);;
+					throw new Exception("Error Processing Save Insert Request ". pg_last_error(DBi::_getConnection()), 1);;
 				}
 				return "!!! Error: sorry an error ocurred on INSERT record. Data is not saved";
 			}
