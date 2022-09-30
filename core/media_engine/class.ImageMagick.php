@@ -396,11 +396,48 @@ final class ImageMagick {
 			$command	= MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
 			$result		= shell_exec($command);
 
-		debug_log(__METHOD__." Exec Command:  $command", logger::DEBUG);
+		debug_log(__METHOD__." Exec Command:" . PHP_EOL . $command, logger::DEBUG);
 
 
 		return $result;
 	}//end rotate
+
+
+
+	/**
+	* GET_MEDIA_ATTRIBUTES
+	* Read file attributes (format, geometry, resolution, gamma, etc.)
+	* (!) Note that a file can contain many layers (.psd case for example) so the result
+	* is always an array of one or more objects
+	* Sample:
+	* [
+    *	{
+    *		"version": "1.0",
+    *		"image": {
+    *			"name": "/dedalo/media/image/original/0/rsc29_rsc170_707.psd",
+    *			"baseName": "rsc29_rsc170_707.psd",
+    * 			...
+    * 		}
+    *	}
+    * ]
+	* @param string $file_path
+	* @return array|null $result
+	*/
+	public static function get_media_attributes( string $file_path ) : ?array {
+
+		// convert image.jpg[1x1+0+0] json:
+		$command		= MAGICK_PATH . "convert '$file_path' json: ";
+		$exec_result	= shell_exec($command);
+
+		debug_log(__METHOD__." Exec Command:" . PHP_EOL . $command, logger::DEBUG);
+
+		$result = !empty($exec_result)
+			? json_decode($exec_result)
+			: null;
+
+
+		return $result;
+	}//end get_media_attributes
 
 
 
