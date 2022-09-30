@@ -365,7 +365,7 @@ import * as fn from './data.js'
 			section_id			: section_id,
 			mode				: mode,
 			lang				: lang,
-			new_value			: fn.random_image_data
+			new_value			: fn.random_svg_data
 		})
 
 	// component_text_area
