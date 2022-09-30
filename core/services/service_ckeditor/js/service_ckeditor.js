@@ -51,6 +51,7 @@ export const service_ckeditor = function() {
 
 			const key				= options.key // array key of the value of the caller data
 			const editor_config		= options.editor_config // options for build custom buttons in the toolbar or custom events
+			const editor_class		= options.editor_class || 'ddEditor'
 
 		// fix vars
 			self.caller				= caller
@@ -62,14 +63,65 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			// value_container.innerHTML = value
 
+		switch(editor_class) {
+
+			case 'InlineEditor':
+				return self.create_InlineEditor()
+
+			case 'ddEditor':
+			default:
+				return self.create_ddEditor(editor_config)
+		}
+
+
+	}//end init
+
+
+	this.create_InlineEditor = function(){
+
+		const self = this
+
+		return new Promise(function(resolve){
+
+			// editor.
+			// InlineEditor is created from lib ckeditor source using webpack.
+			// See source and webpack config files
+			// InlineEditor is initiated with user interface
+			ckeditor.InlineEditor.create( self.value_container, {})
+			.then( editor => {
+				
+				// fix the instance
+					self.editor = editor
+
+				// init editor status changes to track isDirty value
+					// self.init_status_changes()
+
+				// remove original value container
+					// self.value_container.remove()
+
+				resolve(self)
+			})
+			.catch( error => {
+				console.error( 'Oops, something went wrong!' );
+				console.error( error );
+			});
+		})
+	}
+
+
+	this.create_ddEditor = function(editor_config){
+
+		const self = this
+
 		return new Promise(function(resolve){
 
 			// editor.
 			// ddEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
 			// ckEditor is initiated without user interface
-			ddEditor.create( value_container, {
+			ckeditor.ddEditor.create( self.value_container, {
 				// initialData: value
+
 
 			})
 			.then( editor => {
@@ -160,7 +212,7 @@ export const service_ckeditor = function() {
 					self.init_status_changes()
 
 				// remove original value container
-					value_container.remove()
+					self.value_container.remove()
 
 				// click event
 					self.click = function(e) {
@@ -179,7 +231,7 @@ export const service_ckeditor = function() {
 					const node = self.toolbar_container.parentNode
 					node.addEventListener('mousedown', function() {
 						// remove the hide class to show the toolbar
-						toolbar_container.classList.remove('hide')
+						self.toolbar_container.classList.remove('hide')
 						document.body.addEventListener('mouseup', fn_remove)
 					})
 					function fn_remove(e) {
@@ -187,7 +239,7 @@ export const service_ckeditor = function() {
 							const path	= e.composedPath()
 							const found	= path.find(el => el===node)
 							if (!found) {
-								toolbar_container.classList.add('hide')
+								self.toolbar_container.classList.add('hide')
 								document.body.removeEventListener("mouseup", fn_remove)
 							}
 						}
@@ -201,9 +253,7 @@ export const service_ckeditor = function() {
 				console.error( error );
 			});
 		})
-	}//end init
-
-
+	}
 
 	/**
 	* SAVE
