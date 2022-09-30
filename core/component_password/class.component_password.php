@@ -191,7 +191,7 @@ class component_password extends component_common {
 						if(SHOW_DEBUG) {
 							dump($strQuery,"strQuery");
 						}
-						throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);;
+						throw new Exception("Error Processing Save Update Request ". pg_last_error(DBi::_getConnection()), 1);;
 					}
 
 					$response = new stdClass();

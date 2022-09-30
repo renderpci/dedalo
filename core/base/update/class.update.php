@@ -170,11 +170,11 @@ class update {
 		if(!$result) {
 			echo "Error: sorry an error ocurred on SQL_update code.";
 			if(SHOW_DEBUG===true) {
-				trigger_error( "<span class=\"error\">Error Processing SQL_update Request </span>". pg_last_error() );
+				trigger_error( "<span class=\"error\">Error Processing SQL_update Request </span>". pg_last_error(DBi::_getConnection()) );
 				dump(null,"SQL_update ".to_string($SQL_update));
-				#throw new Exception("Error Processing SQL_update Request ". pg_last_error(), 1);;
+				#throw new Exception("Error Processing SQL_update Request ". pg_last_error(DBi::_getConnection()), 1);;
 			}
-			$response->msg .= " Error Processing SQL_update Request: ". pg_last_error();
+			$response->msg .= " Error Processing SQL_update Request: ". pg_last_error(DBi::_getConnection());
 			return $response;
 		}
 		debug_log(__METHOD__." Executed database update: ".to_string($SQL_update), logger::DEBUG);
