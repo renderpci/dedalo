@@ -27,8 +27,8 @@
 
 	export const random_json = function() {
 		const value = {
-			"text" 	 : random_string(64),
-			"number" : random_number()
+			text	: random_string(64),
+			number	: random_number()
 		}
 		return value
 	}

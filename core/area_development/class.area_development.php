@@ -165,8 +165,8 @@ class area_development extends area_common {
 				$item->body		= $file_path;
 				$confirm_text	= label::get_label('seguro');
 				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
+					'fn'		=> 'init_form',
+					'options'	=> (object)[
 						'inputs' => [
 							(object)[
 								'type'		=> 'text',
@@ -249,8 +249,8 @@ class area_development extends area_common {
 						return $tool_name;
 					}
 				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
-				$item->body 	= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
-				$item->body 	.= implode('<br>', array_filter($list));
+				$item->body		= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
+				$item->body		.= implode('<br>', array_filter($list));
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_form',
 					'options' => (object)[
@@ -258,9 +258,9 @@ class area_development extends area_common {
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'register_tools',
-					'options' 	=> null
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'register_tools',
+					'options'	=> null
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -273,10 +273,10 @@ class area_development extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('build_structure_css');
-				$item->body 	= 'Regenerate css from actual structure (Ontology)';
+				$item->body		= 'Regenerate css from actual structure (Ontology)';
 				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
+					'fn'		=> 'init_form',
+					'options'	=> (object)[
 						'confirm_text' => label::get_label('seguro')
 					]
 				];
@@ -377,9 +377,9 @@ class area_development extends area_common {
 					]
 				];
 				$item->trigger 	= (object)[
-					'dd_api' 	=> 'get_input_value:dd_api_base',
-					'action' 	=> 'get_input_value:dd_api_fn',
-					'options' 	=> null
+					'dd_api'	=> 'get_input_value:dd_api_base',
+					'action'	=> 'get_input_value:dd_api_fn',
+					'options'	=> null
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -397,13 +397,13 @@ class area_development extends area_common {
 				$item->body		= '<textarea id="json_editor" class="hide"></textarea>';
 				$item->body		.= '<div id="json_editor_container" class="editor_json"></div>';
 				$item->run[]	= (object)[
-					'fn' 	  => 'init_json_editor',
-					'options' => (object)['editor_id' => "json_editor"]
+					'fn'		=> 'init_json_editor',
+					'options'	=> (object)['editor_id' => "json_editor"]
 				];
-				$item->trigger 	= (object)[
-					'dd_api' 	=> 'dd_utils_api',
-					'action' 	=> 'convert_search_object_to_sql_query',
-					'options' 	=> null
+				$item->trigger	= (object)[
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'convert_search_object_to_sql_query',
+					'options'	=> null
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -411,14 +411,14 @@ class area_development extends area_common {
 
 		// dedalo version
 			$item = new stdClass();
-				$item->id 		= 'dedalo_version';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'DEDALO VERSION';
-				$item->info 	= null;
-				$item->body 	= 'Version '.DEDALO_VERSION;
-				$item->body    .= '<pre>v '.DEDALO_VERSION .' | Build: '.DEDALO_BUILD.'</pre>';
+				$item->id		= 'dedalo_version';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'DEDALO VERSION';
+				$item->info		= null;
+				$item->body		= 'Version '.DEDALO_VERSION;
+				$item->body		.= '<pre>v '.DEDALO_VERSION .' | Build: '.DEDALO_BUILD.'</pre>';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -427,14 +427,14 @@ class area_development extends area_common {
 			$info = pg_version(DBi::_getConnection());
 			$info['host'] = to_string(DEDALO_HOSTNAME_CONN);
 			$item = new stdClass();
-				$item->id 		= 'database_info';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'DATABASE INFO';
-				$item->info 	= null;
-				$item->body 	= 'Database '.$info['IntervalStyle']. " ". $info['server']. " ".DEDALO_HOSTNAME_CONN;
-				$item->body    .= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
+				$item->id		= 'database_info';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'DATABASE INFO';
+				$item->info		= null;
+				$item->body		= 'Database '.$info['IntervalStyle']. " ". $info['server']. " ".DEDALO_HOSTNAME_CONN;
+				$item->body		.= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -504,46 +504,46 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// sequences_state
+		// sequences_status
 			require(DEDALO_CORE_PATH.'/db/class.data_check.php');
 			$data_check = new data_check();
 			$response 	= $data_check->check_sequences();
 			$item = new stdClass();
-				$item->id 		= 'sequences_state';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'DB SEQUENCES STATE';
-				$item->info 	= null;
-				$item->body     = $response->msg;
+				$item->id		= 'sequences_status';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'DB SEQUENCES STATUS';
+				$item->info		= null;
+				$item->body		= $response->msg;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// counters_state
+		// counters_status
 			$response = counter::check_counters();
 			$item = new stdClass();
-				$item->id 		= 'counters_state';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'DEDALO COUNTERS STATE';
-				$item->info 	= null;
-				$item->body     = $response->msg;
+				$item->id		= 'counters_status';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'DEDALO COUNTERS STATUS';
+				$item->info		= null;
+				$item->body		= $response->msg;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
 		// php info
 			$item = new stdClass();
-				$item->id 		= 'php_info';
-				$item->typo 	= 'widget';
-				$item->tipo 	= $this->tipo;
-				$item->parent 	= $this->tipo;
-				$item->label 	= 'PHP INFO';
-				$item->info 	= null;
-				// $item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px;\'"></iframe>';
-				$item->body 	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php"></iframe>';
+				$item->id		= 'php_info';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= 'PHP INFO';
+				$item->info		= null;
+				// $item->body	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px;\'"></iframe>';
+				$item->body		= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php"></iframe>';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -614,15 +614,15 @@ class area_development extends area_common {
 			if ($tables==='*') {
 
 				// truncate relations table data
-				$strQuery 	= "TRUNCATE \"relations\";";
-				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				$strQuery	= 'TRUNCATE "relations";';
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if ($result===false) {
 					$response->msg = $response->msg[0].' - Unable to truncate table relations!';
 					return $response;
 				}
 				// restart table sequence
-				$strQuery 	= "ALTER SEQUENCE relations_id_seq RESTART WITH 1;";
-				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				$strQuery	= 'ALTER SEQUENCE relations_id_seq RESTART WITH 1;';
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if ($result===false) {
 					$response->msg = $response->msg[0].' - Unable to alter SEQUENCE relations_id_seq!';
 					return $response;
@@ -635,8 +635,8 @@ class area_development extends area_common {
 			$counter = 1;
 
 			// last id in current table
-				$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
-				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1;";
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if ($result===false) {
 					$response->msg[] ='Table \''.$table.'\' not found!';
 					$response->msg 	 = implode('<br>', $response->msg);

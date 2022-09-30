@@ -27,7 +27,7 @@ class section extends common {
 		protected $modelo;
 		protected $label;
 
-		# Buttons objs
+		# Buttons objects
 		public $ar_buttons;
 
 		public $ar_all_project_langs;
@@ -773,7 +773,7 @@ class section extends common {
 		if (!empty($this->section_id) && (int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
 
 			################################################################################
-			# UPDATE RECORD : Update current matrix section record trigered by one component
+			# UPDATE RECORD : Update current matrix section record triggered by one component
 
 			if ($this->save_modified===false) {
 				// section dato only
@@ -1772,7 +1772,7 @@ class section extends common {
 			# portal related terms
 			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($current_portal_tipo, true, true);
 			if (in_array($component_tipo_inside_portal, $ar_related)) {
-				// breakand return tipo
+				// break and return tipo
 				return $current_portal_tipo;
 			}
 		}
@@ -2285,18 +2285,19 @@ class section extends common {
 	public function get_publication_date(string $component_tipo) : ?string {
 
 		// tipos
-			#$component_tipo	= ($type==='first') ? diffusion::$publication_first_tipo : diffusion::$publication_last_tipo;
-			$section_id 	= $this->section_id;
-			$section_tipo 	= $this->tipo;
+			$section_id		= $this->section_id;
+			$section_tipo	= $this->tipo;
 
 		// component
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$dato = $component->get_dato();
 
 		// local_date
@@ -2306,10 +2307,10 @@ class section extends common {
 
 			}else{
 
-				$current_date 	= reset($dato);
-				$dd_date 		= new dd_date($current_date->start);
-				$timestamp 		= $dd_date->get_dd_timestamp();
-				$local_date 	= component_date::timestamp_to_date($timestamp, true); // string|null
+				$current_date	= reset($dato);
+				$dd_date		= new dd_date($current_date->start);
+				$timestamp		= $dd_date->get_dd_timestamp();
+				$local_date		= component_date::timestamp_to_date($timestamp, true); // string|null
 			}
 
 
@@ -2330,13 +2331,15 @@ class section extends common {
 			$section_tipo	= $this->tipo;
 
 		// component
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$dato = $component->get_dato();
 
 		// user name
@@ -2359,7 +2362,7 @@ class section extends common {
 	/**
 	* GET_AR_CHILDRENS_BY_MODEL
 	* Get the children of the section by modelo_name required
-	* childrens like relation_list or time machine_list
+	* children like relation_list or time machine_list
 	* @param string $section_tipo
 	* @param array $ar_modelo_name_required
 	* @return string|null $first_child
@@ -2372,7 +2375,7 @@ class section extends common {
 
 		// $ar_modelo_name_required = [$modelo_name];
 
-		// Locate childrens element in current section (virtual ot not)
+		// Locate children element in current section (virtual ot not)
 		$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section(
 			$current_section_tipo,
 			$ar_modelo_name_required, // ar_modelo_name_required
@@ -2683,12 +2686,12 @@ class section extends common {
 				$filter_tipo 	  = $ar_filter_tipo[0];
 
 				# Filter can be component_filter or component_filter_master in user section case
-				# When you are in import useres context, you need use 'component_filter_master' as projects data
+				# When you are in import users context, you need use 'component_filter_master' as projects data
 				$filter_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($filter_tipo,true);
 				$component_filter 	= component_common::get_instance($filter_modelo_name,
 																	 $filter_tipo,
 																	 $this->section_id,
-																	 'edit', # mode 'edt' already autosave default dato
+																	 'edit', # mode 'edit' already autosave default dato
 																	 DEDALO_DATA_NOLAN,
 																	 $this->tipo);
 				#
@@ -2869,13 +2872,14 @@ class section extends common {
 				continue;
 			}
 
-			$component 	 = component_common::get_instance(	$modelo_name,
-															$component_tipo,
-															$section_id,
-															'edit',
-															DEDALO_DATA_NOLAN,
-															$section_tipo
-															);
+			$component = component_common::get_instance(
+				$modelo_name,
+				$component_tipo,
+				$section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$locator_to_remove = new locator();
 				$locator_to_remove->set_section_tipo($this->tipo);
@@ -2982,8 +2986,8 @@ class section extends common {
 			return false;
 		}
 
-		$current_type 	= $locator->type;
-		$relations 		= $this->get_relations( $relations_container );
+		$current_type	= $locator->type;
+		$relations		= $this->get_relations( $relations_container );
 
 		# DATA INTEGRITY: Clean possible bad format locators (old and beta errors)
 		foreach ((array)$relations as $key => $current_relation) {
@@ -3103,19 +3107,19 @@ class section extends common {
 
 		$relations = $this->get_relations( $relations_container );
 
-		$removed 			 = false;
-		$ar_deleted_locators = [];
-		$new_relations 		 = [];
+		$removed				= false;
+		$ar_deleted_locators	= [];
+		$new_relations			= [];
 		foreach ($relations as $key => $current_locator) {
 
 			# Test if from_component_tipo
 			if (isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo) {
-				# Ignoerd locator
+				# Ignored locator
 				$ar_deleted_locators[] = $current_locator;
 				$removed = true;
 				if(SHOW_DEBUG===true) {
-					$c_section_label 	= RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
-					$c_scomponent_label = RecordObj_dd::get_termino_by_tipo($component_tipo);
+					$c_section_label	= RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
+					$c_scomponent_label	= RecordObj_dd::get_termino_by_tipo($component_tipo);
 					// debug_log(__METHOD__." Deleted locator in '$relations_container'. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo - $c_section_label - $c_scomponent_label " . PHP_EOL . to_string($current_locator), logger::DEBUG);
 				}
 			}else{
@@ -3125,7 +3129,7 @@ class section extends common {
 		}
 
 		if ($removed===true) {
-			# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
+			# maintain array index after unset value. ! Important for encode JSON as array later (if keys are not correlatives, object is created)
 			#$relations = array_values($relations);
 
 			# Update section dato relations on finish
@@ -3158,13 +3162,27 @@ class section extends common {
 		$ar_modelo_name_required	= array('section_map');
 		$resolve_virtual			= false;
 
-		// Locate section_map element in current section (virtual ot not)
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+		// Locate section_map element in current section (virtual or not)
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$section_tipo,
+			$ar_modelo_name_required,
+			$from_cache=true,
+			$resolve_virtual,
+			$recursive=false,
+			$search_exact=true
+		);
 
 		// If not found children, try resolving real section
 		if (empty($ar_children)) {
 			$resolve_virtual = true;
-			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$section_tipo,
+				$ar_modelo_name_required,
+				$from_cache=true,
+				$resolve_virtual,
+				$recursive=false,
+				$search_exact=true
+			);
 		}
 
 		$section_map = null;

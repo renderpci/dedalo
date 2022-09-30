@@ -338,7 +338,7 @@ common.prototype.render = async function (options={}) {
 * REFRESH
 * Destroy current instance dependencies and build and render again
 * (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
-* @param object options
+* @param object options = {}
 * @return promise
 * 	resolve bool true
 */

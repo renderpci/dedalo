@@ -1509,37 +1509,36 @@ export const ui = {
 	create_dom_element : function(options){
 
 		// options
-			const element_type				= options.element_type
-			const type						= options.type
-			const id						= options.id
-			const parent					= options.parent
-			const class_name				= options.class_name
-			const style						= options.style
-			const data_set					= (typeof options.dataset!=="undefined") ? options.dataset : options.data_set
-			// const custom_function_events	= options.custom_function_events
-			const title_label				= options.title_label || options.title
-			const text_node					= options.text_node
-			const text_content				= options.text_content
-			const inner_html				= options.inner_html
-			const draggable					= options.draggable
-			const value						= options.value
-			const src						= options.src
-			const contenteditable			= options.contenteditable
-			const name						= options.name
-			const placeholder				= options.placeholder
-			const pattern					= options.pattern
-			const href						= options.href
+			const element_type		= options.element_type
+			const type				= options.type
+			const id				= options.id
+			const parent			= options.parent
+			const class_name		= options.class_name
+			const style				= options.style
+			const data_set			= (typeof options.dataset!=="undefined") ? options.dataset : options.data_set
+			const title_label		= options.title_label || options.title
+			const text_node			= options.text_node
+			const text_content		= options.text_content
+			const inner_html		= options.inner_html
+			const draggable			= options.draggable
+			const value				= options.value
+			const src				= options.src
+			const contenteditable	= options.contenteditable
+			const name				= options.name
+			const placeholder		= options.placeholder
+			const pattern			= options.pattern
+			const href				= options.href
 
 		// DOM node element
 			const element = document.createElement(element_type)
 
 		// id. Add id property to element
-			if(id){
+			if(id) {
 				element.id = id
 			}
 
 		// element_type. A element. Add default href property to element
-			if(element_type==='a'){
+			if(element_type==='a') {
 				element.href = href || 'javascript:;'
 			}
 
@@ -1549,12 +1548,12 @@ export const ui = {
 			}
 
 		// class_name. Add CSS classes property to element
-			if(class_name){
+			if(class_name) {
 				element.className = class_name
 			}
 
 		// style. Add CSS style property to element
-			if(style){
+			if(style) {
 				for(let key in style) {
 					element.style[key] = style[key]
 					//element.setAttribute("style", key +":"+ style[key]+";");
@@ -1562,19 +1561,19 @@ export const ui = {
 			}
 
 		// title . Add title attribute to element
-			if(title_label){
+			if(title_label) {
 				element.title = title_label
 			}
 
 		// dataset Add dataset values to element
-			if(data_set){
+			if(data_set) {
 				for (let key in data_set) {
 					element.dataset[key] = data_set[key]
 				}
 			}
 
 		// value
-			if(value!==undefined){
+			if(value!==undefined) {
 				element.value = value
 			}
 
@@ -1600,12 +1599,12 @@ export const ui = {
 
 
 		// draggable
-			if(draggable){
+			if(draggable) {
 				element.draggable = draggable
 			}
 
 		// src
-			if(src){
+			if(src) {
 				element.src = src
 			}
 
@@ -1615,17 +1614,17 @@ export const ui = {
 			}
 
 		// name
-			if(name){
+			if(name) {
 				element.name = name
 			}
 
 		// placeholder
-			if(placeholder){
+			if(placeholder) {
 				element.placeholder = placeholder
 			}
 
 		// pattern
-			if(pattern){
+			if(pattern) {
 				element.pattern = pattern
 			}
 
@@ -1633,6 +1632,7 @@ export const ui = {
 			if (parent) {
 				parent.appendChild(element)
 			}
+
 
 		return element;
 	},//end create_dom_element
@@ -2783,7 +2783,7 @@ export const ui = {
 
 	/**
 	* HILITE
-	* Hilite/unhilite and element (usually a component) in the DOM
+	* Hilite/un-hilite and element (usually a component) in the DOM
 	* @param object options
 	* @return bool
 	*/

@@ -1,10 +1,11 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_RELATION_COMMON
 * Used as common base from all components that works with media
 * like component_av, component_image, component_pdf, component_svg, etc..
 */
 class component_media_common extends component_common {
+
 
 
 	// public $allowed_extensions;
@@ -13,18 +14,34 @@ class component_media_common extends component_common {
 
 	// Unified data sample:
 	// [{
-	// 	 "original_file_name": "icon_link.svg",
-	//    "upload_date": {
-	//      "day": 27,
-	//      "hour": 17,
-	//      "time": 65009757539,
-	//      "year": 2022,
-	//      "month": 8,
-	//      "minute": 58,
-	//      "second": 59
-	//    },
-	//    "custom property": "xxx"
+	//	"files_info": [{
+	//		'quality'			: $quality,
+	//		'file_name'			: $file_name,
+	//		'file_path'			: $file_path,
+	//		'file_url'			: $file_url,
+	//		'file_size'			: $file_size,
+	//		'file_time'			: $file_time,
+	//		'upload_file_name'	: $source_file_name,
+	//		'upload_date'		: $upload_date,
+	//		'upload_user'		: $upload_user,
+	//	}],
+	//	"lib_data": {} // component_image only
 	// }]
+
+
+
+	/* REMOVED !
+		//	"original_file_name": "icon_link.svg",
+		//	"original_file_upload_date": {
+		//		"day": 27,
+		//		"hour": 17,
+		//		"time": 65009757539,
+		//		"year": 2022,
+		//		"month": 8,
+		//		"minute": 58,
+		//		"second": 59
+		//	},
+		*/
 
 
 
@@ -296,7 +313,7 @@ class component_media_common extends component_common {
 	* Used as 'datalist' in component data API response
 	* @return array $files_info
 	*/
-	public function get_files_info(): array {
+	public function get_files_info() : array {
 
 		$ar_quality = $this->get_ar_quality();
 
@@ -393,6 +410,7 @@ class component_media_common extends component_common {
 						];
 					}
 			}//end foreach ($ar_quality as $quality)
+
 
 		return $files_info;
 	}//end get_files_info
