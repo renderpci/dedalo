@@ -589,16 +589,53 @@ class component_svg extends component_media_common {
 			$quality  = $this->get_quality();
 
 		// add data with the file uploaded
-			if ($quality===DEDALO_SVG_QUALITY_DEFAULT) {
+			// if ($quality===DEDALO_SVG_QUALITY_DEFAULT) {
+			// 	$dato			= $this->get_dato();
+			// 	$value			= empty($dato) ? new stdClass() : reset($dato);
+			// 	$media_value	= $this->build_media_value((object)[
+			// 		'value'		=> $value,
+			// 		'file_name'	=> $original_file_name
+			// 	]);
+			// 	$this->set_dato([$media_value]);
+			// 	$this->Save();
+			// }
 
-				$dato			= $this->get_dato();
-				$value			= empty($dato) ? new stdClass() : reset($dato);
-				$media_value	= $this->build_media_value((object)[
-					'value'		=> $value,
-					'file_name'	=> $original_file_name
-				]);
 
-				$this->set_dato([$media_value]);
+		// get files info
+			$files_info	= [];
+			$ar_quality = DEDALO_SVG_AR_QUALITY;
+			foreach ($ar_quality as $current_quality) {
+				if ($current_quality==='thumb') continue;
+				// read file if exists to get file_info
+				$file_info = $this->get_quality_file_info($current_quality);
+				// add non empty quality files data
+				if (!empty($file_info)) {
+					$files_info[] = $file_info;
+				}
+			}
+
+		// save component dato
+			$dato		= $this->get_dato();
+			$save_dato	= false;
+			if (isset($dato[0])) {
+				if (!is_object($dato[0])) {
+					// bad dato
+					debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
+				}else{
+					// update property files_info
+					$dato[0]->files_info = $files_info;
+					$save_dato = true;
+				}
+			}else{
+				// create a new dato from scratch
+				$dato_item = (object)[
+					'files_info' => $files_info
+				];
+				$dato = [$dato_item];
+				$save_dato = true;
+			}
+			if ($save_dato===true) {
+				$this->set_dato($dato);
 				$this->Save();
 			}
 
@@ -609,6 +646,154 @@ class component_svg extends component_media_common {
 
 		return $response;
 	}//end process_uploaded_file
+
+
+
+	/**
+	* UPDATE_DATO_VERSION
+	* @param object $request_options
+	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*/
+	public static function update_dato_version(object $request_options) : object {
+
+		$options = new stdClass();
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// short vars
+			$update_version	= implode('.', $options->update_version);
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
+
+		switch ($update_version) {
+
+			case '6.0.0':
+				$is_old_dato = (
+					empty($dato_unchanged) || // v5 early case
+					isset($dato_unchanged->section_id) || // v5 modern case
+					(isset($dato_unchanged[0]) && isset($dato_unchanged[0]->original_file_name)) // v6 alpha case
+				);
+				$is_old_dato = true; // force here
+				if ($is_old_dato===true) {
+
+					// create the component svg
+						$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+						$component	= component_common::get_instance(
+							$model, // string 'component_svg'
+							$options->tipo,
+							$options->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$options->section_tipo
+						);
+
+					// get existing files data
+						$file_id			= $component->get_id();
+						$source_quality		= $component->get_original_quality();
+						$additional_path	= $component->get_additional_path();
+						$initial_media_path	= $component->get_initial_media_path();
+						$original_extension	= $component->get_original_extension(
+							false // bool exclude_converted
+						) ?? $component->get_extension(); // 'svg' fallback is expected
+
+						$base_path	= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
+						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_id . '.' . $original_extension;
+
+						// no original file found. Use default quality file
+							if(!file_exists($file)) {
+								// use default quality as original
+								$source_quality	= $component->get_default_quality();
+								$base_path		= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
+								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_id . '.' . $component->get_extension();
+							}
+							// try again
+							if(!file_exists($file)) {
+								// reset bad dato
+								$response = new stdClass();
+									$response->result	= 1;
+									$response->new_dato	= null;
+									$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string(null).".<br />";
+								// $response = new stdClass();
+								// 	$response->result	= 2;
+								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($dato_unchanged)."
+								return $response;
+							}
+
+					// source_file_upload_date
+						$dd_date							= new dd_date();
+						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
+						$source_file_upload_date			= $dd_date->get_date_from_timestamp($upload_date_timestamp);
+						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
+						$source_file_upload_date->timestamp	= $upload_date_timestamp;
+
+					// get the source file name
+						$source_file_name = pathinfo($file)['basename'];
+
+					// lib_data
+						$lib_data = null;
+
+					// get files info
+						$files_info	= [];
+						$ar_quality = DEDALO_SVG_AR_QUALITY;
+						foreach ($ar_quality as $current_quality) {
+							if ($current_quality==='thumb') continue;
+							// read file if exists to get file_info
+							$file_info = $component->get_quality_file_info($current_quality);
+							// add non empty quality files data
+							if (!empty($file_info)) {
+								// Note that source_quality could be original or default
+								if ($current_quality===$source_quality) {
+									$file_info->upload_info = (object)[
+										'file_name'	=> $source_file_name ?? null,
+										'date'		=> $source_file_upload_date ?? null,
+										'user'		=> null // unknown here
+									];
+								}
+								// add
+								$files_info[] = $file_info;
+							}
+						}
+
+					// create new dato
+						$dato_item = new stdClass();
+							$dato_item->files_info	= $files_info;
+							$dato_item->lib_data	= $lib_data;
+
+					// fix final dato with new format as array
+						$new_dato = [$dato_item];
+						debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
+
+					$response = new stdClass();
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}
+				break;
+
+			default:
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
+				break;
+		}//end switch ($update_version)
+
+
+		return $response;
+	}//end update_dato_version
 
 
 

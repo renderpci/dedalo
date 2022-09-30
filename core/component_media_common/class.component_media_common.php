@@ -287,6 +287,9 @@ class component_media_common extends component_common {
 	*/
 	protected function build_media_value(object $options) : object {
 
+		throw new Exception("Error . REMOVE THIS METHOD !", 1);
+
+
 		// options
 			$value				= $options->value ?? new stdClass();
 			$file_name			= $options->file_name;
@@ -588,6 +591,211 @@ class component_media_common extends component_common {
 
 		return $original_files;
 	}//end get_original_files
+
+
+
+	/**
+	* GET_QUALITY_FILE_INFO
+	* Read the given quality file data, in media common dato item format
+	* @param string $quality
+	* @return object|null $quality_dato
+	*/
+	public function get_quality_file_info( string $quality ) : ?object {
+
+		// file path
+			$file_path = $this->get_path($quality);
+			// original could override default path
+			if ($quality==='original') {
+				$raw_path = $this->get_original_file_path($quality);
+				if ($raw_path!==$file_path) {
+					$file_path = $raw_path;
+				}
+			}
+
+		// file_exist
+			$file_exist	= !empty($file_path)
+				? file_exists($file_path)
+				: false;
+
+		// no file case
+			if ($file_exist===false) {
+				return null;
+			}
+
+		// file_name
+			$file_name = basename($file_path);
+
+		// file_url
+			$file_url = $this->get_url($quality);
+			if ($quality==='original') {
+				// replace default extension for the real file extension
+				$path_parts	= pathinfo($file_path);
+				$url_parts	= pathinfo($file_url);
+				if($url_parts['extension']!==$path_parts['extension']) {
+					$file_url = $url_parts['dirname'].'/'.$url_parts['filename'].'.'.$path_parts['extension'];
+				}
+			}
+
+		// file_size
+			$file_size = (function() use($file_path) {
+				try {
+					$size = @filesize($file_path);
+				} catch (Exception $e) {
+					trigger_error( __METHOD__ . ' Error on read file size. ' . $e->getMessage() , E_USER_NOTICE);
+				}
+				return $size ?? null; // in bytes
+			 })();
+
+		// file_time (creation or modification date timestamp). The time when the content of the file was changed
+			$file_time = date("Y-m-d H:i:s", filemtime($file_path));
+			$dd_date					= new dd_date();
+			$file_time_dd				= $dd_date->get_date_from_timestamp($file_time);
+			$file_time_dd->time			= dd_date::convert_date_to_seconds($file_time_dd);
+			$file_time_dd->timestamp	= $file_time;
+
+
+		// media_attributes
+			// $media_attributes = $this->get_media_attributes($file_path);
+
+		// add quality file info
+			$dato_item = (object)[
+				'quality'			=> $quality,
+				'file_name'			=> $file_name,
+				'file_path'			=> $file_path,
+				'file_url'			=> $file_url,
+				'file_size'			=> $file_size,
+				'file_time'			=> $file_time_dd,
+				// 'media_attributes'	=> $media_attributes
+			];
+
+
+		return $dato_item;
+	}//end get_quality_file_info
+
+
+
+	/**
+	* GET_ORIGINAL_EXTENSION
+	* Search the original file into the original path and returns the file extension if is found
+	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.
+	* The original files are saved renamed but keeping the ending.
+	* This function is used to locate them by checking if there is more than one.
+	* @param bool $exclude_converted = true
+	* @return string|null $result
+	* 	File extensions like 'jpg', 'mp4', ...
+	*/
+	public function get_original_extension(bool $exclude_converted=true) : ?string {
+
+		$result = null;
+
+		// original_files (from component_media_common)
+			$original_files	= $this->get_original_files(); // return array
+
+		// ar_originals
+			$ar_originals = [];
+			foreach ($original_files as $current_file) {
+				if ($exclude_converted===true) {
+					// Besides, verify that extension is different to dedalo extension (like .tiff)
+					if (strpos($current_file, $this->get_target_filename())===false) {
+						$ar_originals[] = $current_file;
+					}
+				}else{
+					// Included all originals (with all extensions)
+					$ar_originals[] = $current_file;
+				}
+			}
+
+		// check found files
+			$n = count($ar_originals);
+			if ($n===0) {
+
+				// no file found. Return null
+
+			}elseif($n===1) {
+
+				// all is OK, found 1 file as expected
+				$ext	= pathinfo($ar_originals[0], PATHINFO_EXTENSION);
+				$result	= $ext;
+
+			}else{
+
+				// ! more than one file are found
+				foreach ($ar_originals as $current_original) {
+
+					$ext				= pathinfo($current_original, PATHINFO_EXTENSION);
+					$default_extension	= $this->get_extension();
+					if( strtolower($ext)!==strtolower($default_extension) ) {
+						$result = $ext;
+						break;
+					}
+				}
+				if(!isset($ext)) {
+					trigger_error("Error Processing Request. Too much original files found and all have invalid extension ($n)");
+					#throw new Exception("Error Processing Request. Too much original files found", 1);
+				}
+			}
+
+
+		return $result;
+	}//end get_original_extension
+
+
+
+	/**
+	* GET_ORIGINAL_FILE_PATH
+	* Returns the full path of the original file (with no default extension) if exists
+	* If a file with an extension other than DEDALO_xxx_EXTENSION is uploaded, it is converted to DEDALO_xxx_EXTENSION.
+	* The original files are saved renamed but keeping the ending. This function is used to locate them by checking if
+	* there is more than one.
+	* @param string $quality
+	* @return string|null $result
+	*/
+	public function get_original_file_path(string $quality) : ?string {
+
+		$result = null;
+
+		// original_files (from component_media_common)
+			$original_files	= $this->get_original_files(); // return array
+			$ar_originals	= $original_files;
+
+		// remove conversions if exists
+			$n = count($ar_originals);
+			if ($n>1) {
+				foreach ($ar_originals as $file) {
+
+					$ext				= pathinfo($file, PATHINFO_EXTENSION);
+					$default_extension	= $this->get_extension();
+					if(strtolower($ext)!==strtolower($default_extension)) {
+						// overwrite ar_originals with only one value
+						$ar_originals = [$file];
+						break;
+					}
+				}
+			}
+
+		// check found files
+			$n = count($ar_originals);
+			if ($n===0) {
+
+				// no file found. Return null
+
+			}elseif($n===1) {
+
+				// all is OK, found 1 file as expected
+				$result = $ar_originals[0];
+
+			}else{
+
+				// ! more than one file are found
+				if(SHOW_DEBUG===true) {
+					dump($ar_originals, "ar_originals ".to_string($ar_originals));
+					trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
+				}
+			}
+
+
+		return $result;
+	}//end get_original_file_path
 
 
 
