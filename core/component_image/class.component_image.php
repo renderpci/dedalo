@@ -315,31 +315,35 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_AdDITIONAL_PATH
+	* GET_ADDITIONAL_PATH
 	* Calculate image additional path from 'properties' json config.
+	* @return string $additional_path
 	*/
-	public function get_additional_path() {
-
-		static $ar_additional_path;
+	public function get_additional_path() : string {
 
 		// already set case
 			if(isset($this->additional_path)) {
 				return $this->additional_path;
 			}
 
-		$properties = $this->get_properties();
-		if ( isset($properties->additional_path) && !empty($this->get_parent()) ) {
+		// default value
+			$additional_path = false;
+
+		$properties				= $this->get_properties();
+		$additional_path_tipo	= $properties->additional_path ?? null;
+		$section_id				= $this->get_section_id();
+		if ( !is_null($additional_path_tipo) && !empty($section_id) ) {
 
 			switch (true) {
 
-				case (is_string($properties->additional_path)):
+				case (is_string($additional_path_tipo)):
 
-					$component_tipo		= $properties->additional_path;
+					$component_tipo		= $additional_path_tipo;
 					$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$component			= component_common::get_instance(
 						$component_modelo,
 						$component_tipo,
-						$this->get_parent(),
+						$section_id,
 						'edit',
 						DEDALO_DATA_NOLAN,
 						$this->get_section_tipo()
@@ -348,56 +352,59 @@ class component_image extends component_media_common {
 					// valor
 						$valor = trim($component->get_valor());
 
-					// Add / at begin if not already exits
+					// Add a slash at the beginning if it doesn't already exist
 						if ( substr($valor, 0, 1)!=='/' ) {
 							$valor = '/'.$valor;
 						}
 
-					// Remove / at end if exists
+					// Remove the trailing slash if it exists
 						if ( substr($valor, -1)==='/' ) {
 							$valor = substr($valor, 0, -1);
 						}
 
-					$ar_additional_path[$this->image_id] = $valor;
+					if(empty($valor) && isset($properties->max_items_folder)) {
 
-					if(isset($properties->max_items_folder) && empty($valor)) {
+						// max_items_folder defined case
+							$max_items_folder	= $properties->max_items_folder;
+							$int_section_id		= (int)$section_id;
 
-						$max_items_folder  = $properties->max_items_folder;
-						$parent_section_id = $this->parent;
+						// add
+							$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
 
-						$ar_additional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+						// update component dato. Final dato must be an array to saved into component_input_text
+							$final_dato = array( $ar_additional_path[$this->image_id] );
+							$component->set_dato( $final_dato );
 
-						# Final dato must be an array to saved into component_input_text
-						$final_dato = array( $ar_additional_path[$this->image_id] );
-						$component->set_dato( $final_dato );
-
-						if ($this->modo==='edit') {
-							$component->Save();
-						}
+						// save if mode is edit
+							if ($this->modo==='edit') {
+								$component->Save();
+							}
+					}else{
+						// add
+							$additional_path = $valor;
 					}
 					break;
 
 				/*
-				case (is_object($properties->additional_path) ):
-					//dump(gettype($properties->additional_path),'$properties->additional_path');
-					if(isset($properties->additional_path->max_items_folder)){
-						$max_items_folder = $properties->additional_path->max_items_folder;
-						$parent_section_id = $this->parent;
+				case (is_object($additional_path) ):
+					//dump(gettype($additional_path),'$additional_path');
+					if(isset($additional_path->max_items_folder)){
+						$max_items_folder = $additional_path->max_items_folder;
+						$section_id = $this->parent;
 
-						$ar_additional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+						$ar_additional_path[$this->image_id] = '/'.$max_items_folder*(floor($section_id_section_id / $max_items_folder));
 					}
 
 					break;
 				*/
 			}//end switch (true)
-
-
-		}else{
-			$ar_additional_path[$this->image_id] = false;
 		}
 
+		// fix value
+			$this->additional_path = $additional_path;
 
-		return $this->additional_path = $ar_additional_path[$this->image_id];
+
+		return $additional_path;
 	}//end get_additional_path
 
 
@@ -707,47 +714,49 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GENERATE_DEFAULT
+	* GENERATE_DEFAULT_QUALITY_FILE
+	* Generates the default quality image from retouched or original file
+	* @param bool $overwrite = true
 	* @return bool
 	*/
-	public function generate_default(bool $overwrite=true) : bool {
+	public function generate_default_quality_file(bool $overwrite=true) : bool {
 
-		// vars
-			$image_id 			 = $this->get_id();
-			$additional_path 	 = $this->get_additional_path();
-			$initial_media_path  = $this->get_initial_media_path();
+		// short vars
+			$image_id			= $this->get_id();
+			$additional_path	= $this->get_additional_path();
+			$initial_media_path	= $this->get_initial_media_path();
 
 		// quality retouched
 			if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
 				# source data (modified is source)
-				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $additional_path, $initial_media_path);
-				$original_image_path = $source_ImageObj->get_local_full_path();
-				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
+				$source_ImageObj		= new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $additional_path, $initial_media_path);
+				$original_image_path	= $source_ImageObj->get_local_full_path();
+				$real_orig_quality		= DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
 			}
 
 		// quality original
 			if (!isset($original_image_path) || !file_exists($original_image_path)) {
 				# source data (default quality is source)
-				$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $additional_path, $initial_media_path);
-				$original_image_path = $source_ImageObj->get_local_full_path();
-				$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
+				$source_ImageObj		= new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $additional_path, $initial_media_path);
+				$original_image_path	= $source_ImageObj->get_local_full_path();
+				$real_orig_quality		= DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
 			}
 			// check original file again
 			if (!file_exists($original_image_path)) {
-				debug_log(__METHOD__." Unable locate original_image. File not exists in $original_image_path ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Unable locate original_image. File does not exists in $original_image_path ".to_string(), logger::ERROR);
 				return false;
 			}
 
 		// quality default
-			$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $additional_path, $initial_media_path);
-			$image_default_path  = $ImageObj->get_local_full_path();
+			$ImageObj			= new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $additional_path, $initial_media_path);
+			$image_default_path	= $ImageObj->get_local_full_path();
 			// overwrite or create default quality image version
 			if ($overwrite===true || !file_exists($image_default_path)) {
 				$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );
 			}
 
 		return true;
-	}//end generate_default
+	}//end generate_default_quality_file
 
 
 

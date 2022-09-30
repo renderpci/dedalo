@@ -32,8 +32,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		#dump($section_id,"__construct JSON_RecordObj_matrix , matrix_table: $matrix_table");
 
 		if(empty($matrix_table)) {
-			if(SHOW_DEBUG===true)
-				dump($matrix_table,"section_id:$section_id - tipo:$section_tipo");
+			if(SHOW_DEBUG===true) {
+				dump($matrix_table, "section_id: $section_id - tipo: $section_tipo");
+			}
 			throw new Exception("Error Processing Request. Matrix wrong name ", 1);
 		}
 

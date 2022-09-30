@@ -70,18 +70,26 @@ class component_pdf extends component_media_common {
 
 		static $ar_additional_path;
 
-		#if(isset($ar_additional_path[$this->pdf_id])) return $ar_additional_path[$this->pdf_id];
-		if(isset($this->additional_path)) return $this->additional_path;
+		// return if already calculated
+			if(isset($this->additional_path)) {
+				return $this->additional_path;
+			}
 
 		$properties = $this->get_properties();
-
+			// dump($properties, ' get_additional_path properties ++ '.to_string($this->tipo)); // die();
 		if (isset($properties->additional_path)) {
 
-			$component_tipo 	= $properties->additional_path;
-			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-
-			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
-			$dato 		= trim($component->get_valor());
+			$component_tipo		= $properties->additional_path;
+			$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component			= component_common::get_instance(
+				$component_modelo,
+				$component_tipo,
+				$this->get_section_id(),
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$this->get_section_tipo()
+			);
+			$dato = trim($component->get_valor());
 
 			# Add / at begin if not exits
 			if ( substr($dato, 0, 1) != '/' ) {
@@ -98,7 +106,7 @@ class component_pdf extends component_media_common {
 			if(isset($properties->max_items_folder) && empty($dato)) {
 
 				$max_items_folder  = $properties->max_items_folder;
-				$parent_section_id = $this->parent;
+				$parent_section_id = $this->section_id;
 
 				$ar_additional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
@@ -107,12 +115,16 @@ class component_pdf extends component_media_common {
 					$component->Save();
 				}
 			}
-
 		}else{
+
 			$ar_additional_path[$this->pdf_id] = false;
 		}
 
-		return $this->additional_path = $ar_additional_path[$this->pdf_id];
+		// fix additional_path
+			$this->additional_path = $ar_additional_path[$this->pdf_id];
+
+
+		return $ar_additional_path[$this->pdf_id];
 	}//end get_additional_path
 
 

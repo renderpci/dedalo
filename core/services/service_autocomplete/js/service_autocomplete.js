@@ -174,7 +174,8 @@ export const service_autocomplete = function() {
 
 	/**
 	* RENDER
-	* @return bool
+	* Creates the DOM nodes of the service
+	* @return DOM node searh_container
 	*/
 	this.render = function() {
 
