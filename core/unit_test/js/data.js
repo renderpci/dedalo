@@ -52,42 +52,6 @@
 		return value
 	}
 
-	export const random_av_data = function() {
-
-		// expected
-		// 	"section_id": "1",
-		// 	"section_tipo": "test3",
-		// 	"component_tipo": "test94"
-
-		// const section_tipo			= arguments[0][0]
-		// const section_id			= arguments[0][1] + '' // string force
-		// const from_component_tipo	= arguments[0][2]
-
-		// const value = {
-		// 	section_id		: section_id,
-		// 	section_tipo	: section_tipo,
-		// 	component_tipo	: from_component_tipo
-		// }
-
-		const file_name = random_string(128) + '_' + random_number(99) + '.mp4'
-
-		const value = {
-			user_id		: -1,
-			upload_date	: {
-				day		: 27,
-				hour	: 12,
-				time	: 65009738806,
-				year	: 2022,
-				month	: 8,
-				minute	: 46,
-				second	: 46
-			},
-			original_file_name : file_name
-		  }
-
-		return value
-	}
-
 	export const ar_random_locator = function() {
 		const result = random_locator(...arguments)
 		return [result]
@@ -246,51 +210,12 @@
 		return result;
 	}
 
-	export const random_image_data = function() {
-		const result = [
-		 {
-		  "original_file_name": "rsc29_rsc170_179_deleted_2022-02-11_1347.jpg",
-		  "original_upload_date": {
-		   "day": random_number(30) || 1,
-		   "hour": random_number(23) || 12,
-		   "time": random_number(64997809699),
-		   "year": random_number(2022) || 1,
-		   "month": random_number(12) || 1,
-		   "minute": random_number(59) || 1,
-		   "second": random_number(59) || 1
-		  }
-		 }
-		]
-
-		return result
-	}
-
 	export const random_iri_data = function() {
 		const result = {
 			iri		: "https://www." + random_string(64) + '-' + random_string(50) +  '.' + random_string(3),
 			title	: random_string(128)
 		}
 		return result;
-	}
-
-	export const random_pdf_data = function() {
-		const result = {
-			section_id : (random_number(50) || 1).toString(),
-			section_tipo : "rsc170",
-			component_tipo : "rsc74",
-			original_file_name : "rsc209_rsc205_" + (random_number(500) || 36).toString() + "_lg-spa.pdf",
-			original_upload_date : {
-				day : random_number(30) || 1,
-				hour : random_number(23) || 1,
-				time : random_number(64983057555) || 1,
-				year : random_number(2022) || 1,
-				month : random_number(12) || 1,
-				minute : 19,
-				second : 15
-			}
-		}
-
-		return result
 	}
 
 	export const random_security_access = function() {
@@ -305,4 +230,222 @@
 			section_tipo	: "oh1"
 		}]
 		return result
+	}
+
+	export const random_av_data = function() {
+
+		const file_name = random_string(128) + '_' + random_number(99) + ''
+
+		const value = [
+		  {
+		    "lib_data": null,
+		    "files_info": [
+		      {
+		        "quality": "original",
+		        "file_url": `/v6/media/media_development/av/original/${file_name}.AVI`,
+		        "file_name": `${file_name}.AVI`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/original/${file_name}.AVI`,
+		        "file_size": 22126087,
+		        "file_time": {
+		          "day": 11,
+		          "hour": 11,
+		          "time": 64992281681,
+		          "year": 2022,
+		          "month": 2,
+		          "minute": 34,
+		          "second": 41,
+		          "timestamp": "2022-02-11 11:34:41"
+		        },
+		        "upload_info": {
+		          "date": {
+		            "day": 11,
+		            "hour": 11,
+		            "time": 64992281681,
+		            "year": 2022,
+		            "month": 2,
+		            "minute": 34,
+		            "second": 41,
+		            "timestamp": "2022-02-11 11:34:41"
+		          },
+		          "user": null,
+		          "file_name": `${file_name}.AVI`
+		        }
+		      },
+		      {
+		        "quality": "404",
+		        "file_url": `/v6/media/media_development/av/404/${file_name}.mp4`,
+		        "file_name": `${file_name}.mp4`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/404/${file_name}.mp4`,
+		        "file_size": 22126087,
+		        "file_time": {
+		          "day": 11,
+		          "hour": 11,
+		          "time": 64992281681,
+		          "year": 2022,
+		          "month": 2,
+		          "minute": 34,
+		          "second": 41,
+		          "timestamp": "2022-02-11 11:34:41"
+		        }
+		      }
+		    ]
+		  }
+		]
+
+		return value
+	}
+
+	export const random_image_data = function() {
+
+		const file_name = random_string(128) + '_' + random_number(99) + ''
+
+		const value = [
+		  {
+		    "lib_data": null,
+		    "files_info": [
+		      {
+		        "quality": "original",
+		        "file_url": `/v6/media/media_development/image/original/0/${file_name}.jpg`,
+		        "file_name": `${file_name}.jpg`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/original/0/${file_name}.jpg`,
+		        "file_size": 14355433,
+		        "file_time": {
+		          "day": 13,
+		          "hour": 11,
+		          "time": 64997809695,
+		          "year": 2022,
+		          "month": 4,
+		          "minute": 8,
+		          "second": 15,
+		          "timestamp": "2022-04-13 11:08:15"
+		        },
+		        "upload_info": {
+		          "date": {
+		            "day": 13,
+		            "hour": 11,
+		            "time": 64997809695,
+		            "year": 2022,
+		            "month": 4,
+		            "minute": 8,
+		            "second": 15,
+		            "timestamp": "2022-04-13 11:08:15"
+		          },
+		          "user": null,
+		          "file_name": `${file_name}_deleted_2022-02-11_1347.jpg`
+		        }
+		      },
+		      {
+		        "quality": "1.5MB",
+		        "file_url": `/v6/media/media_development/image/1.5MB/0/${file_name}.jpg`,
+		        "file_name": `${file_name}.jpg`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/1.5MB/0/${file_name}.jpg`,
+		        "file_size": 344574,
+		        "file_time": {
+		          "day": 13,
+		          "hour": 11,
+		          "time": 64997809699,
+		          "year": 2022,
+		          "month": 4,
+		          "minute": 8,
+		          "second": 19,
+		          "timestamp": "2022-04-13 11:08:19"
+		        }
+		      }
+		    ]
+		  }
+		]
+
+		return value
+	}
+
+	export const random_pdf_data = function() {
+
+		const file_name = random_string(128) + '_' + random_number(99) + ''
+
+		const value = [
+		  {
+		    "lib_data": null,
+		    "files_info": [
+		      {
+		        "quality": "standard",
+		        "file_url": `/v6/media/media_development/pdf/standard/0/${file_name}.pdf`,
+		        "file_name": `${file_name}.pdf`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/pdf/standard/0/${file_name}.pdf`,
+		        "file_size": 255969,
+		        "file_time": {
+		          "day": 25,
+		          "hour": 9,
+		          "time": 64980091880,
+		          "year": 2021,
+		          "month": 9,
+		          "minute": 31,
+		          "second": 20,
+		          "timestamp": "2021-09-25 09:31:20"
+		        },
+		        "upload_info": {
+		          "date": {
+		            "day": 25,
+		            "hour": 9,
+		            "time": 64980091880,
+		            "year": 2021,
+		            "month": 9,
+		            "minute": 31,
+		            "second": 20,
+		            "timestamp": "2021-09-25 09:31:20"
+		          },
+		          "user": null,
+		          "file_name": `${file_name}.pdf`
+		        }
+		      }
+		    ]
+		  }
+		]
+
+		return value
+	}
+
+	export const random_svg_data = function() {
+
+		const file_name = random_string(128) + '_' + random_number(99) + ''
+
+		const value = [
+		  {
+		    "lib_data": null,
+		    "files_info": [
+		      {
+		        "quality": "standard",
+		        "file_url": `/v6/media/media_development/svg/standard/${file_name}.svg`,
+		        "file_name": `${file_name}.svg`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/svg/standard/${file_name}.svg`,
+		        "file_size": 1180,
+		        "file_time": {
+		          "day": 19,
+		          "hour": 10,
+		          "time": 65009038764,
+		          "year": 2022,
+		          "month": 8,
+		          "minute": 19,
+		          "second": 24,
+		          "timestamp": "2022-08-19 10:19:24"
+		        },
+		        "upload_info": {
+		          "date": {
+		            "day": 19,
+		            "hour": 10,
+		            "time": 65009038764,
+		            "year": 2022,
+		            "month": 8,
+		            "minute": 19,
+		            "second": 24,
+		            "timestamp": "2022-08-19 10:19:24"
+		          },
+		          "user": null,
+		          "file_name": `${file_name}.svg`
+		        }
+		      }
+		    ]
+		  }
+		]
+
+		return value
 	}

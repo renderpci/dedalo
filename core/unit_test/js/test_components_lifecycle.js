@@ -7,75 +7,91 @@ import {
 import {get_instance} from '../../common/js/instances.js'
 
 
+const ar_mode = ['edit','list']
+const ar_mode_length = ar_mode.length
+for (let k = 0; k < ar_mode_length; k++) {
 
-describe("COMPONENTS LIFE-CYCLE", function() {
+	const element_mode = ar_mode[k]
 
-	for (let i = 0; i < elements.length; i++) {
+	describe(`COMPONENTS LIFE-CYCLE ${element_mode}`, async function() {
 
-		const element = elements[i]
-		// direct minimum context
-			const request_config = [{
-				api_engine	: 'dedalo',
-				show		: {
-					ddo_map : []
-				},
-				sqo			: {
-					section_tipo : [element.section_tipo]
+		for (let i = 0; i < elements.length; i++) {
+
+			const element = elements[i]
+			// direct minimum context
+				const request_config = [{
+					api_engine	: 'dedalo',
+					show		: {
+						ddo_map : []
+					},
+					sqo			: {
+						section_tipo : [element.section_tipo]
+					}
+				}]
+				element.context = {
+					request_config : request_config // [source]
 				}
-			}]
-			element.context = {
-				request_config : request_config // [source]
-			}
+			element.mode = element_mode
 
-		describe(element.model, function() {
+			describe(`${element.model}`, async function() {
 
-			let new_instance = null
+				let new_instance = null
 
-			it(`${element.model} INIT`, async function() {
+				it(`${element.model} INIT ${element.mode}`, async function() {
 
-				const expected = 'initiated'
+					// init instance
+						new_instance = await get_instance(element)
 
-				// init instance
-					new_instance = await get_instance(element)
+					const expected = 'initiated'
+					assert.equal(new_instance.status, expected);
+					assert.equal(new_instance.mode, element_mode);
+				});
 
-				assert.equal(new_instance.status, expected);
-			});
+				it(`${element.model} BUILD (autoload=true) ${element.mode}`, async function() {
 
-			it(`${element.model} BUILD (autoload=true)`, async function() {
+					const expected = 'built'
 
-				const expected = 'built'
+					// init instance
+						await new_instance.build(true)
 
-				// init instance
-					await new_instance.build(true)
+					assert.equal(new_instance.status, expected);
+					// assert.equal(new_instance.mode, element_mode);
+				});
 
-				assert.equal(new_instance.status, expected);
-			});
+				it(`${element.model} RENDER ${element.mode}`, async function() {
 
-			it(`${element.model} RENDER`, async function() {
+					const expected = 'rendered'
 
-				const expected = 'rendered'
+					// init instance
+						await new_instance.render()
 
-				// init instance
-					await new_instance.render()
+					assert.equal(new_instance.status, expected);
+					// assert.equal(new_instance.mode, element_mode);
+				});
 
-				assert.equal(new_instance.status, expected);
-			});
+				it(`${element.model} DESTROY ${element.mode}`, async function() {
 
-			it(`${element.model} DESTROY`, async function() {
+					const expected = 'destroyed'
 
-				const expected = 'destroyed'
+					// init instance
+						await new_instance.destroy(
+							true,  // delete_self . default true
+							true, // delete_dependencies . default false
+							true // remove_dom . default false
+						)
 
-				// init instance
-					await new_instance.destroy(
-						true,  // delete_self . default true
-						true, // delete_dependencies . default false
-						true // remove_dom . default false
-					)
+					assert.equal(new_instance.status, expected)
+					assert.deepEqual(new_instance.ar_instances, [])
+					assert.deepEqual(new_instance.node, null)
+				});
 
-				assert.equal(new_instance.status, expected)
-				assert.deepEqual(new_instance.ar_instances, [])
-				assert.deepEqual(new_instance.node, null)
-			});
-		});//end describe(element.model, function()
-	}//end for (let i = 0; i < elements.length; i++)
-});
+
+
+			});//end describe(element.model, function()
+
+		}//end for (let i = 0; i < elements.length; i++)
+
+	});
+
+
+}//end for (let k = 0; k < ar_mode_length; k++)
