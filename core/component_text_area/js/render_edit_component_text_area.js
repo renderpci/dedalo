@@ -206,11 +206,13 @@ const get_input_element = (i, current_value, self) => {
 					toolbar_container	: toolbar_container,
 					value				: value,
 					key					: i,
-					editor_config		: editor_config
+					editor_config		: editor_config,
+					editor_class		: 'InlineEditor' // ddEditor | InlineEditor
 				})
 
 			// fix current_service_text_editor when is ready
 				self.text_editor[i] = current_service_text_editor
+
 
 			return current_service_text_editor
 		}//end init_current_service_text_editor
@@ -219,15 +221,19 @@ const get_input_element = (i, current_value, self) => {
 		value_container.innerHTML = value
 
 	// user click in the wrapper and init the editor
-		const auto_init_editor = self.auto_init_editor!==undefined
-			? self.auto_init_editor
-			: (self.render_level==='content') ? true : false
+		// const auto_init_editor = self.auto_init_editor!==undefined
+		// 	? self.auto_init_editor
+		// 	: (self.render_level==='content') ? true : false
+		const auto_init_editor = true
 		if (auto_init_editor===true) {
 			// activate now
 			value_container.classList.add('loading')
 			// use timeout only to force real async execution
 			setTimeout(function(){
 				init_current_service_text_editor()
+				// .then(()=>{
+					value_container.classList.remove('loading')
+				// })
 			}, 5)
 		}else{
 			// activate on user click
