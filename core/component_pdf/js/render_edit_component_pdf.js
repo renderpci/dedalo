@@ -118,8 +118,8 @@ const get_content_value = function(i, current_value, self) {
 	// short vars
 		const quality		= self.quality || self.context.quality
 		const datalist		= self.data.datalist || []
-		const offset_value	= current_value && current_value.offset!=='undefined' && current_value.offset!==null
-			? current_value.offset
+		const offset_value	= current_value && current_value.lib_data && current_value.lib_data.offset!=='undefined' && current_value.lib_data.offset!==null
+			? current_value.lib_data.offset
 			: 1
 
 	// content_value
@@ -239,20 +239,22 @@ const get_content_value = function(i, current_value, self) {
 			})
 			offset_input.addEventListener('change', function() {
 
-				// value
-					current_value.offset = (this.value.length>0)
-						? parseInt(this.value)
-						: null
+				if (this.value.length>0) {
 
-				const changed_data = [Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: current_value
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
+					current_value[i].lib_data = current_value[i].lib_data || {}
+					// add/update offset
+					current_value[i].lib_data.offset = parseInt(this.value)
+
+					const changed_data = [Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: current_value
+					})]
+					self.change_value({
+						changed_data	: changed_data,
+						refresh			: false
+					})
+				}
 			})
 	}//end if (pdf_url)
 
