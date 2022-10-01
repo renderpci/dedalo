@@ -87,11 +87,12 @@ render_edit_component_geolocation.prototype.edit = async function(options) {
 */
 export const get_content_data_edit = async function(self) {
 
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-
-	// value
-		const value = self.data.value
 
 	// inputs - loop with the value array
 		const inputs_value	= value //(value.length<1) ? [''] : value
