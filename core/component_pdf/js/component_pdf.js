@@ -112,10 +112,12 @@ component_pdf.prototype.go_to_page = async function(options) {
 * GET_DATA_TAG
 * Send the data_tag to the text_area when it need create a new tag
 */
-component_pdf.prototype.get_data_tag = function(){
+component_pdf.prototype.get_data_tag = function() {
 
 	const self = this
-	const offset 		= self.data.value[0].offset
+	const offset 		= self.data.value[0] && self.data.value[0].lib_data
+		? self.data.value[0].lib_data.offset
+		: 0
 	const total_pages 	= self.pdf_viewer.pagesCount
 
 	const data_tag = {
@@ -134,7 +136,7 @@ component_pdf.prototype.get_data_tag = function(){
 
 
 ///// not used
-function get_text(){
+function get_text() {
 
 	const ar_text = self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textContentItemsStr
 
