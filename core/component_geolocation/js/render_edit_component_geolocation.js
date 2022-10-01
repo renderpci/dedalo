@@ -97,7 +97,16 @@ export const get_content_data_edit = async function(self) {
 		const inputs_value	= value //(value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
+
+			// value
+			const value_item = inputs_value[i] || {
+				lat		: 39.462571,
+				lon		: -0.376295,
+				zoom	: 12,
+				alt		: 16
+			}
+
+			const input_element_node = get_input_element_edit(i, value_item, self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
