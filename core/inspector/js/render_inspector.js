@@ -377,6 +377,20 @@ export const render_section_info = function(self) {
 					open_ontology_window(section_tipo, custom_url)
 				})
 			}
+		// master_ontology
+			if (SHOW_DEVELOPER===true) {
+				const master_ontology = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button edit',
+					title			: 'Master Ontology',
+					parent			: tipo_info
+				})
+				master_ontology.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + section_tipo
+					open_ontology_window(section_tipo, custom_url)
+				})
+			}
 
 	// section created
 		// label
@@ -497,6 +511,20 @@ export const render_component_info = function(self, component) {
 				local_ontology.addEventListener('click', function(e){
 					e.stopPropagation()
 					const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
+					open_ontology_window(tipo, custom_url)
+				})
+			}
+		// master_ontology
+			if (SHOW_DEVELOPER===true) {
+				const master_ontology = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button edit',
+					title			: 'Master Ontology',
+					parent			: tipo_info
+				})
+				master_ontology.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo
 					open_ontology_window(tipo, custom_url)
 				})
 			}
