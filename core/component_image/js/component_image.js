@@ -159,7 +159,7 @@ component_image.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const lib_data = typeof (self.data.value[0])!=='undefined' && typeof (self.data.value[0].lib_data)!=='undefined'
+	const lib_data = typeof self.data.value[0]!=='undefined' && self.data.value[0].lib_data
 		? self.data.value[0].lib_data
 		: [{
 			layer_id		: 1,
@@ -216,10 +216,10 @@ component_image.prototype.load_vector_editor = async function(options) {
 			self.vector_tools_loaded = true
 		}
 
-	// load all layers if the data is empty it create the frist layer
+	// load all layers if the data is empty it create the first layer
 		if(self.ar_layer_loaded.length < 1){
 			// add the data from instance to the ar_layer_loaded, it control the all project layers that will showed in the vector editor
-			self.ar_layer_loaded = typeof (self.data.value[0])!=='undefined' && typeof (self.data.value[0].lib_data)!=='undefined'
+			self.ar_layer_loaded = typeof self.data.value[0]!=='undefined' && self.data.value[0].lib_data
 				? self.data.value[0].lib_data
 				: [{
 					layer_id	: 0,
