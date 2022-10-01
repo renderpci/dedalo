@@ -2838,7 +2838,35 @@ export const ui = {
 
 
 		return true
-	}//end enter_fullscreen
+	},//end enter_fullscreen
+
+
+
+	/**
+	* GET_ONTOLY_TERM_LINK
+	* @return DOM node ontoly_link
+	*/
+	get_ontoly_term_link(tipo) {
+
+		const url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
+
+		const ontoly_term_link = ui.create_dom_element({
+			element_type	: 'a',
+			// class_name		: 'button pen',
+			href			: url,
+			text_content	: tipo,
+			title			: 'Local Ontology'
+		})
+		ontoly_term_link.target	= '_blank'
+		ontoly_term_link.rel	= 'noopener'
+		// ontoly_term_link.addEventListener('click', function(e){
+		// 	e.stopPropagation()
+		// 	const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + section_tipo
+		// 	open_ontology_window(section_tipo, custom_url)
+		// })
+
+		return ontoly_term_link
+	}//end get_ontoly_term_link
 
 
 
