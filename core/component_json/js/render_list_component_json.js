@@ -52,21 +52,24 @@ render_list_component_json.prototype.list = function() {
 export const get_value_string = function(self) {
 
 	// short vars
-		const data = self.data
+		const data	= self.data
+		const value	= data.value || []
 
 	// value_string
 		if(self.section_tipo==='dd542'){
 
 			// activity section case
 			const ar_values	= []
-			const value_len	= data.value.length
+			const value_len	= value.length
 			for (let i = 0; i < value_len; i++) {
-				const value_map = new Map(Object.entries(data.value[i]))
+				const value_map = new Map(Object.entries(value[i]))
 				for (let [key, value] of value_map) {
-					ar_values.push(key+ ": " +value)
+					ar_values.push( key + ': ' + value )
 				}
 			}
-			return ar_values.join('<br>')
+			const value_string = ar_values.join('<br>')
+
+			return value_string
 		}
 
 	// default cases
@@ -74,9 +77,11 @@ export const get_value_string = function(self) {
 			? self.context.properties.list_show_key
 			: 'msg'
 
-		const value_string = (typeof data.value[0][list_show_key]!=='undefined')
-			? data.value[0][list_show_key]
-			: JSON.stringify(data.value).substring(0,100)+' ...'
+		const value_string = value[0] && (typeof value[0][list_show_key]!=='undefined')
+			? value[0][list_show_key]
+			: value[0]
+				? JSON.stringify(value).substring(0,100)+' ...'
+				: ''
 
 
 	return value_string
