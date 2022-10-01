@@ -2790,8 +2790,14 @@ export const ui = {
 	hilite : function(options) {
 
 		// options
-			const hilite	= options.hilite // boll
+			const hilite	= options.hilite // bool
 			const instance	= options.instance // object instance
+
+		// check wrapper node
+			if (!instance.node) {
+				console.log('Skip hilite! Invalid instance node. instance :', instance);
+				return
+			}
 
 		// add/remove wrapper class
 			const wrapper_node = instance.node

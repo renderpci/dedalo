@@ -35,7 +35,7 @@ render_search_component_geolocation.prototype.search = async function() {
 	const self = this
 
 	// content data
-		const content_data = get_content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
