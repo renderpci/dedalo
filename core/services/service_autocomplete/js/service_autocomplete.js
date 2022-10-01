@@ -188,6 +188,32 @@ export const service_autocomplete = function() {
 				parent			: self.wrapper
 			})
 
+		// check there exists valid target sections before create the options and selector
+			const all_ar_section	= []
+			const ar_source			= self.request_config || []
+			const ar_source_length	= ar_source.length
+			for (let i = 0; i < ar_source_length; i++) {
+				const source		= ar_source[i]
+				const current_sqo	= source.sqo
+				const ar_section	= current_sqo.section_tipo
+				if (ar_section) {
+					all_ar_section.push(...ar_section)
+				}
+			}
+			if (all_ar_section.length<1) {
+				const ontology_link = ui.get_ontoly_term_link(self.tipo)
+				const msg = `Invalid target section tipo (empty).
+							Please, configure at least one target section tipo for current component:
+							${ontology_link.outerHTML}`
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'debug',
+					inner_html		: msg,
+					parent			: searh_container
+				})
+				return searh_container
+			}
+
 		// options container
 			const options_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -246,7 +272,7 @@ export const service_autocomplete = function() {
 			self.datalist			= datalist
 
 
-		return true
+		return searh_container
 	}//end render
 
 
@@ -292,13 +318,17 @@ export const service_autocomplete = function() {
 					// const ddo_section	= request_ddo.find(item => item.type === 'section' && item.typo === 'ddo')
 					const search_engine		= source.api_engine//find(current_item=> current_item.typo==='search_engine').value
 
+					const label = ar_section && ar_section.length > 1
+						? (ar_section[0].label || ('Unknown label ' + ar_section[0])) + ', etc.'
+						: ar_section && ar_section[0]
+							? ar_section[0].label || ('Unknown label ' + ar_section[0])
+							: 'Unknown label ' + JSON.stringify(ar_section)
+
 					const swicher_source = ui.create_dom_element({
 						element_type	: 'option',
 						parent			: select,
-						value			: i+'',
-						inner_html		: ar_section.length > 1
-							? ar_section[0].label + ', etc.'
-							: ar_section[0].label
+						value			: i.toString(), // pass key as string option
+						inner_html		: label
 					})
 					if (search_engine===self.search_engine) {
 						swicher_source.setAttribute('selected', true)
