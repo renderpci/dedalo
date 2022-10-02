@@ -79,6 +79,9 @@ abstract class RecordDataBoundObject {
 				$port=ONTOLOGY_DB['DEDALO_DB_PORT_CONN'],
 				$socket=ONTOLOGY_DB['DEDALO_SOCKET_CONN']
 			);
+			if($ontology_pg_conn===false){
+				throw new Exception("Error. Could not connect to database (52-2)", 1);
+			}
 			return $ontology_pg_conn;
 		}
 
