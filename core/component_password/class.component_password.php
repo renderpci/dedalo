@@ -27,7 +27,7 @@ class component_password extends component_common {
 	public function get_dato() {
 
 		$dato = parent::get_dato();
-		if (!is_array($dato)) {
+		if (!empty($dato) && !is_array($dato)) {
 			$dato = [$dato];
 		}
 
