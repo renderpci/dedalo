@@ -371,16 +371,18 @@
 		background-color: red !important;
 		transition: background-color 0.3s ease;
 	}
-	.alert{
+	.alert {
 		height: min-content;
 		margin-right: 0.25em;
 		padding-bottom: 0.275rem;
 		padding-left: 1rem;
 		padding-right: 1rem;
 		padding-top: 0.275rem;
-		width: max-content;
 		text-align: center;
 		vertical-align: middle;
+		// width: max-content; // removed 30-09-2022
+		width: 100%;
+		word-wrap: break-word;
 		-webkit-user-select: none;
 		-moz-user-select: none;
 		-ms-user-select: none;
@@ -507,6 +509,9 @@
 // debug
 	.debug {
 		padding: 1em;
+		word-break: break-word;
+		white-space: pre-line;
+		line-height: 1.1rem;
 
 		.debug_container {
 			background-color: #f1f2f3;

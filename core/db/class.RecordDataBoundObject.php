@@ -183,11 +183,11 @@ abstract class RecordDataBoundObject {
 			#pg_get_result($this->get_connection()) ;
 
 			// pg_query
-				$result = pg_query($this->get_connection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error());
+				$result = pg_query($this->get_connection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
 				if ($result===false) {
 					trigger_error("Error Processing Request Load");
 					if(SHOW_DEBUG===true) {
-						throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error()." <hr>$strQuery", 1);
+						throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
 					}
 				}
 
@@ -204,8 +204,8 @@ abstract class RecordDataBoundObject {
 				// $result = pg_execute($this->get_connection(), $stmtname, array());
 				// if ($result===false) {
 				// 	if(SHOW_DEBUG===true) {
-				// 		// throw new Exception("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery", 1);
-				// 		trigger_error("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery");
+				// 		// throw new Exception("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
+				// 		trigger_error("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery");
 				// 	}else{
 				// 		trigger_error("Error Processing Request Load");
 				// 	}
@@ -360,7 +360,7 @@ abstract class RecordDataBoundObject {
 				echo "Error: sorry an error ocurred on UPDATE record '$this->ID'. Data is not saved";
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
-					dump(pg_last_error(),"pg_last_error()");
+					dump(pg_last_error(DBi::_getConnection()),"pg_last_error(DBi::_getConnection())");
 					throw new Exception("Error Processing Request", 1);;
 				}
 			}
@@ -408,7 +408,7 @@ abstract class RecordDataBoundObject {
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
-					throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(), 1);
+					throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(DBi::_getConnection()), 1);
 				}
 				// return "Error: sorry an error ocurred on INSERT record. Data is not saved";
 				debug_log(__METHOD__." Error: sorry an error ocurred on INSERT record. Data is not saved ", logger::ERROR);
@@ -419,7 +419,7 @@ abstract class RecordDataBoundObject {
 			if ($id===false) {
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
-					throw new Exception("Error Processing Request (1-b): ".pg_last_error(), 1);
+					throw new Exception("Error Processing Request (1-b): ".pg_last_error(DBi::_getConnection()), 1);
 				}
 			}
 			# Fix new received id
@@ -690,7 +690,7 @@ abstract class RecordDataBoundObject {
 			$result = pg_query($this->get_connection(), $strQuery);
 			if ($result===false) {
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request . ".pg_last_error(), 1);
+					throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
 				}else{
 					trigger_error("Error on DB query");
 				}

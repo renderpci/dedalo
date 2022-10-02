@@ -1,6 +1,6 @@
 // WORKER
 // Calculate complex data in background like recursive children or parent
-// (!) Note that module version of the worker do not works in Firefox and the scope is very annoying to receive functions by name
+// (!) Note that the worker module version doesn't work in Firefox and scope is very annoying to receive functions by name
 
 
 

@@ -56,7 +56,7 @@ render_list_view_default.render = function(self, options) {
 		image.draggable = false
 		image.loading = 'lazy'
 		// image.setAttribute('crossOrigin', 'Anonymous');
-		if(self.caller.caller.mode === 'edit'){
+		if(self.caller && self.caller.caller && self.caller.caller.mode==='edit') {
 			ui.component.add_image_fallback(image, load_error)
 
 			function load_error() {

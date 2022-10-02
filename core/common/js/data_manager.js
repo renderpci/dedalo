@@ -32,13 +32,14 @@ data_manager.request = async function(options) {
 		this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 		this.body			= options.body // body data type must match "Content-Type" header
 
-	const handle_errors = function(response) {
-		if (!response.ok) {
-			console.warn("-> HANDLE_ERRORS response:",response);
-			throw Error(response.statusText);
+	// handle_errors
+		const handle_errors = function(response) {
+			if (!response.ok) {
+				console.warn("-> HANDLE_ERRORS response:",response);
+				throw Error(response.statusText);
+			}
+			return response;
 		}
-		return response;
-	}
 
 	const api_response = fetch(
 		this.url,
@@ -69,7 +70,7 @@ data_manager.request = async function(options) {
 						const msg = result.msg || result.error
 						alert("An error occurred in the connection with the API. \n" + msg);
 
-					// custom behabiours
+					// custom behaviors
 						switch (result.error) {
 							case 'not_logged':
 								// redirect to login page
@@ -86,17 +87,16 @@ data_manager.request = async function(options) {
 			})
 			// console.log("-> api_response json_parsed:",json_parsed);
 			return json_parsed
-		})// parses JSON response into native Javascript objects
+		})// parses JSON response into native JavaScript objects
 		.catch(error => {
 			console.warn("options:", options);
 			console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
 			return {
-				result 	: false,
-				msg 	: error.message,
-				error 	: error
+				result	: false,
+				msg		: error.message,
+				error	: error
 			}
 		});
-
 
 
 	return api_response

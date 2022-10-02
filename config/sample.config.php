@@ -395,6 +395,8 @@
 		define('DEDALO_PDF_EXTENSION'				, 'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
+		// dedalo_pdf_quality_original. string default 'original'
+		define('DEDALO_PDF_QUALITY_ORIGINAL'		, 'original');
 		// pdf_quality_default. Default: 'standard'
 		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standard');
 		// pdf_ar_quality. Array of PDF quality definitions
@@ -538,9 +540,9 @@
 
 
 // remote_structure_server_code
-	define('STRUCTURE_FROM_SERVER'		, true); # bool
-	define('STRUCTURE_SERVER_CODE'		, ''); 	 # string like aZdUs7asdasdhRsw4!sp
-	define('STRUCTURE_SERVER_URL'		, ''); 	 # string like https://master.render.es/dedalo/lib/dedalo/extras/str_manager/
+	define('STRUCTURE_FROM_SERVER'		, true);
+	define('STRUCTURE_SERVER_CODE'		, 'x3a0B4Y020Eg9w');
+	define('STRUCTURE_SERVER_URL'		, 'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
 	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_STRUCTURE . '/download');
 
 

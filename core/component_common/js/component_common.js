@@ -276,16 +276,17 @@ export const init_events_subscription = function(self) {
 	// events subscription (from component properties)
 	// the ontology can define a observer property that specify the tipo that this component will listen
 	// the event has a scope of the same section_tipo and same section_id for the observer and observable
-		const observe = (self.context.properties && typeof self.context.properties.observe!=="undefined")
+		const observe = (self.context.properties && typeof self.context.properties.observe!=='undefined')
 			? (self.context.properties.observe || null)
 			: null
-		if(observe){
-			const l = observe.length
-			for (let i = l - 1; i >= 0; i--) {
+		if(observe) {
 
-				const component_tipo	= observe[i].component_tipo // target event component tipo
-				const event_name		= observe[i].event
-				const perform			= observe[i].perform || null
+			const observe_length = observe.length
+			for (let i = observe_length - 1; i >= 0; i--) {
+
+				const component_tipo	= observe[i].component_tipo // string target event component tipo
+				const event_name		= observe[i].event // string event name as 'update_data'
+				const perform			= observe[i].perform || null // string action to exec like 'update_data'
 
 				if(perform && typeof self[perform]==='function'){
 					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
@@ -295,7 +296,15 @@ export const init_events_subscription = function(self) {
 					// or the sort format with the id_base of the observable component:
 					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
 					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
-					// console.log("SUBSCRIBE self.id:", self.id, ' id_base:',id_base, " perform:"+perform);
+
+					// debug
+						// console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
+						// console.log("SUBSCRIBE info ",
+						// 	'self.id:', self.id,
+						// 	'id_base:', id_base,
+						// 	'perform:', perform
+						// );
+
 					self.events_tokens.push(
 						event_manager.subscribe(event_name +'_'+ id_base, self[perform].bind(self))
 					)
@@ -516,11 +525,19 @@ component_common.prototype.save = async function(changed_data) {
 				}
 			}
 
-		// dispatch save event
-			event_manager.publish('save', {
-				instance		: self,
-				api_response	: response
-			})
+		// dispatch save event general
+			event_manager.publish(
+				'save',
+				{
+					instance		: self,
+					api_response	: response
+				}
+			)
+		// dispatch event specific by id_base (usually observed by component properties 'observe' definition)
+			event_manager.publish(
+				'save_'+ self.id_base,
+				{}
+			)
 
 		// remove active
 			// ui.component.inactive(self)

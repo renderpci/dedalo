@@ -720,7 +720,8 @@ abstract class backup {
 			case 1:
 				#$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
 				$res_html .= '<div class="error text-left">';
-				$res_html .= 'There was an error during import. Please make sure the import file is saved in the same folder as this script and check your values:<br/><br/>';
+				$res_html .= 'There was an error during import (pg_restore). Please make sure the import file is saved in the same folder as this script and check your values:<br/><br/>';
+				$res_html .= 'worked_result: ' . to_string($worked_result) .'<hr>';
 				$res_html .= '<table>';
 				$res_html .= '<tr><td>DB Name:</td><td><b>' .DEDALO_DATABASE_CONN.'</b></td></tr>';
 				$res_html .= '<tr><td>DB User Name:</td><td><b>' .DEDALO_USERNAME_CONN.'</b></td></tr>';

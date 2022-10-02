@@ -35,9 +35,9 @@ render_search_component_check_box.prototype.search = async function() {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end search
@@ -94,7 +94,13 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element li
+* Render a input element based on passed value
+* @param int i
+* 	data.value array key
+* @param object current_value
+* @param object self
+*
+* @return DOM node li
 */
 const get_input_element = (i, current_value, self) => {
 
@@ -160,5 +166,3 @@ const get_input_element = (i, current_value, self) => {
 
 	return li
 }//end get_input_element
-
-

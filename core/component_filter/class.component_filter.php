@@ -34,41 +34,35 @@ class component_filter extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	function __construct(string $tipo=null, $section_id=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
-		$lang = DEDALO_DATA_NOLAN;
+		// force lang value always
+			$lang = DEDALO_DATA_NOLAN;
 
-		# Build component normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		// Build the component normally
+			parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
 
-		$this->parent = $this->get_parent();
+		// dedalo_default_project
+		// If component is in edit mode and don't have data, we assign the default data defined in config
+			if ($modo==='edit' &&
+				get_called_class()==='component_filter' && // Remember that component_filter_master extends this class
+				!is_null($this->section_id) &&
+				$section_tipo!=='test3' // exclude unit_test 'test3' section to create default dato
+				) {
+				$dato = $this->get_dato();
+				if(empty($dato)) {
 
-		#if(SHOW_DEBUG===true) {
-		#	if ($this->RecordObj_dd->get_traducible()==='si') {
-		#		throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-		#	}
-		#}
-		#debug_log(__METHOD__." get_called_class ".get_called_class(), logger::DEBUG);
+					// filter always save default project.
+						$user_id				= navigator::get_user_id();
+						$default_dato_for_user	= $this->get_default_dato_for_user($user_id);
+					// set current user projects default
+						$this->set_dato($default_dato_for_user);
+						$this->Save();
 
-		# DEDALO_DEFAULT_PROJECT
-		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto definido en config
-		if ($modo==='edit' && get_called_class()==='component_filter' && !is_null($this->parent)) { // Remember that component_filter_master extends this class
-			$dato = $this->get_dato();
-			if(empty($dato)) {
-				#
-				# FILTER always save default project
-				# Get current user projects
-				$user_id 				= navigator::get_user_id();
-				$default_dato_for_user 	= $this->get_default_dato_for_user($user_id);
-				#debug_log(__METHOD__." default_dato_for_user ".to_string($default_dato_for_user), logger::DEBUG);
-
-				$this->set_dato($default_dato_for_user);
-				$this->Save();
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Saved component filter (tipo:$tipo, parent:$parent, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".json_encode($default_dato_for_user));
+					debug_log(__METHOD__." Saved component filter (tipo:$tipo, section_id:$section_id, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".json_encode($default_dato_for_user), logger::DEBUG);
 				}
 			}
-		}
+
 
 		return true;
 	}//end __construct
