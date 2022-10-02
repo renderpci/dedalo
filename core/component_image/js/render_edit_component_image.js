@@ -135,6 +135,9 @@ const get_content_value = function(i, value, self) {
 				ui.set_background_image(this, content_value)
 				image.classList.remove('hide')
 			}
+			image.addEventListener('error', function(){
+				console.warn('Error on load image:', url, image);
+			}, false)
 			image.src = url
 		}
 
@@ -150,8 +153,8 @@ const get_content_value = function(i, value, self) {
 		if (data.base_svg_url && url) {
 			object_node.data = data.base_svg_url
 		}else{
-			object_node.data = DEDALO_CORE_URL + '/themes/default/0.svg'
-			content_value.addEventListener('mouseup',function(e) {
+			object_node.data = page_globals.fallback_image
+			content_value.addEventListener('mouseup', function(e) {
 				e.stopPropagation();
 				// tool_upload. Get the tool context to be opened
 				const tool_upload = self.tools.find(el => el.model==='tool_upload')
@@ -162,6 +165,7 @@ const get_content_value = function(i, value, self) {
 				})
 			})
 		}
+		// set pointer
 		self.object_node = object_node
 
 		// auto-change url the first time

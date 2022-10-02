@@ -63,6 +63,19 @@ class component_av extends component_media_common {
 			$dato = [$dato];
 		}
 
+		// test
+			// $new_dato	= [];
+			// $ar_quality = DEDALO_AV_AR_QUALITY;
+			// foreach ($ar_quality as $current_quality) {
+			// 	// read file if exists to get dato_item
+			// 	$dato_item = $this->get_quality_file_info($current_quality);
+			// 	// add non empty quality files data
+			// 	if (!empty($dato_item)) {
+			// 		$new_dato[] = $dato_item;
+			// 	}
+			// }
+			// dump($new_dato, ' new_dato +///////////////////++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
+
 		return $dato;
 	}//end get_dato
 
@@ -540,10 +553,11 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_DURATION
-	* Get file av duration from metadata reading attributes
+	* Get file av duration from file metadata reading attributes
+	* Note that this calculation, read fiscally the file and this is slow (about 200 ms)
 	* @return float $duration
 	*/
-	public function get_duration() : float {
+	public function get_duration( ?string $quality=null ) : float {
 
 		$duration = 0;
 
@@ -571,12 +585,33 @@ class component_av extends component_media_common {
 			// );
 			// $tc = $component->get_dato();
 
-		// short vars
-			$quality = DEDALO_AV_QUALITY_DEFAULT;
+		// current quality
+			$quality = $quality ?? $this->get_quality();
 
 		// read file
-			$video_path			= $this->get_video_path($quality);
-			$media_attributes	= ffmpeg::get_media_attributes($video_path);
+			$path				= $this->get_path($quality);
+			$media_attributes	= $this->get_media_attributes($path);
+			// expected result sample:
+				// {
+				// 	"format": {
+				// 		"filename": "/../dedalo/media/av/404/rsc35_rsc167_1.mp4",
+				// 		"nb_streams": 3,
+				// 		"nb_programs": 0,
+				// 		"format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+				// 		"format_long_name": "QuickTime / MOV",
+				// 		"start_time": "0.000000",
+				// 		"duration": "172.339000",
+				// 		"size": "22126087",
+				// 		"bit_rate": "1027095",
+				// 		"probe_score": 100,
+				// 		"tags": {
+				// 			"major_brand": "isom",
+				// 			"minor_version": "512",
+				// 			"compatible_brands": "isomiso2avc1mp41",
+				// 			"encoder": "Lavf59.16.100"
+				// 		}
+				// 	}
+				// }
 			if (isset($media_attributes->format->duration) && !empty($media_attributes->format->duration)) {
 
 				$duration = $media_attributes->format->duration;
@@ -586,6 +621,7 @@ class component_av extends component_media_common {
 					// $component->set_dato($tc);
 					// $component->Save();
 			}
+
 
 		return $duration;
 	}//end get_duration
@@ -1102,16 +1138,52 @@ class component_av extends component_media_common {
 
 
 			// add data with the file uploaded
-				if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
+				// if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
+				// 	$dato			= $this->get_dato();
+				// 	$value			= empty($dato) ? new stdClass() : reset($dato);
+				// 	$media_value	= $this->build_media_value((object)[
+				// 		'value'		=> $value,
+				// 		'file_name'	=> $original_file_name
+				// 	]);
+				// 	$this->set_dato([$media_value]);
+				// 	$this->Save();
+				// }
 
-					$dato			= $this->get_dato();
-					$value			= empty($dato) ? new stdClass() : reset($dato);
-					$media_value	= $this->build_media_value((object)[
-						'value'		=> $value,
-						'file_name'	=> $original_file_name
-					]);
+			// get files info
+				$files_info	= [];
+				$ar_quality = DEDALO_AV_AR_QUALITY;
+				foreach ($ar_quality as $current_quality) {
+					if ($current_quality==='thumb') continue;
+					// read file if exists to get file_info
+					$file_info = $this->get_quality_file_info($current_quality);
+					// add non empty quality files data
+					if (!empty($file_info)) {
+						$files_info[] = $file_info;
+					}
+				}
 
-					$this->set_dato([$media_value]);
+			// save component dato
+				$dato		= $this->get_dato();
+				$save_dato	= false;
+				if (isset($dato[0])) {
+					if (!is_object($dato[0])) {
+						// bad dato
+						debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
+					}else{
+						// update property files_info
+						$dato[0]->files_info = $files_info;
+						$save_dato = true;
+					}
+				}else{
+					// create a new dato from scratch
+					$dato_item = (object)[
+						'files_info' => $files_info
+					];
+					$dato = [$dato_item];
+					$save_dato = true;
+				}
+				if ($save_dato===true) {
+					$this->set_dato($dato);
 					$this->Save();
 				}
 
@@ -1452,6 +1524,21 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_MEDIA_ATTRIBUTES
+	* Read file and get attributes using ffmpeg
+	* @param string $file_path
+	* @return object|null $media_attributes
+	*/
+	public function get_media_attributes(string $file_path) : ?object {
+
+		$media_attributes = ffmpeg::get_media_attributes($file_path);
+
+		return $media_attributes;
+	}//end get_media_attributes
+
+
+
+	/**
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
@@ -1471,18 +1558,21 @@ class component_av extends component_media_common {
 			$options->context			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$update_version	= $options->update_version;
+		// short vars
+			$update_version	= implode('.', $options->update_version);
 			$dato_unchanged	= $options->dato_unchanged;
 			$reference_id	= $options->reference_id;
 
-		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
 			case '6.0.0':
-				if (	$dato_unchanged===null
-					|| is_object($dato_unchanged)===true
-					|| (isset($dato_unchanged[0]) && isset($dato_unchanged[0]->section_id))
-					) {
+				$is_old_dato = (
+					empty($dato_unchanged) || // v5 early case
+					isset($dato_unchanged->section_id) || // v5 modern case
+					(isset($dato_unchanged[0]) && isset($dato_unchanged[0]->original_file_name)) // v6 alpha case
+				);
+				// $is_old_dato = true; // force
+				if ($is_old_dato===true) {
 
 					// note that old dato could be a locator object as:
 						// {
@@ -1491,27 +1581,10 @@ class component_av extends component_media_common {
 						// 	"component_tipo": "test207"
 						// }
 
-					// data model target sample
-						// [
-						//   {
-						// 	"user_id": -1,
-						// 	"upload_date": {
-						// 	  "day": 23,
-						// 	  "hour": 9,
-						// 	  "time": 65012058295,
-						// 	  "year": 2022,
-						// 	  "month": 9,
-						// 	  "minute": 4,
-						// 	  "second": 55
-						// 	},
-						// 	"original_file_name": "rsc35_rsc167_13.mp4"
-						//   }
-						// ]
-
-					// create the component
+					// create the component av
 						$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 						$component	= component_common::get_instance(
-							$model,
+							$model, // string 'component_av'
 							$options->tipo,
 							$options->section_id,
 							'list',
@@ -1519,55 +1592,86 @@ class component_av extends component_media_common {
 							$options->section_tipo
 						);
 
-					// get the upload data
-						$id					= $component->get_id();
-						$source_quality		= DEDALO_AV_QUALITY_ORIGINAL;
-						$aditional_path		= $component->get_aditional_path();
+					// get existing files data
+						$file_id			= $component->get_id();
+						$source_quality		= $component->get_original_quality();
+						$additional_path	= $component->get_additional_path();
 						$initial_media_path	= $component->get_initial_media_path();
-						$original_extension	= $component->get_original($source_quality, false) ?? 'mp4';
+						$original_extension	= $component->get_original_extension(
+							false // bool exclude_converted
+						) ?? $component->get_extension();
 
-						$base_path	= DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $source_quality . $aditional_path;
-						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $id . '.' . $original_extension;
+						$base_path	= DEDALO_AV_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
+						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_id . '.' . $original_extension;
 
-						if(file_exists($file)) {
-
-							$upload_date_timestamp = date("Y-m-d H:i:s", filemtime($file));
-							$dd_date = new dd_date();
-							$original_upload_date		= $dd_date->get_date_from_timestamp($upload_date_timestamp);
-							$original_upload_date->time	= dd_date::convert_date_to_seconds($original_upload_date);
-
-							$original_file_name = $id . '.' . $original_extension;
-
-							// create new dato. Note that user_id is unknown here and upload_date is obtained from file date
-								$dato_item = new stdClass();
-									$dato_item->original_file_name	= $original_file_name;
-									$dato_item->upload_date			= $original_upload_date;
-									$dato_item->user_id				= null;
-
-							// fix final dato with new format as array
-								$new_dato = [$dato_item];
-
-							$response = new stdClass();
-								$response->result	= 1;
-								$response->new_dato	= $new_dato;
-								$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-						}else{
-
-							if (!empty($dato_unchanged)) {
-								// reset dato when original file do not exits
-								$new_dato = null;
-
+						// no original file found. Use default quality file
+							if(!file_exists($file)) {
+								// use default quality as original
+								$source_quality	= $component->get_default_quality();
+								$base_path		= DEDALO_AV_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
+								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_id . '.' . $component->get_extension();
+							}
+							// try again
+							if(!file_exists($file)) {
+								// reset bad dato
 								$response = new stdClass();
 									$response->result	= 1;
-									$response->new_dato	= $new_dato;
-									$response->msg		= "[$reference_id] Dato is changed (RESET) from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-							}else{
-								$response = new stdClass();
-									$response->result	= 2;
-									$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+									$response->new_dato	= null;
+									$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string(null).".<br />";
+								// $response = new stdClass();
+								// 	$response->result	= 2;
+								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($dato_unchanged)."
 								return $response;
 							}
+
+					// source_file_upload_date
+						$dd_date							= new dd_date();
+						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
+						$source_file_upload_date			= $dd_date->get_date_from_timestamp($upload_date_timestamp);
+						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
+						$source_file_upload_date->timestamp	= $upload_date_timestamp;
+
+					// get the original file name
+						$source_file_name = pathinfo($file)['basename'];
+
+					// lib_data
+						$lib_data = null;
+
+					// get files info
+						$files_info	= [];
+						$ar_quality = DEDALO_AV_AR_QUALITY;
+						foreach ($ar_quality as $current_quality) {
+							if ($current_quality==='thumb') continue;
+							// read file if exists to get file_info
+							$file_info = $component->get_quality_file_info($current_quality);
+							// add non empty quality files data
+							if (!empty($file_info)) {
+								// Note that source_quality could be original or default
+								if ($current_quality===$source_quality) {
+									$file_info->upload_info = (object)[
+										'file_name'	=> $source_file_name ?? null,
+										'date'		=> $source_file_upload_date ?? null,
+										'user'		=> null // unknown here
+									];
+								}
+								// add
+								$files_info[] = $file_info;
+							}
 						}
+
+					// create new dato
+						$dato_item = new stdClass();
+							$dato_item->files_info	= $files_info;
+							$dato_item->lib_data	= $lib_data;
+
+					// fix final dato with new format as array
+						$new_dato = [$dato_item];
+						debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
+
+					$response = new stdClass();
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
 
 					$response = new stdClass();
@@ -1584,7 +1688,7 @@ class component_av extends component_media_common {
 		}//end switch ($update_version)
 
 
-		return $response ;
+		return $response;
 	}//end update_dato_version
 
 

@@ -122,15 +122,15 @@ abstract class JSON_RecordDataBoundObject {
 			// DEFAULT. GET DB DATA
 
 			// Synchronous query
-				// $result = pg_query(DBi::_getConnection(), $strQuery);	#or die("Cannot execute query: $strQuery\n". pg_last_error());
+				// $result = pg_query(DBi::_getConnection(), $strQuery);	#or die("Cannot execute query: $strQuery\n". pg_last_error(DBi::_getConnection()));
 				// # $result  = pg_query_params(DBi::_getConnection(), $strQuery, array( $this->section_id, $this->section_tipo ));
 
 			// pg_query
-				$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error());
+				$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
 				if ($result===false) {
 					trigger_error("Error Processing Request Load");
 					if(SHOW_DEBUG===true) {
-						throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error()." <hr>$strQuery", 1);
+						throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
 					}
 				}
 
@@ -147,8 +147,8 @@ abstract class JSON_RecordDataBoundObject {
 				// $result = pg_execute(DBi::_getConnection(), $stmtname, array());
 				// if ($result===false) {
 				// 	if(SHOW_DEBUG===true) {
-				// 		// throw new Exception("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery", 1);
-				// 		trigger_error("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery");
+				// 		// throw new Exception("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
+				// 		trigger_error("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery");
 				// 	}else{
 				// 		trigger_error("Error Processing Request Load");
 				// 	}
@@ -232,6 +232,13 @@ abstract class JSON_RecordDataBoundObject {
 		// section_id. Section_id is always int
 			$section_id = intval($this->section_id);
 
+		// debug
+			if(SHOW_DEBUG===true) {
+				// dump($save_options->new_record, ' save_options->new_record ++ '.to_string());
+				// dump($section_id, ' section_id ++ '.to_string());
+				// dump($this->force_insert_on_save, ' this->force_insert_on_save ++ '.to_string());
+			}
+
 		#
 		# SAVE UPDATE : Record already exists
 		if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true ) {
@@ -246,12 +253,15 @@ abstract class JSON_RecordDataBoundObject {
 			$params		= [$datos, $section_id, $section_tipo];
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, $params);
 			if($result===false) {
-				if(SHOW_DEBUG===true) {
-					dump($datos,"strQuery:$strQuery, section_id:$section_id, section_tipo:$section_tipo");
-					throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);
-				}else{
-					trigger_error("Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved");
-				}
+
+				// error case
+					if(SHOW_DEBUG===true) {
+						dump($datos, "strQuery:$strQuery, section_id:$section_id, section_tipo:$section_tipo");
+						throw new Exception("Error Processing Save Update Request ". pg_last_error(DBi::_getConnection()), 1);
+					}else{
+						trigger_error("Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved");
+					}
+
 				// return false; // "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
 				return null;
 			}
@@ -265,29 +275,37 @@ abstract class JSON_RecordDataBoundObject {
 					// 	},
 					// 	$strQuery
 					// );
-					// dump($result, ' Save result ++ '.to_string($debug_strQuery));
+					// dump($result, ' Save result ++ '.$section_id .PHP_EOL. to_string($debug_strQuery));
 				}
 
 			// test 3-5-2022
 				$id = pg_fetch_result($result, 0, 'id');
-				if ($id===false) {
-					if(SHOW_DEBUG===true) {
-						dump($strQuery,"strQuery");
-						throw new Exception("Error Processing Request: ".pg_last_error(), 1);
-					}else{
-						trigger_error("Error Processing Request. ".pg_last_error());
+				// error case
+					if ($id===false) {
+						if(SHOW_DEBUG===true) {
+							$debug_strQuery = preg_replace_callback(
+								'/\$(\d+)\b/',
+								function($match) use ($params) {
+									$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), $params[$key]) );
+								},
+								$strQuery
+							);
+							dump($result, ' Save result ++ '.$section_id .PHP_EOL. to_string($debug_strQuery));
+							throw new Exception("Error Processing Request: " .PHP_EOL. pg_last_error(DBi::_getConnection()), 1);
+						}else{
+							trigger_error("Error Processing Request. " .PHP_EOL. pg_last_error(DBi::_getConnection()));
+						}
+						// return false;
+						return null;
 					}
-					// return false;
-					return null;
-				}
-				# Fix new received id (id matrix)
-				if (!isset($this->ID)) {
-					$this->ID = $id;
-				}elseif($this->ID!=$id) {
-					throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
-				}
+				// Fix new received id (id matrix)
+					if (!isset($this->ID)) {
+						$this->ID = $id;
+					}elseif($this->ID!=$id) {
+						throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
+					}
 
-				# Return always current existing or updated id
+				// Return always current existing or updated id
 				return (int)$id;
 		#
 		# SAVE INSERT : Record not exists and create one
@@ -307,7 +325,7 @@ abstract class JSON_RecordDataBoundObject {
 					if ($section_id===false) {
 						if(SHOW_DEBUG===true) {
 							dump(null, "strQuery : ".PHP_EOL.to_string($strQuery));
-							throw new Exception("Error Processing Request: ".pg_last_error(), 1);
+							throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
 						}else{
 							trigger_error('Error Processing Request strQuery:' . PHP_EOL . $strQuery);
 						}
@@ -332,9 +350,9 @@ abstract class JSON_RecordDataBoundObject {
 					if($result===false) {
 						if(SHOW_DEBUG===true) {
 							dump($strQuery,"strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));
-							throw new Exception("Error Processing Save Insert Request (2) error: ". pg_last_error(), 1);;
+							throw new Exception("Error Processing Save Insert Request (2) error: ". pg_last_error(DBi::_getConnection()), 1);;
 						}else{
-							trigger_error("Error: sorry an error ocurred on INSERT record. Data is not saved. ".pg_last_error());
+							trigger_error("Error: sorry an error ocurred on INSERT record. Data is not saved. ".pg_last_error(DBi::_getConnection()));
 						}
 						// return false;
 						return null;
@@ -344,9 +362,9 @@ abstract class JSON_RecordDataBoundObject {
 					if ($id===false) {
 						if(SHOW_DEBUG===true) {
 							dump($strQuery,"strQuery");
-							throw new Exception("Error Processing Request: ".pg_last_error(), 1);
+							throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
 						}else{
-							trigger_error("Error Processing Request. ".pg_last_error());
+							trigger_error("Error Processing Request. ".pg_last_error(DBi::_getConnection()));
 						}
 						// return false;
 						return null;
@@ -446,9 +464,9 @@ abstract class JSON_RecordDataBoundObject {
 		// check result
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
-					dump(pg_last_error()," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
+					dump(pg_last_error(DBi::_getConnection())," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
 				}
-				trigger_error("Error Processing SEARCH_FREE Request. pg_last_error: ". pg_last_error());
+				trigger_error("Error Processing SEARCH_FREE Request. pg_last_error: ". pg_last_error(DBi::_getConnection()));
 				return false;
 			}
 
@@ -607,11 +625,11 @@ abstract class JSON_RecordDataBoundObject {
 
 			# DATA IS NOT IN CACHE . Searching real data in DB
 
-			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
+			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error(DBi::_getConnection()));
 			if ($result===false) {
 				if(SHOW_DEBUG===true) {
-					dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
-					throw new Exception("Error Processing Request . ".pg_last_error(), 1);
+					dump(pg_last_error(DBi::_getConnection()), ' pg_last_error(DBi::_getConnection()) ++ '.to_string($strQuery));
+					throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
 				}else{
 					trigger_error("Error on DB query");
 				}

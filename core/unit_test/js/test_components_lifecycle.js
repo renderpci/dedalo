@@ -7,75 +7,112 @@ import {
 import {get_instance} from '../../common/js/instances.js'
 
 
+// vars
+	const ar_mode = [
+		'edit',
+		'list',
+		'search'
+	]
+	const ar_mode_length	= ar_mode.length
+	const elements_length	= elements.length
 
-describe("COMPONENTS LIFE-CYCLE", function() {
 
-	for (let i = 0; i < elements.length; i++) {
+
+describe(`COMPONENTS LIFE-CYCLE`, async function() {
+
+	// elements iterate
+	for (let i = 0; i < elements_length; i++) {
 
 		const element = elements[i]
+
 		// direct minimum context
-			const request_config = [{
-				api_engine	: 'dedalo',
-				show		: {
-					ddo_map : []
-				},
-				sqo			: {
-					section_tipo : [element.section_tipo]
-				}
-			}]
-			element.context = {
-				request_config : request_config // [source]
+		const request_config = [{
+			api_engine	: 'dedalo',
+			show		: {
+				ddo_map : []
+			},
+			sqo			: {
+				section_tipo : [element.section_tipo]
 			}
+		}]
+		element.context = {
+			request_config : request_config // [source]
+		}
 
-		describe(element.model, function() {
+		describe(`${element.model.toUpperCase()}`, async function() {
 
-			let new_instance = null
+			// modes iterate for each element
+			for (let k = 0; k < ar_mode_length; k++) {
 
-			it(`${element.model} INIT`, async function() {
+				element.mode = ar_mode[k]
 
-				const expected = 'initiated'
+				life_cycle_test(element)
+			}
+		});
 
-				// init instance
-					new_instance = await get_instance(element)
+	}//end for (let i = 0; i < elements_length; i++)
+});//end describe(`COMPONENTS LIFE-CYCLE`
 
-				assert.equal(new_instance.status, expected);
-			});
 
-			it(`${element.model} BUILD (autoload=true)`, async function() {
 
-				const expected = 'built'
+/**
+* LIFE_CYCLE_TEST
+* @param object element
+* @return void
+*/
+async function life_cycle_test(element) {
 
-				// init instance
-					await new_instance.build(true)
+	describe(`${element.model} ${element.mode}`, async function() {
 
-				assert.equal(new_instance.status, expected);
-			});
+		let new_instance = null
 
-			it(`${element.model} RENDER`, async function() {
+		it(`${element.model} INIT ${element.mode}`, async function() {
 
-				const expected = 'rendered'
+			// init instance
+				new_instance = await get_instance(element)
 
-				// init instance
-					await new_instance.render()
+			const expected = 'initiated'
+			assert.equal(new_instance.status, expected);
+			assert.equal(new_instance.mode, element.mode);
+		});
 
-				assert.equal(new_instance.status, expected);
-			});
+		it(`${element.model} BUILD (autoload=true) ${element.mode}`, async function() {
 
-			it(`${element.model} DESTROY`, async function() {
+			const expected = 'built'
 
-				const expected = 'destroyed'
+			// init instance
+				await new_instance.build(true)
 
-				// init instance
-					await new_instance.destroy(
-						true,  // delete_self . default true
-						true, // delete_dependencies . default false
-						true // remove_dom . default false
-					)
+			assert.equal(new_instance.status, expected);
+			// assert.equal(new_instance.mode, element_mode);
+		});
 
-				assert.equal(new_instance.status, expected)
-				assert.deepEqual(new_instance.ar_instances, [])
-				assert.deepEqual(new_instance.node, null)
-			});
-		});//end describe(element.model, function()
-	}//end for (let i = 0; i < elements.length; i++)
-});
+		it(`${element.model} RENDER ${element.mode}`, async function() {
+
+			const expected = 'rendered'
+
+			// init instance
+				await new_instance.render()
+
+			assert.equal(new_instance.status, expected);
+			// assert.equal(new_instance.mode, element_mode);
+		});
+
+		it(`${element.model} DESTROY ${element.mode}`, async function() {
+
+			const expected = 'destroyed'
+
+			// init instance
+				await new_instance.destroy(
+					true,  // delete_self . default true
+					true, // delete_dependencies . default false
+					true // remove_dom . default false
+				)
+
+			assert.equal(new_instance.status, expected)
+			assert.deepEqual(new_instance.ar_instances, [])
+			assert.deepEqual(new_instance.node, null)
+		});
+
+	});//end describe(element.model, function()
+}//end life_cycle_test

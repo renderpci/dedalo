@@ -102,7 +102,7 @@ abstract class component_common extends common {
 	* Singleton pattern
 	* @return object|null
 	*/
-	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true) : ?object {
+	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) : ?object {
 		$start_time = start_time();
 
 		// tipo check. Is mandatory
@@ -334,7 +334,7 @@ abstract class component_common extends common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// tipo
 			if ( empty($tipo) ) {

@@ -48,13 +48,13 @@ describe("COMPONENTS ACTIVATE", async function() {
 					const instance = await get_instance_rendered(element)
 
 					// pointer content_data
-					assert( instance.node, `wrapper DO NOT exists`)
+					assert( instance.node, `wrapper DOES NOT exists`)
 
 					// pointer content_data
-					assert( instance.node.content_data, `wrapper pointer to content_data DO NOT exists`)
+					assert( instance.node.content_data, `wrapper pointer to content_data DOES NOT exists`)
 
 					// pointer content_value
-					// assert( instance.node.content_data[0], `wrapper pointer to content_data DO NOT exists`)
+					// assert( instance.node.content_data[0], `wrapper pointer to content_data DOES NOT exists`)
 
 					// check selection
 					const wrapper = instance.node

@@ -23,43 +23,43 @@ class component_geolocation extends component_common {
 		# Dato verification, if the dato is empty, build the standard view of the map
 		$dato = $this->get_dato();
 
-		# if the section_id is not empty and the dato is empty create the basic and standart dato
-		$need_save=false;
-		if((!isset($dato[0]->lat) || !isset($dato[0]->lon)) && $this->parent>0) {
-			#####################################################################################################
-			# DEFAULT VALUES
-			# Store section dato as array(key=>value)
-			$dato_new = new stdClass();
-				$dato_new->lat		= 39.462571;
-				$dato_new->lon		= -0.376295;	# Calle Denia
-				$dato_new->zoom		= 12;
-				$dato_new->alt		= 16;
-				#$dato_new->coordinates	= array();
-			# END DEFAULT VALUES
-			######################################################################################################
+		// # if the section_id is not empty and the dato is empty create the basic and standard dato
+		// $need_save=false;
+		// if((!isset($dato[0]->lat) || !isset($dato[0]->lon)) && $this->parent>0) {
+		// 	#####################################################################################################
+		// 	# DEFAULT VALUES
+		// 	# Store section dato as array(key=>value)
+		// 	$dato_new = new stdClass();
+		// 		$dato_new->lat		= 39.462571;
+		// 		$dato_new->lon		= -0.376295;	# Calle Denia
+		// 		$dato_new->zoom		= 12;
+		// 		$dato_new->alt		= 16;
+		// 		#$dato_new->coordinates	= array();
+		// 	# END DEFAULT VALUES
+		// 	######################################################################################################
 
-			# Dato
-			$this->set_dato([$dato_new]);
-			$need_save=true;
-		}
+		// 	# Dato
+		// 	$this->set_dato([$dato_new]);
+		// 	$need_save=true;
+		// }
 
-		#
-		# CONFIGURACIÓN NECESARIA PARA PODER SALVAR
-		# Nothing to do here
+		// #
+		// # CONFIGURACIÓN NECESARIA PARA PODER SALVAR
+		// # Nothing to do here
 
-		if ($need_save===true) {
-			$result = $this->Save();
-			# debug_log(__METHOD__."  Added default component_geolocation data $section_id with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
-		}
+		// if ($need_save===true) {
+		// 	$result = $this->Save();
+		// 	# debug_log(__METHOD__."  Added default component_geolocation data $section_id with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
+		// }
 
 		// debug
-			if(SHOW_DEBUG) {
-				$traducible = $this->RecordObj_dd->get_traducible();
-				if ($traducible==='si') {
-					#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-					trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
-				}
-			}
+			// if(SHOW_DEBUG) {
+			// 	$traducible = $this->RecordObj_dd->get_traducible();
+			// 	if ($traducible==='si') {
+			// 		#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+			// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
+			// 	}
+			// }
 
 
 		return true;
