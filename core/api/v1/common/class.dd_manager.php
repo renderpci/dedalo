@@ -43,9 +43,11 @@ final class dd_manager {
 
 		// logged check
 			$no_loggin_needed_actions = [
+				'install',
 				'start',
 				'change_lang',
-				'login'
+				'login',
+				'get_login_context',
 			];
 			if (in_array($rqo->action, $no_loggin_needed_actions)) {
 				// do not check login here
