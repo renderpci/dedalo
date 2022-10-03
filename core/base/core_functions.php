@@ -594,7 +594,7 @@ function dedalo_encrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAC
 
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
-	$secret_iv = DEDALO_ENTITY;
+	$secret_iv = DEDALO_INFO_KEY;
 	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
 	$output = base64_encode(openssl_encrypt(serialize($stringArray), $encrypt_method, md5(md5($key)), 0, $iv));
@@ -614,7 +614,7 @@ function dedalo_decrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAC
 
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
-	$secret_iv = DEDALO_ENTITY;
+	$secret_iv = DEDALO_INFO_KEY;
 	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
 	$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
