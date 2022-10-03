@@ -1945,3 +1945,34 @@ function get_legacy_constant_value(string $constant_name) {
 }//end get_legacy_constant_value
 
 
+
+
+/**
+* TEST_PHP_VERSION_SUPPORTED
+* Test if PHP version is supported
+* @return bool
+*/
+function test_php_version_supported() : bool {
+
+	static $php_version_supported;
+
+	if(isset($php_version_supported)) {
+		return ($php_version_supported);
+	}
+
+	$current_php_version	= phpversion();
+	$minimun_php_version	= '8.1.0';
+
+	$ar_current_php_version	= explode('.',$current_php_version);
+	$ar_minimun_php_version	= explode('.',$minimun_php_version);
+
+	if(	$ar_current_php_version[0] < $ar_minimun_php_version[0] ||
+		($ar_current_php_version[0]===$ar_minimun_php_version[0] && $ar_current_php_version[1] < $ar_minimun_php_version[1])
+	  ) {
+	  	debug_log(__METHOD__." This PHP version (".phpversion().") is not supported ! Please update your PHP to $minimun_php_version or higher ASAP ".to_string(), logger::ERROR);
+
+	  	return false;
+	}
+
+	return true;
+}//end test_php_version_supported

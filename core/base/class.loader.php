@@ -168,44 +168,6 @@ class class_loader {
 		return true;
 	}//end loader
 
-
-
-	/**
-	* TEST_PHP_VERSION_SUPPORTED
-	* Test if PHP version is supported
-	* @return bool
-	*/
-	static private function test_php_version_supported() : bool {
-
-		static $php_version_supported;
-
-		if(isset($php_version_supported)) {
-			return ($php_version_supported);
-		}
-
-		$current_php_version	= phpversion();
-		$minimun_php_version	= '8.0.0';
-
-		$ar_current_php_version	= explode('.',$current_php_version);
-		$ar_minimun_php_version	= explode('.',$minimun_php_version);
-
-		if ($ar_current_php_version[1]<4) {
-			trigger_error("PHP version $current_php_version is not full compatible with this application. Please update ASAP to PHP 7.2");
-		}
-
-		if(	$ar_current_php_version[0] < $ar_minimun_php_version[0] ||
-			($ar_current_php_version[0]===$ar_minimun_php_version[0] && $ar_current_php_version[1] < $ar_minimun_php_version[1])
-		  ) {
-			throw new Exception( " This PHP version (".phpversion().") is not supported ! Please update your PHP to $minimun_php_version or higher ASAP ");
-		}
-
-		$php_version_supported = true;
-
-		return $php_version_supported;
-	}//end test_php_version_supported
-
-
-
 }//end class_loader
 
 
