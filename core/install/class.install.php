@@ -363,7 +363,7 @@ class install extends common {
 			// 	'fr2'
 			// ];
 			// foreach ($ar_hierarchy_section_tipo as $section_tipo) {
-			// 	$call_response = install::import_toponomy($section_tipo);
+			// 	$call_response = install::import_hierarchy_file($section_tipo);
 			// 	if ($call_response->result===false) {
 			// 		return $call_response;
 			// 	}
@@ -1359,7 +1359,7 @@ class install extends common {
 	* BUILD_INSTALL_DB_FILE
 	* @return object $response
 	*/
-	private static function build_install_db_file() {
+	public static function build_install_db_file() {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1399,12 +1399,12 @@ class install extends common {
 
 
 	/**
-	* IMPORT_TOPONOMY
+	* IMPORT_HIERARCHY_FILE
 	* @param string $section_tipo
 	* 	Like 'es1'
 	* @return object $response
 	*/
-	public static function import_toponomy(string $section_tipo) {
+	public static function import_hierarchy_file(string $section_tipo) {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1463,7 +1463,7 @@ class install extends common {
 
 
 		return $response;
-	}//end import_toponomy
+	}//end import_hierarchy_file
 
 
 
@@ -1488,7 +1488,7 @@ class install extends common {
 				SELECT section_id
 				FROM "matrix_hierarchy_main"
 				WHERE
-				f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld2.'".*\')
+				f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld2.'"\].*\')
 			';
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
@@ -1976,11 +1976,11 @@ class install extends common {
 
 		$ar_responses = [];
 
-		// import_toponomy
+		// import_hierarchy_file
 			foreach ($selected_hierarchies as $item) {
 
 				// import records from file *.copy.gz
-				$ar_responses[] = install::import_toponomy($item->section_tipo);
+				$ar_responses[] = install::import_hierarchy_file($item->section_tipo);
 
 				// activate_hierarchy
 				if ($item->type==='term') {
