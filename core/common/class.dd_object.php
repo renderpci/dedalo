@@ -54,6 +54,7 @@ class dd_object {
 		'area',
 		'tm',
 		'widget',
+		'install',
 		'login',
 		'menu',
 		'tool',
@@ -106,6 +107,8 @@ class dd_object {
 				$type = 'login';
 			}elseif ($model==='menu') {
 				$type = 'menu';
+			}elseif ($model==='install') {
+				$type = 'install';
 			}elseif (strpos($model, 'tool_')===0) {
 				$type = 'tool';
 			}else{
