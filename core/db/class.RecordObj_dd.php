@@ -165,7 +165,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_PROPIEDADES
 	* Return the value of property 'properties', stored as plain text in table column 'properties'
-	* Values expected in 'propiedaes' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
+	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
 	* @param bool $json_decode
 	* @return object / string parent::$properties
 	*/

@@ -294,7 +294,7 @@ abstract class RecordDataBoundObject {
 	/**
 	* SAVE
 	* Update current record
-	* @return int|null $this->ID
+	* @return mixed|null $this->ID
 	*/
 	public function Save() {
 
@@ -357,7 +357,7 @@ abstract class RecordDataBoundObject {
 
 			$result = pg_query($this->get_connection(), $strQuery);
 			if($result===false) {
-				echo "Error: sorry an error ocurred on UPDATE record '$this->ID'. Data is not saved";
+				echo "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
 					dump(pg_last_error(DBi::_getConnection()),"pg_last_error(DBi::_getConnection())");
@@ -410,8 +410,8 @@ abstract class RecordDataBoundObject {
 					dump($strQuery,"strQuery");
 					throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(DBi::_getConnection()), 1);
 				}
-				// return "Error: sorry an error ocurred on INSERT record. Data is not saved";
-				debug_log(__METHOD__." Error: sorry an error ocurred on INSERT record. Data is not saved ", logger::ERROR);
+				// return "Error: sorry an error occurred on INSERT record. Data is not saved";
+				debug_log(__METHOD__." Error: sorry an error occurred on INSERT record. Data is not saved ", logger::ERROR);
 				return null;
 			}
 
@@ -427,7 +427,7 @@ abstract class RecordDataBoundObject {
 		}
 
 
-		return (int)$this->ID;
+		return $this->ID;
 	}//end Save
 
 
