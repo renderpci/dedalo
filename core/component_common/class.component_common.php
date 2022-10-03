@@ -336,6 +336,7 @@ abstract class component_common extends common {
 	*/
 	protected function __construct(string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
+
 		// tipo
 			if ( empty($tipo) ) {
 				$msg = "Component common: valid 'tipo' value is mandatory!";
@@ -443,6 +444,8 @@ abstract class component_common extends common {
 						? (int)$rqo->show->sqo_config->offset
 						: 0);
 
+
+		return true;
 	}//end __construct
 
 
