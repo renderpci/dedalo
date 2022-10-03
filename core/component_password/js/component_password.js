@@ -86,7 +86,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			badWords			: ["password", "contraseña", "clave","Mynew2Pass5K","dios","micontraseña"],
 			badSequenceLength	: 4,
 			noQwertySequences	: false,
-			noSequential		: false
+			noSequential		: true
 		};
 
 	// set options
@@ -105,29 +105,42 @@ component_password.prototype.validate_password_format = function (pw, options) {
 
 	// enforce min/max length
 		if (pw.length < o.length[0] || pw.length > o.length[1]) {
-			alert("Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars ");
-			return false;
+			const response ={
+				result : false,
+				msg: "Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars "
+			}
+			return response;
 		}
 
 	// enforce lower/upper/alpha/numeric/special rules
 		for (rule in re) {
 			if ((pw.match(re[rule]) || []).length < o[rule]) {
-				alert("Password is invalid! \nPlease mix lowercase / uppercase chars and numbers");
-				return false;
+				const response ={
+					result : false,
+					msg: "Password is invalid! \nPlease mix lowercase / uppercase chars and numbers"
+				}
+				return response;
 			}
 		}
 
 	// enforce word ban (case insensitive)
 		for (i = 0; i < o.badWords.length; i++) {
 			if (pw.toLowerCase().indexOf(o.badWords[i].toLowerCase()) > -1) {
-				alert("Bad word! \nPlease use a different password");
-				return false;
+				const response ={
+					result : false,
+					msg: "Bad word! \nPlease use a different password"
+				}
+				return response;
 			}
 		}
 
 	// enforce the no sequential, identical characters rule
 		if (o.noSequential && /([\S\s])\1/.test(pw)) {
-			return false;
+			const response ={
+				result : false,
+				msg: "identical characters in sequential order are not allowed"
+			}
+			return response;
 		}
 
 	// enforce alphanumeric/qwerty sequence ban rules
@@ -146,7 +159,11 @@ component_password.prototype.validate_password_format = function (pw, options) {
 					numbers.indexOf(seq) > -1 ||
 					(o.noQwertySequences && qwerty.indexOf(seq) > -1)
 				) {
-					return false;
+					const response ={
+						result : false,
+						msg: "alphabetical order not allowed | numerical order not allowed"
+					}
+					return response;
 				}
 			}
 		}
@@ -155,14 +172,29 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		for (i = 0; i < o.custom.length; i++) {
 			rule = o.custom[i];
 			if (rule instanceof RegExp) {
-				if (!rule.test(pw))
-					return false;
+				if (!rule.test(pw)){
+					const response ={
+						result : false,
+						msg: "invalid pw for rule " + rule
+					}
+					return response;
+				}
 			} else if (rule instanceof Function) {
-				if (!rule(pw))
-					return false;
+				if (!rule(pw)){
+					const response ={
+						result : false,
+						msg: "invalid pw for function " + rule
+					}
+					return response;
+				}
 			}
 		}
 
+	const response ={
+		result : true,
+		msg: "pw is valid "
+	}
+
 	// great success!
-	return true;
+	return response;
 }//end password validator

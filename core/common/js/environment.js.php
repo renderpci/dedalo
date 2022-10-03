@@ -78,7 +78,7 @@ session_write_close();
 			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
 			$obj->dedalo_projects_default_langs		= array_map(function($current_lang){
 				$lang_obj = new stdClass();
-					$lang_obj->label = lang::get_name_from_code($current_lang);
+					$lang_obj->label = 'patata'; // lang::get_name_from_code($current_lang);
 					$lang_obj->value = $current_lang;
 				return $lang_obj;
 			}, DEDALO_PROJECTS_DEFAULT_LANGS);
@@ -132,7 +132,13 @@ session_write_close();
 			// debug only
 			if(SHOW_DEBUG===true) {
 				$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
-				$obj->pg_version		= pg_version(DBi::_getConnection())['server'];
+				$obj->pg_version		= (function() {
+					try {
+						return pg_version(DBi::_getConnection())['server'];
+					}catch(Exception $e){
+						// echo '';
+					}
+				})();
 				$obj->php_version		= PHP_VERSION;
 				// $obj->php_version		.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 				$obj->php_memory		= to_string(ini_get('memory_limit'));

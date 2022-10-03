@@ -562,83 +562,6 @@ class login extends common {
 
 
 	/**
-	* REST_LOGIN
-	* Special login for rest users. $auth_code and source ip are verified for security
-	* @param stdClass $options
-	*		options->source_ip Optional
-	*		options->auth_code Mandatory
-	* @return object $response
-	*/
-	public static function rest_login( stdClass $options ) : object {
-		global $rest_config;
-		#unset($_SESSION['dedalo']);
-
-		$response = new stdClass();
-
-
-		if ( !property_exists($options, 'source_ip') ) {
-			$options->source_ip = $_SERVER['REMOTE_ADDR'];
-		}
-
-		if ( !property_exists($options, 'auth_code') || $options->auth_code!=$rest_config->auth_code ) {
-			$response->logged 	= false;
-			$response->msg 		= 'Invalid auth_code';
-			return $response;
-		}
-
-		if ( !property_exists($options, 'source_ip') || !in_array($options->source_ip, (array)$rest_config->source_ip) ) {
-			$response->logged 	= false;
-			$response->msg 		= 'Invalid source';
-			return $response;
-		}
-
-		# Is already logged? If yes, return true and no activity log is generated again
-		if (
-			isset($_SESSION['dedalo']['auth']['user_id']) &&
-			$_SESSION['dedalo']['auth']['user_id']==$rest_config->user_id &&
-			($_SESSION['dedalo']['auth']['is_logged']==1)
-		 ) {
-			$response->logged	= true;
-			$response->msg		= 'User is already logged';
-			return $response;
-		}
-
-		$_SESSION['dedalo']['auth']['user_id']		= $rest_config->user_id;
-		$_SESSION['dedalo']['auth']['username']		= $rest_config->user;
-		$_SESSION['dedalo']['auth']['is_logged']	= 1;
-
-		# CONFIG KEY
-		$_SESSION['dedalo']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
-
-
-		#
-		# LOGIN ACTIVITY REPORT
-		$activity_datos['result'] 	= "allow";
-		$activity_datos['cause'] 	= "rest_login";
-		if (isset($_SERVER['REQUEST_URI']))
-		$activity_datos['url'] 		= urldecode( 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] );
-		if (isset($_SERVER['HTTP_REFERER']))
-		$activity_datos['referer'] 	= $_SERVER['HTTP_REFERER'];
-		if (property_exists($options, 'activity_info')) {
-			$activity_datos['activity_info'] = $options->activity_info;
-		}
-
-		self::login_activity_report(
-			"User $rest_config->user_id is logged. Hello $rest_config->user",
-			null,
-			'LOG IN',
-			$activity_datos
-			);
-
-		$response->logged 	= true;
-		$response->msg 		= 'Logged successfully';
-
-		return $response;
-	}//end rest_login
-
-
-
-	/**
 	* INIT_USER_LOGIN_SEqUENCE
 	* Init login sequence when all is OK
 	* @param string|int $user_id
@@ -1127,12 +1050,12 @@ class login extends common {
 
 
 	/**
-	* TEST_SU_DEFAULT_PASSWORD
-	* Check if admin user password default has been changed or not
+	* CHECK_ROOT_HAS_DEFAULT_PASSWORD
+	* Check if super user password (root) default has been changed or not
 	* If is default password returns true, else false
-	* @return bool true/false
+	* @return bool
 	*/
-	public function test_su_default_password() : bool {
+	public static function check_root_has_default_password() : bool {
 
 		$component = component_common::get_instance(
 			'component_password',
@@ -1144,12 +1067,12 @@ class login extends common {
 		);
 		$dato = $component->get_dato();
 
-		if ($dato==='') {
+		if (is_null($dato)) {
 			return true;
 		}
 
 		return false;
-	}//end test_su_default_password
+	}//end check_root_has_default_password
 
 
 
@@ -1294,31 +1217,6 @@ class login extends common {
 
 		return $dd_object;
 	}//end get_structure_context
-
-
-
-	/**
-	* CHECK_INSTALL
-	* @return
-	*/
-		// public function check_install() {
-
-
-		// 	// Test su password
-		// 		$su_default_password = (bool)$this->test_su_default_password();
-
-
-		// 	// Test if superuser psw is default
-		// 		if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $su_default_password===true ) {
-
-		// 			# CSS includes
-		// 			array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
-
-		// 			$page_html	= 'html/' . get_class($this) . '_set_psw.phtml';
-		// 			include($page_html);
-		// 			return;
-		// 		}
-		// }//end check_install
 
 
 

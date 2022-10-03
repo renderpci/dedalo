@@ -1,6 +1,6 @@
 <?php
 
-// Reviewed: 12-05-2018
+// Reviewed: 02-10-2022
 
 // POSTGRESQL (PRIVATE DATA)
 // Default PotsgreSQL connection, for investigation system
@@ -11,10 +11,11 @@ define('PHP_BIN_PATH'				, '/usr/bin/php'); // Ex. /usr/bin/php
 define('DEDALO_HOSTNAME_CONN'		, 'localhost');
 define('DEDALO_DB_PORT_CONN'		, '5432');
 define('DEDALO_SOCKET_CONN'			, null); // Like '/var/pgsql-socket' if use
-define('DEDALO_DATABASE_CONN'		, 'dedalo4_XXX');
+define('DEDALO_DATABASE_CONN'		, 'dedalo_mydatabase');
 define('DEDALO_USERNAME_CONN'		, 'myusername');
 define('DEDALO_PASSWORD_CONN'		, 'mypassword');
-define('DEDALO_INFORMACION'			, 'Dédalo install version');
+define('DEDALO_INFORMACION'			, 'Dédalo install version'); // don't change it after install
+define('DEDALO_INFO_KEY'			, DEDALO_ENTITY); // change it with any string before install, but don't change it after install
 define('SLOW_QUERY_MS'				, 6000);
 
 // MYSQL (PUBLIC DATA)

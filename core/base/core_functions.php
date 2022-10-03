@@ -594,7 +594,7 @@ function dedalo_encrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAC
 
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
-	$secret_iv = DEDALO_ENTITY;
+	$secret_iv = DEDALO_INFO_KEY;
 	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
 	$output = base64_encode(openssl_encrypt(serialize($stringArray), $encrypt_method, md5(md5($key)), 0, $iv));
@@ -614,7 +614,7 @@ function dedalo_decrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAC
 
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
-	$secret_iv = DEDALO_ENTITY;
+	$secret_iv = DEDALO_INFO_KEY;
 	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
 	$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
@@ -1943,3 +1943,35 @@ function get_legacy_constant_value(string $constant_name) {
 
 	return $constant;
 }//end get_legacy_constant_value
+
+
+
+/**
+* TEST_PHP_VERSION_SUPPORTED
+* Test if PHP version is supported
+* @return bool
+*/
+function test_php_version_supported() : bool {
+
+	static $php_version_supported;
+
+	if(isset($php_version_supported)) {
+		return ($php_version_supported);
+	}
+
+	$current_php_version	= phpversion();
+	$minimun_php_version	= '8.1.0';
+
+	$ar_current_php_version	= explode('.',$current_php_version);
+	$ar_minimun_php_version	= explode('.',$minimun_php_version);
+
+	if(	$ar_current_php_version[0] < $ar_minimun_php_version[0] ||
+		($ar_current_php_version[0]===$ar_minimun_php_version[0] && $ar_current_php_version[1] < $ar_minimun_php_version[1])
+	  ) {
+	  	debug_log(__METHOD__." This PHP version (".phpversion().") is not supported ! Please update your PHP to $minimun_php_version or higher ASAP ".to_string(), logger::ERROR);
+
+	  	return false;
+	}
+
+	return true;
+}//end test_php_version_supported

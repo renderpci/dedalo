@@ -62,6 +62,32 @@ final class dd_core_api {
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
 			$menu		= $options->menu ?? false;
 
+		// install check
+		// check if Dédalo was installed, if not, run the install process
+		// else start the normal behavior
+
+			// check constant DEDALO_TEST_INSTALL (config.php) Default value is true.
+			// Change manually to false after install to prevent to do this check on every start call
+			if (!defined('DEDALO_TEST_INSTALL') || DEDALO_TEST_INSTALL===true) {
+				// check the dedalo install status (config_auto.php)
+				// When install is finished, it will be set automatically to 'installed'
+				if(!defined('DEDALO_INSTALL_STATUS') || DEDALO_INSTALL_STATUS!=='installed') {
+
+					// run install process
+						$install = new install();
+
+					// get the install context, client only need context of the install to init the install instance
+						$context[] = $install->get_structure_context();
+
+					// response to client
+						$response->result	= $context;
+						$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+						return $response;
+				}
+			}
+
+
 		// page mode and tipo
 			$default_section_tipo = MAIN_FALLBACK_SECTION; // 'test38';
 			if (isset($search_obj->tool)) {
@@ -91,8 +117,6 @@ final class dd_core_api {
 		// context
 			$context = [];
 			if (true!==login::is_logged()) {
-
-				// not logged case
 
 				// check_basic_system (lang and structure files)
 					$is_system_ready = check_basic_system();

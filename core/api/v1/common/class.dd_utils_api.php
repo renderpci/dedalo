@@ -46,37 +46,44 @@ final class dd_utils_api {
 
 
 	/**
-	* GET_LOGIN (!) No longer used. Login now only need context, no data to render
+	* GET_LOGIN_CONTEXT
+	* This function is not used in normal login behavior (login is called directly in start API),
+	* it could be caller when the instance of the login has been build with autoload in true.
+	* This function could be caller by external processes as install to get the context of the login to create the login instance
+	* Login only need context, it not need data to be render.
+	* @param object $request_options
 	* @return object $response
 	*/
-		// public static function get_login($request_options=null) {
-		// 	$start_time = start_time();
+	public static function get_login_context(object $request_options) : object {
 
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// 	$login = new login();
+		$login = new login();
 
-		// 	// login json
-		// 		$get_json_options = new stdClass();
-		// 			$get_json_options->get_context	= true;
-		// 			$get_json_options->get_data		= true;
-		// 		$login_json = $login->get_json($get_json_options);
+		// login json
+			$get_json_options = new stdClass();
+				$get_json_options->get_context	= true;
+				$get_json_options->get_data		= false;
+			$login_json = $login->get_json($get_json_options);
 
-		// 	$response->msg		= 'Ok. Request done';
-		// 	$response->result	= $login_json;
+		// context add
+			$context = $login_json->context;
 
-		// 	// Debug
-		// 		if(SHOW_DEBUG===true) {
-		// 			$debug = new stdClass();
-		// 				$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-		// 				$debug->request_options	= $request_options;
-		// 			$response->debug = $debug;
-		// 		}
+		// response
+			$response->result	= $context;
+			$response->msg		= 'Ok. Request done';
 
-		// 	return $response;
-		// }//end get_login
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->request_options	= $request_options;
+				$response->debug = $debug;
+			}
+
+		return $response;
+	}//end get_login_context
 
 
 
@@ -747,6 +754,70 @@ final class dd_utils_api {
 
 		return $response;
 	}//end quit
+
+
+	/**
+	* INSTALL
+	* Control the install process calls to be re-direct to the correct actions
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function install(object $request_options) : object {
+
+		$action	= $request_options->options->action;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// check the dedalo install status (config_auto.php)
+		// When install is finished, it will be set automatically to 'installed'
+		if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed' && $action!=='install_hierarchies') {
+			$response->msg		= 'Error. Request not valid, Dédalo was installed';
+			return $response;
+		}
+
+		switch ($action) {
+			case 'install_db_from_default_file':
+
+				// check db is already imported for security
+					$db_tables		= backup::get_tables(); // returns array empty if not is imported
+					$db_is_imported	= (bool)in_array('matrix_users', $db_tables);
+					if ($db_is_imported===true) {
+						$response->msg = 'Error. Current database is not empty';
+						return $response;
+					}
+
+				// exec
+					$response = (object)install::install_db_from_default_file();
+
+				break;
+			case 'install_hierarchies':
+
+				// check login for security
+					if (login::is_logged()!==true) {
+						$response->msg = 'Error. You are not logged in';
+						return $response;
+					}
+
+				$install_hierarchies_options = $request_options->options;
+
+				// exec
+					$response = (object)install::install_hierarchies( $install_hierarchies_options );
+
+				break;
+			case 'set_root_pw':
+
+				//exec
+					$response = (object)install::set_root_pw($request_options->options);
+				break;
+			default:
+				$response->msg		= 'Error. Request not valid';
+				break;
+		}
+
+		return $response;
+	}//end install
 
 
 

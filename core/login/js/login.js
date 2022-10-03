@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {common,create_source} from '../../common/js/common.js'
@@ -32,6 +32,8 @@ export const login = function() {
 
 	this.node
 	this.ar_instances = []
+
+	this.custom_action_dispatch = null
 
 	this.status
 
@@ -77,7 +79,6 @@ login.prototype.init = async function(options) {
 	self.type			= 'login'
 	self.label			= null
 
-
 	// status update
 		self.status = 'initiated'
 
@@ -93,38 +94,34 @@ login.prototype.init = async function(options) {
 * @return promise
 *	bool true
 */
-login.prototype.build = async function(autoload=true) {
+login.prototype.build = async function(autoload=false) {
 
 	const self = this
 
 	// status update
 		self.status = 'building'
 
-	// (!) Note that login only needs the context to operate and is injected from page
+	// (!) Note that normally login only needs the context to operate and is injected from page
 	// @see page.instantiate_page_element()
+	// because this the autoload here is false instead the true option in other components, section ...
 
-	// OLD WORLD (it's not necessary lo load nothing)
-		// if (autoload===true) {
+		if (autoload===true) {
 
-		// 	// rqo build
-		// 		const rqo = {
-		// 			action : 'get_login',
-		// 			dd_api : 'dd_utils_api',
-		// 			source : create_source(self, null)
-		// 		}
+			// rqo build
+				const rqo = {
+					action : 'get_login_context',
+					dd_api : 'dd_utils_api',
+					source : create_source(self, null)
+				}
 
-		// 	// load data. get context and data
-		// 		const api_response = await data_manager.request({
-		// 			body : rqo
-		// 		})
+			// load data. get context and data
+				const api_response = await data_manager.request({
+					body : rqo
+				})
 
-		// 	// set the result to the datum
-		// 		self.datum = api_response.result
-
-		// 	// set context and data to current instance
-		// 		self.context	= self.datum.context.find(element => element.tipo===self.tipo);
-		// 		self.data		= self.datum.data.find(element => element.tipo===self.tipo);
-		// }
+			// set context and data to current instance
+				self.context = api_response.result.find(element => element.model===self.model);
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -177,3 +174,46 @@ export const quit = async function() {
 
 	return api_response
 }//end quit
+
+
+
+/**
+* ACTION_DISPATCH
+* After API login call, it's possible to go to some different pages,
+* the normal behavior will reload the page to go to the section in session or page caller
+* when install the login only need to set the section but it's not necessary load any other page.
+* @param object api_response
+* @return bool
+*/
+login.prototype.action_dispatch = async function(api_response) {
+
+	const self = this
+
+	// publish event always
+		const event_name = api_response.result===true
+			? 'login_successful'
+			: 'login_failed'
+		event_manager.publish(event_name, api_response)
+
+	// custom_action_dispatch. Injected by caller
+		if(self.custom_action_dispatch && typeof self.custom_action_dispatch==='function'){
+			return self.custom_action_dispatch(api_response)
+		}
+
+	// default behavior
+		if (api_response.result===true) {
+			// result_options is defined when the user is root or developer and the tools are not loaded
+			// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
+			if (api_response.result_options && api_response.result_options.redirect) {
+				setTimeout(function(){
+					window.location.replace(api_response.result_options.redirect)
+				}, 2000)
+			}else{
+				window.location.reload(false);
+			}
+		}
+
+	return true
+}//end action_dispatch
+
+
