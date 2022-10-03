@@ -13,14 +13,14 @@
 *
 * @return string $html
 *	Nothing
-*	Only print (formated as <pre>code</pre>) the info and value or dumped var
+*	Only print (formatted as <pre>code</pre>) the info and value or dumped var
 */
 function dump($val, string $var_name=null, array $arguments=[]) : string {
 
 	$html = '';
 
 
-	// Backtrace info of current execution
+	// Back-trace info of current execution
 	$bt = debug_backtrace();
 
 
@@ -631,7 +631,7 @@ function dedalo_decrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAC
 
 /**
 * IS_SERIALIZED
-* Check if given string is seralized
+* Check if given string is serialized
 * @return bool
 */
 function is_serialized(string $str) : bool {
@@ -970,7 +970,7 @@ function build_sorter(string $key) {
 
 /**
 * SEARCH_STRING_IN_ARRAY
-* Searchs with preg_match a string match in array of strings
+* Search with preg_match a string match in array of strings
 * @return array $matches
 *	Array of coincidences about search string
 */
@@ -994,7 +994,7 @@ function search_string_in_array(array $array, string $search_string) : array {
 
 /**
 * ADD_ACCENTS
-* Converts string to lowervase string containing various combinations to simplify preg_match searches
+* Converts string to lowercase string containing various combinations to simplify preg_match searches
 * like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
 * @return string
 */
@@ -1309,7 +1309,7 @@ function notice_to_active_users(array $ar_options) {
 /**
 * GET_REQUEST_VAR
 * Check if var exists in $_REQUEST environment. If not do a fallback to search var in php://input (for
-* example in trigger json requests)
+* example in trigger JSON requests)
 * @return mixed|bool $var_value
 */
 function get_request_var(string $var_name) {
@@ -1352,9 +1352,9 @@ function safe_xss($value) {
 	if (!empty($value) && is_string($value)) {
 
 		if ($decode_json=json_decode($value)) {
-			// If var is a stringify json, not verify string now
+			// If var is a stringify JSON, not verify string now
 		}else{
-			// It's NOT json data
+			// It's NOT JSON data
 			$value = strip_tags($value,'<br><strong><em>');
 			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 		}
@@ -1784,7 +1784,7 @@ function check_basic_system() : object {
 
 	// basic system files check
 	// langs js
-		# Generate js files with all labels (if not extist current lang file)
+		# Generate js files with all labels (if not exist current lang file)
 		$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0777,true)) {
@@ -1821,7 +1821,7 @@ function check_basic_system() : object {
 
 /**
 * ARRAY_FIND
-* Equivalent of javascript find
+* Equivalent of JAVASCRIPT find
 * @return mixed
 * Return null when nothing is found
 */
@@ -1870,7 +1870,7 @@ function write_session_value(array $session_keys, $value) {
 
 /**
 * INSERT_INTO
-* Insert vallue into array using any number of keys sequence
+* Insert value into array using any number of keys sequence
 * like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
 */
 function insert_into(&$array, array $keys, $value) {
@@ -1943,7 +1943,6 @@ function get_legacy_constant_value(string $constant_name) {
 
 	return $constant;
 }//end get_legacy_constant_value
-
 
 
 
