@@ -1050,12 +1050,12 @@ class login extends common {
 
 
 	/**
-	* TEST_SU_DEFAULT_PASSWORD
-	* Check if admin user password default has been changed or not
+	* CHECK_ROOT_HAS_DEFAULT_PASSWORD
+	* Check if super user password (root) default has been changed or not
 	* If is default password returns true, else false
-	* @return bool true/false
+	* @return bool
 	*/
-	public function test_su_default_password() : bool {
+	public static function check_root_has_default_password() : bool {
 
 		$component = component_common::get_instance(
 			'component_password',
@@ -1067,12 +1067,12 @@ class login extends common {
 		);
 		$dato = $component->get_dato();
 
-		if ($dato==='') {
+		if (is_null($dato)) {
 			return true;
 		}
 
 		return false;
-	}//end test_su_default_password
+	}//end check_root_has_default_password
 
 
 
