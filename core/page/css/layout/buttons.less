@@ -166,73 +166,111 @@
 		color: #212529; // default dark grey
 
 		&.primary {
-			background-color: @color_primary;
-			border-color: @color_primary;
+			@color: @color_primary;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
+			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
 			}
 		}
 		&.secondary {
-			background-color: @color_secondary;
-			border-color: @color_secondary;
+			@color: @color_secondary;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
+			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
 			}
 		}
 		&.success {
-			background-color: @color_success;
-			border-color: @color_success;
+			@color: @color_success;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
+			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
 			}
 		}
 		&.danger {
-			background-color: @color_danger;
-			border-color: @color_danger;
+			@color: @color_danger;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
+			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
 			}
 		}
 		&.warning {
-			// color: #212529;
-			// background-color: #ffc107;
-			// border-color: #ffc107;
-			background-color: @color_orange_dedalo;
-			border-color: darken(@color_orange_dedalo, 2%);
+			@color: @color_orange_dedalo;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
+			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
 			}
 		}
 		&.info {
-			background-color: @color_info;
-			border-color: @color_info;
+			@color: @color_info;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
+			}
 		}
 		&.light {
-			background-color: @color_light;
-			border-color: darken(@color_light, 5%); // #e7e7e7
+			@color: @color_light;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #212529;
 			&:before {
 				background-color: #212529 !important;
 			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
+			}
 		}
 		&.dark {
-			background-color: @color_dark;
-			border-color: @color_dark;
+			@color: @color_dark;
+			background-color: @color;
+			border-color: darken(@color, 2%);
 			color: #ffffff;
 			&:before {
 				background-color: #ffffff !important;
 			}
+			&:hover {
+				background-color: darken(@color, 5%);
+				border-color: darken(@color, 7%);
+			}
 		}
 		&.link {
+			// no background for link button
 			color: @color_primary;
 			font-weight: 400;
 			text-decoration: none;
@@ -246,6 +284,8 @@
 		// 	background-origin: content-box;
 		// 	padding-left: 2em !important;
 		// }
+
+
 
 		&:active {
 			opacity: 0.5;
