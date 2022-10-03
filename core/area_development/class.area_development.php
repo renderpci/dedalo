@@ -289,6 +289,29 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
+		// build_install_db_file
+			$item = new stdClass();
+				$item->id		= 'build_install_db_file';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('build_install_db_file');
+				$item->body		= 'Clone the current database '.DEDALO_DATABASE_CONN.' to "dedalo_install_v6" and export it to file: /install/db/dedalo_install_v6.pgsql.gz ';
+				$item->run[]	= (object)[
+					'fn'		=> 'init_form',
+					'options'	=> (object)[
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'build_install_db_file',
+					'options'	=> null
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// update data version
 			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 			$updates		= update::get_updates();
