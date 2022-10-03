@@ -160,8 +160,8 @@ const get_content_data = function(self) {
 			}
 
 			// show spinner and hide button label
-				button_enter_label.classList.add("display_none")
-				button_enter_loading.classList.remove("display_none")
+				button_enter_label.classList.add('display_none')
+				button_enter_loading.classList.remove('display_none')
 
 			// data_manager API call
 			data_manager.request({
@@ -174,26 +174,17 @@ const get_content_data = function(self) {
 					}
 				}
 			})
-			.then((response)=>{
+			.then((api_response)=>{
 
 				// hide spinner and show button label
-					button_enter_label.classList.remove("display_none")
-					button_enter_loading.classList.add("display_none")
+					button_enter_label.classList.remove('display_none')
+					button_enter_loading.classList.add('display_none')
 
-				const message	= response.msg
-				const msg_type	= response.result===true ? 'ok' : 'error'
+				const message	= api_response.msg
+				const msg_type	= api_response.result===true ? 'ok' : 'error'
 				ui.show_message(content_data, message, msg_type, 'component_message', true)
 
-				if (response.result===true) {
-
-					if (response.result_options && response.result_options.redirect) {
-						setTimeout(function(){
-							window.location.replace(response.result_options.redirect)
-						}, 2000)
-					}else{
-						window.location.reload(false);
-					}
-				}
+				self.action_dispatch(api_response)
 			})
 		})//end button_enter.addEventListener('click', function(e)
 
@@ -254,7 +245,7 @@ const get_content_data = function(self) {
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "content_data"
+			class_name		: 'content_data'
 		})
 		content_data.appendChild(fragment)
 
@@ -282,7 +273,7 @@ const get_browser_info = function() {
 	M=M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
 	if((tem=ua.match(/version\/(\d+)/i))!=null) {M.splice(1,1,tem[1]);}
 
-	const target_div	= document.getElementById('login_ajax_response');
+	const target_div = document.getElementById('login_ajax_response');
 	if (target_div) {
 		target_div.innerHTML = "Using " + M[0] + " " + M[1] + ""
 	}

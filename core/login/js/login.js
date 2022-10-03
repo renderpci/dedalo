@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {common,create_source} from '../../common/js/common.js'
@@ -32,6 +32,8 @@ export const login = function() {
 
 	this.node
 	this.ar_instances = []
+
+	this.custom_action_dispatch = null
 
 	this.status
 
@@ -76,7 +78,6 @@ login.prototype.init = async function(options) {
 
 	self.type			= 'login'
 	self.label			= null
-
 
 	// status update
 		self.status = 'initiated'
@@ -173,3 +174,46 @@ export const quit = async function() {
 
 	return api_response
 }//end quit
+
+
+
+/**
+* ACTION_DISPATCH
+* After API login call, it's possible to go to some different pages,
+* the normal behavior will reload the page to go to the section in session or page caller
+* when install the login only need to set the section but it's not necessary load any other page.
+* @param object api_response
+* @return bool
+*/
+login.prototype.action_dispatch = async function(api_response) {
+
+	const self = this
+
+	// publish event always
+		const event_name = api_response.result===true
+			? 'login_successful'
+			: 'login_failed'
+		event_manager.publish(event_name, api_response)
+
+	// custom_action_dispatch. Injected by caller
+		if(self.custom_action_dispatch && typeof self.custom_action_dispatch==='function'){
+			return self.custom_action_dispatch(api_response)
+		}
+
+	// default behavior
+		if (api_response.result===true) {
+			// result_options is defined when the user is root or developer and the tools are not loaded
+			// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
+			if (api_response.result_options && api_response.result_options.redirect) {
+				setTimeout(function(){
+					window.location.replace(api_response.result_options.redirect)
+				}, 2000)
+			}else{
+				window.location.reload(false);
+			}
+		}
+
+	return true
+}//end action_dispatch
+
+
