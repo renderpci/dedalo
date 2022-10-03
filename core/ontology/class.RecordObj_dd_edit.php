@@ -139,10 +139,10 @@ class RecordObj_dd_edit extends RecordObj_dd {
 	*/
 	public static function get_counter_value($tld) : int {
 
-		$strQuery 		= "SELECT counter FROM \"main_dd\" WHERE tld = '$tld' LIMIT 1";
+		$strQuery		= "SELECT counter FROM \"main_dd\" WHERE tld = '$tld' LIMIT 1";
 		$search			= JSON_RecordDataBoundObject::search_free($strQuery);
-		$result 		= pg_fetch_assoc($search);
-		$counter_value 	= $result['counter'] ?? null;
+		$result			= pg_fetch_assoc($search);
+		$counter_value	= $result['counter'] ?? null;
 
 		if (!$counter_value || is_null($counter_value)) {
 
