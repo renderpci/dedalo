@@ -93,38 +93,34 @@ login.prototype.init = async function(options) {
 * @return promise
 *	bool true
 */
-login.prototype.build = async function(autoload=true) {
+login.prototype.build = async function(autoload=false) {
 
 	const self = this
 
 	// status update
 		self.status = 'building'
 
-	// (!) Note that login only needs the context to operate and is injected from page
+	// (!) Note that normally login only needs the context to operate and is injected from page
 	// @see page.instantiate_page_element()
+	// because this the autoload here is false instead the true option in other components, section ...
 
-	// OLD WORLD (it's not necessary lo load nothing)
-		// if (autoload===true) {
+		if (autoload===true) {
 
-		// 	// rqo build
-		// 		const rqo = {
-		// 			action : 'get_login',
-		// 			dd_api : 'dd_utils_api',
-		// 			source : create_source(self, null)
-		// 		}
+			// rqo build
+				const rqo = {
+					action : 'get_login_context',
+					dd_api : 'dd_utils_api',
+					source : create_source(self, null)
+				}
 
-		// 	// load data. get context and data
-		// 		const api_response = await data_manager.request({
-		// 			body : rqo
-		// 		})
+			// load data. get context and data
+				const api_response = await data_manager.request({
+					body : rqo
+				})
 
-		// 	// set the result to the datum
-		// 		self.datum = api_response.result
-
-		// 	// set context and data to current instance
-		// 		self.context	= self.datum.context.find(element => element.tipo===self.tipo);
-		// 		self.data		= self.datum.data.find(element => element.tipo===self.tipo);
-		// }
+			// set context and data to current instance
+				self.context = api_response.result.find(element => element.model===self.model);
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
