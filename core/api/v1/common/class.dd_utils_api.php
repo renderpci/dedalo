@@ -756,6 +756,70 @@ final class dd_utils_api {
 	}//end quit
 
 
+	/**
+	* INSTALL
+	* Control the install process calls to be re-direct to the correct actions
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function install(object $request_options) : object {
+
+		$action	= $request_options->options->action;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// check the dedalo install status (config_auto.php)
+		// When install is finished, it will be set automatically to 'installed'
+		if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed' && $action!=='install_hierarchies') {
+			$response->msg		= 'Error. Request not valid, Dédalo was installed';
+			return $response;
+		}
+
+		switch ($action) {
+			case 'install_db_from_default_file':
+
+				// check db is already imported for security
+					$db_tables		= backup::get_tables(); // returns array empty if not is imported
+					$db_is_imported	= (bool)in_array('matrix_users', $db_tables);
+					if ($db_is_imported===true) {
+						$response->msg = 'Error. Current database is not empty';
+						return $response;
+					}
+
+				// exec
+					$response = (object)install::install_db_from_default_file();
+
+				break;
+			case 'install_hierarchies':
+
+				// check login for security
+					if (login::is_logged()!==true) {
+						$response->msg = 'Error. You are not logged in';
+						return $response;
+					}
+
+				$install_hierarchies_options = $request_options->options;
+
+				// exec
+					$response = (object)install::install_hierarchies( $install_hierarchies_options );
+
+				break;
+			case 'set_root_pw':
+
+				//exec
+					$response = (object)install::set_root_pw($request_options->options);
+				break;
+			default:
+				$response->msg		= 'Error. Request not valid';
+				break;
+		}
+
+		return $response;
+	}//end install
+
+
 
 	// /**
 	// * GET_TIME_MACHILE_LIST
