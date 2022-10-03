@@ -31,7 +31,7 @@ class component_password extends component_common {
 			$dato = [$dato];
 		}
 
-		return (array)$dato;
+		return $dato;
 	}//end get_dato
 
 
