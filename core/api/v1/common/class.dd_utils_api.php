@@ -541,6 +541,36 @@ final class dd_utils_api {
 
 
 	/**
+	* build_install_db_file
+	* @return object $response
+	*/
+	public static function build_install_db_file(object $request_options=null) : object {
+		$start_time = start_time();
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+
+		$response->result	= install::build_install_db_file();
+		$response->msg		= 'Ok. Request done';
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
+					$debug->request_options	= $request_options;
+				$response->debug = $debug;
+			}
+
+		return $response;
+	}//end build_install_db_file
+
+
+
+	/**
 	* UPDATE_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
@@ -772,7 +802,11 @@ final class dd_utils_api {
 
 		// check the dedalo install status (config_auto.php)
 		// When install is finished, it will be set automatically to 'installed'
-		if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed' && $action!=='install_hierarchies') {
+		if(
+			defined('DEDALO_INSTALL_STATUS')
+			&& DEDALO_INSTALL_STATUS==='installed'
+			&& $action!=='install_hierarchies'
+		){
 			$response->msg		= 'Error. Request not valid, Dédalo was installed';
 			return $response;
 		}
