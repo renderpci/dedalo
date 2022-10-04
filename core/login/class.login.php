@@ -49,43 +49,45 @@ class login extends common {
 
 	/**
 	* LOGIN
-	* @param object $request_options
+	* Exec user login action comparing received values with database encrypted values
+	* @param object $options
 	* @see Mandatory vars: 'username','password'
-	* Get post vars and search received user/password in db
+	*
 	* @return object $response
 	*/
-	public static function Login( object $request_options ) : object {
+	public static function Login( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed [Login]';
 
-		$options = new stdClass();
-			$options->username	= null;
-			$options->password	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$username = $options->username;
+			$password = $options->password;
 
 		// username
-			$username = trim($options->username);
-			if (empty($username)) {
-				$response->msg = "Error Processing Request: username is empty!";
+			if(!empty($username) && is_string($username)) {
+				$username = trim($username);
+			}
+			if (!is_string($username) || empty($username)) {
+				$response->msg = "Error Processing Request: username is invalid!";
 				return $response;
 			}
-			$username = safe_xss($options->username);
+			// safe username
+			$username = safe_xss($username);
 
 		// password
-			$password = $options->password;
-			if (empty($password) || strlen($password)<8) {
-				$response->msg = "Error Processing Request: password is empty or the lenght is invalid !";
+			if (!is_string($password) || empty($password) || strlen($password)<8) {
+				$response->msg = "Error Processing Request: password is empty or the length is invalid !";
 				return $response;
 			}
 
 		// search username
-			$arguments=array();
-			$arguments["strPrimaryKeyName"] = 'section_id';
-			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
+			$arguments = [];
+			$arguments['strPrimaryKeyName']	= 'section_id';
+			$arguments['section_tipo']		= DEDALO_SECTION_USERS_TIPO;
 			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
-
+			// search
 			$matrix_table			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
 			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
 			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
@@ -97,8 +99,8 @@ class login extends common {
 				#
 				# STOP: USERNAME NOT EXISTS
 				#
-				$activity_datos['result']	= "deny";
-				$activity_datos['cause']	= "user not exist";
+				$activity_datos['result']	= 'deny';
+				$activity_datos['cause']	= 'User does not exist';
 				$activity_datos['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
@@ -107,11 +109,11 @@ class login extends common {
 					NULL,
 					'LOG IN',
 					$activity_datos
-					);
-				# delay failed output after 2 seconds to prevent brute force attacks
+				);
+				// delay failed output after 2 seconds to prevent brute force attacks
 		        sleep(2);
-				#exit("Error: User $username not exists !");
-				$response->msg = "Error: User not exists or password is invalid!";
+				// response
+				$response->msg = "Error: User does not exists or password is invalid!";
 				error_log("DEDALO LOGIN ERROR : Invalid user or password");
 				return $response;
 			}
@@ -122,8 +124,8 @@ class login extends common {
 				#
 				# STOP: USERNAME DUPLICATED
 				#
-				$activity_datos['result']	= "deny";
-				$activity_datos['cause']	= "user duplicated in database";
+				$activity_datos['result']	= 'deny';
+				$activity_datos['cause']	= 'User duplicated in database';
 				$activity_datos['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
@@ -136,7 +138,7 @@ class login extends common {
 				# delay failed output after 2 seconds to prevent brute force attacks
 		        sleep(2);
 				#exit("Error: User $username not exists !");
-				$response->msg = "Error: User ambiguous";
+				$response->msg = 'Error: User ambiguous';
 				error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
 				return $response;
 			}
@@ -162,8 +164,8 @@ class login extends common {
 					#
 					# STOP : PASSWORD IS WRONG
 					#
-					$activity_datos['result']	= "deny";
-					$activity_datos['cause']	= "wrong password";
+					$activity_datos['result']	= 'deny';
+					$activity_datos['cause']	= 'wrong password';
 					$activity_datos['username']	= $username;
 
 					# LOGIN ACTIVITY REPORT
@@ -172,18 +174,18 @@ class login extends common {
 						NULL,
 						'LOG IN',
 						$activity_datos
-						);
+					);
 					# delay failed output by 2 seconds to prevent brute force attacks
 	        		sleep(2);
 
-					$response->msg = "Error: Wrong password [1]";
+					$response->msg = 'Error: Wrong password [1]';
 					error_log("DEDALO LOGIN ERROR : Wrong password [1] (".DEDALO_ENTITY.")");
 					return $response;
 				}//end if( $password_encrypted!==$password_dato )
 
 			// password length check
 				if( empty($password_dato) || strlen($password_dato)<8 ) {
-					$response->msg = "Error: Wrong password [2]";
+					$response->msg = 'Error: Wrong password [2]';
 					error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
 					return $response;
 				}
@@ -209,11 +211,9 @@ class login extends common {
 					)
 				);
 
-
 				# delay failed output by 2 seconds to prevent brute force attacks
 				sleep(2);
-				#exit("Error: Account inactive or not defined [1]");
-				$response->msg = "Error: Account inactive or not defined [1]";
+				$response->msg = 'Error: Account inactive or not defined [1]';
 				error_log("DEDALO LOGIN ERROR : Account inactive");
 				return $response;
 			}

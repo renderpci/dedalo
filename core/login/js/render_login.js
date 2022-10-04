@@ -192,7 +192,7 @@ const get_content_data = function(self) {
 
 		const button_enter_loading = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'spinner button_enter_loading',
+			class_name		: 'spinner button_enter_loading hide',
 			parent			: button_enter
 		})
 		const button_enter_label = ui.create_dom_element({
