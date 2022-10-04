@@ -22,61 +22,75 @@ class lang {
 	*	like 'lg-spa'
 	* @param string $lang
 	*	like 'lg-eng'. Default is current dedalo data lang
-	* @return string $name
+	* @return object|null $response
 	*/
-	private static function resolve( string $lang_tld, string $lang=DEDALO_DATA_LANG ) : object {
+	private static function resolve( string $lang_tld, string $lang=DEDALO_DATA_LANG ) : ?object {
 
 		$name = null;
 
-		if (strpos($lang_tld, 'lg-')===0) {
-			$lang_tld = substr($lang_tld, 3);
-		}
+		// lang tld formatting
+			if (strpos($lang_tld, 'lg-')===0) {
+				$lang_tld = substr($lang_tld, 3);
+			}
 
-		static $resolve_response;
-		if (isset($resolve_response[$lang_tld])) {
-			return $resolve_response[$lang_tld];
-		}
+		// cache
+			static $resolve_response;
+			if (isset($resolve_response[$lang_tld])) {
+				return $resolve_response[$lang_tld];
+			}
 
-		$tipo 	 	 = DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
-		$table 		 = lang::$langs_matrix_table;
-		$term_tipo	 = DEDALO_THESAURUS_TERM_TIPO;
+		// short vars
+			$tipo		= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
+			$table		= lang::$langs_matrix_table;
+			$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
 
-		$strQuery  = '';
-		$strQuery .= 'SELECT';
-		$strQuery .= PHP_EOL . 'section_id, section_tipo, datos#>\'{components, '.$term_tipo.', dato}\' AS names';
-		$strQuery .= PHP_EOL . 'FROM "'.$table.'"';
-		$strQuery .= PHP_EOL . 'WHERE';
-		$strQuery .= PHP_EOL . 'datos#>\'{components, '.$tipo.', dato, lg-nolan}\' ? \''.$lang_tld.'\';';
+		// query
+			$strQuery	= '';
+			$strQuery	.= 'SELECT';
+			$strQuery	.= PHP_EOL . 'section_id, section_tipo, datos#>\'{components, '.$term_tipo.', dato}\' AS names';
+			$strQuery	.= PHP_EOL . 'FROM "'.$table.'"';
+			$strQuery	.= PHP_EOL . 'WHERE';
+			$strQuery	.= PHP_EOL . 'datos#>\'{components, '.$tipo.', dato, lg-nolan}\' ? \''.$lang_tld.'\';';
 
-		$response = new stdClass();
-		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-					while ($rows = pg_fetch_assoc($result)) {
-						$names = $rows['names'];
-						$names = json_decode($names);
+		// DB query exec
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			if ($result===false) {
+				debug_log(__METHOD__." Error on search_free  ".to_string($strQuery), logger::ERROR);
+				return null;
+			}
 
-						$response->section_id = $rows['section_id'];
-						$response->names 	  = $names;
-						break;
-					}
-					#dump($names, ' names ++ '.to_string());
+		// response
+			$response = new stdClass();
+			while ($rows = pg_fetch_assoc($result)) {
 
-		$resolve_response[$lang_tld] = $response;
+				$names = $rows['names'];
+				$names = json_decode($names);
 
-		return (object)$response;
+				$response->section_id = $rows['section_id'];
+				$response->names 	  = $names;
+
+				break; // only one is expected
+			}
+
+		// cache
+			$resolve_response[$lang_tld] = $response;
+
+
+		return $response;
 	}//end resolve
 
 
 
 	/**
 	* GET_SECTION_ID_FROM_CODE
-	* @return int $section_id
+	* @return int|null $section_id
 	*/
-	public static function get_section_id_from_code( string $code ) : int {
+	public static function get_section_id_from_code( string $code ) : ?int {
 
 		$result 	 = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
 		$section_id  = $result->section_id;
 
-		return (int)$section_id;
+		return $section_id;
 	}//end get_section_id_from_code
 
 
@@ -126,7 +140,7 @@ class lang {
 	* GET_NAME_FROM_CODE
 	* @return string $name
 	*/
-	public static function get_name_from_code( string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true ) : string {
+	public static function get_name_from_code( string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true ) : ?string {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
