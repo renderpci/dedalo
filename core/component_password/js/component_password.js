@@ -66,12 +66,24 @@ export const component_password = function(){
 * PASSWORD VALIDATOR 0.1
 * (c) 2007 Steven Levithan <stevenlevithan.com>
 * MIT License
+* @param string pw
+* @param object options
+* @return object response
+*  Sample:
+*  {
+*		result	: false,
+*		msg		: "Password is invalid! Please mix lowercase / uppercase chars and numbers"
+*	}
 */
 component_password.prototype.validate_password_format = function (pw, options) {
 
 	// empty case
 		if (pw.length<1) {
-			return true;
+			const response = {
+				result	: true,
+				msg		: "Password is empty. ignored validation"
+			}
+			return response;
 		}
 
 	// default options (allows any password)
@@ -105,9 +117,9 @@ component_password.prototype.validate_password_format = function (pw, options) {
 
 	// enforce min/max length
 		if (pw.length < o.length[0] || pw.length > o.length[1]) {
-			const response ={
-				result : false,
-				msg: "Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars "
+			const response = {
+				result	: false,
+				msg		: "Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars "
 			}
 			return response;
 		}
@@ -115,9 +127,9 @@ component_password.prototype.validate_password_format = function (pw, options) {
 	// enforce lower/upper/alpha/numeric/special rules
 		for (rule in re) {
 			if ((pw.match(re[rule]) || []).length < o[rule]) {
-				const response ={
-					result : false,
-					msg: "Password is invalid! \nPlease mix lowercase / uppercase chars and numbers"
+				const response = {
+					result	: false,
+					msg		: "Password is invalid! \nPlease mix lowercase / uppercase chars and numbers"
 				}
 				return response;
 			}
@@ -126,9 +138,9 @@ component_password.prototype.validate_password_format = function (pw, options) {
 	// enforce word ban (case insensitive)
 		for (i = 0; i < o.badWords.length; i++) {
 			if (pw.toLowerCase().indexOf(o.badWords[i].toLowerCase()) > -1) {
-				const response ={
-					result : false,
-					msg: "Bad word! \nPlease use a different password"
+				const response = {
+					result	: false,
+					msg		: "Bad word! \nPlease use a different password"
 				}
 				return response;
 			}
@@ -136,9 +148,9 @@ component_password.prototype.validate_password_format = function (pw, options) {
 
 	// enforce the no sequential, identical characters rule
 		if (o.noSequential && /([\S\s])\1/.test(pw)) {
-			const response ={
-				result : false,
-				msg: "identical characters in sequential order are not allowed"
+			const response = {
+				result	: false,
+				msg		: 'identical characters in sequential order are not allowed'
 			}
 			return response;
 		}
@@ -160,8 +172,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 					(o.noQwertySequences && qwerty.indexOf(seq) > -1)
 				) {
 					const response ={
-						result : false,
-						msg: "alphabetical order not allowed | numerical order not allowed"
+						result	: false,
+						msg		: 'alphabetical order not allowed | numerical order not allowed'
 					}
 					return response;
 				}
@@ -173,26 +185,26 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			rule = o.custom[i];
 			if (rule instanceof RegExp) {
 				if (!rule.test(pw)){
-					const response ={
-						result : false,
-						msg: "invalid pw for rule " + rule
+					const response = {
+						result	: false,
+						msg		: 'invalid pw for rule ' + rule
 					}
 					return response;
 				}
 			} else if (rule instanceof Function) {
 				if (!rule(pw)){
 					const response ={
-						result : false,
-						msg: "invalid pw for function " + rule
+						result	: false,
+						msg		: 'invalid pw for function ' + rule
 					}
 					return response;
 				}
 			}
 		}
 
-	const response ={
-		result : true,
-		msg: "pw is valid "
+	const response = {
+		result	: true,
+		msg		: 'pw is valid '
 	}
 
 	// great success!
