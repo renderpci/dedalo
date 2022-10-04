@@ -215,5 +215,3 @@ login.prototype.action_dispatch = async function(api_response) {
 
 	return true
 }//end action_dispatch
-
-
