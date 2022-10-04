@@ -1553,13 +1553,13 @@ class hierarchy {
 		  ]
 		}');
 
-		$search_development2 = new search_development2($search_query_object);
-		$search_result 		 = $search_development2->search();
-		$ar_records 		 = $search_result->ar_records;
+		$search			= search::get_instance($search_query_object);
+		$search_result	= $search->search();
+		$ar_records		= $search_result->ar_records;
 
 		foreach ($ar_records as $key => $row) {
 
-			if( $ar_locators = json_decode($row->{DEDALO_HIERARCHY_TYPOLOGY_TIPO}) ) {
+			if( $ar_locators = $row->{DEDALO_HIERARCHY_TYPOLOGY_TIPO} ) {
 				if (isset($ar_locators[0]->section_id)) {
 					$hierarchy_type = (int)$ar_locators[0]->section_id;
 				}
@@ -1606,9 +1606,9 @@ class hierarchy {
 			}');
 
 		// search
-			$search_development2	= new search_development2($search_query_object);
-			$search_result			= $search_development2->search();
-			$record					= reset($search_result->ar_records);
+			$search			= search::get_instance($search_query_object);
+			$search_result	= $search->search();
+			$record			= reset($search_result->ar_records);
 
 		// section id
 			$section_id = isset($record->section_id) ? $record->section_id : null;
