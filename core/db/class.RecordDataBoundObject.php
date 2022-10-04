@@ -223,7 +223,7 @@ abstract class RecordDataBoundObject {
 				// 	dump($bt, ' Load pg_fetch_assoc bt +++++++++++++++++++++ '.to_string($this->ID));
 				// }
 				// // trigger_error('WARNING: No result on Load arRow. $strQuery: ' .PHP_EOL. $strQuery);
-				// debug_log(__METHOD__." 'WARNING: No result on Load arRow: ".to_string($arRow), logger::WARNING);
+				debug_log(__METHOD__." 'WARNING: No result on Load arRow: ".to_string($arRow), logger::WARNING);
 				return false;
 			}
 

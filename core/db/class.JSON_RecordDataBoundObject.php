@@ -442,6 +442,12 @@ abstract class JSON_RecordDataBoundObject {
 				}
 			}
 
+		$conn = DBi::_getConnection() ?? false;
+		if ($conn===false) {
+			debug_log(__METHOD__." Error. DDBB connection failed ".to_string(), logger::ERROR);
+			return false;
+		}
+
 		// $result = pg_query(DBi::_getConnection(), $strQuery);
 
 		// exec With prepared statement
