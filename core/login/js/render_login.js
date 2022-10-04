@@ -136,10 +136,9 @@ const get_content_data = function(self) {
 	// Button
 		const login_item_enter = login_items.find(el => el.tipo==='dd259')
 		const button_enter = ui.create_dom_element({
-			id				: 'auth_submit',
 			element_type	: 'button',
 			type			: 'submit',
-			class_name		: 'warning',
+			class_name		: 'button_enter warning',
 			parent			: form
 		})
 		button_enter.addEventListener('click', function(e) {
@@ -160,8 +159,10 @@ const get_content_data = function(self) {
 			}
 
 			// show spinner and hide button label
-				button_enter_label.classList.add('display_none')
-				button_enter_loading.classList.remove('display_none')
+				button_enter_label.classList.add('hide')
+				button_enter_loading.classList.remove('hide')
+				button_enter.classList.add('white')
+				button_enter.blur()
 
 			// data_manager API call
 			data_manager.request({
@@ -177,8 +178,9 @@ const get_content_data = function(self) {
 			.then((api_response)=>{
 
 				// hide spinner and show button label
-					button_enter_label.classList.remove('display_none')
-					button_enter_loading.classList.add('display_none')
+					button_enter_label.classList.remove('hide')
+					button_enter_loading.classList.add('hide')
+					button_enter.classList.remove('white')
 
 				const message	= api_response.msg
 				const msg_type	= api_response.result===true ? 'ok' : 'error'
@@ -190,12 +192,12 @@ const get_content_data = function(self) {
 
 		const button_enter_loading = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'preload display_none',
+			class_name		: 'spinner button_enter_loading',
 			parent			: button_enter
 		})
 		const button_enter_label = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button_label',
+			class_name		: 'button_enter_label',
 			inner_html		: strip_tags(login_item_enter.label),
 			parent			: button_enter
 		})
