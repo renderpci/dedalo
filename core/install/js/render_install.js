@@ -1153,9 +1153,9 @@ const render_install_finish_block = function(self) {
 	const fragment = new DocumentFragment();
 
 	// info
-		ui.create_dom_element({
+		const description_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'description info ok',
+			class_name		: 'description msg ok',
 			inner_html		: get_label.install_finished || 'Congrats! The installation process was successfully, Dédalo is ready.',
 			parent			: fragment
 		})
@@ -1175,7 +1175,7 @@ const render_install_finish_block = function(self) {
 				const spinner = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'spinner',
-					parent			: install_finish_status
+					parent			: description_node
 				})
 
 			// data_manager API call
@@ -1199,6 +1199,7 @@ const render_install_finish_block = function(self) {
 					install_finish_status.classList.add('error')
 					install_finish_status.innerHTML = api_response.msg
 
+					spinner.remove()
 
 				}else{
 
@@ -1214,6 +1215,7 @@ const render_install_finish_block = function(self) {
 						install_finish_status.innerHTML = 'Initializing in ' + counter
 						counter--;
 						if (counter < 0 ) {
+							spinner.remove()
 							clearInterval(interval);
 							location.reload()
 						}
@@ -1224,7 +1226,7 @@ const render_install_finish_block = function(self) {
 
 			// unlock button
 				install_finish_button.classList.remove('loading')
-				spinner.remove()
+
 		})
 
 	// install_finish_status msg
