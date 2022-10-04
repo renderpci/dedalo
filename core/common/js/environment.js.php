@@ -1,4 +1,5 @@
 <?php
+// $global_start_time = hrtime(true);
 // PREVENT_SESSION_LOCK
 define('PREVENT_SESSION_LOCK', true);
 // CONFIG
@@ -66,19 +67,25 @@ session_write_close();
 
 		$obj = new stdClass();
 			// logged informative only
-			$obj->is_logged			= login::is_logged();
-			# version
-			$obj->dedalo_entity		= DEDALO_ENTITY;
-			# version
-			$obj->dedalo_version	= DEDALO_VERSION;
-			# lang
+			$obj->is_logged							= login::is_logged();
+			$obj->is_global_admin					= $is_global_admin;
+			$obj->is_root							= $is_root;
+			$obj->user_id							= $user_id;
+			$obj->username							= $username;
+			$obj->full_username						= $full_username;
+			// version
+			$obj->dedalo_entity						= DEDALO_ENTITY;
+			// version
+			$obj->dedalo_version					= DEDALO_VERSION;
+			// mode
+			$obj->mode								= $mode ?? null;
+			// lang
 			$obj->dedalo_application_langs_default	= DEDALO_APPLICATION_LANGS_DEFAULT;
 			$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
 			$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
 			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
-
-			// langs
-			if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
+			// dedalo_projects_default_langs
+			if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 				$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
 					$lang_obj = new stdClass();
 						$lang_obj->label = lang::get_name_from_code($current_lang);
@@ -86,49 +93,20 @@ session_write_close();
 					return $lang_obj;
 				}, DEDALO_PROJECTS_DEFAULT_LANGS);
 			}
-
+			// quality defaults
 			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
 			$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
 			$obj->dedalo_image_thumb_default	= DEDALO_IMAGE_THUMB_DEFAULT;
-			# parent
-			#$obj->_parent						= isset($parent) ? (int)$parent : '';
-			# tipos
-			#$obj->tipo							= $tipo;
-			#$obj->section_tipo					= defined('SECTION_TIPO') ? SECTION_TIPO : null;
-			#$obj->section_name					= defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
-			# top
-			#$obj->top_tipo						= TOP_TIPO;
-			#$obj->top_id						= TOP_ID;
-			# modo
-			$obj->mode							= isset($mode) ? $mode : null;
-			# caller_tipo
-			#$obj->caller_tipo					= $caller_tipo;
-			# context_name
-			#$obj->context_name					= $context_name;
-			# tag_id
-			$obj->tag_id						= isset($_REQUEST["tag_id"]) ? safe_xss($_REQUEST["tag_id"]) : "";
-			# user
-			$obj->user_id						= $user_id;
-			$obj->username						= $username;
-			$obj->full_username					= $full_username;
-			# is_global_admin
-			$obj->is_global_admin				= $is_global_admin;
-			$obj->is_root						= $is_root;
-			# components_to_refresh
-			#$obj->components_to_refresh		= [];
-			# portal
-			#$obj->portal_tipo					= isset($_REQUEST["portal_tipo"]) ? safe_xss($_REQUEST["portal_tipo"]) : null;
-			#$obj->portal_parent				= isset($_REQUEST["portal_parent"]) ? safe_xss($_REQUEST["portal_parent"]) : null;
-			#$obj->portal_section_tipo			= isset($_REQUEST["portal_section_tipo"]) ? safe_xss($_REQUEST["portal_section_tipo"]) : null;
-			# id_path
-			#$obj->id_path						= isset($_REQUEST["id_path"]) ? safe_xss($_REQUEST["id_path"]) : null;
-			# dedalo_protect_media_files
+
+			// tag_id
+			$obj->tag_id						= isset($_REQUEST['tag_id']) ? safe_xss($_REQUEST['tag_id']) : null;
+			// dedalo_protect_media_files
 			$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
-			# notifications
+			// notifications
 			$obj->DEDALO_NOTIFICATIONS			= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
 			$obj->DEDALO_PUBLICATION_ALERT		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
-			# float_window_features
-			#$obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
+			// float_window_features
+			// $obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 			$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/0.jpg';
 			$obj->locale						= DEDALO_LOCALE;
 			$obj->DEDALO_DATE_ORDER				= DEDALO_DATE_ORDER;
@@ -136,7 +114,7 @@ session_write_close();
 			// debug only
 			if(SHOW_DEBUG===true) {
 				$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
-				if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
+				if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 					$obj->pg_version = (function() {
 						try {
 							$conn = DBi::_getConnection() ?? false;
@@ -150,7 +128,7 @@ session_write_close();
 					})();
 				}
 				$obj->php_version		= PHP_VERSION;
-				// $obj->php_version		.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
+				// $obj->php_version	.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 				$obj->php_memory		= to_string(ini_get('memory_limit'));
 			}
 
@@ -160,13 +138,13 @@ session_write_close();
 
 // plain global vars
 	$plain_vars = [
-		'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
-		'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
-		'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
-		'SHOW_DEBUG'				=> SHOW_DEBUG,
-		'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
-		'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
-		'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
+		'DEDALO_CORE_URL'						=> DEDALO_CORE_URL,
+		'DEDALO_ROOT_WEB'						=> DEDALO_ROOT_WEB,
+		'DEDALO_TOOLS_URL'						=> DEDALO_TOOLS_URL,
+		'SHOW_DEBUG'							=> SHOW_DEBUG,
+		'SHOW_DEVELOPER'						=> SHOW_DEVELOPER,
+		'DEVELOPMENT_SERVER'					=> DEVELOPMENT_SERVER,
+		'DEDALO_SECTION_ID_TEMP'				=> DEDALO_SECTION_ID_TEMP,
 		// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 		'DD_TIPOS' => [
 			'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
@@ -205,3 +183,4 @@ echo 'const get_label=';
 include dirname(__FILE__) . '/lang/'.DEDALO_APPLICATION_LANG.'.js';
 // json_elements_data array
 // echo ';'.PHP_EOL.js::get_json_elements_data();
+// debug_log('exec_time: ' .exec_time_unit($global_start_time,'ms').' ms', logger::DEBUG);
