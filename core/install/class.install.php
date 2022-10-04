@@ -2127,11 +2127,12 @@ class install extends common {
 	public static function set_root_pw(object $options) : object {
 
 		// options
-		$password = $options->password;
+			$password = safe_xss($options->password);
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
 
 		// check the dedalo install status (config_auto.php)
 		// When install is finished, it will be set automatically to 'installed'
@@ -2142,29 +2143,28 @@ class install extends common {
 
 		// check if the root has the default value in the user sections inside DDBB
 			if(login::check_root_has_default_password()===false){
-				$response->msg = 'Error. root pw was set in other install process';
+				$response->msg = 'Error. root pw was set in another install process';
 				return $response;
 			}
 
-		// check pw
+		// check password
 			if (empty($password) ) {
-				$response->msg		= "Error: few vars";
+				$response->msg = 'Error: few vars';
 				return $response;
 			}
-
-		$password = safe_xss($options->password);
-		$password_encripted = dedalo_encrypt_openssl($password);
 
 		// Test encrypt and decrypt data cycle
+			$password_encripted	= dedalo_encrypt_openssl($password);
 			if (dedalo_decrypt_openssl($password_encripted) !== $password) {
-				$response->msg =  "Error: sorry an error happens on UPDATE record. Encrypt and decrypt cycle was wrong!";
+				$response->msg =  'Error: sorry an error happens on UPDATE record. Encrypt and decrypt cycle was wrong!';
 				return $response;
 			}
 
-		$section	= section::get_instance(-1, DEDALO_SECTION_USERS_TIPO);
-		$dato		= $section->get_dato();
-		$tipo		= DEDALO_USER_PASSWORD_TIPO;
-		$lang		= DEDALO_DATA_NOLAN;
+		// section
+			$section	= section::get_instance(-1, DEDALO_SECTION_USERS_TIPO);
+			$dato		= $section->get_dato();
+			$tipo		= DEDALO_USER_PASSWORD_TIPO;
+			$lang		= DEDALO_DATA_NOLAN;
 
 		// empty component data case
 			if (!isset($dato->components->{$tipo})) {
@@ -2172,22 +2172,25 @@ class install extends common {
 				$dato->components->{$tipo}->dato	= new stdClass();
 			}
 
-		# Set dato
-		$dato->components->{$tipo}->dato->$lang	= $password_encripted;
+		// Set dato as array
+			$dato->components->{$tipo}->dato->{$lang} = [$password_encripted];
 
+		// update section full dato. It's saved directly because for security, save data prevents to save section_id < 1
+			$strQuery	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
+			if($result===false) {
+				$response->msg = 'Error: sorry an error happens on UPDATE record. Data is not saved';
+				debug_log(__METHOD__." $response->msg ".to_string($strQuery), logger::ERROR);
+				return $response;
+			}
 
-		$strQuery	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
-		$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
-		if($result===false) {
-			debug_log(__METHOD__." Error: sorry an error happens on UPDATE record. Data is not saved ".to_string($strQuery), logger::ERROR);
-			$response->msg = 'Error: sorry an error happens on UPDATE record. Data is not saved';
-			return $response;
-		}
+		// reset session
+			unset($_SESSION['dedalo']['auth']);
 
-		unset($_SESSION['dedalo']['auth']);
+		// response ok
+			$response->result	= true;
+			$response->msg		= 'OK. root pw was set';
 
-		$response->result	= true;
-		$response->msg		= 'Ok. root pw was set';
 
 		return $response;
 	}//end set_root_pw
