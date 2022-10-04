@@ -546,6 +546,18 @@ const render_install_db_block = function(self) {
 			// lock button
 				install_db_button.classList.add('loading')
 
+			// reset messages
+				install_db_status.classList.remove('ok')
+				install_db_status.classList.remove('error')
+				install_db_status.innerHTML = ''
+
+			// add spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: install_db_status
+				})
+
 			// data_manager API call
 				const api_response = await data_manager.request({
 					body : {
@@ -583,6 +595,7 @@ const render_install_db_block = function(self) {
 
 			// unlock button
 				install_db_button.classList.remove('loading')
+				spinner.remove()
 		})//end mouse_up event
 
 
@@ -607,6 +620,30 @@ const render_set_root_password_block = function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// password_validation_options
+		const password_validation_options = {
+			lower				: 1,
+			upper				: 1,
+			alpha				: 0, /* lower + upper */
+			numeric				: 1,
+			special				: 0,
+			length				: [8, 32],
+			custom				: [ /* regexes and/or functions  (?=.*\d)(?=.*[a-z])(?=.*[A-Z])\w{6,} */ ],
+			badWords			: ['password','contraseña','clave','Mynew2Pass5K','dios','micontraseña'],
+			badSequenceLength	: 4,
+			noQwertySequences	: false,
+			noSequential		: true
+		}
+
+	// description
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description',
+			inner_html		: get_label.type_root_password || `Type and retype your desired superuser password and keep it in a safe place.
+							  Use a strong password from 8 to 32 characters.`,
+			parent			: fragment
+		})
+
 	// input_new_pw field
 		const input_new_pw = ui.create_dom_element({
 			element_type	: 'input',
@@ -621,26 +658,59 @@ const render_set_root_password_block = function(self) {
 			e.preventDefault()
 
 			// validated. Test password is acceptable string
-			const validated = component_password.prototype.validate_password_format(input_new_pw.value)
-			if (validated.result === false) {
-				input_new_pw.classList.remove('valid')
-				input_new_pw.classList.add('invalid')
-			}else{
-				input_new_pw.classList.remove('invalid')
-				input_new_pw.classList.add('valid')
-			}
+				const validated_obj = component_password.prototype.validate_password_format(
+					input_new_pw.value,
+					password_validation_options
+				)
+
+			// message
+				set_message(
+					validated_obj,
+					input_new_pw
+				)
 		})
 		input_new_pw.addEventListener('change', function(e) {
 			e.preventDefault()
 
 			// validated. Test password is acceptable string
-				const validated = component_password.prototype.validate_password_format(
-					input_new_pw.value
+				const validated_obj = component_password.prototype.validate_password_format(
+					input_new_pw.value,
+					password_validation_options
 				)
-				if (!validated.result) {
-					return false
-				}
+
+			// message
+				set_message(
+					validated_obj,
+					input_new_pw
+				)
 		})
+
+		function set_message(validated_obj, input_node) {
+
+			// message reset
+				set_pw_status.classList.remove('ok')
+				set_pw_status.classList.remove('error')
+				set_pw_status.innerHTML = ''
+
+			if (validated_obj.result===false) {
+				// decorate input_node as valid (green)
+				input_node.classList.remove('valid')
+				input_node.classList.add('invalid')
+				// message
+				set_pw_status.classList.add('error')
+				set_pw_status.innerHTML = validated_obj.msg
+				// button lock
+				change_root_pw_button.classList.add('loading')
+			}else{
+				// decorate input_node as not valid (red)
+				input_node.classList.remove('invalid')
+				input_node.classList.add('valid')
+				// button lock
+				change_root_pw_button.classList.remove('loading')
+			}
+
+			return true
+		}//end set_message
 
 	// input_new_pw 2 field
 		const input_new_pw_retype = ui.create_dom_element({
@@ -648,22 +718,33 @@ const render_set_root_password_block = function(self) {
 			type			: 'password',
 			class_name		: 'password_value',
 			value			: '', // default value
-			placeholder 	: get_label.new_pw_retype || 'Retype Password',
+			placeholder		: get_label.new_pw_retype || 'Retype Password',
 			parent			: fragment
 		})
 		input_new_pw_retype.autocomplete = 'new-password'
+		// prevent paste values here
+		input_new_pw_retype.addEventListener('paste', function(e) {
+			e.preventDefault();
+			return false;
+		})
+
 		input_new_pw_retype.addEventListener('keyup', function(e) {
 			e.preventDefault()
 
 			// validated. Test password is acceptable string
-			const validated = input_new_pw_retype.value === input_new_pw.value
-			if (validated === false) {
-				input_new_pw_retype.classList.remove('valid')
-				input_new_pw_retype.classList.add('invalid')
-			}else{
-				input_new_pw_retype.classList.remove('invalid')
-				input_new_pw_retype.classList.add('valid')
-			}
+				const validated_obj = component_password.prototype.validate_password_format(
+					input_new_pw.value,
+					password_validation_options
+				)
+
+			// message
+				set_message(
+					{
+						result	: input_new_pw_retype.value===input_new_pw.value && validated_obj.result===true, // bool
+						msg		: input_new_pw_retype.value!==input_new_pw.value ? 'Error. Password do not match!' : ''
+					},
+					input_new_pw_retype
+				)
 		})
 
 	// checkbox show/hide
@@ -689,24 +770,64 @@ const render_set_root_password_block = function(self) {
 			}
 		})
 
+	// set_pw_status msg
+		const set_pw_status = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'msg',
+			parent			: fragment
+		})
+
 	// change_root_pw_button
 		const change_root_pw_button = ui.create_dom_element({
-			element_type 	: 'button',
+			element_type	: 'button',
 			class_name		: 'primary change_root_pw_button',
 			inner_html		: get_label.save_root_pw || ' Save the root password ',
 			parent			: fragment
 		})
 		change_root_pw_button.addEventListener('mouseup', async function() {
 
-			// check mismatch retype
-				if(input_new_pw_retype.value!==input_new_pw.value){
-					const label = get_label.pw_dont_match || 'Password do not match!'
-					alert(label)
+			// reset messages
+				set_pw_status.classList.remove('ok')
+				set_pw_status.classList.remove('error')
+				set_pw_status.innerHTML = ''
+
+			// validate again first password input
+				const validated_obj = component_password.prototype.validate_password_format(
+					input_new_pw.value,
+					password_validation_options
+				)
+				// password_value_is_valid
+				if (validated_obj.result!==true) {
+					// message
+						set_message(
+							validated_obj,
+							input_new_pw
+						)
+					return false
+				}
+
+			// check again mismatch retype
+				if(input_new_pw_retype.value!==input_new_pw.value) {
+					// message
+						set_message(
+							{
+								result	: false, // bool
+								msg		: 'Error. Password do not match!'
+							},
+							input_new_pw_retype
+						)
 					return false
 				}
 
 			// lock button
 				change_root_pw_button.classList.add('loading')
+
+			// add spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: set_pw_status
+				})
 
 			// data_manager API call
 				const api_response = await data_manager.request({
@@ -714,8 +835,8 @@ const render_set_root_password_block = function(self) {
 						action	: 'install',
 						dd_api	: 'dd_utils_api',
 						options	: {
-							action : 'set_root_pw',
-							password : input_new_pw.value
+							action		: 'set_root_pw',
+							password	: input_new_pw.value
 						}
 					}
 				})
@@ -746,13 +867,7 @@ const render_set_root_password_block = function(self) {
 
 			// unlock button
 				change_root_pw_button.classList.remove('loading')
-		})
-
-	// set_pw_status msg
-		const set_pw_status = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'msg',
-			parent			: fragment
+				spinner.remove()
 		})
 
 
@@ -955,6 +1070,13 @@ const render_hierarchies_import_block = function(self) {
 				import_hierarchies_button.classList.add('loading')
 				hierachy_ul.classList.add('loading')
 
+			// add spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: import_hiearachies_status
+				})
+
 			// data_manager API call
 				const api_response = await data_manager.request({
 					body : {
@@ -1004,6 +1126,7 @@ const render_hierarchies_import_block = function(self) {
 			// unlock button
 				import_hierarchies_button.classList.remove('loading')
 				hierachy_ul.classList.remove('loading')
+				spinner.remove()
 		})
 
 	// import_hiearachies_status msg
@@ -1048,6 +1171,13 @@ const render_install_finish_block = function(self) {
 			// lock button
 				install_finish_button.classList.add('loading')
 
+			// add spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: install_finish_status
+				})
+
 			// data_manager API call
 				const api_response = await data_manager.request({
 					body : {
@@ -1081,17 +1211,20 @@ const render_install_finish_block = function(self) {
 
 					let counter = 5;
 					const interval = setInterval(() => {
-						install_finish_status.innerHTML = api_response.msg + ' Initializing in ' + counter
+						install_finish_status.innerHTML = 'Initializing in ' + counter
 						counter--;
 						if (counter < 0 ) {
 							clearInterval(interval);
 							location.reload()
 						}
 					}, 1000);
+
+					install_finish_button.remove()
 				}
 
 			// unlock button
 				install_finish_button.classList.remove('loading')
+				spinner.remove()
 		})
 
 	// install_finish_status msg
