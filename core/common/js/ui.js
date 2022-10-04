@@ -37,7 +37,7 @@ export const ui = {
 	message_timeout : null,
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
 
-		// message_wrap. always check if already exists
+		// message_wrap. always check if already exists, else, create a new one and recycle it
 			const message_wrap = wrapper.querySelector("."+message_node) || (()=>{
 
 				const new_message_wrap = ui.create_dom_element({
@@ -73,8 +73,8 @@ export const ui = {
 				}
 			}
 
-		// add msg text
-			const text = ui.create_dom_element({
+		// add message text
+			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'text',
 				text_content	: message,
@@ -82,7 +82,10 @@ export const ui = {
 			})
 
 		// adjust height
-			message_wrap.style.top = '-' + message_wrap.offsetHeight + 'px'
+			const computed_styles = getComputedStyle(message_wrap.parentNode);
+			if (computed_styles.position!=='fixed') {
+				message_wrap.style.top = '-' + message_wrap.offsetHeight + 'px'
+			}
 
 		// close button move to bottom when height is too much
 			if (message_wrap.offsetHeight>120) {
@@ -91,7 +94,7 @@ export const ui = {
 				close_button.style.bottom	= '0px';
 			}
 
-		// remove msg after time
+		// remove message after time
 			clearTimeout(ui.message_timeout);
 			if (msg_type==='ok') {
 				ui.message_timeout = setTimeout(()=>{
