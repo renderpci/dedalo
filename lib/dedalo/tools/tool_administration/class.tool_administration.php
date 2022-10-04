@@ -1492,7 +1492,6 @@ class tool_administration extends tool_common {
 								if (isset($current_locator->from_component_tipo)) {
 									// prevent to propagate some sections
 									if (   $current_locator->section_tipo==='dd64' // yes/no
-										|| $current_locator->section_tipo==='dd153' // projects
 										|| $current_locator->section_tipo==='dd128' // users
 									) {
 										continue;
@@ -1521,7 +1520,7 @@ class tool_administration extends tool_common {
 					if(SHOW_DEBUG===true) {
 						# Show log msg every 100 id
 						if ($counter===1) {
-							debug_log(__METHOD__." Updated section data table $table $i".to_string(), logger::DEBUG);
+							debug_log(__METHOD__." Updated section data table $table id: $i of $max ".to_string(), logger::DEBUG);
 						}
 						$counter++;
 						if ($counter>300) {
