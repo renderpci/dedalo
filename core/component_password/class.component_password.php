@@ -39,7 +39,7 @@ class component_password extends component_common {
 	/**
 	* SET_DATO
 	* @param array|null $dato
-	* (!) do not encrytp this var
+	* (!) do not encrypt this var
 	*/
 	public function set_dato($dato) {
 
