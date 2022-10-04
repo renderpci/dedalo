@@ -158,7 +158,7 @@ class install extends common {
 		$target_file_path			= DEDALO_ROOT_PATH . '/install/db/'.$db_install_name.'.pgsql';
 		$target_file_path_compress	= $target_file_path.'.gz';
 		$hierarchy_files_dir_path	= DEDALO_ROOT_PATH . '/install/import/hierarchy';
-		$config_auto_file_path		= DEDALO_CONFIG_PATH.'/config_auto.php';
+		$config_core_file_path		= DEDALO_CONFIG_PATH.'/config_core.php';
 
 		return (object)[
 			'db_install_name'			=> $db_install_name,
@@ -170,7 +170,7 @@ class install extends common {
 			'target_file_path_compress'	=> $target_file_path_compress,
 			'hierarchy_files_dir_path'	=> $hierarchy_files_dir_path,
 			'install_checked_default'	=> $install_checked_default,
-			'config_auto_file_path'		=> $config_auto_file_path
+			'config_core_file_path'		=> $config_core_file_path
 		];
 	}//end get_config
 
@@ -1493,7 +1493,7 @@ class install extends common {
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
 				$result = pg_query(DBi::_getConnection(), $sql);
-				if (!$result) {
+				if ($result===false) {
 					$msg = " Error on db execution (clone database): ".pg_last_error();
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
@@ -1586,7 +1586,7 @@ class install extends common {
 
 		// set children data
 			// general term
-				$component_tipo	= DEDALO_HIERARCHY_CHIDRENS_TIPO;	// 'hierarchy45';
+				$component_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;	// 'hierarchy45';
 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				$component		= component_common::get_instance( $modelo_name,
 																  $component_tipo,
@@ -1599,7 +1599,7 @@ class install extends common {
 						"type": "dd48",
 						"section_id": "1",
 						"section_tipo": "'.$tld2.'1",
-						"from_component_tipo": "'.DEDALO_HIERARCHY_CHIDRENS_TIPO.'"
+						"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_TIPO.'"
 					}
 				]');
 				$component->set_dato($dato);
@@ -1988,50 +1988,6 @@ class install extends common {
 				}
 			}
 
-		// config_auto write install status (config_auto.php)
-			$found_result_false = array_find($ar_responses, function($el){
-				return $el->result===false;
-			});
-			if ($found_result_false===null) {
-
-				$file = $config->config_auto_file_path;
-
-				// remove last php tag if exists
-					$content = file_get_contents($file);
-
-				// add vars
-					if (strpos($content, 'DEDALO_INSTALL_STATUS')===false) {
-						// line
-						$line = PHP_EOL . 'define(\'DEDALO_INSTALL_STATUS\', \'installed\');';
-						// Write the contents to the file,
-						// using the FILE_APPEND flag to append the content to the end of the file
-						// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
-						file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
-
-						debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ".to_string(), logger::ERROR);
-					}elseif (strpos($content, 'DEDALO_INSTALL_STATUS')!==false && strpos($content, '\'DEDALO_INSTALL_STATUS\', \'installed\'')===false) {
-						// replace line to updated value
-						$content = preg_replace('/define\(\'DEDALO_INSTALL_STATUS\',.+\);/', 'define(\'DEDALO_INSTALL_STATUS\', \'installed\');', $content);
-						// Write the contents to the file,
-						// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
-						file_put_contents($file, $content, LOCK_EX);
-
-						debug_log(__METHOD__." Changed config_auto content with constant: DEDALO_INSTALL_STATUS = 'installed' ".to_string(), logger::ERROR);
-					}
-			}else{
-				debug_log(__METHOD__." Some responses fail: ".json_encode($ar_responses), logger::ERROR);
-			}
-
-		// re-create relations table ?
-
-
-		// refresh session cached data. Delete all session data except auth
-			foreach ($_SESSION['dedalo'] as $key => $value) {
-				if ($key==='auth') continue;
-				unset($_SESSION['dedalo'][$key]);
-			}
-
-
 		$response->result	= $ar_responses;
 		$response->msg		= 'OK. Request done '.__METHOD__;
 
@@ -2235,5 +2191,98 @@ class install extends common {
 
 		return $response;
 	}//end set_root_pw
+
+
+
+	/**
+	* SET_INSTALL_STATUS
+	*
+	* @param string $status
+	* 	Options: 'installed'
+	* @return object $response
+	*/
+	public static function set_install_status(string $status) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// config_core write install status (config_core.php)
+			$config	= install::get_config();
+			$file	= $config->config_core_file_path;
+
+		// set file content
+			if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS===$status) {
+
+				$response->result	= true;
+				$response->msg		= 'Ok. Dédalo status is already: '.$status;
+				return $response;
+
+			}else{
+
+				if(!file_exists($file)) {
+
+					if(!file_put_contents($file, '')) {
+						$response->msg = 'Error (1). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
+						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+						return $response;
+					}
+				}
+
+				$content = file_get_contents($file);
+
+				// add vars
+				if (strpos($content, 'DEDALO_INSTALL_STATUS')===false) {
+
+					// file do not exists or const DEDALO_INSTALL_STATUS it's not defined case
+
+					// line
+					$line = PHP_EOL . 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');';
+					// Write the contents to the file,
+					// using the FILE_APPEND flag to append the content to the end of the file
+					// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
+					if(!file_put_contents($file, $line, FILE_APPEND | LOCK_EX)) {
+
+						$response->msg = 'Error (2). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
+						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+						return $response;
+					}
+
+
+					$response->result	= true;
+					$response->msg		= 'All ready';
+
+					debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ".to_string(), logger::DEBUG);
+
+
+				}elseif (strpos($content, 'DEDALO_INSTALL_STATUS')!==false && strpos($content, '\'DEDALO_INSTALL_STATUS\', \''.$status.'\'')===false) {
+
+					// file exists but const DEDALO_INSTALL_STATUS it's not defined or it's different case
+
+					// replace line to updated value
+					$content = preg_replace('/define\(\'DEDALO_INSTALL_STATUS\',.+\);/', 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');', $content);
+					// Write the contents to the file,
+					// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
+					if(!file_put_contents($file, $content, LOCK_EX)) {
+						$response->msg = 'Error (3). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
+						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+						return $response;
+					}
+
+					$response->result	= true;
+					$response->msg		= 'All ready';
+
+					debug_log(__METHOD__." Changed config_auto content with constant: DEDALO_INSTALL_STATUS = ''.$status.'' ".to_string(), logger::DEBUG);
+				}
+			}
+
+
+		// refresh session cached data. Delete all session data
+			unset($_SESSION['dedalo']);
+
+
+
+		return $response;
+	}//end set_install_status
 
 }//end class
