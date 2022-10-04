@@ -845,6 +845,12 @@ final class dd_utils_api {
 				//exec
 					$response = (object)install::set_root_pw($request_options->options);
 				break;
+
+			case 'install_finish':
+
+				//exec
+					$response = (object)install::set_install_status('installed');
+				break;
 			default:
 				$response->msg		= 'Error. Request not valid';
 				break;
