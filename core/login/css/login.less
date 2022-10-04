@@ -8,7 +8,10 @@
 	position: fixed; /* or absolute */
 	height: 100%;
 	width: 100%;
-	margin: -1em;
+	// margin: -1em;
+	left: 0;
+	top: 0;
+
 
 	// background image big Dédalo
 	&:before {
@@ -17,15 +20,21 @@
 		background-repeat: no-repeat;
 		background-size: 527px 1024px;
 		content: '';
-		position: absolute;
+		position: fixed;
 		height: 100%;
 		width: 100%;
 		z-index: -1;
 		//-webkit-transform: rotate(30deg);
 		transform: scaleX(-1);
+		top: 0;
+		left: 0;
+		background-color: rgb(255 255 255 / 89%);
 	}
 
 	>.content_data {
+		background-color: rgba(243, 243, 243, 0.76);
+		border: solid 1px #e1e1e1;
+		border-radius: 0.5em;
 		// center
 		// position: absolute;
 		// left: 50%;
@@ -36,10 +45,8 @@
 
 		// .component_base;
 
-		background-color: rgba(243, 243, 243, 0.76);
 		max-width: 24em;
 		padding: 2em;
-		border-radius: 0.5em;
 		//padding-top: 1em;
 		//padding-bottom: 1em;
 
@@ -47,16 +54,18 @@
 			height: 2.5em;
 			width: 100%;
 			font-size: 1em;
-			background-color: @color_grey_untralight;
+			// background-color: @color_grey_untralight;
+			margin: 0px;
 			margin-bottom: 1em;
+			border-radius: 3px;
 
-			// remove browser apperance style
+			// remove browser appearance style
 			background: url('data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0Ljk1IDEwIj48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZjt9LmNscy0ye2ZpbGw6IzQ0NDt9PC9zdHlsZT48L2RlZnM+PHRpdGxlPmFycm93czwvdGl0bGU+PHJlY3QgY2xhc3M9ImNscy0xIiB3aWR0aD0iNC45NSIgaGVpZ2h0PSIxMCIvPjxwb2x5Z29uIGNsYXNzPSJjbHMtMiIgcG9pbnRzPSIxLjQxIDQuNjcgMi40OCAzLjE4IDMuNTQgNC42NyAxLjQxIDQuNjciLz48cG9seWdvbiBjbGFzcz0iY2xzLTIiIHBvaW50cz0iMy41NCA1LjMzIDIuNDggNi44MiAxLjQxIDUuMzMgMy41NCA1LjMzIi8+PC9zdmc+') no-repeat 95% 50%;
 			-moz-appearance: none;
 			-webkit-appearance: none;
 			appearance: none;
 			padding-left: 1em;
-
+			background-color: #fcfcfc;
 			opacity: 0.7;
 			border: 1px solid #e0e0e0;
 		}
@@ -64,6 +73,7 @@
 		>form {
 			display: flex;
 			flex-wrap: wrap;
+			margin: 0px;
 			margin-bottom: 1em;
 
 			>input, >button {
@@ -72,18 +82,42 @@
 			}
 
 			>input {
+				margin: 0px;
 				margin-bottom: 1em;
 				&#username {
+
 				}
 			}
 
-			>#auth_submit {
+			>.button_enter {
+				display: flex;
 				height: 3em;
+				margin: 0px;
+				text-align: center;
+				transition: all 0.17s ease, padding 0s;
 
-				>.preload {
-					background-color: white;
-					min-height: 2em;
+				&.white {
+					background-color: transparent;
+					outline: none;
 					cursor: default;
+					pointer-events: none;
+				}
+
+				// spinner
+				>.button_enter_loading {
+					// background-color: white;
+					// min-height: 2em;
+					// cursor: default;
+					position: relative;
+					height: 2rem;
+					width: 2rem;
+					margin: 0px;
+					top: unset;
+					left: unset;
+				}
+
+				>.button_enter_label {
+
 				}
 			}
 		}//end form
