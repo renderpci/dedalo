@@ -747,7 +747,7 @@ abstract class common {
 	* Alias of $this->RecordObj_dd->get_properties() but json decoded
 	* @return object|array|null $properties
 	*/
-	public function get_properties() {
+	public function get_properties() : ?object {
 
 		$properties = isset($this->properties)
 			? $this->properties // already fixed
