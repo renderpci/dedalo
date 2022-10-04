@@ -62,21 +62,9 @@ render_install.prototype.install = async function(options) {
 */
 const get_content_data = function(self) {
 
-	// short vars
-		// const properties	= self.context.properties
-		// const db_status		= properties.db_status || null
-
-	// hidden_block
+	// add_hidden_block
 		const add_hidden_block = (name) => {
-			return ''
-			const result = [
-				'hierarchies_import_block'
-			]
-			.find(el => el===name)
-				? ' hide'
-				: '';
-
-			return result
+			return ' hide'
 		}
 
 	// content_data
@@ -231,6 +219,30 @@ const get_content_data = function(self) {
 			render_hierarchies_import_block(self)
 		)
 
+	// install_finish_block
+		const install_finish_block = ui.create_dom_element({
+			element_type	: 'section',
+			class_name		: 'install_finish_block' + add_hidden_block('install_finish_block'),
+			parent			: content_data
+		})
+		// set pointers
+		content_data.install_finish_block = install_finish_block
+		// title
+		ui.create_dom_element({
+			element_type	: 'h1',
+			inner_html		: get_label.install_done || '5. Done!',
+			parent			: install_finish_block
+		})
+		// content
+		const install_finish_block_content = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content',
+			parent			: install_finish_block
+		})
+		install_finish_block_content.appendChild(
+			render_install_finish_block(self)
+		)
+
 
 	return content_data
 }//end get_content_data
@@ -239,7 +251,7 @@ const get_content_data = function(self) {
 
 /**
 * RENDER_HELP_BLOCK
-* Create contents nodes for current block
+* Creates contents nodes for current block
 * @param object self
 * @return DOM DocumentFragment
 */
@@ -297,7 +309,7 @@ const render_help_block = function(self) {
 
 /**
 * RENDER_CONFIG_BLOCK
-* Create contents nodes for current block
+* Creates contents nodes for current block
 * @param object self
 * @return DOM node
 */
@@ -329,19 +341,19 @@ const render_config_block = function(self) {
 			// warning errors message
 				ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'msg warning',
+					class_name		: 'msg error',
 					inner_html		: get_label.config_has_errors || 'Configuration test contains errors!',
 					parent			: fragment
 				})
 
 			// errors
-				const db_status_container_node = ui.create_dom_element({
+				const db_status_container = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'container_errors',
 					parent			: fragment
 				})
 
-			// db config_check
+			// db config_check (global)
 				const db_config_check_label = db_status.config_check
 					? get_label.db_config_check_ok || 'Database: db config ok'
 					: get_label.db_config_check_invalid || 'Database: db config invalid!'
@@ -352,76 +364,76 @@ const render_config_block = function(self) {
 					element_type	: 'div',
 					class_name		: 'msg ' + db_config_check_class,
 					inner_html		: db_config_check_label,
-					parent			: db_status_container_node
+					parent			: db_status_container
 				})
 
-				// config db name
-					const db_name_label = db_status.config_db_name_check
-						? get_label.db_name_ok || 'Database: db name config ok'
-						: get_label.db_name_invalid || 'Database: db name config invalid!'
-					const db_name_class = db_status.config_db_name_check
-						? 'ok'
-						: 'error'
-					const db_name_check = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'msg ' + db_name_class,
-						inner_html		: db_name_label,
-						parent			: db_config_check_node
-					})
+			// config db name
+				const db_name_label = db_status.config_db_name_check
+					? get_label.db_name_ok || 'Database: db name config ok'
+					: get_label.db_name_invalid || 'Database: db name config invalid!'
+				const db_name_class = db_status.config_db_name_check
+					? 'ok'
+					: 'error'
+				const db_name_check = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg ' + db_name_class,
+					inner_html		: db_name_label,
+					parent			: db_config_check_node
+				})
 
-				// config user_name_check
-					const user_name_label = db_status.config_user_name_check
-						? get_label.db_username_ok || 'Database: username config ok'
-						: get_label.db_username_invalid || 'Database: username config invalid!'
-					const db_username_class = db_status.config_user_name_check
-						? 'ok'
-						: 'error'
-					const db_username_check = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'msg ' + db_username_class,
-						inner_html		: user_name_label,
-						parent			: db_config_check_node
-					})
+			// config user_name_check
+				const user_name_label = db_status.config_user_name_check
+					? get_label.db_username_ok || 'Database: username config ok'
+					: get_label.db_username_invalid || 'Database: username config invalid!'
+				const db_username_class = db_status.config_user_name_check
+					? 'ok'
+					: 'error'
+				const db_username_check = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg ' + db_username_class,
+					inner_html		: user_name_label,
+					parent			: db_config_check_node
+				})
 
-				// config pw_check
-					const pw_label = db_status.config_pw_check
-						? get_label.db_pw_ok || 'Database: pw config ok'
-						: get_label.db_pw_invalid || 'Database: pw config invalid!'
-					const db_pw_class = db_status.config_pw_check
-						? 'ok'
-						: 'error'
-					const db_pw_check = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'msg ' + db_pw_class,
-						inner_html		: pw_label,
-						parent			: db_config_check_node
-					})
-				// config information_check
-					const information_label = db_status.config_information_check
-						? get_label.db_information_ok || 'Database: information config ok'
-						: get_label.db_information_invalid || 'Database: information config invalid!'
-					const db_information_class = db_status.config_information_check
-						? 'ok'
-						: 'error'
-					const db_information_check = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'msg ' + db_information_class,
-						inner_html		: information_label,
-						parent			: db_config_check_node
-					})
-				// config info_key_check
-					const info_key_label = db_status.config_info_key_check
-						? get_label.db_info_key_ok || 'Database: information key config ok'
-						: get_label.db_info_key_invalid || 'Database: information key config invalid!'
-					const db_info_key_class = db_status.config_info_key_check
-						? 'ok'
-						: 'error'
-					const db_info_key_check = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'msg ' + db_info_key_class,
-						inner_html		: info_key_label,
-						parent			: db_config_check_node
-					})
+			// config pw_check
+				const pw_label = db_status.config_pw_check
+					? get_label.db_pw_ok || 'Database: pw config ok'
+					: get_label.db_pw_invalid || 'Database: pw config invalid!'
+				const db_pw_class = db_status.config_pw_check
+					? 'ok'
+					: 'error'
+				const db_pw_check = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg ' + db_pw_class,
+					inner_html		: pw_label,
+					parent			: db_config_check_node
+				})
+			// config information_check
+				const information_label = db_status.config_information_check
+					? get_label.db_information_ok || 'Database: information config ok'
+					: get_label.db_information_invalid || 'Database: information config invalid!'
+				const db_information_class = db_status.config_information_check
+					? 'ok'
+					: 'error'
+				const db_information_check = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg ' + db_information_class,
+					inner_html		: information_label,
+					parent			: db_config_check_node
+				})
+			// config info_key_check
+				const info_key_label = db_status.config_info_key_check
+					? get_label.db_info_key_ok || 'Database: information key config ok'
+					: get_label.db_info_key_invalid || 'Database: information key config invalid!'
+				const db_info_key_class = db_status.config_info_key_check
+					? 'ok'
+					: 'error'
+				const db_info_key_check = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg ' + db_info_key_class,
+					inner_html		: info_key_label,
+					parent			: db_config_check_node
+				})
 
 			// db connection_check
 				const db_connection_check_label = db_status.db_connection_check
@@ -470,7 +482,7 @@ const render_config_block = function(self) {
 
 /**
 * RENDER_INSTALL_DB_BLOCK
-* Create contents nodes for current block
+* Creates contents nodes for current block
 * @param object self
 * @return DOM DocumentFragment
 */
@@ -484,8 +496,8 @@ const render_install_db_block = function(self) {
 	// check if the file exists in the correct path
 		if (!properties.target_file_path_exists) {
 			ui.create_dom_element({
-				element_type 	: 'div',
-				class_name		: 'error',
+				element_type	: 'div',
+				class_name		: 'msg error',
 				inner_html		: get_label.installation_db_error_file_path || 'Database file not found! Please verify that the installation file exists in: '+ properties.target_file_path,
 				parent			: fragment
 			})
@@ -511,7 +523,7 @@ const render_install_db_block = function(self) {
 			ui.create_dom_element({
 				element_type 	: 'div',
 				class_name		: 'db_config key',
-				inner_html		: config_item ,
+				inner_html		: config_item,
 				parent			: db_config_container
 			})
 			ui.create_dom_element({
@@ -531,7 +543,8 @@ const render_install_db_block = function(self) {
 		})
 		install_db_button.addEventListener('mouseup', async function() {
 
-			install_db_button.classList.add('loading')
+			// lock button
+				install_db_button.classList.add('loading')
 
 			// data_manager API call
 				const api_response = await data_manager.request({
@@ -543,33 +556,42 @@ const render_install_db_block = function(self) {
 						}
 					}
 				})
-			// manage result
+				// manage result
 				if (api_response.result===true) {
+
+					// all is OK case
 
 					console.log('DBB installed:', api_response);
 
-					// const root_pasword_form = render_set_root_pasword_form();
-					// instalation_pw_container.appendChild(root_pasword_form)
-					self.content_data.set_root_password_block.classList.remove('hide')
+					install_db_status.classList.add('ok')
+					install_db_status.innerHTML = api_response.msg
+
+					// show set_root_password_block
+					self.node.content_data.set_root_password_block.classList.remove('hide')
 
 					install_db_button.remove();
 
 				}else{
 
+					// fail case
+
 					console.error(api_response.msg);
+
+					install_db_status.classList.add('error')
+					install_db_status.innerHTML = api_response.msg
 				}
-			install_db_button.classList.remove('loading')
+
+			// unlock button
+				install_db_button.classList.remove('loading')
 		})//end mouse_up event
 
-	// const instalation_pw_container = ui.create_dom_element({
-	// 	element_type	: 'section',
-	// 	class_name		: 'instalation_pw_container',
-	// 	parent			: fragment
-	// })
-	// // temporal (ONLY TO SEE THE CONTENT)
-	// const root_pasword_form = render_set_root_pasword_form(self);
-	// instalation_pw_container.appendChild(root_pasword_form)
 
+	// install_db_status msg
+		const install_db_status = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'msg',
+			parent			: fragment
+		})
 
 	return fragment
 }//end render_install_db_block
@@ -585,14 +607,6 @@ const render_set_root_password_block = function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// input_new_pw label
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'label',
-		// 	inner_html		: get_label.password || 'Password',
-		// 	parent			: fragment
-		// })
-
 	// input_new_pw field
 		const input_new_pw = ui.create_dom_element({
 			element_type	: 'input',
@@ -607,15 +621,14 @@ const render_set_root_password_block = function(self) {
 			e.preventDefault()
 
 			// validated. Test password is acceptable string
-				const validated = component_password.prototype.validate_password_format(input_new_pw.value)
-
-				if (validated.result === false) {
-					input_new_pw.classList.remove('valid')
-					input_new_pw.classList.add('invalid')
-				}else{
-					input_new_pw.classList.remove('invalid')
-					input_new_pw.classList.add('valid')
-				}
+			const validated = component_password.prototype.validate_password_format(input_new_pw.value)
+			if (validated.result === false) {
+				input_new_pw.classList.remove('valid')
+				input_new_pw.classList.add('invalid')
+			}else{
+				input_new_pw.classList.remove('invalid')
+				input_new_pw.classList.add('valid')
+			}
 		})
 		input_new_pw.addEventListener('change', function(e) {
 			e.preventDefault()
@@ -627,6 +640,30 @@ const render_set_root_password_block = function(self) {
 				if (!validated.result) {
 					return false
 				}
+		})
+
+	// input_new_pw 2 field
+		const input_new_pw_retype = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'password',
+			class_name		: 'password_value',
+			value			: '', // default value
+			placeholder 	: get_label.new_pw_retype || 'Retype Password',
+			parent			: fragment
+		})
+		input_new_pw_retype.autocomplete = 'new-password'
+		input_new_pw_retype.addEventListener('keyup', function(e) {
+			e.preventDefault()
+
+			// validated. Test password is acceptable string
+			const validated = input_new_pw_retype.value === input_new_pw.value
+			if (validated === false) {
+				input_new_pw_retype.classList.remove('valid')
+				input_new_pw_retype.classList.add('invalid')
+			}else{
+				input_new_pw_retype.classList.remove('invalid')
+				input_new_pw_retype.classList.add('valid')
+			}
 		})
 
 	// checkbox show/hide
@@ -643,61 +680,16 @@ const render_set_root_password_block = function(self) {
 		})
 		label_checkbox_show.prepend(input_new_pw_show)
 		input_new_pw_show.addEventListener('click', function() {
-			if(input_new_pw.type === 'password'){
-				input_new_pw.type	= 'text'
-				input_new_pw_retype	= 'text'
+			if(input_new_pw.type === 'password') {
+				input_new_pw.type			= 'text'
+				input_new_pw_retype.type	= 'text'
 			}else{
-				input_new_pw.type	= 'password'
-				input_new_pw_retype	= 'password'
+				input_new_pw.type			= 'password'
+				input_new_pw_retype.type	= 'password'
 			}
 		})
 
-	// input_new_pw 2 field
-		// ui.create_dom_element({
-		// 	element_type 	: 'span',
-		// 	class_name		: 'label',
-		// 	inner_html		: get_label.new_pw_retype || 'Retype Password',
-		// 	parent			: fragment
-		// })
-		const input_new_pw_retype = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'password',
-			class_name		: 'password_value',
-			value			: '', // default value
-			placeholder 	: get_label.new_pw_retype || 'Retype Password',
-			parent			: fragment
-		})
-		input_new_pw_retype.autocomplete = 'new-password'
-		input_new_pw_retype.addEventListener('keyup', function(e) {
-			e.preventDefault()
-			// validated. Test password is acceptable string
-				const validated = input_new_pw_retype.value === input_new_pw.value
-					? true
-					: false
-				if (validated === false) {
-					input_new_pw_retype.classList.remove('valid')
-					input_new_pw_retype.classList.add('invalid')
-				}else{
-					input_new_pw_retype.classList.remove('invalid')
-					input_new_pw_retype.classList.add('valid')
-				}
-		})
-
-		// const input_new_pw_show_retype = ui.create_dom_element({
-		// 	element_type	: 'input',
-		// 	type			: 'checkbox',
-		// 	class_name		: 'password_show',
-		// 	value			: '', // default value
-		// 	parent			: fragment
-		// })
-		// input_new_pw_show_retype.addEventListener('click', function() {
-		// 	if(input_new_pw_retype.type === 'password'){
-		// 		input_new_pw_retype.type = 'text'
-		// 	}else{
-		// 		input_new_pw_retype.type = 'password'
-		// 	}
-		// })
-
+	// change_root_pw_button
 		const change_root_pw_button = ui.create_dom_element({
 			element_type 	: 'button',
 			class_name		: 'primary change_root_pw_button',
@@ -706,13 +698,15 @@ const render_set_root_password_block = function(self) {
 		})
 		change_root_pw_button.addEventListener('mouseup', async function() {
 
-			const validated = input_new_pw_retype.value===input_new_pw.value
-				? true
-				: false
+			// check mismatch retype
+				if(input_new_pw_retype.value!==input_new_pw.value){
+					const label = get_label.pw_dont_match || 'Password do not match!'
+					alert(label)
+					return false
+				}
 
-			if(!validated){
-				return false
-			}
+			// lock button
+				change_root_pw_button.classList.add('loading')
 
 			// data_manager API call
 				const api_response = await data_manager.request({
@@ -725,26 +719,41 @@ const render_set_root_password_block = function(self) {
 						}
 					}
 				})
-			// manage result
+				// manage result
 				if (api_response.result===true) {
 
+					// all is OK case
+
 					console.log('api_response:', api_response.msg)
+
+					set_pw_status.classList.add('ok')
+					set_pw_status.innerHTML = api_response.msg
+
 					change_root_pw_button.remove();
+
+					// show next block
+					self.node.content_data.login_block.classList.remove('hide')
 
 				}else{
 
+					// fail case
+
 					console.error(api_response.msg);
+
+					set_pw_status.classList.add('error')
+					set_pw_status.innerHTML = api_response.msg
 				}
+
+			// unlock button
+				change_root_pw_button.classList.remove('loading')
 		})
 
-		// const hierarchies_import_container = ui.create_dom_element({
-		// 	element_type	: 'section',
-		// 	class_name		: 'hierarchies_import_container',
-		// 	parent			: fragment
-		// })
-		// const hierarchies_import = render_hierarchies_import(self);
-		// hierarchies_import_container.appendChild(hierarchies_import)
-
+	// set_pw_status msg
+		const set_pw_status = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'msg',
+			parent			: fragment
+		})
 
 
 	return fragment
@@ -764,40 +773,9 @@ const render_login_block = async function(self) {
 	// login_container
 		const login_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'hide',
+			class_name		: 'login_container hide',
 			parent			: fragment
 		})
-
-	// login instance, build and render
-		const login = await get_instance({
-			model	: 'login',
-			mode	: 'edit'
-		})
-		// custom_action_dispatch
-			const custom_action_dispatch = function(api_response){
-				if (api_response.result===true) {
-					// login_status
-						login_status.classList.add('ok')
-						login_status.classList.remove('hide')
-					// login_node
-						login_node.classList.add('hide')
-					// show hierarchies_import_block
-						self.node.content_data.hierarchies_import_block.classList.remove('hide')
-				}else{
-					// login_status
-						login_status.classList.add('error')
-						login_status.innerHTML = api_response.msg || 'API response login fails'
-					// debug
-						console.warn('api_response.result:', api_response.result);
-				}
-				return api_response.result
-			}
-			login.custom_action_dispatch = custom_action_dispatch
-		// build with autoload to get login context from API
-			await login.build(true)
-		// render and assign node
-			const login_node = await login.render()
-			login_container.appendChild(login_node)
 
 	// to_login_button
 		const to_login_button = ui.create_dom_element({
@@ -807,9 +785,57 @@ const render_login_block = async function(self) {
 			parent			: fragment
 		})
 		to_login_button.addEventListener('mouseup', async function() {
-			// show the install_db
-			login_container.classList.remove('hide')
-			// this.remove();
+
+			// login instance, build and render
+				const login = await get_instance({
+					model	: 'login',
+					mode	: 'edit'
+				})
+
+			// custom_action_dispatch. Set before render to catch the on-login action
+				const custom_action_dispatch = function(api_response){
+
+					if (api_response.result===true) {
+
+						// all is OK case
+
+						// login_status
+							login_status.classList.add('ok')
+							login_status.classList.remove('hide')
+						// login_node
+							login_container.classList.add('hide')
+
+						// remove button to prevent press again
+							to_login_button.remove()
+
+						// show next block hierarchies_import_block
+							self.node.content_data.hierarchies_import_block.classList.remove('hide')
+
+					}else{
+
+						// fail case
+
+						// login_status
+							login_status.classList.add('error')
+							login_status.innerHTML = api_response.msg || 'API response login fails'
+
+						// debug
+							console.warn('api_response:', api_response);
+					}
+
+					return api_response.result
+				}
+				login.custom_action_dispatch = custom_action_dispatch
+
+			// build with autoload to get login context from API
+				await login.build(true)
+
+			// render and assign node
+				const login_node = await login.render()
+				login_container.appendChild(login_node)
+
+			// show the login_container
+				login_container.classList.remove('hide')
 		})//end mouse_up event
 
 	// login_status msg
@@ -856,14 +882,14 @@ const render_hierarchies_import_block = function(self) {
 
 	// list of hierarchies
 		const default_checked	= properties.install_checked_default || []
-		const hierarchies		= properties.hierarchies
+		const hierarchies		= properties.hierarchies || []
 		const hierarchies_len	= hierarchies.length
 
 		const hierachy_ul = ui.create_dom_element({
-				element_type	: 'ul',
-				class_name		: 'hierachy_ul',
-				parent			: fragment
-			})
+			element_type	: 'ul',
+			class_name		: 'hierachy_ul',
+			parent			: fragment
+		})
 		const hierarchies_to_install = []
 		for (let i = hierarchies_len - 1; i >= 0; i--) {
 
@@ -924,7 +950,10 @@ const render_hierarchies_import_block = function(self) {
 			parent			: fragment
 		})
 		import_hierarchies_button.addEventListener('mouseup', async function(){
-			console.log('hierarchies_to_install:', hierarchies_to_install);
+
+			// lock button
+				import_hierarchies_button.classList.add('loading')
+				hierachy_ul.classList.add('loading')
 
 			// data_manager API call
 				const api_response = await data_manager.request({
@@ -937,18 +966,141 @@ const render_hierarchies_import_block = function(self) {
 						}
 					}
 				})
-			// manage result
-				if (api_response.result===true) {
 
-					console.log('api_response:', api_response.msg)
-					// change_root_pw_button.remove();
+			// manage result
+				if (api_response.result===false) {
+
+					// fail case
+
+					console.error(api_response.msg);
+
+					import_hiearachies_status.classList.add('error')
+					import_hiearachies_status.innerHTML = api_response.msg
 
 				}else{
 
-					console.error(api_response.msg);
+					const false_check = api_response.result.find(el => el.result === false)
+					if(false_check) {
+
+						// some import file fail case
+
+						import_hiearachies_status.classList.add('error')
+						import_hiearachies_status.innerHTML = false_check.msg
+
+					}else{
+
+						// all is OK case
+
+						import_hiearachies_status.classList.add('ok')
+						import_hiearachies_status.innerHTML = api_response.msg
+
+						import_hierarchies_button.remove()
+
+						// show next block
+						self.node.content_data.install_finish_block.classList.remove('hide')
+					}
 				}
+
+			// unlock button
+				import_hierarchies_button.classList.remove('loading')
+				hierachy_ul.classList.remove('loading')
+		})
+
+	// import_hiearachies_status msg
+		const import_hiearachies_status = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'msg',
+			parent			: fragment
 		})
 
 
 	return fragment
 }//end render_hierarchies_import_block
+
+
+
+
+/**
+* RENDER_INSTALL_FINISH_BLOCK
+* @param object self
+* @return DOM node content_value
+*/
+const render_install_finish_block = function(self) {
+
+	const fragment = new DocumentFragment();
+
+	// info
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description info ok',
+			inner_html		: get_label.install_finished || 'Congrats! The installation process was successfully, Dédalo is ready.',
+			parent			: fragment
+		})
+
+		const install_finish_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'success install_finish_button',
+			inner_html		: get_label.install_finished || ' Let\'s go! ',
+			parent			: fragment
+		})
+		install_finish_button.addEventListener('mouseup', async function(){
+
+			// lock button
+				install_finish_button.classList.add('loading')
+
+			// data_manager API call
+				const api_response = await data_manager.request({
+					body : {
+						action	: 'install',
+						dd_api	: 'dd_utils_api',
+						options	: {
+							action	: 'install_finish'
+						}
+					}
+				})
+
+			// manage result
+				if (api_response.result===false) {
+
+					// fail case
+
+					console.error("install_finish api_response:", api_response);
+
+					install_finish_status.classList.add('error')
+					install_finish_status.innerHTML = api_response.msg
+
+
+				}else{
+
+					// all is OK case
+
+					console.log("install_finish api_response:", api_response);
+
+					install_finish_status.classList.add('ok')
+					install_finish_status.innerHTML = api_response.msg + ' Setting up!'
+
+					let counter = 5;
+					const interval = setInterval(() => {
+						install_finish_status.innerHTML = api_response.msg + ' Initializing in ' + counter
+						counter--;
+						if (counter < 0 ) {
+							clearInterval(interval);
+							location.reload()
+						}
+					}, 1000);
+				}
+
+			// unlock button
+				install_finish_button.classList.remove('loading')
+		})
+
+	// install_finish_status msg
+		const install_finish_status = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'msg',
+			parent			: fragment
+		})
+
+
+	return fragment
+}//end render_install_finish_block
