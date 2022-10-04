@@ -101,7 +101,7 @@ You can use our ready to use VM for develop (only V5 available):
 Or follow the install video (video show all install process of v5, that is similar for v6):
 <p><a href="https://dedalo.dev/v5_install" target="_blank">Dedalo V5 install video on CentOS</a></p>
 
-Or do it manually:
+Or do it manually (provisional installation instructions for v6 beta):
 1. Download Dédalo and copy to the httpdocs of web server
 2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
 3. Rename the /dedalo/config/sample.config.php to /dedalo/config/config.php.
