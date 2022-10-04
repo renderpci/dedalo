@@ -4,7 +4,15 @@
 
 *Dédalo*
 
+**IMPORTANT: V6 ontology compatibility for V4 and V5**
+*Starting at 21-05-2020, the ontology in V4 and V5 need to be update with a new column into the "jer_dd" table named "properties", for compatibility with the upcoming V6, this new column will not affect v4 or V5 normal function but the new exported ontologies files from master will include this column in copy files. If you don't add this column to jer_dd, Dédalo will can't import the new files and you will can lost the ontology data, although you can re-build jer_dd making the import process manually.
+Read the update V5.6.0*
+
+**ATENTION: this v6_developer branch is in beta state, don't use it in production**
+
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory.
+
+<p><a href="https://dedalo.dev" target="_blank">Official Dédalo webpage</a></p>
 
 Dédalo is a Open Source software based in a new paradigm of programing: develop objects with a ontology model. The ontology control the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. The objects are built with a MVC structure and are linked to the ontology. The database use a NoSQL model, all data is stored in JSONB (binary).
 
@@ -14,14 +22,14 @@ Dédalo use the structured Ontology for three things:
 	2. Build the programing objects in the execution time (in real time).
 	3. Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
-The ontology can be changed by the time and this will change the data and the programing code; it's possible develop new functionalities without change the data, and you can change the metadata without change the code or the data.
+The ontology can be changed by the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
 
-Dédalo is based in linked data model, and use a relative, multi reference and universal locator. The locator can find:
+Dédalo is based in linked data model, and use a relative, multi-reference and universal locator. The locator can find:
 entity, section, component, and tag. In other words, the locator can find, archives (in others entities), records, fields, and part of the fields (sub-field data).
 
 Dédalo is a real multilingual app (Dédalo can use any language) in the interface and the managed data, has a multi-thesaurus engine and manage multiple resources and resolutions for video, image, pdf, notation scores, etc.
 
-Dédalo has a geo-reference for the cultural goods, interviews, etc. with points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
+Dédalo has a geo-reference for the cultural properties, interviews, etc. with points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
 
 Dédalo can handle and cut video in real time for find thematic parts of interviews or cultural goods (fragments of interviews / cultural goods), for 4k, HD 1080, 720, 404 resolutions.
 
@@ -29,94 +37,86 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 
 You can see Dédalo in action:
 
-<p><a href="https://dedalo.render.es/dedalo/lib/dedalo/main/?t=oh1" target="_blank">Dédalo demo</a></p>
+<p><a href="https://dedalo.render.es/" target="_blank">Dédalo demo</a></p>
 
 Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 <p><strong>Projects: </strong>
 <p><a href="http://www.occupation-memories.org/de/archive/index.html" target="_blank">Freie Universität Berlin</a></p>
-<p><a href="https://numisdata.org/sardinia/" target="_blank">Findsopts in Sardinia</a></p>
+<p><a href="https://monedaiberica.org" target="_blank">Moneda Ibérica catalog</a></p>
 <p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>
 <p><a href="https://arxiu.memoria.gencat.cat/en/app/#/" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
 <p><a href="https://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>
 <p><a href="http://memoriahistorica.paiporta.es" target="_blank">Arxiu de la Memòria Històrica de Paiporta</a> Delegación de Memoria Histórica de la Diputación de Valencia </p>
-<p><a href="https://numisdata.org/valencia/" target="_blank">Monedas, medallas y fichas de la colección de Vidal Valle</a></p>
 <p><a href="http://memoriahistorica.dival.es/recursos/archivo-memoria-historica/" target="_blank">Nuestra Memoria. Archivo de historia oral</a></p>
-<p><a href="http://memorialdemocratic.gencat.cat/ca/exposicions/expcicions_virtuals/catalunya_en_transicio/" target="_blank">
-	Catalonia in transition</a> (Transition in Catalonia - Memorial Democràtic)</p>
+<p><a href="https://exhumacionestempranas.navarra.es" target="_blank"> Lur Azpian, Desobiratze Goiztiarrak Nafarroan| Bajo tierra, Exhumaciones tempranas en Navarra </a> (Underground Early exhumations in Navarra - Instituto Navarro de Memoria)</p>
 <p><a href="http://www.museudelaparaula.es" target="_blank">Museu de la Paraula</a> (Archivo de la Memoria Oral Valenciana)</p>
 <p><a href="http://www.museudelaparaula.es/colecciones/?lang=es" target="_blank">Collection of funds from MUVAET</a> (Museu Valencià d'Etnologia)</p>
 
 
-**DEPENDENCES**
+**DEPENDENCIES**
 
 *Required for the OS*
 
-- PHP 7.2+
-- Apache 2.4.2+
-- PostgreSQL 10.1+
+- PHP 8.1+
+- Apache 2.4.6+
+- Postgres 12.1+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication).
 
 *libs required for the Dédalo*
 
-Note: If you want install a basic libs dependencies pre-built and tested, you can use the pack in:
-	/install/library_packs/Dedalo_basic_library_pack_2019.zip
-un zip the file and move th libraries to:
-	/dedalo/lib/
-
-- Jquery 2.2.3
-- bootstrap 3.1.1
-- calendar 1.25
-- Captionator 0.5.1
-- FullCalendar v2.3.1
-- geoip2
-- jshash md5 v2.2
-- json-logic
-- leaflet 1.0
+- flatpickr 4.6.3
+- geoip2 (!)
+- json-view
+- leaflet 1.8+
+- geoman 2.13.0
 - lessphp v0.4.0
+- d3
+- mocha 9.2.2
+- chai 4.3.3
 - nvd3 1.7.1
 - paper 0.9.25
 - pdfjs 1.1.1
 - pdfkit
-- PdfParser (2014)
 - tcpdf 6.2.5
-- tinymce 4.3.10
+- ckeditor 5+
 - wexflow 1.2
 
-Some libraries like ffmpeg or ImageMagick need to be install directly in the system (CentOs, Debian, MacOs X, etc)
+Some libraries like ffmpeg or ImageMagick need to be install directly in the system (Ubuntu, Debian, MacOs X, etc)
 
 SO libraries:
-- ffmpeg 2.6.1+
+- Ffmpeg 4.0+
+- Ffprobe 2.6.1+
 - qtfaststart 1.0
 - ImageMagick 6.9+
-- ffprobe 2.6.1+
-- NodeJS 5.10.1
-- Xpdf 4.00.01+
+- Xpdf command line tools 4.00.01+
 - wkhtmltopdf 0.12.1-08b0817
 
 
 **INSTALLATION**
 
+You can use our ready to use VM for develop (only V5 available):
+<p><a href="https://dedalo.dev/v5" target="_blank">Dedalo V5</a></p>
+
+Or follow the install video (video show all install process of v5, that is similar for v6):
+<p><a href="https://dedalo.dev/v5_install" target="_blank">Dedalo V5 install video on CentOS</a></p>
+
+Or do it manually:
 1. Download Dédalo and copy to the httpdocs of web server
 2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
-3. Restore the file /install/db/dedalo4_install.backup to the postgres created DB.
+3. Rename the /dedalo/config/sample.config.php to /dedalo/config/config.php.
+4. Change the /dedalo/config/config.php to with your project needs.
+5. Rename the /dedalo/config/sample.config_db.php to /dedalo/config/config_db.php.
+6. Change the /dedalo/config/config_db.php with your DB configuration.
+7. Rename the /dedalo/config/sample.config_core.php to /dedalo/config/config_core.php.
+8. Rename the /dedalo/config/sample.config_areas.php to /dedalo/config/config_areas.php.
+9. Run Dédalo into the browser.
+10. Follow the instructions.
+11. When the install process will done, login and go to Development Area and register all tools.
+12. Create admin user to be used in normal edition.
+13. log-out and log-in with the admin user.
+14. Create Users and Projects as you need.
 
-		Basic pg_restore:
-		pg_restore /install/db/dedalo4_install.backup dedalo_xx
-
-		Example of actual use:
-		pg_restore --host localhost --port 5432 --username "XXX" --dbname "dedalo4_xx" --role "xxx" --no-owner --no-privileges --clean --verbose "/install/db/dedalo4_install.backup"
-
-4. Download the dependencies and libs for Dédalo and install it into the /lib/ folder. In some cases you need see the /lib/dedalo/config/sample.config4.php file in order to change or customize the installation.
-5. Rename the /lib/dedalo/config/sample.config4.php to /lib/dedalo/config/config4.php.
-6. Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
-7. Rename the /lib/dedalo/config/sample.config4_db.php to /lib/dedalo/config/config4_db.php.
-8. Run Dédalo into the browser.
-9. Fix your root password (you can change it only once), the default account is: root (this user is a superuser and only for development or debugger the application).
-10. Create one Administrator user account with all access to the system. This user will be the administrator of the system.
-11. Logout and login with the Administrator account.
-12. Create Users and Projects as you need.
-Optional: Import the toponymy that you will need (Dédalo install DB will not provide specific toponymy by default anymore).
 
 **UPDATE**
 
@@ -127,7 +127,7 @@ Dédalo have three main updates procedures:
 1. Update the code files (php, js, css, html, etc)
 	-  Make backup of all files.
 	-  Download the new files and change the files in your server
-	-  You will need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php) is not possible change this files automatically because are the configuration files and it has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+	-  You will need see the new config files and put the changes into your own config files (/dedalo/config/config.php and /dedalo/config/config_db.php) is not possible change this files automatically because are the configuration files and it has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
 
 2. Update the ontology structure with the sections, components, list, etc
 	-  Do the first update step
@@ -144,7 +144,7 @@ Dédalo have three main updates procedures:
 	-  If all go well you will see a report with the changes.
 	-  Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v4.0.9 pass from v4.0.9 to -> v4.0.10, v4.0.10 to -> v4.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
 	-  Log-out and log-in with normal admin user.
-	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" into the list of the sections for update some changes into the components (this task force to update all components with the new model 1 to 1), and will apply the changes to the data into the databases.
+	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" into the list of the sections for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
 
 **IMPORT TOPONYMY**
 
@@ -170,7 +170,7 @@ Dédalo have three main updates procedures:
 	-  Login to Dédalo with developer user
 	-  Go to the "administration tool" and see the:
 		-  DEDALO COUNTERS STATE
-	-  You will see the differences and Dédalo show the SQL command to apply into the postgreSQL, similar to this:
+	-  You will see the diferences and Dédalo show the SQL command to apply into the postgreSQL, similar to this:
 		-  UPDATE "matrix_counter" SET dato = 75845 WHERE tipo = 'es1';
 	-  This command will change the counters to the new imported values in SQL
 	-  Change the profiles to access users to the new hierarchy.
@@ -181,10 +181,11 @@ Dédalo have three main updates procedures:
 **SERVER SYSTEM**
 
 Dédalo in the server part is tested into the next Operating Systems:
-- CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7,5
-- Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7.5
-- Debian 8.7
-- MacOsX 10.10 (deprecated update as soon as possible), 10.11, 10.12+
+- Ubuntu Server 20.04+
+- Debian 9.0+
+- MacOsX 11.0+
+- CentOS, Fedora and RedHat situation. We are stopping Dédalo testing into RedHat/CenOS/Fedora model due CentOS project focus was changed. The main OS will be Ubuntu to test Dédalo. RedHat/CentOS/Fedora will become to the category of "all other linux that we don't test it".
+<p><a href="https://blog.centos.org/2020/12/future-is-centos-stream/?utm_source=rss&utm_medium=rss&utm_campaign=future-is-centos-stream" target="_blank">CentOS blog</a></p>
 
 All other Linux will be compatible but we don't test it.
 
@@ -192,19 +193,22 @@ Windows: is possible that Dédalo can run, but we NO TESTED.
 
 **USE**
 
-Dédalo version 4, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...).
+Dédalo version v6+, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, Edge (77+), ...).
 Firefox situation: From the 4.8 version of Dédalo is full compatible with Firefox, and can be used in production, but we need more feedback from the users, please comment your experience.
 
 Browser	|	Version |	certificated
 --------- | --------- | ---------
-Chrome	|	60+ | YES - recommended
-Chrome	|	50+ | Deprecated (Please update as soon as possible)
-Chrome	|	0 to 50 | NO
-Safari	|	10+ | YES
-Safari	|	9 | Deprecated (Please update as soon as possible)
-Safari	|	0 to 7 | NO
-Firefox	|	50+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (10-09-2018), please test it and comment it.
-Firefox	|	40-49 | NO
+Chrome	|	106+ | YES - recommended
+Chrome	|	100 to 105 | Deprecated (Please update as soon as possible)
+Chrome	|	0 to 100 | NO
+Safari	|	16+ | YES
+Safari	|	15 | Deprecated (Please update as soon as possible)
+Safari	|	0 to 14 | NO
+Firefox	|	105+ | YES
+Firefox	|	100 to 104 | Deprecated (Please update as soon as possible)
+Firefox	|	0-99 | NO
 Firefox	|	0-40 | NO
-EDGE	| All 	| For us NO, we don't test it. But, is possible that Dédalo run fine in the last versions, because Microsoft say that EDGE is ECMA and HTML5 standards compatible. But we insist that we don't test it.
+EDGE	|	106+ | YES
+EDGE	| 	100 to 105 | Deprecated (Please update as soon as possible)
+EDGE	| 	0 to 100 | NO
 IExplorer	| All 	| NO
