@@ -5,8 +5,10 @@
 */
 .install {
 	padding: 4em;
+	padding-top: 1rem;
 	line-height: 1.45rem;
 
+	// background image logo dedalo
 	&:before {
 		content: ' ';
 		background-image: url('../../themes/default/dedalo_icon_big.png');
@@ -33,11 +35,13 @@
 
 	// msg
 	.msg {
+		display: block;
+
 		// error, ok
 		&.error, &.ok, &.warning {
 			line-height: 1.1em;
 			background-color: transparent !important;
-			display: inline-block;
+			display: block;
 			margin: 0;
 			padding-left: 0;
 			font-size: 1.1rem;
@@ -101,8 +105,7 @@
 			padding-right: 3rem;
 			font-weight: 600;
 		}
-	}
-
+	}//end .config_block
 
 	// install_db_block
 	.install_db_block {
@@ -128,16 +131,19 @@
 		// .install_db_button {
 		// 	.button_common_mixin;
 		// }
-	}
+	}//end .install_db_block
 
 	// set_root_password_block
 	.set_root_password_block {
 
 		// input validation styles
 		.password_value {
-			width: 20rem;
+			width: 22rem;
 			margin-left: 0.5rem;
-			margin-right: 0.5rem;
+			// margin-right: 0.5rem;
+			margin-right: 1rem;
+			height: 2.5rem;
+			display: inline-block;
 		}
 		.valid {
 			border-bottom: 3px solid green;
@@ -151,6 +157,7 @@
 			display: block;
 			line-height: 0.5rem;
 			padding: 1rem;
+			cursor: pointer;
 
 			// checkbox
 			>.password_show {
@@ -164,7 +171,7 @@
 		// .change_root_pw_button {
 		// 	.button_common_mixin;
 		// }
-	}
+	}//end .set_root_password_block
 
 	// hierarchies_import_block
 	.hierarchies_import_block {
@@ -197,7 +204,12 @@
 		// .import_hierarchies_button {
 		// 	.button_common_mixin;
 		// }
-	}//end .hierarchies_import_container
+	}//end .hierarchies_import_block
+
+	// install_finish_block
+	.install_finish_block {
+
+	}//end .install_finish_block
 
 
 }//end .install
