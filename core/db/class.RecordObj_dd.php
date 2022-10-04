@@ -296,11 +296,16 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	protected static function get_counter_value(string $tld) : int {
 
-		$strQuery		= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
-		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
-		$counter_value	= pg_fetch_assoc($result)['counter'];
+		$strQuery	= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
+		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+		$value		= pg_fetch_assoc($result);
+		if ($value===false) {
+			debug_log(__METHOD__." Error on get counter ".to_string($strQuery), logger::ERROR);
+			return 0;
+		}
 
-		if ($counter_value===false || is_null($counter_value)) {
+		$counter_value	=  $value['counter'] ?? null;
+		if (empty($counter_value)) {
 			if(SHOW_DEBUG===true) {
 				//debug_log(__METHOD__." Error on get_counter_value 'RecordObj_dd_edit'. counter for tld not found. ".to_string(), logger::WARNING);
 			}
@@ -980,8 +985,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* SET_RELACIONES
 	* Set relaciones as JSON (MODELO: $ar_relaciones[$terminoID_source][] = array($modelo => $terminoID_rel))
+	* @param mixed $ar_relaciones
+	* 	Could array, string, null
 	*/
-	public function set_relaciones(array $ar_relaciones) {
+	public function set_relaciones( ?array $ar_relaciones) {
 
 		return parent::set_relaciones(json_encode($ar_relaciones));
 	}//end set_relaciones
@@ -1004,7 +1011,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			foreach($ar_values as $modeloID => $terminoID) {
 
-				if($terminoID != $terminoID_to_unlink) $ar_final[] =  array($modeloID => $terminoID);
+				if($terminoID != $terminoID_to_unlink) {
+					$ar_final[] = array($modeloID => $terminoID);
+				}
 			}
 		}
 
