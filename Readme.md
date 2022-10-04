@@ -105,7 +105,7 @@ Or do it manually (provisional installation instructions for v6 beta):
 1. Download Dédalo and copy to the httpdocs of web server
 2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
 3. Rename the /dedalo/config/sample.config.php to /dedalo/config/config.php.
-4. Change the /dedalo/config/config.php to with your project needs.
+4. Change the /dedalo/config/config.php with your project needs.
 5. Rename the /dedalo/config/sample.config_db.php to /dedalo/config/config_db.php.
 6. Change the /dedalo/config/config_db.php with your DB configuration.
 7. Rename the /dedalo/config/sample.config_core.php to /dedalo/config/config_core.php.
@@ -117,6 +117,7 @@ Or do it manually (provisional installation instructions for v6 beta):
 13. log-out and log-in with the admin user.
 14. Create Users and Projects as you need.
 
+Note: the beta state has not cache control, so in the beta period we recommend to open the console of the browser and remove the browser cache.
 
 **UPDATE**
 
