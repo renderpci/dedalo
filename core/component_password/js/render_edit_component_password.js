@@ -57,15 +57,17 @@ render_edit_component_password.prototype.edit = async function(options) {
 */
 const get_content_data_edit = function(self) {
 
+	const key = 0
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add('nowrap')
 
 	// value (input)
-		const content_value	= get_content_value(0, self)
+		const content_value	= get_content_value(key, self)
 		content_data.appendChild(content_value)
 		// set pointers
-		content_data[0] = content_value
+		content_data[key] = content_value
 
 
 	return content_data
@@ -74,7 +76,11 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* get_content_value
+* GET_CONTENT_VALUE
+* @param int i
+* 	Value array key
+* @param object
+* 	component instance
 * @return DOM node content_value
 */
 const get_content_value = function(i, self) {
@@ -103,7 +109,8 @@ const get_content_value = function(i, self) {
 				// }
 
 			// validated. Test password is acceptable string
-				const validated = self.validate_password_format(input.value)
+				const validation_obj	= self.validate_password_format(input.value)
+				const validated			= validation_obj.result
 				ui.component.error(!validated, input)
 				if (!validated) {
 					return false
