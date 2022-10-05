@@ -30,7 +30,7 @@
 	</style>
 	<script defer="defer" rel="preload" src="../common/js/environment.js.php" as="script"></script>
 	<link rel="stylesheet" type="text/css" href="../page/css/main.css">
-	<script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script>
+	<!-- <script defer="defer" src="../../lib/tinymce/js/tinymce/tinymce.min.js"></script> -->
 	<script defer="defer" src="../../lib/ckeditor/build/ckeditor.js"></script>
 </head>
 <body>
@@ -78,7 +78,7 @@
 				// request page context (usually menu and section context)
 				const api_response = await data_manager.request({
 					body : rqo
-				})
+				});
 				console.log(`+++ API start: ${(performance.now()-t0).toFixed(3)} rqo:`, rqo, 'api_response', api_response);
 
 			// error case

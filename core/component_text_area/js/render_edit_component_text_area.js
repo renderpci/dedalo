@@ -225,7 +225,9 @@ const get_input_element = (i, current_value, self) => {
 			: (self.render_level==='content') ? true : false
 		// const auto_init_editor = true
 		if (auto_init_editor===true) {
+
 			// activate now
+
 			value_container.classList.add('loading')
 			// use timeout only to force real async execution
 			setTimeout(function(){
@@ -235,7 +237,9 @@ const get_input_element = (i, current_value, self) => {
 				// })
 			}, 50)
 		}else{
+
 			// activate on user click
+
 			content_value.addEventListener('click', fn_click_init)
 			function fn_click_init(e) {
 				value_container.classList.add('loading')
