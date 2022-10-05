@@ -153,7 +153,7 @@ export const service_ckeditor = function() {
 				// 	writer.setStyle('min-height', '600px', editor.editing.view.document.getRoot());
 				// 	writer.setStyle('min-width', '600px', editor.editing.view.document.getRoot());
 				// });
-				console.log('+++++++++++++++++++++++++++++++ create_InlineEditor editor:', editor);
+				// console.log('+++++++++++++++++++++++++++++++ create_InlineEditor editor:', editor);
 
 				// click event
 					self.click = function(e) {
