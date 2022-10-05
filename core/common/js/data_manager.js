@@ -174,7 +174,7 @@ data_manager.get_local_db = async function() {
 
 	// db storage
 		// In the following line, you should include the prefixes of implementations you want to test.
-		const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+		const current_indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
 		// DON'T use "var indexedDB = ..." if you're not in a function.
 		// Moreover, you may need references to some window.IDB* objects:
 		// const IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
@@ -182,20 +182,24 @@ data_manager.get_local_db = async function() {
 		// (Mozilla has never prefixed these objects, so we don't need window.mozIDB*)
 
 	// invalid local db case
-		if (!indexedDB) {
+		if (!current_indexedDB) {
 			console.error("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
 		}
 
 	// open db. Let us open our database (name, version)
-		const db_request = indexedDB.open("dedalo", 6);
+		const db_request = current_indexedDB.open("dedalo", 6);
 
 
 	return new Promise(function(resolve, reject){
 
 		// error case
 			db_request.onerror = function(event) {
+				if(SHOW_DEBUG){
+					console.log("-> get_local_db error:", event.target);
+				}else{
+					console.log("-----> It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
+				}
 
-				console.error("-> get_local_db error:", event.target);
 				reject(false)
 			};
 
@@ -240,7 +244,9 @@ data_manager.get_local_db = async function() {
 					// };
 			};
 	})
-	.catch(err => { console.error(err) });
+	.catch(err => {
+		// console.error(err)
+	});
 }//end local_db
 
 
@@ -270,6 +276,11 @@ data_manager.set_local_db_data = async function(data, table) {
 	// get local db
 		const db = await self.get_local_db()
 
+	// check if is possible create and use IndexDB, if not, the promise will return undefined and we use false
+		if(!db){
+			return false
+		}
+
 	return new Promise(function(resolve, reject){
 
 		// transaction
@@ -280,7 +291,11 @@ data_manager.set_local_db_data = async function(data, table) {
 				// };
 			// error
 				transaction.onerror = function(event) {
-					console.error("-> set_local_db_data error:", event.target);
+					if(SHOW_DEBUG){
+						console.log("-> get_local_db error:", event.target);
+					}else{
+						console.log("-----> It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
+					}
 					reject(false)
 				};
 
@@ -327,6 +342,11 @@ data_manager.get_local_db_data = async function(id, table, cache=false) {
 				return db_table[table]
 			  })()
 			: await self.get_local_db()
+
+	// check if is possible create and use IndexDB, if not, the promise will return undefined and we use false
+		if(!db){
+			return false
+		}
 		// console.log(`__Time [data_manager.get_local_db_data] table:${table} id:${id} ms: `, performance.now()-t0);
 
 	return new Promise(function(resolve, reject){
@@ -339,8 +359,13 @@ data_manager.get_local_db_data = async function(id, table, cache=false) {
 				// };
 			// error
 				transaction.onerror = function(event) {
-					console.error("-> get_local_db_data error:", event.target);
-					console.log('table:', table, 'db:',db);
+					if(SHOW_DEBUG){
+						console.log("-> get_local_db_data error:", event.target);
+						console.log('table:', table, 'db:',db);
+					}else{
+						console.log("-----> It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
+					}
+
 					reject(false)
 				};
 
@@ -372,6 +397,11 @@ data_manager.delete_local_db_data = async function(id, table) {
 	// get local db
 		const db = await self.get_local_db()
 
+	// check if is possible create and use IndexDB, if not, the promise will return undefined and we use false
+		if(!db){
+			return false
+		}
+
 	return new Promise(function(resolve, reject){
 
 		// transaction
@@ -382,7 +412,11 @@ data_manager.delete_local_db_data = async function(id, table) {
 				// };
 			// error
 				transaction.onerror = function(event) {
-					console.error("-> get_local_db_data error:", event.target);
+					if(SHOW_DEBUG){
+						console.log("-> get_local_db_data error:", event.target);
+					}else{
+						console.log("-----> It's not possible get_local_db, IndexedDB is blocked ");
+					}
 					reject(false)
 				};
 
