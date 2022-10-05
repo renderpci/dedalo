@@ -391,8 +391,7 @@ data_manager.delete_local_db_data = async function(id, table) {
 			const request		= objectStore.delete(id);
 
 			request.onsuccess = function(event) {
-				// event.target.result === customer.ssn;
-				// console.log("Yuppiii:", event.target);
+				// success
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {

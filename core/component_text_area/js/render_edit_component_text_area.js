@@ -213,7 +213,6 @@ const get_input_element = (i, current_value, self) => {
 			// fix current_service_text_editor when is ready
 				self.text_editor[i] = current_service_text_editor
 
-
 			return current_service_text_editor
 		}//end init_current_service_text_editor
 
@@ -221,10 +220,10 @@ const get_input_element = (i, current_value, self) => {
 		value_container.innerHTML = value
 
 	// user click in the wrapper and init the editor
-		// const auto_init_editor = self.auto_init_editor!==undefined
-		// 	? self.auto_init_editor
-		// 	: (self.render_level==='content') ? true : false
-		const auto_init_editor = true
+		const auto_init_editor = self.auto_init_editor!==undefined
+			? self.auto_init_editor
+			: (self.render_level==='content') ? true : false
+		// const auto_init_editor = true
 		if (auto_init_editor===true) {
 			// activate now
 			value_container.classList.add('loading')
@@ -234,7 +233,7 @@ const get_input_element = (i, current_value, self) => {
 				// .then(()=>{
 					value_container.classList.remove('loading')
 				// })
-			}, 5)
+			}, 50)
 		}else{
 			// activate on user click
 			content_value.addEventListener('click', fn_click_init)

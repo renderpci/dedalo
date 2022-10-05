@@ -1088,6 +1088,7 @@ const render_hierarchies_import_block = function(self) {
 						}
 					}
 				})
+				console.log('install_hierarchies response: ', api_response);
 
 			// manage result
 				if (api_response.result===false) {

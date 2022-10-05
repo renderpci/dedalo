@@ -331,6 +331,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// load data if is not already received as option
 		if (autoload===true) {
+			const t0 = performance.now()
 
 			// get context and data
 				const api_response = await data_manager.request({
@@ -341,8 +342,8 @@ section.prototype.build = async function(autoload=false) {
 						console.error("section build autoload api_response:",api_response);
 					}
 					const response	= clone(api_response)
-					const exec_time	= api_response.debug ? api_response.debug.real_execution_time : null
-					dd_console("SECTION api_response:", 'DEBUG', [self.id, response, exec_time]);
+					const exec_time	= (performance.now()-t0).toFixed(3)
+					dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
 				}
 
 			// set the result to the datum
@@ -364,7 +365,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo regenerate
 				await generate_rqo()
-				// console.log("SECTION self.rqo after load:", clone(self.rqo) );
+				// console.log('SECTION self.rqo after load:", clone(self.rqo) );
 
 			// count rows
 				if (!self.total) {

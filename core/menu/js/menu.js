@@ -101,7 +101,12 @@ menu.prototype.build = async function(autoload=true){
 			// set the result to the datum
 				self.datum = menu_cache_data.value
 
-			console.log("__Time [menu.build] returned menu datum from local_db ", self.id, performance.now()-t0);
+			// debug
+				// const total = (performance.now()-t0).toFixed(3)
+				// if (total>20) {
+				// 	// console.warn(msg, total, self);
+				// 	console.log("__Time [menu.build] returned menu datum from local_db ", self.id, total);
+				// }
 
 		}else{
 
