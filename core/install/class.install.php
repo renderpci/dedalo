@@ -455,6 +455,7 @@ class install extends common {
 				if (empty($command_res)) {
 					$response->msg = 'Error. Database import failed! Verify your .pgpass file';
 					trigger_error($response->msg);
+					debug_log(__METHOD__." -> failed command: ".PHP_EOL.$command, logger::ERROR);
 					return $response;
 				}
 			}
@@ -503,7 +504,7 @@ class install extends common {
 				$rows	= (array)pg_fetch_assoc($result); // returns 'f' for false, 't' for true
 				$value	= reset($rows);
 				if (!$result) {
-					$msg = " Error on db execution 1 (clone database): ".pg_last_error();
+					$msg = " Error on db execution 1 (clone database): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 
@@ -539,7 +540,7 @@ class install extends common {
 				if ($exec) {
 					$result = pg_query(DBi::_getConnection(), $sql);
 					if (!$result) {
-						$msg = " Error on db execution (clone database): ".pg_last_error();
+						$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
 						debug_log(__METHOD__.$msg, logger::ERROR);
 						$response->msg = $msg;
 
@@ -559,7 +560,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (clone database): ".pg_last_error();
+					$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 
@@ -575,7 +576,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (clone database): ".pg_last_error();
+					$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 
@@ -622,7 +623,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (jer_dd): ".pg_last_error();
+					$msg = " Error on db execution (jer_dd): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -644,7 +645,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error();
+					$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -659,7 +660,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					debug_log(__METHOD__." Error on db execution (re-index ontology tables): ".pg_last_error(), logger::ERROR);
+					debug_log(__METHOD__." Error on db execution (re-index ontology tables): ".pg_last_error(DBi::_getConnection()), logger::ERROR);
 					return $response;
 				}
 			}
@@ -699,7 +700,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (matrix_counter): ".pg_last_error();
+					$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -721,7 +722,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (main_dd): ".pg_last_error();
+					$msg = " Error on db execution (main_dd): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -768,7 +769,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (clean tables): ".pg_last_error();
+					$msg = " Error on db execution (clean tables): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -814,7 +815,7 @@ class install extends common {
 		// 		if ($exec) {
 		// 			$result   = pg_query($db_install_conn, $sql);
 		// 			if (!$result) {
-		// 				$msg = " Error on db execution (matrix_hierarchy): ".pg_last_error();
+		// 				$msg = " Error on db execution (matrix_hierarchy): ".pg_last_error(DBi::_getConnection());
 		// 				debug_log(__METHOD__.$msg, logger::ERROR);
 		// 				$response->msg = $msg;
 		// 				return $response;
@@ -829,7 +830,7 @@ class install extends common {
 		// 		if ($exec) {
 		// 			$result   = pg_query($db_install_conn, $sql);
 		// 			if (!$result) {
-		// 				debug_log(__METHOD__." Error on db execution (re-index matrix_hierarchy tables): ".pg_last_error(), logger::ERROR);
+		// 				debug_log(__METHOD__." Error on db execution (re-index matrix_hierarchy tables): ".pg_last_error(DBi::_getConnection()), logger::ERROR);
 		// 				return $response;
 		// 			}
 		// 		}
@@ -962,7 +963,7 @@ class install extends common {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error();
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -1083,7 +1084,7 @@ class install extends common {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error();
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -1286,7 +1287,7 @@ class install extends common {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error();
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -1494,7 +1495,7 @@ class install extends common {
 			if ($exec) {
 				$result = pg_query(DBi::_getConnection(), $sql);
 				if ($result===false) {
-					$msg = " Error on db execution (clone database): ".pg_last_error();
+					$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 

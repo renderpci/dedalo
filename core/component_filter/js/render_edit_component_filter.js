@@ -70,6 +70,13 @@ const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add('nowrap')
 
+		// ul
+			const ul_branch = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'branch',
+				parent			: content_data
+			})
+
 		// render all items sequentially
 			const tree_object = {}
 			for (let i = 0; i < datalist_length; i++) {
@@ -87,7 +94,7 @@ const get_content_data = function(self) {
 				tree_object[key] = tree_node
 				// set the pointer
 				if(datalist_item.type!=='typology'){
-					content_data[i] = tree_node
+					ul_branch[i] = tree_node
 				}
 			}
 
@@ -113,7 +120,7 @@ const get_content_data = function(self) {
 					}
 				}
 			}
-			content_data.appendChild(tree_fragment)
+			ul_branch.appendChild(tree_fragment)
 
 
 	return content_data
