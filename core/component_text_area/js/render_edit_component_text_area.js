@@ -220,10 +220,10 @@ const get_input_element = (i, current_value, self) => {
 		value_container.innerHTML = value
 
 	// user click in the wrapper and init the editor
-		const auto_init_editor = self.auto_init_editor!==undefined
-			? self.auto_init_editor
-			: (self.render_level==='content') ? true : false
-		// const auto_init_editor = true
+		// const auto_init_editor = self.auto_init_editor!==undefined
+			// ? self.auto_init_editor
+			// : (self.render_level==='content') ? true : false
+		const auto_init_editor = true
 		if (auto_init_editor===true) {
 
 			// activate now
@@ -235,7 +235,7 @@ const get_input_element = (i, current_value, self) => {
 				// .then(()=>{
 					value_container.classList.remove('loading')
 				// })
-			}, 50)
+			}, 75)
 		}else{
 
 			// activate on user click
