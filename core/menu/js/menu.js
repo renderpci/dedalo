@@ -96,6 +96,7 @@ menu.prototype.build = async function(autoload=true){
 	if (autoload===true) {
 
 		const menu_cache_data = await data_manager.get_local_db_data(self.id, 'data')
+
 		if(menu_cache_data){
 
 			// set the result to the datum
