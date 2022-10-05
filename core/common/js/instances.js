@@ -315,9 +315,9 @@ export const delete_instance = async function(options) {
 	}
 
 	// debug
-		if (deleted<1) {
-			console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
-		}
+		// if (deleted<1) {
+		// 	console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
+		// }
 		// console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
 		// console.log(" ++++++++ instances:",instances, deleted)
 		// console.log(' ++++++++ [delete_instance] instances B:', structuredClone(instances));

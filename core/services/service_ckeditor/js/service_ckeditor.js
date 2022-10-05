@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, ddEditor */
+/*global get_label, page_globals, SHOW_DEBUG, ddEditor, ckeditor */
 /*eslint no-undef: "error"*/
 
 
@@ -32,7 +32,7 @@ export const service_ckeditor = function() {
 	* INIT
 	* Get the options of the caller that do the initialization and set the instance
 	* the caller is a component_text_area and the editor is a instance of the ckeditor
-	* CkEditor is compiled with custom plug-in: dedalo_tags to upcast and downcast the dédalo tags into the ckeditor model
+	* CkEditor is compiled with custom plug-in: dedalo_tags to upcast and downcast the Dédalo tags into the ckeditor model
 	* 	See the ckeditor.js file in ../libs_dev/ckeditor to change the conversion tags
 	* Editor load the core and common commands and plugins from ckEditor but Dédalo will not use the ckEditor user interface
 	* the interface is created inside the toolbar_container with custom icons and functionalities

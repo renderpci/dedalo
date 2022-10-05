@@ -536,7 +536,7 @@ const unwrap_element = function(el) {
 
 /**
 * UPDATE_TAG
-* Edit selected tag adding or modifing the dataset and image url
+* Edit selected tag adding or modifying the dataset and image url
 * This method has been unified to allow to use different services in the same way
 * @param object options
 * @return promise
@@ -902,6 +902,8 @@ component_text_area.prototype.updated_layer_data= function(options) {
 
 }//end updated_layer_data
 
+
+
 /*	Persons
 ----------------------------------------------------------------------------------------- */
 
@@ -944,7 +946,6 @@ component_text_area.prototype.updated_layer_data= function(options) {
 
 
 
-
 /*	Geo location
 ----------------------------------------------------------------------------------------- */
 
@@ -983,6 +984,7 @@ component_text_area.prototype.updated_layer_data= function(options) {
 		const inserted_tag = text_editor.set_content(geo_view_tag)
 
 	}
+
 
 
 /*	References
