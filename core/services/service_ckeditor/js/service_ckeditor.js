@@ -77,7 +77,11 @@ export const service_ckeditor = function() {
 	}//end init
 
 
-	this.create_InlineEditor = function(){
+	/**
+	* CREATE_INLINEEDITOR
+	* @return promise
+	*/
+	this.create_InlineEditor = async function() {
 
 		const self = this
 
@@ -87,9 +91,55 @@ export const service_ckeditor = function() {
 			// InlineEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
 			// InlineEditor is initiated with user interface
-			ckeditor.InlineEditor.create( self.value_container, {})
+			ckeditor.InlineEditor.create( self.value_container, {
+				// initialData: value
+				toolbar: {
+					items : [
+						"heading",
+						// "|",
+						"bold",
+						"italic",
+						"underline",
+						"strikethrough",
+						"alignment",
+						"|",
+						"undo",
+						"redo",
+						"|",
+						"findAndReplace",
+						"sourceEditing",
+						"|",
+						"imageUpload",
+						"blockQuote",
+						"insertTable",
+						"htmlEmbed",
+						"link",
+						// "-",
+						"style",
+						"|",
+						"fontColor",
+						"fontBackgroundColor",
+						"fontSize",
+						"fontFamily",
+						"superscript",
+						"subscript",
+						"|",
+						"numberedList",
+						"bulletedList",
+						"horizontalLine",
+						"|",
+						"outdent",
+						"indent",
+						"|",
+						"specialCharacters",
+						"pageBreak"
+					],
+					shouldNotGroupWhenFull: false
+				}
+
+			})
 			.then( editor => {
-				
+
 				// fix the instance
 					self.editor = editor
 
@@ -99,17 +149,37 @@ export const service_ckeditor = function() {
 				// remove original value container
 					// self.value_container.remove()
 
-				resolve(self)
+				// editor.editing.view.change( writer => {
+				// 	writer.setStyle('min-height', '600px', editor.editing.view.document.getRoot());
+				// 	writer.setStyle('min-width', '600px', editor.editing.view.document.getRoot());
+				// });
+				console.log('+++++++++++++++++++++++++++++++ create_InlineEditor editor:', editor);
+
+				// click event
+					self.click = function(e) {
+						e.stopPropagation()
+						e.preventDefault()
+
+						console.log('create_InlineEditor editor click event:', e);
+					}
+
+				resolve(editor)
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
 				console.error( error );
 			});
 		})
-	}
+	}//end create_InlineEditor
 
 
-	this.create_ddEditor = function(editor_config){
+
+	/**
+	* CREATE_DDEDITOR
+	* @param object editor_config
+	* @return promise
+	*/
+	this.create_ddEditor = function(editor_config) {
 
 		const self = this
 
@@ -121,7 +191,6 @@ export const service_ckeditor = function() {
 			// ckEditor is initiated without user interface
 			ckeditor.ddEditor.create( self.value_container, {
 				// initialData: value
-
 
 			})
 			.then( editor => {
@@ -246,14 +315,16 @@ export const service_ckeditor = function() {
 					}
 
 
-				resolve(self)
+				resolve(editor)
 			})
 			.catch( error => {
 				console.error( 'Oops, something went wrong!' );
 				console.error( error );
 			});
 		})
-	}
+	}//end create_ddEditor
+
+
 
 	/**
 	* SAVE
