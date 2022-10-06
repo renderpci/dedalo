@@ -36,9 +36,14 @@ render_list_component_select.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			// autoload. On true, load edit  data from API when user dblclick to edit inline
-			autoload		: true,
-			value_string	: value_string
+			value_string : value_string
+		})
+		wrapper.addEventListener('click', function(e){
+			e.stopPropagation()
+			self.change_mode(
+				'edit_in_list',
+				true // autoload. On true, load data from API when user click to edit_in_list
+			)
 		})
 
 

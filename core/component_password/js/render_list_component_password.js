@@ -36,8 +36,7 @@ render_list_component_password.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
-			autoload		: false,
-			value_string	: value_string
+			value_string : '********'
 		})
 		wrapper.type = 'password'
 

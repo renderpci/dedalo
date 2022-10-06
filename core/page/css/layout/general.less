@@ -371,6 +371,7 @@
 		background-color: red !important;
 		transition: background-color 0.3s ease;
 	}
+
 	.alert {
 		height: min-content;
 		margin-right: 0.25em;
@@ -435,7 +436,6 @@
 			//line-height: 1px;
 			position: absolute;
 			left: 0px;
-			top: -3px;
 			top: 1px;
 			z-index: 9;
 
@@ -524,17 +524,20 @@
 				width: 100%;
 			}
 		}
+
+		pre {
+			z-index: 0;
+			outline: 1px solid #cad0d4;
+			overflow-wrap: anywhere;
+		}
+
+		.total_time {
+			position: fixed;
+			right: 2em;
+			top: 1em;
+		}
 	}
-	.debug pre {
-		z-index: 0;
-		outline: 1px solid #cad0d4;
-		overflow-wrap: anywhere;
-	}
-	.debug .total_time {
-		position: fixed;
-		right: 2em;
-		top: 1em;
-	}
+
 	.developer_info {
 		font-size: 95%;
 		opacity: 0.5;
@@ -564,12 +567,12 @@
 		padding-left: 3.5rem !important;
 
 		>.spinner {
+			left: 0.5rem;
+			top: 0.5rem;
 			height: 2rem;
 			width: 2rem;
-			top: 0.5rem;
-			left: 0.5rem;
 			z-index: 2;
-			margin: 0;
+			margin: 0px;
 			border-top: 1px @color_orange_dedalo solid;
 			min-height: unset;
 		}
@@ -595,9 +598,10 @@
 	}
 	.css_email_error {
 		background-color: red;
-	}
-	.css_email_error:hover {
-		background-color: orange;
+
+		&:hover {
+			background-color: orange;
+		}
 	}
 
 
@@ -658,8 +662,8 @@
 				left: 50%;
 				border: solid transparent;
 				content: " ";
-				height: 0;
-				width: 0;
+				height: 0px;
+				width: 0px;
 				position: absolute;
 				pointer-events: none;
 				//border-color: rgba(0, 0, 0, 0.8);
@@ -685,12 +689,14 @@
 		background-color: rgba(255, 0, 0, 0.11);
 	}
 
+
+
 /* CK Editor */
-.ck-rounded-corners .ck.ck-balloon-panel {
-	// display: block;
-	margin-top: 8px;
-}
-.ck-toolbar-container .ck.ck-toolbar {
-	// background-color: #b1f1e6;
-	zoom: 0.86;
-}
+	.ck-rounded-corners .ck.ck-balloon-panel {
+		// display: block;
+		margin-top: 8px;
+	}
+	.ck-toolbar-container .ck.ck-toolbar {
+		// background-color: #b1f1e6;
+		zoom: 0.86;
+	}

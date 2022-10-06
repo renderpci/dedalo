@@ -40,7 +40,7 @@ render_list_component_info.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
+
 		})
 
 	// Set value

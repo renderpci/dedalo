@@ -1140,7 +1140,8 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		})
 
 	// replace the node with the new render
-		old_node.parentNode.replaceChild(new_node, old_node)
+		// old_node.parentNode.replaceChild(new_node, old_node)
+		old_node.replaceWith(new_node);
 
 	// active component at end
 		if (new_mode.indexOf('edit')!==-1) {

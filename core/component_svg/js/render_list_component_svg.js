@@ -34,9 +34,10 @@ render_list_component_svg.prototype.list = function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
+
 		})
 		wrapper.appendChild(fragment)
+
 
 	return wrapper
 }//end list

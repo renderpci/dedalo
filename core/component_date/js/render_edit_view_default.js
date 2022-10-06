@@ -6,7 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 
 
 
@@ -138,7 +138,7 @@ const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if (!is_inside_tool) {
+		if (!is_inside_tool && mode==='edit') {
 			ui.add_tools(self, fragment)
 		}
 
