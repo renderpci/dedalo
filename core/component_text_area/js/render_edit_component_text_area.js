@@ -108,6 +108,7 @@ const get_buttons = (self) => {
 
 	// short vars
 		const is_inside_tool	= (self.caller && self.caller.type==='tool')
+		const mode				= self.mode
 		const fragment			= new DocumentFragment()
 
 	// button_fullscreen
@@ -121,7 +122,7 @@ const get_buttons = (self) => {
 		})
 
 	// buttons tools
-		if (!is_inside_tool) {
+		if (!is_inside_tool && mode==='edit') {
 			ui.add_tools(self, fragment)
 			// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
 		}

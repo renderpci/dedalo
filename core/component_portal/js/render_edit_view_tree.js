@@ -237,7 +237,7 @@ const rebuild_columns_map = async function(self) {
 const get_buttons = (self) => {
 
 	const is_inside_tool		= self.is_inside_tool
-	// const mode				= self.mode
+	const mode					= self.mode
 	// const show				= self.rqo.show
 	const target_section		= self.target_section
 	const target_section_lenght	= target_section.length
@@ -412,7 +412,7 @@ const get_buttons = (self) => {
 		})
 
 	// buttons tools
-		if (!is_inside_tool) {
+		if (!is_inside_tool && mode==='edit') {
 			ui.add_tools(self, fragment)
 		}
 
