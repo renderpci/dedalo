@@ -4,8 +4,8 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
-	import {common} from '../../common/js/common.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {common,create_source} from '../../common/js/common.js'
 	import {render_install} from './render_install.js'
 
 
@@ -91,12 +91,31 @@ install.prototype.init = async function(options) {
 * @return promise
 *	bool true
 */
-install.prototype.build = async function(autoload=true) {
+install.prototype.build = async function(autoload=false) {
 
 	const self = this
 
 	// status update
 		self.status = 'building'
+
+	// autoload
+		if (autoload===true) {
+
+			// rqo build
+				const rqo = {
+					action : 'get_element_context',
+					source : create_source(self, null)
+				}
+
+			// load data. get context and data
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+
+			// set context and data to current instance
+				self.context	= api_response.result.find(element => element.model===self.model);
+				self.data		= {}
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
