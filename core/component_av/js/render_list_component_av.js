@@ -66,7 +66,8 @@ render_list_component_av.prototype.list = async function() {
 		image.src = url
 
 	// open viewer
-		image.addEventListener('mouseup', function (evt) {
+		image.addEventListener('click', function (evt) {
+			evt.stopPropagation();
 
 			const file_exist = data.datalist.find(item => item.file_exist === true)
 			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
