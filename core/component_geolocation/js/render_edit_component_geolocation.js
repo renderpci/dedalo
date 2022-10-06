@@ -310,7 +310,8 @@ export const get_input_element_edit = (i, current_value, self) =>{
 const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool = self.is_inside_tool
+		const is_inside_tool	= self.is_inside_tool
+		const mode				= self.mode
 
 	// DOM fragment
 		const fragment = new DocumentFragment()
