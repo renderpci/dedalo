@@ -36,20 +36,41 @@ import {data_manager} from '../../common/js/data_manager.js'
 				model	: 'login',
 				tipo	: 'dd229',
 				mode	: mode,
-				lang	: lang,
-				context	: async function(){
-					const rqo = {
-						action	: 'get_element_context',
-						source	: {model : 'login'}
-					}
-					const login_api_response = await data_manager.request({
-						body : rqo
-					})
-					return login_api_response.result.find(el => el.model==='login')
-				}
+				lang	: lang
 			})
-			// elements.push(login_context)
 
+		// install
+			// const install_context = await (async function(){
+			// 	const rqo = {
+			// 		action	: 'get_element_context',
+			// 		source	: {model : 'install'}
+			// 	}
+			// 	const install_api_response = await data_manager.request({
+			// 		body : rqo
+			// 	})
+			// 	return install_api_response.result
+			// 		? install_api_response.result.find(el => el.model==='install')
+			// 		: {}
+			// })()
+			elements.push({
+				model	: 'install',
+				tipo	: 'dd1590',
+				mode	: 'install',
+				lang	: lang,
+				// context	: async function(){
+				// 	const rqo = {
+				// 		action	: 'get_element_context',
+				// 		source	: {model : 'install'}
+				// 	}
+				// 	const install_api_response = await data_manager.request({
+				// 		body : rqo
+				// 	})
+				// 	console.log('install_api_response:', install_api_response);
+				// 	return install_api_response.result
+				// 		? install_api_response.result.find(el => el.model==='install')
+				// 		: {}
+				// }
+			})
 
 		return elements
 	}//end get_elelemnts
@@ -62,12 +83,11 @@ import {data_manager} from '../../common/js/data_manager.js'
 describe("OTHERS LIFE-CYCLE", function() {
 
 	const elements =  get_elelemnts()
-		console.log('-- > elements:', elements);
 
 	for (let i = 0; i < elements.length; i++) {
 
 		const element = elements[i]
-		console.log('-- element:', i, element.model, element);
+		// console.log('-- element:', i, element.model, element);
 
 
 		describe(element.model, async function() {
@@ -85,7 +105,7 @@ describe("OTHERS LIFE-CYCLE", function() {
 
 				// init instance
 					new_instance = await get_instance(element)
-					console.log('init new_instance:', new_instance);
+					// console.log('init new_instance:', new_instance);
 
 				assert.equal(new_instance.status, expected);
 			});
@@ -96,7 +116,7 @@ describe("OTHERS LIFE-CYCLE", function() {
 
 				// init instance
 					await new_instance.build(true)
-					console.log('build new_instance:', new_instance);
+					// console.log('build new_instance:', new_instance);
 					if (element.context) {
 						new_instance.context = element.context
 					}
@@ -110,7 +130,7 @@ describe("OTHERS LIFE-CYCLE", function() {
 
 				// init instance
 					await new_instance.render()
-					console.log('render new_instance:', new_instance);
+					// console.log('render new_instance:', new_instance);
 
 				assert.equal(new_instance.status, expected);
 			});
