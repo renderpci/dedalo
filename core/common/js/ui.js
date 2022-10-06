@@ -404,6 +404,7 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_LIST
+		* Render a unified version of component wrapper in list mode
 		* @param object instance
 		* @param object options = {}
 		* @return DOM node wrapper
@@ -411,7 +412,6 @@ export const ui = {
 		build_wrapper_list : (instance, options={}) => {
 
 			// options
-				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : false
 				const value_string	= options.value_string
 
 			// short vars
@@ -420,12 +420,6 @@ export const ui = {
 				const tipo			= instance.tipo 	// like 'rsc26'
 				const section_tipo	= instance.section_tipo 	// like 'oh1'
 				const view			= instance.view || instance.context.view || null
-				const edit_in_list	= (
-						instance.section_tipo==='dd542' // dd542-> activity section
-					|| 	(instance.caller && instance.caller.id_variant && instance.caller.id_variant.indexOf('tool_')===0) // inside tool like tool_time_machime
-					)
-					? false
-					: true
 
 			// wrapper
 				const wrapper = document.createElement('div')
@@ -440,7 +434,7 @@ export const ui = {
 					if (view) {ar_css.push('view_'+view)}
 					wrapper.classList.add(...ar_css)
 
-			// span value. Add span if value_string is received
+			// value_string. span value. Add span if value_string is received
 				if (value_string) {
 					ui.create_dom_element({
 						element_type	: 'span',
@@ -450,30 +444,26 @@ export const ui = {
 				}
 
 			// event dblclick change component mode
-				if(edit_in_list) {
-
-					wrapper.addEventListener('click', function(e){
-
-						// check level
-							const is_first_level = function(wrapper){
-								const parent_list_body = wrapper.parentNode.parentNode.parentNode.parentNode
-								return (parent_list_body && parent_list_body.classList.contains('list_body'))
-							}
-							if (!is_first_level(wrapper)) {
-								// ignore click and continue bubble event
-								return
-							}
-
-						e.stopPropagation()
-
-						// change mode (from 'list' to 'edit_in_list')
-							if (instance.change_mode) {
-								instance.change_mode('edit_in_list', autoload)
-							}else{
-								console.warn('WARNING: change_mode method its not available for instance: ', instance)
-							}
-					})
-				}
+				// if(edit_in_list) {
+				// 	wrapper.addEventListener('click', function(e){
+				// 		// check level
+				// 			const is_first_level = function(wrapper){
+				// 				const parent_list_body = wrapper.parentNode.parentNode.parentNode.parentNode
+				// 				return (parent_list_body && parent_list_body.classList.contains('list_body'))
+				// 			}
+				// 			if (!is_first_level(wrapper)) {
+				// 				// ignore click and continue bubble event
+				// 				return
+				// 			}
+				// 		e.stopPropagation()
+				// 		// change mode (from 'list' to 'edit_in_list')
+				// 			if (instance.change_mode) {
+				// 				instance.change_mode('edit_in_list', autoload)
+				// 			}else{
+				// 				console.warn('WARNING: change_mode method its not available for instance: ', instance)
+				// 			}
+				// 	})
+				// }
 
 			// debug
 				if(SHOW_DEBUG===true) {

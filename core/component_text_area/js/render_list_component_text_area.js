@@ -45,9 +45,7 @@ render_list_component_text_area.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			// autoload. On true, load edit data from API when user dblclick to edit inline
-			autoload		: false,
-			value_string	: value_string_with_tags
+			value_string : value_string_with_tags
 		})
 
 

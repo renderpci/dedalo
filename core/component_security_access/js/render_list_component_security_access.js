@@ -39,8 +39,7 @@ render_list_component_security_access.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload		: false,
-			value_string	: value_string
+			value_string : value_string
 		})
 
 
