@@ -453,7 +453,7 @@ export const ui = {
 				if(edit_in_list) {
 
 					wrapper.addEventListener('click', function(e){
-
+						// return
 						// check level
 							const is_first_level = function(wrapper){
 								const parent_list_body = wrapper.parentNode.parentNode.parentNode.parentNode
