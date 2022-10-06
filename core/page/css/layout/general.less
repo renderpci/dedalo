@@ -146,51 +146,77 @@
 	}
 
 	// spinner loading
+	// .spinner {
+	// 	@diameter : 45px;
+	// 	display: block;
+	// 	height: @diameter;
+	// 	left: 50%;
+	// 	margin: -45px 0px 0px -45px;
+	// 	@border_size: 4px;
+	// 	@border_color: @color_orange_dedalo;
+	// 	position: absolute;
+	// 	top: 50%;
+	// 	width: @diameter;
+	// 	border: @border_size transparent solid; // rgba(0, 0, 0, 0.25)
+	// 	// border-top: @border_size @border_color solid;
+	// 	border-top: 1px @border_color solid;
+	// 	border-right: @border_size @border_color solid;
+	// 	border-bottom: @border_size @border_color solid;
+	// 	border-radius: 50%;
+	// 	-webkit-animation: spin3 1.25s infinite linear;
+	// 	animation: spin3 1.25s infinite linear;
+	// 	overflow: hidden;
+	// }
+
+	// @-webkit-keyframes spin3 {
+
+	// 	from {
+	// 		-webkit-transform: rotate(0deg);
+	// 		transform: rotate(0deg);
+	// 	}
+
+	// 	to {
+	// 		-webkit-transform: rotate(359deg);
+	// 		transform: rotate(359deg);
+	// 	}
+	// }
+
+	// @keyframes spin3 {
+
+	// 	from {
+	// 		-webkit-transform: rotate(0deg);
+	// 		transform: rotate(0deg);
+	// 	}
+
+	// 	to {
+	// 		-webkit-transform: rotate(359deg);
+	// 		transform: rotate(359deg);
+	// 	}
+	// }
+
+
 	.spinner {
-		@diameter : 45px;
-		display: block;
-		height: @diameter;
-		left: 50%;
-		margin: -45px 0px 0px -45px;
-		@border_size: 4px;
-		@border_color: @color_orange_dedalo;
+		/* Size */
+		height: 3rem;
+		width: 3rem;
 		position: absolute;
-		top: 50%;
-		width: @diameter;
-		border: @border_size transparent solid; // rgba(0, 0, 0, 0.25)
-		// border-top: @border_size @border_color solid;
-		border-top: 1px @border_color solid;
-		border-right: @border_size @border_color solid;
-		border-bottom: @border_size @border_color solid;
+		left: 40%;
+		top: 40%;
+
+		/* Create a curve at the top */
+		border: 4px solid #d1d5db;
+		border-top-color: @color_orange_dedalo;
 		border-radius: 50%;
-		-webkit-animation: spin3 1.25s infinite linear;
-		animation: spin3 1.25s infinite linear;
-		overflow: hidden;
+
+		animation: spinner 800ms linear infinite;
 	}
 
-	@-webkit-keyframes spin3 {
-
+	@keyframes spinner {
 		from {
-			-webkit-transform: rotate(0deg);
 			transform: rotate(0deg);
 		}
-
 		to {
-			-webkit-transform: rotate(359deg);
-			transform: rotate(359deg);
-		}
-	}
-
-	@keyframes spin3 {
-
-		from {
-			-webkit-transform: rotate(0deg);
-			transform: rotate(0deg);
-		}
-
-		to {
-			-webkit-transform: rotate(359deg);
-			transform: rotate(359deg);
+			transform: rotate(360deg);
 		}
 	}
 
@@ -567,13 +593,13 @@
 		padding-left: 3.5rem !important;
 
 		>.spinner {
-			left: 0.5rem;
+			left: 0.75rem;
 			top: 0.5rem;
 			height: 2rem;
 			width: 2rem;
 			z-index: 2;
 			margin: 0px;
-			border-top: 1px @color_orange_dedalo solid;
+			// border-top: 1px @color_orange_dedalo solid;
 			min-height: unset;
 		}
 	}
