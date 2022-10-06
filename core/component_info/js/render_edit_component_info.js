@@ -118,7 +118,8 @@ const get_content_value = (i, current_widget) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
