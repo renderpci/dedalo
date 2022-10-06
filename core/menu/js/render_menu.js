@@ -47,16 +47,18 @@ render_menu.prototype.edit = async function() {
 			id				: 'quit',
 			parent			: fragment
 		})
-		quit_button.addEventListener('click', () => {
+		quit_button.addEventListener('click', async () => {
 			// local_db_data remove in all langs
 				for (let i = 0; i < self.data.langs_datalist.length; i++) {
 					const lang	= self.data.langs_datalist[i].value
 					const regex	= /lg-[a-z]{2,5}$/
 					const id	= self.id.replace(regex, lang)
-					data_manager.delete_local_db_data(id, 'data')
+					await data_manager.delete_local_db_data(id, 'data')
 				}
 			// exec login quit sequence
-				quit()
+				quit({
+					caller : self
+				})
 		})
 
 	// logo image
