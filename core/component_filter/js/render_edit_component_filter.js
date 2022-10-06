@@ -328,7 +328,7 @@ const get_buttons = (self) => {
 		})
 
 	// buttons tools
-		if (!is_inside_tool) {
+		if (!is_inside_tool && mode==='edit') {
 			ui.add_tools(self, fragment)
 		}
 
