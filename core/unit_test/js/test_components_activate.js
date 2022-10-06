@@ -34,6 +34,7 @@ describe("COMPONENTS ACTIVATE", async function() {
 			element.context = {
 				request_config : request_config // [source]
 			}
+			element.mode = 'edit'
 
 		describe(`component: ${element.model} :`,  function() {
 

@@ -34,6 +34,7 @@ describe("COMPONENTS DATA CHANGES", function() {
 			element.context = {
 				request_config : request_config // [source]
 			}
+			element.mode = 'edit' // force edit mode
 
 		describe(element.model, function() {
 
@@ -102,11 +103,12 @@ describe("COMPONENTS DATA CHANGES", function() {
 						// init and build instance
 							new_instance = await get_instance(element)
 							await new_instance.build(true)
-							// console.log('new_instance:', new_instance);
 						// read value from saved DDBB
-							const read_value = new_instance.data.value[0]
+							const data			= new_instance.data || {}
+							const value			= data.value || []
+							const read_value	= value[0] || null
 						// portal locator cases remove paginated_key
-							if (read_value.hasOwnProperty('paginated_key')) {
+							if (read_value && read_value.hasOwnProperty('paginated_key')) {
 								delete read_value.paginated_key
 							}
 
