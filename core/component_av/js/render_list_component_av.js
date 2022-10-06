@@ -58,6 +58,7 @@ render_list_component_av.prototype.list = async function() {
 			function set_bg_color() {
 				this.removeEventListener('load', set_bg_color, false)
 				ui.set_background_image(this, this)
+
 			}
 			image.addEventListener('error', () => {
 				console.log('Image load error:', image);
