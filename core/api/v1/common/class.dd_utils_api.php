@@ -47,8 +47,8 @@ final class dd_utils_api {
 
 	/**
 	* GET_LOGIN_CONTEXT
-	* This function is not used in normal login behavior (login is called directly in start API),
-	* it could be caller when the instance of the login has been build with autoload in true.
+	* This function is not used in normal login behavior (login is called directly in start API).
+	* It could be caller when the instance of the login has been build with autoload in true.
 	* This function could be caller by external processes as install to get the context of the login to create the login instance
 	* Login only need context, it not need data to be render.
 	* @param object $request_options
@@ -57,8 +57,8 @@ final class dd_utils_api {
 	public static function get_login_context(object $request_options) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		$login = new login();
 

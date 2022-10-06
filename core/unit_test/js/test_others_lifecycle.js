@@ -116,7 +116,7 @@ describe("OTHERS LIFE-CYCLE", function() {
 
 				// init instance
 					await new_instance.build(true)
-					// console.log('build new_instance:', new_instance);
+					console.log('build new_instance:', new_instance);
 					if (element.context) {
 						new_instance.context = element.context
 					}

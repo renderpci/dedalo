@@ -101,13 +101,13 @@ login.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
-	// (!) Note that normally login only needs the context to operate and is injected from page
+	// (!) Note that normally login only needs the context to operate and it is injected from page
 	// @see page.instantiate_page_element()
 	// because this the autoload here is false instead the true option in other components, section ...
-
 		if (autoload===true) {
 
-			// rqo build
+			// rqo build.
+			// Note that get_login_context don't need previous login action as similar call get_element_context
 				const rqo = {
 					action : 'get_login_context',
 					dd_api : 'dd_utils_api',
@@ -120,7 +120,8 @@ login.prototype.build = async function(autoload=false) {
 				})
 
 			// set context and data to current instance
-				self.context = api_response.result.find(element => element.model===self.model);
+				self.context	= api_response.result.find(element => element.model===self.model);
+				self.data		= {}
 		}
 
 	// debug

@@ -65,7 +65,6 @@ final class dd_core_api {
 		// install check
 		// check if Dédalo was installed, if not, run the install process
 		// else start the normal behavior
-
 			// check constant DEDALO_TEST_INSTALL (config.php) Default value is true.
 			// Change manually to false after install to prevent to do this check on every start call
 			if (!defined('DEDALO_TEST_INSTALL') || DEDALO_TEST_INSTALL===true) {
@@ -1023,15 +1022,18 @@ final class dd_core_api {
 					$element = new $model($section_id, $section_tipo);
 					break;
 
-				case $model==='login':
-
-					$element = new $model($mode);
-					break;
-
 				default:
-					#throw new Exception("Error Processing Request", 1);
-					$response->msg = 'Error. model not found: '.$model;
-					return $response;
+
+					// others
+
+					try {
+						$element = new $model($mode);
+					} catch (Exception $e) {
+						// throw new Exception("Error Processing Request", 1);
+						debug_log(__METHOD__." invalid element ".$e->getMessage(), logger::ERROR);
+						$response->msg = 'Error. model not found: '.$model;
+						return $response;
+					}
 					break;
 			}
 
