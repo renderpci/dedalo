@@ -5,10 +5,12 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {strip_tags} from '../../../core/common/js/utils/index.js'
 	import {component_password} from '../../component_password/js/component_password.js'
 	import {get_instance} from '../../common/js/instances.js'
+
 
 
 /**
@@ -97,10 +99,34 @@ const get_content_data = function(self) {
 			render_help_block(self)
 		)
 
+	// init_test_block
+		const init_test_block = ui.create_dom_element({
+			element_type	: 'section',
+			class_name		: 'init_test_block',
+			parent			: content_data
+		})
+		// set pointers
+		content_data.init_test_block = init_test_block
+		// title
+		ui.create_dom_element({
+			element_type	: 'h1',
+			inner_html		: get_label.init_text || 'Init test',
+			parent			: init_test_block
+		})
+		// content
+		const init_test_block_content = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content',
+			parent			: init_test_block
+		})
+		init_test_block_content.appendChild(
+			render_init_test_block(self)
+		)
+
 	// config block
 		const config_block = ui.create_dom_element({
 			element_type	: 'section',
-			class_name		: 'config_block',
+			class_name		: 'config_block' + add_hidden_block('config_block'),
 			parent			: content_data
 		})
 		// set pointers
@@ -193,7 +219,6 @@ const get_content_data = function(self) {
 		.then(function(response){
 			login_block_content.appendChild(response)
 		})
-
 
 	// hierarchies_import_block
 		const hierarchies_import_block = ui.create_dom_element({
@@ -304,6 +329,75 @@ const render_help_block = function(self) {
 
 	return fragment
 }//end render_help_block
+
+
+
+/**
+* RENDER_INIT_TEST_BLOCK
+* Creates contents nodes for current block
+* @param object self
+* @return DOM node
+*/
+const render_init_test_block = function(self) {
+
+	// short vars
+		const properties	= self.context.properties
+		const init_test		= properties.init_test || null
+
+	const fragment = new DocumentFragment()
+
+	// fail init_test case
+		if (init_test.result===false) {
+			const msg = init_test.msg
+				? init_test.msg.join('<br>')
+				: 'Init test fails (server error)'
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg error',
+				inner_html		: msg,
+				parent			: fragment
+			})
+
+			return fragment
+		}//end if (!db_status)
+
+	// config is OK message
+		const msg = init_test.msg
+			? init_test.msg.join('<br>')
+			: 'Init test test passed!'
+		const add_css = init_test.errors===true
+			? 'warning'
+			: 'ok'
+		const msg_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'msg ' + add_css,
+			inner_html		: msg,
+			parent			: fragment
+		})
+
+	// config_button
+		// const config_button = ui.create_dom_element({
+		// 	element_type	: 'button',
+		// 	class_name		: 'primary config_button',
+		// 	inner_html		: get_label.to_install || 'To confi',
+		// 	parent			: fragment
+		// })
+		// config_button.addEventListener('mouseup', async function() {
+		// 	// show the install_db
+		// 	self.node.content_data.install_db_block.classList.remove('hide')
+		// 	this.remove();
+		// })//end mouse_up event
+
+	when_in_viewport(
+		msg_node,
+		() => {
+			self.node.content_data.config_block.classList.remove('hide')
+		}
+	)
+
+
+	return fragment;
+}//end render_init_test_block
 
 
 

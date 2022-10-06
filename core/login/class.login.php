@@ -597,7 +597,7 @@ class login extends common {
 							# $response->result 	= false;
 							# $response->msg 		= $init_response->msg;
 							# return $response;
-						$response->errors[] = $init_response->msg;
+						array_push($response->errors, ...$init_response->msg);
 					}
 
 				// init_response result_options (like redirect)

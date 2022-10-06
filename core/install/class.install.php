@@ -47,6 +47,21 @@ class install extends common {
 		// properties base
 			$properties = new stdClass();
 
+		// dd_init_test. check general files and permissions
+				$init_test_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
+				$properties->init_test = $init_test_response;
+
+			// errors found on init test (Don't stop execution here)
+				if ($init_test_response->result===false) {
+
+					// failed. Stop here
+					$dd_object->set_properties($properties);
+
+					debug_log(__METHOD__." Init test error: ".$init_test_response->msg.to_string(), logger::ERROR);
+
+					return $dd_object;
+				}
+
 		// check db_status (config_db.php and DB connection)
 			$db_status = install::get_db_status();
 			$properties->db_status = $db_status;
@@ -88,7 +103,7 @@ class install extends common {
 
 		// check php version
 			$properties->php_version			= PHP_VERSION;
-			$properties->php_version_supported	= test_php_version_supported();
+			$properties->php_version_supported	= test_php_version_supported(); // >= 8.1.0
 
 		// dd_object
 			$dd_object->set_properties($properties);
@@ -242,7 +257,7 @@ class install extends common {
 			}
 
 		// check db connection
-			$db_connection		= DBi::_getNewConnection(
+			$db_connection = DBi::_getNewConnection(
 				DEDALO_HOSTNAME_CONN,
 				DEDALO_USERNAME_CONN,
 				DEDALO_PASSWORD_CONN,
@@ -2200,12 +2215,12 @@ class install extends common {
 
 	/**
 	* SET_INSTALL_STATUS
-	*
+	* Fix current Dédalo app as installed
 	* @param string $status
 	* 	Options: 'installed'
 	* @return object $response
 	*/
-	public static function set_install_status(string $status) {
+	public static function set_install_status(string $status) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2288,5 +2303,7 @@ class install extends common {
 
 		return $response;
 	}//end set_install_status
+
+
 
 }//end class
