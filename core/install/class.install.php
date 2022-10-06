@@ -47,6 +47,13 @@ class install extends common {
 		// properties base
 			$properties = new stdClass();
 
+		// already installed case
+			if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
+
+				$dd_object->set_properties($properties);
+				return $dd_object;
+			}
+
 		// dd_init_test. check general files and permissions
 				$init_test_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
 				$properties->init_test = $init_test_response;

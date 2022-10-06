@@ -1184,21 +1184,21 @@ class login extends common {
 				'label'	=> 'Ontology version',
 				'value'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, true, true)
 			];
-		// database user (only developer)
-			if (DEDALO_ENTITY==='development') {
-				$properties->info[] = [
-					'type'	=> 'db_user',
-					'label'	=> 'DB user',
-					'value'	=> DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN
-				];
-			}
-		// db info
-			if (DEVELOPMENT_SERVER===true) {
-				$properties->info[] = [
-					'type'	=> 'db_user',
-					'label'	=> 'DB info',
-					'value'	=> DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
-				];
+
+		// development server only
+			if (DEDALO_ENTITY==='development' && DEVELOPMENT_SERVER===true) {
+				// database user (only developer)
+					$properties->info[] = [
+						'type'	=> 'db_user',
+						'label'	=> 'DB user',
+						'value'	=> DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN
+					];
+				// db info
+					$properties->info[] = [
+						'type'	=> 'db_user',
+						'label'	=> 'DB info',
+						'value'	=> DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
+					];
 			}
 
 		// langs list

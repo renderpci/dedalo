@@ -347,8 +347,8 @@ const render_init_test_block = function(self) {
 	const fragment = new DocumentFragment()
 
 	// fail init_test case
-		if (init_test.result===false) {
-			const msg = init_test.msg
+		if (!init_test || init_test.result===false) {
+			const msg = init_test && init_test.msg
 				? init_test.msg.join('<br>')
 				: 'Init test fails (server error)'
 			ui.create_dom_element({
@@ -374,19 +374,6 @@ const render_init_test_block = function(self) {
 			inner_html		: msg,
 			parent			: fragment
 		})
-
-	// config_button
-		// const config_button = ui.create_dom_element({
-		// 	element_type	: 'button',
-		// 	class_name		: 'primary config_button',
-		// 	inner_html		: get_label.to_install || 'To confi',
-		// 	parent			: fragment
-		// })
-		// config_button.addEventListener('mouseup', async function() {
-		// 	// show the install_db
-		// 	self.node.content_data.install_db_block.classList.remove('hide')
-		// 	this.remove();
-		// })//end mouse_up event
 
 	when_in_viewport(
 		msg_node,
