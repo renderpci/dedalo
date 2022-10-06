@@ -188,7 +188,7 @@ const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if (!is_inside_tool) {
+		if (!is_inside_tool && mode==='edit') {
 			ui.add_tools(self, fragment)
 		}
 
@@ -204,7 +204,7 @@ const get_buttons = (self) => {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
-* @return dom element content_value
+* @return DOM element content_value
 */
 const get_input_element_edit = (i, current_value, self) => {
 

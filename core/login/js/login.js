@@ -140,9 +140,16 @@ login.prototype.build = async function(autoload=false) {
 
 /**
 * QUIT
+* Close user session
+* (!) Note that quit menu event removes local indexedDB menu data before quit
+* @param options
+* Sample:
+* {
+* 	caller : { menu {id: 'menu_dd85_dd85_edit_lg-eng'.. }
+* }
 * @return object api_response
 */
-export const quit = async function() {
+export const quit = async function(options) {
 
 	// data_manager API call
 		const api_response = await data_manager.request({
@@ -162,7 +169,7 @@ export const quit = async function() {
 				window.location.href = api_response.saml_redirect
 
 			}else{
-				//window.location.href = window.location
+
 				window.location.reload(false)
 			}
 

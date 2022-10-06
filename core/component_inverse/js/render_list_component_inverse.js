@@ -34,8 +34,7 @@ render_list_component_inverse.prototype.list = function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload		: false,
-			value_string	: value_string
+			value_string : value_string
 		})
 
 

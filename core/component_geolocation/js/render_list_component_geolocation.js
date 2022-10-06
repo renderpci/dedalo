@@ -36,9 +36,15 @@ render_list_component_geolocation.prototype.list = async function() {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload		: false,
-			value_string	: value_string
+			value_string : value_string
 		})
+		// wrapper.addEventListener('click', function(e){
+		// 	e.stopPropagation()
+		// 	self.change_mode(
+		// 		'edit_in_list',
+		// 		true // autoload. On true, load data from API when user click to edit_in_list
+		// 	)
+		// })
 
 
 	return wrapper

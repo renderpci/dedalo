@@ -111,6 +111,10 @@ render_list_view_default.render = async function(self, options) {
 			// set pointers
 			wrapper.content_data	= content_data
 			wrapper.list_body		= list_body
+			wrapper.addEventListener('click', function(e) {
+				e.stopPropagation()
+				// nothing to do in list mode, only catch click event
+			})
 
 		// events
 			// add_events(self, wrapper)

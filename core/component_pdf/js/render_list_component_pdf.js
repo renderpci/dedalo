@@ -34,10 +34,13 @@ render_list_component_pdf.prototype.list = function() {
 
 	// image append to wrapper
 		const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
-		ui.create_dom_element({
+		const image_pdf_icon = ui.create_dom_element({
 			element_type	: 'img',
 			src				: url,
 			parent			: wrapper
+		})
+		image_pdf_icon.addEventListener('error', function() {
+			console.log('pdf icon load error:', url);
 		})
 
 

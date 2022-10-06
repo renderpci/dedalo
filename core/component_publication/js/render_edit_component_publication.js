@@ -167,12 +167,13 @@ const get_content_value = (i, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
 
 	// buttons tools
-		if (!is_inside_tool) {
+		if (!is_inside_tool && mode==='edit') {
 			ui.add_tools(self, fragment)
 		}
 
