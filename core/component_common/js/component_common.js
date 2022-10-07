@@ -74,6 +74,9 @@ component_common.prototype.init = async function(options) {
 		// true options is used to call directly to API and manage his data, used by tools or services that need components standalone.
 		self.standalone = true
 
+	// active. Active status (true|false) is set by ui.component.activate/deactivate
+		self.active = false
+
 	// pagination info
 		// self.pagination = (self.data && self.data.pagination)
 		// 	? self.data.pagination
@@ -345,6 +348,9 @@ export const init_events_subscription = function(self) {
 component_common.prototype.save = async function(changed_data) {
 
 	const self = this
+
+	// fallback to self.changed_data if not received
+		changed_data = changed_data || self.changed_data
 
 	// check changed_data format
 		if (typeof changed_data==='undefined' || !Array.isArray(changed_data) || changed_data.length<1) {
@@ -1146,7 +1152,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 	// active component at end
 		if (new_mode.indexOf('edit')!==-1) {
 			if (!new_instance.active) {
-				event_manager.publish('activate_component', new_instance)
+				ui.component.activate(new_instance)
 			}
 		}
 

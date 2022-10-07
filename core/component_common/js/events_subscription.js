@@ -15,15 +15,6 @@
 // wrapper = self.node
 export const events_subscription = function(self) {
 
-	// activate_component (when user focus it in DOM)
-		self.events_tokens.push(
-			event_manager.subscribe('activate_component', fn_activate_component)
-		)
-		function fn_activate_component(actived_component) {
-			// console.log('self:', self, actived_component);
-			ui.component.activate(self, actived_component)
-		}
-
 	// hilite (search mode)
 		if (self.mode==='search') {
 			self.events_tokens.push(

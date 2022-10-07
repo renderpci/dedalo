@@ -210,6 +210,30 @@ component_text_area.prototype.init = async function(options) {
 				event_manager.subscribe('create_geo_tag_'+ self.id_base, self.create_geo_tag)
 			)
 
+		// deactivate. Save content
+			self.events_tokens.push(
+				event_manager.subscribe('deactivate_component', fn_deactivate)
+			)
+			function fn_deactivate (component) {
+				if ( component.id === self.id ) {
+					// (!) If self.changed_data has changed, save is fired automatically
+					// from ui.component.deactivate
+					console.log('+++++ custom fn_deactivate self.changed_data:', self.changed_data);
+
+					// self.save()
+
+					// const text_editor = self.text_editor[0] || null
+					// if (!text_editor) {
+					// 	console.error('No text editor found. Save failed!', self);
+					// 	return false
+					// }
+					// if (text_editor.is_dirty === true) {
+					// 	// save content from editor
+					// 	text_editor.save()
+					// }
+				}
+			}
+
 	// call the generic method
 		const common_init = component_common.prototype.init.call(self, options);
 

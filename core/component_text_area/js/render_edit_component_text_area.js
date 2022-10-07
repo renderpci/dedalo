@@ -548,7 +548,7 @@ const get_custom_events = (self, i, text_editor) => {
 	// focus
 		custom_events.focus = (evt, options) => {
 			if (!self.active) {
-				event_manager.publish('activate_component', self)
+				ui.component.activate(self)
 			}
 		}//end focus
 

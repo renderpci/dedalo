@@ -73,7 +73,7 @@ const get_content_data_search = function(self) {
 		input_q_operator.addEventListener('focus', function() {
 			// force activate on input focus (tabulating case)
 			if (!self.active) {
-				event_manager.publish('activate_component', self)
+				ui.component.activate(self)
 			}
 		})
 		input_q_operator.addEventListener('change', function(){

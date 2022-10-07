@@ -204,7 +204,7 @@ export const ui = {
 				// event click . Activate component on event
 					wrapper.addEventListener('click', (e) => {
 						e.stopPropagation()
-						event_manager.publish('activate_component', instance)
+						ui.component.activate(instance)
 					})
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
@@ -624,9 +624,7 @@ export const ui = {
 				// event click . Activate component on event
 					wrapper.addEventListener('click', e => {
 						e.stopPropagation()
-						if (!instance.active) {
-							event_manager.publish('activate_component', instance)
-						}
+						ui.component.activate(instance)
 					})
 
 				wrapper.appendChild(fragment)
@@ -638,57 +636,36 @@ export const ui = {
 
 		/**
 		* ACTIVATE
-		* Set component state as active/inactive by subscription event
-		* @see common events event_manage.publish
+		* Set component state as active/inactive and publish activation event
 		*
-		* @param object self
-		*	Full component instance. Each component that is subscribed
-		* @param object actived_component
-		*	Full component instance. Actual active component
+		* @param object component
+		*	Full component instance
 		* @return bool
+		* 	If component is undefined or already active return false, else true
 		*/
-		activate : async (self, actived_component) => {
+		activate : async (component) => {
 
-			// actived_component mandatory check
-				if (typeof actived_component==='undefined') {
-					console.warn('[ui.component.active]: WARNING. Received undefined actived_component!');
+			// component mandatory check
+				if (typeof component==='undefined') {
+					console.warn('[ui.component.active]: WARNING. Received undefined component!');
 					return false
 				}
 
 			// already active case
-				if (self.active===true) {
-
-					if (self.id===actived_component.id) {
-						console.log('Ignored already self active:', self.id);
-					}else{
-						// deactivate active component
-						console.log('Deactivating active component (self):', self.id);
-						await ui.component.deactivate(self)
-					}
+				if (component.active===true) {
+					// console.log('Ignored already active component: ', component.id);
 					return false
 				}
 
-			// ignore another non match to active
-				if (self.id!==actived_component.id) {
-					return false
+			// deactivate others
+				if (page_globals.component_active &&
+					page_globals.component_active.id!==component.id
+					) {
+					await ui.component.deactivate(page_globals.component_active)
 				}
-
-			// match . Add wrapper css active
-				// component.node.map(function(item_node) {
-
-					// event mouse out add to component wrapper
-						// const wrapper = item_node
-						// wrapper.addEventListener('mouseleave', fn_mouseleave, false)
-						// function fn_mouseleave(){
-						// 	// remove event to prevent duplicity
-						// 	wrapper.removeEventListener('mouseleave', fn_mouseleave, false)
-						// 	// blur the active element by forcing the component to save the modified values and to deactivate it
-						// 	document.activeElement.blur()
-						// }
-				// })
 
 			// inspector. fix nearby inspector overlapping
-				const wrapper = self.node
+				const wrapper = component.node
 				if (wrapper) {
 					wrapper.classList.add('active')
 
@@ -710,17 +687,16 @@ export const ui = {
 				}
 
 			// component active status
-				self.active = true
+				component.active = true
 
 			// fix component as active
-				page_globals.component_active = self
+				page_globals.component_active = component
 
-			// custom component deactivate callbacks
-				if (typeof self.activate==='function') {
-					self.activate(true)
-				}
+			// publish activate_component event
+				event_manager.publish('activate_component', component)
 
-				console.log('Activating component:', self.id);
+				// console.log('ui Activating component:', component.id);
+
 
 			return true
 		},//end activate
@@ -729,20 +705,20 @@ export const ui = {
 
 		/**
 		* DEACTIVATE
-		* Removes component active style and save data if
-		* changed_data is different from undefined
-		* @see events event_manage.publish
-		*
+		* Removes component active style and save it
+		* if changed_data is different from undefined
+		* (!) Note that component changed_data existence provoke the save call (change_value())
 		* @param object component
 		*	Full component instance
 		* @return promise
-		* 	Resolve bool saved
+		* 	Resolve bool false if component it's not active or
+		* 	true when deactivation finish
 		*/
 		deactivate : async (component) => {
 
 			// check already inactive
 				if (component.active!==true) {
-					console.log('Ignored component not active: ', component.id);
+					// console.log('Ignored component. It\'s not active:', component.id);
 					return false
 				}
 
@@ -754,6 +730,7 @@ export const ui = {
 			// changed_data check. This action saves changed_data
 			// and reset component changed_data to empty array []
 				if (component.data && component.data.changed_data && component.data.changed_data.length>0) {
+					// console.log('>>>>>> UI component.data.changed_data:', component.model, component.data.changed_data);
 					// set_before_unload(true)
 					await component.change_value({
 						changed_data	: component.data.changed_data,
@@ -769,10 +746,10 @@ export const ui = {
 					page_globals.component_active = null
 				}
 
-			// custom component deactivate callbacks
-				if (typeof component.deactivate==='function') {
-					component.deactivate()
-				}
+			// publish event deactivate_component
+				event_manager.publish('deactivate_component', component)
+
+				// console.log('ui Deactivating component:', component.id);
 
 
 			return true

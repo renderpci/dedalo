@@ -99,34 +99,6 @@ component_input_text.prototype.init = async function(options) {
 
 
 /**
-* ACTIVATE
-* Custom activate function triggered after ui.activate has finish
-*/
-component_input_text.prototype.activate = function(result) {
-
-	// place custom component code here after activate
-	console.log('--> component activated. result:', result);
-
-	return true
-}//end activate
-
-
-
-/**
-* DEACTIVATE
-* Custom deactivate function triggered after ui.deactivate has finish
-*/
-component_input_text.prototype.deactivate = function() {
-
-	// place custom component code here after deactivate
-	console.log('--> component deactivated.', this.id);
-
-	return true
-}//end deactivate
-
-
-
-/**
 * IS_UNIQUE
 * Check the value of the input_text with the all values in the database
 * @result bool

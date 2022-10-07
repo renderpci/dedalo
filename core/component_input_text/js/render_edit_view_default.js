@@ -109,14 +109,14 @@ const get_content_value = (i, current_value, self) => {
 			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value,
-			placeholder 	: (current_value) ? '' : self.data.fallback_value[i],
+			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
 			parent			: content_value
 		})
 		// focus event
 			input.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					event_manager.publish('activate_component', self)
+					ui.component.activate(self)
 				}
 			})
 		// blur event
