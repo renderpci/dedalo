@@ -6,7 +6,7 @@
 // import
 	// custom html elements
 	// import '../../common/js/dd-modal.js'
-	import '../../services/service_tinymce/js/dd-tiny.js'
+	// import '../../services/service_tinymce/js/dd-tiny.js'
 	// others
 	import {clone, dd_console, find_up_node} from '../../common/js/utils/index.js'
 	// import {menu} from '../../menu/js/menu.js'
