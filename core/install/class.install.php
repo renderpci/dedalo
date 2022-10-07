@@ -371,6 +371,12 @@ class install extends common {
 				return $call_response;
 			}
 
+		// create default test_record
+			$call_response = install::create_test_record();
+			if ($call_response->result===false) {
+				return $call_response;
+			}
+
 		// import_hierarchy_main_records (matrix_hierarchy_main records)
 			$call_response = install::import_hierarchy_main_records();
 			if ($call_response->result===false) {
@@ -883,88 +889,88 @@ class install extends common {
 			{
 			  "label": "Usuarios",
 			  "relations": [
-			    {
-			      "type": "dd151",
-			      "section_id": "1",
-			      "section_tipo": "dd64",
-			      "from_component_tipo": "dd131"
-			    },
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd200"
-			    },
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd197"
-			    },
-			    {
-			      "type": "dd151",
-			      "section_id": "2",
-			      "section_tipo": "dd64",
-			      "from_component_tipo": "dd244"
-			    },
-			    {
-			      "type": "dd151",
-			      "section_id": "2",
-			      "section_tipo": "dd234",
-			      "from_component_tipo": "dd1725"
-			    }
+				{
+				  "type": "dd151",
+				  "section_id": "1",
+				  "section_tipo": "dd64",
+				  "from_component_tipo": "dd131"
+				},
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd200"
+				},
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd197"
+				},
+				{
+				  "type": "dd151",
+				  "section_id": "2",
+				  "section_tipo": "dd64",
+				  "from_component_tipo": "dd244"
+				},
+				{
+				  "type": "dd151",
+				  "section_id": "2",
+				  "section_tipo": "dd234",
+				  "from_component_tipo": "dd1725"
+				}
 			  ],
 			  "components": {
-			    "dd132": {
-			      "inf": "User [component_input_text]",
-			      "dato": {
-			        "lg-nolan": [
-			          "root"
-			        ]
-			      }
-			    },
-			    "dd133": {
-			      "inf": "Password [component_password]",
-			      "dato": {
-			        "lg-nolan": null
-			      }
-			    },
-			    "dd199": {
-			      "inf": "Created date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 30,
-			              "hour": 12,
-			              "time": 64772914091,
-			              "year": 2022,
-			              "month": 9,
-			              "minute": 8,
-			              "second": 11
-			            }
-			          }
-			        ]
-			      }
-			    },
-			    "dd201": {
-			      "inf": "Modified date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 30,
-			              "hour": 12,
-			              "time": 64772914091,
-			              "year": 2022,
-			              "month": 9,
-			              "minute": 8,
-			              "second": 11
-			            }
-			          }
-			        ]
-			      }
-			    }
+				"dd132": {
+				  "inf": "User [component_input_text]",
+				  "dato": {
+					"lg-nolan": [
+					  "root"
+					]
+				  }
+				},
+				"dd133": {
+				  "inf": "Password [component_password]",
+				  "dato": {
+					"lg-nolan": null
+				  }
+				},
+				"dd199": {
+				  "inf": "Created date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 30,
+						  "hour": 12,
+						  "time": 64772914091,
+						  "year": 2022,
+						  "month": 9,
+						  "minute": 8,
+						  "second": 11
+						}
+					  }
+					]
+				  }
+				},
+				"dd201": {
+				  "inf": "Modified date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 30,
+						  "hour": 12,
+						  "time": 64772914091,
+						  "year": 2022,
+						  "month": 9,
+						  "minute": 8,
+						  "second": 11
+						}
+					  }
+					]
+				  }
+				}
 			  },
 			  "section_id": 0,
 			  "created_date": "2022-09-30 13:48:31",
@@ -1020,72 +1026,72 @@ class install extends common {
 			{
 			  "label": "Proyectos",
 			  "relations": [
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd200"
-			    },
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd197"
-			    }
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd200"
+				},
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd197"
+				}
 			  ],
 			  "components": {
-			    "dd155": {
-			      "inf": "Project code [component_input_text]",
-			      "dato": {
-			        "lg-nolan": [
-			          "001"
-			        ]
-			      }
-			    },
-			    "dd156": {
-			      "inf": "Project (name) [component_input_text]",
-			      "dato": {
-			        "lg-eng": [
-			          "General project"
-			        ]
-			      }
-			    },
-			    "dd199": {
-			      "inf": "Created date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 15,
-			              "hour": 0,
-			              "time": 64606896000,
-			              "year": 2010,
-			              "month": 2,
-			              "minute": 0,
-			              "second": 0
-			            }
-			          }
-			        ]
-			      }
-			    },
-			    "dd201": {
-			      "inf": "Modified date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 10,
-			              "hour": 16,
-			              "time": 64890432722,
-			              "year": 2018,
-			              "month": 12,
-			              "minute": 12,
-			              "second": 2
-			            }
-			          }
-			        ]
-			      }
-			    }
+				"dd155": {
+				  "inf": "Project code [component_input_text]",
+				  "dato": {
+					"lg-nolan": [
+					  "001"
+					]
+				  }
+				},
+				"dd156": {
+				  "inf": "Project (name) [component_input_text]",
+				  "dato": {
+					"lg-eng": [
+					  "General project"
+					]
+				  }
+				},
+				"dd199": {
+				  "inf": "Created date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 15,
+						  "hour": 0,
+						  "time": 64606896000,
+						  "year": 2010,
+						  "month": 2,
+						  "minute": 0,
+						  "second": 0
+						}
+					  }
+					]
+				  }
+				},
+				"dd201": {
+				  "inf": "Modified date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 10,
+						  "hour": 16,
+						  "time": 64890432722,
+						  "year": 2018,
+						  "month": 12,
+						  "minute": 12,
+						  "second": 2
+						}
+					  }
+					]
+				  }
+				}
 			  },
 			  "section_id": 1,
 			  "created_date": "2010-02-15 00:00:00",
@@ -1141,72 +1147,72 @@ class install extends common {
 			{
 			  "label": "Profiles",
 			  "relations": [
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd200"
-			    },
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd197"
-			    }
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd200"
+				},
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd197"
+				}
 			  ],
 			  "components": {
-			    "dd199": {
-			      "inf": "Created date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 21,
-			              "hour": 20,
-			              "time": 64803010979,
-			              "year": 2016,
-			              "month": 3,
-			              "minute": 22,
-			              "second": 59
-			            }
-			          }
-			        ]
-			      }
-			    },
-			    "dd201": {
-			      "inf": "Modified date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 8,
-			              "hour": 14,
-			              "time": 64839364078,
-			              "year": 2017,
-			              "month": 5,
-			              "minute": 27,
-			              "second": 58
-			            }
-			          }
-			        ]
-			      }
-			    },
-			    "dd237": {
-			      "inf": "Name [component_input_text]",
-			      "dato": {
-			        "lg-eng": [
-			          "Admin"
-			        ]
-			      }
-			    },
-			    "dd238": {
-			      "inf": "Descripción [component_text_area]",
-			      "dato": {
-			        "lg-eng": [
-			          "<p>Admin general</p>"
-			        ]
-			      }
-			    }
+				"dd199": {
+				  "inf": "Created date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 21,
+						  "hour": 20,
+						  "time": 64803010979,
+						  "year": 2016,
+						  "month": 3,
+						  "minute": 22,
+						  "second": 59
+						}
+					  }
+					]
+				  }
+				},
+				"dd201": {
+				  "inf": "Modified date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 8,
+						  "hour": 14,
+						  "time": 64839364078,
+						  "year": 2017,
+						  "month": 5,
+						  "minute": 27,
+						  "second": 58
+						}
+					  }
+					]
+				  }
+				},
+				"dd237": {
+				  "inf": "Name [component_input_text]",
+				  "dato": {
+					"lg-eng": [
+					  "Admin"
+					]
+				  }
+				},
+				"dd238": {
+				  "inf": "Descripción [component_text_area]",
+				  "dato": {
+					"lg-eng": [
+					  "<p>Admin general</p>"
+					]
+				  }
+				}
 			  },
 			  "section_id": 1,
 			  "created_date": "2016-03-21 20:22:59",
@@ -1222,72 +1228,72 @@ class install extends common {
 			{
 			  "label": "Profiles",
 			  "relations": [
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd200"
-			    },
-			    {
-			      "type": "dd151",
-			      "section_id": "-1",
-			      "section_tipo": "dd128",
-			      "from_component_tipo": "dd197"
-			    }
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd200"
+				},
+				{
+				  "type": "dd151",
+				  "section_id": "-1",
+				  "section_tipo": "dd128",
+				  "from_component_tipo": "dd197"
+				}
 			  ],
 			  "components": {
-			    "dd199": {
-			      "inf": "Created date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 21,
-			              "hour": 20,
-			              "time": 64803011216,
-			              "year": 2016,
-			              "month": 3,
-			              "minute": 26,
-			              "second": 56
-			            }
-			          }
-			        ]
-			      }
-			    },
-			    "dd201": {
-			      "inf": "Modified date [component_date]",
-			      "dato": {
-			        "lg-nolan": [
-			          {
-			            "start": {
-			              "day": 8,
-			              "hour": 14,
-			              "time": 64839364078,
-			              "year": 2017,
-			              "month": 5,
-			              "minute": 27,
-			              "second": 58
-			            }
-			          }
-			        ]
-			      }
-			    },
-			    "dd237": {
-			      "inf": "Name [component_input_text]",
-			      "dato": {
-			        "lg-eng": [
-			          "User"
-			        ]
-			      }
-			    },
-			    "dd238": {
-			      "inf": "Descripción [component_text_area]",
-			      "dato": {
-			        "lg-eng": [
-			          "<p>Generic user</p>"
-			        ]
-			      }
-			    }
+				"dd199": {
+				  "inf": "Created date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 21,
+						  "hour": 20,
+						  "time": 64803011216,
+						  "year": 2016,
+						  "month": 3,
+						  "minute": 26,
+						  "second": 56
+						}
+					  }
+					]
+				  }
+				},
+				"dd201": {
+				  "inf": "Modified date [component_date]",
+				  "dato": {
+					"lg-nolan": [
+					  {
+						"start": {
+						  "day": 8,
+						  "hour": 14,
+						  "time": 64839364078,
+						  "year": 2017,
+						  "month": 5,
+						  "minute": 27,
+						  "second": 58
+						}
+					  }
+					]
+				  }
+				},
+				"dd237": {
+				  "inf": "Name [component_input_text]",
+				  "dato": {
+					"lg-eng": [
+					  "User"
+					]
+				  }
+				},
+				"dd238": {
+				  "inf": "Descripción [component_text_area]",
+				  "dato": {
+					"lg-eng": [
+					  "<p>Generic user</p>"
+					]
+				  }
+				}
 			  },
 			  "section_id": 2,
 			  "created_date": "2016-03-21 20:26:56",
@@ -1326,6 +1332,59 @@ class install extends common {
 
 
 	/**
+	* CREATE_TEST_RECORD
+	* This record it's necessary to run unit_test checks
+	* Table 'matrix_test' must to exists
+	* @return object $response
+	*/
+	private static function create_test_record() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// short vars
+			$config				= self::get_config();
+			$db_install_conn	= install::get_db_install_conn();
+			$exec				= true;
+			$section_tipo		= 'test3';
+			$table				= 'matrix_test';
+
+		$dato = trim('
+			{
+			  "relations": [],
+			  "components": {},
+			  "modified_date": "2022-10-07 11:16:43",
+			  "diffusion_info": null,
+			  "modified_by_userID": 1
+			}
+		');
+		$sql = '
+			TRUNCATE "'.$table.'";
+			ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1;
+			INSERT INTO "'.$table.'" ("section_id", "section_tipo", "datos") VALUES (\'1\', \''.$section_tipo.'\', \''.$dato.'\');
+		';
+		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+		if ($exec) {
+			$result   = pg_query($db_install_conn, $sql);
+			if (!$result) {
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+				debug_log(__METHOD__.$msg, logger::ERROR);
+				$response->msg = $msg;
+				return $response;
+			}
+		}
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end create_test_record
+
+
+
+	/**
 	* IMPORT_HIERARCHY_MAIN_RECORDS
 	* Import basic matrix_hierarchy_main records
 	* Countries and main hierarchies (thematic, special, semantic, languages)
@@ -1341,10 +1400,10 @@ class install extends common {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config					= self::get_config();
-			$exec					= true;
-			$sql_file_path			= DEDALO_ROOT . '/install/import/matrix_hierarchy_main.sql';
-			$matrix_table			= 'matrix_hierarchy_main';
+			$config			= self::get_config();
+			$exec			= true;
+			$sql_file_path	= DEDALO_ROOT_PATH . '/install/import/matrix_hierarchy_main.sql';
+			$matrix_table	= 'matrix_hierarchy_main';
 
 		// check if file exists
 			if (!file_exists($sql_file_path)) {
@@ -1386,14 +1445,22 @@ class install extends common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->msg		= 'Error. Request failed '.__METHOD__.' ';
 
 		// short vars
 			$config						= self::get_config();
-			$db_install_conn			= install::get_db_install_conn();
 			$exec						= true;
 			$target_file_path			= $config->target_file_path;
 			$target_file_path_compress	= $config->target_file_path_compress;
+			$db_install_name			= $config->db_install_name;
+			$db_install_conn			= install::get_db_install_conn();
+			// check target install database exists and connection is reliable
+			if ($db_install_conn===false) {
+				$msg = ' Error. DDBB connection error. Verify database "'.$db_install_name.'" exists and is accessible';
+				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+				$response->msg .= $msg;
+				return $response;
+			}
 
 		// rename old version if exists
 			if (file_exists($target_file_path_compress)) {
@@ -1402,7 +1469,7 @@ class install extends common {
 			}
 
 		// terminal command pg_dump
-			$command  = 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.DEDALO_USERNAME_CONN.' -F p -b -v --no-owner --no-privileges --role='.DEDALO_USERNAME_CONN.' '.$config->db_install_name; //.' > '.$target_file_path.'.psql';
+			$command  = 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.DEDALO_USERNAME_CONN.' -F p -b -v --no-owner --no-privileges --role='.DEDALO_USERNAME_CONN.' '.$db_install_name; //.' > '.$target_file_path.'.psql';
 			// $command .= ' | zip '.$target_file_path_compress.' -foo'; // redirects output to zip compressed file
 			$command .=' | gzip > '.$target_file_path_compress;
 
@@ -1547,10 +1614,10 @@ class install extends common {
 															  $section_tipo);
 			$dato = json_decode('[
 			  {
-			    "type": "'.DEDALO_RELATION_TYPE_LINK.'",
-			    "section_id": "'.NUMERICAL_MATRIX_VALUE_YES.'",
-			    "section_tipo": "'.DEDALO_SECTION_SI_NO_TIPO.'",
-			    "from_component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'"
+				"type": "'.DEDALO_RELATION_TYPE_LINK.'",
+				"section_id": "'.NUMERICAL_MATRIX_VALUE_YES.'",
+				"section_tipo": "'.DEDALO_SECTION_SI_NO_TIPO.'",
+				"from_component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'"
 			  }
 			]');
 			$component->set_dato($dato);

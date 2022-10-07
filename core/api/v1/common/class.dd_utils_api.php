@@ -541,11 +541,10 @@ final class dd_utils_api {
 
 
 	/**
-	* build_install_db_file
+	* BUILD_INSTALL_VERSION
 	* @return object $response
 	*/
-	public static function build_install_db_file(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function build_install_version(object $request_options=null) : object {
 
 		// session_write_close();
 
@@ -554,19 +553,18 @@ final class dd_utils_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-		$response->result	= install::build_install_db_file();
-		$response->msg		= 'Ok. Request done';
+		$response->result	= install::build_install_version();
+		$response->msg		= 'OK. Request done';
 
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
 					$debug->request_options	= $request_options;
 				$response->debug = $debug;
 			}
 
 		return $response;
-	}//end build_install_db_file
+	}//end build_install_version
 
 
 
