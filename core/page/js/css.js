@@ -171,7 +171,7 @@ const update_style_sheet = async function(key, value) {
 
 /**
 * INSERT_RULE
-* Execute a statndard 'insertRule' order with given values
+* Execute a standard 'insertRule' order with given values
 *
 * @param string selector
 * 	like: '.rsc170_rsc20.wrapper_component'
@@ -300,5 +300,3 @@ export const get_elements_style_sheet = function() {
 
 	return window.elements_style_sheet
 }//end create_new_CSS_sheet
-
-

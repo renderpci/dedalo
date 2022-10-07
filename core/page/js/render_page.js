@@ -193,9 +193,11 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_SERVER_RESPONSE_ERROR
-* @return DOM node
+* Render generic page error (Raspa background)
+* @param string msg
+* @return DOM node wrapper
 */
-export const render_server_response_error = function(msg) {
+render_page.render_server_response_error = function(msg) {
 
 	// wrapper
 		const wrapper = document.createElement('div')
