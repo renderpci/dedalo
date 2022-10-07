@@ -33,7 +33,8 @@ render_viewer_component_image.prototype.viewer = function() {
 		const datalist = self.data.datalist || []
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
+		// const wrapper = ui.component.build_wrapper_mini(self)
+		const wrapper = document.createElement('div')
 			  wrapper.classList.add('component_image')
 			  wrapper.classList.add('viewer')
 
@@ -41,14 +42,14 @@ render_viewer_component_image.prototype.viewer = function() {
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
 		const url			= (typeof url_object==='undefined')
-			? DEDALO_CORE_URL + '/themes/default/0.jpg'
+			? page_globals.fallback_image
 			: url_object.url
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			src				: url,
-			class_name 		: 'hidden',
+			// src			: url,
+			class_name		: 'viewer_image hidden',
 			parent			: wrapper
 		})
 		// ui.component.add_image_fallback(image)
@@ -64,12 +65,13 @@ render_viewer_component_image.prototype.viewer = function() {
 	// button download
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name 		: 'primary download',
-			// value 			: ' ok ',
-			parent			: wrapper,
+			class_name		: 'primary download',
+			// value		: ' ok ',
+			parent			: wrapper
 		})
 		download_image_button.addEventListener('click', function(e) {
 			e.stopPropagation()
+
 			// get the original quality for download
 			const original = self.data.datalist.find(item => item.quality==='original')
 			// check if the original file exist else get the url of the default image
@@ -83,13 +85,19 @@ render_viewer_component_image.prototype.viewer = function() {
 				? self.data.value[0].original_file_name
 				: self.tipo+'_'+self.section_tipo+'_'+self.section_id
 
-			download_original_image({download_url:download_url, name:name})
+			download_original_image({
+				download_url	: download_url,
+				name			: name
+			})
 		})
 
 	// close window when the user click in the image
-		image.addEventListener('mousedown',function () {
+		image.addEventListener('mousedown', function() {
 			window.close()
 		})
+
+	// set url
+		image.src = url
 
 
 	return wrapper
@@ -115,7 +123,7 @@ const resize_window_to_image_size = function(image) {
 			?  screen_max_height / image.height
 			: 1;
 		const ratio_w = screen_max_width < image.width
-			?  screen_max_width / image.width
+			? screen_max_width / image.width
 			: 1;
 		// get the ratio of the most high multiplied
 		// (lowest ratio is more difference between sizes; 0.5 > 0.7)
@@ -132,6 +140,8 @@ const resize_window_to_image_size = function(image) {
 		const width		= image.width;
 
 	const tool_bar_height = (window.outerHeight - window.innerHeight) || 50
+	console.log('width:', width, 'height:', height);
+	console.log('tool_bar_height:', tool_bar_height);
 	window.resizeTo(width, height+tool_bar_height)
 }//end resize_window_to_image_size
 
