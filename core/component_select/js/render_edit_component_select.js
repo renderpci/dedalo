@@ -123,7 +123,7 @@ const get_content_value = (i, current_value, self) => {
 			select.addEventListener('focus', function(){
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					event_manager.publish('activate_component', self)
+					ui.component.activate(self)
 				}
 			})
 		// change event

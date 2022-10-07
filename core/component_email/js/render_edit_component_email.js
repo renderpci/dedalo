@@ -211,7 +211,7 @@ const get_input_element_edit = (i, current_value, self) => {
 	const mode				= self.mode
 	const is_inside_tool	= self.is_inside_tool
 	// check if the component is mandatory and it doesn't has value
-	const add_class 		= self.context.properties.mandatory && !current_value
+	const add_class			= self.context.properties.mandatory && !current_value
 		? ' mandatory'
 		: ''
 
@@ -233,7 +233,7 @@ const get_input_element_edit = (i, current_value, self) => {
 			input_email.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					event_manager.publish('activate_component', self)
+					ui.component.activate(self)
 				}
 			})
 		// blur event

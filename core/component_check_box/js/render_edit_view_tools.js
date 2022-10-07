@@ -128,7 +128,7 @@ const get_input_element = (i, current_value, self) => {
 		input_checkbox.addEventListener('focus', function() {
 			// force activate on input focus (tabulating case)
 			if (!self.active) {
-				event_manager.publish('activate_component', self)
+				ui.component.activate(self)
 			}
 		})
 		input_checkbox.addEventListener('change', function(){

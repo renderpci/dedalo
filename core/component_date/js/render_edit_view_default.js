@@ -316,7 +316,7 @@ const input_element_period = (i, current_value, self) => {
 			input_year.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					event_manager.publish('activate_component', self)
+					ui.component.activate(self)
 				}
 			})
 			input_year.addEventListener('keyup', function(e) {
@@ -346,7 +346,7 @@ const input_element_period = (i, current_value, self) => {
 			input_month.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					event_manager.publish('activate_component', self)
+					ui.component.activate(self)
 				}
 			})
 			input_month.addEventListener('keyup', function(e) {
@@ -376,7 +376,7 @@ const input_element_period = (i, current_value, self) => {
 			input_day.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					event_manager.publish('activate_component', self)
+					ui.component.activate(self)
 				}
 			})
 			input_day.addEventListener('keyup', function(e) {
@@ -470,7 +470,7 @@ const input_element_time = (i, current_value, self) => {
 	input.addEventListener('focus', function() {
 		// force activate on input focus (tabulating case)
 		if (!self.active) {
-			event_manager.publish('activate_component', self)
+			ui.component.activate(self)
 		}
 	})
 	input.addEventListener('keyup', function(e) {
@@ -561,7 +561,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 		input.addEventListener('focus', function() {
 			// force activate on input focus (tabulating case)
 			if (!self.active) {
-				event_manager.publish('activate_component', self)
+				ui.component.activate(self)
 			}
 		})
 		input.addEventListener('keyup', function(e) {

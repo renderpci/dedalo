@@ -12,14 +12,18 @@
 * EVENTS_SUBSCRIPTION
 * subscription to events, the events could be fired by itself or other components, section, area, etc...
 * Use event_manager to get the publications
-* in some cases, events are fired by observables and some events are controlled by ontology, his definition is not in the code, see the ontology.
+* in some cases, events are fired by observable elements and some events are controlled
+* by ontology, his definition is not in the code, see the Ontology.
 * wrapper = self.node
 */
 export const events_subscription = function() {
 
 	const self = this
 
-	// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+	// update value
+		// sync data on similar components (same id_base)
+		// Subscription to the changes: if the DOM input value was changed,
+		// observers DOM elements will be changed own value with the observable value
 		self.events_tokens.push(
 			event_manager.subscribe('update_value_'+self.id_base, fn_update_value)
 		)
@@ -41,5 +45,28 @@ export const events_subscription = function() {
 					: 'full'
 			})
 		}
+
+	// activate. Nothing to do. Only as example of manage
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('activate_component', fn_activate)
+		// )
+		// function fn_activate (component) {
+		// 	if ( component.id === self.id ) {
+		// 		console.log('fn_activate component:', self.id, component);
+		// 		return
+		// 	}
+		// }
+
+	// deactivate. Nothing to do. Only as example of manage
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('deactivate_component', fn_deactivate)
+		// )
+		// function fn_deactivate (component) {
+		// 	if ( component.id === self.id ) {
+		// 		console.log('self.changed_data:', self.changed_data);
+		// 		// self.save()
+		// 		return
+		// 	}
+		// }
 
 }//end events_subscription
