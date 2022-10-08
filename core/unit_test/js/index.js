@@ -1,6 +1,3 @@
-
-
-
 /**
 * UNIT_TEST
 * 	To check Dédalo elements basic functionalities
