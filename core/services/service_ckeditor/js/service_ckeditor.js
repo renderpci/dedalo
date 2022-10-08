@@ -66,7 +66,7 @@ export const service_ckeditor = function() {
 		switch(editor_class) {
 
 			case 'InlineEditor':
-				return self.create_InlineEditor()
+				return self.create_InlineEditor(editor_config)
 
 			case 'ddEditor':
 			default:
@@ -81,7 +81,7 @@ export const service_ckeditor = function() {
 	* CREATE_INLINEEDITOR
 	* @return promise
 	*/
-	this.create_InlineEditor = async function() {
+	this.create_InlineEditor = async function(editor_config) {
 
 		const self = this
 
@@ -93,49 +93,50 @@ export const service_ckeditor = function() {
 			// InlineEditor is initiated with user interface
 			ckeditor.InlineEditor.create( self.value_container, {
 				// initialData: value
-				toolbar: {
-					items : [
-						"heading",
-						// "|",
-						"bold",
-						"italic",
-						"underline",
-						"strikethrough",
-						"alignment",
-						"|",
-						"undo",
-						"redo",
-						"|",
-						"findAndReplace",
-						"sourceEditing",
-						"|",
-						"imageUpload",
-						"blockQuote",
-						"insertTable",
-						"htmlEmbed",
-						"link",
-						// "-",
-						"style",
-						"|",
-						"fontColor",
-						"fontBackgroundColor",
-						"fontSize",
-						"fontFamily",
-						"superscript",
-						"subscript",
-						"|",
-						"numberedList",
-						"bulletedList",
-						"horizontalLine",
-						"|",
-						"outdent",
-						"indent",
-						"|",
-						"specialCharacters",
-						"pageBreak"
-					],
-					shouldNotGroupWhenFull: false
-				}
+				// toolbar: {
+				// 	items : [
+				// 		"heading",
+				// 		// "|",
+				// 		"bold",
+				// 		"italic",
+				// 		"underline",
+				// 		"strikethrough",
+				// 		"alignment",
+				// 		"|",
+				// 		"undo",
+				// 		"redo",
+				// 		"|",
+				// 		"findAndReplace",
+				// 		"sourceEditing",
+				// 		"|",
+				// 		"imageUpload",
+				// 		"blockQuote",
+				// 		"insertTable",
+				// 		"htmlEmbed",
+				// 		"link",
+				// 		// "-",
+				// 		"style",
+				// 		"|",
+				// 		"fontColor",
+				// 		"fontBackgroundColor",
+				// 		"fontSize",
+				// 		"fontFamily",
+				// 		"superscript",
+				// 		"subscript",
+				// 		"|",
+				// 		"numberedList",
+				// 		"bulletedList",
+				// 		"horizontalLine",
+				// 		"|",
+				// 		"outdent",
+				// 		"indent",
+				// 		"|",
+				// 		"specialCharacters",
+				// 		"pageBreak",
+				// 		"reference"
+				// 	],
+				// 	shouldNotGroupWhenFull: false
+				// }
 
 			})
 			.then( editor => {
@@ -144,7 +145,7 @@ export const service_ckeditor = function() {
 					self.editor = editor
 
 				// init editor status changes to track isDirty value
-					// self.init_status_changes()
+					self.init_status_changes()
 
 				// remove original value container
 					// self.value_container.remove()
@@ -162,6 +163,13 @@ export const service_ckeditor = function() {
 
 						console.log('create_InlineEditor editor click event:', e);
 					}
+
+				// setup_events
+					// self.setup_inline_events();
+
+				// setup_events
+					self.setup_events(editor_config);
+
 
 				resolve(editor)
 			})
@@ -523,6 +531,25 @@ export const service_ckeditor = function() {
 
 		return true
 	}//end onsetup_editor
+
+
+	/**
+	* SETUP_INLINE_EVENTS
+	* callback when ckeditor is ready
+	* Capture the event fired in the editor and callback to the caller to be processed. See render_edit_component_text_area.js
+	* @return true
+	*/
+	this.setup_inline_events = function() {
+
+		const self		= this
+		const editor	= self.editor
+
+
+		// editor.commands.get( 'reference' ).on( 'execute', ( evt, args ) => {
+		// 	console.log( evt, args );
+		// } );
+
+	}//end setup_inline_events
 
 
 
@@ -1300,7 +1327,7 @@ export const service_ckeditor = function() {
 
 			};
 			editor.listenTo( command, 'change:isEnabled',(evt)=>{
-					onIsEnabledChange()
+				onIsEnabledChange()
 			})
 
 		return true
