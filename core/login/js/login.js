@@ -92,7 +92,7 @@ login.prototype.init = async function(options) {
 * BUILD
 * @param bool autoload = true
 * @return promise
-*	bool true
+*	object self
 */
 login.prototype.build = async function(autoload=false) {
 
@@ -134,7 +134,7 @@ login.prototype.build = async function(autoload=false) {
 		self.status = 'built'
 
 
-	return true
+	return self
 }//end build
 
 

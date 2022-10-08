@@ -46,8 +46,10 @@ abstract class DBi {
 		// Connecting, selecting database
 		$pg_conn = pg_connect($str_connect);
 		if($pg_conn===false) {
-			// throw new Exception("Error. Could not connect to database (52)", 1);
 			debug_log(__METHOD__.' Error. Could not connect to database (52) : '.to_string($database), logger::ERROR);
+			if(SHOW_DEBUG===true) {
+				// throw new Exception("Error. Could not connect to database (52)", 1);
+			}
 		}
 
 		return $pg_conn;

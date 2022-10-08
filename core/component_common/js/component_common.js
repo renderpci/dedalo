@@ -161,7 +161,7 @@ component_common.prototype.init = async function(options) {
 * Set the main component properties.
 * Could be from database context and data or injected by caller section, tools, etc.
 * @param bool autoload = false
-* @return bool
+* @return object self
 */
 component_common.prototype.build = async function(autoload=false){
 	// const t0 = performance.now()
@@ -246,7 +246,7 @@ component_common.prototype.build = async function(autoload=false){
 
 	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
 
-	return true
+	return self
 }//end component_common.prototype.build
 
 
