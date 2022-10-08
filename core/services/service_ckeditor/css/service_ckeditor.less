@@ -6,131 +6,85 @@
 @import '../../../common/css/library.less';
 
 
-	.toolbar_container {
-		display: flex;
-		position: absolute;
-		top: -1.75rem;
-		left: 1rem;
-		width: auto;
-		height: 2.2em;
-		padding: 0.25rem;
-		z-index: 1;
-		// background-color: @color_grey_light;
-		background-color: #fafafa;
-		// border: 1px solid #c4c4c4;
-		outline: 1px solid #e6e6e6;
+// ddEdit custom toolbar
+.toolbar_container {
+	display: flex;
+	position: absolute;
+	top: -1.75rem;
+	left: 1rem;
+	width: auto;
+	height: 2.2em;
+	padding: 0.25rem;
+	z-index: 1;
+	// background-color: @color_grey_light;
+	background-color: #fafafa;
+	// border: 1px solid #c4c4c4;
+	outline: 1px solid #e6e6e6;
 
-		// version mini	(fit heigth)
-			// top: -1.35rem;
-			// height: 1.8em;
-			// padding: 0.05rem;
-			// width: calc(100% - 2rem);
+	// version mini	(fit heigth)
+		// top: -1.35rem;
+		// height: 1.8em;
+		// padding: 0.05rem;
+		// width: calc(100% - 2rem);
 
-		>.toolbar_button {
+	>.toolbar_button {
+		height: 100%;
+		padding: 0.33rem;
+		padding-right: 0.5em;
+		padding-left: 0.5em;
+		cursor: pointer;
+		border-radius: 0.33em;
+		&.separator {
+			pointer-events: none;
+		}
+		&:hover {
+			background-color: #dddddd;
+		}
+		&:active {
+			opacity: 0.6;
+		}
+		&.active {
+			background-color: #dddddd;
+		}
+		&.disable {
+			opacity: 25%;
+		}
+
+		img {
 			height: 100%;
-			padding: 0.33rem;
-			padding-right: 0.5em;
-			padding-left: 0.5em;
-			cursor: pointer;
-			border-radius: 0.33em;
-			&.separator{
-				pointer-events: none;
-			}
-			&:hover {
-				background-color: #dddddd;
-			}
-			&:active {
-				opacity: 0.6;
-			}
-			&.active {
-				background-color: #dddddd;
-			}
-			&.disable {
-				opacity: 25%;
-			}
-
-			img {
-				height: 100%;
-			}
 		}
 	}
+}
 
 
-	// source ckeditor
-	.ck-source-editing-area {
-		width: 100%;
-		height: calc(100% - 1.5rem);
-		margin: 0.5rem;
-		margin-left: 1rem;
-		margin-right: 1rem;
-		z-index: 0;
-		>textarea {
-			overflow: auto;
-		}
+// inline editor toolbar
+.ck-rounded-corners .ck.ck-balloon-panel {
+	// display: block;
+	margin-top: 8px;
+}
+.ck-toolbar-container .ck.ck-toolbar {
+	// background-color: #b1f1e6;
+	zoom: 0.86;
+}
+.ck-toolbar{
+	zoom: 0.86;
+}
+
+
+// source ckeditor
+.ck-source-editing-area {
+	width: 100%;
+	height: calc(100% - 1.5rem);
+	margin: 0.5rem;
+	margin-left: 1rem;
+	margin-right: 1rem;
+	z-index: 0;
+
+	>textarea {
+		overflow: auto;
 	}
+}
 
-	dd-modal{
-		.body_contanier{
-				padding: 1.5em;
-		}
-		.replace_contanier{
-			padding-top: 1.5em;
-		}
-		.options_contanier{
-			padding-left: 1.5em;
-
-			.label_whole_words{
-				padding-left:1.5em;
-			}
-
-			/* toggle-pill-color */
-			.check input[type="checkbox"] {
-				display: none;
-			}
-			.check input[type="checkbox"] + label {
-				display: inline-block;
-				position: relative;
-				width: 3em;
-				height: 1.6em;
-				// margin-bottom: 20px;
-				border-radius: 1em;
-				// background: #e84d4d;
-				background: #eeeeee;
-				// box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.3);
-				cursor: pointer;
-				-webkit-user-select: none;
-				-moz-user-select: none;
-				-ms-user-select: none;
-				-webkit-transition: background 0.1s ease-in-out;
-				transition: background 0.1s ease-in-out;
-			}
-			.check input[type="checkbox"] + label:before {
-				content: "";
-				display: inline-block;
-				width: 1.2em;
-				height: 1.2em;
-				border-radius: 1em;
-				background: #fff;
-				box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
-				position: absolute;
-				left: 0.2em;
-				top: 0.2em;
-				-webkit-transition: all 0.2s ease-in-out;
-				transition: all 0.2s ease-in-out;
-			}
-			.check input[type="checkbox"]:checked + label {
-				background: #47cf73;
-			}
-			.check input[type="checkbox"]:checked + label:before {
-				box-shadow: -2px 0px 5px rgba(0, 0, 0, 0.2);
-				left: 1.6em;
-			}
-			/* toggle-pill-color end */
-
-
-		}
-
-	}
 
 .ck.ck-content {
 
@@ -188,5 +142,65 @@
 		// 		}
 		// 	}
 		// }
+}//end .ck.ck-content
 
-}
+
+dd-modal {
+	.body_contanier {
+			padding: 1.5em;
+	}
+	.replace_contanier {
+		padding-top: 1.5em;
+	}
+	.options_contanier {
+		padding-left: 1.5em;
+
+		.label_whole_words {
+			padding-left:1.5em;
+		}
+
+		/* toggle-pill-color */
+		.check input[type="checkbox"] {
+			display: none;
+		}
+		.check input[type="checkbox"] + label {
+			display: inline-block;
+			position: relative;
+			width: 3em;
+			height: 1.6em;
+			// margin-bottom: 20px;
+			border-radius: 1em;
+			// background: #e84d4d;
+			background: #eeeeee;
+			// box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.3);
+			cursor: pointer;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+			-webkit-transition: background 0.1s ease-in-out;
+			transition: background 0.1s ease-in-out;
+		}
+		.check input[type="checkbox"] + label:before {
+			content: "";
+			display: inline-block;
+			width: 1.2em;
+			height: 1.2em;
+			border-radius: 1em;
+			background: #fff;
+			box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
+			position: absolute;
+			left: 0.2em;
+			top: 0.2em;
+			-webkit-transition: all 0.2s ease-in-out;
+			transition: all 0.2s ease-in-out;
+		}
+		.check input[type="checkbox"]:checked + label {
+			background: #47cf73;
+		}
+		.check input[type="checkbox"]:checked + label:before {
+			box-shadow: -2px 0px 5px rgba(0, 0, 0, 0.2);
+			left: 1.6em;
+		}
+		/* toggle-pill-color end */
+	}
+}//end dd-modal
