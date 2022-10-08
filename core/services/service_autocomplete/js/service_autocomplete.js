@@ -939,7 +939,18 @@ export const service_autocomplete = function() {
 						if(current_element_data === false) continue;
 
 					// context of the element
-						const current_element_context = context.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===current_element_data.section_tipo)
+						const current_element_context = context.find( (item) =>
+							item.tipo===ddo_item.tipo &&
+							item.section_tipo===current_element_data.section_tipo
+						)
+						if (!current_element_context) {
+							console.error('Ignored element: context not found. ddo_item:', ddo_item, 'context:', context);
+							continue;
+						}
+
+						// mode and view
+							current_element_context.mode	= 'list'
+							current_element_context.view	= 'mini'
 
 						if (typeof current_element_data==='undefined') {
 							console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
@@ -954,7 +965,7 @@ export const service_autocomplete = function() {
 							section_tipo	: current_element_context.section_tipo,
 							model			: current_element_context.model,
 							section_id		: current_element_data.section_id,
-							mode			: 'mini',
+							mode			: current_element_context.mode, // 'mini',
 							lang			: current_element_context.lang,
 							id_variant		: self.id
 						}
