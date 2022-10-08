@@ -208,7 +208,9 @@ const get_input_element = (i, current_value, self) => {
 					value				: value,
 					key					: i,
 					editor_config		: editor_config,
-					editor_class		: 'InlineEditor' // ddEditor | InlineEditor
+					editor_class		: self.context.view === 'html_text'
+						? 'InlineEditor'
+						: 'ddEditor' // ddEditor | InlineEditor
 				})
 
 			// fix current_service_text_editor when is ready
@@ -810,6 +812,7 @@ const get_custom_events = (self, i, text_editor) => {
 		custom_events.changeData = (evt, options) => {
 			const ar_changes = options
 			const changes_len = ar_changes.length
+
 			for (var i = changes_len - 1; i >= 0; i--) {
 				const change = ar_changes[i]
 				// create the event name as:
