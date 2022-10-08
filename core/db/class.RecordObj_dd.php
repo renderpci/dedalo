@@ -436,7 +436,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$model = $this->get_termino_by_tipo($modelo_tipo, 'lg-spa', true, false);
 
 		// replace obsolete models on the fly
-			if ($model==='component_input_text_large') {
+			if ($model==='component_input_text_large' || $model==='component_html_text') {
 				$model='component_text_area';
 			}
 			elseif ($model==='component_autocomplete' || $model==='component_autocomplete_hi') {
