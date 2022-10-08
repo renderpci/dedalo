@@ -3843,21 +3843,39 @@ abstract class common {
 			}
 
 		// non relation components cases as 'component_input_text'
-			$ar_related = component_relation_common::get_components_with_relations();
-			if(!in_array($this->get_model(), $ar_related)){
-				return 'default';
-			}
+			// $ar_related = component_relation_common::get_components_with_relations();
+			$components_to_change = [
+				'component_portal',
+				'component_text_area'
+			];
 
 		// relation components like 'component_portal'
-			$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+			$real_model = (in_array($this->get_model(), $components_to_change))
+				? RecordObj_dd::get_real_model_name_by_tipo($this->tipo)
+				: $this->get_model();
+
+		// view
 			switch ($real_model) {
 				case 'component_portal':
 					$view = 'table';
 					break;
-				default:
+				case 'component_relation_children':
+				case 'component_relation_parent':
+				case 'component_relation_index':
+				case 'component_relation_model':
+				case 'component_relation_related':
+				case 'component_autocomplete':
+				case 'component_autocomplete_hi':
 					$view = 'line';
 					break;
+				case 'component_html_text':
+					$view = 'html_text';
+					break;
+				default:
+					$view = 'default';
+					break;
 			}
+
 
 		return $view;
 	}//end get_view
