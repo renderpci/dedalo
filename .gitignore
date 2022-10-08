@@ -27,6 +27,7 @@ des
 test
 .DS_Store
 .eslintrc
+.lesshintrc
 .phpintel
 *~
 .htaccess~
