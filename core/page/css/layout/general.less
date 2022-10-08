@@ -119,7 +119,7 @@
 		// 	z-index: 99;
 
 		// 	&:before {
-		// 		content: " ";
+		// 		content: ' ';
 		// 		background-color: #3c3c3c;
 		// 		position: absolute;
 		// 		left: 0;
@@ -297,7 +297,7 @@
 
 // general definition of html input/form elements
 // If you need to build a variant, apply 'reset_input' class
-	input[type="text"], input[type="number"], input[type="url"], input[type="password"], button[type="submit"], textarea, select, .contenteditable {
+	input[type='text'], input[type='number'], input[type='url'], input[type='password'], button[type='submit'], textarea, select, .contenteditable {
 
 		li & {
 			max-width: 100%;
@@ -343,7 +343,7 @@
 
 // .reset_input Restore default appearance of html input/form elements
 	.reset_input {
-		&,input[type="text"], &,input[type="number"], &,input[type="url"], &,input[type="password"], &,button[type="submit"], &,textarea, &,select, &.contenteditable {
+		&,input[type='text'], &,input[type='number'], &,input[type='url'], &,input[type='password'], &,button[type='submit'], &,textarea, &,select, &.contenteditable {
 
 			li & {
 				width: unset;
@@ -380,12 +380,12 @@
 				}
 			}
 		}
-		&,select  {
+		&,select {
 			li & {
 				margin-right: unset;
 			}
 		}
-		&,input[type="radio"] {
+		&,input[type='radio'] {
 			font-size: unset;
 		}
 	}//end .reset_input
@@ -665,11 +665,11 @@
 			right: 1em;
 			z-index: 1;
 			background-color: rgba(0, 0, 0, 0.9);
-			color: #fff;
+			color: #ffffff;
 			padding: 1em;
 			line-height: 1.5em;
 			border-radius: 5px;
-			font-size: .8em;
+			font-size: 0.8em;
 			width: 100%;
 			max-width: 20em;
 			// display: block !important;
@@ -688,7 +688,7 @@
 				bottom: 100%;
 				left: 50%;
 				border: solid transparent;
-				content: " ";
+				content: ' ';
 				height: 0px;
 				width: 0px;
 				position: absolute;
