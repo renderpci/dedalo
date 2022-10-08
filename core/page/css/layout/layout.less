@@ -12,7 +12,7 @@
 	.hilite(@outline_offset:0) {
 		outline-offset: @outline_offset;
 		outline: 1px solid @color_hilite;
-		box-shadow: 0 0 10px @color_hilite; //rgba(26, 154, 245, .5);
+		box-shadow: 0px 0px 10px @color_hilite; //rgba(26, 154, 245, .5);
 		opacity: 1;
 		z-index: 1;
 		// pointer-events: none;
@@ -1662,7 +1662,7 @@
 					pointer-events: none;
 
 					&:after {
-						content: "X";
+						content: 'X';
 						display: block;
 						// background-color: #a0a0a0;
 						float: right;
@@ -1736,14 +1736,8 @@
 						cursor: move;
 						background: url('../../themes/default/draggable.svg');
 						background-color: rgba(0, 0, 0, 0);
-						background-repeat: repeat;
 						background-position-x: 0%;
 						background-position-y: 0%;
-						background-size: auto auto;
-						background-color: rgba(0,0,0,0);
-						background-repeat: repeat;
-						background-position-x: 0;
-						background-position-y: 0;
 						background-size: auto auto;
 						background-position: right 5px bottom 7px;
 						background-repeat: no-repeat;
@@ -1762,7 +1756,7 @@
 							display: inline-block;
 							pointer-events: none;
 							position: absolute;
-							background: url(../../themes/default/icons/play.svg);
+							background: url('../../themes/default/icons/play.svg');
 							background-repeat: no-repeat;
 							background-position: center;
 							background-size: 0.55em;
