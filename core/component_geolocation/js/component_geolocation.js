@@ -105,6 +105,15 @@ component_geolocation.prototype.init = async function(options) {
 	// this var will not save in DB, if the user delete the tag and do not undo in the same session or close the window the buffer will erase
 		self.ar_data_buffer = []
 
+	// self default value when the component doesn't has any value, data = null
+	// default value
+		self.default_value = [{
+			lat		: 39.462571,
+			lon		: -0.376295,
+			zoom	: 16,
+			alt		: 0
+		}]
+
 	// call the generic common tool init
 		const common_init = component_common.prototype.init.call(this, options);
 
@@ -167,27 +176,23 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 	const self = this
 
 	// defaults
-		const default_lat	= 39.462571
-		const default_lon	= -0.376295
-		const default_zoom	= 16
-		const default_alt	= 0
-
-		const value = self.data.value || []
+		const value = self.data.value || self.default_value
 
 	// get data
 		// const key			= JSON.parse(map_container.dataset.key)
-		const field_lat		= value[key].lat 	|| default_lat
-		const field_lon		= value[key].lon 	|| default_lon
-		const field_zoom	= value[key].zoom 	|| default_zoom
-		const field_alt		= value[key].alt 	|| default_alt
+		const field_lat		= value[key].lat
+		const field_lon		= value[key].lon
+		const field_zoom	= value[key].zoom
+		const field_alt		= value[key].alt
 
 	// update the current_value with the data from DDBB
 	// current_value will be update with different changes to create change_data to save
-		self.current_value[key] = clone(self.data.value[key])
+		self.current_value[key] = clone(value[key])
+
 
 	// load all layers
-		self.ar_layer_loaded = typeof self.data.value[key].lib_data!=='undefined'
-			? clone(self.data.value[key].lib_data)
+		self.ar_layer_loaded = typeof value[key].lib_data!=='undefined'
+			? clone(value[key].lib_data)
 			: []
 
 	// map_data

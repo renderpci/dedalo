@@ -34,7 +34,7 @@ render_edit_component_geolocation.prototype.edit = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -89,7 +89,7 @@ export const get_content_data_edit = async function(self) {
 
 	// short vars
 		const data	= self.data || {}
-		const value	= data.value || []
+		const value = data.value || self.default_value
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -100,12 +100,7 @@ export const get_content_data_edit = async function(self) {
 		for (let i = 0; i < value_length; i++) {
 
 			// value
-			const value_item = inputs_value[i] || {
-				lat		: 39.462571,
-				lon		: -0.376295,
-				zoom	: 12,
-				alt		: 16
-			}
+			const value_item = inputs_value[i] || self.default_value[0]
 
 			const input_element_node = get_input_element_edit(i, value_item, self)
 			content_data.appendChild(input_element_node)
