@@ -169,6 +169,48 @@ export const service_ckeditor = function() {
 				// setup_events
 					self.setup_events(editor_config);
 
+				// set toolbar width
+					(()=>{
+						// elements
+							const toolbar			= editor.ui.view.toolbar
+							const ck_toolbar		= toolbar.element
+							const ck_balloon_panel	= ck_toolbar.parentNode
+							// move ck_balloon_panel inside component toolbar_container
+							self.toolbar_container.appendChild(ck_balloon_panel)
+
+						// adjust_size function
+							const adjust_size = () => {
+								const width = self.value_container.offsetWidth // add corrective factor of 47 px
+								// fix maxWidth
+								// toolbar.maxWidth = width
+								// set styles
+								Object.assign(ck_toolbar.style, {
+									width		: width + 'px',
+									// maxWidth	: width + 'px'
+								});
+								console.log('fixed width:', width);
+							}
+
+						// sync toolbar container. Focus/blur editor show/hide the toolbar container
+							editor.ui.focusTracker.on( 'change:isFocused', ( evt, name, isFocused ) => {
+								if ( isFocused===true ) {
+									// adjust_size()
+									self.toolbar_container.classList.remove('hide')
+								}else{
+									self.toolbar_container.classList.add('hide')
+								}
+							} );
+
+						// resize value_container observer
+							const resizeObserver = new ResizeObserver((entries) => {
+								for (const entry of entries) {
+									if (entry.contentBoxSize) {
+										window.requestAnimationFrame(adjust_size)
+									}
+								}
+							});
+							resizeObserver.observe(self.value_container);
+					})()
 
 				resolve(editor)
 			})

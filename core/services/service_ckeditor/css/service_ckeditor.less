@@ -1,32 +1,16 @@
-// service_ckeditor
+/**
+* service_ckeditor
+*
+* Included from main.less file
+*/
 
-
-
-// Usage
-@import '../../../common/css/library.less';
 
 
 // ddEdit custom toolbar
 .toolbar_container {
-	display: flex;
-	position: absolute;
-	left: 1rem;
-	top: -1.75rem;
-	width: auto;
-	height: 2.2em;
-	padding: 0.25rem;
-	z-index: 1;
-	// background-color: @color_grey_light;
-	background-color: #fafafa;
-	// border: 1px solid #c4c4c4;
-	outline: 1px solid #e6e6e6;
+	// container details defined in component_text_area
 
-	// version mini	(fit heigth)
-		// top: -1.35rem;
-		// height: 1.8em;
-		// padding: 0.05rem;
-		// width: calc(100% - 2rem);
-
+	// custom toolbar of ddEditor
 	>.toolbar_button {
 		height: 100%;
 		padding: 0.33rem;
@@ -55,29 +39,62 @@
 			height: 100%;
 		}
 	}
-}
+
+	// standard ckeditor inline toolbar moved inside toolbar_container
+	.ck {
+		// inline editor toolbar
+		&.ck-balloon-panel {
+			position: relative;
+			display: contents;
+			z-index: 1;
+			left: 0px !important;
+			top: 0px !important;
+			box-shadow: none;
+			border: 0px;
+		}
+		&.ck-toolbar {
+			outline: none;
+			padding: 0px !important;
+			margin: 0px !important;
+			max-height: 2rem;
+		}
+
+		// items wrapper
+		&.ck-toolbar__items {
+			margin: 0px !important;
+			padding: 0px !important;
+
+			.ck-dropdown,
+			.ck-toolbar__separator,
+			.ck-file-dialog-button,
+			.ck-button {
+				min-height: 2em;
+				margin: 0px !important;
+				margin-top: 1px !important;
+				margin-bottom: 1px !important;
+			}
+
+			// dropdown like 'paragraph'
+			.ck-dropdown.ck-heading-dropdown {
+				width: 8rem;
+			}
+
+			// svg icons
+			.ck-icon {
+				height: 19px;
+			}
+			// separators
+			.ck-toolbar__separator {
+				height: 19px;
+				top: 4px;
+				position: relative;
+			}
+		}
+	}//end .ck
 
 
-// inline editor toolbar
-	.ck-rounded-corners .ck.ck-balloon-panel {
-		// display: block;
-		margin-top: 7px;
-		z-index: 1;
-		display: block;
-		background-color: #fafafa;
-		box-shadow: 0px 1px 1px 0px #3b87fd;
-	}
-	.ck-toolbar-container .ck.ck-toolbar {
-		// background-color: #b1f1e6;
-		zoom: 0.95;
-		outline: 1px solid #e6e6e6;
-	}
+}//end .toolbar_container
 
-	.ck.ck-toolbar>.ck-toolbar__items>:not(.ck-toolbar__line-break),
-	.ck.ck-toolbar>.ck.ck-toolbar__grouped-dropdown,
-	.ck-heading-dropdown {
-		margin: 0px !important;
-	}
 
 
 // source ckeditor
@@ -154,6 +171,7 @@
 }//end .ck.ck-content
 
 
+
 // dd-modal {
 // 	.body_contanier {
 // 		padding: 1.5em;
@@ -167,7 +185,6 @@
 // 		.label_whole_words {
 // 			padding-left:1.5em;
 // 		}
-
 // 		/* toggle-pill-color */
 // 		.check input[type="checkbox"] {
 // 			display: none;
