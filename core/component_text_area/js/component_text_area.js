@@ -273,6 +273,32 @@ component_text_area.prototype.build = async function(options) {
 
 
 /**
+* DESTROY
+* @return promise bool
+* 	Resolve bool
+*/
+component_text_area.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+	const self = this
+
+	// destroy the editors too
+		if (self.text_editor && self.text_editor.length>0) {
+			for (let i = 0; i < self.text_editor.length; i++) {
+				// console.log('destroying editor:', self.text_editor[i].editor );
+				self.text_editor[i].editor.destroy()
+			}
+		}
+
+	// call the generic common method
+		const common_destroy = common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom);
+
+
+	return common_destroy
+}//end build
+
+
+
+/**
 * TAGS_TO_HTML
 * Parses Dédalo server side tags to html tags
 * i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
