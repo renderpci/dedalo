@@ -137,7 +137,6 @@ export const service_ckeditor = function() {
 				// 	],
 				// 	shouldNotGroupWhenFull: false
 				// }
-
 			})
 			.then( editor => {
 
@@ -165,7 +164,7 @@ export const service_ckeditor = function() {
 					}
 
 				// setup_events
-					// self.setup_inline_events();
+					self.setup_button_reference();
 
 				// setup_events
 					self.setup_events(editor_config);
@@ -216,6 +215,9 @@ export const service_ckeditor = function() {
 
 				// setup_events
 					self.setup_events(editor_config);
+
+				// setup_button_reference
+					self.setup_button_reference();
 
 				// Drag and Drop control
 				// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
@@ -436,25 +438,35 @@ export const service_ckeditor = function() {
 
 		// click event
 			editor.editing.view.document.on('click', function(evt, data ) {
+				// const modelDocument	= editor.model.document;
+				// const selection		= modelDocument.selection;
 
 				// get the name of the node clicked, 'img' 'p' 'div', etc
 				const click_element = data.target.name
 
+				// if ( clickedElement.tagName.toLowerCase() != 'reference' ) {
+				// 	clickedElement = clickedElement.closest( 'a' );
+				// }
+
 				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
-				if(click_element==='div' && !data.target.parent && click_element!=='img'){
+				if(click_element==='div' || ( click_element!=='img' && click_element!=='reference')){
 					return
 				}
+				const item = click_element!=='reference'
+					? data.target.parent
+					: data.domTarget
+
 				// get the parent of the img, it will be a span with the data of the tag in attributes
-				const item = data.target.parent._attrs
-				const tag_obj = {
-					node_name	: data.target.name,
-					// dataset
-					type		: item.get('data-type'),
-					tag_id		: item.get('data-tag_id'),
-					state		: item.get('data-state'),
-					label		: item.get('data-label'),
-					data		: item.get('data-data')
-				}
+				// const item = data.target.parent._attrs
+				const tag_obj =  {
+						node_name	: click_element,
+						// dataset
+						type		: item.getAttribute('data-type'),
+						tag_id		: item.getAttribute('data-tag_id'),
+						state		: item.getAttribute('data-state'),
+						label		: item.getAttribute('data-label'),
+						data		: item.getAttribute('data-data')
+					}
 
 				if (custom_events.click) {
 					custom_events.click(data.domEvent, tag_obj)
@@ -534,22 +546,44 @@ export const service_ckeditor = function() {
 
 
 	/**
-	* SETUP_INLINE_EVENTS
+	* SETUP_button_reference
 	* callback when ckeditor is ready
 	* Capture the event fired in the editor and callback to the caller to be processed. See render_edit_component_text_area.js
 	* @return true
 	*/
-	this.setup_inline_events = function() {
+	this.setup_button_reference = function() {
 
 		const self		= this
 		const editor	= self.editor
+		const key  		= self.key
 
+		editor.commands.get( 'reference' ).on( 'execute', ( evt, args ) => {
+			// fire event
+			event_manager.publish('create_reference_'+ self.id_base + '_' + key, {
+				caller		: self,
+				text_editor	: self
+			})
+			// create the new tag for the reference
+			const tag_type		='reference'
+			const last_tag_id	= self.get_last_tag_id(tag_type, self)
+			const note_number	= parseInt(last_tag_id) + 1
+			const reference_tag		= {
+				type	: tag_type,
+				label	: 'reference ' + note_number,
+				tag_id	: String(note_number),
+				state	: 'n',
+				data	: ''
+			}
+			// render the modal
+			self.caller.render_reference({
+				self		: self.caller,
+				text_editor	: self,
+				i			: key,
+				tag			: reference_tag
+			})
+		} );
 
-		// editor.commands.get( 'reference' ).on( 'execute', ( evt, args ) => {
-		// 	console.log( evt, args );
-		// } );
-
-	}//end setup_inline_events
+	}//end setup_button_reference
 
 
 
@@ -562,8 +596,8 @@ export const service_ckeditor = function() {
 	*/
 	this.set_content = function(tag_obj) {
 
-		const self = this
-		const editor = self.editor
+		const self		= this
+		const editor	= self.editor
 
 		// convert the html to the model of ck_editor
 		// const view_fragment	= editor.data.processor.toView( html );
@@ -658,12 +692,7 @@ export const service_ckeditor = function() {
 
 								// remove
 									editor.model.change( writer => {
-										if(current_att_type==='reference'){
-											writer.unwrap( item )
-										}else{
-											writer.remove( item )
-										}
-
+										writer.remove( item )
 									});
 
 								// set dirty state
@@ -1064,8 +1093,6 @@ export const service_ckeditor = function() {
 								const new_id	= new_tag.id
 								edit_attributes.set('src_id' , new_id)
 
-
-
 							// set to model
 								editor.model.change( writer => {
 									writer.setAttributes( edit_attributes, item );
@@ -1172,15 +1199,7 @@ export const service_ckeditor = function() {
 				}
 				// if(button_config.name === 'reference'){
 
-					// editor.listenTo( editor.model.document, 'change', () => {
-					// 	const model = editor.model;
-					// 	const doc = model.document;
 
-					// 	const value = self._getValueFromFirstAllowedNode();
-					// 	const isEnabled = model.schema.checkAttributeInSelection( doc.selection, 'italic' );
-
-					// 		console.log("isEnabled:----------",isEnabled);
-					// } );
 				// }
 
 				toolbar_container.appendChild(button_node)
@@ -1213,34 +1232,6 @@ export const service_ckeditor = function() {
 
 		return toolbar_container
 	}//end this.build_toolbar
-
-
-	/**
-	 * Checks the attribute value of the first node in the selection that allows the attribute.
-	 * For the collapsed selection returns the selection attribute.
-	 *
-	 * @private
-	 * @returns {Boolean} The attribute value.
-	 */
-	this._getValueFromFirstAllowedNode = function() {
-		const model = this.editor.model;
-		const schema = model.schema;
-		const selection = model.document.selection;
-
-		if ( selection.isCollapsed ) {
-			return selection.hasAttribute( this.attributeKey );
-		}
-
-		for ( const range of selection.getRanges() ) {
-			for ( const item of range.getItems() ) {
-				if ( schema.checkAttribute( item, this.attributeKey ) ) {
-					return item.hasAttribute( this.attributeKey );
-				}
-			}
-		}
-
-		return false;
-	}
 
 
 	/**
@@ -1332,5 +1323,291 @@ export const service_ckeditor = function() {
 
 		return true
 	}//end factory_events_for_buttons
+
+
+
+		/**
+	 * Checks the attribute value of the first node in the selection that allows the attribute.
+	 * For the collapsed selection returns the selection attribute.
+	 *
+	 * @private
+	 * @returns {Boolean} The attribute value.
+	 */
+	this._getValueFromFirstAllowedNode = function() {
+		const model = this.editor.model;
+		const schema = model.schema;
+		const selection = model.document.selection;
+
+		if ( selection.isCollapsed ) {
+			return selection.hasAttribute( this.attributeKey );
+		}
+
+		for ( const range of selection.getRanges() ) {
+			for ( const item of range.getItems() ) {
+				if ( schema.checkAttribute( item, this.attributeKey ) ) {
+					return item.hasAttribute( this.attributeKey );
+				}
+			}
+		}
+
+		return false;
+	}
+
+
+	/**
+	 * Returns the link {@link module:engine/view/attributeelement~AttributeElement} under
+	 * the {@link module:engine/view/document~Document editing view's} selection or `null`
+	 * if there is none.
+	 *
+	 * **Note**: For a non–collapsed selection, the link element is returned when **fully**
+	 * selected and the **only** element within the selection boundaries, or when
+	 * a linked widget is selected.
+	 *
+	 * @private
+	 * @returns {module:engine/view/attributeelement~AttributeElement|null}
+	 */
+	this.get_selected_reference_element = function() {
+
+		const self		= this
+		const editor	= self.editor
+
+		const model				= editor.model;
+		const selection			= model.document.selection;
+
+		// get the reference_editing plug-ing to get ck_funcitonalities
+		const reference_editing = editor.plugins.get( 'reference_editing' )
+		const selectedElement	= selection.getSelectedElement() || reference_editing.first( selection.getSelectedBlocks() );
+
+		function is_referable_element( element, schema ) {
+			if ( !element ) {
+				return false;
+			}
+			return schema.checkAttribute( element.name, 'reference' );
+		}
+		// A check for any integration that allows reference elements.
+		// Currently the selection reads attributes from text nodes only.
+		// if ( is_referable_element( selectedElement, model.schema ) ) {
+		const value = ( is_referable_element( selectedElement, model.schema ) )
+				? selectedElement.getAttribute( 'reference' )
+				: selection.getAttribute( 'reference' )
+
+		return value
+
+		// 	this.isEnabled = model.schema.checkAttribute( selectedElement, 'reference' );
+		// } else {
+		// 	this.value = selection.getAttribute( 'reference' );
+		// 	this.isEnabled = model.schema.checkAttributeInSelection( selection, 'reference' );
+		// }
+
+
+
+		// const self		= this
+		// const editor	= self.editor
+
+		// const view				= editor.editing.view;
+		// const selection			= view.document.selection;
+		// const selectedElement	= selection.getSelectedElement();
+
+		// function is_widget( node ) {
+		// 	if ( !node.is( 'element' ) ) {
+		// 		return false;
+		// 	}
+		// 	return !!node.getCustomProperty( 'widget' );
+		// }
+
+		// // The selection is collapsed or some widget is selected (especially inline widget).
+		// if ( selection.isCollapsed || selectedElement && is_widget(selectedElement) ) {
+		// 	return self.find_reference_element_ancestor( selection.getFirstPosition() );
+		// } else {
+		// 	// The range for fully selected link is usually anchored in adjacent text nodes.
+		// 	// Trim it to get closer to the actual link element.
+		// 	const range = selection.getFirstRange().getTrimmed();
+		// 	const start_reference	= self.find_reference_element_ancestor( range.start );
+		// 	const end_reference		= self.find_reference_element_ancestor( range.end );
+
+		// 	if ( !start_reference || start_reference != end_reference ) {
+		// 		return null;
+		// 	}
+
+		// 	// Check if the reference element is fully selected.
+		// 	if ( view.createRangeIn( start_reference ).getTrimmed().isEqual( range ) ) {
+		// 		return start_reference;
+		// 	} else {
+		// 		return null;
+		// 	}
+		// }
+	}
+
+
+	/**
+	 * Returns `true` if a given view node is the reference element.
+	 *
+	 * @param {module:engine/view/node~Node} node
+	 * @returns {Boolean}
+	 */
+	this.find_reference_element_ancestor = function ( position ) {
+
+		const node = position.getAncestors()
+
+		return node.find( ancestor =>
+			ancestor.is( 'attributeElement' ) && !!ancestor.getCustomProperty( 'reference' )
+		);
+	}
+
+
+
+	/**
+	* SET_REFERENCE
+	* @param object options
+	* Sample:
+	* {
+	* 	type : [indexIn,indexOut]
+	* 	tag_id : 1,
+	* 	new_data_obj : { type : n } (former dataset)
+	* }
+	*/
+	this.set_reference = function(options) {
+
+		const self		= this
+		const editor	= self.editor
+
+		const new_data_obj			= options.new_data_obj // all properties need to be his type (object, string, etc) do not send stringify properties
+		const locator				= options.locator
+		const locator_text_value	= options.locator_text_value
+
+		const model		= editor.model;
+		const selection	= model.document.selection;
+		// get the reference_editing plug-ing to get ck_funcitonalities
+		const reference_editing = editor.plugins.get( 'reference_editing' )
+
+		model.change( writer => {
+			// If selection is collapsed then update selected link or insert new one at the place of caret.
+			if ( selection.isCollapsed ) {
+				const position = selection.getFirstPosition();
+
+				// When selection is inside text with `reference` attribute.
+				if ( selection.hasAttribute( 'reference' ) ) {
+					// Then update `reference` value.
+					const reference_range = reference_editing.findAttributeRange( position, 'reference', selection.getAttribute( 'reference' ), model );
+
+					writer.setAttribute( 'reference', new_data_obj, reference_range );
+
+					// new_data_obj.forEach( item => {
+					// 	writer.setAttribute( item, true, reference_range );
+					// } );
+
+					// Put the selection at the end of the updated link.
+					writer.setSelection( writer.createPositionAfter( reference_range.end.nodeBefore ) );
+				}
+				// If not then insert text node with `reference` attribute in place of caret.
+				// However, since selection is collapsed, attribute value will be used as data for text node.
+				// So, if `locator` is empty, do not create text node.
+				else if ( new_data_obj.data !== '' ) {
+					const attributes = new Map( selection.getAttributes() );
+
+					attributes.set( 'reference', new_data_obj );
+
+					// new_data_obj.forEach( item => {
+					// 	attributes.set( item, true );
+					// } );
+					// for (const name in new_data_obj) {
+					// 	attributes.set(name, new_data_obj[name])
+					// }
+
+
+					const { end: positionAfter } = model.insertContent( writer.createText( locator_text_value, attributes ), position );
+
+					// Put the selection at the end of the inserted link.
+					// Using end of range returned from insertContent in case nodes with the same attributes got merged.
+					writer.setSelection( positionAfter );
+				}
+
+				// Remove the `reference` attribute and all link decorators from the selection.
+				// It stops adding a new content into the link element.
+				// [ 'reference', ...truthyManualDecorators, ...falsyManualDecorators ].forEach( item => {
+				writer.removeSelectionAttribute( 'reference' );
+				// } );
+			} else {
+				// If selection has non-collapsed ranges, we change attribute on nodes inside those ranges
+				// omitting nodes where the `reference` attribute is disallowed.
+				const ranges = model.schema.getValidRanges( selection.getRanges(), 'reference' );
+
+				// But for the first, check whether the `reference` attribute is allowed on selected blocks (e.g. the "image" element).
+				const allowedRanges = [];
+
+				for ( const element of selection.getSelectedBlocks() ) {
+					if ( model.schema.checkAttribute( element, 'reference' ) ) {
+						allowedRanges.push( writer.createRangeOn( element ) );
+					}
+				}
+
+				// Ranges that accept the `reference` attribute. Since we will iterate over `allowedRanges`, let's clone it.
+				const rangesToUpdate = allowedRanges.slice();
+
+				function is_range_to_update( range, allowedRanges ) {
+					for ( const allowedRange of allowedRanges ) {
+						// A range is inside an element that will have the `reference` attribute. Do not modify its nodes.
+						if ( allowedRange.containsRange( range ) ) {
+							return false;
+						}
+					}
+					return true;
+				}
+
+				// For all selection ranges we want to check whether given range is inside an element that accepts the `reference` attribute.
+				// If so, we don't want to propagate applying the attribute to its children.
+				for ( const range of ranges ) {
+					if ( is_range_to_update( range, allowedRanges ) ) {
+						rangesToUpdate.push( range );
+					}
+				}
+
+				for ( const range of rangesToUpdate ) {
+					writer.setAttribute( 'reference', new_data_obj, range );
+
+					// new_data_obj.forEach( item => {
+					// 	writer.setAttribute( item, true, range );
+					// } );
+				}
+			}
+		} );
+
+	};//end set_reference
+
+
+	/**
+	* REMOVE_REFERENCE
+	* @return
+	*/
+	this.remove_reference = function() {
+
+		const self		= this
+		const editor	= self.editor
+		const model		= editor.model;
+		const selection	= model.document.selection;
+
+		// get the reference_editing plug-ing to get ck_funcitonalities
+		const reference_editing = editor.plugins.get( 'reference_editing' )
+
+		model.change( writer => {
+			// Get ranges to unlink.
+			const ranges_to_remove = selection.isCollapsed ?
+				[ reference_editing.findAttributeRange(
+					selection.getFirstPosition(),
+					'reference',
+					selection.getAttribute( 'reference' ),
+					model
+				) ] :
+				model.schema.getValidRanges( selection.getRanges(), 'reference' );
+
+			// Remove `reference` attribute from specified ranges.
+			for ( const range of ranges_to_remove ) {
+				writer.removeAttribute( 'reference', range );
+			}
+		} );
+
+
+	};//end remove_reference
+
 
 }//end service_ckeditor
