@@ -10,8 +10,8 @@
 .toolbar_container {
 	display: flex;
 	position: absolute;
-	top: -1.75rem;
 	left: 1rem;
+	top: -1.75rem;
 	width: auto;
 	height: 2.2em;
 	padding: 0.25rem;
@@ -30,8 +30,8 @@
 	>.toolbar_button {
 		height: 100%;
 		padding: 0.33rem;
-		padding-right: 0.5em;
 		padding-left: 0.5em;
+		padding-right: 0.5em;
 		cursor: pointer;
 		border-radius: 0.33em;
 
@@ -59,23 +59,31 @@
 
 
 // inline editor toolbar
-.ck-rounded-corners .ck.ck-balloon-panel {
-	// display: block;
-	margin-top: 8px;
-}
-.ck-toolbar-container .ck.ck-toolbar {
-	// background-color: #b1f1e6;
-	zoom: 0.86;
-}
-.ck-toolbar{
-	zoom: 0.86;
-}
+	.ck-rounded-corners .ck.ck-balloon-panel {
+		// display: block;
+		margin-top: 7px;
+		z-index: 1;
+		display: block;
+		background-color: #fafafa;
+		box-shadow: 0px 1px 1px 0px #3b87fd;
+	}
+	.ck-toolbar-container .ck.ck-toolbar {
+		// background-color: #b1f1e6;
+		zoom: 0.95;
+		outline: 1px solid #e6e6e6;
+	}
+
+	.ck.ck-toolbar>.ck-toolbar__items>:not(.ck-toolbar__line-break),
+	.ck.ck-toolbar>.ck.ck-toolbar__grouped-dropdown,
+	.ck-heading-dropdown {
+		margin: 0px !important;
+	}
 
 
 // source ckeditor
 .ck-source-editing-area {
-	width: 100%;
 	height: calc(100% - 1.5rem);
+	width: 100%;
 	margin: 0.5rem;
 	margin-left: 1rem;
 	margin-right: 1rem;
@@ -146,62 +154,62 @@
 }//end .ck.ck-content
 
 
-dd-modal {
-	.body_contanier {
-			padding: 1.5em;
-	}
-	.replace_contanier {
-		padding-top: 1.5em;
-	}
-	.options_contanier {
-		padding-left: 1.5em;
+// dd-modal {
+// 	.body_contanier {
+// 		padding: 1.5em;
+// 	}
+// 	.replace_contanier {
+// 		padding-top: 1.5em;
+// 	}
+// 	.options_contanier {
+// 		padding-left: 1.5em;
 
-		.label_whole_words {
-			padding-left:1.5em;
-		}
+// 		.label_whole_words {
+// 			padding-left:1.5em;
+// 		}
 
-		/* toggle-pill-color */
-		.check input[type="checkbox"] {
-			display: none;
-		}
-		.check input[type="checkbox"] + label {
-			display: inline-block;
-			position: relative;
-			width: 3em;
-			height: 1.6em;
-			// margin-bottom: 20px;
-			border-radius: 1em;
-			// background: #e84d4d;
-			background: #eeeeee;
-			// box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.3);
-			cursor: pointer;
-			-webkit-user-select: none;
-			-moz-user-select: none;
-			-ms-user-select: none;
-			-webkit-transition: background 0.1s ease-in-out;
-			transition: background 0.1s ease-in-out;
-		}
-		.check input[type="checkbox"] + label:before {
-			content: "";
-			display: inline-block;
-			width: 1.2em;
-			height: 1.2em;
-			border-radius: 1em;
-			background: #fff;
-			box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
-			position: absolute;
-			left: 0.2em;
-			top: 0.2em;
-			-webkit-transition: all 0.2s ease-in-out;
-			transition: all 0.2s ease-in-out;
-		}
-		.check input[type="checkbox"]:checked + label {
-			background: #47cf73;
-		}
-		.check input[type="checkbox"]:checked + label:before {
-			box-shadow: -2px 0px 5px rgba(0, 0, 0, 0.2);
-			left: 1.6em;
-		}
-		/* toggle-pill-color end */
-	}
-}//end dd-modal
+// 		/* toggle-pill-color */
+// 		.check input[type="checkbox"] {
+// 			display: none;
+// 		}
+// 		.check input[type="checkbox"] + label {
+// 			display: inline-block;
+// 			position: relative;
+// 			width: 3em;
+// 			height: 1.6em;
+// 			// margin-bottom: 20px;
+// 			border-radius: 1em;
+// 			// background: #e84d4d;
+// 			background: #eeeeee;
+// 			// box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.3);
+// 			cursor: pointer;
+// 			-webkit-user-select: none;
+// 			-moz-user-select: none;
+// 			-ms-user-select: none;
+// 			-webkit-transition: background 0.1s ease-in-out;
+// 			transition: background 0.1s ease-in-out;
+// 		}
+// 		.check input[type="checkbox"] + label:before {
+// 			content: "";
+// 			display: inline-block;
+// 			width: 1.2em;
+// 			height: 1.2em;
+// 			border-radius: 1em;
+// 			background: #fff;
+// 			box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
+// 			position: absolute;
+// 			left: 0.2em;
+// 			top: 0.2em;
+// 			-webkit-transition: all 0.2s ease-in-out;
+// 			transition: all 0.2s ease-in-out;
+// 		}
+// 		.check input[type="checkbox"]:checked + label {
+// 			background: #47cf73;
+// 		}
+// 		.check input[type="checkbox"]:checked + label:before {
+// 			box-shadow: -2px 0px 5px rgba(0, 0, 0, 0.2);
+// 			left: 1.6em;
+// 		}
+// 		/* toggle-pill-color end */
+// 	}
+// }//end dd-modal
