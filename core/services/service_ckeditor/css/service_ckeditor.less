@@ -1,32 +1,16 @@
-// service_ckeditor
+/**
+* service_ckeditor
+*
+* Included from main.less file
+*/
 
-
-
-// Usage
-@import '../../../common/css/library.less';
 
 
 // ddEdit custom toolbar
 .toolbar_container {
-	// display: flex;
-	// position: absolute;
-	// left: 1rem;
-	// top: -1.75rem;
-	// width: auto;
-	// height: 2.2em;
-	// padding: 0.25rem;
-	// z-index: 1;
-	// // background-color: @color_grey_light;
-	// background-color: #fafafa;
-	// // border: 1px solid #c4c4c4;
-	// outline: 1px solid #e6e6e6;
+	// container details defined in component_text_area
 
-	// version mini	(fit heigth)
-		// top: -1.35rem;
-		// height: 1.8em;
-		// padding: 0.05rem;
-		// width: calc(100% - 2rem);
-
+	// custom toolbar of ddEditor
 	>.toolbar_button {
 		height: 100%;
 		padding: 0.33rem;
@@ -62,32 +46,21 @@
 		&.ck-balloon-panel {
 			position: relative;
 			display: contents;
-			// margin-top: 7px;
 			z-index: 1;
-			// background-color: #fafafa;
-			// box-shadow: 0px 1px 1px 0px #3b87fd;
-			// display: block !important;
 			left: 0px !important;
 			top: 0px !important;
 			box-shadow: none;
 			border: 0px;
 		}
 		&.ck-toolbar {
-			// background-color: #efccf0 !important;
-			// zoom: 0.87;
-			// outline: 1px solid #e6e6e6;
-			// max-width: unset !important;
 			outline: none;
 			padding: 0px !important;
 			margin: 0px !important;
 			max-height: 2rem;
-    		// overflow: hidden;
 		}
 
 		// items wrapper
 		&.ck-toolbar__items {
-			// background-color: #ee7f44;
-			// max-height: 2.2rem;
 			margin: 0px !important;
 			padding: 0px !important;
 
@@ -99,8 +72,6 @@
 				margin: 0px !important;
 				margin-top: 1px !important;
 				margin-bottom: 1px !important;
-				// padding-right: 3px !important;
-				// background-color: #8bf598;
 			}
 
 			// svg icons
@@ -114,46 +85,10 @@
 				position: relative;
 			}
 		}
-
-		&.ck-toolbar>.ck-toolbar__items>:not(.ck-toolbar__line-break),
-		&.ck-toolbar>.ck.ck-toolbar__grouped-dropdown,
-		.ck-heading-dropdown {
-
-		}
-
-
 	}//end .ck
 
 
 }//end .toolbar_container
-
-
-// inline editor toolbar
-	// .ck.ck-balloon-panel {
-	// 	// display: block;
-	// 	margin-top: 7px;
-	// 	z-index: 1;
-	// 	background-color: #fafafa;
-	// 	box-shadow: 0px 1px 1px 0px #3b87fd;
-	// 	// display: block !important;
-
-	// 	&.hidden_block {
-	// 		display: block;
-	// 		visibility: hidden;
-	// 	}
-	// }
-	// .ck-toolbar-container .ck.ck-toolbar {
-	// 	// background-color: #b1f1e6;
-	// 	zoom: 0.95;
-	// 	outline: 1px solid #e6e6e6;
-	// 	max-width: unset !important;
-	// }
-
-	// .ck.ck-toolbar>.ck-toolbar__items>:not(.ck-toolbar__line-break),
-	// .ck.ck-toolbar>.ck.ck-toolbar__grouped-dropdown,
-	// .ck-heading-dropdown {
-	// 	margin: 0px !important;
-	// }
 
 
 // source ckeditor
@@ -228,6 +163,7 @@
 		// 	}
 		// }
 }//end .ck.ck-content
+
 
 
 // dd-modal {
