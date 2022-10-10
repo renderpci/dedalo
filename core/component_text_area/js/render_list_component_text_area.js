@@ -40,12 +40,9 @@ render_list_component_text_area.prototype.list = async function() {
 		const fallback			= get_fallback_value(value, fallback_value)
 		const value_string		= fallback.join(self.context.fields_separator)
 
-	// Value as string
-		const value_string_with_tags = tr.add_tag_img_on_the_fly( value_string )
-
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string_with_tags
+			value_string : value_string
 		})
 
 
