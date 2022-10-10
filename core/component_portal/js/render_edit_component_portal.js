@@ -575,7 +575,7 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool		= (self.caller && self.caller.type==='tool')
+		const is_inside_tool		= self.is_inside_tool // 	(self.caller && self.caller.type==='tool')
 		const target_section		= self.target_section
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant

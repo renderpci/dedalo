@@ -1619,9 +1619,15 @@ export const ui = {
 	*/
 	inside_tool : function(self) {
 
-		if (self.caller && self.caller.type==='tool') {
-			return self.caller.constructor.name
-		}
+		// already custom fixed case (bool is expected)
+			if (self.is_inside_tool!==null) {
+				return self.is_inside_tool
+			}
+
+		// caller is a tool case
+			if (self.caller && self.caller.type==='tool') {
+				return self.caller.constructor.name
+			}
 
 		return false
 	},//end inside_tool
