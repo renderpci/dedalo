@@ -186,7 +186,7 @@ export const service_ckeditor = function() {
 				}
 			})
 			.then( editor => {
-				console.log( editor );
+
 				// fix the instance
 					self.editor = editor
 
@@ -653,22 +653,23 @@ export const service_ckeditor = function() {
 				text_editor	: self
 			})
 			// create the new tag for the reference
-			const tag_type		='reference'
-			const last_tag_id	= self.get_last_tag_id(tag_type, self)
-			const note_number	= parseInt(last_tag_id) + 1
+			const tag_type			='reference'
+			const last_tag_id		= 0 //self.get_last_tag_id(tag_type, self)
+			const refrence_number	= parseInt(last_tag_id) + 1
 			const reference_tag		= {
 				type	: tag_type,
-				label	: 'reference ' + note_number,
-				tag_id	: String(note_number),
+				label	: 'reference ' + refrence_number,
+				tag_id	: String(refrence_number),
 				state	: 'n',
 				data	: ''
 			}
+			const tag = self.caller.build_view_tag_obj(reference_tag, reference_tag.tag_id)
 			// render the modal
 			self.caller.render_reference({
 				self		: self.caller,
 				text_editor	: self,
 				i			: key,
-				tag			: reference_tag
+				tag			: tag
 			})
 		} );
 

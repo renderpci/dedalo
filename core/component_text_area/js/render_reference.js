@@ -59,6 +59,9 @@ export const render_reference = async function(options) {
 											  await reference_component.build(true)
 			const reference_component_node	= await reference_component.render()
 
+		// disable_save_animation
+			reference_component.view_properties.disable_save_animation = true
+
 		// change data to set empty value in the component (it saved in Session instead DDBB)
 			const changed_data = [Object.freeze({
 				action	: 'set_data',
@@ -164,12 +167,13 @@ export const render_reference = async function(options) {
 					label	: view_tag.label,
 					tag_id	: view_tag.tag_id,
 					state	: view_tag.state,
-					data	: self.tag_data_object_to_string(new_locator) // object format
+					data	: new_locator // object format
 				}
+				const tag = self.build_view_tag_obj(reference_tag, reference_tag.tag_id)
 				const reference_obj = {
 					locator 			: new_locator,
 					locator_text_value	: locator_text_value,
-					new_data_obj		: reference_tag
+					new_data_obj		: tag
 				}
 
 				text_editor.set_reference(reference_obj)
