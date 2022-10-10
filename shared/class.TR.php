@@ -225,11 +225,11 @@ abstract class TR {
 				$options->pageEditable		= false;
 				$options->personEditable	= false;
 				$options->noteEditable		= false;
-				$options->tag_url			= '../../component_text_area/tag';
+				$options->tag_url			= '../component_text_area/tag';
 				$options->force_tr_tags_cdn	= false;
 				if(!empty($request_options)) {
 					foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-				}
+			}
 
 		// hilite
 			$codeHiliteIn = ($options->hilite===true)
@@ -245,104 +245,110 @@ abstract class TR {
 				: $options->tag_url . '/?id='; //'?'
 
 		# INDEX IN
-			$pattern	= TR::get_mark_pattern('indexIn'); // id,state,label,data
-			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
-			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+		$pattern 	= TR::get_mark_pattern('indexIn'); // id,state,label,data
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
 		# INDEX OUT
-			$pattern	= TR::get_mark_pattern('indexOut');
-			$text		= preg_replace($pattern, "<img id=\"[/\$2-$3-$4-$6]\" src=\"{$tag_url}[/\$2-$3-$4-$6]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+		$pattern 	= TR::get_mark_pattern('indexOut');
+		$text		= preg_replace($pattern, "<img id=\"[/\$2-$3-$4-$6]\" src=\"{$tag_url}[/\$2-$3-$4-$6]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+
 
 		# REFERENCE IN
-			$pattern	= TR::get_mark_pattern('referenceIn');
-			// <reference class="reference" id="reference_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
-			$text		= preg_replace($pattern, "<reference id=\"reference_$4\" class=\"reference\" data-type=\"reference\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
+		$pattern 	= TR::get_mark_pattern('referenceIn');
+		// <reference class="reference" id="reference_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
+		$text		= preg_replace($pattern, "<reference id=\"reference_$4\" class=\"reference\" data-type=\"reference\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
 		# REFERENCE OUT
-			$pattern	= TR::get_mark_pattern('referenceOut');
-			$text		= preg_replace($pattern, "</reference>", $text);
+		$pattern 	= TR::get_mark_pattern('referenceOut');
+		$text		= preg_replace($pattern, "</reference>", $text);
 
 		# TC
-			$pattern	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
-			$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
-			// $text	= preg_replace_callback(
-			// 	$pattern,
-			// 	function($matches) {
-			// 		#dump($matches, ' matches ++ '.to_string());
-			// 		$_1 = $matches[1];
-			// 		$_2 = $matches[2];
-			// 		$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
-			// 		$a = "<img id=\"$id\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$_1\" data-state=\"n\" data-label=\"$_2\" data-data=\"$_2\">";
-			// 		#dump($a, ' a ++ '.to_string());
-			// 		return $a;
-			// 	},
-			// 	$text);
+		$pattern 	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
+		/*$text		= preg_replace_callback(
+			$pattern,
+			function($matches) {
+				#dump($matches, ' matches ++ '.to_string());
+				$_1 = $matches[1];
+				$_2 = $matches[2];
+				$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
+				$a = "<img id=\"$id\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$_1\" data-state=\"n\" data-label=\"$_2\" data-data=\"$_2\">";
+				#dump($a, ' a ++ '.to_string());
+				return $a;
+			},
+			$text);*/
 
 		# SVG
-			$pattern = TR::get_mark_pattern('svg');
-			preg_match($pattern, $text, $matches);
-			if (!empty($matches)) {
-				// $text	= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-				// $text	= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
-				$text = preg_replace_callback(
-					$pattern,
-					function ($matches) {
+		$pattern 	= TR::get_mark_pattern('svg');
+		preg_match($pattern, $text, $matches);
+		if (!empty($matches)) {
+			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}/[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+			#$text		= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
+			$text = preg_replace_callback(
+				$pattern,
+				function ($matches) {
 
-						$new_text = null;
+					$new_text = null;
 
-						$_2	= $matches[2];
-						$_3	= $matches[3];
-						$_4	= $matches[4];
-						$_5	= $matches[5];
-						$_6	= $matches[6];
-						$_7	= $matches[7] ?? '';
+					$_2 = $matches[2];
+					$_3 = $matches[3];
+					$_4 = $matches[4];
+					$_5 = $matches[5];
+					$_6 = $matches[6];
+					$_7 = $matches[7];
 
-						// data is a locator encoded as text
-						// Restore double quotes from saved safe locator string
-						$locator_text = str_replace('\'','"',$_7);
-						if(!empty($locator_text) && $locator = json_decode($locator_text) ) {
+					# data is a locator encoded as text
+					# Restore double quotes from saved safe locator string
+					$locator_text = str_replace('\'','"',$_7);
+					if($locator = json_decode($locator_text) ) {
 
-							$url = component_svg::get_url_from_locator($locator);
+						$url  = component_svg::get_url_from_locator($locator);
 
-							// Replace double quotes for safe management in text editor
-							$data = str_replace('"','\'',$_7);
+						# Replace double quotes for safe management in text editor
+						$data = str_replace('"','\'',$_7);
 
-							$new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
-						}
+						$new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
 
-						return $new_text;
-					},
-					$text
-				);
-			}
+					}
+					return $new_text;
+				},
+				$text
+			);
+		}
 
 		# DRAW
-			$pattern	= TR::get_mark_pattern('draw');
-			#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"svg\" />$codeHiliteOut", $text);
-			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"draw\" data-type=\"draw\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		$pattern 	= TR::get_mark_pattern('draw');
+		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"svg\" />$codeHiliteOut", $text);
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"draw\" data-type=\"draw\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 		# GEO
-			$pattern 	= TR::get_mark_pattern('geo');
-			#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"geo\" />$codeHiliteOut", $text);
-			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		$pattern 	= TR::get_mark_pattern('geo');
+		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"geo\" />$codeHiliteOut", $text);
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 		# PAGE
-			$pattern	= TR::get_mark_pattern('page');
-			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$7\">", $text);
+		$pattern 	= TR::get_mark_pattern('page');
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 		# PERSON
-			$pattern	= TR::get_mark_pattern('person'); // $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";
-			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
-			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
+		$pattern 	= TR::get_mark_pattern('person'); // $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
+		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}/[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
 
 		# NOTE
-			$pattern	= TR::get_mark_pattern('note'); // $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
-			$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		$pattern 	= TR::get_mark_pattern('note'); // $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+
+		# IMAGE
+		$pattern 	= TR::get_mark_pattern('lang'); // $string = "(\[lang-([a-z])-(.+)-data:.*?:data\])";
+		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"image\" />$codeHiliteOut", $text);
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$7]\" class=\"image\" data-type=\"image\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 
-		return $text;
+		return (string)$text;
 	}//end addTagImgOnTheFly
 
 
