@@ -1466,11 +1466,8 @@ const render_langs_list = function(self, text_editor, i) {
 					text_editor.set_content(tag)
 					// save value
 					text_editor.set_dirty(true)
-					// text_editor.save()
-					.then(function(){
-						// close current modal
+					// close current modal
 						modal.close()
-					})
 				});
 
 				// lang_icon
