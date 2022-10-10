@@ -2391,10 +2391,8 @@ class component_text_area extends component_common {
 	}//end update_dato_version
 
 
-
 	/**
 	* GET_LIST_VALUE
-	* (!) Identical to component_text_area method
 	* Unified value list output
 	* By default, list value is equivalent to dato. Override in other cases.
 	* Note that empty array or string are returned as null
@@ -2405,7 +2403,78 @@ class component_text_area extends component_common {
 	*/
 	public function get_list_value(object $options=null) : ?array {
 
-		return $this->get_list_value_large_text($options);
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		// options
+			$max_chars = $options->max_chars ?? 130;
+
+		$list_value = [];
+		foreach ($dato as $current_value) {
+			// convert the dato to html
+			$html_value = TR::addTagImgOnTheFly($current_value);
+
+			// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
+			$list_value[] = !empty($html_value)
+				? common::truncate_html(
+					$max_chars,
+					$html_value,
+					true // isUtf8
+				  )
+				: '';
+
+			// $list_value[] =$html_value ;
+		}
+
+		return $list_value;
 	}//end get_list_value
+
+
+
+	/**
+	* GET_FALLBACK_LIST_VALUE
+	* Used by component_text_area and component_html_text to
+	* generate fallback versions of current empty values
+	* @param object $options
+	* @return array|null $list_value
+	*/
+	public function get_fallback_list_value(object $options=null) : ?array {
+
+		// options
+			$max_chars = $options->max_chars ?? 700;
+
+		// dato_fallback. array of each dato array element using fallback
+			$dato_fallback = component_common::extract_component_dato_fallback(
+				$this,
+				DEDALO_DATA_LANG, // lang
+				DEDALO_DATA_LANG_DEFAULT // main_lang
+			);
+			if (empty($dato_fallback)) {
+				return null;
+			}
+
+		// list_value. Iterate dato_fallback and truncate long text
+			$list_value = [];
+			foreach ($dato_fallback as $current_value) {
+
+				$value = null;
+
+				if(!empty($html_value)){
+					$html_value = TR::addTagImgOnTheFly($current_value);
+					$value = common::truncate_html($max_chars, $html_value, true); // $maxLength, $html, $isUtf8=true
+				}
+
+				// add final ... when is truncated
+					if (!empty($value) && strlen($value)<strlen($html_value)) {
+						$value .= ' ...';
+					}
+
+				$list_value[] = $value;
+			}
+
+		return $list_value;
+	}//end get_fallback_list_value
 
 }//end class component_text_area
