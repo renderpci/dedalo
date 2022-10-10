@@ -361,7 +361,7 @@
 	# Target folder exists test
 	$folder_path = DEDALO_LOGS_DIR;
 	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0600, true)) {
+		if(!mkdir($folder_path, 0700, true)) {
 
 			$init_response->msg[]	= 'Error on read or create logs directory. Permission denied';
 			$init_response->errors	= true;
@@ -377,7 +377,7 @@
 // DEDALO_UPLOAD_TMP_DIR
 	$folder_path = DEDALO_UPLOAD_TMP_DIR;
 	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0600, true)) {
+		if(!mkdir($folder_path, 0700, true)) {
 			$init_response->msg[]	= 'Error on read or create DEDALO_UPLOAD_TMP_DIR directory. Permission denied';
 			$init_response->errors	= true;
 			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
