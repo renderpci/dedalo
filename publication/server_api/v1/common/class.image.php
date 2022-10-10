@@ -70,7 +70,7 @@ class image {
 
 			$options = new stdClass();
 				$options->tag_url = $this->tag_url; //__CONTENT_BASE_URL__ . '/core/component_text_area/tag/?id=';
-			$this->description_with_images = TR::addTagImgOnTheFly($description_raw, $options);
+			$this->description_with_images = TR::add_tag_img_on_the_fly($description_raw, $options);
 		}
 		
 		# Description clean text
