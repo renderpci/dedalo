@@ -765,12 +765,12 @@ function array_flatten(array $array) : array {
 * Rearrange the array to your desired output
 */
 function rearrange_array($array, $key) {
-    while ($key > 0) {
-        $temp = array_shift($array);
-        $array[] = $temp;
-        $key--;
-    }
-    return $array;
+	while ($key > 0) {
+		$temp = array_shift($array);
+		$array[] = $temp;
+		$key--;
+	}
+	return $array;
 }//end rearrange_array
 
 
@@ -1961,3 +1961,101 @@ function test_php_version_supported(string $minimun_php_version='8.1.0') : bool 
 		return false;
 	}
 }//end test_php_version_supported
+
+
+
+/**
+* FILTER_FILENAME
+* Sanitize filenames for user uploaded files
+* From Sean Vieira
+* @param string $filename
+* @param bool $beautify = true
+* @return string $filename
+*/
+	// function filter_filename(string $filename, bool $beautify=true) : string {
+	// 	// sanitize filename
+	// 	$filename = preg_replace(
+	// 		'~
+	// 		[<>:"/\\\|?*]|           # file system reserved https://en.wikipedia.org/wiki/Filename#Reserved_characters_and_words
+	// 		[\x00-\x1F]|             # control characters http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx
+	// 		[\x7F\xA0\xAD]|          # non-printing characters DEL, NO-BREAK SPACE, SOFT HYPHEN
+	// 		[#\[\]@!$&\'()+,;=]|     # URI reserved https://www.rfc-editor.org/rfc/rfc3986#section-2.2
+	// 		[{}^\~`]                 # URL unsafe characters https://www.ietf.org/rfc/rfc1738.txt
+	// 		~x',
+	// 		'X', $filename);
+	// 	// avoids ".", ".." or ".hiddenFiles"
+	// 	$filename = ltrim($filename, '.-');
+	// 	// optional beautification
+	// 	if ($beautify) $filename = beautify_filename($filename);
+	// 	// maximize filename length to 255 bytes http://serverfault.com/a/9548/44086
+	// 	$ext = pathinfo($filename, PATHINFO_EXTENSION);
+	// 	$filename = mb_strcut(pathinfo($filename, PATHINFO_FILENAME), 0, 255 - ($ext ? strlen($ext) + 1 : 0), mb_detect_encoding($filename)) . ($ext ? '.' . $ext : '');
+
+	// 	return $filename;
+	// }//end filter_filename
+
+
+/**
+* SANITIZE_FILE_NAME
+* Sanitize filenames for user uploaded files
+* From Sean Vieira
+* @param string $filename
+* @param bool $beautify = true
+* @return string $filename
+*/
+function sanitize_file_name(string $filename, bool $beautify=true) : string {
+	// Remove anything which isn't a word, white space, number
+	// or any of the following characters -_~,;[]().
+	$filename = mb_ereg_replace("([^\w\s\d\-_~,;\[\]\(\).])", '', $filename);
+	// Remove any runs of periods
+	$filename = mb_ereg_replace("([\.]{2,})", '', $filename);
+	// Ensure the filename only keeps a-z letters and numbers
+	$filename = preg_replace( '/[^a-z0-9\.]+/', '-', strtolower( $filename ) );
+
+	// optional beautification
+	if ($beautify) {
+		$filename = beautify_filename($filename);
+	}
+
+	// maximize filename length to 255 bytes http://serverfault.com/a/9548/44086
+	$ext = pathinfo($filename, PATHINFO_EXTENSION);
+	$filename = mb_strcut(pathinfo($filename, PATHINFO_FILENAME), 0, 128 - ($ext ? strlen($ext) + 1 : 0), mb_detect_encoding($filename)) . ($ext ? '.' . $ext : '');
+
+	return $filename;
+}//end sanitize_file_name
+
+
+
+/**
+* BEAUTIFY_FILENAME
+* Make more human readable sanitized file names
+* From Sean Vieira
+* @param string $filename
+* @return string $filename
+*/
+function beautify_filename(string $filename) : string {
+	// reduce consecutive characters
+	$filename = preg_replace(array(
+		// "file   name.zip" becomes "file-name.zip"
+		'/ +/',
+		// "file___name.zip" becomes "file-name.zip"
+		'/_+/',
+		// "file---name.zip" becomes "file-name.zip"
+		'/-+/'
+	), '-', $filename);
+	$filename = preg_replace(array(
+		// "file--.--.-.--name.zip" becomes "file.name.zip"
+		'/-*\.-*/',
+		// "file...name..zip" becomes "file.name.zip"
+		'/\.{2,}/'
+	), '.', $filename);
+	// lowercase for windows/unix interoperability http://support.microsoft.com/kb/100625
+	$filename = mb_strtolower($filename, mb_detect_encoding($filename));
+	// ".file-name.-" becomes "file-name"
+	$filename = trim($filename, '.-');
+
+	return $filename;
+}//end beautify_filename
+
+
+
