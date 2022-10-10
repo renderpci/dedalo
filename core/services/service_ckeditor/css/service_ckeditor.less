@@ -41,56 +41,71 @@
 	}
 
 	// standard ckeditor inline toolbar moved inside toolbar_container
-	.ck {
-		// inline editor toolbar
-		&.ck-balloon-panel {
-			position: relative;
-			display: contents;
-			z-index: 1;
-			left: 0px !important;
-			top: 0px !important;
-			box-shadow: none;
-			border: 0px;
-		}
-		&.ck-toolbar {
+	// inline editor toolbar
+	.ck-balloon-panel.ck-toolbar-container {
+		display: contents;
+		position: relative;
+		z-index: 0;
+		left: 0px !important;
+		top: 0px !important;
+		box-shadow: none;
+		border: 0px;
+
+		.ck-toolbar.ck-toolbar_grouping {
 			outline: none;
 			padding: 0px !important;
 			margin: 0px !important;
-			max-height: 1.70rem;
-		}
+			height: 1.70rem;
 
-		// items wrapper
-		&.ck-toolbar__items {
-			margin: 0px !important;
-			padding: 0px !important;
+			// 1 - items wrapper
+			.ck-toolbar__items {
+				margin: 0px !important;
+				padding: 0px !important;
+			}
+
+			// 2 - separator
+			.ck-toolbar__separator {
+				height: 100%;
+			}
+
+			// 3 folded grouped-dropdown
+			.ck-toolbar__grouped-dropdown {
+
+			}
 
 			.ck-dropdown,
 			.ck-toolbar__separator,
 			.ck-file-dialog-button,
 			.ck-button {
-				min-height: 1.95rem;
-				margin: 0px !important;
-				margin-top: 0px !important;
-				margin-bottom: 0px !important;
+				min-height: 22px;
+				margin: 0px ;
+				margin-top: 0px ;
+				margin-bottom: 0px ;
 			}
 
 			// dropdown like 'paragraph'
 			.ck-dropdown.ck-heading-dropdown {
 				width: 8rem;
+				max-height: unset;
 			}
 
 			// svg icons
 			.ck-icon {
 				height: 19px;
 			}
+
 			// separators
 			.ck-toolbar__separator {
-				height: 19px;
-				top: 0px;
-				position: relative;
+				height: 16px;
+				// top: 0px;
+				// position: relative;
+			}
+			input, label {
+				height: unset;
+				font-size: unset;
 			}
 		}
-	}//end .ck
+	}//end .ck-balloon-panel
 
 
 }//end .toolbar_container
