@@ -1,14 +1,17 @@
-/*global get_label, page_globals, SHOW_DEBUG, ddEditor, ckeditor */
+/*global get_label, page_globals, SHOW_DEBUG, ddEditor, ckeditor, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
 	// import {event_manager} from '../../../common/js/event_manager.js'
+	import {common} from '../../../common/js/common.js'
 	import {set_before_unload} from '../../../common/js/events.js';
 	// import {ui} from '../../../common/js/ui.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
+	import {data_manager} from '../../../common/js/data_manager.js'
+
 	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
 
 
@@ -39,7 +42,7 @@ export const service_ckeditor = function() {
 	* @param object options
 	* @return promise js_promise
 	*/
-	this.init = function(options) {
+	this.init = async function(options) {
 
 		const self = this
 
@@ -63,6 +66,28 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			// value_container.innerHTML = value
 
+		// load dependencies
+			const load_promises = []
+
+		// load and set JSON langs file
+			load_promises.push(
+				new Promise(function(resolve){
+					data_manager.request({
+						url		: '../common/js/lang.json',
+						method	: 'GET'
+					})
+					.then(function(response){
+						// set json_langs
+						self.json_langs = response
+						resolve(response)
+					})
+				})
+			)
+			await Promise.all(load_promises)
+			.then(async function(response){
+				// console.log('All component_geolocation items are loaded:', response);
+			})
+
 		switch(editor_class) {
 
 			case 'InlineEditor':
@@ -85,9 +110,26 @@ export const service_ckeditor = function() {
 
 		const self = this
 
-		return new Promise(function(resolve){
+		// set the lang of the tool
+			const json_langs	= self.json_langs || []
+			if (json_langs.length<1) {
+				console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
+			}
+			const dedalo_lang	= page_globals.dedalo_data_lang
+			const lang_obj		= json_langs.find(item => item.dd_lang===dedalo_lang)
+			const lang			= lang_obj
+				? lang_obj.tld2
+				: 'en'
 
+			if(lang !== 'en'){
+				const ck_translation_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/translations/'+lang+'.js'
+				await common.prototype.load_script(ck_translation_file)
+			}
+
+		// remove loading class of value_container before is changed by ckeditor
 			self.value_container.classList.remove('loading')
+
+		return new Promise(function(resolve){
 
 			// editor.
 			// InlineEditor is created from lib ckeditor source using webpack.
@@ -139,6 +181,13 @@ export const service_ckeditor = function() {
 				// 	],
 				// 	shouldNotGroupWhenFull: false
 				// }
+				// The UI will be in English.
+				language: lang,
+				simpleUpload: {
+
+					 // The URL that the images are uploaded to.
+					uploadUrl: DEDALO_ROOT_WEB + "/core/api/v1/json/?resource_type=web"
+				}
 			})
 			.then( editor => {
 
@@ -594,22 +643,23 @@ export const service_ckeditor = function() {
 				text_editor	: self
 			})
 			// create the new tag for the reference
-			const tag_type		='reference'
-			const last_tag_id	= self.get_last_tag_id(tag_type, self)
-			const note_number	= parseInt(last_tag_id) + 1
+			const tag_type			='reference'
+			const last_tag_id		= 0 //self.get_last_tag_id(tag_type, self)
+			const refrence_number	= parseInt(last_tag_id) + 1
 			const reference_tag		= {
 				type	: tag_type,
-				label	: 'reference ' + note_number,
-				tag_id	: String(note_number),
+				label	: 'reference ' + refrence_number,
+				tag_id	: String(refrence_number),
 				state	: 'n',
 				data	: ''
 			}
+			const tag = self.caller.build_view_tag_obj(reference_tag, reference_tag.tag_id)
 			// render the modal
 			self.caller.render_reference({
 				self		: self.caller,
 				text_editor	: self,
 				i			: key,
-				tag			: reference_tag
+				tag			: tag
 			})
 		} );
 
@@ -634,11 +684,11 @@ export const service_ckeditor = function() {
 		// const model_tag_node	= editor.data.toModel( view_fragment );
 
 		editor.model.change( writer => {
-			if(tag_obj.type==='reference'){
-				const model_tag_node = writer.createElement( 'reference', tag_obj) ;
-				// set the element to enclose the selection range
-				writer.wrap( editor.model.document.selection.getFirstRange(), model_tag_node )
-			}else{
+			// if(tag_obj.type==='reference'){
+			// 	const model_tag_node = writer.createElement( 'reference', tag_obj) ;
+			// 	// set the element to enclose the selection range
+			// 	writer.wrap( editor.model.document.selection.getFirstRange(), model_tag_node )
+			// }else{
 				// get the end position of the selection
 				const position = editor.model.document.selection.getLastPosition()
 				// create the tag_node
@@ -648,7 +698,7 @@ export const service_ckeditor = function() {
 				editor.model.insertContent( model_tag_node, position );
 				// Put the selection on the inserted element.
 				writer.setSelection( model_tag_node, 'on' );
-			}
+			// }
 		});
 
 		self.is_dirty = true;

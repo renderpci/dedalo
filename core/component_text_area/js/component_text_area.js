@@ -483,6 +483,12 @@ component_text_area.prototype.preprocess_text_to_save = function(html_value) {
 			for (let i = 0; i < image_elements_len; i++) {
 
 				const current_element = image_elements[i]
+				// check if the image is a tag or other images
+				// if the image is not a tag do not change the node
+				const current_tag_type = current_element.dataset.type
+				if(!current_tag_type){
+					continue
+				}
 
 				let current_tag_id = current_element.dataset.tag_id
 
