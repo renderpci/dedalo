@@ -77,6 +77,12 @@ component_common.prototype.init = async function(options) {
 	// active. Active status (true|false) is set by ui.component.activate/deactivate
 		self.active = false
 
+	// view_properties. object . Defines useful view custom properties to take control
+	// of some common component behaviors
+		self.view_properties = {
+			disable_save_animation : false
+		}
+
 	// pagination info
 		// self.pagination = (self.data && self.data.pagination)
 		// 	? self.data.pagination
