@@ -133,7 +133,8 @@
 						vertical-align: text-bottom;
 					}
 
-					img {
+					// images are inside span .dd_tag
+					.dd_tag > img {
 						cursor: pointer;
 						height: 15px;
 						vertical-align: text-bottom;
@@ -166,6 +167,7 @@
 						&.draw {
 
 						}
+
 						&.page {
 
 						}
@@ -212,7 +214,7 @@
 					position: absolute;
 					right: -5px;
 					bottom: 0px;
-					box-shadow: 2px 2px 5px 0 rgb(38 38 38 / 30%);
+					box-shadow: 2px 2px 5px 0px rgb(38 38 38 / 30%);
 					height: 33px;
 				}
 
@@ -247,7 +249,7 @@
 					clear: both;
 					// border: 0.5px solid #777;
 
-					>li{
+					>li {
 						display: grid;
 						grid-template-columns: 1em 1em auto 1em;
 						align-items: center;
@@ -286,7 +288,7 @@
 						// }
 					}
 					>li:first-child {
-						border-top: 0.5px solid #777;
+						border-top: 0.5px solid #777777;
 					}
 				}
 			}
@@ -405,11 +407,11 @@ dd-modal {
 					opacity: 0.5;
 				}
 
-				>img.person  {
+				>img.person {
 					height: 1.2rem;
 					margin-right: 0.5rem;
 				}
-				>span.label  {
+				>span.label {
 					margin-right: 0.5rem;
 				}
 			}

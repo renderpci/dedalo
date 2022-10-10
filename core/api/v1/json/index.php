@@ -19,8 +19,16 @@ $global_start_time = hrtime(true);
 
 
 
-// header print as json data
+// header print as JSON data
 	header('Content-Type: application/json');
+
+
+
+// includes
+	// config dedalo
+	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
+	// JSON dd_manager
+	include dirname(dirname(__FILE__)) .'/common/class.dd_manager.php';
 
 
 
@@ -29,8 +37,6 @@ $global_start_time = hrtime(true);
 	//error_log(print_r($str_json,true));
 	if (!empty($str_json)) {
 		$rqo = json_decode( $str_json );
-		// to prevent php session lock. On true, set session as read only to prevent lock
-		// define('PREVENT_SESSION_LOCK', ($rqo->prevent_lock ?? false));
 	}
 
 	// debug
@@ -38,7 +44,8 @@ $global_start_time = hrtime(true);
 		// error_log('--------------------------------------- current 1 (after file_get_contents) ms: '.$current);
 
 
-// received files case
+
+// received files case. Uploading from tool_upload or text editor images upload
 	if (isset($_FILES)) {
 		if (!isset($rqo)) {
 			$rqo = new stdClass();
@@ -46,20 +53,15 @@ $global_start_time = hrtime(true);
 				$rqo->dd_api = 'dd_utils_api';
 		}
 		foreach($_POST as $key => $value) {
-			$rqo->{$key} = $value;
+				$rqo->{$key} = safe_xss($value);
+		}
+		foreach($_GET as $key => $value) {
+				$rqo->{$key} = safe_xss($value);
 		}
 		foreach($_FILES as $key => $value) {
-			$rqo->{$key} = $value;
+				$rqo->{$key} = $value;
 		}
 	}
-
-
-
-// includes
-	// config dedalo
-	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
-	// json dd_manager
-	include dirname(dirname(__FILE__)) .'/common/class.dd_manager.php';
 
 
 

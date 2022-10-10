@@ -638,9 +638,9 @@ const get_custom_events = (self, i, text_editor) => {
 						// rebuild the correct data with the " instead '
 						const data_lang			= tag_data_lang_string.replace(/\'/g, '"')
 						// parse the string to object or create new one
-						const tag_data_lang		= JSON.parse(data_lang) || ''
+						const tag_data_lang		= JSON.parse(data_lang) || []
 						// get the object of the lang clicked from all project_langs
-						const lang_obj 			= ar_project_langs.find(el => el.value===tag_data_lang) || {label: data_lang}
+						const lang_obj 			= ar_project_langs.find(el => el.value===tag_data_lang[0]) || {label: data_lang}
 
 						// save editor changes to prevent conflicts with modal components changes
 							// text_editor.save()
@@ -657,7 +657,6 @@ const get_custom_events = (self, i, text_editor) => {
 					case 'reference':
 						// Show reference info
 						event_manager.publish('click_reference_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-
 
 						self.render_reference({
 							self		: self,
@@ -1464,18 +1463,17 @@ const render_langs_list = function(self, text_editor, i) {
 						label	: current_lang.value.split('-')[1], //.substring(0, 3),
 						tag_id	: String(lang_number),
 						state	: 'a',
-						data	: current_lang.value
+						data	: [current_lang.value]
 					}
+
 					const tag = self.build_view_tag_obj(lang_tag, lang_tag.tag_id)
 					// set the new lang tag at caret position of the text_editor.
+
 					text_editor.set_content(tag)
 					// save value
 					text_editor.set_dirty(true)
-					// text_editor.save()
-					.then(function(){
-						// close current modal
+					// close current modal
 						modal.close()
-					})
 				});
 
 				// lang_icon
