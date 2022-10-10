@@ -5,10 +5,13 @@
 
 // imports
 	// import {event_manager} from '../../../common/js/event_manager.js'
+	import {common} from '../../../common/js/common.js'
 	import {set_before_unload} from '../../../common/js/events.js';
 	// import {ui} from '../../../common/js/ui.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
+	import {data_manager} from '../../../common/js/data_manager.js'
+
 	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
 
 
@@ -39,7 +42,7 @@ export const service_ckeditor = function() {
 	* @param object options
 	* @return promise js_promise
 	*/
-	this.init = function(options) {
+	this.init = async function(options) {
 
 		const self = this
 
@@ -63,6 +66,28 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			// value_container.innerHTML = value
 
+		// load dependencies
+			const load_promises = []
+
+		// load and set JSON langs file
+			load_promises.push(
+				new Promise(function(resolve){
+					data_manager.request({
+						url		: '../common/js/lang.json',
+						method	: 'GET'
+					})
+					.then(function(response){
+						// set json_langs
+						self.json_langs = response
+						resolve(response)
+					})
+				})
+			)
+			await Promise.all(load_promises)
+			.then(async function(response){
+				// console.log('All component_geolocation items are loaded:', response);
+			})
+
 		switch(editor_class) {
 
 			case 'InlineEditor':
@@ -85,8 +110,23 @@ export const service_ckeditor = function() {
 
 		const self = this
 
-		return new Promise(function(resolve){
+		// set the lang of the tool
+			const json_langs	= self.json_langs || []
+			if (json_langs.length<1) {
+				console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
+			}
+			const dedalo_lang	= page_globals.dedalo_data_lang
+			const lang_obj		= json_langs.find(item => item.dd_lang===dedalo_lang)
+			const lang			= lang_obj
+				? lang_obj.tld2
+				: 'en'
 
+			if(lang !== 'en'){
+				const ck_translation_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/translations/'+lang+'.js'
+				await common.prototype.load_script(ck_translation_file)
+			}
+
+		return new Promise(function(resolve){
 			// editor.
 			// InlineEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
@@ -137,6 +177,8 @@ export const service_ckeditor = function() {
 				// 	],
 				// 	shouldNotGroupWhenFull: false
 				// }
+				// The UI will be in English.
+				language: lang,
 				simpleUpload: {
 
 					 // The URL that the images are uploaded to.
@@ -144,7 +186,7 @@ export const service_ckeditor = function() {
 				}
 			})
 			.then( editor => {
-
+				console.log( editor );
 				// fix the instance
 					self.editor = editor
 
