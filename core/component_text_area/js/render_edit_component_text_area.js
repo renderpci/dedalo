@@ -185,7 +185,7 @@ const get_input_element = (i, current_value, self) => {
 				self.service_text_editor_instance[i] = current_service_text_editor
 
 			// toolbar. create the toolbar base
-				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','full_screen','|']
+				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','|']
 				// toolbar add custum_buttons
 					if(self.context.toolbar_buttons){
 						toolbar.push(...self.context.toolbar_buttons)
@@ -363,16 +363,6 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'html_source',
 				image	: '../../core/themes/default/icons/html_source.svg'
-			}
-		})
-
-	// full_screen
-		custom_buttons.push({
-			name			: "full_screen",
-			manager_editor	: false,
-			options	: {
-				tooltip	: 'full_screen',
-				image	: '../../core/themes/default/icons/full_screen.svg'
 			}
 		})
 
