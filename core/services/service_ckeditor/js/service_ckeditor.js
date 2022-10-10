@@ -69,6 +69,12 @@ export const service_ckeditor = function() {
 		// load dependencies
 			const load_promises = []
 
+		// load ckeditor js file
+			const ckeditor_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/ckeditor.js'
+			load_promises.push(
+				common.prototype.load_script(ckeditor_file)
+			)
+
 		// load and set JSON langs file
 			load_promises.push(
 				new Promise(function(resolve){
@@ -84,27 +90,33 @@ export const service_ckeditor = function() {
 				})
 			)
 			await Promise.all(load_promises)
-			.then(async function(response){
-				// console.log('All component_geolocation items are loaded:', response);
-			})
 
+	// init ckeditor (InlineEditor|ddEditor)
 		switch(editor_class) {
-
 			case 'InlineEditor':
-				return self.create_InlineEditor(editor_config)
+				await self.create_InlineEditor(editor_config)
+				break;
 
 			case 'ddEditor':
 			default:
-				return self.create_ddEditor(editor_config)
+				await self.create_ddEditor(editor_config)
+				break;
 		}
 
 
+		return true
 	}//end init
+
 
 
 	/**
 	* CREATE_INLINEEDITOR
+	* Builds a ckeditor InlineEditor instance
+	* This instance uses full featured ckeditor toolbar and is used
+	* by component_html_text
+	* @param object editor_config
 	* @return promise
+	* 	Resolve editor
 	*/
 	this.create_InlineEditor = async function(editor_config) {
 
@@ -138,53 +150,52 @@ export const service_ckeditor = function() {
 			ckeditor.InlineEditor.create( self.value_container, {
 				// initialData: value
 				// toolbar: {
-				// 	items : [
-				// 		"heading",
-				// 		// "|",
-				// 		"bold",
-				// 		"italic",
-				// 		"underline",
-				// 		"strikethrough",
-				// 		"alignment",
-				// 		"|",
-				// 		"undo",
-				// 		"redo",
-				// 		"|",
-				// 		"findAndReplace",
-				// 		"sourceEditing",
-				// 		"|",
-				// 		"imageUpload",
-				// 		"blockQuote",
-				// 		"insertTable",
-				// 		"htmlEmbed",
-				// 		"link",
-				// 		// "-",
-				// 		"style",
-				// 		"|",
-				// 		"fontColor",
-				// 		"fontBackgroundColor",
-				// 		"fontSize",
-				// 		"fontFamily",
-				// 		"superscript",
-				// 		"subscript",
-				// 		"|",
-				// 		"numberedList",
-				// 		"bulletedList",
-				// 		"horizontalLine",
-				// 		"|",
-				// 		"outdent",
-				// 		"indent",
-				// 		"|",
-				// 		"specialCharacters",
-				// 		"pageBreak",
-				// 		"reference"
-				// 	],
-				// 	shouldNotGroupWhenFull: false
-				// }
+					// 	items : [
+					// 		"heading",
+					// 		// "|",
+					// 		"bold",
+					// 		"italic",
+					// 		"underline",
+					// 		"strikethrough",
+					// 		"alignment",
+					// 		"|",
+					// 		"undo",
+					// 		"redo",
+					// 		"|",
+					// 		"findAndReplace",
+					// 		"sourceEditing",
+					// 		"|",
+					// 		"imageUpload",
+					// 		"blockQuote",
+					// 		"insertTable",
+					// 		"htmlEmbed",
+					// 		"link",
+					// 		// "-",
+					// 		"style",
+					// 		"|",
+					// 		"fontColor",
+					// 		"fontBackgroundColor",
+					// 		"fontSize",
+					// 		"fontFamily",
+					// 		"superscript",
+					// 		"subscript",
+					// 		"|",
+					// 		"numberedList",
+					// 		"bulletedList",
+					// 		"horizontalLine",
+					// 		"|",
+					// 		"outdent",
+					// 		"indent",
+					// 		"|",
+					// 		"specialCharacters",
+					// 		"pageBreak",
+					// 		"reference"
+					// 	],
+					// 	shouldNotGroupWhenFull: false
+					// }
 				// The UI will be in English.
 				language: lang,
 				simpleUpload: {
-
 					 // The URL that the images are uploaded to.
 					uploadUrl: DEDALO_ROOT_WEB + "/core/api/v1/json/?resource_type=web"
 				}
@@ -262,8 +273,12 @@ export const service_ckeditor = function() {
 
 	/**
 	* CREATE_DDEDITOR
+	* Builds a ckeditor ddEditor instance
+	* This instance uses custom limited toolbar and is used
+	* by component_text_area
 	* @param object editor_config
 	* @return promise
+	* 	Resolve editor
 	*/
 	this.create_ddEditor = function(editor_config) {
 
@@ -277,7 +292,6 @@ export const service_ckeditor = function() {
 			// ckEditor is initiated without user interface
 			ckeditor.ddEditor.create( self.value_container, {
 				// initialData: value
-
 			})
 			.then( editor => {
 
@@ -299,9 +313,9 @@ export const service_ckeditor = function() {
 					self.setup_button_reference();
 
 				// Drag and Drop control
-				// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
-				// the drop event doesn't has any effect in the final position of the drop,
-				// the final check position is fired in the clipboardInput event.
+					// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
+					// the drop event doesn't has any effect in the final position of the drop,
+					// the final check position is fired in the clipboardInput event.
 					editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
 
 						// target is undefined unless a existing element is focus on paste or drop
