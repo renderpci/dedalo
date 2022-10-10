@@ -3,7 +3,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 
@@ -17,10 +17,10 @@
 export const render_reference = async function(options) {
 
 	// options
-		const self				= options.self
-		const text_editor		= options.text_editor
-		const i					= options.i
-		const view_tag			= options.tag
+		const self			= options.self
+		const text_editor	= options.text_editor
+		const i				= options.i
+		const view_tag		= options.tag
 
 
 	// short vars
@@ -43,8 +43,7 @@ export const render_reference = async function(options) {
 		const references_component_model	= self.context.references_component_model
 
 
-	// section
-		// create the instance of the note section, it will render without inspector or filter and with edit mode
+	// reference_component
 		const instance_options = {
 			model			: references_component_model,
 			tipo			: references_component_tipo,
@@ -52,12 +51,18 @@ export const render_reference = async function(options) {
 			section_id		: 'tmp',
 			mode			: 'edit',
 			lang			: page_globals.dedalo_data_nolan,
-			caller			: self,
+			caller			: self
 		}
 		// get the instance, built and render
 			const reference_component		= await instances.get_instance(instance_options)
 											  await reference_component.build(true)
+
+			// is_inside_tool force to prevent to show tool buttons
+			reference_component.is_inside_tool = true
+
 			const reference_component_node	= await reference_component.render()
+
+
 
 		// change data to set empty value in the component (it saved in Session instead DDBB)
 			const changed_data = [Object.freeze({

@@ -87,6 +87,8 @@ export const service_ckeditor = function() {
 
 		return new Promise(function(resolve){
 
+			self.value_container.classList.remove('loading')
+
 			// editor.
 			// InlineEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
@@ -148,20 +150,6 @@ export const service_ckeditor = function() {
 
 				// remove original value container
 					// self.value_container.remove()
-
-				// editor.editing.view.change( writer => {
-				// 	writer.setStyle('min-height', '600px', editor.editing.view.document.getRoot());
-				// 	writer.setStyle('min-width', '600px', editor.editing.view.document.getRoot());
-				// });
-				// console.log('+++++++++++++++++++++++++++++++ create_InlineEditor editor:', editor);
-
-				// click event
-					self.click = function(e) {
-						e.stopPropagation()
-						e.preventDefault()
-
-						console.log('create_InlineEditor editor click event:', e);
-					}
 
 				// setup_events
 					self.setup_button_reference();
