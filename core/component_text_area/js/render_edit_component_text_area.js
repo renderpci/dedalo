@@ -653,7 +653,6 @@ const get_custom_events = (self, i, text_editor) => {
 						// Show reference info
 						event_manager.publish('click_reference_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 
-
 						self.render_reference({
 							self		: self,
 							text_editor	: text_editor,
