@@ -660,11 +660,11 @@ export const service_ckeditor = function() {
 		// const model_tag_node	= editor.data.toModel( view_fragment );
 
 		editor.model.change( writer => {
-			if(tag_obj.type==='reference'){
-				const model_tag_node = writer.createElement( 'reference', tag_obj) ;
-				// set the element to enclose the selection range
-				writer.wrap( editor.model.document.selection.getFirstRange(), model_tag_node )
-			}else{
+			// if(tag_obj.type==='reference'){
+			// 	const model_tag_node = writer.createElement( 'reference', tag_obj) ;
+			// 	// set the element to enclose the selection range
+			// 	writer.wrap( editor.model.document.selection.getFirstRange(), model_tag_node )
+			// }else{
 				// get the end position of the selection
 				const position = editor.model.document.selection.getLastPosition()
 				// create the tag_node
@@ -674,7 +674,7 @@ export const service_ckeditor = function() {
 				editor.model.insertContent( model_tag_node, position );
 				// Put the selection on the inserted element.
 				writer.setSelection( model_tag_node, 'on' );
-			}
+			// }
 		});
 
 		self.is_dirty = true;
