@@ -206,13 +206,13 @@ abstract class TR {
 	* @param object $request_options = null
 	* @return string $text
 	*/
-	public static function addTagImgOnTheFly(string $text, object $request_options=null) : string {
+	public static function add_tag_img_on_the_fly(string $text, object $request_options=null) : string {
 
 		#$hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
 
 		# Temporal (for catch old calls only)
 			if (is_bool($request_options)) {
-				throw new Exception("Error. Only a object is valid for addTagImgOnTheFly options. Update your call to new format please", 1);
+				throw new Exception("Error. Only a object is valid for add_tag_img_on_the_fly options. Update your call to new format please", 1);
 			}
 
 		// options
@@ -349,7 +349,7 @@ abstract class TR {
 
 
 		return (string)$text;
-	}//end addTagImgOnTheFly
+	}//end add_tag_img_on_the_fly
 
 
 
