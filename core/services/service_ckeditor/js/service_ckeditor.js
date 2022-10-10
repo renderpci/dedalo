@@ -137,6 +137,20 @@ export const service_ckeditor = function() {
 				// 	],
 				// 	shouldNotGroupWhenFull: false
 				// }
+				simpleUpload: {
+
+					 // The URL that the images are uploaded to.
+					uploadUrl: DEDALO_ROOT_WEB + "/core/api/v1/json/?resource_type=reference",
+
+					// Enable the XMLHttpRequest.withCredentials property.
+					// withCredentials: true,
+
+					// Headers sent along with the XMLHttpRequest to the upload server.
+					headers: {
+						'X-CSRF-TOKEN': 'CSRF-Token',
+						Authorization: 'Bearer <JSON Web Token>'
+					}
+				}
 			})
 			.then( editor => {
 
