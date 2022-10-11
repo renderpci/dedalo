@@ -114,6 +114,7 @@ const get_content_data_edit = async function(self) {
 				})
 
 		// source component
+			self.main_element.view_properties.read_only = true
 			const source_component_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'source_component_container',
@@ -121,7 +122,7 @@ const get_content_data_edit = async function(self) {
 			})
 			self.main_element.render()
 			.then(function(node){
-				node.classList.add('disabled_component')
+				// node.classList.add('disabled_component')
 				source_component_container.appendChild(node)
 			})
 
@@ -141,8 +142,8 @@ const get_content_data_edit = async function(self) {
 
 			// target lang select
 				const target_select_lang = ui.build_select_lang({
-					langs  		: self.langs,
-					selected 	: self.target_lang,
+					langs		: self.langs,
+					selected	: self.target_lang,
 					class_name	: 'target_lang'
 				})
 				target_select_lang.addEventListener("change", async function(e){
@@ -431,7 +432,8 @@ export const add_component = async (self, component_container, lang) => {
 
 	// source lang lock
 		if (lang===self.source_lang || component_container.classList.contains('source_component_container')) {
-			node.classList.add('disabled_component')
+			// node.classList.add('disabled_component')
+			component.view_properties.read_only = true
 		}
 
 	// clean container before append
@@ -458,17 +460,23 @@ export const add_component = async (self, component_container, lang) => {
 */
 const render_status = async function(self) {
 
-		const fragment = new DocumentFragment()
+	const fragment = new DocumentFragment()
 
-		self.status_user_component.context.view		= 'mini'
-		self.status_admin_component.context.view	= 'mini'
-		self.status_user_component.is_inside_tool	= true
-		self.status_admin_component.is_inside_tool	= true
-		const status_user_node	= await self.status_user_component.render()
+	// status_user_component
+		self.status_user_component.context.view	= 'mini'
+		self.status_user_component.is_inside_tool = true
+		self.status_user_component.view_properties.disable_save_animation = true
+		const status_user_node = await self.status_user_component.render()
+
+	// status_admin_component
+		self.status_admin_component.context.view = 'mini'
+		self.status_admin_component.is_inside_tool = true
+		self.status_admin_component.view_properties.disable_save_animation = true
 		const status_admin_node	= await self.status_admin_component.render()
 
-		fragment.appendChild(status_user_node)
-		fragment.appendChild(status_admin_node)
+	fragment.appendChild(status_user_node)
+	fragment.appendChild(status_admin_node)
+
 
 	return fragment
 }//end render_status

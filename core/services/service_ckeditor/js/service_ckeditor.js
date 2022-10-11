@@ -217,6 +217,11 @@ export const service_ckeditor = function() {
 				// setup_events
 					self.setup_events(editor_config);
 
+				// read_only
+					if(editor_config.read_only) {
+						editor.enableReadOnlyMode( 'read_only_ mode' );
+					}
+
 				// set toolbar width
 					(()=>{
 						// elements
@@ -307,6 +312,11 @@ export const service_ckeditor = function() {
 
 				// setup_events
 					self.setup_events(editor_config);
+
+				// read_only
+					if(editor_config.read_only) {
+						editor.enableReadOnlyMode( 'read_only_ mode' );
+					}
 
 				// setup_button_reference
 					self.setup_button_reference();
