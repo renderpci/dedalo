@@ -51,6 +51,10 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 		const tanscription_options = await render_tanscription_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
 
+	// status, render the status components for users and admins to control the process of the tool
+		const status_container = await render_status(self)
+		wrapper.tool_buttons_container.appendChild(status_container)
+
 	// render_activity_info are the information of the activity as "Save"
 		const activity_info = render_activity_info(self)
 		wrapper.activity_info_container.appendChild(activity_info)
@@ -452,7 +456,7 @@ const render_tanscription_options = async function(self, content_data) {
 			const tool_tr_print_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'tool_button tool_tr_print light',
-				inner_html		: tool_tr_print.label || 'Tool Transcription',
+				title			: tool_tr_print.label || 'Tool Transcription',
 				parent			: fragment
 			})
 			const tool_tr_print_icon = ui.create_dom_element({
@@ -476,7 +480,7 @@ const render_tanscription_options = async function(self, content_data) {
 			const tool_tm_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'tool_button tool_tm_button light',
-				inner_html		: tool_tm.label || 'Tool Time machine',
+				title			: tool_tm.label || 'Tool Time machine',
 				parent			: fragment
 			})
 			const tool_tm_icon = ui.create_dom_element({
@@ -498,6 +502,38 @@ const render_tanscription_options = async function(self, content_data) {
 
 	return fragment
 }//end render_tanscription_options
+
+
+/**
+* RENDER_STATUS
+* Render the status components to get control of the process of the tool
+* the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
+* @param object self
+* 	instance of current tool
+* @return DOM node fragment
+*/
+const render_status = async function(self) {
+
+		const fragment = new DocumentFragment()
+
+		// status_user_component
+			self.status_user_component.context.view	= 'mini'
+			self.status_user_component.is_inside_tool = true
+			self.status_user_component.view_properties.disable_save_animation = true
+			const status_user_node = await self.status_user_component.render()
+
+		// status_admin_component
+			self.status_admin_component.context.view = 'mini'
+			self.status_admin_component.is_inside_tool = true
+			self.status_admin_component.view_properties.disable_save_animation = true
+			const status_admin_node	= await self.status_admin_component.render()
+
+		fragment.appendChild(status_user_node)
+		fragment.appendChild(status_admin_node)
+
+
+	return fragment
+}//end render_status
 
 
 

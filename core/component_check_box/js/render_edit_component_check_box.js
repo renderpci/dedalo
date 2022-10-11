@@ -8,6 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {render_edit_view_default} from './render_edit_view_default.js'
 	import {render_edit_view_tools} from './render_edit_view_tools.js'
+	// import {render_view_mini} from './render_view_mini.js'
 
 
 /**
@@ -35,6 +36,9 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 		const view	= self.context.view || 'default'
 
 	switch(view) {
+
+		// case 'mini':
+			// return render_view_mini.render(self, options)
 
 		case 'tools':
 			return render_edit_view_tools.render(self, options)

@@ -5,10 +5,10 @@
 */
 
 // imports
-	@import '../../../core/page/css/layout/vars.less';
+	@import '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool : #23bcc7;
+	@color_bg_tool: #23bcc7;
 
 
 
@@ -19,8 +19,8 @@
 			background-color: @color_bg_tool;
 		}
 		>.icon{
-			-webkit-mask-image: url(../img/icon.svg);
-			mask-image: url(../img/icon.svg);
+			-webkit-mask-image: url('../img/icon.svg');
+			mask-image: url('../img/icon.svg');
 		}
 	}
 
@@ -36,6 +36,87 @@
 
 		>.tool_header {
 			background-color: @color_bg_tool;
+			position: relative;
+
+			@media screen and (max-width: @width_break_point_0) {
+				flex-wrap: wrap;
+			}
+
+			>.tool_buttons_container {
+				display: flex;
+				align-items: flex-start;
+
+				@media screen and (max-width: @width_break_point_0) {
+					flex-wrap: wrap;
+					margin-top: 1rem;
+				}
+
+				>div, >button {
+					margin: 0rem;
+					margin-left: 0.5rem;
+					margin-right: 0rem;
+					min-height: 2rem;
+
+					@media screen and (max-width: @width_break_point_0) {
+						margin-bottom: 1rem;
+						flex: 1 0 auto;
+					}
+				}
+
+				// select top tipo / id
+				>.related_list_container {
+
+					>select {
+						opacity: 1;
+						padding: 0.33rem;
+						background-color: #f8f9fa;
+						border-radius: 3px;
+						margin-right: 0px;
+						max-width: 22rem;
+
+						@media screen and (max-width: @width_break_point_0) {
+							max-width: unset;
+							width: 100%;
+						}
+					}
+				}
+
+				// component lang selector
+				>.lang_selector {
+					display: flex;
+					align-items: center;
+					margin-left: 0.75rem;
+					margin-right: 0.12rem;
+					@media screen and (max-width: @width_break_point_0) {
+						padding-right: 0.5rem;
+					}
+
+					>.lang_label {
+						padding-right: 0.33rem;
+					}
+					>select {
+						opacity: 1;
+						padding: 0.33rem;
+						background-color: #f8f9fa;
+						border-radius: 3px;
+						margin-right: 0px;
+						max-width: 22rem;
+
+						@media screen and (max-width: @width_break_point_0) {
+							max-width: unset;
+						}
+					}
+				}
+
+				// buttons of tools (tool print, tool time machine..)
+				>.tool_button {
+
+					>.icon {
+						height: 1rem;
+						margin-right: 0.33rem;
+					}
+				}
+			}
 		}
 
 		>.content_data {

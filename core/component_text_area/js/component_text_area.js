@@ -156,6 +156,10 @@ component_text_area.prototype.init = async function(options) {
 			function fn_show_button_create_fragment(options) {
 				// dd_console('--> show_button_create_fragment options', 'DEBUG', options)
 
+				if (self.view_properties.read_only===true) {
+					return
+				}
+
 				// options
 					const selection	= options.selection
 					const caller	= options.caller
