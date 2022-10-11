@@ -606,7 +606,7 @@ const render_related_list = function(self){
 
 /**
 * RENDER_VIEWER_SELECTOR
-* Let user select left side viewer from options (tesaurus/audiovisual)
+* Let user select left side viewer from options (thesaurus/audiovisual)
 * @param object self
 * 	tool instance
 * @return DocumentFragment
@@ -627,7 +627,7 @@ const render_viewer_selector = function(self, wrapper){
 			}
 		]
 
-	// fix initial viewer name
+	// fix initial viewer name (Thesaurus)
 		self.viewer = items[0].value
 
 	const fragment = new DocumentFragment();
@@ -688,7 +688,6 @@ const render_viewer_selector = function(self, wrapper){
 			}
 		})
 
-
 	// option label
 		const option_blank = ui.create_dom_element({
 			element_type	: 'option',
@@ -711,70 +710,10 @@ const render_viewer_selector = function(self, wrapper){
 				value			: item.value,
 				parent			: select
 			})
-			// option.selected = i==0
+			if (item.value==='area_thesaurus') {
+				option.selected = true // select default (Thesaurus)
+			}
 		}
-
-	return fragment
-
-
-
-	// // select -> options
-	// 	// sections
-	// 		const sections = data.find(el => el.typo==='sections')
-	// 		if (!sections) {
-	// 			ui.create_dom_element({
-	// 				element_type	: 'div',
-	// 				class_name		: 'error msg',
-	// 				inner_html		: 'Empty top sections to index!',
-	// 				parent			: related_list_container
-	// 			})
-	// 			console.error('Empty top sections to index!')
-	// 			return fragment
-	// 		}
-
-	// 	const select = ui.create_dom_element({
-	// 		element_type	: 'select',
-	// 		parent			: related_list_container
-	// 	})
-
-	// 	const value			= sections.value
-	// 	const value_length	= value.length
-	// 	for (let i = 0; i < value_length; i++) {
-
-	// 		const current_locator = {
-	// 			section_top_tipo	: value[i].section_tipo,
-	// 			section_top_id		: value[i].section_id
-	// 		}
-	// 		// fix the first locator when tool is loaded (without user interaction)
-	// 			if(i===0){
-	// 				self.top_locator = current_locator
-	// 			}
-
-	// 		const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
-	// 		const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
-
-	// 		// ar_component_value
-	// 			const ar_component_value = []
-	// 			for (let j = 0; j < ar_component_data.length; j++) {
-	// 				const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
-	// 				ar_component_value.push(current_value)
-	// 			}
-
-	// 		// label
-	// 			const label = 	section_label + ' | ' +
-	// 							current_locator.section_top_id +' | ' +
-	// 							ar_component_value.join(' | ')
-
-	// 		// option DOM element
-	// 			const option = ui.create_dom_element({
-	// 				element_type	: 'option',
-	// 				inner_html		: label,
-	// 				parent			: select
-	// 			})
-	// 			option.locator = current_locator
-	// 	}//end for
-
-
 
 
 	return fragment
@@ -792,17 +731,23 @@ const render_viewer_selector = function(self, wrapper){
 */
 const render_status = async function(self) {
 
-		const fragment = new DocumentFragment()
+	const fragment = new DocumentFragment()
 
-		self.status_user_component.context.view		= 'mini'
-		self.status_admin_component.context.view	= 'mini'
-		self.status_user_component.is_inside_tool	= true
-		self.status_admin_component.is_inside_tool	= true
-		const status_user_node	= await self.status_user_component.render()
+	// status_user_component
+		self.status_user_component.context.view	= 'mini'
+		self.status_user_component.is_inside_tool = true
+		self.status_user_component.view_properties.disable_save_animation = true
+		const status_user_node = await self.status_user_component.render()
+
+	// status_admin_component
+		self.status_admin_component.context.view = 'mini'
+		self.status_admin_component.is_inside_tool = true
+		self.status_admin_component.view_properties.disable_save_animation = true
 		const status_admin_node	= await self.status_admin_component.render()
 
-		fragment.appendChild(status_user_node)
-		fragment.appendChild(status_admin_node)
+	fragment.appendChild(status_user_node)
+	fragment.appendChild(status_admin_node)
+
 
 	return fragment
 }//end render_status
