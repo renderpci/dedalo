@@ -664,12 +664,22 @@ const get_buttons = function(self) {
 							delete_sqo.limit = null
 							delete delete_sqo.offset
 
-							event_manager.publish('delete_section_' + self.id, {
-								section_tipo	: self.section_tipo,
-								section_id		: null,
-								caller			: self,
-								sqo				: delete_sqo
-							})
+							// delete_record
+								self.delete_record({
+									section			: self,
+									section_id		: null,
+									section_tipo	: self.section_tipo,
+									sqo				: delete_sqo
+								})
+
+
+
+							// event_manager.publish('delete_section_' + self.id, {
+							// 	section_tipo	: self.section_tipo,
+							// 	section_id		: null,
+							// 	caller			: self,
+							// 	sqo				: delete_sqo
+							// })
 							break;
 						default:
 							event_manager.publish('click_' + current_button.model)
