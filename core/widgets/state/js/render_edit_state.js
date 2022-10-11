@@ -164,7 +164,7 @@ const get_value_element = (i, data, values_container, self) => {
 														&& item.column === 'situation'
 														&& item.type ==='total')
 
-				// node for the colum situation
+				// node for the column situation
 				const situation = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'situation',

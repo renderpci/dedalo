@@ -103,8 +103,8 @@ const get_value_element = (i, data, self) => {
 		})
 
 		// important!, data don't has all info
-		// is neccesary get the langs for create the all lang nodes
-		// when the component is traslatable, data can't has all languages, in the data will only has the langs that has value
+		// is necessary get the langs for create the all lang nodes
+		// when the component is translatable, data can't has all languages, in the data will only has the langs that has value
 		// but when the component id non translatable, data has always the node reference (empty or with value)
 		// const project_langs = page_globals.dedalo_projects_default_langs
 		// const nolan 		= page_globals.dedalo_data_nolan
