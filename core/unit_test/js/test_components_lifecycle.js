@@ -39,6 +39,7 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 			request_config : request_config // [source]
 		}
 
+
 		describe(`${element.model.toUpperCase()}`, async function() {
 
 			// modes iterate for each element
