@@ -59,11 +59,12 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 		wrapper.content_data = content_data
 
 	// fix editor height. This guarantees that content_data grow to the maximum possible height
-		when_in_viewport(wrapper, ()=> {
-			const wrapper_height	= wrapper.offsetHeight
-			const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
-			wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
-		})
+		// when_in_viewport(wrapper, ()=> {
+		// 	const wrapper_height	= wrapper.offsetHeight
+		// 	const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
+		// 	wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
+		// 	console.log('wrapper_height calculated but not set:', wrapper_height);
+		// })
 
 
 	return wrapper
