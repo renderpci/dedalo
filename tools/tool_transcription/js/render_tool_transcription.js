@@ -51,6 +51,10 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 		const tanscription_options = await render_tanscription_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(tanscription_options)
 
+	// status, render the status components for users and admins to control the process of the tool
+		const status_container = await render_status(self)
+		wrapper.tool_buttons_container.appendChild(status_container)
+
 	// render_activity_info are the information of the activity as "Save"
 		const activity_info = render_activity_info(self)
 		wrapper.activity_info_container.appendChild(activity_info)
@@ -498,6 +502,37 @@ const render_tanscription_options = async function(self, content_data) {
 
 	return fragment
 }//end render_tanscription_options
+
+
+/**
+* RENDER_STATUS
+* This is used to build a optional buttons inside the header
+* @param object self
+* 	instance of current tool
+* @return DOM node activity_info_body
+*/
+const render_status = async function(self) {
+
+		const fragment = new DocumentFragment()
+
+	// activity alert
+		const status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_container',
+			parent 			: fragment
+		})
+		self.status_user_component.context.view		= 'mini'
+		self.status_admin_component.context.view	= 'mini'
+		self.status_user_component.is_inside_tool	= true
+		self.status_admin_component.is_inside_tool	= true
+		const status_user_node	= await self.status_user_component.render()
+		const status_admin_node	= await self.status_admin_component.render()
+
+		status_container.appendChild(status_user_node)
+		status_container.appendChild(status_admin_node)
+
+	return fragment
+}//end render_status
 
 
 
