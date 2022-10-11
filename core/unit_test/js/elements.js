@@ -119,7 +119,16 @@ import * as fn from './data.js'
 
 	// component grouper/sync ?????? (WORKING HERE)
 
-	// component_html_text -full tinymce- (WORKING HERE)
+	// component_html_text (called as model 'component_text_area' to work)
+		elements.push({
+			model			: 'component_text_area',
+			tipo			: 'test135',
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: mode,
+			lang			: lang,
+			new_value		: fn.random_string
+		})
 
 	// component_image
 		elements.push({
