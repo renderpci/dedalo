@@ -456,7 +456,7 @@ const render_tanscription_options = async function(self, content_data) {
 			const tool_tr_print_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'tool_button tool_tr_print light',
-				inner_html		: tool_tr_print.label || 'Tool Transcription',
+				title			: tool_tr_print.label || 'Tool Transcription',
 				parent			: fragment
 			})
 			const tool_tr_print_icon = ui.create_dom_element({
@@ -480,7 +480,7 @@ const render_tanscription_options = async function(self, content_data) {
 			const tool_tm_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'tool_button tool_tm_button light',
-				inner_html		: tool_tm.label || 'Tool Time machine',
+				title			: tool_tm.label || 'Tool Time machine',
 				parent			: fragment
 			})
 			const tool_tm_icon = ui.create_dom_element({
@@ -506,21 +506,16 @@ const render_tanscription_options = async function(self, content_data) {
 
 /**
 * RENDER_STATUS
-* This is used to build a optional buttons inside the header
+* Render the status components to get control of the process of the tool
+* the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node activity_info_body
+* @return DOM node fragment
 */
 const render_status = async function(self) {
 
 		const fragment = new DocumentFragment()
 
-	// activity alert
-		const status_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'status_container',
-			parent 			: fragment
-		})
 		self.status_user_component.context.view		= 'mini'
 		self.status_admin_component.context.view	= 'mini'
 		self.status_user_component.is_inside_tool	= true
@@ -528,8 +523,8 @@ const render_status = async function(self) {
 		const status_user_node	= await self.status_user_component.render()
 		const status_admin_node	= await self.status_admin_component.render()
 
-		status_container.appendChild(status_user_node)
-		status_container.appendChild(status_admin_node)
+		fragment.appendChild(status_user_node)
+		fragment.appendChild(status_admin_node)
 
 	return fragment
 }//end render_status

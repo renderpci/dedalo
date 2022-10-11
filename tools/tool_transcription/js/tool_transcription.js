@@ -103,11 +103,11 @@ tool_transcription.prototype.build = async function(autoload=false) {
 			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
 
-		// status_user. control the status for users
+		// status_user. control the tool status process for users
 			const status_user_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_user")
 			self.status_user_component	= self.ar_instances.find(el => el.tipo===status_user_ddo.tipo)
 
-		// status_admin. control the status for users
+		// status_admin. control the tool status process for administrators
 			const status_admin_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_admin")
 			self.status_admin_component	= self.ar_instances.find(el => el.tipo===status_admin_ddo.tipo)
 
