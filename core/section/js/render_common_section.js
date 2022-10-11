@@ -38,6 +38,11 @@ render_common_section.prototype.delete_record = (options) => {
 
 	// short vars
 		const total	= section.total
+		const label 		= section.label || section_tipo
+
+		const id_label 		= section_id
+			? section_id
+			: get_label.all_records_found || 'All records found' + ' ('+total+')'
 
 	// header
 		const header = ui.create_dom_element({
@@ -47,7 +52,7 @@ render_common_section.prototype.delete_record = (options) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+			inner_html		: (get_label.delete || 'Delete') + ` ID: ${id_label} <span class="note">[${label}]</span>`,
 			parent			: header
 		})
 
