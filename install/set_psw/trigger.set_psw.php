@@ -42,6 +42,15 @@ if($mode==='set_psw') {
 			$dato->components->{$tipo}->dato	= new stdClass();
 			$dato->components->{$tipo}->valor	= new stdClass();
 		}
+	$current_pw = $dato->components->{$tipo}->dato;
+
+	// check the dedalo install status and the empty root pw
+	if( ( defined('DEDALO_TEST_INSTALL') && DEDALO_TEST_INSTALL!==true )
+		|| ( defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS ==='installed' )
+		|| !empty($current_pw)) {
+
+		return false;
+	}
 
 	# Set dato 
 	$dato->components->{$tipo}->dato->$lang		= $password_encripted;
