@@ -236,7 +236,6 @@ export const service_ckeditor = function() {
 									width		: width + 'px',
 									// maxWidth	: width + 'px'
 								});
-								console.log('fixed width:', width);
 							}
 
 						// sync toolbar container. Focus/blur editor show/hide the toolbar container
