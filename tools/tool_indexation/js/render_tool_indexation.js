@@ -56,6 +56,10 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		const viewer_selector_node = render_viewer_selector(self, wrapper)
 		wrapper.tool_buttons_container.appendChild(viewer_selector_node)
 
+	// status, render the status components for users and admins to control the process of the tool
+		const status_container = await render_status(self)
+		wrapper.tool_buttons_container.appendChild(status_container)
+
 	// get_tag_info. Fires build tag info panel nodes at begin
 		get_tag_info(self)
 
@@ -775,3 +779,31 @@ const render_viewer_selector = function(self, wrapper){
 
 	return fragment
 }//end render_viewer_selector
+
+
+
+/**
+* RENDER_STATUS
+* Render the status components to get control of the process of the tool
+* the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
+* @param object self
+* 	instance of current tool
+* @return DOM node fragment
+*/
+const render_status = async function(self) {
+
+		const fragment = new DocumentFragment()
+
+		self.status_user_component.context.view		= 'mini'
+		self.status_admin_component.context.view	= 'mini'
+		self.status_user_component.is_inside_tool	= true
+		self.status_admin_component.is_inside_tool	= true
+		const status_user_node	= await self.status_user_component.render()
+		const status_admin_node	= await self.status_admin_component.render()
+
+		fragment.appendChild(status_user_node)
+		fragment.appendChild(status_admin_node)
+
+	return fragment
+}//end render_status
+
