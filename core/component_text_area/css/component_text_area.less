@@ -27,7 +27,7 @@
 			// padding-bottom: 0;
 			margin: 0px;
 			padding: 0px;
-
+			// overflow: hidden;
 			// ul
 			// display: contents;
 			// height: inherit;
@@ -49,7 +49,7 @@
 					display: flex;
 					position: absolute;
 					// top: -1.75rem;
-					left: 1rem;
+					// left: 1rem;
 					// width: auto;
 					// height: 2.2em;
 					// padding: 0.25rem;
@@ -70,7 +70,7 @@
 						width: calc(100% - 12px);
 
 					flex-wrap: wrap;
-					z-index: 0;
+					z-index: 1;
 
 
 					>.toolbar_button {
@@ -115,12 +115,8 @@
 					// background-color: #d9fdaf;
 					margin: 0.5rem;
 					margin-bottom: 1.5rem;
-
 					padding: 0.5rem;
 					padding-top: 1rem;
-					// padding-left: 0.68rem;
-
-					// width: 100%;
 					height: calc(100% - 1.5rem);
 					overflow: auto;
 					// outline: 1px solid #e6e6e6;
@@ -139,58 +135,44 @@
 						vertical-align: text-bottom;
 					}
 
+					// figure
+					// .image_resized {
+					// 	>img {
+					// 		width: 100%;
+					// 	}
+					// }
+
 					// images are inside span .dd_tag
-					.dd_tag > img {
+					.person,
+					.note,
+					.index,
+					.tc,
+					.tc2,
+					.svg,
+					.draw,
+					.page,
+					.geo,
+					.dd_tag>img {
 						cursor: pointer;
 						height: 15px;
 						vertical-align: text-bottom;
-
-						&.person {
-
-						}
-
-						&.note {
-							margin-left: 2px;
-							margin-right: 2px;
-						}
-
-						&.index {
-
-						}
-
-						&.tc {
-							margin-right: 3px;
-						}
-
-						&.tc2 {
-							filter: invert(80%);
-							margin-right: 3px;
-						}
-						&.svg {
-
-						}
-
-						&.draw {
-
-						}
-
-						&.page {
-
-						}
-
-						&.geo {
-
-						}
-
-						&.lang {
-
-						}
-
-						&.struct {
-							//display: none;
-						}
 					}
 
+					.note {
+						margin-left: 2px;
+						margin-right: 2px;
+					}
+
+					.tc {
+						margin-right: 3px;
+					}
+
+					.tc2 {
+						filter: invert(80%);
+						margin-right: 3px;
+					}
+
+					// reference tag
 					.reference {
 						text-decoration: underline;
 						color: @color_orange_dedalo;
@@ -380,7 +362,7 @@ dd-modal {
 	// persons_list_container into modal
 	>.text_area_persons_list_container {
 		color: initial;
-		padding: 1rem;
+		// padding: 1rem;
 		line-height: 1.6rem;
 		// background-color: rgb(240 240 240 / 87%);
 		// z-index: 1;
@@ -427,7 +409,7 @@ dd-modal {
 	// langs list into modal
 	>.text_area_project_langs_container {
 		color: initial;
-		padding: 1rem;
+		// padding: 1rem;
 		line-height: 1.6rem;
 
 		>.lang_container {
