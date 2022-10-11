@@ -11,7 +11,6 @@
 
 
 
-
 /**
 * RENDER_EDIT_COMPONENT_TEXT_AREA
 * Manage the components logic and appearance in client side
@@ -391,7 +390,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'Add georef',
 				image	: '../../core/themes/default/icons/geo.svg',
-				onclick	: function(evt) {
+				onclick	: function() {
 					event_manager.publish('create_geo_tag_'+ self.id_base, {
 						caller		: self,
 						text_editor	: text_editor
@@ -407,7 +406,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'Add note',
 				image	: '../../core/themes/default/icons/note.svg',
-				onclick	: function(evt) {
+				onclick	: function() {
 					event_manager.publish('create_note_tag_'+ self.id_base + '_' + i, {
 						caller		: self,
 						text_editor	: text_editor
@@ -487,7 +486,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 				text	: save_label,
 				tooltip	: save_label,
 				icon	: false,
-				onclick	: function(evt) {
+				onclick	: function() {
 					// save. text_editor save function calls current component save_value()
 					text_editor.save()
 				}
@@ -857,7 +856,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 		add_layer.addEventListener("click", (e) =>{
 			e.preventDefault()
 
-			data_tag.data = "["+data_tag.last_layer_id+"]"
+			data_tag.data = '[' + data_tag.last_layer_id + ']'
 			const tag 	= self.build_view_tag_obj(data_tag, tag_id)
 			text_editor.set_content(tag)
 			layer_selector.remove()
@@ -896,23 +895,25 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 				element_type	: 'li',
 				parent			: layer_ul
 			})
-			layer_li.addEventListener("click", (e) =>{
+			layer_li.addEventListener('click', (e) =>{
 				e.preventDefault()
 
-				data_tag.data = "["+layer.layer_id+"]"
+				data_tag.data = '[' + layer.layer_id + ']'
 				const tag = self.build_view_tag_obj(data_tag, tag_id)
 				text_editor.set_content(tag)
 				layer_selector.remove()
 			})
 
-				const layer_id = ui.create_dom_element({
+			// layer_id
+				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'layer_id',
 					parent			: layer_li,
 					text_node		: layer.layer_id
 				})
 
-				const user_layer_name = ui.create_dom_element({
+			// user_layer_name
+				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'user_layer_name',
 					parent			: layer_li,
@@ -936,7 +937,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 
 	const layer_selector = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'layer_selector',
+		class_name		: 'layer_selector'
 	})
 	layer_selector.appendChild(fragment)
 
@@ -958,7 +959,6 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 		const offset		= data_tag.offset
 		const page_in		= offset
 		const page_out		= (offset -1) + total_pages
-
 
 	// header
 		const header = ui.create_dom_element({
@@ -1055,7 +1055,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 
 /**
 * RENDER_NOTE
-*
+* Creates a modal dialog with note options
 * @param object options
 * @return DOM node fragment
 */
@@ -1161,7 +1161,7 @@ const render_note = async function(options) {
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'footer'
+			class_name		: 'footer content'
 		})
 
 		// button remove
@@ -1174,7 +1174,7 @@ const render_note = async function(options) {
 			// When the user click on remove button, two actions happens:
 			// first, delete the section in the server
 			// second, remove the tag from the text_area
-			button_remove.addEventListener("click", function(e){
+			button_remove.addEventListener('click', function(e){
 				e.stopPropagation()
 				// ask to user if really want delete the note
 				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ view_tag.tag_id
@@ -1247,6 +1247,7 @@ const render_note = async function(options) {
 
 /**
 * RENDER_PERSONS_LIST
+* Creates a modal dialog with persons_list options
 * @return DOM node fragment|null
 */
 const render_persons_list = function(self, text_editor, i) {
@@ -1275,7 +1276,7 @@ const render_persons_list = function(self, text_editor, i) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'text_area_persons_list_container'
+			class_name		: 'content text_area_persons_list_container'
 		})
 
 		// person sections
@@ -1330,10 +1331,10 @@ const render_persons_list = function(self, text_editor, i) {
 										current_locator.section_id +' | ' +
 										ar_component_value.join(' | ')
 
-					// label DOM element
-						const section_label_node = ui.create_dom_element({
+					// section_label_node
+						ui.create_dom_element({
 							element_type	: 'span',
-							class_name 		: 'label',
+							class_name		: 'label',
 							inner_html		: label,
 							parent			: section_container
 						})
@@ -1373,7 +1374,7 @@ const render_persons_list = function(self, text_editor, i) {
 							parent			: person_container
 						})
 
-					person_container.addEventListener("mousedown", function (evt) {
+					person_container.addEventListener('mousedown', function (evt) {
 						evt.preventDefault()
 						evt.stopPropagation()
 
@@ -1403,6 +1404,7 @@ const render_persons_list = function(self, text_editor, i) {
 
 /**
 * RENDER_LANGS_LIST
+* Creates a modal dialog with langs_list options
 * @return DOM node fragment
 */
 const render_langs_list = function(self, text_editor, i) {
@@ -1484,7 +1486,7 @@ const render_langs_list = function(self, text_editor, i) {
 				// label_keyboard
 					ui.create_dom_element({
 						element_type	: 'span',
-						text_node		: 'Control + Shift + '+ k++,
+						text_node		: 'Control + Shift + ' + k++,
 						class_name		: 'label label_keyboard',
 						parent			: lang_container
 					})
@@ -1498,11 +1500,9 @@ const render_langs_list = function(self, text_editor, i) {
 			header	: header,
 			body	: body,
 			footer	: null,
-			size	: 'small' // string size big|normal
+			size	: 'small' // string size big|normal|default
 		})
 
 
 	return true
 }//end render_langs_list
-
-
