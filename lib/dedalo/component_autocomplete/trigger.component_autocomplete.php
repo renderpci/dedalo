@@ -31,8 +31,8 @@ function new_element($json_data) {
 				return $response;
 			}
 		}
-	
-	
+
+
 	$lang = DEDALO_DATA_LANG;
 	$RecordObj_dd = new RecordObj_dd($tipo);
 	$propiedades 	 = $RecordObj_dd->get_propiedades(true);
@@ -47,15 +47,15 @@ function new_element($json_data) {
 			$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
 		}
 		#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
-	
+
 	if(SHOW_DEBUG) {
 		#$ar_related = common::get_ar_related_by_model('section' $tipo);
 		if (empty($ar_terminos_relacionados)) {
 			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Missing required ar_terminos_relacionados for current component';
 			return $response;
-		}		
+		}
 	}
-	
+
 	// View html page
 	$page_html	= DEDALO_LIB_BASE_PATH .'/component_autocomplete/html/component_autocomplete_new.phtml';
 	ob_start();
@@ -76,7 +76,7 @@ function new_element($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end function new_element')
 
@@ -113,15 +113,26 @@ function submit_new_element($json_data) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on json decode ar_data!';
 		return $response;
 	}
-	
-	if (empty($target_section_tipo)) {		
+
+	if (empty($target_section_tipo)) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty target_section_tipo is not valid!';
 		return $response;
-	}	
+	}
 
-	$referenced_tipo = key($ar_data);
-	if ( !is_object($ar_data) || empty($referenced_tipo) ) {
-		$response->msg = 'Trigger Error: ('.__FUNCTION__.') ar_data is not object!';
+
+	// ar_vars sample:
+	// {
+	// 	"mdcat3324": [
+	// 		"Nueva"
+	// 	]
+	// }
+	// $referenced_tipo	= key($ar_data); // deprecated
+	$ar_data_array		= get_object_vars($ar_data); // get as assoc array
+	$referenced_tipo	= !empty($ar_data_array)
+		? reset($ar_data_array)
+		: null;
+	if ( empty($referenced_tipo) || !is_object($ar_data) ) {
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') ar_data is not valid object!';
 		return $response;
 	}
 
@@ -140,7 +151,7 @@ function submit_new_element($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end function submit_new_element')
 
@@ -171,7 +182,7 @@ function autocomplete($json_data) {
 				return $response;
 			}
 		}
-	
+
 	if (!$search_fields = json_decode($search_fields)) {
 		$response->msg = "Trigger Error. Invalid search_fields";
 		return $response;
@@ -179,7 +190,7 @@ function autocomplete($json_data) {
 	if (!$ar_target_section_tipo = json_decode($ar_target_section_tipo)) {
 		$response->msg = "Trigger Error. Invalid ar_target_section_tipo";
 		return $response;
-	}	
+	}
 
 	$result = (array)component_autocomplete::autocomplete_search($tipo,
 																$ar_target_section_tipo,
@@ -188,7 +199,7 @@ function autocomplete($json_data) {
 																$filter_sections,
 																$search_fields,
 																$divisor);
-	
+
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -204,7 +215,7 @@ function autocomplete($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end function autocomplete')*/
 
@@ -234,8 +245,8 @@ function autocomplete2($json_data) {
 				return $response;
 			}
 		}
-	
-	
+
+
 	if (!$search_query_object = json_decode($search_query_object)) {
 		$response->msg = "Trigger Error. Invalid search_query_object";
 		return $response;
@@ -243,7 +254,7 @@ function autocomplete2($json_data) {
 	if(SHOW_DEBUG===true) {
 		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
 		#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
-	}	
+	}
 
 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
@@ -257,7 +268,7 @@ function autocomplete2($json_data) {
 	$result = (array)$component_autocomplete->autocomplete_search2(
 															 $search_query_object,
 															 $divisor);
-	
+
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -273,7 +284,7 @@ function autocomplete2($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end function autocomplete')
 */
@@ -304,7 +315,7 @@ function add_locator($json_data) {
 				return $response;
 			}
 		}
-	
+
 	if(!$locator = json_decode($locator)){
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid locator';
 		return $response;
@@ -333,7 +344,7 @@ function add_locator($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end add_locator*/
 
@@ -360,7 +371,7 @@ function remove_locator($json_data) {
 				return $response;
 			}
 		}
-	
+
 	if(!$locator = json_decode($locator)){
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid locator';
 		return $response;
@@ -389,7 +400,7 @@ function remove_locator($json_data) {
 
 		$response->debug = $debug;
 	}
-	
+
 	return (object)$response;
 }//end remove_locator*/
 

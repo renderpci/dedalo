@@ -2750,7 +2750,18 @@
 
 
 	Queue build
-
+		Valencia 22-09-2022T18:45:00
+		Added Full-Text Search literal options to web_data::get_global_search_json method into query parameter
+		Valencia 23-09-2022T14:08:00
+		Fixed trigger autocomplete PHP8 deprecation issues
+		Fixed section_tab issue when infinite loop is created on paginate records or creating a new one in mdcat2949
+		Valencia 27-09-2022T16:59:00
+		Fixed component_portal error where tool_description portals was show as list mode instead portal_list_view_mosaic (small images issue in tool_description of numistada case)
+		Valencia 29-09-2022T18:07:00
+		Fixed bug in component_portal where on add new record to the portal and intermediately later sort the rows, the last row locator is removed from the component dato (in portals with propiedades.portal_link_open=false)
+		Fixed error on 'propiedades' js trigger where changes of radio button (mdcat3047) were not saved
+		Valencia 04-10-2022T21:20:00
+		Fixed bug in tool_administration generate_relations_table_data method. Project relationships are rebuild correctly now
 
 
 	[/HISTORY]
@@ -2782,7 +2793,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-09-2022T19:30:00');
+	define('DEDALO_BUILD'	, '04-10-2022T21:20:00');
 
 
 

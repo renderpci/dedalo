@@ -4398,15 +4398,14 @@ class web_data {
 			#$options->ar_fields 		= array('id','section_id','list_data','link');
 
 			# Search string is expected rawurlencoded — URL-encode according to RFC 3986
-			# q scape
-			if ($options->q!==false) {
-				$options->q = web_data::get_db_connection()->real_escape_string($options->q);
-			}
-
-			function escape_string($string) {
-				$result = web_data::get_db_connection()->real_escape_string($string);
-				return $result;
-			}
+			# q escape
+				if ($options->q!==false) {
+					$options->q = web_data::get_db_connection()->real_escape_string($options->q);
+				}
+				function escape_string($string) {
+					$result = web_data::get_db_connection()->real_escape_string($string);
+					return $result;
+				}
 
 			#
 			# FILTER
@@ -4754,6 +4753,18 @@ class web_data {
 				$search_options->sql_filter = '';
 				# q
 				if (!empty($options->q)) {
+					// is literal check. Note that quotes are escaped previously as 'Cementiri de Sant Hilari' to \'Cementiri de Sant Hilari\' .
+						if (strlen($options->q)>4) {
+							$first_char	= $options->q[0] . $options->q[1];
+							$last_char	= $options->q[strlen($options->q)-2] . $options->q[strlen($options->q)-1];
+							if ($first_char==="\'" && $last_char==="\'") {
+								// literal case
+								$is_literal	= true;
+								// rewrite options->q
+								$options->q	= str_replace("\'", '"', $options->q);
+							}
+						}
+
 					# Add field
 					$field_fts = "MATCH (".$field_full_data.") AGAINST ('$options->q') AS relevance ";
 					array_unshift($search_options->ar_fields, $field_fts);
@@ -4787,6 +4798,9 @@ class web_data {
 				$search_options->limit 		= $options->rows_per_page;
 				$search_options->offset 	= $options->offset;
 				$search_options->count 		= $options->count;
+				$search_options->is_literal = $is_literal ?? false;
+				// debug
+				// error_log('++++ search_options:'.PHP_EOL. json_encode($search_options, JSON_PRETTY_PRINT));
 
 			$rows_data = (object)web_data::get_rows_data( $search_options );
 				#dump($rows_data, ' $rows_data ++ '.to_string($search_options));
