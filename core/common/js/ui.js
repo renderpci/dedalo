@@ -1624,7 +1624,7 @@ export const ui = {
 	inside_tool : function(self) {
 
 		// already custom fixed case (bool is expected)
-			if (self.is_inside_tool!==null) {
+			if (self.is_inside_tool!==undefined && self.is_inside_tool!==null) {
 				return self.is_inside_tool
 			}
 

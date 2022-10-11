@@ -5,22 +5,22 @@
 */
 
 // imports
-	@import '../../../core/page/css/layout/vars.less';
+	@import '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool : #fd7f26; // @color_orange_dedalo;
+	@color_bg_tool: #fd7f26; // @color_orange_dedalo;
 
 
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_transcription {
 
-		&:hover{
+		&:hover {
 			background-color: @color_bg_tool;
 		}
-		>.icon{
-			-webkit-mask-image: url(../img/icon.svg);
-			mask-image: url(../img/icon.svg);
+		>.icon {
+			-webkit-mask-image: url('../img/icon.svg');
+			mask-image: url('../img/icon.svg');
 		}
 	}
 
@@ -38,7 +38,7 @@
 
 			>.tool_buttons_container {
 				display: flex;
-				align-items: flex-end;
+				align-items: flex-start;
 
 				@media screen and (max-width: @width_break_point_0) {
 					flex-wrap: wrap;
@@ -46,13 +46,15 @@
 				}
 
 				>div, button {
-					// height: 2.1rem;
+
 					margin: 0rem;
 					margin-left: 0.5rem;
 					margin-right: 0rem;
-						@media screen and (max-width: @width_break_point_0) {
-					    flex: 1 0 100%;
-						margin: 0.25rem;
+					min-height: 2rem;
+
+					@media screen and (max-width: @width_break_point_0) {
+						margin-bottom: 1rem;
+						flex: 1 0 auto;
 					}
 				}
 
@@ -158,22 +160,8 @@
 					}
 				}
 
-				.av_control_buttons{
+				.av_control_buttons {
 					text-align: center;
-
-					// .smpte {
-					// 	color: #fd7f26;
-					// 	padding: 0;
-					// 	margin-left: 1rem;
-					// 	margin-right: 1rem;
-					// 	font-family: Verdana, Geneva, sans-serif;
-					// 	font-size: 1.65rem;
-					// 	width: auto;
-					// 	height: 1em;
-					// 	display: inline-block;
-					// 	vertical-align: baseline;
-					// 	text-shadow: 1px 2px 2px #b9b9b9;
-					// }
 				}
 
 				.slider_container {
@@ -183,7 +171,7 @@
 					// padding-right: 10%;
 					text-alignt: center;
 
-					.slider_label{
+					.slider_label {
 						font-size: 14px;
 						font-weight: lighter;
 						width: 100%;

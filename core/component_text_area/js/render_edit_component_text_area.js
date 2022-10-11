@@ -108,25 +108,27 @@ const get_content_data_edit = function(self) {
 const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool	= (self.caller && self.caller.type==='tool')
+		const is_inside_tool	= self.is_inside_tool // (self.caller && self.caller.type==='tool')
 		const mode				= self.mode
 		const fragment			= new DocumentFragment()
 
-	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button full_screen',
-			parent			: fragment
-		})
-		button_fullscreen.addEventListener('click', function() {
-			ui.enter_fullscreen(self.node)
-		})
 
-	// buttons tools
-		if (!is_inside_tool && mode==='edit') {
+	if (!is_inside_tool && mode==='edit') {
+
+		// button_fullscreen
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function() {
+				ui.enter_fullscreen(self.node)
+			})
+
+		// buttons tools
 			ui.add_tools(self, fragment)
 			// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
-		}
+	}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
@@ -198,7 +200,8 @@ const get_input_element = (i, current_value, self) => {
 					// plugins		: ['paste','image','print','searchreplace','code','noneditable','fullscreen'], // ,'fullscreen'
 					toolbar			: toolbar, // array of strings like ['bold','italic']
 					custom_buttons	: get_custom_buttons(self, current_service_text_editor, i),
-					custom_events	: get_custom_events(self, i, current_service_text_editor)
+					custom_events	: get_custom_events(self, i, current_service_text_editor),
+					read_only		: self.view_properties.read_only || false
 				}
 
 			// init editor
@@ -223,48 +226,52 @@ const get_input_element = (i, current_value, self) => {
 	// set value
 		value_container.innerHTML = value
 
-	// user click in the wrapper and init the editor
-		const auto_init_editor = self.auto_init_editor!==undefined
-			? self.auto_init_editor
-			: (self.render_level==='content') ? true : false
-		// const auto_init_editor = true
-		if (auto_init_editor===true) {
+	// user click in the wrapper and init the editor. When it's not read only
+		if (self.view_properties.read_only!==true) {
 
-			// activate now
+			const auto_init_editor = self.auto_init_editor!==undefined
+				? self.auto_init_editor
+				: (self.render_level==='content') ? true : false
+			// const auto_init_editor = true
+			if (auto_init_editor===true) {
 
-			value_container.classList.add('loading')
-			// use timeout only to force real async execution
-			setTimeout(function(){
-				init_current_service_text_editor()
-				// .then(()=>{
-					value_container.classList.remove('loading')
-				// })
-			}, 75)
-		}else{
+				// activate now
 
-			// activate on user click
-
-			content_value.addEventListener('click', fn_click_init)
-			function fn_click_init(e) {
 				value_container.classList.add('loading')
 				// use timeout only to force real async execution
 				setTimeout(function(){
-					// init editor on user click
 					init_current_service_text_editor()
-					.then(function(service_editor) {
-						if (self.context.view === 'html_text') {
-							service_editor.editor.focus()
-							// service_editor.value_container.classList.remove('loading')
-						}else{
-							// trigger service_editor click action (show toolbar and focus it)
-							service_editor.click(e)
-						}
-					})
-					// once only. Remove event to prevent duplicates
-					content_value.removeEventListener('click', fn_click_init)
-				}, 25)
+					// .then(()=>{
+						value_container.classList.remove('loading')
+					// })
+				}, 75)
+			}else{
+
+				// activate on user click
+
+				content_value.addEventListener('click', fn_click_init)
+				function fn_click_init(e) {
+					value_container.classList.add('loading')
+					// use timeout only to force real async execution
+					setTimeout(function(){
+						// init editor on user click
+						init_current_service_text_editor()
+						.then(function(service_editor) {
+							if (self.context.view === 'html_text') {
+								service_editor.editor.focus()
+								// service_editor.value_container.classList.remove('loading')
+							}else{
+								// trigger service_editor click action (show toolbar and focus it)
+								service_editor.click(e)
+							}
+						})
+						// once only. Remove event to prevent duplicates
+						content_value.removeEventListener('click', fn_click_init)
+					}, 25)
+				}
 			}
-		}
+		}//end if (self.view_properties.read_only!==true)
+
 
 	return content_value
 }//end get_input_element
