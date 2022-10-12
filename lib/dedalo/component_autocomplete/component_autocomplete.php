@@ -204,21 +204,6 @@
 			//search mode always can edit the field, permissions always in 2
 			$permissions = 2;
 
-			// Dataframe manager
-				// $ar_dataframe_obj = array();
-				// $ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
-				// if($ar_dataframe!==false){
-				// 	foreach ($dato as $key => $value) {
-				// 		foreach ($ar_dataframe as $current_dataframe) {
-				// 			if ($current_dataframe->tipo!==false) {
-				// 				$dataframe_obj = new dataframe($current_dataframe->tipo, $current_dataframe->type, $this, 'dataframe_edit', $key);
-				// 				$ar_dataframe_obj[] = $dataframe_obj;
-				// 				//dump($ar_dataframe_obj[0]->get_html(), ' $ar_dataframe_obj[$i]->get_html(); ++ '.to_string());
-				// 			}
-				// 		}
-				// 	}
-				// }
-
 			# Check if the compoment is mandatory
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json = json_encode($mandatory);
