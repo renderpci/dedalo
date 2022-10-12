@@ -50,7 +50,8 @@
 					# Force file_name
 					$file_name 	= 'edit';
 					break;
-
+		case 'dataframe_search' :
+			$file_name	= 'search';
 		case 'search' :
 					# dato is injected by trigger search wen is needed
 					$dato = isset($this->dato) ? $this->dato : null;
