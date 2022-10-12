@@ -48,28 +48,37 @@ Options -Indexes
 # Various header fixes.
 <IfModule mod_headers.c>
 	# Disable content sniffing, since it's an attack vector.
-	Header always set X-Content-Type-Options nosniff
+	# Header always set X-Content-Type-Options nosniff
 	# Disable Proxy header, since it's an attack vector.
-	RequestHeader unset Proxy
+	# RequestHeader unset Proxy
+
+  # PRODUCTION
+  # Set cache files for one week 3600 * 24 * 7 = 604800
+  # Header set Cache-Control: stale-while-revalidate=604800
+
+  # DEVELOPMENT
+  # Header set Cache-Control: "no-store, max-age=0"
+
+  # Header set Service-Worker-Navigation-Preload: true
 </IfModule>
 
 
 # rewrite allow version in url path
-<IfModule mod_rewrite.c>
-	# Activate rewrite
-	RewriteEngine on
+# <IfModule mod_rewrite.c>
+# 	# Activate rewrite
+# 	RewriteEngine on
 
-	# RewriteBase /
+# 	# RewriteBase /
 
-	# Redirect all but exceptions
-	# RewriteCond $1 !^v1/
+# 	# Redirect all but exceptions
+# 	# RewriteCond $1 !^v1/
 
-	# // test
-	# RewriteCond %{REQUEST_URI} ^(.*)/core/.*$
-	# RewriteCond $1 ^v1/
-	# RewriteRule ^core/(.*)$ %1/v1/core/$1 [R]
+# 	# // test
+# 	# RewriteCond %{REQUEST_URI} ^(.*)/core/.*$
+# 	# RewriteCond $1 ^v1/
+# 	# RewriteRule ^core/(.*)$ %1/v1/core/$1 [R]
 
-	# working !
-	RewriteCond %{REQUEST_URI} ^(.*)/v1/.*$
-	RewriteRule ^v1/(.*)$ %1/$1 [L]
-</IfModule>
+# 	# working !
+# 	RewriteCond %{REQUEST_URI} ^(.*)/v1/.*$
+# 	RewriteRule ^v1/(.*)$ %1/$1 [L]
+# </IfModule>

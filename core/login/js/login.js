@@ -8,7 +8,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {common,create_source} from '../../common/js/common.js'
-	import {render_login} from './render_login.js'
+	import {render_login, render_files_loader} from './render_login.js'
 
 
 
@@ -210,14 +210,44 @@ login.prototype.action_dispatch = async function(api_response) {
 
 	// default behavior
 		if (api_response.result===true) {
-			// result_options is defined when the user is root or developer and the tools are not loaded
-			// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
-			if (api_response.result_options && api_response.result_options.redirect) {
-				setTimeout(function(){
-					window.location.replace(api_response.result_options.redirect)
-				}, 2000)
-			}else{
-				window.location.reload(false);
+
+			const files_loader = render_files_loader({
+				on_load_finish : load_finish
+			})
+			self.node.content_data.top.appendChild(files_loader)
+
+			// launch worker cache
+				const worker_url		= DEDALO_CORE_URL + '/page/js/worker_cache.js'
+				const current_worker	= new Worker( worker_url, {
+					type		: 'module',
+					credentials	: 'omit'
+				});
+				current_worker.postMessage({
+					action	: 'clear_cache',
+					url		: DEDALO_CORE_URL + '/api/v1/json/'
+				});
+				current_worker.onmessage = function(e) {
+
+					// send message data to files_loader function
+					files_loader.update(e.data)
+
+					if (e.data.status==='finish') {
+						// login continue
+						load_finish()
+					}
+				}
+
+			// triggered by render_files_loader when worker finish to load all files
+			function load_finish() {
+				// result_options is defined when the user is root or developer and the tools are not loaded
+				// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
+				if (api_response.result_options && api_response.result_options.redirect) {
+					setTimeout(function(){
+						window.location.replace(api_response.result_options.redirect)
+					}, 1)
+				}else{
+					window.location.reload(false);
+				}
 			}
 		}
 

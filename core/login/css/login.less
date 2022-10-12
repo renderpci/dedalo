@@ -146,4 +146,45 @@
 			border-radius: 0.2em;
 		}
 	}
+
+	// loading_files
+	.cont {
+		display: block;
+		height: 200px;
+		width: 200px;
+		margin: 2em auto;
+		box-shadow: 0px 0px 1em #e4e4e4;
+		border-radius: 100%;
+		position: relative;
+		text-align: center;
+
+		&:after {
+		  position: absolute;
+		  display: block;
+		  height: 160px;
+		  width: 160px;
+		  left: 50%;
+		  top: 50%;
+		  box-shadow: inset 0px 0px 1em #e4e4e4;
+		  content: attr(data-pct); //'%';
+		  margin-top: -80px;
+		  margin-left: -80px;
+		  border-radius: 100%;
+		  line-height: 160px;
+		  font-size: 2em;
+		  // text-shadow: 0 0 0.5em black;
+		}
+
+		#svg circle {
+		  stroke-dashoffset: 0;
+		  // transition: stroke-dashoffset 1s linear;
+		  stroke: #666666;
+		  stroke-width: 1em;
+		}
+		#svg #bar {
+			// stroke: #ff9f1e;
+			stroke: @color_orange_dedalo;
+		}
+	}// end cont
+
 }
