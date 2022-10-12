@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -72,6 +72,15 @@ render_login.prototype.edit = async function(options) {
 const get_content_data = function(self) {
 
 	const fragment = new DocumentFragment()
+
+	// top
+		const top = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'top',
+			parent			: fragment
+		})
+		// const files_loader = render_files_loader()
+		// top.appendChild(files_loader)
 
 	// select lang
 		const langs			= self.context.properties.dedalo_application_langs
@@ -250,6 +259,8 @@ const get_content_data = function(self) {
 			class_name		: 'content_data'
 		})
 		content_data.appendChild(fragment)
+		// set pointers
+		content_data.top = top
 
 
 	return content_data
@@ -341,3 +352,75 @@ const validate_browser = function() {
 
 	return true;
 }//end validate_browser
+
+
+
+/**
+* RENDER_FILES_LOADER
+* @return DOM node cont
+*/
+export const render_files_loader = function() {
+
+	// cont
+		const cont = ui.create_dom_element({
+			element_type	: 'div',
+			id				: 'cont',
+			class_name		: 'cont',
+			dataset			: {
+				pct : 'Loading..'
+			}
+		})
+
+	// svg circle
+		const svg_string = `
+		<svg id="svg" width="200" height="200" viewPort="0 0 100 100" version="1.1" xmlns="http://www.w3.org/2000/svg">
+			<circle r="90" cx="100" cy="100" fill="transparent" stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
+			<circle id="bar" class="hide" r="90" cx="100" cy="100" fill="transparent" stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
+		</svg>`
+
+		const parser	= new DOMParser();
+		const svg		= parser.parseFromString(svg_string, 'image/svg+xml').firstChild;
+		cont.appendChild( svg )
+
+	// update. receive worker messages data
+		let loaded = 0
+		cont.update = function( data ) {
+
+			const total_files	= data.total_files
+			const rate			= data.status==='loading'
+				? 100/total_files
+				: 0
+
+			// update loaded
+			loaded = rate + loaded
+
+			// animate
+			animate_circle(loaded)
+		}
+
+	// bar_circle animation
+		const bar_circle	= svg.querySelector('#bar')
+		const radio			= bar_circle.getAttribute('r');
+		const cst			= Math.PI*(radio*2);
+		function animate_circle(value) {
+
+			if (value>0 && value<2) {
+				bar_circle.classList.remove('hide')
+			}
+
+			const val = (value > 100)
+				? 100
+				: Math.abs(parseInt(value))
+
+			const offset = ((100-val)/100)*cst
+
+			// change circle stroke offset
+			bar_circle.style.strokeDashoffset = offset
+
+			// updates number as 50%
+			cont.dataset.pct = val + '%'
+		}
+
+
+	return cont
+}//end render_files_loader
