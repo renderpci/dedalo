@@ -9,7 +9,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= $this->get_component_permissions();
+	$permissions			= $modo==='dataframe_search' ? 2: $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= $label;
 	$ar_tools_obj			= $this->get_ar_tools_obj();
