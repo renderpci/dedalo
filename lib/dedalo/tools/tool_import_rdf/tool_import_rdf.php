@@ -30,7 +30,14 @@
 			$section_id		= $_REQUEST['section_id'];
 			$component_tipo	= $_REQUEST['component_tipo'];
 			$ontology_tipo	= $this->get_ontology_tipo($component_tipo);
+			$id_wrapper 	= 'wrapper_'.$component_tipo.'_'.$section_id.'_'.$ontology_tipo	;
 			$component_dato	= $this->get_component_dato($section_id, $component_tipo);
+
+
+			# LANG
+			# Note that component_textarea can change his lang ('force_change_lang') in some contexts
+				$lang = DEDALO_DATA_LANG;
+
 
 			break;		
 	}//end switch
