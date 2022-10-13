@@ -66,9 +66,8 @@ tool_time_machine.prototype.init = async function(options) {
 	const self = this
 
 
-
 	// call the generic common tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// fix dedalo_projects_langs
 		self.langs = page_globals.dedalo_projects_default_langs
@@ -82,11 +81,20 @@ tool_time_machine.prototype.init = async function(options) {
 		self.events_tokens.push(
 			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
 		)
-		async function fn_tm_edit_record(e) {
-			const matrix_id = e.matrix_id
+		async function fn_tm_edit_record(data) {
+			console.log('data:', data);
+			const matrix_id	= data.matrix_id
+			const date		= data.date
 			// render. Create and add new component to preview container
 			const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
-			add_component(self, self.preview_component_container, self.lang, e.date, load_mode, matrix_id)
+			add_component(
+				self,
+				self.preview_component_container,
+				self.lang,
+				date,
+				load_mode,
+				matrix_id
+			)
 			// fix selected matrix_id
 			self.selected_matrix_id = matrix_id
 			// show Apply button

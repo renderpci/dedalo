@@ -211,7 +211,7 @@ const render_column_id = function(options) {
 			class_name		: 'button_view',
 			parent			: fragment
 		})
-		button_view.addEventListener("click", function(){
+		button_view.addEventListener('click', function() {
 
 			if (main_caller.model==='section') {
 
@@ -252,13 +252,14 @@ const render_column_id = function(options) {
 				// component case
 
 				// publish event
-					event_manager.publish('tm_edit_record', {
+					const data = {
 						tipo		: section_tipo,
 						section_id	: section_id,
 						matrix_id	: matrix_id,
 						date		: modification_date || null,
 						mode		: 'tm'
-					})
+					}
+					event_manager.publish('tm_edit_record', data)
 			}
 		})
 
