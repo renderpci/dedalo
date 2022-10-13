@@ -8,14 +8,16 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
+	import {LZString as lzstring} from '../../../core/common/js/utils/lzstring.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {
 		clone,
 		dd_console,
 		printf,
-		object_to_url_vars,
-		url_vars_to_object,
-		JSON_parse_safely
+		// object_to_url_vars,
+		// url_vars_to_object,
+		// JSON_parse_safely,
+		// open_window_with_post
 		} from '../../../core/common/js/utils/index.js'
 	import {render_error} from './render_tool_common.js'
 
@@ -45,7 +47,7 @@ export const tool_common = function(){
 * }
 */
 tool_common.prototype.init = async function(options) {
-	// dd_console(`init tool options`, 'DEBUG', options)
+	dd_console(`init tool options`, 'DEBUG', options)
 
 	const self = this
 
@@ -59,25 +61,69 @@ tool_common.prototype.init = async function(options) {
 		// self.tool_labels	= options.tool_labels
 		// self.description	= options.description
 		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
+		self.tool_config	= options.tool_config
 
 		// caller. Could be direct assigned (modal) or by URL caller_id (new window)
 			self.caller = options.caller // optional, only for refresh on tool exit
-			// caller fallback to window.opener.callers variable
+			// caller fallback to window.opener.callers variable or local data base
 			if (!self.caller) {
-				// searchParams
+
+				// re-build from caller_ddo
+					// searchParams
 					const searchParams = new URLSearchParams(window.location.href)
-				// caller_id
-					const caller_id = searchParams.has('caller_id')
-						? searchParams.get('caller_id') // string from url
+
+					const raw_data = searchParams.has('raw_data')
+						? searchParams.get('raw_data') // string from url
 						: null
-				if (caller_id) {
-					if (window.opener && window.opener.callers && window.opener.callers[caller_id]) {
-						self.caller = window.opener.callers[caller_id]
-						if(SHOW_DEBUG===true) {
-							console.warn("//////////// assigned self.caller from opener by caller_id:", self.caller);
-						}
+
+					if (raw_data) {
+
+						// Note that url param 'url_data' is an object stringify-ed and compressed-encoded
+						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
+						const url_data_object	= JSON.parse(url_data_string)
+						const caller_ddo		= url_data_object.caller_ddo
+						const tool_config		= url_data_object.tool_config
+						console.log('caller_ddo:', caller_ddo);
+						// set and build caller
+							self.caller = await get_instance( caller_ddo )
+							await self.caller.build(true)
+							console.log('self.caller:', self.caller);
+
+						// set tool_config
+							self.tool_config = tool_config
+
+					}else{
+						console.error('Error. Unable to get caller_ddo from URL:', window.location.href);
 					}
-				}
+
+				// DES
+					// // caller_id
+					// 	const caller_id = searchParams.has('caller_id')
+					// 		? searchParams.get('caller_id') // string from url
+					// 		: null
+					// if (caller_id) {
+					// 	// fallback to opener window caller. Removed 13-10-2022 (Do not use this way anymore)
+					// 		if (window.opener && window.opener.callers && window.opener.callers[caller_id]) {
+					// 			self.caller = window.opener.callers[caller_id]
+					// 			if(SHOW_DEBUG===true) {
+					// 				console.warn("//////////// assigned self.caller from opener by caller_id:", self.caller);
+					// 			}
+					// 		}
+
+					// 	// fallback to local data base. Removed 13-10-2022 (Do not use this way anymore)
+					// 		if (!self.caller) {
+					// 			const db_data = await data_manager.get_local_db_data(caller_id+'_'+self.model, 'context', true)
+					// 			if (!db_data) {
+					// 				alert("Error. Unable to get data from local db. Make sure your browser is not in private mode");
+					// 			}
+					// 			const caller_context	= db_data.value.caller_context
+					// 			self.caller = await get_instance(caller_context)
+					// 			// await self.caller.build()
+					// 			if(SHOW_DEBUG===true) {
+					// 				console.warn("//////////// assigned self.caller from local_db_data by caller_id:", self.caller);
+					// 			}
+					// 		}
+					// }
 			}
 			if (!self.caller) {
 				self.error = `Warning. Empty caller !`
@@ -87,15 +133,6 @@ tool_common.prototype.init = async function(options) {
 			// console.log("self.caller:",self.caller);
 
 		// tool_config. Contains the needed ddo_map
-			self.tool_config = options.tool_config
-			// tool_config fallback. Check caller config o create a new one on the fly
-			if (!self.tool_config) {
-				const url_vars =  url_vars_to_object(window.location.search)
-				if (url_vars.tool_config) {
-					self.tool_config = JSON_parse_safely(url_vars.tool_config)
-				}
-				// console.log('self.tool_config:', self.tool_config);
-			}
 			if (!self.tool_config && self.caller) {
 
 				if (self.caller.config && self.caller.config.tool_context) {
@@ -709,24 +746,39 @@ const view_window = async function(options) {
 			// }
 
 	// short vars
-		const name = tool_context.name
+		const name			= tool_context.name
+		const tool_config	= tool_context.tool_config || null
 
 	// fix current instance as caller in global window to be accessible from new window
-		window.callers = window.callers || {}
-		window.callers[caller.id] = caller
+		// window.callers = window.callers || {}
+		// window.callers[caller.id] = caller
+
+	// caller_ddo. Minimum caller data to re-build it from tool
+		const caller_ddo = {
+			tipo				: caller.tipo,
+			section_tipo		: caller.section_tipo,
+			section_id			: caller.section_id,
+			section_id_selected	: caller.section_id_selected,
+			mode				: caller.mode,
+			model				: caller.model,
+			lang				: caller.lang
+		}
 
 	// URL
-		const url_search = object_to_url_vars({
-			tool		: name,
-			menu		: false,
-			caller_id	: caller.id,
-			tool_config	: tool_context.tool_config
-				? JSON.stringify(tool_context.tool_config)
-				: null
-		})
-		const url = DEDALO_CORE_URL + '/page/?' + url_search
+		// raw_data will be compressed and de-compressed from target window
+		const raw_data	= lzstring.compressToEncodedURIComponent(
+			JSON.stringify({
+				// caller_id	: caller.id,
+				caller_ddo		: caller_ddo,
+				tool_config		: tool_config
+			})
+		)
+		const url = DEDALO_CORE_URL + `/page/?tool=${name}&menu=false&raw_data=` + raw_data
+		if (url.length>2000) {
+			console.warn('Warning. The URL is too long:', url.length);
+		}
 
-	// features
+	// window features
 		const parsed_windowFeatures = typeof windowFeatures==='string'
 			? windowFeatures // string case as 'left=100,top=100,width=320,height=320'
 			: (()=>{ // object case as {"left":"return screen.width -760","top":0,"width":760,"height":500}
