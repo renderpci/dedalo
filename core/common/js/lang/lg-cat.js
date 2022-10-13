@@ -405,6 +405,7 @@
     "apply": "Aplicar",
     "shift_key": "Majúscules",
     "created": "creat",
+    "default_lang_of_file_to_import": "Idioma per defecte del fitxer a importar. Dades sense idioma especificat seran importades a:",
     "days": "dies",
     "months": "mesos",
     "year": "any",

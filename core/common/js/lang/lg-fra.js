@@ -405,6 +405,7 @@
     "apply": "<mark>Aplicar<\/mark>",
     "shift_key": "Majuscule",
     "created": "<mark>creado<\/mark>",
+    "default_lang_of_file_to_import": "Langue par défaut du fichier à importer. Les données sans langue spécifiée seront importées dans :",
     "days": "journées",
     "months": "mois",
     "year": "an",
