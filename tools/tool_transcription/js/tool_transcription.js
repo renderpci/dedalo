@@ -94,26 +94,29 @@ tool_transcription.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	try {
+		const roles = [
+			'media_component',
+			'transcription_component',
+			'status_user_component',
+			'status_admin_component'
+		];
+		const roles_length = roles.length
+		for (let i = 0; i < roles_length; i++) {
+			const role = roles[i]
 
-		// media_component. fix media_component for convenience
-			const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="media_component")
-			self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
-
-		// transcription_component. fix transcription_component for convenience
-			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="transcription_component")
-			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
-
-		// status_user. control the tool status process for users
-			const status_user_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_user")
-			self.status_user_component	= self.ar_instances.find(el => el.tipo===status_user_ddo.tipo)
-
-		// status_admin. control the tool status process for administrators
-			const status_admin_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_admin")
-			self.status_admin_component	= self.ar_instances.find(el => el.tipo===status_admin_ddo.tipo)
+			// fix media_component for convenience
+			const ddo = self.tool_config.ddo_map.find(el => el.role===role)
+			if (!ddo) {
+				console.error(`Error: \n\tThe mandatory role '${role}' it's not defined in Ontology`);
+				continue;
+			}
+			self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
+		}
+		console.log('self.media_component:', self.media_component);
 
 		// relation_list. load_relation_list. Get the relation list.
-		// This is used to build a select element to allow
-		// user select the top_section_tipo and top_section_id of current transcription
+			// This is used to build a select element to allow
+			// user select the top_section_tipo and top_section_id of current transcription
 			self.relation_list = await self.load_relation_list()
 
 	} catch (error) {
