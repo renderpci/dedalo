@@ -405,6 +405,7 @@
     "apply": "Aplicar",
     "shift_key": "Mayúsculas",
     "created": "creado",
+    "default_lang_of_file_to_import": "Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:",
     "days": "días",
     "months": "meses",
     "year": "año",

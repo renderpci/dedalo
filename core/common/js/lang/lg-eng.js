@@ -405,6 +405,7 @@
     "apply": "Apply",
     "shift_key": "Shift",
     "created": "created",
+    "default_lang_of_file_to_import": "Default language of the file to import. Data without specified language will be imported in:",
     "days": "days",
     "months": "months",
     "year": "year",
