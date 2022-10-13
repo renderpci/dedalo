@@ -57,9 +57,9 @@ Options -Indexes
   # Header set Cache-Control: stale-while-revalidate=604800
 
   # DEVELOPMENT
-  # Header set Cache-Control: "no-store, max-age=0"
-
-  # Header set Service-Worker-Navigation-Preload: true
+  <If "%{HTTP_HOST} =~ /(127\.0\.0\.1.+|localhost.+)$/">
+	Header set Cache-Control: "no-store, max-age=0"
+  </If>
 </IfModule>
 
 
