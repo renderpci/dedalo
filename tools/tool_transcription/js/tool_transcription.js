@@ -107,7 +107,7 @@ tool_transcription.prototype.build = async function(autoload=false) {
 			// fix media_component for convenience
 			const ddo = self.tool_config.ddo_map.find(el => el.role===role)
 			if (!ddo) {
-				console.error(`Error: \n\tThe mandatory role '${role}' it's not defined in Ontology`);
+				console.warn(`Warning: \n\tThe role '${role}' it's not defined in Ontology and will be ignored`);
 				continue;
 			}
 			self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
