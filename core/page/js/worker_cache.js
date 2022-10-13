@@ -37,8 +37,7 @@
 * Called from caller 'postMessage' action like:
 
 	const current_worker = new Worker('../area_development/js/worker.js', {
-		type		: 'module',
-		credentials	: 'omit'
+		type : 'module'
 	});
 	current_worker.postMessage({
 		url		: DEDALO_CORE_URL + '/api/v1/json/',
