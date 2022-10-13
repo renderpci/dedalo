@@ -340,12 +340,13 @@ section.prototype.build = async function(autoload=false) {
 					body : self.rqo
 				})
 				if(SHOW_DEVELOPER===true) {
-					if (!api_response || !api_response.result) {
-						console.error("section build autoload api_response:",api_response);
-					}
-					const response	= clone(api_response)
-					const exec_time	= (performance.now()-t0).toFixed(3)
-					dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
+					// const response	= clone(api_response)
+					// const exec_time	= (performance.now()-t0).toFixed(3)
+					// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
+				}
+				if (!api_response || !api_response.result) {
+					console.error("Error: section build autoload api_response:", api_response);
+					return false
 				}
 
 			// set the result to the datum

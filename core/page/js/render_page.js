@@ -75,6 +75,12 @@ const get_content_data = async function(self) {
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.type)
 
+	// check page context is valid
+		if (!self.context) {
+			const response_error = render_page.render_server_response_error('Invalid context', false)
+			return response_error
+		}
+
 	// add all instance rendered nodes
 		// const ar_instances_length = self.ar_instances.length;
 
@@ -195,13 +201,15 @@ const get_content_data = async function(self) {
 * RENDER_SERVER_RESPONSE_ERROR
 * Render generic page error (Raspa background)
 * @param string msg
-* @return DOM node wrapper
+* @return DOM node wrapper|error_container
 */
-render_page.render_server_response_error = function(msg) {
+render_page.render_server_response_error = function(msg, add_wrapper=true) {
 
 	// wrapper
-		const wrapper = document.createElement('div')
-		wrapper.classList.add('wrapper', 'page')
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper page'
+		})
 
 	// error_container
 		const error_container = ui.create_dom_element({
@@ -230,9 +238,14 @@ render_page.render_server_response_error = function(msg) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'more_info',
-			inner_html		: 'Received data is not JSON valid. See your server log for details',
+			inner_html		: 'Received data format is not as expected. See your server log for details',
 			parent			: error_container
 		})
+
+	// add_wrapper false  case
+		if (add_wrapper===false) {
+			return error_container
+		}
 
 
 	return wrapper
