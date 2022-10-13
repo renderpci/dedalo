@@ -330,7 +330,7 @@ const render_area_item = function(item, datalist, value, self) {
 				ui.collapse_toggle_track({
 					header				: label,
 					content_data		: branch,
-					collapsed_id		: 'security_acccess_'+item.tipo,
+					collapsed_id		: 'security_acccess_' + item.tipo,
 					collapse_callback	: collapse,
 					expose_callback		: expose,
 					default_state		: 'closed'
@@ -357,7 +357,9 @@ const render_area_item = function(item, datalist, value, self) {
 					when_in_viewport(
 						li, // DOM node
 						function() {
-							const current_worker = new Worker('../component_security_access/js/worker.js');
+							const current_worker = new Worker('../component_security_access/js/worker.js', {
+								type : 'module'
+							});
 							current_worker.postMessage({
 								fn		: 'get_children',
 								params	: [item, datalist]
@@ -370,7 +372,7 @@ const render_area_item = function(item, datalist, value, self) {
 						}
 					)
 
-			// add brach at last position
+			// add branch at last position
 			li.appendChild(branch)
 		}//end direct_children
 

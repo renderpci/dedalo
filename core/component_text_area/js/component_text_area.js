@@ -263,7 +263,7 @@ component_text_area.prototype.build = async function(options) {
 	const self = this
 
 	// call the generic common method
-		const common_build = component_common.prototype.build.call(self, options);
+		const common_build = await component_common.prototype.build.call(self, options);
 
 	// auto_init_editor
 		self.auto_init_editor = self.auto_init_editor!==undefined

@@ -217,10 +217,8 @@ login.prototype.action_dispatch = async function(api_response) {
 			self.node.content_data.top.appendChild(files_loader)
 
 			// launch worker cache
-				const worker_url		= DEDALO_CORE_URL + '/page/js/worker_cache.js'
-				const current_worker	= new Worker( worker_url, {
-					type		: 'module',
-					credentials	: 'omit'
+				const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
+					type : 'module'
 				});
 				current_worker.postMessage({
 					action	: 'clear_cache',
