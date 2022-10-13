@@ -463,19 +463,22 @@ const render_status = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// status_user_component
-		self.status_user_component.context.view	= 'mini'
-		self.status_user_component.is_inside_tool = true
-		self.status_user_component.view_properties.disable_save_animation = true
-		const status_user_node = await self.status_user_component.render()
+		if (self.status_user_component) {
+			self.status_user_component.context.view	= 'mini'
+			self.status_user_component.is_inside_tool = true
+			self.status_user_component.view_properties.disable_save_animation = true
+			const status_user_node = await self.status_user_component.render()
+			fragment.appendChild(status_user_node)
+		}
 
 	// status_admin_component
-		self.status_admin_component.context.view = 'mini'
-		self.status_admin_component.is_inside_tool = true
-		self.status_admin_component.view_properties.disable_save_animation = true
-		const status_admin_node	= await self.status_admin_component.render()
-
-	fragment.appendChild(status_user_node)
-	fragment.appendChild(status_admin_node)
+		if (self.status_admin_component) {
+			self.status_admin_component.context.view = 'mini'
+			self.status_admin_component.is_inside_tool = true
+			self.status_admin_component.view_properties.disable_save_animation = true
+			const status_admin_node	= await self.status_admin_component.render()
+			fragment.appendChild(status_admin_node)
+		}
 
 
 	return fragment

@@ -105,18 +105,22 @@ tool_lang.prototype.build = async function(autoload=false) {
 	try {
 
 		// main_element. fix main_element for convenience
-			const main_element_ddo = self.tool_config.ddo_map.find(el => el.role==="main_element")
+			const main_element_ddo = self.tool_config.ddo_map.find(el => el.role==='main_element')
 			if (main_element_ddo) {
 				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 			}
 
-		// status_user. control the tool status process for users
-			const status_user_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_user")
-			self.status_user_component	= self.ar_instances.find(el => el.tipo===status_user_ddo.tipo)
+		// status_user_component. control the tool status process for users
+			const status_user_ddo = self.tool_config.ddo_map.find(el => el.role==='status_user_component')
+			if (status_user_ddo) {
+				self.status_user_component = self.ar_instances.find(el => el.tipo===status_user_ddo.tipo)
+			}
 
-		// status_admin. control the tool status process for administrators
-			const status_admin_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_admin")
-			self.status_admin_component	= self.ar_instances.find(el => el.tipo===status_admin_ddo.tipo)
+		// status_admin_component. control the tool status process for administrators
+			const status_admin_ddo = self.tool_config.ddo_map.find(el => el.role==='status_admin_component')
+			if (status_admin_ddo) {
+				self.status_admin_component	= self.ar_instances.find(el => el.tipo===status_admin_ddo.tipo)
+			}
 
 		// target lang. When user changes it, a local DB var is stored as 'tool_lang_target_lang' in table 'status'
 			const tool_lang_target_lang_object = await data_manager.get_local_db_data(
