@@ -55,14 +55,15 @@ render_tool_posterframe.prototype.edit = async function(options) {
 		// spinner
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "spinner",
+			class_name		: 'spinner',
 			parent			: main_element_container
 		})
-		// rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
-		self.main_element.mode = 'player'
+		// rebuild it in 'player' mode to get stream info (allow navigation frame by frame)
 		self.main_element.build(true)
 		.then(async function(){
 			setTimeout(function(){
+				self.main_element.mode = 'edit'
+				self.main_element.context.view = 'player'
 				self.main_element.render()
 				.then(function(component_node){
 					main_element_container.appendChild(component_node)
@@ -162,7 +163,7 @@ const get_buttons = function(self) {
 				inner_html		: get_label.crear_imagen_identificativa || 'Create identifying image',
 				parent			: identifying_image_block
 			})
-			button_create_identifying_image.addEventListener("click", async function(){
+			button_create_identifying_image.addEventListener('click', async function(){
 				identifying_image_block.classList.add('loading')
 				const item_value	= JSON.parse(identifying_image_selector.value)
 				const current_time	= self.main_element.video.currentTime
@@ -208,7 +209,7 @@ const get_buttons = function(self) {
 				inner_html		: get_label.crear || 'Create',
 				parent			: manage_posterframe_block
 			})
-			button_create_posterframe.addEventListener("click", async function(){
+			button_create_posterframe.addEventListener('click', async function(){
 				image_posterframe.classList.add('loading')
 				const current_time = self.main_element.video.currentTime
 				await self.create_posterframe(current_time)
@@ -227,7 +228,7 @@ const get_buttons = function(self) {
 				inner_html		: get_label.borrar || 'Delete',
 				parent			: manage_posterframe_block
 			})
-			button_delete_posterframe.addEventListener("click", async function(){
+			button_delete_posterframe.addEventListener('click', async function(){
 				image_posterframe.classList.add('loading')
 				const deleted = await self.delete_posterframe()
 				image_posterframe.src = deleted===true
@@ -247,7 +248,7 @@ const get_buttons = function(self) {
 			// self.events_tokens.push(token)
 			// function fn_update_posterframe() {
 			// 	image_posterframe.src = self.main_element.data.posterframe_url + '?' + Math.random()
-			// 	console.log("updated image_posterframe.src:", image_posterframe.src);
+			// 	console.log('updated image_posterframe.src:', image_posterframe.src);
 			// 	event_manager.unsubscribe(token)
 			// }
 

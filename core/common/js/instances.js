@@ -210,7 +210,7 @@ export const get_instance = async function(options){
 				// add to the instances cache
 					instances.push(instance_element)
 
-					// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
+					// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element)
 
 				// return the new created instance
 					resolve(instance_element)

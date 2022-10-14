@@ -58,21 +58,25 @@
 					}
 				}
 
+				select {
+					opacity: 1;
+					padding: 0.33rem;
+					background-color: #f8f9fa;
+					border-radius: 3px;
+					margin-right: 0px;
+					max-width: 20rem;
+					min-width: 7rem;
+
+					@media screen and (max-width: @width_break_point_0) {
+						// max-width: unset;
+					}
+				}
+
 				// select top tipo / id
 				>.related_list_container {
 
 					>select {
-						opacity: 1;
-						padding: 0.33rem;
-						background-color: #f8f9fa;
-						border-radius: 3px;
-						margin-right: 0px;
-						max-width: 22rem;
 
-						@media screen and (max-width: @width_break_point_0) {
-							max-width: unset;
-							width: 100%;
-						}
 					}
 				}
 
@@ -90,16 +94,7 @@
 						padding-right: 0.33rem;
 					}
 					>select {
-						opacity: 1;
-						padding: 0.33rem;
-						background-color: #f8f9fa;
-						border-radius: 3px;
-						margin-right: 0px;
-						max-width: 22rem;
 
-						@media screen and (max-width: @width_break_point_0) {
-							max-width: unset;
-						}
 					}
 				}
 
@@ -163,15 +158,25 @@
 			.right_container {
 				>.wrapper_component {
 					height: 100%; // calc(100vh - 8rem);
-					min-height: 50%;
+					min-height: 472px; // prevents to cut component_av player
 
+					// addons. Additional elements like video slider, keys map, etc.
 					&.with_addons {
 						height: 50%;
+						@media screen and (max-width: @width_break_point_1) {
+							height: unset;
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						min-height: unset;
+						height: unset;
 					}
 
 					>.content_data {
-						overflow: auto;
+						// overflow: auto;
 						height: 100%;
+						// min-height: 528px;
 					}
 				}
 
