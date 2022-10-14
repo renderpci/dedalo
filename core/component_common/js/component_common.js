@@ -209,6 +209,10 @@ component_common.prototype.build = async function(autoload=false){
 				if (!context) {
 					console.error("context not found in api_response:", api_response);
 				}
+				// preserve view across builds
+				if(self.context.view) {
+					context.view = self.context.view
+				}
 				self.context = context
 
 			// data
