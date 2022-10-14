@@ -3,22 +3,18 @@
 
 const t0 = performance.now()
 
-	// page instance
+	// page instance imports
+	import '../js/page.js'
 	import {events_init} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
-	// import {common} from '../../common/js/common.js'
-	// import '../../common/js/dd-modal.js'
-	// import {login} from '../../login/js/login.js'
-	// preload
-	import '../js/page.js'
 	import {render_page} from '../js/render_page.js'
 
 
 	( async () => {
 
-		// DEDALO_ENVIRONMENT
+		// dedalo_environment
 			// If environment file fails, set basic vars to allow create errors
 			if (typeof DEDALO_ENVIRONMENT==='undefined') {
 				window.DEDALO_CORE_URL = '../'
