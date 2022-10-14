@@ -76,7 +76,7 @@ const get_content_data = function(self) {
 	// top
 		const top = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'top',
+			class_name		: 'top hide',
 			parent			: fragment
 		})
 		// const files_loader = render_files_loader()
@@ -110,9 +110,10 @@ const get_content_data = function(self) {
 	// form
 		const form = ui.create_dom_element({
 			element_type	: 'form',
+			class_name		: 'login_form',
 			parent			: fragment
 		})
-		form.addEventListener("submit", (e) => {
+		form.addEventListener('submit', (e) => {
 			e.preventDefault()
 			button_enter.click()
 		})
@@ -129,7 +130,7 @@ const get_content_data = function(self) {
 			placeholder		: strip_tags(login_item_username.label),
 			parent			: form
 		})
-		user_input.autocomplete	= "username"
+		user_input.autocomplete	= 'username'
 
 	// Authorization input
 		const login_item_password = login_items.find(el => el.tipo==='dd256')
@@ -140,9 +141,9 @@ const get_content_data = function(self) {
 			placeholder		: strip_tags(login_item_password.label),
 			parent			: form
 		})
-		auth_input.autocomplete= "current-password"
+		auth_input.autocomplete= 'current-password'
 
-	// Button
+	// button submit
 		const login_item_enter = login_items.find(el => el.tipo==='dd259')
 		const button_enter = ui.create_dom_element({
 			element_type	: 'button',
@@ -150,20 +151,34 @@ const get_content_data = function(self) {
 			class_name		: 'button_enter warning',
 			parent			: form
 		})
+		// button_enter_loading
+			const button_enter_loading = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'spinner button_enter_loading hide',
+				parent			: button_enter
+			})
+		// button_enter_label
+			const button_enter_label = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button_enter_label',
+				inner_html		: strip_tags(login_item_enter.label),
+				parent			: button_enter
+			})
+		// event click
 		button_enter.addEventListener('click', function(e) {
 			e.preventDefault()
 
 			const username = user_input.value
 			if (username.length<2) {
 				const message = `Invalid username ${username}!`
-				ui.show_message(content_data, message, 'error', 'component_message', true)
+				ui.show_message(messages_container, message, 'error', 'component_message', true)
 				return false
 			}
 
 			const auth = auth_input.value
 			if (auth.length<2) {
 				const message = `Invalid auth code!`
-				ui.show_message(content_data, message, 'error', 'component_message', true)
+				ui.show_message(messages_container, message, 'error', 'component_message', true)
 				return false
 			}
 
@@ -174,47 +189,36 @@ const get_content_data = function(self) {
 				button_enter.blur()
 
 			// data_manager API call
-			data_manager.request({
-				body : {
-					action	: 'login',
-					dd_api	: 'dd_utils_api',
-					options	: {
-						username	: username,
-						auth		: auth
+				data_manager.request({
+					body : {
+						action	: 'login',
+						dd_api	: 'dd_utils_api',
+						options	: {
+							username	: username,
+							auth		: auth
+						}
 					}
-				}
-			})
-			.then((api_response)=>{
+				})
+				.then((api_response)=>{
 
-				// hide spinner and show button label
-					button_enter_label.classList.remove('hide')
-					button_enter_loading.classList.add('hide')
-					button_enter.classList.remove('white')
+					// hide spinner and show button label
+						button_enter_label.classList.remove('hide')
+						button_enter_loading.classList.add('hide')
+						button_enter.classList.remove('white')
 
-				const message	= api_response.msg
-				const msg_type	= api_response.result===true ? 'ok' : 'error'
-				ui.show_message(content_data, message, msg_type, 'component_message', true)
+					const message	= api_response.msg
+					const msg_type	= api_response.result===true ? 'ok' : 'error'
+					ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
-				self.action_dispatch(api_response)
-			})
+					self.action_dispatch(api_response)
+				})
 		})//end button_enter.addEventListener('click', function(e)
-
-		const button_enter_loading = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'spinner button_enter_loading hide',
-			parent			: button_enter
-		})
-		const button_enter_label = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button_enter_label',
-			inner_html		: strip_tags(login_item_enter.label),
-			parent			: button_enter
-		})
 
 	// info
 		const info = ui.create_dom_element({
-			element_type : 'div',
-			class_name 	 : "info"
+			element_type	: 'div',
+			class_name		: 'info',
+			parent			: fragment
 		})
 		const info_data			= self.context.properties.info || []
 		const info_data_length	= info_data.length
@@ -251,7 +255,13 @@ const get_content_data = function(self) {
 					parent			: info
 				})
 		}
-		fragment.appendChild(info)
+
+	// messages_container
+		const messages_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'messages_container',
+			parent			: fragment
+		})
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -260,8 +270,11 @@ const get_content_data = function(self) {
 		})
 		content_data.appendChild(fragment)
 		// set pointers
-		content_data.top = top
-
+		content_data.top				= top
+		content_data.select_lang		= select_lang
+		content_data.form				= form
+		content_data.info				= info
+		content_data.messages_container	= messages_container
 
 	return content_data
 }//end get_content_data
@@ -357,9 +370,13 @@ const validate_browser = function() {
 
 /**
 * RENDER_FILES_LOADER
-* @return DOM node cont
+* Creates the files loader nodes
+* @see login.action_dispatch
+* @return DOM DocumentFragment
 */
 export const render_files_loader = function() {
+
+	const fragment = new DocumentFragment()
 
 	// cont
 		const cont = ui.create_dom_element({
@@ -368,7 +385,8 @@ export const render_files_loader = function() {
 			class_name		: 'cont',
 			dataset			: {
 				pct : 'Loading..'
-			}
+			},
+			parent			: fragment
 		})
 
 	// svg circle
@@ -384,7 +402,7 @@ export const render_files_loader = function() {
 
 	// update. receive worker messages data
 		let loaded = 0
-		cont.update = function( data ) {
+		fragment.update = function( data ) {
 
 			const total_files	= data.total_files
 			const rate			= data.status==='loading'
@@ -421,6 +439,13 @@ export const render_files_loader = function() {
 			cont.dataset.pct = val + '%'
 		}
 
+	// loader_label
+		ui.create_dom_element({
+			element_type	: 'h2',
+			class_name		: 'loader_label',
+			inner_html		: 'Loading Dédalo files',
+			parent			: fragment
+		})
 
-	return cont
+	return fragment
 }//end render_files_loader
