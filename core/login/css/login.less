@@ -33,21 +33,19 @@
 		background-color: rgba(243, 243, 243, 0.76);
 		border: solid 1px #e1e1e1;
 		border-radius: 0.5em;
-		// center
-		// position: absolute;
-		// left: 50%;
-		// top: 32%;
-		// transform: translate(-50%);
 		.centered;
-		// top: 35%;
-
-		// .component_base;
-
 		max-width: 24em;
 		padding: 2em;
-		//padding-top: 1em;
-		//padding-bottom: 1em;
 
+		>.top {
+			text-align: center;
+			.loader_label {
+				width: 100%;
+				padding-bottom: 1.75rem;
+			}
+		}
+
+		// lang selector
 		>.select_lang {
 			height: 2.5em;
 			width: 100%;
@@ -56,7 +54,6 @@
 			margin: 0px;
 			margin-bottom: 1em;
 			border-radius: 3px;
-
 			// remove browser appearance style
 			background: url('data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0Ljk1IDEwIj48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZjt9LmNscy0ye2ZpbGw6IzQ0NDt9PC9zdHlsZT48L2RlZnM+PHRpdGxlPmFycm93czwvdGl0bGU+PHJlY3QgY2xhc3M9ImNscy0xIiB3aWR0aD0iNC45NSIgaGVpZ2h0PSIxMCIvPjxwb2x5Z29uIGNsYXNzPSJjbHMtMiIgcG9pbnRzPSIxLjQxIDQuNjcgMi40OCAzLjE4IDMuNTQgNC42NyAxLjQxIDQuNjciLz48cG9seWdvbiBjbGFzcz0iY2xzLTIiIHBvaW50cz0iMy41NCA1LjMzIDIuNDggNi44MiAxLjQxIDUuMzMgMy41NCA1LjMzIi8+PC9zdmc+') no-repeat 95% 50%;
 			-moz-appearance: none;
@@ -68,7 +65,8 @@
 			border: 1px solid #e0e0e0;
 		}
 
-		>form {
+		// form
+		>.login_form {
 			display: flex;
 			flex-wrap: wrap;
 			margin: 0px;
@@ -82,11 +80,9 @@
 			>input {
 				margin: 0px;
 				margin-bottom: 1em;
-				&#username {
-
-				}
 			}
 
+			// submit button
 			>.button_enter {
 				display: flex;
 				height: 3em;
@@ -120,30 +116,38 @@
 			}
 		}//end form
 
+		// info container where is placed server info like data version..
 		>.info {
 			display: grid;
 			grid-template-columns: 1.2fr 2fr;
 			font-size: 0.8em;
 			opacity: 0.6;
 			line-height: 1.3em;
-
-			>span {
-				padding: 0.20em;
-				line-height: 1.1em;
-
-				&.error {
-					padding-left: 0.5em;
-					color: white;
-				}
-			}
 		}
 
-		>.component_message {
+		// messages from API are showed here
+		>.messages_container {
 			position: relative;
-			top: 1em;
-			margin-bottom: 1.5em;
-			//font-size: 0.9em;
-			border-radius: 0.2em;
+			width: 100%;
+			padding: 0.5rem;
+
+			>.component_message {
+				position: relative;
+				top: 1rem !important;
+				margin-bottom: 1.5em;
+				//font-size: 0.9em;
+				border-radius: 0.2em;
+
+				>span {
+					padding: 0.20em;
+					line-height: 1.1em;
+
+					&.error {
+						padding-left: 0.5em;
+						color: white;
+					}
+				}
+			}
 		}
 	}
 
@@ -152,7 +156,7 @@
 		display: block;
 		height: 200px;
 		width: 200px;
-		margin: 2em auto;
+		margin: 1rem auto;
 		box-shadow: 0px 0px 1em #e4e4e4;
 		border-radius: 100%;
 		position: relative;

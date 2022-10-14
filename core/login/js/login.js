@@ -226,6 +226,15 @@ login.prototype.action_dispatch = async function(api_response) {
 				});
 				current_worker.onmessage = function(e) {
 
+					if (e.data.status==='ready') {
+						// hide things
+						self.node.content_data.select_lang.classList.add('hide')
+						self.node.content_data.form.classList.add('hide')
+						// self.node.content_data.info.classList.add('hide')
+						// show things
+						self.node.content_data.top.classList.remove('hide')
+					}
+
 					// send message data to files_loader function
 					files_loader.update(e.data)
 
