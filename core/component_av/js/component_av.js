@@ -10,14 +10,15 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
 	import {render_list_component_av} from '../../component_av/js/render_list_component_av.js'
-	import {render_mini_component_av} from '../../component_av/js/render_mini_component_av.js'
-	import {render_player_component_av} from '../../component_av/js/render_player_component_av.js'
-	import {render_viewer_component_av} from '../../component_av/js/render_viewer_component_av.js'
+	// import {render_mini_component_av} from '../../component_av/js/render_mini_component_av.js'
+	// import {render_player_component_av} from '../../component_av/js/render_player_component_av.js'
+	// import {render_viewer_component_av} from '../../component_av/js/render_viewer_component_av.js'
 
 	// Note about event_manager
 	// the component_av is configured by properties in the ontology,
 	// it has subscribed to some events that comes defined in properties as: key_up_f2, key_up_esc, click_tag_tc
 	// the events need to be linked to specific text_area and it's defined in ontology.
+
 
 
 export const component_av = function(){
@@ -71,13 +72,13 @@ export const component_av = function(){
 	component_av.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_av.prototype.mini					= render_mini_component_av.prototype.mini
 	component_av.prototype.list					= render_list_component_av.prototype.list
 	component_av.prototype.edit					= render_edit_component_av.prototype.edit
 	component_av.prototype.edit_in_list			= render_edit_component_av.prototype.edit
 	component_av.prototype.search				= render_edit_component_av.prototype.search
-	component_av.prototype.player				= render_player_component_av.prototype.player
-	component_av.prototype.viewer				= render_viewer_component_av.prototype.viewer
+	// component_av.prototype.player			= render_player_component_av.prototype.player
+	// component_av.prototype.viewer			= render_viewer_component_av.prototype.viewer
+
 	component_av.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -89,24 +90,34 @@ export const component_av = function(){
 * 	usually fired by 'click_tag_tc' event
 * 2 direct in seconds (8)
 * the video player use seconds, if the information comes from tag it will convert this tc to seconds.
-* @return int seconds
+* @param object options
+* Sample from component_text_area event :
+* {
+*  	caller : instance
+*	tag : object {node_name: 'img', type: 'tc', tag_id: '[TC_00:00:00.000_TC]', state: 'n', label: '00:00:00.000', …}
+*	text_editor : service_ckeditor instance
+* }
+* Sample from component_av direct call :
+* {
+*  	seconds : float 16
+* }
+* @return double-precision floating-point seconds
 */
 component_av.prototype.go_to_time = function(options) {
 
 	const self = this
+	console.warn('+++++++++++++++++++++++++++++ component_av go_to_time options:', options);
 
 	if (!self.video) {
 		dd_console("Ignored go_to_time call. No self.video is set", 'warning', [self.tipo, self.id]);
 		return false
 	}
 
-	// options
-		const tag = options.tag
-
-	const tag_time = tag.data
-	const seconds = tag
-		? self.tc_to_seconds(tag_time)
-		: options
+	const seconds = options.seconds
+		? options.seconds
+		: (options.tag && options.tag.data)
+			? self.tc_to_seconds(options.tag.data)
+			: 0
 
 	self.video.currentTime = seconds;
 
@@ -161,7 +172,7 @@ component_av.prototype.rewind = function(seconds) {
 /**
 * GET_DATA_TAG
 * Builds a tag object using current timecode
-* @return obejct data_tag
+* @return object data_tag
 */
 component_av.prototype.get_data_tag = function() {
 
@@ -199,10 +210,14 @@ component_av.prototype.get_current_tc = function(){
 /**
 * TC_TO_SECONDS
 * tc to seconds . convert tc like 00:12:19.878 to total seconds like 139.878
+* @param string tc
+* @return float total_seconds
 */
 component_av.prototype.tc_to_seconds = function(tc) {
 
-	if(Number.isInteger(tc)) return tc
+	if(Number.isInteger(tc)) {
+		return tc
+	}
 
 	//var tc		= "00:09:52.432";
 	const ar		= tc.split(":")
@@ -287,7 +302,7 @@ component_av.prototype.set_playback_rate = function(rate) {
 			return false
 		}
 
-	// Format number as float, precission 1
+	// Format number as float, precision 1
 		rate = parseFloat(rate)
 		rate = rate.toPrecision(1)
 

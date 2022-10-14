@@ -97,8 +97,8 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// media_component
-		self.media_component.mode = 'edit'
-		self.media_component.view = 'player'
+		self.media_component.mode			= 'edit'
+		self.media_component.context.view	= 'player'
 		await self.media_component.build(false)
 		const media_component_node = await self.media_component.render();
 		right_container.appendChild(media_component_node)

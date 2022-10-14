@@ -111,6 +111,7 @@ final class dd_core_api {
 				$section_id		= $search_obj->id	?? $search_obj->section_id		?? null;
 				$mode			= $search_obj->m	?? $search_obj->mode			?? 'list';
 				$lang			= $search_obj->lang	?? $search_obj->lang			?? DEDALO_DATA_LANG;
+				$view			= $search_obj->view ?? null;
 			}
 
 		// context
@@ -314,6 +315,11 @@ final class dd_core_api {
 							// component_context
 								$component_context = $element_json->context[0];
 								$component_context->section_id = $section_id; // section_
+
+							// view. Overwrite default if is passed
+								if (!empty($view)) {
+									$component_context->view = $view;
+								}
 
 							// test minimal context
 								// $component_context = (object)[

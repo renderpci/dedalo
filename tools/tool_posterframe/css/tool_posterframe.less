@@ -5,7 +5,7 @@
 */
 
 // imports
-@import '../../../core/page/css/layout/vars.less';
+	@import '../../../core/page/css/layout/vars';
 
 
 
@@ -13,7 +13,6 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_posterframe {
 		justify-content: space-around;
-
 		// >div {
 		// 	max-width: calc(720px + 2rem);
 		// 	margin-left: auto;
@@ -31,8 +30,8 @@
 			// display: table;
 			min-height: 483px;
 			// display: block;
-			padding: 0;
-			margin: 0;
+			padding: 0px;
+			margin: 0px;
 			margin-left: auto;
 			margin-right: auto;
 			margin-top: 1rem;
@@ -51,7 +50,6 @@
 			// 	height: inherit;
 			// }
 
-
 			.wrapper_component.component_av {
 				// height: 404px;
 
@@ -69,7 +67,7 @@
 			display: flex;
 			flex-wrap: wrap;
 			justify-content: center;
-			padding: 0;
+			padding: 0px;
 			// display: grid;
 			// grid-template-rows: 1fr 1fr;
 
@@ -124,25 +122,28 @@
 						width: 31%;
 						border-left: 1px solid #eeeeee;
 
-						button.create_posterframe {
+						// button
+						.create_posterframe {
 
 						}
 
-						button.delete_posterframe {
+						// button
+						.delete_posterframe {
 
 						}
 					}
 
-					img.image_posterframe {
+					// image
+					.image_posterframe {
 						// background-color: #e8caf2;
 						flex: 1 1 auto;
 						object-fit: contain;
 						width: 13rem;
 						height: auto;
 						display: block;
+						padding-right: 2rem;
 					}
 				}
-
 			}//end .buttons_container
 
 

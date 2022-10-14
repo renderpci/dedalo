@@ -6,29 +6,27 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-
+	// import {get_content_data_edit} from './render_edit_view_default.js'
 
 
 /**
-* RENDER_PLAYER_COMPONENT_AV
+* RENDER_VIEW_PLAYER
 * Manages the component's logic and appearance in client side
 */
-export const render_player_component_av = function() {
+export const render_view_player = function() {
 
 	return true
-}//end  render_player_component_av
+}//end  render_view_player
 
 
 
 /**
-* PLAYER
+* RENDER
 * Render node for use in modes: edit, edit_in_list
 * @param object options
 * @return DOM node wrapper
 */
-render_player_component_av.prototype.player = async function(options) {
-
-	const self = this
+render_view_player.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -37,7 +35,10 @@ render_player_component_av.prototype.player = async function(options) {
 		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// content_data
-		const content_data = get_content_data_player(self)
+		const content_data = get_content_data_player({
+			self					: self,
+			with_control_buttons	: true
+		})
 		if (render_level==='content') {
 			return content_data
 		}
@@ -49,12 +50,6 @@ render_player_component_av.prototype.player = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
-
-	// av_control_buttons
-		if (self.video) {
-			const av_control_buttons = get_av_control_buttons(self)
-			wrapper.appendChild(av_control_buttons)
-		}
 
 	// add events
 		//add_events(self, wrapper)
@@ -70,7 +65,11 @@ render_player_component_av.prototype.player = async function(options) {
 * @param instance self
 * @return DOM node content_data
 */
-export const get_content_data_player = function(self) {
+export const get_content_data_player = function(options) {
+
+	// options
+		const self					= options.self
+		const with_control_buttons	= options.with_control_buttons
 
 	const fragment = new DocumentFragment()
 
@@ -80,7 +79,7 @@ export const get_content_data_player = function(self) {
 		const datalist	= data.datalist || []
 		const quality	= self.quality || context.quality
 
-	// urls
+	// url
 		// posterframe
 			const posterframe_url = data.posterframe_url
 		// media
@@ -110,19 +109,19 @@ export const get_content_data_player = function(self) {
 					? tc_in + '&' + tc_out
 					: null
 
-			// source tag
-				const source	= document.createElement("source")
-				source.type		= "video/mp4"
+			// source node
+				const source	= document.createElement('source')
+				source.type		= 'video/mp4'
 				source.src		= (self.fragment)
 					? video_url + '?' + fragment_url
 					: video_url
 
-			// video tag
-				const video		= document.createElement("video")
+			// video node
+				const video		= document.createElement('video')
 				video.poster	= posterframe_url
 				video.controls	= true
-				video.classList.add("posterframe")
-				video.setAttribute("tabindex", 0)
+				video.classList.add('posterframe')
+				video.setAttribute('tabindex', 0)
 				video.appendChild(source)
 
 			// subtitles track
@@ -141,6 +140,12 @@ export const get_content_data_player = function(self) {
 			// append the video node to the instance
 				self.video = video
 				fragment.appendChild(video)
+		}
+
+	// av_control_buttons
+		if (with_control_buttons) {
+			const av_control_buttons = get_av_control_buttons(self)
+			fragment.appendChild(av_control_buttons)
 		}
 
 	// content_data
@@ -172,8 +177,11 @@ const get_av_control_buttons =  (self) =>{
 			inner_html		: get_label.inicio || 'Beginning',
 			parent			: fragment
 		})
-		av_begin_button.addEventListener("mouseup", () =>{
-			self.go_to_time(0);
+		av_begin_button.addEventListener('mouseup', () =>{
+			const seconds = 0
+			self.go_to_time({
+				seconds : seconds
+			});
 		})
 
 	// av_play_button. play / pause media
@@ -193,43 +201,47 @@ const get_av_control_buttons =  (self) =>{
 			av_play_button.classList.add('pause')
 		})
 		// change the state of the av
-		av_play_button.addEventListener("mouseup", () =>{
+		av_play_button.addEventListener('mouseup', () =>{
 			self.play_pause();
 		})
 
-	// av_smpte. Show the smpte (time code)
+	// av_smpte. Show the SMPTE (time code)
 		const av_smpte = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'smpte',
 			parent			: fragment,
 			inner_html		: self.get_current_tc()
 		})
-		self.video.addEventListener("timeupdate", async () =>{
+		self.video.addEventListener('timeupdate', async () =>{
 			av_smpte.innerHTML = self.get_current_tc();
 		})
 
-	// av_minus_10_seg. Go to 10 secons before of the current time ( - 10 seconds )
+	// av_minus_10_seg. Go to 10 seconds before of the current time ( - 10 seconds )
 		const av_minus_10_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '< 10s',
 			parent			: fragment
 		})
-		av_minus_10_seg.addEventListener("mouseup", () =>{
+		av_minus_10_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime - 10
-			self.go_to_time(seconds);
+			self.go_to_time({
+				seconds : seconds
+			});
 		})
 
-	// av_minus_5_seg. Go to 5 secons before of the current time ( - 5 seconds )
+	// av_minus_5_seg. Go to 5 seconds before of the current time ( - 5 seconds )
 		const av_minus_5_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '< 5s',
 			parent			: fragment
 		})
-		av_minus_5_seg.addEventListener("mouseup", () =>{
+		av_minus_5_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime - 5
-			self.go_to_time(seconds);
+			self.go_to_time({
+				seconds : seconds
+			});
 		})
 
 	// av_minus_1_frame. Go to 1 frame before of the current time ( - 1 frame )
@@ -241,18 +253,20 @@ const get_av_control_buttons =  (self) =>{
 			text_content	: '- 1',
 			parent			: fragment
 		})
-		av_minus_1_frame.addEventListener("mouseup", () =>{
+		av_minus_1_frame.addEventListener('mouseup', () =>{
 			// get the r_frame_rate of the video stream and get the time for 1 frame
 			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
 			const ar_frame_rate_opeartor	= r_frame_rate.split('/')
 			const frame_rate				=  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
 			const time_for_frame			= 1 / frame_rate
 			const seconds					= (self.video.currentTime - time_for_frame).toFixed(3)
-			self.go_to_time(seconds);
+			self.go_to_time({
+				seconds : seconds
+			});
 		})
 
 	// av_plus_1_frame. go to 1 frame after of the current time ( + 1 frame )
-		// the server se	nd the head information in the media_info streams
+		// the server send the head information in the media_info streams
 		// the video is the first item of the streams array
 		const av_plus_1_frame = ui.create_dom_element({
 			element_type	: 'button',
@@ -260,7 +274,7 @@ const get_av_control_buttons =  (self) =>{
 			text_content	: '+ 1',
 			parent			: fragment
 		})
-		av_plus_1_frame.addEventListener("mouseup", () =>{
+		av_plus_1_frame.addEventListener('mouseup', () =>{
 
 			//get the r_frame_rate of the video stream and get the time for 1 frame
 			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
@@ -268,35 +282,40 @@ const get_av_control_buttons =  (self) =>{
 			const frame_rate				=  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
 			const time_for_frame			= (1 / frame_rate)
 			const seconds					= (self.video.currentTime + time_for_frame).toFixed(3)
-
-			self.go_to_time(seconds);
+			self.go_to_time({
+				seconds : seconds
+			});
 		})
 
-	// av_plus_5_seg. Go to 5 secons after of the current time ( + 5 seconds )
+	// av_plus_5_seg. Go to 5 seconds after of the current time ( + 5 seconds )
 		const av_plus_5_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '> 5s',
 			parent			: fragment
 		})
-		av_plus_5_seg.addEventListener("mouseup", () =>{
+		av_plus_5_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime + 5
-			self.go_to_time(seconds);
+			self.go_to_time({
+				seconds : seconds
+			});
 		})
 
-	// av_plus_10_seg. Go to 10 secons after of the current time ( + 10 seconds )
+	// av_plus_10_seg. Go to 10 seconds after of the current time ( + 10 seconds )
 		const av_plus_10_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '> 10s',
 			parent			: fragment
 		})
-		av_plus_10_seg.addEventListener("mouseup", () =>{
+		av_plus_10_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime + 10
-			self.go_to_time(seconds);
+			self.go_to_time({
+				seconds : seconds
+			});
 		})
 
-	// av_control_buttons main cotainer
+	// av_control_buttons main container
 		const av_control_buttons = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'av_control_buttons'
