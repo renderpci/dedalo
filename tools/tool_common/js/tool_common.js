@@ -71,7 +71,7 @@ tool_common.prototype.init = async function(options) {
 				// re-build from caller_ddo
 					// searchParams
 					const searchParams = new URLSearchParams(window.location.href)
-
+					// raw_data
 					const raw_data = searchParams.has('raw_data')
 						? searchParams.get('raw_data') // string from url
 						: null
@@ -79,15 +79,19 @@ tool_common.prototype.init = async function(options) {
 					if (raw_data) {
 
 						// Note that url param 'url_data' is an object stringify-ed and compressed-encoded
+						// Expected raw_data decoded is an object as
+						// {
+						//	 caller_ddo : object {...},
+						//	 tool_config : object {...}
+						// }
 						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
 						const url_data_object	= JSON.parse(url_data_string)
 						const caller_ddo		= url_data_object.caller_ddo
 						const tool_config		= url_data_object.tool_config
-						console.log('caller_ddo:', caller_ddo);
+
 						// set and build caller
 							self.caller = await get_instance( caller_ddo )
 							await self.caller.build(true)
-							console.log('self.caller:', self.caller);
 
 						// set tool_config
 							self.tool_config = tool_config
