@@ -208,6 +208,7 @@ common.prototype.render = async function (options={}) {
 				return 'list';
 			  })()
 			: render_mode
+
 		const node = await self[current_render_mode]({
 			render_level : render_level
 		})
