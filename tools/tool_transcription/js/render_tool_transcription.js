@@ -273,11 +273,14 @@ const get_content_data_edit = async function(self) {
 				})
 
 				// button_build_subtitles
-					ui.create_dom_element({
+					const button_build_subtitles = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light btn_subtitles',
 						inner_html		: get_label.build_subtitles || 'Build subtitles',
 						parent			: subtitles_block
+					})
+					button_build_subtitles.addEventListener('click', function(evt) {
+						const subtitles_characters_value = localStorage.getItem('subtitles_characters_per_line')
 					})
 
 				// input characters per line
