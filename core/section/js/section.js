@@ -28,37 +28,38 @@ export const section = function() {
 	this.id				= null
 
 	// element properties declare
-	this.model			= null
-	this.type			= null
-	this.tipo			= null
-	this.section_tipo	= null
-	this.section_id		= null
-	this.mode			= null
-	this.lang			= null
-	this.column_id		= null
+	this.model					= null
+	this.type					= null
+	this.tipo					= null
+	this.section_tipo			= null
+	this.section_id				= null
+	this.section_id_selected	= null
+	this.mode					= null
+	this.lang					= null
+	this.column_id				= null
 
-	this.datum			= null
-	this.context		= null
-	this.data			= null
-	this.total			= null
+	this.datum					= null
+	this.context				= null
+	this.data					= null
+	this.total					= null
 
-	this.ar_section_id	= null
+	this.ar_section_id			= null
 
-	this.node			= null
-	this.ar_instances	= null
+	this.node					= null
+	this.ar_instances			= null
 
-	this.status			= null
+	this.status					= null
 
-	this.filter			= null
-	this.inspector		= null
-	this.paginator		= null
+	this.filter					= null
+	this.inspector				= null
+	this.paginator				= null
 
-	this.id_variant		= null
+	this.id_variant				= null
 
-	this.rqo_config		= null
-	this.rqo			= null
+	this.rqo_config				= null
+	this.rqo					= null
 
-	this.config			= null
+	this.config					= null
 
 
 	return true
@@ -100,47 +101,48 @@ section.prototype.init = async function(options) {
 
 	// vars
 		// instance key used vars
-		self.model				= options.model
-		self.tipo				= options.tipo
-		self.section_tipo		= options.section_tipo
-		self.section_id			= options.section_id
-		self.mode				= options.mode
-		self.lang				= options.lang
+		self.model					= options.model
+		self.tipo					= options.tipo
+		self.section_tipo			= options.section_tipo
+		self.section_id				= options.section_id
+		self.section_id_selected	= options.section_id_selected
+		self.mode					= options.mode
+		self.lang					= options.lang
 
 		// DOM
-		self.node				= null
+		self.node					= null
 
-		self.section_lang		= options.section_lang
-		self.parent				= options.parent
+		self.section_lang			= options.section_lang
+		self.parent					= options.parent
 
-		self.events_tokens		= []
-		self.ar_instances		= []
+		self.events_tokens			= []
+		self.ar_instances			= []
 
-		self.caller				= options.caller	|| null
+		self.caller					= options.caller	|| null
 
-		self.datum				= options.datum		|| null
-		self.context			= options.context	|| null
-		self.data				= options.data		|| null
+		self.datum					= options.datum		|| null
+		self.context				= options.context	|| null
+		self.data					= options.data		|| null
 
-		self.type				= 'section'
-		self.label				= null
+		self.type					= 'section'
+		self.label					= null
 
 		// filter. Allow false as value when no filter is required
-		self.filter				= options.filter!==undefined ? options.filter : null
+		self.filter					= options.filter!==undefined ? options.filter : null
 
 		// inspector. Allow false as value when no inspector is required (notes cases)
-		self.inspector			= options.inspector!==undefined ? options.inspector : null
+		self.inspector				= options.inspector!==undefined ? options.inspector : null
 
 		// paginator. Allow false as value when no paginator is required
-		self.paginator			= options.paginator!==undefined ? options.paginator : null
+		self.paginator				= options.paginator!==undefined ? options.paginator : null
 
-		self.permissions		= options.permissions || null
+		self.permissions			= options.permissions || null
 
 		// columns_map
-		self.columns_map		= options.columns_map || []
+		self.columns_map			= options.columns_map || []
 
 		// config
-		self.config				= options.config || null
+		self.config					= options.config || null
 
 
 
@@ -338,12 +340,13 @@ section.prototype.build = async function(autoload=false) {
 					body : self.rqo
 				})
 				if(SHOW_DEVELOPER===true) {
-					if (!api_response || !api_response.result) {
-						console.error("section build autoload api_response:",api_response);
-					}
-					const response	= clone(api_response)
-					const exec_time	= (performance.now()-t0).toFixed(3)
-					dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
+					// const response	= clone(api_response)
+					// const exec_time	= (performance.now()-t0).toFixed(3)
+					// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
+				}
+				if (!api_response || !api_response.result) {
+					console.error("Error: section build autoload api_response:", api_response);
+					return false
 				}
 
 			// set the result to the datum

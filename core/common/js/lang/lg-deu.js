@@ -405,6 +405,7 @@
     "apply": "Anwenden",
     "shift_key": "<mark>Mayúsculas<\/mark>",
     "created": "erstellt",
+    "default_lang_of_file_to_import": "Standardsprache der zu importierenden Datei. Daten ohne festgelegte Sprache werden importiert in:",
     "days": "Tage",
     "months": "Monate",
     "year": "Jahr",
