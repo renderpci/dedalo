@@ -348,7 +348,7 @@ export const ui = {
 
 			// options
 				const button_close	= options.button_close
-				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : false
+				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : true
 				const type			= instance.type
 				const component_css	= instance.context.css || {}
 
