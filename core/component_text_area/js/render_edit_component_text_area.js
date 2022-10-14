@@ -174,7 +174,8 @@ const get_input_element = (i, current_value, self) => {
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value_container',
-			parent			: content_value
+			parent			: content_value,
+			inner_html 		: value
 		})
 
 	// init_current_service_text_editor
@@ -223,8 +224,6 @@ const get_input_element = (i, current_value, self) => {
 			return current_service_text_editor
 		}//end init_current_service_text_editor
 
-	// set value
-		value_container.innerHTML = value
 
 	// user click in the wrapper and init the editor. When it's not read only
 		if (self.view_properties.read_only!==true) {
@@ -294,10 +293,10 @@ const get_custom_buttons = (self, text_editor, i) => {
 			name			: '|',
 			manager_editor	: false,
 			options	: {
-				tooltip	: '',
-				image	: '../../core/themes/default/icons/separator.svg',
+				tooltip		: '',
+				image		: '../../core/themes/default/icons/separator.svg',
 				class_name	: 'separator',
-				onclick	: null
+				onclick		: null
 			}
 		})
 
