@@ -405,6 +405,7 @@
     "apply": "Applicare",
     "shift_key": "Maiuscole",
     "created": "Creato",
+    "default_lang_of_file_to_import": "Lingua predefinita del file da importare. I dati senza la lingua specificata verranno importati in:",
     "days": "Giorni",
     "months": "metodo",
     "year": "Anno",

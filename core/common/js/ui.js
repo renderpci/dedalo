@@ -38,7 +38,7 @@ export const ui = {
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
 
 		// message_wrap. always check if already exists, else, create a new one and recycle it
-			const message_wrap = wrapper.querySelector("."+message_node) || (()=>{
+			const message_wrap = wrapper.querySelector('.'+message_node) || (()=>{
 
 				const new_message_wrap = ui.create_dom_element({
 					element_type	: 'div',
@@ -1900,8 +1900,13 @@ export const ui = {
 
 		// options
 			const id			= options.id || null
-			const langs			= options.langs || page_globals.dedalo_projects_default_langs
-			const selected		= options.selected || page_globals.dedalo_application_lang
+			const langs			= options.langs ||
+								  page_globals.dedalo_projects_default_langs ||
+								  [{
+									label : 'English',
+									value : 'lg-eng'
+								  }]
+			const selected		= options.selected || page_globals.dedalo_application_lang || 'lg-eng'
 			const action		= options.action || null
 			const class_name	= options.class_name || 'select_lang'
 

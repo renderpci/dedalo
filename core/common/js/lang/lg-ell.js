@@ -405,6 +405,7 @@
     "apply": "ισχύουν",
     "shift_key": "Shift",
     "created": "δημιουργήθηκε",
+    "default_lang_of_file_to_import": "<mark>Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:<\/mark>",
     "days": "ημέρες",
     "months": "μήνες",
     "year": "έτος",

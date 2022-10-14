@@ -97,13 +97,17 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// media_component
-		self.media_component.mode = 'player'
+		self.media_component.mode = 'edit'
+		self.media_component.view = 'player'
 		await self.media_component.build(false)
 		const media_component_node = await self.media_component.render();
 		right_container.appendChild(media_component_node)
 
 	// component_av specifics
 		if (self.media_component.model==='component_av') {
+
+			media_component_node.classList.add('with_addons')
+
 			// slider for control audiovisual speed
 				const slider_container = ui.create_dom_element({
 					element_type	: 'div',
@@ -507,6 +511,7 @@ const render_tanscription_options = async function(self, content_data) {
 }//end render_tanscription_options
 
 
+
 /**
 * RENDER_STATUS
 * Render the status components to get control of the process of the tool
@@ -517,22 +522,25 @@ const render_tanscription_options = async function(self, content_data) {
 */
 const render_status = async function(self) {
 
-		const fragment = new DocumentFragment()
+	const fragment = new DocumentFragment()
 
-		// status_user_component
+	// status_user_component
+		if (self.status_user_component) {
 			self.status_user_component.context.view	= 'mini'
 			self.status_user_component.is_inside_tool = true
 			self.status_user_component.view_properties.disable_save_animation = true
 			const status_user_node = await self.status_user_component.render()
+			fragment.appendChild(status_user_node)
+		}
 
-		// status_admin_component
+	// status_admin_component
+		if (self.status_admin_component) {
 			self.status_admin_component.context.view = 'mini'
 			self.status_admin_component.is_inside_tool = true
 			self.status_admin_component.view_properties.disable_save_animation = true
 			const status_admin_node	= await self.status_admin_component.render()
-
-		fragment.appendChild(status_user_node)
-		fragment.appendChild(status_admin_node)
+			fragment.appendChild(status_admin_node)
+		}
 
 
 	return fragment

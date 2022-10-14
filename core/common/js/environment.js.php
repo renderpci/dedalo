@@ -138,13 +138,14 @@ session_write_close();
 
 // plain global vars
 	$plain_vars = [
-		'DEDALO_CORE_URL'						=> DEDALO_CORE_URL,
-		'DEDALO_ROOT_WEB'						=> DEDALO_ROOT_WEB,
-		'DEDALO_TOOLS_URL'						=> DEDALO_TOOLS_URL,
-		'SHOW_DEBUG'							=> SHOW_DEBUG,
-		'SHOW_DEVELOPER'						=> SHOW_DEVELOPER,
-		'DEVELOPMENT_SERVER'					=> DEVELOPMENT_SERVER,
-		'DEDALO_SECTION_ID_TEMP'				=> DEDALO_SECTION_ID_TEMP,
+		'DEDALO_ENVIRONMENT'		=> true,
+		'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
+		'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
+		'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
+		'SHOW_DEBUG'				=> SHOW_DEBUG,
+		'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
+		'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
+		'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
 		// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 		'DD_TIPOS' => [
 			'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
@@ -162,11 +163,12 @@ session_write_close();
 // headers
 	header('Content-type: application/javascript; charset=utf-8');
 	// cache optional
-		$seconds_to_cache = 3600;
-		$ts = gmdate("D, d M Y H:i:s", time() + $seconds_to_cache) . ' GMT';
-		header("Expires: $ts");
-		header("Pragma: cache");
-		header("Cache-Control: max-age=$seconds_to_cache");
+		// $seconds_to_cache = 3600;
+		// $ts = gmdate('D, d M Y H:i:s', time() + $seconds_to_cache) . ' GMT';
+		// header("Expires: $ts");
+		// header("Pragma: cache");
+		// // header("Cache-Control: max-age=$seconds_to_cache");
+		// header("Cache-Control: Cache-Control: stale-while-revalidate=$seconds_to_cache");
 ?>
 "use strict";
 const page_globals=<?php

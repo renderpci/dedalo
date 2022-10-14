@@ -405,6 +405,7 @@
     "apply": "<mark>Aplicar<\/mark>",
     "shift_key": "<mark>Mayúsculas<\/mark>",
     "created": "<mark>creado<\/mark>",
+    "default_lang_of_file_to_import": "<mark>Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:<\/mark>",
     "days": "<mark>días<\/mark>",
     "months": "<mark>meses<\/mark>",
     "year": "<mark>año<\/mark>",
