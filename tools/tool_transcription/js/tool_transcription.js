@@ -112,7 +112,6 @@ tool_transcription.prototype.build = async function(autoload=false) {
 			}
 			self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
 		}
-		console.log('self.media_component:', self.media_component);
 
 		// relation_list. load_relation_list. Get the relation list.
 			// This is used to build a select element to allow
