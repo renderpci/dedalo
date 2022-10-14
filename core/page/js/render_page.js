@@ -158,7 +158,11 @@ const get_content_data = async function(self) {
 						// render instance
 						current_instance.render()
 						.then(function(node){
-							container_placeholder.replaceWith(node);
+							if (node) {
+								container_placeholder.replaceWith(node);
+							}else{
+								console.log('Error. page element render fails. Element:', current_instance);
+							}
 						})
 					})
 			}//end for (let i = 0; i < elements_length; i++)
