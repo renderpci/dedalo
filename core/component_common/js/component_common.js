@@ -183,7 +183,9 @@ component_common.prototype.build = async function(autoload=false){
 			data	: [],
 			context	: []
 		}
-		self.data = self.data || {}
+		self.data = self.data || {
+			value : null
+		}
 		// changed_data. Set as empty array always
 		self.data.changed_data = []
 
@@ -387,7 +389,9 @@ component_common.prototype.save = async function(changed_data) {
 
 				const changed_data_item = update_items[i]
 
-				const original_value	= self.db_data.value[changed_data_item.key]
+				const original_value	= self.db_data.value && self.db_data.value[changed_data_item.key]
+					? self.db_data.value[changed_data_item.key]
+					: null
 				const new_value			= changed_data_item.value
 
 				if (is_equal(new_value, original_value)) {
