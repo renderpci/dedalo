@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_AV
+* RENDER_VIEW_MINI
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_av = function() {
+export const render_view_mini = function() {
 
 	return true
-}//end  render_mini_component_av
+}//end  render_view_mini
 
 
 
@@ -25,7 +25,7 @@ export const render_mini_component_av = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_av.prototype.mini = async function() {
+render_view_mini.mini = async function() {
 
 	const self = this
 
@@ -41,7 +41,7 @@ render_mini_component_av.prototype.mini = async function() {
 
 	// image
 		ui.create_dom_element({
-			element_type	: "img",
+			element_type	: 'img',
 			src				: url,
 			parent			: wrapper
 		})

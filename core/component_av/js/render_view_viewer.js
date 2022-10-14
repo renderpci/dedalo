@@ -6,29 +6,27 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_content_data_player} from '../../component_av/js/render_player_component_av.js'
+	import {get_content_data_player} from './render_view_player.js'
 
 
 
 /**
-* RENDER_VIEWER_COMPONENT_AV
+* RENDER_VIEW_VIEWER
 * Manage the components logic and appearance in client side
 */
-export const render_viewer_component_av = function() {
+export const render_view_viewer = function() {
 
 	return true
-}//end render_viewer_component_av
+}//end render_view_viewer
 
 
 
 /**
-* VIEWER
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_viewer_component_av.prototype.viewer = async function() {
-
-	const self = this
+render_view_viewer.render = async function(self, options) {
 
 	// short vars
 		const datalist = self.data.datalist || []
@@ -59,7 +57,10 @@ render_viewer_component_av.prototype.viewer = async function() {
 		}
 
 	// media_component player
-		const media_player_node = get_content_data_player(self)
+		const media_player_node = get_content_data_player({
+			self					: self,
+			with_control_buttons	: false
+		})
 		wrapper.appendChild(media_player_node)
 
 	// button download
@@ -92,7 +93,7 @@ render_viewer_component_av.prototype.viewer = async function() {
 
 
 	return wrapper
-}//end viewer
+}//end render
 
 
 
@@ -110,9 +111,9 @@ const download_original_av = function (options) {
 
 	// Create a temporal 'a' element and click it
 	const download_image_temp = document.createElement('a');
-		download_image_temp.href = download_url
-		download_image_temp.setAttribute('download', name);
-		download_image_temp.style.display = 'none';
+		  download_image_temp.href = download_url
+		  download_image_temp.setAttribute('download', name);
+		  download_image_temp.style.display = 'none';
 	document.body.appendChild(download_image_temp);
 	// do click to the image to be downloaded
 	download_image_temp.click();
