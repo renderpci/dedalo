@@ -1,0 +1,168 @@
+{
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "51",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "inf": "Fecha de creación [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 6,
+              "hour": 17,
+              "time": 65002584908,
+              "year": 2022,
+              "month": 6,
+              "minute": 35,
+              "second": 8
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "inf": "Fecha de modificación [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 6,
+              "hour": 17,
+              "time": 65002585176,
+              "year": 2022,
+              "month": 6,
+              "minute": 39,
+              "second": 36
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "inf": "Descripción [component_text_area]",
+      "dato": {
+        "lg-cat": [
+          "Crea i edita els subtítols d'una transcripció per utilitzar-los en format VTT"
+        ],
+        "lg-ell": [
+          "Δημιουργήστε και επεξεργαστείτε τους υπότιτλους μιας μεταγραφής για να τους χρησιμοποιήσετε σε μορφή VTT"
+        ],
+        "lg-eng": [
+          "Create and edit the subtitles of a transcript to use them in VTT format"
+        ],
+        "lg-fra": [
+          "Créer et éditer les sous-titres d'une transcription pour les utiliser au format VTT"
+        ],
+        "lg-ita": [
+          "Crea e modifica i sottotitoli di una trascrizione per usarli in formato VTT"
+        ],
+        "lg-spa": [
+          "Crea y edita los subtítulos de una transcripción para utilizarlos en formato VTT"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Etiqueta [component_input_text]",
+      "dato": {
+        "lg-cat": [
+          "Subtítols"
+        ],
+        "lg-ell": [
+          "Υπότιτλος"
+        ],
+        "lg-eng": [
+          "Subtitles"
+        ],
+        "lg-fra": [
+          "Sous-titre"
+        ],
+        "lg-ita": [
+          "Sottotitolo"
+        ],
+        "lg-spa": [
+          "Subtítulos"
+        ]
+      }
+    },
+    "dd1326": {
+      "inf": "Nombre de la herramienta [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_subtitles"
+        ]
+      }
+    },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1350": {
+      "inf": "Afecta a tipos: [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            "rsc36"
+          ]
+        ]
+      }
+    }
+  },
+  "section_id": 9,
+  "created_date": "2022-06-06 17:35:08",
+  "section_tipo": "dd1340",
+  "modified_date": "2022-06-06 17:39:36",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": -1
+}
