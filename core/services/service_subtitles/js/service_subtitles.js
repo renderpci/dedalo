@@ -58,7 +58,7 @@ service_subtitles.prototype.init = async function(options) {
 		const common_init = await common.prototype.init.call(this, options);
 
 	// fix
-		self.model				= options.model || 'service_subtitles'
+		self.model = options.model || 'service_subtitles'
 
 	// events
 
