@@ -10,7 +10,6 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_edit_component_info} from '../../component_info/js/render_edit_component_info.js'
 	import {render_list_component_info} from '../../component_info/js/render_list_component_info.js'
-	import {render_mini_component_info} from '../../component_info/js/render_mini_component_info.js'
 
 
 
@@ -51,21 +50,10 @@ export const component_info = function(){
 	component_info.prototype.refresh				= common.prototype.refresh
 	component_info.prototype.destroy				= common.prototype.destroy
 
-	// change data
-	// component_info.prototype.save				= component_common.prototype.save
-	// component_info.prototype.update_data_value	= component_common.prototype.update_data_value
-	// component_info.prototype.update_datum		= component_common.prototype.update_datum
-	// component_info.prototype.change_value		= component_common.prototype.change_value
-	// component_info.prototype.set_changed_data	= component_common.prototype.set_changed_data
-	// component_info.prototype.build_rqo			= common.prototype.build_rqo
-
 	// render
-	component_info.prototype.mini					= render_mini_component_info.prototype.mini
 	component_info.prototype.list					= render_list_component_info.prototype.list
 	component_info.prototype.edit					= render_edit_component_info.prototype.edit
-	// component_info.prototype.edit_in_list		= render_component_info.prototype.edit
 	component_info.prototype.search					= render_edit_component_info.prototype.edit
-	// component_info.prototype.change_mode			= component_common.prototype.change_mode
 
 
 

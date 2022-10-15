@@ -1,35 +1,36 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
 
 // imports
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* RENDER_LIST_VIEW_DEFAULT
+* VIEW_DEFAULT_LIST_EMAIL
 * Manage the components logic and appearance in client side
 */
-export const render_list_view_default = function() {
+export const view_default_list_email = function() {
 
 	return true
-}//end render_list_view_default
+}//end view_default_list_email
 
 
 
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @return DOM node
 */
-render_list_view_default.render = async function(self, options) {
+view_default_list_email.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || ''
-		const value_string	= value
+		const value			= data.value || []
+		const value_string	= value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -42,7 +43,6 @@ render_list_view_default.render = async function(self, options) {
 				true // autoload. On true, load data from API when user click to edit_in_list
 			)
 		})
-
 
 	return wrapper
 }//end list

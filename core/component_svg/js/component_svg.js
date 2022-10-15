@@ -6,9 +6,8 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_edit_component_svg} from '../../component_svg/js/render_edit_component_svg.js'
-	import {render_list_component_svg} from '../../component_svg/js/render_list_component_svg.js'
-	import {render_mini_component_svg} from '../../component_svg/js/render_mini_component_svg.js'
+	import {render_edit_component_svg} from './render_edit_component_svg.js'
+	import {render_list_component_svg} from './render_list_component_svg.js'
 
 
 
@@ -63,6 +62,5 @@ export const component_svg = function(){
 
 
 	// render
-	component_svg.prototype.mini				= render_mini_component_svg.prototype.mini
 	component_svg.prototype.list				= render_list_component_svg.prototype.list
 	component_svg.prototype.edit				= render_edit_component_svg.prototype.edit

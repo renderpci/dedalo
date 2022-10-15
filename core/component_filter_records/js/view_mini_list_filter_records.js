@@ -10,24 +10,22 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_INFO
-* Manages the component's logic and appearance in client side
+* view_mini_list_filter_records
+* Manage the components logic and appearance in client side
 */
-export const render_mini_component_info = function() {
+export const view_mini_list_filter_records = function() {
 
 	return true
-}//end render_mini_component_info
+}//end view_mini_list_filter_records
 
 
 
 /**
 * MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node wrapper
+* Render node to be used in current mode
+* @return DOM node
 */
-render_mini_component_info.prototype.mini = async function() {
-
-	const self = this
+view_mini_list_filter_records.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data
@@ -37,11 +35,13 @@ render_mini_component_info.prototype.mini = async function() {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = value.join(' | ')
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper
-}//end mini
+}//end min
+
+

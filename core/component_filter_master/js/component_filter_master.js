@@ -56,7 +56,6 @@ export const component_filter_master = function(){
 	component_filter_master.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render (from component_filter_master)
-	component_filter_master.prototype.mini				= component_filter.prototype.mini
 	component_filter_master.prototype.list				= component_filter.prototype.list
 	component_filter_master.prototype.edit				= component_filter.prototype.edit
 	component_filter_master.prototype.edit_in_list		= component_filter.prototype.edit

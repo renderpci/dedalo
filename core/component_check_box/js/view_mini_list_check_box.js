@@ -3,20 +3,21 @@
 
 
 
-// imports
+// import
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* RENDER_MINI_COMPONENT_GEOLOCATION
-* Manages the component's logic and appearance in client side
+* VIEW_MINI_LIST_CHECK_BOX
+* Manage the components logic and appearance in client side
 */
-export const render_mini_component_geolocation = function() {
+export const view_mini_list_check_box = function() {
 
 	return true
-}//end render_mini_component_geolocation
+}//end view_mini_list_check_box
+
 
 
 /**
@@ -24,11 +25,10 @@ export const render_mini_component_geolocation = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_geolocation.prototype.mini = async function() {
+view_mini_list_check_box.render = async function(self, options) {
 
-	const self = this
 
-	// short vars
+	// Options vars
 		const data	= self.data
 		const value	= data.value || []
 
@@ -36,7 +36,7 @@ render_mini_component_geolocation.prototype.mini = async function() {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(' | ')
+		const value_string = value.join(self.context.fields_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
@@ -44,3 +44,5 @@ render_mini_component_geolocation.prototype.mini = async function() {
 
 	return wrapper
 }//end mini
+
+

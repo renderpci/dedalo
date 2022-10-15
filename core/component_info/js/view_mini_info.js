@@ -10,40 +10,36 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_EMAIL
-* Manage the components logic and appearance in client side
+* VIEW_MINI_INFO
+* Manages the component's logic and appearance in client side
 */
-export const render_mini_component_email = function() {
+export const view_mini_info = function() {
 
 	return true
-}//end render_mini_component_email
+}//end view_mini_info
 
 
 
 /**
 * MINI
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return DOM node wrapper
 */
-render_mini_component_email.prototype.mini = async function() {
-
-	const self = this
+view_mini_info.render = async function(self, options) {
 
 	// short vars
-		const data = self.data
+		const data	= self.data
+		const value	= data.value || []
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
-			autoload : false
-		})
+		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = data.value.join(self.context.fields_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
+
 	return wrapper
 }//end mini
-
-

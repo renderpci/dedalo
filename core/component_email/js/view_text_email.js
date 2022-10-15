@@ -3,18 +3,14 @@
 
 
 
-// imports
-import {get_ar_raw_data_value} from './render_edit_component_date.js'
-
-
 /**
-* RENDER_VIEW_TEXT
+* VIEW_TEXT_EMAIL
 * Manages the component's logic to get the values of the data without DOM elements or structure
 */
-export const render_view_text = function() {
+export const view_text_email = function() {
 
 	return true
-}//end render_view_text
+}//end view_text_email
 
 
 
@@ -23,11 +19,14 @@ export const render_view_text = function() {
 * Output component value to use as raw text
 * @return DOM textNode text_node
 */
-render_view_text.render = async function(self, options) {
+view_text_email.render = async function(self, options) {
 
-		const ar_value = get_ar_raw_data_value(self)
 
-		const value_string = ar_value.join(self.context.fields_separator)
+	// short vars
+		const data = self.data
+
+	// Value as string
+		const value_string = data.value.join(self.context.fields_separator)
 
 		const text_node = document.createTextNode(value_string)
 

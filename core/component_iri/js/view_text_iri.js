@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_VIEW_text
+* VIEW_TEXT_IRI
 * Manage the components logic and appearance in client side
 */
-export const render_view_text = function() {
+export const view_text_iri = function() {
 
 	return true
-}//end render_view_text
+}//end view_text_iri
 
 
 
@@ -26,7 +26,7 @@ export const render_view_text = function() {
 * Output component value to use as raw text
 * @return DOM text node text_node
 */
-render_view_text.render = async function(self, options) {
+view_text_iri.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data || {}

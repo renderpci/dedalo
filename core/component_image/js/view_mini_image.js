@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_IMAGE
+* VIEW_MINI_IMAGE
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_image = function() {
+export const view_mini_image = function() {
 
 	return true
-}//end render_mini_component_image
+}//end view_mini_image
 
 
 
@@ -25,9 +25,7 @@ export const render_mini_component_image = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_image.prototype.mini = function() {
-
-	const self = this
+view_mini_image.prototype.render = function(self, options) {
 
 	// short vars
 		const datalist = self.data.datalist || []
