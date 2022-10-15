@@ -10,9 +10,9 @@
 	// import {when_in_dom} from '../../common/js/events.js'
 	// import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {render_list_view_default} from './render_list_view_default.js'
-	import {render_view_mini} from './render_view_mini.js'
-	import {render_view_text} from './render_view_text.js'
+	import {view_default_list_section_record} from './view_default_list_section_record.js'
+	import {view_mini_section_record} from './view_mini_section_record.js'
+	import {view_text_section_record} from './view_text_section_record.js'
 
 
 /**
@@ -42,16 +42,15 @@ render_list_section_record.prototype.list = async function(options={}) {
 	switch(view) {
 
 		case 'mini':
-			return render_view_mini.render(self, options)
+			return view_mini_section_record.render(self, options)
 
 		case 'text':
-			return render_view_text.render(self, options)
+			return view_text_section_record.render(self, options)
 
 		case 'default':
 		default:
-			return render_list_view_default.render(self, options)
+			return view_default_list_section_record.render(self, options)
 	}
 
 	return null
 }//end render_list_section_record.prototype.list
-
