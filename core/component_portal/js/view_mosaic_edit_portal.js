@@ -30,21 +30,21 @@
 
 
 /**
-* RENDER_EDIT_VIEW_MOSAIC
+* VIEW_MOSAIC_EDIT_PORTAL
 * Manage the components logic and appearance in client side
 */
-export const render_edit_view_mosaic = function() {
+export const view_mosaic_edit_portal = function() {
 
 	return true
-}//end render_edit_view_mosaic
+}//end view_mosaic_edit_portal
 
 
 
 /**
-* RENDER_EDIT_VIEW_MOSAIC
+* view_mosaic_edit_portal
 * Manages the component's logic and appearance in client side
 */
-render_edit_view_mosaic.render = async function(self, options) {
+view_mosaic_edit_portal.render = async function(self, options) {
 	// options
 		const render_level 	= options.render_level || 'full'
 
@@ -570,7 +570,7 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 * RENDER_COLUMN_ID
 * @return DocumentFragment
 */
-	// render_edit_view_mosaic.render_column_id = function(options){
+	// view_mosaic_edit_portal.render_column_id = function(options){
 
 	// 	// options
 	// 		const self			= options.caller
