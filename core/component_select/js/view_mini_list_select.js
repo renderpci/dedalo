@@ -9,22 +9,22 @@
 
 
 /**
-* VIEW_MINI_SELECT
+* VIEW_MINI_LIST_SELECT
 * Manages the component's logic and appearance in client side
 */
-export const view_mini_select = function() {
+export const view_mini_list_select = function() {
 
 	return true
-}//end view_mini_select
+}//end view_mini_list_select
 
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_mini_select.prototype.mini = async function(self, options) {
+view_mini_list_select.prototype.render = async function(self, options) {
 
 	// short vars
 		const value_string	= self.data.value || ''
@@ -36,4 +36,4 @@ view_mini_select.prototype.mini = async function(self, options) {
 
 
 	return wrapper
-}//end mini
+}//end render

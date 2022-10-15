@@ -21,11 +21,11 @@ export const view_default_list_select = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
 * @return DOM node
 */
-view_default_list_select.list = async function(self, options) {
+view_default_list_select.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
@@ -46,4 +46,4 @@ view_default_list_select.list = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
