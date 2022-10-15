@@ -14,13 +14,13 @@
 
 
 /**
-* RENDER_LIST_VIEW_DEFAULT
+* VIEW_DEFAULT_LIST_SECTION_RECORD
 * Manage the components logic and appearance in client side
 */
-export const render_list_view_default = function() {
+export const view_default_list_section_record = function() {
 
 	return true
-}//end render_list_view_default
+}//end view_default_list_section_record
 
 
 
@@ -30,7 +30,7 @@ export const render_list_view_default = function() {
 * @param array ar_instances
 * @return Promise DOM node wrapper
 */
-render_list_view_default.render = async function(self, options) {
+view_default_list_section_record.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -265,7 +265,7 @@ render_list_view_default.render = async function(self, options) {
 
 
 	return wrapper
-}//end render_list_view_default.prototype.list
+}//end render
 
 
 

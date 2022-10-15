@@ -6,17 +6,17 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_column_node_callback} from './render_list_view_default.js'
+	import {render_column_node_callback} from './view_default_list_section_record.js'
 
 
 /**
-* RENDER_VIEW_TEXT
+* VIEW_TEXT_SECTION_RECORD
 * Manage the components logic and appearance in client side
 */
-export const render_view_text = function() {
+export const view_text_section_record = function() {
 
 	return true
-}//end render_view_text
+}//end view_text_section_record
 
 
 
@@ -27,7 +27,7 @@ export const render_view_text = function() {
 * @param object options
 * @return DocumentFragment
 */
-render_view_text.render = async function(self, options) {
+view_text_section_record.render = async function(self, options) {
 
 	const render_level = options.render_level || 'full'
 
