@@ -10,13 +10,13 @@
 
 
 /**
-* render_mini_component_filter
+* view_mini_list_filter
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_filter = function() {
+export const view_mini_list_filter = function() {
 
 	return true
-}//end render_mini_component_filter
+}//end view_mini_list_filter
 
 
 
@@ -25,9 +25,7 @@ export const render_mini_component_filter = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_filter.prototype.mini = function() {
-
-	const self = this
+view_mini_list_filter.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data
