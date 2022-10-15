@@ -12,13 +12,13 @@
 
 
 /**
-* RENDER_EDIT_VIEW_DEFAULT
+* VIEW_DEFAULT_EDIT_IRI
 * Manage the components logic and appearance in client side
 */
-export const render_edit_view_default = function() {
+export const view_default_edit_iri = function() {
 
 	return true
-}//end render_edit_view_default
+}//end view_default_edit_iri
 
 
 
@@ -27,7 +27,7 @@ export const render_edit_view_default = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node
 */
-render_edit_view_default.render = async function(self, options) {
+view_default_edit_iri.render = async function(self, options) {
 
 	self.data.value = self.data.value || []
 
