@@ -1105,7 +1105,7 @@ component_common.prototype.get_ar_instances = async function(options={}){
 /**
 * CHANGE_MODE
 * Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
-* Create a new instance in the new mode (for example, from list to edit_in_list)
+* Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
 * Render a fresh full element node in the new mode
 * Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
@@ -1137,17 +1137,11 @@ component_common.prototype.change_mode = async function(options) {
 		const current_section_id	= self.section_id
 		const section_lang			= self.section_lang
 		const old_node				= self.node
+		const id_variant			= self.id_variant
 
 	// set the new view to context
 		current_context.view = view
 		current_context.mode = mode
-
-	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
-		self.destroy(
-			true, // delete_self
-			true, // delete_dependences
-			false // remove_dom
-		)
 
 	// element. Create the instance options for build it. The instance is reflect of the context and section_id
 		const new_instance = await instances.get_instance({
@@ -1162,7 +1156,8 @@ component_common.prototype.change_mode = async function(options) {
 			type			: current_context.type,
 			context			: current_context,
 			data			: current_data,
-			datum			: current_datum
+			datum			: current_datum,
+			id_variant 		: id_variant
 		})
 
 	// build
@@ -1184,6 +1179,12 @@ component_common.prototype.change_mode = async function(options) {
 			}
 		}
 
+	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
+		self.destroy(
+			true, // delete_self
+			true, // delete_dependences
+			true // remove_dom
+		)
 
 	return true
 }//end change_mode
