@@ -602,6 +602,8 @@ render_list_section.render_column_id = function(options){
 
 /**
 * GET_BUTTONS
+* @param object self
+* 	area instance
 * @return DOM node fragment
 */
 const get_buttons = function(self) {
