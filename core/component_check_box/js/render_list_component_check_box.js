@@ -4,9 +4,9 @@
 
 
 // import
-	import {render_list_view_default} from './render_list_view_default.js'
-	import {render_view_mini} from './render_view_mini.js'
-	import {render_view_text} from './render_view_text.js'
+	import {view_default_list_check_box} from './view_default_list_check_box.js'
+	import {view_mini_list_check_box} from './view_mini_list_check_box.js'
+	import {view_text_list_check_box} from './view_text_list_check_box.js'
 
 
 
@@ -36,14 +36,14 @@ render_list_component_check_box.prototype.list = async function(options) {
 	switch(view) {
 
 		case 'mini':
-			return render_view_mini.render(self, options)
+			return view_mini_list_check_box.render(self, options)
 
 		case 'text':
-			return render_view_text.render(self, options)
+			return view_text_list_check_box.render(self, options)
 
 		case 'default':
 		default:
-			return render_list_view_default.render(self, options)
+			return view_default_list_check_box.render(self, options)
 	}
 
 	return null

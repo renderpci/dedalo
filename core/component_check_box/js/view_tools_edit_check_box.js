@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -6,18 +6,18 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {strip_tags} from '../../common/js/utils/index.js'
 	import {get_buttons} from './render_edit_component_check_box.js'
 
 
-
 /**
-* RENDER_EDIT_VIEW_DEFAULT
+* VIEW_TOOLS_EDIT_CHECK_BOX
 * Manage the components logic and appearance in client side
 */
-export const render_edit_view_default = function() {
+export const view_tools_edit_check_box = function() {
 
 	return true
-}//end render_edit_view_default
+}//end view_tools_edit_check_box
 
 
 
@@ -26,13 +26,13 @@ export const render_edit_view_default = function() {
 * Render node for use in edit
 * @return DOM node
 */
-render_edit_view_default.render = async function(self, options) {
+view_tools_edit_check_box.render = async function(self, options) {
 
-	// options
+	// render_level
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -45,6 +45,7 @@ render_edit_view_default.render = async function(self, options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		wrapper.classList.add('view_'+self.context.view)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -55,11 +56,12 @@ render_edit_view_default.render = async function(self, options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @param instance self
+* GET_CONTENT_DATA
+* Render content_data node with all included contents
+* @param instance object self
 * @return DOM node content_data
 */
-export const get_content_data_edit = function(self) {
+const get_content_data = function(self) {
 
 	// short vars
 		const datalist = self.data.datalist || []
@@ -73,7 +75,7 @@ export const get_content_data_edit = function(self) {
 	// build options
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			const input_element_node = get_input_element_edit(i, datalist[i], self)
+			const input_element_node = get_input_element(i, datalist[i], self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -81,22 +83,24 @@ export const get_content_data_edit = function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
 /**
-* GET_INPUT_ELEMENT_EDIT
+* GET_INPUT_ELEMENT
 * @return DOM node content_value
 */
-const get_input_element_edit = (i, current_value, self) => {
+const get_input_element = (i, current_value, self) => {
 
-	const value				= self.data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value
-	const datalist_value	= datalist_item.value
-	const label				= datalist_item.label
-	const section_id		= datalist_item.section_id
+	// short vars
+		const data				= self.data || {}
+		const value				= data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const datalist_value	= datalist_item.value
+		const label				= datalist_item.label // string e.g. 'Tool posterframe | <mark>tool_posterframe</mark>'
+		const section_id		= datalist_item.section_id
 
 	// create content_value
 		const content_value = ui.create_dom_element({
@@ -105,14 +109,17 @@ const get_input_element_edit = (i, current_value, self) => {
 		})
 
 	// label
-		// const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
-		const option_label = ui.create_dom_element({
+		const label_parts		= label.split(' | ')
+		const tool_label		= label_parts[0]
+		const tool_name			= strip_tags(label_parts[1])
+		// const label_string	= (SHOW_DEBUG===true) ? tool_label + ` [${tool_name} - ${section_id}]` : tool_label
+		const option_label	= ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: label,
+			inner_html		: tool_label,
 			parent			: content_value
 		})
 
-	// input_checkbox
+	// input checkbox
 		const input_checkbox = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox'
@@ -126,11 +133,6 @@ const get_input_element_edit = (i, current_value, self) => {
 		})
 		input_checkbox.addEventListener('change', function(){
 
-			// add style modified to wrapper node
-				if (!self.node.classList.contains('modified')) {
-					self.node.classList.add('modified')
-				}
-
 			const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
 			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
 			const changed_value	= (action==='insert') ? datalist_value : null
@@ -140,6 +142,8 @@ const get_input_element_edit = (i, current_value, self) => {
 				key		: changed_key,
 				value	: changed_value
 			})]
+			// fix instance changed_data
+				self.data.changed_data = changed_data
 			// force to save on every change
 				self.change_value({
 					changed_data	: changed_data,
@@ -152,8 +156,7 @@ const get_input_element_edit = (i, current_value, self) => {
 					self.selected_key = i
 				})
 		})//end change event
-
-		// checked option set on match
+		// checked input_checkbox set on match
 		for (let j = 0; j < value_length; j++) {
 			if (value[j] && datalist_value &&
 				value[j].section_id===datalist_value.section_id &&
@@ -167,51 +170,19 @@ const get_input_element_edit = (i, current_value, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'developer_info show_on_active',
-			text_content	: `[${section_id}]`,
+			text_content	: `[${tool_name} - ${section_id}]`,
 			parent			: content_value
 		})
 
-	// button_edit
-		// const button_edit = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button edit show_on_active',
-		// 	parent			: content_value
-		// })
-		// button_edit.addEventListener("click", function(e){
-		// 	e.stopPropagation()
-		// 	try {
-		// 		// target_section
-		// 			const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
-		// 			const target_section_tipo = sqo.section_tipo[0].tipo
-		// 			console.log("+++ sqo:",sqo);
-		// 		// navigation
-		// 			const user_navigation_options = {
-		// 				source		: {
-		// 					action			: 'search',
-		// 					model			: 'section',
-		// 					tipo			: target_section_tipo,
-		// 					section_tipo	: target_section_tipo,
-		// 					mode			: 'edit',
-		// 					lang			: self.lang
-		// 				},
-		// 				sqo : {
-		// 					section_tipo		: [{tipo : target_section_tipo}],
-		// 					filter				: null,
-		// 					limit				: 1,
-		// 					filter_by_locators	: [{
-		// 						section_tipo	: target_section_tipo,
-		// 						section_id		: section_id
-		// 					}]
-		// 				}
-		// 			}
-		// 		event_manager.publish('user_navigation', user_navigation_options)
-		// 	} catch (error) {
-		// 		console.error(error)
-		// 	}
-		// })
+	// tool_icon
+		const icon_url	= DEDALO_TOOLS_URL + '/' + tool_name + '/img/icon.svg'
+		const tool_icon	= ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'tool_icon',
+			src				: icon_url
+		})
+		content_value.prepend(tool_icon)
 
 
 	return content_value
-}//end get_input_element_edit
-
-
+}//end get_input_element
