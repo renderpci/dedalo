@@ -24,7 +24,7 @@ export const view_mini_section_id = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_mini_section_id.prototype.render = function(self, options) {
+view_mini_section_id.render = function(self, options) {
 
 	// short vars
 		const data = self.data
