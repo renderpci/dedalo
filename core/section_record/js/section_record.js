@@ -7,9 +7,9 @@
 	//import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
-	import {render_list_section_record} from '../../section_record/js/render_list_section_record.js'
-	import {render_edit_section_record} from '../../section_record/js/render_edit_section_record.js'
 	import * as instances from '../../common/js/instances.js'
+	import {render_list_section_record} from './render_list_section_record.js'
+	import {render_edit_section_record} from './render_edit_section_record.js'
 
 
 
