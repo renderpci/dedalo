@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, JSONEditor */
+ /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -6,21 +6,17 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {
-		get_value_string
-	}
-	from '../../component_json/js/render_list_component_json.js'
 
 
 
 /**
-* RENDER_MINI_COMPONENT_JSON
+* VIEW_MINI_NUMBER
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_json = function() {
+export const view_mini_number = function() {
 
 	return true
-}//end render_mini_component_json
+}//end view_mini_number
 
 
 
@@ -29,12 +25,13 @@ export const render_mini_component_json = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_json.prototype.mini = function() {
+view_mini_number.render = async function(self, options) {
 
-	const self = this
+	// short vars
+		const data = self.data
 
-	// value_string
-		const value_string = get_value_string()
+	// Value as string
+		const value_string = data.value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
