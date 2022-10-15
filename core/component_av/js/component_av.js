@@ -74,7 +74,7 @@ export const component_av = function(){
 	// render
 	component_av.prototype.list					= render_list_component_av.prototype.list
 	component_av.prototype.edit					= render_edit_component_av.prototype.edit
-	component_av.prototype.edit_in_list			= render_edit_component_av.prototype.edit
+	// component_av.prototype.edit_in_list			= render_edit_component_av.prototype.edit
 	component_av.prototype.search				= render_edit_component_av.prototype.search
 	// component_av.prototype.player			= render_player_component_av.prototype.player
 	// component_av.prototype.viewer			= render_viewer_component_av.prototype.viewer
@@ -106,7 +106,6 @@ export const component_av = function(){
 component_av.prototype.go_to_time = function(options) {
 
 	const self = this
-	console.warn('+++++++++++++++++++++++++++++ component_av go_to_time options:', options);
 
 	if (!self.video) {
 		dd_console("Ignored go_to_time call. No self.video is set", 'warning', [self.tipo, self.id]);

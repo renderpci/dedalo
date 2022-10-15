@@ -6,18 +6,18 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_content_data_player} from './render_view_player.js'
+	import {get_content_data_player} from './view_player_edit_av.js'
 
 
 
 /**
-* RENDER_VIEW_VIEWER
+* VIEW_VIEWER_EDIT_AV
 * Manage the components logic and appearance in client side
 */
-export const render_view_viewer = function() {
+export const view_viewer_edit_av = function() {
 
 	return true
-}//end render_view_viewer
+}//end view_viewer_edit_av
 
 
 
@@ -26,7 +26,7 @@ export const render_view_viewer = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_view_viewer.render = async function(self, options) {
+view_viewer_edit_av.render = async function(self, options) {
 
 	// short vars
 		const datalist = self.data.datalist || []
