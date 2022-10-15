@@ -11,7 +11,6 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_json, on_change} from '../../component_json/js/render_edit_component_json.js'
 	import {render_list_component_json} from '../../component_json/js/render_list_component_json.js'
-	import {render_mini_component_json} from '../../component_json/js/render_mini_component_json.js'
 	import {render_search_component_json} from '../../component_json/js/render_search_component_json.js'
 
 
@@ -64,7 +63,6 @@ export const component_json = function(){
 	component_json.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_json.prototype.mini				= render_mini_component_json.prototype.mini
 	component_json.prototype.list				= render_list_component_json.prototype.list
 	component_json.prototype.edit				= render_edit_component_json.prototype.edit
 	component_json.prototype.edit_in_list		= render_edit_component_json.prototype.edit

@@ -9,18 +9,18 @@
 	import {
 		get_value_string
 	}
-	from '../../component_json/js/render_list_component_json.js'
+	from './view_default_list_json.js'
 
 
 
 /**
-* RENDER_MINI_COMPONENT_JSON
+* VIEW_MINI_JSON
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_json = function() {
+export const view_mini_json = function() {
 
 	return true
-}//end render_mini_component_json
+}//end view_mini_json
 
 
 
@@ -29,9 +29,7 @@ export const render_mini_component_json = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_json.prototype.mini = function() {
-
-	const self = this
+view_mini_json.render = async function(self, options) {
 
 	// value_string
 		const value_string = get_value_string()
