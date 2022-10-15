@@ -11,13 +11,13 @@
 
 
 /**
-* RENDER_EDIT_VIEW_DEFAULT
+* VIEW_DEFAULT_EDIT_INPUT_TEXT
 * Manages the component's logic and appearance in client side
 */
-export const render_edit_view_default = function() {
+export const view_default_edit_input_text = function() {
 
 	return true
-}//end render_edit_view_default
+}//end view_default_edit_input_text
 
 
 
@@ -26,7 +26,7 @@ export const render_edit_view_default = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_edit_view_default.render = async function(self, options) {
+view_default_edit_input_text.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
