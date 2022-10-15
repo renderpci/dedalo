@@ -12,13 +12,13 @@
 
 
 /**
-* RENDER_VIEW_DEFAULT
+* VIEW_DEFAULT_EDIT_AV
 * Manages the component's logic and appearance in client side
 */
-export const render_view_default = function() {
+export const view_default_edit_av = function() {
 
 	return true
-}//end  render_view_default
+}//end  view_default_edit_av
 
 
 
@@ -27,7 +27,7 @@ export const render_view_default = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-render_view_default.render = async function(self, options) {
+view_default_edit_av.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -51,7 +51,7 @@ render_view_default.render = async function(self, options) {
 
 
 	return wrapper
-}//end render_view_default
+}//end view_default_edit_av
 
 
 

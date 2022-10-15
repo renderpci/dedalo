@@ -12,13 +12,13 @@
 
 
 /**
-* RENDER_VIEW_COLUMN
+* VIEW_COLUMN_LIST_AV
 * Manages the component's logic and appearance in client side
 */
-export const render_view_column = function() {
+export const view_column_list_av = function() {
 
 	return true
-}//end  render_view_column
+}//end  view_column_list_av
 
 
 
@@ -27,7 +27,7 @@ export const render_view_column = function() {
 * Render node for use in list as column
 * @return DOM node wrapper
 */
-render_view_column.render = async function(self, options) {
+view_column_list_av.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
