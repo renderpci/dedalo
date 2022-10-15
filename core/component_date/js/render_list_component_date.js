@@ -4,9 +4,9 @@
 
 
 // imports
-	import {render_list_view_default} from './render_list_view_default.js'
-	import {render_view_mini} from './render_view_mini.js'
-	import {render_view_text} from './render_view_text.js'
+	import {view_default_list_date} from './view_default_list_date.js'
+	import {view_mini_date} from './view_mini_date.js'
+	import {view_text_date} from './view_text_date.js'
 
 
 /**
@@ -35,14 +35,14 @@ render_list_component_date.prototype.list = async function(options) {
 	switch(view) {
 
 		case 'mini':
-			return render_view_mini.render(self, options)
+			return view_mini_date.render(self, options)
 
 		case 'text':
-			return render_view_text.render(self, options)
+			return view_text_date.render(self, options)
 
 		case 'default':
 		default:
-			return render_list_view_default.render(self, options)
+			return view_default_list_date.render(self, options)
 	}
 
 	return null

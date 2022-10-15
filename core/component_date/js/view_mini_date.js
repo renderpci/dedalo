@@ -8,13 +8,13 @@
 
 
 /**
-* RENDER_VIEW_MINI
+* VIEW_MINI_DATE
 * Manage the components logic and appearance in client side
 */
-export const render_view_mini = function() {
+export const view_mini_date = function() {
 
 	return true
-}//end render_view_mini
+}//end view_mini_date
 
 
 /**
@@ -22,7 +22,7 @@ export const render_view_mini = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_view_mini.render = async function(self, options) {
+view_mini_date.render = async function(self, options) {
 
 	// Value as string
 		const value_string = self.data.value
