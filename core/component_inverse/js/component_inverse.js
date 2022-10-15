@@ -8,7 +8,6 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_inverse} from '../../component_inverse/js/render_edit_component_inverse.js'
 	import {render_list_component_inverse} from '../../component_inverse/js/render_list_component_inverse.js'
-	import {render_mini_component_inverse} from '../../component_inverse/js/render_mini_component_inverse.js'
 
 
 export const component_inverse = function(){
@@ -47,7 +46,6 @@ export const component_inverse = function(){
 
 	// render
 	component_inverse.prototype.render		= common.prototype.render
-	component_inverse.prototype.mini		= render_mini_component_inverse.prototype.mini
 	component_inverse.prototype.list		= render_list_component_inverse.prototype.list
 	component_inverse.prototype.edit		= render_edit_component_inverse.prototype.edit
 	component_inverse.prototype.search		= render_edit_component_inverse.prototype.edit
