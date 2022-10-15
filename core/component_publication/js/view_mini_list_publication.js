@@ -10,22 +10,22 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_PUBLICATION
+* VIEW_MINI_LIST_PUBLICATION
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_publication = function() {
+export const view_mini_list_publication = function() {
 
 	return true
-}//end render_mini_component_publication
+}//end view_mini_list_publication
 
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used in current mode
 * @return DOM node
 */
-render_mini_component_publication.prototype.mini = async function() {
+view_mini_list_publication.render = async function() {
 
 	const self = this
 
@@ -38,4 +38,4 @@ render_mini_component_publication.prototype.mini = async function() {
 		})
 
 	return wrapper
-}//end mini
+}//end render
