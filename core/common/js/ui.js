@@ -363,27 +363,35 @@ export const ui = {
 				]
 				content_data.classList.add(...ar_css)
 
-			// button close
-				if(		button_close!==null // if null is received instead undefined, avoid to add the button
-					&&	instance.mode==='edit_in_list' // only in list mode
-					&&	!instance.is_inside_tool // prevent add the button when component is into a tool
-					){
-					const button_close_node = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button close build_content_data',
-						parent			: content_data
-					})
-					button_close_node.addEventListener('click', function(e){
-						e.stopPropagation()
-						// change mode destroy current instance and render a fresh full element node in the new mode
-						instance.change_mode('list', autoload)
-					})
-				}
-
 			return content_data
 		},//end build_content_data
 
+		/**
+		* build_button_exit_edit
+		* @param object options = {}
+		* @return DOM node content_data
+		*/
+		build_button_exit_edit : (instance, options={}) => {
 
+			const autoload		= options.autoload || true
+			const target_mode	= options.target_mode || 'list'
+
+			const button_close_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button close button_exit_edit'
+			})
+			button_close_node.addEventListener('click', async function(e){
+				e.stopPropagation()
+				await ui.component.deactivate(instance)
+				// change mode destroy current instance and render a fresh full element node in the new mode
+				instance.change_mode({
+					mode		: target_mode,
+					autoload	: autoload
+				})
+			})
+
+			return button_close_node;
+		},// end build_button_exit_edit
 
 		/**
 		* BUILD_BUTTONS_CONTAINER

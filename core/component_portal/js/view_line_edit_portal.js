@@ -62,6 +62,11 @@ view_line_edit_portal.render = async function(self, options) {
 
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)
+
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+		content_data.appendChild(button_exit_edit)
+
 		if (render_level==='content') {
 			return content_data
 		}
@@ -207,28 +212,6 @@ view_line_edit_portal.render_column_id = function(options){
 		button_edit.addEventListener('click', function(e) {
 			e.stopPropagation()
 
-			// user navigation
-				// const user_navigation_rqo = {
-				// 	caller_id	: self.id,
-				// 	source		: {
-				// 		action			: 'search',
-				// 		model			: 'section',
-				// 		tipo			: section_tipo,
-				// 		section_tipo	: section_tipo,
-				// 		mode			: 'edit',
-				// 		lang			: self.lang
-				// 	},
-				// 	sqo : {
-				// 		section_tipo		: [{tipo : section_tipo}],
-				// 		filter				: null,
-				// 		limit				: 1,
-				// 		filter_by_locators	: [{
-				// 			section_tipo	: section_tipo,
-				// 			section_id		: section_id,
-				// 		}]
-				// 	}
-				// }
-				// event_manager.publish('user_navigation', user_navigation_rqo)
 			// open a new window
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: section_tipo,

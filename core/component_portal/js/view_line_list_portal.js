@@ -65,9 +65,24 @@ view_line_list_portal.render = async function(self, options) {
 		wrapper.content_data = content_data
 
 	// autocomplete
-		// wrapper.addEventListener('click', function() {
-		// 	activate_autocomplete(self, wrapper)
-		// })
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			const change_mode = self.context.properties.with_value
+				&& self.context.properties.with_value.mode !== self.mode
+					? self.context.properties.with_value.mode
+					: self.context.properties.mode
+
+			const change_view = self.context.properties.with_value
+				&& self.context.properties.with_value.view !== self.context.view
+					? self.context.properties.with_value.view
+					: self.context.properties.view
+
+			self.change_mode({
+				mode	: change_mode,
+				view	: change_view
+			})
+		})
 
 
 	return wrapper
@@ -89,9 +104,6 @@ const get_content_data = async function(self, ar_section_record) {
 			const ar_section_record_length	= ar_section_record.length
 			if (ar_section_record_length===0) {
 
-				// no records found case
-				// const row_item = no_records_node()
-				// fragment.appendChild(row_item)
 			}else{
 
 				const ar_promises = []

@@ -80,7 +80,9 @@ component_common.prototype.init = async function(options) {
 	// view_properties. object . Defines useful view custom properties to take control
 	// of some common component behaviors
 		self.view_properties = {
-			disable_save_animation : false
+			disable_save_animation : false,
+			disable_buttons_container: false,
+			disable_value_buttons : false,
 		}
 
 	// pagination info
@@ -212,7 +214,7 @@ component_common.prototype.build = async function(autoload=false){
 					console.error("context not found in api_response:", api_response);
 				}
 				// preserve view across builds
-				if(self.context.view) {
+				if(self.context && self.context.view) {
 					context.view = self.context.view
 				}
 				self.context = context
@@ -1103,7 +1105,7 @@ component_common.prototype.get_ar_instances = async function(options={}){
 /**
 * CHANGE_MODE
 * Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
-* Create a new instance in the new mode (for example, from list to edit_in_list)
+* Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
 * Render a fresh full element node in the new mode
 * Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
@@ -1111,29 +1113,35 @@ component_common.prototype.get_ar_instances = async function(options={}){
 * @param bool autoload
 * @return bool true
 */
-component_common.prototype.change_mode = async function(new_mode, autoload) {
+component_common.prototype.change_mode = async function(options) {
 
 	const self = this
 
+	// options vars
+		// mode check. When mode is undefined, fallback to 'list'. From 'list', change to 'eddit'
+		const mode = (options.mode)
+			? options.mode
+			: self.mode === 'list' ? 'edit' : 'list'
+		const autoload = (typeof options.autoload!=='undefined')
+			? options.autoload
+			: true
+		const view = (options.view)
+			? options.view
+			: self.context.view
+
 	// short vars
+		// set
 		const current_context		= self.context
 		const current_data			= self.data
 		const current_datum			= self.datum
 		const current_section_id	= self.section_id
 		const section_lang			= self.section_lang
 		const old_node				= self.node
+		const id_variant			= self.id_variant
 
-	// new_mode check. When new_mode is undefined, fallback to 'list'. From 'list', change to 'edit_in_list'
-		if(typeof new_mode==='undefined'){
-			new_mode = self.mode==='list' ? 'edit_in_list' : 'list'
-		}
-
-	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
-		self.destroy(
-			true, // delete_self
-			true, // delete_dependences
-			false // remove_dom
-		)
+	// set the new view to context
+		current_context.view = view
+		current_context.mode = mode
 
 	// element. Create the instance options for build it. The instance is reflect of the context and section_id
 		const new_instance = await instances.get_instance({
@@ -1141,14 +1149,15 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 			tipo			: current_context.tipo,
 			section_tipo	: current_context.section_tipo,
 			section_id		: current_section_id,
-			mode			: new_mode,
+			mode			: mode,
 			lang			: current_context.lang,
 			section_lang	: section_lang,
 			parent			: current_context.parent,
 			type			: current_context.type,
 			context			: current_context,
 			data			: current_data,
-			datum			: current_datum
+			datum			: current_datum,
+			id_variant 		: id_variant
 		})
 
 	// build
@@ -1164,12 +1173,18 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		old_node.replaceWith(new_node);
 
 	// active component at end
-		if (new_mode.indexOf('edit')!==-1) {
+		if (mode.indexOf('edit')!==-1) {
 			if (!new_instance.active) {
 				ui.component.activate(new_instance)
 			}
 		}
 
+	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
+		self.destroy(
+			true, // delete_self
+			true, // delete_dependences
+			true // remove_dom
+		)
 
 	return true
 }//end change_mode
