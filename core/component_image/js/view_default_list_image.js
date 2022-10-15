@@ -12,13 +12,13 @@
 
 
 /**
-* RENDER_LIST_VIEW_DEFAULT
+* VIEW_DEFAULT_LIST_IMAGE
 * Manage the components logic and appearance in client side
 */
-export const render_list_view_default = function() {
+export const view_default_list_image = function() {
 
 	return true
-}//end render_list_view_default
+}//end view_default_list_image
 
 
 
@@ -27,7 +27,7 @@ export const render_list_view_default = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_view_default.render = function(self, options) {
+view_default_list_image.render = function(self, options) {
 
 	// short vars
 		const data		= self.data || {}

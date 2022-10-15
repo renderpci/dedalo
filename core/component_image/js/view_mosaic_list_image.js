@@ -11,13 +11,13 @@
 
 
 /**
-* RENDER_LIST_VIEW_MOSAIC
+* view_mosaic_list_image
 * Manage the components logic and appearance in client side
 */
-export const render_list_view_mosaic = function() {
+export const view_mosaic_list_image = function() {
 
 	return true
-}//end render_list_view_mosaic
+}//end view_mosaic_list_image
 
 
 
@@ -26,7 +26,7 @@ export const render_list_view_mosaic = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_view_mosaic.render = function(self, options) {
+view_mosaic_list_image.render = function(self, options) {
 
 	// short vars
 		const data		= self.data || {}
