@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_VIEW_text
+* VIEW_MINI_LIST_CHECK_BOX
 * Manage the components logic and appearance in client side
 */
-export const render_view_text = function() {
+export const view_mini_list_check_box = function() {
 
 	return true
-}//end render_view_text
+}//end view_mini_list_check_box
 
 
 
@@ -25,18 +25,24 @@ export const render_view_text = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_view_text.render = async function(self, options) {
+view_mini_list_check_box.render = async function(self, options) {
+
 
 	// Options vars
 		const data	= self.data
 		const value	= data.value || []
 
+	// wrapper
+		const wrapper = ui.component.build_wrapper_mini(self)
+
 	// Value as string
 		const value_string = value.join(self.context.fields_separator)
 
-		const text_node = document.createTextNode(value_string)
+	// Set value
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
-	return text_node
+
+	return wrapper
 }//end mini
 
 
