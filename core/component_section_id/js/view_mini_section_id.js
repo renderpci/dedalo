@@ -9,24 +9,22 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_SECTION_ID
+* VIEW_MINI_SECTION_ID
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_section_id = function() {
+export const view_mini_section_id = function() {
 
 	return true
-}//end render_mini_component_section_id
+}//end view_mini_section_id
 
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_section_id.prototype.mini = function() {
-
-	const self = this
+view_mini_section_id.prototype.render = function(self, options) {
 
 	// short vars
 		const data = self.data
@@ -40,4 +38,4 @@ render_mini_component_section_id.prototype.mini = function() {
 		})
 
 	return wrapper
-}//end mini
+}//end render
