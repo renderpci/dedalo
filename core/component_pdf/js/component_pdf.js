@@ -7,7 +7,6 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_pdf} from '../../component_pdf/js/render_edit_component_pdf.js'
-	import {render_mini_component_pdf} from '../../component_pdf/js/render_mini_component_pdf.js'
 	import {render_list_component_pdf} from '../../component_pdf/js/render_list_component_pdf.js'
 
 
@@ -48,7 +47,6 @@ export const component_pdf = function(){
 // prototypes assign
 	// lifecycle
 	component_pdf.prototype.init                = component_common.prototype.init
-	//component_pdf.prototype.build				= component_common.prototype.build
 	component_pdf.prototype.render				= common.prototype.render
 	component_pdf.prototype.refresh				= common.prototype.refresh
 	component_pdf.prototype.destroy				= common.prototype.destroy
@@ -62,7 +60,6 @@ export const component_pdf = function(){
 	component_pdf.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_pdf.prototype.mini				= render_mini_component_pdf.prototype.mini
 	component_pdf.prototype.list				= render_list_component_pdf.prototype.list
 	component_pdf.prototype.edit				= render_edit_component_pdf.prototype.edit
 

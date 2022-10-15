@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_PASSWORD
+* VIEW_MINI_PASSWORD
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_password = function() {
+export const view_mini_password = function() {
 
 	return true
-}//end render_mini_component_password
+}//end view_mini_password
 
 
 
@@ -26,9 +26,7 @@ export const render_mini_component_password = function() {
 * It shouldn't be use but just in case someone added it to a list the page would work properly
 * @return DOM node
 */
-render_mini_component_password.prototype.mini = async function() {
-
-	const self = this
+view_mini_password.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data
