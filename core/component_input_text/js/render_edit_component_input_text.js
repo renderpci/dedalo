@@ -5,6 +5,7 @@
 
 // imports
 	import {view_default_edit_input_text} from './view_default_edit_input_text.js'
+	import {view_line_edit_input_text} from './view_line_edit_input_text.js'
 	import {view_text_input_text} from './view_text_input_text.js'
 	import {view_mini_input_text} from './view_mini_input_text.js'
 
@@ -38,6 +39,9 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 
 		case 'text':
 			return view_text_input_text.render(self, options)
+
+		case 'line':
+			return view_line_edit_input_text.render(self, options)
 
 		case 'default':
 		default:
