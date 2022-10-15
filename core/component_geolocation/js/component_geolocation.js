@@ -11,7 +11,6 @@
 	// import langs from '../../common/js/lang.json' assert { type: "json" };
 	import {render_edit_component_geolocation, render_popup_text, render_color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
-	import {render_mini_component_geolocation} from '../../component_geolocation/js/render_mini_component_geolocation.js'
 	import {render_search_component_geolocation} from '../../component_geolocation/js/render_search_component_geolocation.js'
 
 
@@ -65,7 +64,6 @@ export const component_geolocation = function(){
 	component_geolocation.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_geolocation.prototype.mini				= render_mini_component_geolocation.prototype.mini
 	component_geolocation.prototype.list				= render_list_component_geolocation.prototype.list
 	component_geolocation.prototype.edit				= render_edit_component_geolocation.prototype.edit
 	component_geolocation.prototype.edit_in_list		= render_edit_component_geolocation.prototype.edit
