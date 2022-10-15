@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_PDF
+* VIEW_MINI_PDF
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_pdf = function() {
+export const view_mini_pdf = function() {
 
 	return true
-}//end render_mini_component_pdf
+}//end view_mini_pdf
 
 
 
@@ -25,9 +25,7 @@ export const render_mini_component_pdf = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_pdf.prototype.mini = function() {
-
-	const self = this
+view_mini_pdf.render = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
