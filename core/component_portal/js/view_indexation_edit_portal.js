@@ -20,13 +20,13 @@
 
 
 /**
-* RENDER_EDIT_VIEW_indexation
+* VIEW_INDEXATION_EDIT_PORTAL
 * Manage the components logic and appearance in client side
 */
-export const render_edit_view_indexation = function() {
+export const view_indexation_edit_portal = function() {
 
 	return true
-}//end render_edit_view_indexation
+}//end view_indexation_edit_portal
 
 
 
@@ -38,7 +38,7 @@ export const render_edit_view_indexation = function() {
 * @return promise
 * 	DOM node wrapper
 */
-render_edit_view_indexation.render = async function(self, options) {
+view_indexation_edit_portal.render = async function(self, options) {
 
 	// prevents to load autocpmplete service
 		self.autocomplete = false

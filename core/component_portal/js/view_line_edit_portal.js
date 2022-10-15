@@ -21,13 +21,13 @@
 
 
 /**
-* RENDER_EDIT_VIEW_LINE
+* VIEW_LINE_EDIT_PORTAL
 * Manage the components logic and appearance in client side
 */
-export const render_edit_view_line = function() {
+export const view_line_edit_portal = function() {
 
 	return true
-}//end render_edit_view_line
+}//end view_line_edit_portal
 
 
 
@@ -40,7 +40,7 @@ export const render_edit_view_line = function() {
 * @return promise
 * 	DOM node wrapper
 */
-render_edit_view_line.render = async function(self, options) {
+view_line_edit_portal.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -152,7 +152,7 @@ const rebuild_columns_map = async function(self) {
 			id			: 'section_id',
 			label		: 'Id',
 			width 		: 'auto',
-			callback	: render_edit_view_line.render_column_id
+			callback	: view_line_edit_portal.render_column_id
 		})
 
 
@@ -175,7 +175,7 @@ const rebuild_columns_map = async function(self) {
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
 				width 		: 'auto',
-				callback	: render_edit_view_line.render_column_remove
+				callback	: view_line_edit_portal.render_column_remove
 			})
 		}
 
@@ -189,7 +189,7 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DOM DocumentFragment
 */
-render_edit_view_line.render_column_id = function(options){
+view_line_edit_portal.render_column_id = function(options){
 
 	// options
 		const self 			= options.caller
@@ -284,7 +284,7 @@ render_edit_view_line.render_column_id = function(options){
 * @param object options
 * @return DOM DocumentFragment
 */
-render_edit_view_line.render_column_remove = function(options) {
+view_line_edit_portal.render_column_remove = function(options) {
 
 	// options
 		const self				= options.caller

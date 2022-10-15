@@ -14,13 +14,13 @@
 
 
 /**
-* RENDER_LIST_VIEW_LINE
+* VIEW_LINE_LIST_PORTAL
 * Manage the components logic and appearance in client side
 */
-export const render_list_view_line = function() {
+export const view_line_list_portal = function() {
 
 	return true
-}//end render_list_view_line
+}//end view_line_list_portal
 
 
 
@@ -33,7 +33,7 @@ export const render_list_view_line = function() {
 * @return promise
 * 	DOM node wrapper
 */
-render_list_view_line.render = async function(self, options) {
+view_line_list_portal.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
