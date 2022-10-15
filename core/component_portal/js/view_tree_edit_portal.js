@@ -13,10 +13,10 @@
 
 
 /**
-* RENDER_EDIT_VIEW_TABLE
+* VIEW_TREE_EDIT_PORTAL
 * Manage the components logic and appearance in client side
 */
-export const render_edit_view_tree = function() {
+export const view_tree_edit_portal = function() {
 
 	return true
 }//end render_edit_view_table
@@ -25,10 +25,10 @@ export const render_edit_view_tree = function() {
 
 
 /**
-* RENDER_EDIT_VIEW_TREE
+* view_tree_edit_portal
 * Manages the component's logic and appearance in client side
 */
-render_edit_view_tree.render = async function(self, options) {
+view_tree_edit_portal.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
