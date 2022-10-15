@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_VIEW_PLAYER
+* VIEW_PLAYER_EDIT_AV
 * Manages the component's logic and appearance in client side
 */
-export const render_view_player = function() {
+export const view_player_edit_av = function() {
 
 	return true
-}//end  render_view_player
+}//end  view_player_edit_av
 
 
 
@@ -26,7 +26,7 @@ export const render_view_player = function() {
 * @param object options
 * @return DOM node wrapper
 */
-render_view_player.render = async function(self, options) {
+view_player_edit_av.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
