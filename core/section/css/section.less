@@ -108,19 +108,41 @@
 
 	&.list {
 		// section buttons container (export, new, print, etc.)
-		>.buttons {
+		>.buttons_container {
 			display: flex;
-			flex-wrap: wrap;
-			justify-content: flex-end;
-			width: 100%;
-			padding: 0px;
+			justify-content: space-between;
 
-			>button {
+			// .search,
+			// .other_buttons_block,
+			// .show_other_buttons_button,
+			button {
 				margin-bottom: 0.25rem;
+			}
 
-				>.button {
-					margin-left: 0px;
+			// button search
+			>.search {
+
+			}
+
+			// other_buttons_block
+			>.other_buttons_block {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+				width: 100%;
+				padding: 0px;
+
+				button {
+
 				}
+			}
+
+			// button show_other_buttons_button
+			>.show_other_buttons_button {
+				height: 2.2rem;
+				transform: rotate(90deg);
+				width: 1rem;
+				padding: 12px;
 			}
 
 			// >.button {
