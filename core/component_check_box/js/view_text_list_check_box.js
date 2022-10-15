@@ -3,20 +3,20 @@
 
 
 
-// imports
+// import
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* render_mini_component_filter
+* VIEW_TEXT_LIST_CHECK_BOX
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_filter = function() {
+export const view_text_list_check_box = function() {
 
 	return true
-}//end render_mini_component_filter
+}//end view_text_list_check_box
 
 
 
@@ -25,25 +25,18 @@ export const render_mini_component_filter = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_filter.prototype.mini = function() {
+view_text_list_check_box.render = async function(self, options) {
 
-	const self = this
-
-	// short vars
+	// Options vars
 		const data	= self.data
 		const value	= data.value || []
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
-
 	// Value as string
-		const value_string = value.join(' | ')
+		const value_string = value.join(self.context.fields_separator)
 
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+		const text_node = document.createTextNode(value_string)
 
-
-	return wrapper
+	return text_node
 }//end mini
 
 

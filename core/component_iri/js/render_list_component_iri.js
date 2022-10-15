@@ -4,10 +4,9 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {render_list_view_default} from './render_list_view_default.js'
-	import {render_view_mini} from './render_view_mini.js'
-	import {render_view_text} from './render_view_text.js'
+	import {view_default_list_iri} from './view_default_list_iri.js'
+	import {view_mini_iri} from './view_mini_iri.js'
+	import {view_text_iri} from './view_text_iri.js'
 
 
 
@@ -37,14 +36,14 @@ render_list_component_iri.prototype.list = async function(options) {
 	switch(view) {
 
 		case 'mini':
-			return render_view_mini.render(self, options)
+			return view_mini_iri.render(self, options)
 
 		case 'text':
-			return render_view_text.render(self, options)
+			return view_text_iri.render(self, options)
 
 		case 'default':
 		default:
-			return render_list_view_default.render(self, options)
+			return view_default_list_iri.render(self, options)
 	}
 
 	return null

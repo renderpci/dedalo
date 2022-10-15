@@ -6,21 +6,17 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {
-		get_value_fragment
-	}
-	from '../../component_svg/js/render_list_component_svg.js'
 
 
 
 /**
-* RENDER_MINI_COMPONENT_SVG
+* view_mini_list_filter
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_svg = function() {
+export const view_mini_list_filter = function() {
 
 	return true
-}//end render_mini_component_svg
+}//end view_mini_list_filter
 
 
 
@@ -29,17 +25,23 @@ export const render_mini_component_svg = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_svg.prototype.mini = function() {
+view_mini_list_filter.render = async function(self, options) {
 
-	const self = this
-
-	// value
-		const fragment = get_value_fragment(self)
+	// short vars
+		const data	= self.data
+		const value	= data.value || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
-		wrapper.appendChild(fragment)
+
+	// Value as string
+		const value_string = value.join(' | ')
+
+	// Set value
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
 	return wrapper
 }//end mini
+
+

@@ -5,13 +5,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_INVERSE
+* VIEW_MINI_INVERSE
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_inverse = function() {
+export const view_mini_inverse = function() {
 
 	return true
-}//end render_mini_component_inverse
+}//end view_mini_inverse
 
 
 
@@ -20,9 +20,7 @@ export const render_mini_component_inverse = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_inverse.prototype.mini = function() {
-
-	const self = this
+view_mini_inverse.render = async function(self, options) {
 
 	// short vars
 		const data = self.data

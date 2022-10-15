@@ -3,20 +3,14 @@
 
 
 
-// import
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-
-
-
 /**
-* RENDER_VIEW_text
+* view_text_list_filter
 * Manage the components logic and appearance in client side
 */
-export const render_view_text = function() {
+export const view_text_list_filter = function() {
 
 	return true
-}//end render_view_text
+}//end view_text_list_filter
 
 
 
@@ -25,18 +19,19 @@ export const render_view_text = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_view_text.render = async function(self, options) {
+view_text_list_filter.render = async function(self, options) {
 
-	// Options vars
+	// short vars
 		const data	= self.data
 		const value	= data.value || []
 
 	// Value as string
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = value.join(' | ')
 
+	// Set value
 		const text_node = document.createTextNode(value_string)
 
-	return text_node
-}//end mini
 
+	return wrapper
+}//end mini
 

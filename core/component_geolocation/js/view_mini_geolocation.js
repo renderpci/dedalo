@@ -3,21 +3,20 @@
 
 
 
-// import
+// imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* RENDER_VIEW_MINI
-* Manage the components logic and appearance in client side
+* VIEW_MINI_GEOLOCATION
+* Manages the component's logic and appearance in client side
 */
-export const render_view_mini = function() {
+export const view_mini_geolocation = function() {
 
 	return true
-}//end render_view_mini
-
+}//end view_mini_geolocation
 
 
 /**
@@ -25,10 +24,9 @@ export const render_view_mini = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_view_mini.render = async function(self, options) {
+view_mini_geolocation.render = async function(self, options) {
 
-
-	// Options vars
+	// short vars
 		const data	= self.data
 		const value	= data.value || []
 
@@ -36,7 +34,7 @@ render_view_mini.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = value.join(' | ')
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
@@ -44,5 +42,3 @@ render_view_mini.render = async function(self, options) {
 
 	return wrapper
 }//end mini
-
-
