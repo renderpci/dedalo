@@ -1,16 +1,15 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-
+	import {view_default_list_pdf} from './view_default_list_pdf.js'
+	import {view_mini_pdf} from './view_mini_pdf.js'
 
 
 /**
-* RENDER_LIST_COMPONENT_PDF
+* RENDER_LIST_COMPONENT_pdf
 * Manage the components logic and appearance in client side
 */
 export const render_list_component_pdf = function() {
@@ -25,24 +24,23 @@ export const render_list_component_pdf = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_pdf.prototype.list = function() {
+render_list_component_pdf.prototype.list = async function(options) {
 
 	const self = this
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {})
+	// view
+		const view	= self.context.view || 'default'
 
-	// image append to wrapper
-		const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
-		const image_pdf_icon = ui.create_dom_element({
-			element_type	: 'img',
-			src				: url,
-			parent			: wrapper
-		})
-		image_pdf_icon.addEventListener('error', function() {
-			console.log('pdf icon load error:', url);
-		})
+	switch(view) {
+
+		case 'mini':
+			return view_mini_pdf.render(self, options)
 
 
-	return wrapper
+		case 'default':
+		default:
+			return view_default_list_pdf.render(self, options)
+	}
+
+	return null
 }//end list

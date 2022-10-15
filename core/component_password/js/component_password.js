@@ -4,8 +4,6 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_password} from '../../component_password/js/render_edit_component_password.js'
 	import {render_list_component_password} from '../../component_password/js/render_list_component_password.js'
-	import {render_mini_component_password} from '../../component_password/js/render_mini_component_password.js'
-
 
 export const component_password = function(){
 
@@ -55,10 +53,8 @@ export const component_password = function(){
 	component_password.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_password.prototype.mini				= render_mini_component_password.prototype.mini
 	component_password.prototype.list				= render_list_component_password.prototype.list
 	component_password.prototype.edit				= render_edit_component_password.prototype.edit
-	component_password.prototype.edit_in_list		= render_edit_component_password.prototype.edit
 
 
 
