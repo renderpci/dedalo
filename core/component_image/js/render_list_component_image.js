@@ -7,8 +7,8 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {render_list_view_default} from './render_list_view_default.js'
-	import {render_list_view_mosaic} from './render_list_view_mosaic.js'
+	import {view_default_list_image} from './view_default_list_image.js'
+	import {view_mosaic_list_image} from './view_mosaic_list_image.js'
 
 
 /**
@@ -41,14 +41,19 @@ render_list_component_image.prototype.list = function(options) {
 		let wrapper
 		switch(view) {
 
+			case 'mini':
+				wrapper = view_mini_image.render(self, options)
+				break;
+
+
 			case 'mosaic':
-				wrapper = render_list_view_mosaic.render(self, options)
+				wrapper = view_mosaic_list_image.render(self, options)
 				break;
 
 
 			case 'default':
 			default:
-				wrapper = render_list_view_default.render(self, options)
+				wrapper = view_default_list_image.render(self, options)
 				break;
 		}
 
