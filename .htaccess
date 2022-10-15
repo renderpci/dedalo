@@ -59,7 +59,7 @@ Options -Indexes
   # DEVELOPMENT
   <If "%{HTTP_HOST} =~ /(127\.0\.0\.1.+|localhost.+)$/">
 	Header set Cache-Control: "no-store, max-age=0"
-  Header unset ETag
+	Header unset ETag
   </If>
 </IfModule>
 
