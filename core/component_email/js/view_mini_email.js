@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_EMAIL
+* VIEW_MINI_EMAIL
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_email = function() {
+export const view_mini_email = function() {
 
 	return true
-}//end render_mini_component_email
+}//end view_mini_email
 
 
 
@@ -25,7 +25,7 @@ export const render_mini_component_email = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_email.prototype.mini = async function() {
+view_mini_email.render = async function() {
 
 	const self = this
 
