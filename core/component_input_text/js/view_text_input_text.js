@@ -9,13 +9,13 @@
 
 
 /**
-* RENDER_VIEW_TEXT
+* VIEW_TEXT_INPUT_TEXT
 * Manages the component's logic to get the values of the data without DOM elements or structure
 */
-export const render_view_text = function() {
+export const view_text_input_text = function() {
 
 	return true
-}//end render_view_text
+}//end view_text_input_text
 
 
 
@@ -25,7 +25,7 @@ export const render_view_text = function() {
 * Output component value to use as raw text
 * @return DOM text node text_node
 */
-render_view_text.render = async function(self, options) {
+view_text_input_text.render = async function(self, options) {
 
 	// short vars
 		const data				= self.data
