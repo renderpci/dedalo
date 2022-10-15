@@ -9,18 +9,18 @@
 	import {
 		get_value_fragment
 	}
-	from '../../component_svg/js/render_list_component_svg.js'
+	from './view_default_list_svg.js'
 
 
 
 /**
-* RENDER_MINI_COMPONENT_SVG
+* VIEW_MINI_LIST_SVG
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_svg = function() {
+export const view_mini_list_svg = function() {
 
 	return true
-}//end render_mini_component_svg
+}//end view_mini_list_svg
 
 
 
@@ -29,9 +29,7 @@ export const render_mini_component_svg = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_svg.prototype.mini = function() {
-
-	const self = this
+view_mini_list_svg.prototype.mini = function(self, options) {
 
 	// value
 		const fragment = get_value_fragment(self)

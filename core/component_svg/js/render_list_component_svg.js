@@ -5,8 +5,9 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-
+	// import {ui} from '../../common/js/ui.js'
+	import {view_mini_list_svg} from './view_mini_list_svg.js'
+	import {view_default_list_svg} from './view_default_list_svg.js'
 
 
 /**
@@ -25,58 +26,22 @@ export const render_list_component_svg = function() {
 * Render node for use in list
 * @return DOM node
 */
-render_list_component_svg.prototype.list = function() {
+render_list_component_svg.prototype.list = async function(options) {
 
 	const self = this
 
-	// value
-		const fragment = get_value_fragment(self)
+	// view
+		const view	= self.context.view || 'default'
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
+	switch(view) {
 
-		})
-		wrapper.appendChild(fragment)
+		case 'mini':
+			return view_mini_list_svg.render(self, options)
 
+		case 'default':
+		default:
+			return view_default_list_svg.render(self, options)
+	}
 
-	return wrapper
+	return null
 }//end list
-
-
-
-/**
-* GET_VALUE_FRAGMENT
-* @param instance self
-* @return DOM DocumentFragment
-*/
-export const get_value_fragment = function(self) {
-
-	// value
-	const data	= self.data || {}
-	const value	= data.value || []
-
-	const fragment = new DocumentFragment()
-
-	// svg elements
-		const value_length = value.length
-		for (let i = 0; i < value_length; i++) {
-
-			const item_value = value[i]
-
-			// check value
-				// if (!item_value) {
-				// 	console.warn("Ignored invalid item value:", item_value, self.data.value)
-				// 	continue
-				// }
-
-			const url	= item_value.url
-			const image	= ui.create_dom_element({
-				element_type	: 'img',
-				src				: url,
-				parent			: fragment
-			})
-			fragment.appendChild(image)
-		}
-
-	return fragment
-}//end get_value_fragment
