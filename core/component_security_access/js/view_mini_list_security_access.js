@@ -11,13 +11,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_SECURITY_ACCESS
+* VIEW_MINI_LIST_SECURITY_ACCESS
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_security_access = function() {
+export const view_mini_list_security_access = function() {
 
 	return true
-}//end render_mini_component_security_access
+}//end view_mini_list_security_access
 
 
 
@@ -26,9 +26,7 @@ export const render_mini_component_security_access = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_security_access.prototype.mini = async function() {
-
-	const self = this
+view_mini_list_security_access.mini = async function(self, options) {
 
 	// short vars
 		const data = self.data

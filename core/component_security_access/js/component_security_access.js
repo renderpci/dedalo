@@ -8,10 +8,9 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import {clone} from '../../common/js/utils/index.js'
-	import {render_edit_component_security_access} from '../../component_security_access/js/render_edit_component_security_access.js'
-	import {render_list_component_security_access} from '../../component_security_access/js/render_list_component_security_access.js'
-	import {render_mini_component_security_access} from '../../component_security_access/js/render_mini_component_security_access.js'
-	import {render_search_component_security_access} from '../../component_security_access/js/render_search_component_security_access.js'
+	import {render_edit_component_security_access} from './render_edit_component_security_access.js'
+	import {render_list_component_security_access} from './render_list_component_security_access.js'
+	import {render_search_component_security_access} from './render_search_component_security_access.js'
 
 
 
@@ -61,11 +60,10 @@ export const component_security_access = function(){
 	component_security_access.prototype.build_dd_request	= common.prototype.build_dd_request
 
 	// render
-	component_security_access.prototype.mini				= render_mini_component_security_access.prototype.mini
 	component_security_access.prototype.list				= render_list_component_security_access.prototype.list
 	component_security_access.prototype.edit				= render_edit_component_security_access.prototype.edit
-	component_security_access.prototype.edit_in_list		= render_edit_component_security_access.prototype.edit
 	component_security_access.prototype.search				= render_search_component_security_access.prototype.search
+
 	component_security_access.prototype.change_mode			= component_common.prototype.change_mode
 
 
@@ -227,7 +225,7 @@ component_security_access.prototype.get_children = function(item, datalist) {
 
 /**
 * UPDATE_PARENTS_RADIO_BUTONS
-* Check all resursive parents and get children values of each one. If
+* Check all recursive parents and get children values of each one. If
 * all of children have the same value, the parent is set with this value (ex. 2)
 * @param object item
 * 	datalist item with info about tipo, model, value as
