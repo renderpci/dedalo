@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_GEOLOCATION
+* VIEW_MINI_GEOLOCATION
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_geolocation = function() {
+export const view_mini_geolocation = function() {
 
 	return true
-}//end render_mini_component_geolocation
+}//end view_mini_geolocation
 
 
 /**
@@ -24,9 +24,7 @@ export const render_mini_component_geolocation = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_geolocation.prototype.mini = async function() {
-
-	const self = this
+view_mini_geolocation.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data
