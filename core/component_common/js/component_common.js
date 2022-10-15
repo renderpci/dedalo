@@ -80,7 +80,9 @@ component_common.prototype.init = async function(options) {
 	// view_properties. object . Defines useful view custom properties to take control
 	// of some common component behaviors
 		self.view_properties = {
-			disable_save_animation : false
+			disable_save_animation : false,
+			disable_buttons_container: false,
+			disable_value_buttons : false,
 		}
 
 	// pagination info
@@ -212,7 +214,7 @@ component_common.prototype.build = async function(autoload=false){
 					console.error("context not found in api_response:", api_response);
 				}
 				// preserve view across builds
-				if(self.context.view) {
+				if(self.context && self.context.view) {
 					context.view = self.context.view
 				}
 				self.context = context
@@ -1111,11 +1113,24 @@ component_common.prototype.get_ar_instances = async function(options={}){
 * @param bool autoload
 * @return bool true
 */
-component_common.prototype.change_mode = async function(new_mode, autoload) {
+component_common.prototype.change_mode = async function(options) {
 
 	const self = this
 
+	// options vars
+		// mode check. When mode is undefined, fallback to 'list'. From 'list', change to 'eddit'
+		const mode = (options.mode)
+			? options.mode
+			: self.mode === 'list' ? 'edit' : 'list'
+		const autoload = (typeof options.autoload!=='undefined')
+			? options.autoload
+			: true
+		const view = (options.view)
+			? options.view
+			: self.context.view
+
 	// short vars
+		// set
 		const current_context		= self.context
 		const current_data			= self.data
 		const current_datum			= self.datum
@@ -1123,10 +1138,9 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		const section_lang			= self.section_lang
 		const old_node				= self.node
 
-	// new_mode check. When new_mode is undefined, fallback to 'list'. From 'list', change to 'edit_in_list'
-		if(typeof new_mode==='undefined'){
-			new_mode = self.mode==='list' ? 'edit_in_list' : 'list'
-		}
+	// set the new view to context
+		current_context.view = view
+		current_context.mode = mode
 
 	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
 		self.destroy(
@@ -1141,7 +1155,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 			tipo			: current_context.tipo,
 			section_tipo	: current_context.section_tipo,
 			section_id		: current_section_id,
-			mode			: new_mode,
+			mode			: mode,
 			lang			: current_context.lang,
 			section_lang	: section_lang,
 			parent			: current_context.parent,
@@ -1164,7 +1178,7 @@ component_common.prototype.change_mode = async function(new_mode, autoload) {
 		old_node.replaceWith(new_node);
 
 	// active component at end
-		if (new_mode.indexOf('edit')!==-1) {
+		if (mode.indexOf('edit')!==-1) {
 			if (!new_instance.active) {
 				ui.component.activate(new_instance)
 			}
