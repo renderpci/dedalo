@@ -9,23 +9,22 @@
 
 
 /**
-* RENDER_MINI_COMPONENT
+* VIEW_MINI_LIST_RADIO_BUTTON
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_radio_button = function() {
+export const view_mini_list_radio_button = function() {
 
 	return true
-}//end render_mini_component_radio_button
+}//end view_mini_list_radio_button
+
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used in current mode
 * @return DOM node
 */
-render_mini_component_radio_button.prototype.mini = async function() {
-
-	const self = this
+view_mini_list_radio_button.render = async function(self, options) {
 
 	// Value as string
 		const value_string = self.data.value
@@ -37,4 +36,4 @@ render_mini_component_radio_button.prototype.mini = async function() {
 
 
 	return wrapper
-}//end mini
+}//end render
