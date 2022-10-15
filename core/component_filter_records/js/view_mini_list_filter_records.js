@@ -10,13 +10,13 @@
 
 
 /**
-* render_mini_component_filter_records
+* view_mini_list_filter_records
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_filter_records = function() {
+export const view_mini_list_filter_records = function() {
 
 	return true
-}//end render_mini_component_filter_records
+}//end view_mini_list_filter_records
 
 
 
@@ -25,9 +25,7 @@ export const render_mini_component_filter_records = function() {
 * Render node to be used in current mode
 * @return DOM node
 */
-render_mini_component_filter_records.prototype.mini = function() {
-
-	const self = this
+view_mini_list_filter_records.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data

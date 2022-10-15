@@ -1,12 +1,12 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-
+	import {view_default_list_filter_records} from './view_default_list_filter_records.js'
+	import {view_mini_list_filter_records} from './view_mini_list_filter_records.js'
+	import {view_text_list_filter_records} from './view_text_list_filter_records.js'
 
 
 /**
@@ -25,27 +25,25 @@ export const render_list_component_filter_records = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_filter_records.prototype.list = function() {
+render_list_component_filter_records.prototype.list = async function(options) {
 
 	const self = this
 
-	// short vars
-		const data			= self.data || {}
-		const value			= data.value || []
-		const value_string	= value.join(' | ')
+	// view
+		const view	= self.context.view || 'default'
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
-		})
-		wrapper.addEventListener('click', function(e){
-			e.stopPropagation()
-			self.change_mode(
-				'edit_in_list',
-				true // autoload. On true, load data from API when user click to edit_in_list
-			)
-		})
+	switch(view) {
 
+		case 'mini':
+			return view_mini_list_filter_records.render(self, options)
 
-	return wrapper
+		case 'text':
+			return view_text_list_filter_records.render(self, options)
+
+		case 'default':
+		default:
+			return view_default_list_filter_records.render(self, options)
+	}
+
+	return null
 }//end list
