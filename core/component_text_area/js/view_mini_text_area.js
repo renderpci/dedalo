@@ -13,13 +13,13 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_TEXT_AREA
+* VIEW_MINI_TEXT_AREA
 * Manage the components logic and appearance in client side
 */
-export const render_mini_component_text_area = function() {
+export const view_mini_text_area = function() {
 
 	return true
-}//end render_mini_component_text_area
+}//end view_mini_text_area
 
 
 
@@ -28,9 +28,7 @@ export const render_mini_component_text_area = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_mini_component_text_area.prototype.mini = async function() {
-
-	const self = this
+view_mini_text_area.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data
