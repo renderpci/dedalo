@@ -9,13 +9,13 @@
 
 
 /**
-* RENDER_VIEW_MINI
+* VIEW_MINI_PORTAL
 * Manages the component's logic and appearance in client side
 */
-export const render_view_mini = function() {
+export const view_mini_portal = function() {
 
 	return true
-}//end render_view_mini
+}//end view_mini_portal
 
 
 
@@ -24,7 +24,7 @@ export const render_view_mini = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_view_mini.render = async function(self, options) {
+view_mini_portal.render = async function(self, options) {
 
 	// ar_section_record
 		const children_view	= self.context.children_view || self.context.view || 'default'

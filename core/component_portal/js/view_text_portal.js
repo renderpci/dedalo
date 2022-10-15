@@ -9,13 +9,13 @@
 
 
 /**
-* RENDER_VIEW_TEXT
+* VIEW_TEXT_PORTAL
 * Manages the component's logic and appearance in client side
 */
-export const render_view_text = function() {
+export const view_text_portal = function() {
 
 	return true
-}//end render_view_text
+}//end view_text_portal
 
 
 
@@ -24,7 +24,7 @@ export const render_view_text = function() {
 * Render node as text view
 * @return DOM node wrapper
 */
-render_view_text.render = async function(self, options) {
+view_text_portal.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
