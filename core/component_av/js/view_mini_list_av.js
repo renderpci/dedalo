@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_VIEW_MINI
+* VIEW_MINI_LIST_AV
 * Manages the component's logic and appearance in client side
 */
-export const render_view_mini = function() {
+export const view_mini_list_av = function() {
 
 	return true
-}//end  render_view_mini
+}//end  view_mini_list_av
 
 
 
@@ -25,7 +25,7 @@ export const render_view_mini = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-render_view_mini.mini = async function() {
+view_mini_list_av.mini = async function() {
 
 	const self = this
 
