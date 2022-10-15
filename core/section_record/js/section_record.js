@@ -410,6 +410,13 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								if(current_ddo.hover){
 									new_context.hover = current_ddo.hover
 								}
+								// set the view and mode when with_value property has set
+								// it change the view and the mode to edit component in lists, if the component has data will render with the definition instead the default
+								// take a different mode and view with data.
+								if(current_ddo.with_value && current_data.value && current_data.value.length > 0){
+									new_context.view = current_ddo.with_value.view
+									new_context.mode = current_ddo.with_value.mode
+								}
 
 							// instance create and set
 								const current_instance = await build_instance(self, new_context, section_id, current_data, current_column.id)
