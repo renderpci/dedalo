@@ -1159,8 +1159,14 @@ abstract class common {
 					$openingTag = array_pop($tags);
 					//assert($openingTag === $tagName); // check that tags are properly nested.
 
-					#print($tag);
-					$full_text .= $tag;
+					// assert($openingTag === $tagName); // check that tags are properly nested.
+					// $full_text .= $tag;
+
+					if ($openingTag!==$tagName) {
+						// error_log("Error. openingTag ($openingTag) is different to expected tagName ($tagName)");
+					}else{
+						 $full_text .= $tag;
+					}
 				}
 				else if ($tag[strlen($tag) - 2] === '/')
 				{

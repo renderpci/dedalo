@@ -5,22 +5,22 @@
 */
 
 // imports
-	@import '../../../core/page/css/layout/vars.less';
+	@import '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool : #fd7f26; // @color_orange_dedalo;
+	@color_bg_tool: #fd7f26; // @color_orange_dedalo;
 
 
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_transcription {
 
-		&:hover{
+		&:hover {
 			background-color: @color_bg_tool;
 		}
-		>.icon{
-			-webkit-mask-image: url(../img/icon.svg);
-			mask-image: url(../img/icon.svg);
+		>.icon {
+			-webkit-mask-image: url('../img/icon.svg');
+			mask-image: url('../img/icon.svg');
 		}
 	}
 
@@ -38,21 +38,37 @@
 
 			>.tool_buttons_container {
 				display: flex;
-				align-items: flex-end;
+				align-items: flex-start;
 
 				@media screen and (max-width: @width_break_point_0) {
 					flex-wrap: wrap;
 					margin-top: 1rem;
 				}
 
-				>* {
-					height: 2.1rem;
+				>div, button {
+
 					margin: 0rem;
 					margin-left: 0.5rem;
 					margin-right: 0rem;
-						@media screen and (max-width: @width_break_point_0) {
-					    flex: 1 0 100%;
-						margin: 0.25rem;
+					min-height: 2rem;
+
+					@media screen and (max-width: @width_break_point_0) {
+						margin-bottom: 1rem;
+						flex: 1 0 auto;
+					}
+				}
+
+				select {
+					opacity: 1;
+					padding: 0.33rem;
+					background-color: #f8f9fa;
+					border-radius: 3px;
+					margin-right: 0px;
+					max-width: 20rem;
+					min-width: 7rem;
+
+					@media screen and (max-width: @width_break_point_0) {
+						// max-width: unset;
 					}
 				}
 
@@ -60,17 +76,7 @@
 				>.related_list_container {
 
 					>select {
-						opacity: 1;
-						padding: 0.33rem;
-						background-color: #f8f9fa;
-						border-radius: 3px;
-						margin-right: 0px;
-						max-width: 22rem;
 
-						@media screen and (max-width: @width_break_point_0) {
-							max-width: unset;
-							width: 100%;
-						}
 					}
 				}
 
@@ -88,20 +94,11 @@
 						padding-right: 0.33rem;
 					}
 					>select {
-						opacity: 1;
-						padding: 0.33rem;
-						background-color: #f8f9fa;
-						border-radius: 3px;
-						margin-right: 0px;
-						max-width: 22rem;
 
-						@media screen and (max-width: @width_break_point_0) {
-							max-width: unset;
-						}
 					}
 				}
 
-				// bottons of tools (tool print, tool time machine..)
+				// buttons of tools (tool print, tool time machine..)
 				>.tool_button {
 					// background-color: #fde2c6;
 					// border-color: #e9ecef;
@@ -135,45 +132,56 @@
 				// flex-direction: column-reverse;
 			}
 
-			.left_container {
-				>.wrapper_component >.content_data {
-					height: calc(100vh - 9rem);
+			// left and right commons
+			.left_container,
+			.right_container {
+				height: calc(100vh - 8rem);
+				// background-color: #e4ca4f;
+				.wrapper_component {
+					// background-color: #dee789;
+					// box-shadow: none;
+				}
+			}
 
-					// background-color: #fbf082;
-					@media screen and (max-width: @width_break_point_0) {
-						min-height: 50vh;
+			.left_container {
+				>.wrapper_component {
+					height: 100%;
+					>.content_data {
+
+						@media screen and (max-width: @width_break_point_0) {
+							min-height: 50vh;
+						}
 					}
 				}
 			}
-			.right_container {
 
+			.right_container {
 				>.wrapper_component {
-					min-height: 50%;
+					height: 100%; // calc(100vh - 8rem);
+					min-height: 472px; // prevents to cut component_av player
+
+					// addons. Additional elements like video slider, keys map, etc.
+					&.with_addons {
+						height: 50%;
+						@media screen and (max-width: @width_break_point_1) {
+							height: unset;
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						min-height: unset;
+						height: unset;
+					}
 
 					>.content_data {
-						// min-height: 88vh;
-						// background-color: #9bffb4;
-						max-height: calc(100vh - 10rem);
-						overflow: auto;
+						// overflow: auto;
+						height: 100%;
+						// min-height: 528px;
 					}
 				}
 
-				.av_control_buttons{
+				.av_control_buttons {
 					text-align: center;
-
-					// .smpte {
-					// 	color: #fd7f26;
-					// 	padding: 0;
-					// 	margin-left: 1rem;
-					// 	margin-right: 1rem;
-					// 	font-family: Verdana, Geneva, sans-serif;
-					// 	font-size: 1.65rem;
-					// 	width: auto;
-					// 	height: 1em;
-					// 	display: inline-block;
-					// 	vertical-align: baseline;
-					// 	text-shadow: 1px 2px 2px #b9b9b9;
-					// }
 				}
 
 				.slider_container {
@@ -183,7 +191,7 @@
 					// padding-right: 10%;
 					text-alignt: center;
 
-					.slider_label{
+					.slider_label {
 						font-size: 14px;
 						font-weight: lighter;
 						width: 100%;

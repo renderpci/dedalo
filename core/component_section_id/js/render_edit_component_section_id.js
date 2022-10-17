@@ -4,8 +4,9 @@
 
 
 // import
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {view_default_edit_section_id} from './view_default_edit_section_id.js'
 
 
 
@@ -29,47 +30,15 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 
 	const self = this
 
-	// options
-		const render_level = options.render_level || 'full'
+	// view
+		const view	= self.context.view || 'default'
 
-	// content_data
-		const content_data = get_content_data_edit(self)
-		if (render_level==='content') {
-			return content_data
-		}
+	switch(view) {
 
-	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
-		})
-		// set pointers
-		wrapper.content_data = content_data
+		case 'default':
+		default:
+			return view_default_edit_section_id.render(self, options)
+	}
 
-
-	return wrapper
+	return null
 }//end edit
-
-
-
-/**
-* CONTENT_DATA_EDIT
-* Note that this component it's editable only in search mode
-* @return DOM node content_data
-*/
-const get_content_data_edit = function(self) {
-
-	const value = self.data.value
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-
-	// section_id value
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'section_id',
-			inner_html		: value,
-			parent			: content_data
-		})
-
-	return content_data
-}//end get_content_data_edit

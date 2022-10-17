@@ -8,7 +8,6 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_filter} from '../../component_filter/js/render_edit_component_filter.js'
 	import {render_list_component_filter} from '../../component_filter/js/render_list_component_filter.js'
-	import {render_mini_component_filter} from '../../component_filter/js/render_mini_component_filter.js'
 	import {render_search_component_filter} from '../../component_filter/js/render_search_component_filter.js'
 
 
@@ -59,7 +58,6 @@ export const component_filter = function(){
 	component_filter.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_filter.prototype.mini					= render_mini_component_filter.prototype.mini
 	component_filter.prototype.list					= render_list_component_filter.prototype.list
 	component_filter.prototype.edit					= render_edit_component_filter.prototype.edit
 	component_filter.prototype.edit_in_list			= render_edit_component_filter.prototype.edit

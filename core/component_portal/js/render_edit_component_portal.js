@@ -12,12 +12,12 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-	import {render_edit_view_table} from './render_edit_view_table.js'
-	import {render_edit_view_line} from './render_edit_view_line.js'
-	import {render_edit_view_tree} from './render_edit_view_tree.js'
-	import {render_edit_view_mosaic} from './render_edit_view_mosaic.js'
-	import {render_edit_view_indexation} from './render_edit_view_indexation.js'
-	import {render_view_text} from './render_view_text.js'
+	import {view_table_edit_portal} from './view_table_edit_portal.js'
+	import {view_line_edit_portal} from './view_line_edit_portal.js'
+	import {view_tree_edit_portal} from './view_tree_edit_portal.js'
+	import {view_mosaic_edit_portal} from './view_mosaic_edit_portal.js'
+	import {view_indexation_edit_portal} from './view_indexation_edit_portal.js'
+	import {view_text_portal} from './view_text_portal.js'
 	import {
 		on_dragstart,
 		on_dragover,
@@ -61,28 +61,28 @@ render_edit_component_portal.prototype.edit = async function(options) {
 		switch(view) {
 
 			case 'text':
-				wrapper = render_view_text.render(self, options)
+				wrapper = view_text_portal.render(self, options)
 				break;
 
 			case 'line':
-				wrapper = render_edit_view_line.render(self, options)
+				wrapper = view_line_edit_portal.render(self, options)
 				break;
 
 			case 'tree':
-				wrapper = render_edit_view_tree.render(self, options)
+				wrapper = view_tree_edit_portal.render(self, options)
 				break;
 
 			case 'mosaic':
-				wrapper = render_edit_view_mosaic.render(self, options)
+				wrapper = view_mosaic_edit_portal.render(self, options)
 				break;
 
 			case 'indexation':
-				wrapper = render_edit_view_indexation.render(self, options)
+				wrapper = view_indexation_edit_portal.render(self, options)
 				break;
 
 			case 'table':
 			default:
-				wrapper = render_edit_view_table.render(self, options)
+				wrapper = view_table_edit_portal.render(self, options)
 				break;
 		}
 
@@ -575,7 +575,7 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool		= (self.caller && self.caller.type==='tool')
+		const is_inside_tool		= self.is_inside_tool // 	(self.caller && self.caller.type==='tool')
 		const target_section		= self.target_section
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant

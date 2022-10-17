@@ -4,7 +4,9 @@
 
 
 // import
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
+	import {view_mini_section_id} from './view_mini_section_id.js'
+	import {view_default_list_section_id} from './view_default_list_section_id.js'
 
 
 
@@ -24,17 +26,22 @@ export const render_list_component_section_id = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_section_id.prototype.list = function() {
+render_list_component_section_id.prototype.list = function(options) {
 
 	const self = this
 
-	// Value as string
-		const value_string = self.data.value
+	// view
+		const view	= self.context.view || 'default'
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
-		})
+	switch(view) {
 
-	return wrapper
+		case 'mini':
+			return view_mini_section_id.render(self, options)
+
+		case 'default':
+		default:
+			return view_default_list_section_id.render(self, options)
+	}
+
+	return null
 }//end list

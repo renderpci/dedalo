@@ -6,7 +6,9 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
+	import {view_mini_list_security_access} from './view_mini_list_security_access.js'
+	import {view_default_list_security_access} from './view_default_list_security_access.js'
 
 
 
@@ -30,18 +32,18 @@ render_list_component_security_access.prototype.list = async function() {
 
 	const self = this
 
-	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+	// view
+		const view	= self.context.view || 'default'
 
-	// Value as string
-		const value_string = JSON.stringify(value, null, 2)
+	switch(view) {
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
-		})
+		case 'mini':
+			return view_mini_list_security_access.render(self, options)
 
+		case 'default':
+		default:
+			return view_default_list_security_access.render(self, options)
+	}
 
-	return wrapper
+	return null
 }//end list

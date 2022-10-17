@@ -11,7 +11,7 @@
 	import {
 		get_content_data_edit
 	}
-	from '../../component_geolocation/js/render_edit_component_geolocation.js'
+	from './view_default_edit_geolocation.js'
 
 
 /**

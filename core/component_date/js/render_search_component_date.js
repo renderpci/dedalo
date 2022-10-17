@@ -6,7 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_input_element_edit} from '../../component_date/js/render_edit_view_default.js'
+	import {get_input_element_edit} from '../../component_date/js/view_default_edit_date.js'
 
 
 

@@ -918,14 +918,14 @@ final class dd_utils_api {
 	* Sample expected $json_data:
 	* {
 	*	"action": "upload",
-	* 	"fileToUpload": {
-	*        "name": "exported_plantillas-web_-1-dd477.csv",
-	*        "full_path": "exported_plantillas-web_-1-dd477.csv",
-	*        "type": "text/csv",
-	*        "tmp_name": "/private/var/tmp/phpQ02UUO",
-	*        "error": 0,
-	*        "size": 29892
-	*    }
+	*	"fileToUpload": { 	(assoc array)
+	*		"name"			: "exported_plantillas-web_-1-dd477.csv",
+	*		"full_path"		: "exported_plantillas-web_-1-dd477.csv",
+	*		"type"			: "text/csv",
+	*		"tmp_name"		: "/private/var/tmp/phpQ02UUO",
+	*		"error"			: 0,
+	*		"size"			: 29892
+	*	}
 	*	"prevent_lock": true
 	* }
 	* @return object $response
@@ -941,9 +941,9 @@ final class dd_utils_api {
 		// debug
 			debug_log(__METHOD__." --> received request_options: ".to_string($request_options), logger::DEBUG);
 
-		// short vars
-			$fileToUpload	= $request_options->fileToUpload;	// Added from PHP input '$_FILES'
-			$resource_type	= $request_options->resource_type; // like 'tool_upload'
+		// request_options
+			$fileToUpload	= $request_options->fileToUpload ?? $request_options->upload;	// assoc array Added from PHP input '$_FILES'
+			$resource_type	= $request_options->resource_type; // string like 'tool_upload'
 
 		// check for upload issues
 		try {
@@ -994,7 +994,7 @@ final class dd_utils_api {
 				// 	throw new RuntimeException('Exceeded filesize limit.');
 				// }
 
-			// DO NOT TRUST $fileToUpload['mime'] VALUE !!
+			// Do not trust $fileToUpload['mime'] VALUE !!
 			// Check MIME Type by yourself.
 				$finfo				= new finfo(FILEINFO_MIME_TYPE);
 				$file_mime			= $finfo->file($fileToUpload['tmp_name']); // ex. string 'text/plain'
@@ -1003,11 +1003,10 @@ final class dd_utils_api {
 					$file_mime,
 					$known_mime_types,
 					true
-				)) {
+					)) {
 					// throw new RuntimeException('Invalid file format.');
-					// debug_log(__METHOD__." Warning. Accepted upload unknow file mime type: ".to_string($file_mime).' - name: '.to_string($fileToUpload['tmp_name']), logger::ERROR);
+					debug_log(__METHOD__." Error. Stopped upload unknown file mime type: ".to_string($file_mime).' - name: '.to_string($fileToUpload['tmp_name']), logger::ERROR);
 					$msg = ' upload: Invalid file format. (mime: '.$file_mime.')';
-					error_log($msg);
 					$response->msg .= $msg;
 					return $response;
 				}
@@ -1028,64 +1027,90 @@ final class dd_utils_api {
 					}
 
 				// check extension
-					// if (!in_array($file_data->extension, $allowed_extensions)) {
-					// 	debug_log(__METHOD__." Error. Invalid file extension ".$file_data->extension, logger::ERROR);
-					// 	$response->msg .= "Error. Invalid file extension ".$file_data->extension;
-					// 	return $response;
-					// }
+					$extension			= strtolower( pathinfo($fileToUpload['name'], PATHINFO_EXTENSION) );
+					$allowed_extensions	= array_keys($known_mime_types);
+					if (!in_array($extension, $allowed_extensions)) {
+						$response->msg .= "Error. Invalid file extension ".$extension;
+						debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+						return $response;
+					}
 
 			// manage uploaded file
 				if (!defined('DEDALO_UPLOAD_TMP_DIR')) {
-					debug_log(__METHOD__." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constatnt 'DEDALO_UPLOAD_TMP_DIR' in config file. (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file') ".to_string(), logger::ERROR);
+					debug_log(__METHOD__." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constant 'DEDALO_UPLOAD_TMP_DIR' in config file. (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file') ".to_string(), logger::ERROR);
 					$response->msg .= " Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!";
 					return $response;
 				}
 				$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
-				if (!empty($dir)) {
-					// Check the target_dir, if it's not created will be make to be used.
-						# Target folder exists test
-						if( !is_dir($dir) ) {
-							if(!mkdir($dir, 0775,true)) {
-								$response->msg .= trim(" Error on read or create media DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH default directory. Permission denied ");
-								return $response;
-							}
-							debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
-						}
-					// move file to target path
-					$name			= basename($fileToUpload["tmp_name"]);
-					$target_path	= $dir . '/' . $name;
-					$moved			= move_uploaded_file($fileToUpload["tmp_name"], $target_path);
-				}
-				if (!isset($moved) || $moved!==true) {
-					debug_log(__METHOD__." Error on get/move to target_dir ". to_string($target_dir), logger::ERROR);
-					$response->msg .= "Uploaded file Error on get/move to target_dir. ".to_string($target_dir->value);
-					return $response;
-				}
 
-				// file_data. post file (sent across $_FILES)
+				// Check the target_dir, if it's not created will be make to be used.
+					// Target folder exists test
+					if( !is_dir($dir) ) {
+						if(!mkdir($dir, 0700, true)) {
+							$response->msg .= ' Error on read or create UPLOAD_TMP_DIR directory. Permission denied';
+							return $response;
+						}
+						debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
+					}
+				// move file to target path
+					$name			= basename($fileToUpload['tmp_name']);
+					$target_path	= $dir . '/' . $name;
+					$moved			= move_uploaded_file($fileToUpload['tmp_name'], $target_path);
+					// verify move file is successful
+					if ($moved!==true) {
+						debug_log(__METHOD__.PHP_EOL
+							.'Error on get/move temp file to target_path '.PHP_EOL
+							.'source: '.$fileToUpload['tmp_name'].PHP_EOL
+							.'target: '.$target_path,
+							 logger::ERROR
+						);
+						$response->msg .= 'Uploaded file Error on get/move to target_path.';
+						return $response;
+					}
+
+			// file_data to client. POST file (sent across $_FILES) info and some additions
 				// Example of received data:
-				// "name": "montaje3.jpg",
-				// "type": "image/jpeg",
-				// "tmp_name": "/private/var/tmp/php6nd4A2",
-				// "error": 0,
-				// "size": 132898
+				// "fileToUpload": {
+				//		"name": "exported_plantillas-web_-1-dd477.csv",
+				//		"full_path": "exported_plantillas-web_-1-dd477.csv",
+				//		"type": "text/csv",
+				//		"tmp_name": "/private/var/tmp/phpQ02UUO",
+				//		"error": 0,
+				//		"size": 29892
+				// }
 				$file_data = new stdClass();
 					$file_data->name			= $fileToUpload['name']; // like 'My Picture 1.jpg'
 					$file_data->type			= $fileToUpload['type']; // like 'image\/jpeg'
-					// $file_data->tmp_name		= $target_path;
+					// $file_data->tmp_name		= $target_path; // do not include for safety
 					$file_data->tmp_dir			= 'DEDALO_UPLOAD_TMP_DIR'; // like DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
 					$file_data->resource_type	= $resource_type; // like 'tool_upload'
 					$file_data->tmp_name		= $name; // like 'phpv75h2K'
 					$file_data->error			= $fileToUpload['error']; // like 0
 					$file_data->size			= $fileToUpload['size']; // like 878860 (bytes)
-					$file_data->extension		= strtolower(pathinfo($fileToUpload['name'], PATHINFO_EXTENSION));
-						// dump($file_data, ' file_data ++++++++++++++++++++++++++++++++++++++ '.to_string());
+					$file_data->extension		= $extension;
 
+			// resource_type cases response
+				switch ($resource_type) {
 
-			// all is OK response
-				$response->result		= true;
-				$response->file_data	= $file_data ?? null;
-				$response->msg			= 'OK. '.label::get_label('fichero_subido_con_exito');
+					case 'web': // uploading images from text editor
+						$safe_file_name	= sanitize_file_name($fileToUpload['name']); // clean file name
+						$file_path		= DEDALO_MEDIA_PATH . '/image' . DEDALO_IMAGE_WEB_FOLDER . '/' . $safe_file_name;
+						$file_url		= DEDALO_MEDIA_URL  . '/image' . DEDALO_IMAGE_WEB_FOLDER . '/' . $safe_file_name;
+						$current_path	= $target_path;
+						$response		= rename($current_path, $file_path)
+							? (object)['url' => $file_url]
+							: (object)['error' => 'Error moving file'];
+						// debug
+							debug_log(__METHOD__." --> saved file as : ".$file_path, logger::DEBUG);
+						break;
+
+					default:
+						// all is OK response
+						$response->result		= true;
+						$response->file_data	= $file_data;
+						$response->msg			= 'OK. '.label::get_label('fichero_subido_con_exito');
+						break;
+				}
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -1097,12 +1122,11 @@ final class dd_utils_api {
 					$response->debug = $debug;
 				}
 
-
 		} catch (RuntimeException $e) {
 
 			$response->msg .= ' Request failed: '. $e->getMessage();
+			debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
 		}
-		// dump($response, ' response ++ '.to_string());
 
 
 		return $response;
@@ -1154,8 +1178,107 @@ final class dd_utils_api {
 
 
 
+	/**
+	* GET_DEDALO_FILES
+	* Connects to database and updates user lock components state
+	* on focus or blur user actions
+	* @return object $response
+	*/
+	public static function get_dedalo_files(object $request_options=null) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// get files
+			$files = [];
+			// css
+			$files[] = (object)[
+				'type'	=> 'css',
+				'url'	=>  DEDALO_CORE_URL . '/page/css/main.css'
+			];
+			// js
+			$core_js_files	= self::get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
+				// remove self base directory from file path
+				$file = str_replace(DEDALO_CORE_PATH, '', $el);
+				if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+					return null; // item does not will be added to the result
+				}
+				return DEDALO_CORE_URL . '' . $file;
+			});
+			foreach ($core_js_files as $url) {
+				$files[] = (object)[
+					'type'	=> 'js',
+					'url'	=>  $url
+				];
+			}
+			$tools_js_files	= self::get_dir_files(DEDALO_TOOLS_PATH, ['js','css'], function(string $el) : ?string {
+				// remove self base directory from file path
+				$file = str_replace(DEDALO_TOOLS_PATH, '', $el);
+				if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+					return null; // item does not will be added to the result
+				}
+				return DEDALO_TOOLS_URL . '' . $file;
+			});
+			foreach ($tools_js_files as $file_url) {
+				$files[] = (object)[
+					'type'	=> 'js',
+					'url'	=>  $file_url
+				];
+			}
+
+		// response
+			$response->result = $files;
+			$response->msg = 'OK. Request done successfully';
+
+
+		return $response;
+	}//end get_dedalo_files
+
+
+
 
 	// private methods ///////////////////////////////////
+
+
+
+	/**
+	* GET_DIR_FILES
+	* Get directory files recursively
+	* @param string $dir
+	* @param array $ext
+	* @param callable $format
+	*
+	* @return array $files
+	*/
+	private static function get_dir_files( string $dir, array $ext, callable $format ) : array {
+
+		$rii = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator( $dir )
+		);
+
+		$files = array();
+		foreach ($rii as $file) {
+
+			if ($file->isDir()){
+				continue;
+			}
+
+			$file_ext = $file->getExtension();
+			if (!in_array($file_ext, $ext)) {
+				continue;
+			}
+
+			$file_path		= $file->getPathname();
+			$file_base_name	= $format($file_path);
+
+			if (!empty($file_base_name)) {
+				$files[] = $file_base_name;
+			}
+		}
+
+		return $files;
+	}//end get_dir_files
 
 
 
@@ -1167,11 +1290,11 @@ final class dd_utils_api {
 	private static function error_number_to_text(int $f_error_number) : string {
 
 		if( $f_error_number===0 ) {
-						# all is ok
-						$f_error_text = label::get_label('archivo_subido_con_exito');
+						 # all is OK
+						 $f_error_text = label::get_label('archivo_subido_con_exito');
 		}else{
 			switch($f_error_number) {
-						# Error by number
+						 # Error by number
 				case 1 : $f_error_text = label::get_label('el_archivo_subido_excede_de_la_directiva');	break;
 				case 2 : $f_error_text = label::get_label('el_archivo_subido_excede_el_tamano_maximo');	break;
 				case 3 : $f_error_text = label::get_label('el_archivo_subido_fue_solo_parcialmente_cargado');	break;

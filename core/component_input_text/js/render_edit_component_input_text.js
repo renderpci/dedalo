@@ -4,9 +4,10 @@
 
 
 // imports
-	import {render_edit_view_default} from './render_edit_view_default.js'
-	import {render_view_text} from './render_view_text.js'
-	import {render_view_mini} from './render_view_mini.js'
+	import {view_default_edit_input_text} from './view_default_edit_input_text.js'
+	import {view_line_edit_input_text} from './view_line_edit_input_text.js'
+	import {view_text_input_text} from './view_text_input_text.js'
+	import {view_mini_input_text} from './view_mini_input_text.js'
 
 /**
 * RENDER_EDIT_COMPONENT_INPUT_TEXT
@@ -34,14 +35,17 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 	switch(view) {
 
 		case 'mini':
-			return render_view_mini.render(self, options)
+			return view_mini_input_text.render(self, options)
 
 		case 'text':
-			return render_view_text.render(self, options)
+			return view_text_input_text.render(self, options)
+
+		case 'line':
+			return view_line_edit_input_text.render(self, options)
 
 		case 'default':
 		default:
-			return render_edit_view_default.render(self, options)
+			return view_default_edit_input_text.render(self, options)
 	}
 
 	return null

@@ -4,12 +4,9 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {ui} from '../../common/js/ui.js'
-	// import {set_before_unload} from '../../common/js/events.js'
-	import {render_edit_view_default} from './render_edit_view_default.js'
-	import {render_view_text} from './render_view_text.js'
-	import {render_view_mini} from './render_view_mini.js'
+	import {view_default_edit_date} from './view_default_edit_date.js'
+	import {view_text_date} from './view_text_date.js'
+	import {view_mini_date} from './view_mini_date.js'
 
 /**
 * RENDER_EDIT_COMPONENT_DATE
@@ -38,14 +35,14 @@ render_edit_component_date.prototype.edit = async function(options) {
 	switch(view) {
 
 		case 'mini':
-			return render_view_mini.render(self, options)
+			return view_mini_date.render(self, options)
 
 		case 'text':
-			return render_view_text.render(self, options)
+			return view_text_date.render(self, options)
 
 		case 'default':
 		default:
-			return render_edit_view_default.render(self, options)
+			return view_default_edit_date.render(self, options)
 	}
 
 	return null

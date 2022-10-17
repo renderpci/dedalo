@@ -239,7 +239,7 @@
 			$fragment = preg_replace( '[^(<br( \/)?>)*|(<br( \/)?>)*$]', '', $fragment);
 			$add_options = new stdClass();
 				$add_options->struct_as_labels = true;
-			$fragment = TR::addTagImgOnTheFly($fragment, $add_options);
+			$fragment = TR::add_tag_img_on_the_fly($fragment, $add_options);
 
 			# descriptors
 			$descriptors = $value_obj->descriptors;
