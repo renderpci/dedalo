@@ -20,11 +20,11 @@ export const view_default_list_section_id = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
 * @return DOM node wrapper
 */
-view_default_list_section_id.list = function(self, options) {
+view_default_list_section_id.render = function(self, options) {
 
 	// Value as string
 		const value_string = self.data.value
@@ -35,4 +35,4 @@ view_default_list_section_id.list = function(self, options) {
 		})
 
 	return wrapper
-}//end list
+}//end render

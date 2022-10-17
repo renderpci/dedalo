@@ -26,7 +26,7 @@ export const render_list_component_section_id = function() {
 * Render node for use in list
 * @return DOM node wrapper
 */
-render_list_component_section_id.prototype.list = function() {
+render_list_component_section_id.prototype.list = function(options) {
 
 	const self = this
 
