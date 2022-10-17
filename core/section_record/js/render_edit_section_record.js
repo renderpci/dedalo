@@ -51,4 +51,3 @@ render_edit_section_record.prototype.edit = async function(options) {
 			return view_default_edit_section_record.render(self, options)
 	}
 }//end edit
-

@@ -8,6 +8,12 @@ import {get_instance} from '../../common/js/instances.js'
 
 
 // vars
+	const ar_view_edit = [
+		'line_edit'
+	]
+	const ar_view_list = [
+		'mini'
+	]
 	const ar_mode = [
 		'edit',
 		'list',
@@ -15,6 +21,9 @@ import {get_instance} from '../../common/js/instances.js'
 	]
 	const ar_mode_length	= ar_mode.length
 	const elements_length	= elements.length
+
+
+const content = document.getElementById('content');
 
 
 
@@ -46,7 +55,29 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 			for (let k = 0; k < ar_mode_length; k++) {
 
 				element.mode = ar_mode[k]
+				element.context.view = element.context.view || 'default'
 
+				// exec
+				life_cycle_test(element)
+			}
+
+			// views_edit iterate
+			for (let k = 0; k < ar_view_edit.length; k++) {
+
+				element.mode = 'edit'
+				element.context.view = ar_view_edit[k]
+
+				// exec
+				life_cycle_test(element)
+			}
+
+			// views_edit iterate
+			for (let k = 0; k < ar_view_list.length; k++) {
+
+				element.mode = 'list'
+				element.context.view = ar_view_list[k]
+
+				// exec
 				life_cycle_test(element)
 			}
 		});
@@ -63,7 +94,7 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 */
 async function life_cycle_test(element) {
 
-	describe(`${element.model} ${element.mode}`, async function() {
+	describe(`${element.model} ${element.mode} ${element.context.view}`, async function() {
 
 		let new_instance = null
 
@@ -93,10 +124,14 @@ async function life_cycle_test(element) {
 			const expected = 'rendered'
 
 			// init instance
-				await new_instance.render()
+				const new_node = await new_instance.render()
+
+			// insert in DOM
+				// if (new_instance.mode==='list') {
+				// 	content.prepend(new_node)
+				// }
 
 			assert.equal(new_instance.status, expected);
-			// assert.equal(new_instance.mode, element_mode);
 		});
 
 		it(`${element.model} DESTROY ${element.mode}`, async function() {
