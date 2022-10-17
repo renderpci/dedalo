@@ -392,7 +392,7 @@ function get_source_dato_lang($json_data) {
 														 $section_tipo);
 
 		$dato = $component->get_dato();
-		$dato = TR::addTagImgOnTheFly($dato);
+		$dato = TR::add_tag_img_on_the_fly($dato);
 		$response->result 	= $dato;
 		$response->msg = 'OK';
 

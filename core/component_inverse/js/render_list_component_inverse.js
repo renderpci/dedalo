@@ -1,10 +1,15 @@
-// import
-	import {ui} from '../../common/js/ui.js'
-	// import {common} from '../../common/js/common.js'
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*eslint no-undef: "error"*/
+
+
+
+// imports
+	import {view_default_list_inverse} from './view_default_list_inverse.js'
+	import {view_mini_inverse} from './view_mini_inverse.js'
 
 
 /**
-* render_list_component_inverse
+* RENDER_LIST_COMPONENT_INVERSE
 * Manage the components logic and appearance in client side
 */
 export const render_list_component_inverse = function() {
@@ -17,26 +22,25 @@ export const render_list_component_inverse = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return DOM node wrapper
 */
-render_list_component_inverse.prototype.list = function() {
+render_list_component_inverse.prototype.list = async function(options) {
 
 	const self = this
 
-	// short vars
-		const data = self.data || {}
-		const value = data.value || []
+	// view
+		const view	= self.context.view || 'default'
 
-	// Value as string
-		const value_string = value && value[0] && value[0].locator
-			? value[0].locator.from_section_id
-			: null
+	switch(view) {
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
-		})
+		case 'mini':
+			return view_mini_inverse.render(self, options)
 
 
-	return wrapper
+		case 'default':
+		default:
+			return view_default_list_inverse.render(self, options)
+	}
+
+	return null
 }//end list

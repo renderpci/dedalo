@@ -73,6 +73,10 @@ render_inspector.prototype.edit = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+		wrapper.addEventListener('click', function(e) {
+			// prevents deactivate selected component when user clicks the inspector
+			e.stopPropagation()
+		})
 
 	// add elements
 		wrapper.appendChild(label)

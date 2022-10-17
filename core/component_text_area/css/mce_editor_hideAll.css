@@ -1,9 +1,0 @@
-@import url('text_editor_default.css');
-/* CSS Document */
-
-/* TC */
-.tc 	{ display:none	}
-
-/* INDEX */
-.index	{ display:none;	}
-.hilite	{ background-color:transparent; color: inherit	}

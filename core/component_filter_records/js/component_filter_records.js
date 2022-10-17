@@ -8,7 +8,6 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_filter_records} from '../../component_filter_records/js/render_edit_component_filter_records.js'
 	import {render_list_component_filter_records} from '../../component_filter_records/js/render_list_component_filter_records.js'
-	import {render_mini_component_filter_records} from '../../component_filter_records/js/render_mini_component_filter_records.js'
 	import {render_search_component_filter_records} from '../../component_filter_records/js/render_search_component_filter_records.js'
 
 
@@ -59,7 +58,6 @@ export const component_filter_records = function(){
 	component_filter_records.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_filter_records.prototype.mini					= render_mini_component_filter_records.prototype.mini
 	component_filter_records.prototype.list					= render_list_component_filter_records.prototype.list
 	component_filter_records.prototype.edit					= render_edit_component_filter_records.prototype.edit
 	component_filter_records.prototype.edit_in_list			= render_edit_component_filter_records.prototype.edit

@@ -245,6 +245,15 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			self.area_thesaurus.caller					= self
 			self.area_thesaurus.linker					= self.indexing_component
 
+		// status_user. control the tool status process for users
+			const status_user_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_user_component")
+			self.status_user_component	= self.ar_instances.find(el => el.tipo===status_user_ddo.tipo)
+
+		// status_admin. control the tool status process for administrators
+			const status_admin_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_admin_component")
+			self.status_admin_component	= self.ar_instances.find(el => el.tipo===status_admin_ddo.tipo)
+
+
 		// related_sections_list. load_related_sections_list. Get the relation list.
 		// This is used to build a select element to allow
 		// user select the top_section_tipo and top_section_id of current indexation

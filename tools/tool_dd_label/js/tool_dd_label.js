@@ -54,15 +54,15 @@ tool_dd_label.prototype.init = async function(options) {
 
 	const self = this
 
-	// call the generic commom tool init
-		const common_init = tool_common.prototype.init.call(this, options);
+	// call the generic common tool init
+		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// languages
-		self.loaded_langs 	= page_globals.dedalo_projects_default_langs
+		self.loaded_langs	= page_globals.dedalo_projects_default_langs
 		self.ar_data		= typeof self.caller.data.value[0]==="object" && JSON.stringify(self.caller.data.value[0])==="{}"
 			? []
 			: self.caller.data.value[0] || []
-		self.ar_names 		= [...new Set(self.ar_data.map(item => item.name))];
+		self.ar_names		= [...new Set(self.ar_data.map(item => item.name))];
 
 
 	return common_init
@@ -72,7 +72,7 @@ tool_dd_label.prototype.init = async function(options) {
 
 /**
 * UPDATE_DATA
-* Set new json data to json editor
+* Set new JSON data to JSON editor
 */
 tool_dd_label.prototype.update_data = function() {
 

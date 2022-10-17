@@ -270,20 +270,22 @@ page.prototype.init = async function(options) {
 			// )
 
 	// beforeunload (event)
-		window.addEventListener('beforeunload', (event) => {
-			event.preventDefault();
+		window.addEventListener('beforeunload', beforeUnloadListener, {capture: true})
+		function beforeUnloadListener(event) {
+			// event.preventDefault();
 
 			// document.activeElement.blur()
-			if (window.unsaved_data!==true) {
-				return null
+			if (typeof window.unsaved_data==='undefined' || window.unsaved_data!==true) {
+				// console.log('window.unsaved_data:', window.unsaved_data);
+				// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
+				return false
 			}
 
 			// set event.returnValue value to force browser standard message (unable to customize)
 			// like : 'Changes that you made may not be saved.'
 			event.returnValue = true
-
 			// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
-		})//end beforeunload
+		}
 
 	// window messages
 		// window.addEventListener("message", receiveMessage, false);
@@ -493,7 +495,6 @@ page.prototype.add_events = function() {
 * @return promise current_instance init promise
 */
 export const instantiate_page_element = function(self, context) {
-	// console.log('context:', context);
 
 	// short vars
 		const tipo			= context.tipo

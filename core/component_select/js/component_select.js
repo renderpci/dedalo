@@ -6,10 +6,9 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_edit_component_select} from '../../component_select/js/render_edit_component_select.js'
-	import {render_search_component_select} from '../../component_select/js/render_search_component_select.js'
-	import {render_mini_component_select} from '../../component_select/js/render_mini_component_select.js'
-	import {render_list_component_select} from '../../component_select/js/render_list_component_select.js'
+	import {render_edit_component_select} from './render_edit_component_select.js'
+	import {render_list_component_select} from './render_list_component_select.js'
+	import {render_search_component_select} from './render_search_component_select.js'
 
 
 
@@ -62,9 +61,8 @@ export const component_select = function(){
 	// component_select.prototype.build_rqo_show	= common.prototype.build_rqo_show
 
 	// render
-	component_select.prototype.mini					= render_mini_component_select.prototype.mini
-	component_select.prototype.list					= render_list_component_select.prototype.list
 	component_select.prototype.edit					= render_edit_component_select.prototype.edit
-	component_select.prototype.edit_in_list			= render_edit_component_select.prototype.edit
+	component_select.prototype.list					= render_list_component_select.prototype.list
 	component_select.prototype.search				= render_search_component_select.prototype.search
+
 	component_select.prototype.change_mode			= component_common.prototype.change_mode

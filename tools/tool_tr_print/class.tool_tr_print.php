@@ -291,7 +291,7 @@ class tool_tr_print extends tool_common {
 	* @return
 	*/
 	public static function format_text_for_tool( $raw_text ) {
-		$raw_text = TR::addTagImgOnTheFly($raw_text);
+		$raw_text = TR::add_tag_img_on_the_fly($raw_text);
 
 		return $raw_text;
 	}//end format_text_for_tool

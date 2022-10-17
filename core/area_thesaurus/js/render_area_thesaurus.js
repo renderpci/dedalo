@@ -80,13 +80,13 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	const fragment = new DocumentFragment()
 
-	// buttons
-		const buttons_node = get_buttons(self);
-		if(buttons_node){
-			fragment.appendChild(buttons_node)
+	// buttons_container
+		const buttons_container = get_buttons(self);
+		if(buttons_container){
+			fragment.appendChild(buttons_container)
 		}
 
-	// search filter node
+	// search_container
 		if (self.filter) {
 			const search_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -103,11 +103,11 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	// content_data
 		const content_data = render_content_data(self)
-		// fragment.appendChild(content_data)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data	: content_data,
+			label			: null
 		})
 		wrapper.prepend(fragment)
 
@@ -474,16 +474,18 @@ const render_content_data = function(self) {
 */
 const get_buttons = function(self) {
 
-	const ar_buttons = self.context.buttons
-
-	if(!ar_buttons) return null;
+	// ar_buttons list from context
+		const ar_buttons = self.context.buttons
+		if(!ar_buttons) {
+			return null;
+		}
 
 	const fragment = new DocumentFragment()
 
-	// buttons node
-		const buttons_wrapper = ui.create_dom_element({
+	// buttons_container
+		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'buttons',
+			class_name		: 'buttons_container',
 			parent			: fragment
 		})
 
@@ -492,7 +494,7 @@ const get_buttons = function(self) {
 				element_type	: 'button',
 				class_name		: 'warning search',
 				inner_html		: get_label.buscar || 'Search',
-				parent			: buttons_wrapper
+				parent			: buttons_container
 			})
 			filter_button.addEventListener("click", function() {
 				event_manager.publish('toggle_search_panel', this)
@@ -517,7 +519,7 @@ const get_buttons = function(self) {
 					element_type	: 'button',
 					class_name		: class_name,
 					inner_html		: current_button.label,
-					parent			: buttons_wrapper
+					parent			: buttons_container
 				})
 				button_node.addEventListener('click', (e) => {
 					e.stopPropagation()
@@ -540,7 +542,7 @@ const get_buttons = function(self) {
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
 	// tools
-		ui.add_tools(self, buttons_wrapper)
+		ui.add_tools(self, buttons_container)
 
 	return fragment
 }//end get_buttons

@@ -1552,7 +1552,7 @@ class component_image extends component_media_common {
 
 		// string_node
 			$source_ImageObj	= new ImageObj($image_id, $source_quality, $additional_path, $initial_media_path);
-			$image_url			= $source_ImageObj->get_media_path() .'/'. $image_id .'.'. $source_ImageObj->get_extension();
+			$image_url			= $source_ImageObj->get_media_path() .'/'. $image_id .'.'. $source_ImageObj->get_extension(); // relative path
 			$image_dimensions	= $source_ImageObj->get_image_dimensions();
 			$width				= $image_dimensions[0];
 			$height				= $image_dimensions[1];

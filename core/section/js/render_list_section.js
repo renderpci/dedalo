@@ -602,6 +602,8 @@ render_list_section.render_column_id = function(options){
 
 /**
 * GET_BUTTONS
+* @param object self
+* 	area instance
 * @return DOM node fragment
 */
 const get_buttons = function(self) {
@@ -614,30 +616,32 @@ const get_buttons = function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// buttons node
-		const buttons_wrapper = ui.create_dom_element({
+	// buttons_container
+		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'buttons',
+			class_name		: 'buttons_container',
 			parent			: fragment
 		})
 
-		// filter button (search) . Show and hide all search elements
-			const filter_button	= ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning search',
-				inner_html		: get_label.buscar || 'Search',
-				parent			: buttons_wrapper
-			})
-			filter_button.addEventListener("click", function() {
-				event_manager.publish('toggle_search_panel', this)
-			})
-			// ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	class_name		: 'button white search',
-			// 	parent			: filter_button
-			// })
-			// filter_button.insertAdjacentHTML('beforeend', get_label.buscar)
+	// filter button (search) . Show and hide all search elements
+		const filter_button	= ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning search',
+			inner_html		: get_label.buscar || 'Search',
+			parent			: buttons_container
+		})
+		filter_button.addEventListener('click', function() {
+			event_manager.publish('toggle_search_panel', this)
+		})
 
+	// other_buttons_block
+		const other_buttons_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'other_buttons_block hide',
+			parent			: buttons_container
+		})
+
+	// other buttons
 		const ar_buttons_length = ar_buttons.length;
 		for (let i = 0; i < ar_buttons_length; i++) {
 
@@ -649,7 +653,7 @@ const get_buttons = function(self) {
 					element_type	: 'button',
 					class_name		: class_name,
 					inner_html		: current_button.label,
-					parent			: buttons_wrapper
+					parent			: other_buttons_block
 				})
 				button_node.addEventListener('click', (e) => {
 					e.stopPropagation()
@@ -664,12 +668,20 @@ const get_buttons = function(self) {
 							delete_sqo.limit = null
 							delete delete_sqo.offset
 
-							event_manager.publish('delete_section_' + self.id, {
-								section_tipo	: self.section_tipo,
-								section_id		: null,
-								caller			: self,
-								sqo				: delete_sqo
-							})
+							// delete_record
+								self.delete_record({
+									section			: self,
+									section_id		: null,
+									section_tipo	: self.section_tipo,
+									sqo				: delete_sqo
+								})
+
+							// event_manager.publish('delete_section_' + self.id, {
+							// 	section_tipo	: self.section_tipo,
+							// 	section_id		: null,
+							// 	caller			: self,
+							// 	sqo				: delete_sqo
+							// })
 							break;
 						default:
 							event_manager.publish('click_' + current_button.model)
@@ -678,8 +690,35 @@ const get_buttons = function(self) {
 				})
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
-	// tools
-		ui.add_tools(self, buttons_wrapper)
+	// tools buttons
+		ui.add_tools(self, other_buttons_block)
+
+	// show_other_buttons_button
+		const show_other_buttons_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'icon_arrow show_other_buttons_button',
+			title			: 'Toggle buttons',
+			parent			: buttons_container
+		})
+		show_other_buttons_button.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
+
+		// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			header				: show_other_buttons_button,
+			content_data		: other_buttons_block,
+			collapsed_id		: 'section_other_buttons_block',
+			collapse_callback	: collapse,
+			expose_callback		: expose,
+			default_state		: 'closed'
+		})
+		function collapse() {
+			show_other_buttons_button.classList.remove('up')
+		}
+		function expose() {
+			show_other_buttons_button.classList.add('up')
+		}
 
 
 	return fragment
@@ -767,7 +806,7 @@ const no_records_node = () => {
 	const node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'no_records',
-		inner_html		: get_label.no_records || "No records found"
+		inner_html		: get_label.no_records || 'No records found'
 	})
 
 	return node

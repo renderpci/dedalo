@@ -70,7 +70,7 @@
 				$item->datalist = $this->get_files_info();
 
 		// player mode case. Send the media header when the component are working as player
-			if($modo==='player') {
+			if($modo==='edit') {
 
 				// media info
 					$item->media_info = $this->get_media_streams();

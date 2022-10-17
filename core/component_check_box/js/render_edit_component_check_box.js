@@ -6,8 +6,9 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_edit_view_default} from './render_edit_view_default.js'
-	import {render_edit_view_tools} from './render_edit_view_tools.js'
+	import {view_default_edit_check_box} from './view_default_edit_check_box.js'
+	import {view_tools_edit_check_box} from './view_tools_edit_check_box.js'
+	// import {render_view_mini} from './render_view_mini.js'
 
 
 /**
@@ -36,12 +37,15 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 
 	switch(view) {
 
+		// case 'mini':
+			// return render_view_mini.render(self, options)
+
 		case 'tools':
-			return render_edit_view_tools.render(self, options)
+			return view_tools_edit_check_box.render(self, options)
 
 		case 'default':
 		default:
-			return render_edit_view_default.render(self, options)
+			return view_default_edit_check_box.render(self, options)
 	}
 
 	return null

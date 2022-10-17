@@ -9,7 +9,7 @@
 
 
 // hilite (on focus)
-	.hilite(@outline_offset:0) {
+	.hilite_mixin(@outline_offset:0) {
 		outline-offset: @outline_offset;
 		outline: 1px solid @color_hilite;
 		box-shadow: 0px 0px 10px @color_hilite; //rgba(26, 154, 245, .5);
@@ -17,9 +17,9 @@
 		z-index: 1;
 		// pointer-events: none;
 
-		&.input_value {
-			padding-right: 2em;
-		}
+		// &.input_value {
+		// 	padding-right: 2em;
+		// }
 	}
 // hilite static
 	.hilite_element {
@@ -65,7 +65,7 @@
 
 		// on focus inputs, adds a soft shadow and outline
 		&:focus {
-			.hilite;
+			.hilite_mixin;
 		}
 	}
 
@@ -635,7 +635,7 @@
 		// grid-template-rows: @component_label_height auto;
 		grid-template-rows: @component_label_height minmax(auto, 100%);
 		// grid-column: 1 / span 10; // default width is 100% (10 columns of 10)
-    	align-content: start;
+		align-content: start;
 
 		// flex config
 			/*
@@ -653,16 +653,14 @@
 			&:after {
 				content: " ";
 				display: block;
-				width: 22px;
-				height: 22px;
+				width: 100%;
+				height: 3px;
 				position: absolute;
-				right: 4px;
-				top: 4px;
-				// background-image: url('../../themes/default/icons/alert.svg');
-				// background-repeat: no-repeat;
-				// background-size: contain;
-				.fn_add_mask('alert.svg');
+				left: 0px;
+				top: 0px;
+				// .fn_add_mask('alert.svg');
 				background-color: @color_orange_dedalo;
+				z-index: 2;
 			}
 		}
 
@@ -701,7 +699,7 @@
 			}
 
 			@media screen and (max-width: @width_break_point_1) {
-				flex: 0 0 100% !important;
+				flex: 0 0 100% ;
 			}
 
 			>.label {
@@ -1269,7 +1267,7 @@
 		// pointer-events: none !important;
 
 		.content_data.component, .buttons_container {
-			pointer-events: none !important;
+			pointer-events: none;
 		}
 
 		.autocomplete_search_container {
@@ -1315,7 +1313,7 @@
 		}
 
 		&.warning {
-			background-color: #ED6223;
+			background-color: #ed6223;
 		}
 
 		&.ok {
@@ -1381,11 +1379,11 @@
 		&.content_data {
 			background-color: #ffbcaa !important;
 			// background-color: #d35d40 !important;
-   //  		color: white !important;
+			// color: white !important;
 
-    		.label {
-    			// color: white !important;
-    		}
+			.label {
+				// color: white !important;
+			}
 		}
 	}
 
@@ -1414,7 +1412,6 @@
 		max-height: 14em;
 		word-break: break-word;
 		//margin-top: 1.5em;
-
 
 		// &:after {
 		// 	content: " ";
@@ -1447,18 +1444,6 @@
 		}
 
 	}
-
-
-
-// component pdf
-	// .component_pdf {
-
-	// 	.pdf_viewer_frame {
-	// 		width: 100%;
-	// 		height: 100%;
-	// 	}
-	// }//end .component_pdf
-
 
 
 
@@ -1523,7 +1508,7 @@
 				}
 			}
 		}
-	}
+	}//end .content_data
 
 
 
@@ -1543,8 +1528,8 @@
 
 		>.jsoneditor-menu {
 			background-color: #949494;
-    		border-bottom: 1px solid #838383;
-    	}
+			border-bottom: 1px solid #838383;
+		}
 
 		>.jsoneditor-menu a.jsoneditor-poweredBy {
 			top: unset;
@@ -1561,16 +1546,23 @@
 			}
 
 		}
-	}
+	}//end .jsoneditor
 
 
 
-// json-container overwrite defaults
+// json-container. Is the JSON data viewer used to show fold-able data like
+// server messages in area_development widgets
 	.json-container {
-		padding: 1px;
+		background-color: #f8fcff;
+		margin: 0px;
 		margin-top: 1em;
+		padding: 0.5rem;
 		font-size: 14px;
 		border-radius: 3px;
+
+		.json-key {
+			word-break: initial;
+		}
 	}
 
 

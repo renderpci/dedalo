@@ -38,7 +38,7 @@ export const ui = {
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
 
 		// message_wrap. always check if already exists, else, create a new one and recycle it
-			const message_wrap = wrapper.querySelector("."+message_node) || (()=>{
+			const message_wrap = wrapper.querySelector('.'+message_node) || (()=>{
 
 				const new_message_wrap = ui.create_dom_element({
 					element_type	: 'div',
@@ -348,7 +348,7 @@ export const ui = {
 
 			// options
 				const button_close	= options.button_close
-				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : false
+				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : true
 				const type			= instance.type
 				const component_css	= instance.context.css || {}
 
@@ -363,27 +363,35 @@ export const ui = {
 				]
 				content_data.classList.add(...ar_css)
 
-			// button close
-				if(		button_close!==null // if null is received instead undefined, avoid to add the button
-					&&	instance.mode==='edit_in_list' // only in list mode
-					&&	!instance.is_inside_tool // prevent add the button when component is into a tool
-					){
-					const button_close_node = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button close build_content_data',
-						parent			: content_data
-					})
-					button_close_node.addEventListener('click', function(e){
-						e.stopPropagation()
-						// change mode destroy current instance and render a fresh full element node in the new mode
-						instance.change_mode('list', autoload)
-					})
-				}
-
 			return content_data
 		},//end build_content_data
 
+		/**
+		* build_button_exit_edit
+		* @param object options = {}
+		* @return DOM node content_data
+		*/
+		build_button_exit_edit : (instance, options={}) => {
 
+			const autoload		= options.autoload || true
+			const target_mode	= options.target_mode || 'list'
+
+			const button_close_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button close button_exit_edit'
+			})
+			button_close_node.addEventListener('click', async function(e){
+				e.stopPropagation()
+				await ui.component.deactivate(instance)
+				// change mode destroy current instance and render a fresh full element node in the new mode
+				instance.change_mode({
+					mode		: target_mode,
+					autoload	: autoload
+				})
+			})
+
+			return button_close_node;
+		},// end build_button_exit_edit
 
 		/**
 		* BUILD_BUTTONS_CONTAINER
@@ -843,6 +851,11 @@ export const ui = {
 		*/
 		exec_save_successfully_animation : (self) => {
 
+			// disable_save_animation from self.view_properties
+				if (self.view_properties && self.view_properties.disable_save_animation===true) {
+					return Promise.resolve(false)
+				}
+
 			// no rendered node exists cases
 				if (!self.node) {
 					return Promise.resolve(false)
@@ -855,24 +868,26 @@ export const ui = {
 						self.node.classList.remove('save_success')
 					}
 
-
 				setTimeout(()=>{
 
 					// success. add save_success class to component wrappers (green line animation)
-						self.node.classList.add('save_success')
-
+						if (self.node) {
+							self.node.classList.add('save_success')
+						}
 
 					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
 						setTimeout(()=>{
 
-							// item.classList.remove('save_success')
-							// allow restart animation. Not set state pause before animation ends (2 secs)
-							self.node.style.animationPlayState = 'paused';
-							self.node.style.webkitAnimationPlayState = 'paused';
+							if (self.node) {
+								// item.classList.remove('save_success')
+								// allow restart animation. Not set state pause before animation ends (2 secs)
+								self.node.style.animationPlayState = 'paused';
+								self.node.style.webkitAnimationPlayState = 'paused';
 
-							// remove animation style
-							if (self.node.classList.contains('save_success')) {
-								self.node.classList.remove('save_success')
+								// remove animation style
+								if (self.node.classList.contains('save_success')) {
+									self.node.classList.remove('save_success')
+								}
 							}
 
 							resolve(true)
@@ -1616,9 +1631,15 @@ export const ui = {
 	*/
 	inside_tool : function(self) {
 
-		if (self.caller && self.caller.type==='tool') {
-			return self.caller.constructor.name
-		}
+		// already custom fixed case (bool is expected)
+			if (self.is_inside_tool!==undefined && self.is_inside_tool!==null) {
+				return self.is_inside_tool
+			}
+
+		// caller is a tool case
+			if (self.caller && self.caller.type==='tool') {
+				return self.caller.constructor.name
+			}
 
 		return false
 	},//end inside_tool
@@ -1887,8 +1908,13 @@ export const ui = {
 
 		// options
 			const id			= options.id || null
-			const langs			= options.langs || page_globals.dedalo_projects_default_langs
-			const selected		= options.selected || page_globals.dedalo_application_lang
+			const langs			= options.langs ||
+								  page_globals.dedalo_projects_default_langs ||
+								  [{
+									label : 'English',
+									value : 'lg-eng'
+								  }]
+			const selected		= options.selected || page_globals.dedalo_application_lang || 'lg-eng'
 			const action		= options.action || null
 			const class_name	= options.class_name || 'select_lang'
 

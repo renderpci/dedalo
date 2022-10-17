@@ -208,7 +208,7 @@ const build_widget = (item, self) => {
 							// spinner.remove()
 
 						// delegates get_children task to worker. When finish, create global radio for current area
-							const current_worker = new Worker('../area_development/js/worker.js', {
+							const current_worker = new Worker('../area_development/js/worker_area_development.js', {
 								type : 'module'
 							});
 							current_worker.postMessage({
@@ -420,7 +420,7 @@ export const build_form = function(widget_object) {
 						// spinner.remove()
 
 					// delegates get_children task to worker. When finish, create global radio for current area
-						const current_worker = new Worker('../area_development/js/worker.js', {
+						const current_worker = new Worker('../area_development/js/worker_area_development.js', {
 							type : 'module'
 						});
 						current_worker.postMessage({

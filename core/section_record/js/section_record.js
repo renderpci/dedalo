@@ -7,9 +7,9 @@
 	//import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
-	import {render_list_section_record} from '../../section_record/js/render_list_section_record.js'
-	import {render_edit_section_record} from '../../section_record/js/render_edit_section_record.js'
 	import * as instances from '../../common/js/instances.js'
+	import {render_list_section_record} from './render_list_section_record.js'
+	import {render_edit_section_record} from './render_edit_section_record.js'
 
 
 
@@ -386,12 +386,18 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								// set the fixed_mode when is set by preferences, properties or tools, to maintain the mode defined
 								// if not the ddo will get the mode of the section_record
 								if(current_ddo.fixed_mode){
-									new_context.fixed_mode = current_ddo.fixed_mode
+									new_context.fixed_mode		= current_ddo.fixed_mode
+									new_context.properties.mode	= current_ddo.fixed_mode
+								}
+								if(current_ddo.mode){
+									new_context.mode			= current_ddo.mode
+									new_context.properties.mode	= current_ddo.mode
 								}
 								// set the view of the column when is defined in ddo, view could be defined in properties of the portals
 								// sometimes it need to be changed to adapt ddo view of the parent (mosaic case for images)
 								if(current_ddo.view){
-									new_context.view = current_ddo.view
+									new_context.view			= current_ddo.view
+									new_context.properties.view	= current_ddo.view
 								}
 								// set the children_view when the ddo has defined it, this param will be used to be render the children of the portals
 								if(current_ddo.children_view){
@@ -409,6 +415,17 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								// hover define the instance not be render as normal only when the mouse will hover of normal nodes (information hover mosaic views)
 								if(current_ddo.hover){
 									new_context.hover = current_ddo.hover
+								}
+								// set the view and mode when with_value property has set
+								// it change the view and the mode to edit component in lists, if the component has data will render with the definition instead the default
+								// take a different mode and view with data.
+								if(current_ddo.with_value){
+									new_context.properties.with_value	= current_ddo.with_value
+
+									if(current_data.value && current_data.value.length > 0){
+										new_context.view = current_ddo.with_value.view
+										new_context.mode = current_ddo.with_value.mode
+									}
 								}
 
 							// instance create and set

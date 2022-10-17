@@ -31,4 +31,35 @@
 			}
 		}
 	// }
+
+	&.edit.view_mini {
+		background-color: transparent;
+		outline: none;
+		color: unset;
+		box-shadow: none;
+		display: flex;
+
+		&:after {
+			display: none;
+		}
+
+		.buttons_container, .developer_info, .show_on_active {
+			display: none !important;
+		}
+
+		.label {
+			flex: 1 0 auto;
+			padding-left: 0px;
+			padding-right: 0px;
+		}
+		.content_data {
+			padding-top: 0px;
+			padding-bottom: 0px;
+			padding-right: 0px;
+
+			.select {
+				width: auto;
+			}
+		}
+	}
 }//end .component_select

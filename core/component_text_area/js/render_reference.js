@@ -3,7 +3,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 
@@ -17,10 +17,10 @@
 export const render_reference = async function(options) {
 
 	// options
-		const self				= options.self
-		const text_editor		= options.text_editor
-		const i					= options.i
-		const view_tag			= options.tag
+		const self			= options.self
+		const text_editor	= options.text_editor
+		const i				= options.i
+		const view_tag		= options.tag
 
 
 	// short vars
@@ -43,8 +43,7 @@ export const render_reference = async function(options) {
 		const references_component_model	= self.context.references_component_model
 
 
-	// section
-		// create the instance of the note section, it will render without inspector or filter and with edit mode
+	// reference_component
 		const instance_options = {
 			model			: references_component_model,
 			tipo			: references_component_tipo,
@@ -52,12 +51,19 @@ export const render_reference = async function(options) {
 			section_id		: 'tmp',
 			mode			: 'edit',
 			lang			: page_globals.dedalo_data_nolan,
-			caller			: self,
+			caller			: self
 		}
 		// get the instance, built and render
 			const reference_component		= await instances.get_instance(instance_options)
 											  await reference_component.build(true)
+
+			// is_inside_tool force to prevent to show tool buttons
+			reference_component.is_inside_tool = true
+
 			const reference_component_node	= await reference_component.render()
+
+		// disable_save_animation
+			reference_component.view_properties.disable_save_animation = true
 
 		// change data to set empty value in the component (it saved in Session instead DDBB)
 			const changed_data = [Object.freeze({
@@ -164,12 +170,13 @@ export const render_reference = async function(options) {
 					label	: view_tag.label,
 					tag_id	: view_tag.tag_id,
 					state	: view_tag.state,
-					data	: self.tag_data_object_to_string(new_locator) // object format
+					data	: new_locator // object format
 				}
+				const tag = self.build_view_tag_obj(reference_tag, reference_tag.tag_id)
 				const reference_obj = {
 					locator 			: new_locator,
 					locator_text_value	: locator_text_value,
-					new_data_obj		: reference_tag
+					new_data_obj		: tag
 				}
 
 				text_editor.set_reference(reference_obj)

@@ -3,20 +3,23 @@
 
 const t0 = performance.now()
 
-	// page instance
+	// page instance imports
+	import '../js/page.js'
 	import {events_init} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
-	// import {common} from '../../common/js/common.js'
-	// import '../../common/js/dd-modal.js'
-	// import {login} from '../../login/js/login.js'
-	// preload
-	import '../js/page.js'
 	import {render_page} from '../js/render_page.js'
 
 
 	( async () => {
+
+		// dedalo_environment
+			// If environment file fails, set basic vars to allow create errors
+			if (typeof DEDALO_ENVIRONMENT==='undefined') {
+				window.DEDALO_CORE_URL = '../'
+			}
+
 		// main events init
 			events_init()
 
@@ -51,9 +54,9 @@ const t0 = performance.now()
 			console.log(`+++ API start: ${(performance.now()-t0).toFixed(3)} rqo:`, rqo, 'api_response', api_response);
 
 		// error case
-			if (api_response.result===false) {
+			if (!api_response || !api_response.result) {
 
-				const wrapper_page = render_page.render_server_response_error(api_response.msg)
+				const wrapper_page = render_page.render_server_response_error(api_response.msg || 'Invalid result')
 				main.appendChild(wrapper_page)
 				main.classList.remove('loading','hide')
 

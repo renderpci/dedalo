@@ -1,14 +1,17 @@
-/*global get_label, page_globals, SHOW_DEBUG, ddEditor, ckeditor */
+/*global get_label, page_globals, SHOW_DEBUG, ddEditor, ckeditor, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
 	// import {event_manager} from '../../../common/js/event_manager.js'
+	import {common} from '../../../common/js/common.js'
 	import {set_before_unload} from '../../../common/js/events.js';
 	// import {ui} from '../../../common/js/ui.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
+	import {data_manager} from '../../../common/js/data_manager.js'
+
 	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
 
 
@@ -39,7 +42,7 @@ export const service_ckeditor = function() {
 	* @param object options
 	* @return promise js_promise
 	*/
-	this.init = function(options) {
+	this.init = async function(options) {
 
 		const self = this
 
@@ -63,27 +66,80 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			// value_container.innerHTML = value
 
-		switch(editor_class) {
+		// load dependencies
+			const load_promises = []
 
+		// load ckeditor js file
+			const ckeditor_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/ckeditor.js'
+			load_promises.push(
+				common.prototype.load_script(ckeditor_file)
+			)
+
+		// load and set JSON langs file
+			load_promises.push(
+				new Promise(function(resolve){
+					data_manager.request({
+						url		: '../common/js/lang.json',
+						method	: 'GET'
+					})
+					.then(function(response){
+						// set json_langs
+						self.json_langs = response
+						resolve(response)
+					})
+				})
+			)
+			await Promise.all(load_promises)
+
+	// init ckeditor (InlineEditor|ddEditor)
+		switch(editor_class) {
 			case 'InlineEditor':
-				return self.create_InlineEditor(editor_config)
+				await self.create_InlineEditor(editor_config)
+				break;
 
 			case 'ddEditor':
 			default:
-				return self.create_ddEditor(editor_config)
+				await self.create_ddEditor(editor_config)
+				break;
 		}
 
 
+		return true
 	}//end init
+
 
 
 	/**
 	* CREATE_INLINEEDITOR
+	* Builds a ckeditor InlineEditor instance
+	* This instance uses full featured ckeditor toolbar and is used
+	* by component_html_text
+	* @param object editor_config
 	* @return promise
+	* 	Resolve editor
 	*/
 	this.create_InlineEditor = async function(editor_config) {
 
 		const self = this
+
+		// set the lang of the tool
+			const json_langs	= self.json_langs || []
+			if (json_langs.length<1) {
+				console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
+			}
+			const dedalo_lang	= page_globals.dedalo_data_lang
+			const lang_obj		= json_langs.find(item => item.dd_lang===dedalo_lang)
+			const lang			= lang_obj
+				? lang_obj.tld2
+				: 'en'
+
+			if(lang !== 'en'){
+				const ck_translation_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/translations/'+lang+'.js'
+				await common.prototype.load_script(ck_translation_file)
+			}
+
+		// remove loading class of value_container before is changed by ckeditor
+			self.value_container.classList.remove('loading')
 
 		return new Promise(function(resolve){
 
@@ -94,51 +150,52 @@ export const service_ckeditor = function() {
 			ckeditor.InlineEditor.create( self.value_container, {
 				// initialData: value
 				// toolbar: {
-				// 	items : [
-				// 		"heading",
-				// 		// "|",
-				// 		"bold",
-				// 		"italic",
-				// 		"underline",
-				// 		"strikethrough",
-				// 		"alignment",
-				// 		"|",
-				// 		"undo",
-				// 		"redo",
-				// 		"|",
-				// 		"findAndReplace",
-				// 		"sourceEditing",
-				// 		"|",
-				// 		"imageUpload",
-				// 		"blockQuote",
-				// 		"insertTable",
-				// 		"htmlEmbed",
-				// 		"link",
-				// 		// "-",
-				// 		"style",
-				// 		"|",
-				// 		"fontColor",
-				// 		"fontBackgroundColor",
-				// 		"fontSize",
-				// 		"fontFamily",
-				// 		"superscript",
-				// 		"subscript",
-				// 		"|",
-				// 		"numberedList",
-				// 		"bulletedList",
-				// 		"horizontalLine",
-				// 		"|",
-				// 		"outdent",
-				// 		"indent",
-				// 		"|",
-				// 		"specialCharacters",
-				// 		"pageBreak",
-				// 		"reference"
-				// 	],
-				// 	shouldNotGroupWhenFull: false
-				// }
+					// 	items : [
+					// 		"heading",
+					// 		// "|",
+					// 		"bold",
+					// 		"italic",
+					// 		"underline",
+					// 		"strikethrough",
+					// 		"alignment",
+					// 		"|",
+					// 		"undo",
+					// 		"redo",
+					// 		"|",
+					// 		"findAndReplace",
+					// 		"sourceEditing",
+					// 		"|",
+					// 		"imageUpload",
+					// 		"blockQuote",
+					// 		"insertTable",
+					// 		"htmlEmbed",
+					// 		"link",
+					// 		// "-",
+					// 		"style",
+					// 		"|",
+					// 		"fontColor",
+					// 		"fontBackgroundColor",
+					// 		"fontSize",
+					// 		"fontFamily",
+					// 		"superscript",
+					// 		"subscript",
+					// 		"|",
+					// 		"numberedList",
+					// 		"bulletedList",
+					// 		"horizontalLine",
+					// 		"|",
+					// 		"outdent",
+					// 		"indent",
+					// 		"|",
+					// 		"specialCharacters",
+					// 		"pageBreak",
+					// 		"reference"
+					// 	],
+					// 	shouldNotGroupWhenFull: false
+					// }
+				// The UI will be in English.
+				language: lang,
 				simpleUpload: {
-
 					 // The URL that the images are uploaded to.
 					uploadUrl: DEDALO_ROOT_WEB + "/core/api/v1/json/?resource_type=web"
 				}
@@ -154,25 +211,16 @@ export const service_ckeditor = function() {
 				// remove original value container
 					// self.value_container.remove()
 
-				// editor.editing.view.change( writer => {
-				// 	writer.setStyle('min-height', '600px', editor.editing.view.document.getRoot());
-				// 	writer.setStyle('min-width', '600px', editor.editing.view.document.getRoot());
-				// });
-				// console.log('+++++++++++++++++++++++++++++++ create_InlineEditor editor:', editor);
-
-				// click event
-					self.click = function(e) {
-						e.stopPropagation()
-						e.preventDefault()
-
-						console.log('create_InlineEditor editor click event:', e);
-					}
-
 				// setup_events
 					self.setup_button_reference();
 
 				// setup_events
 					self.setup_events(editor_config);
+
+				// read_only
+					if(editor_config.read_only) {
+						editor.enableReadOnlyMode( 'read_only_ mode' );
+					}
 
 				// set toolbar width
 					(()=>{
@@ -193,7 +241,6 @@ export const service_ckeditor = function() {
 									width		: width + 'px',
 									// maxWidth	: width + 'px'
 								});
-								console.log('fixed width:', width);
 							}
 
 						// sync toolbar container. Focus/blur editor show/hide the toolbar container
@@ -230,8 +277,12 @@ export const service_ckeditor = function() {
 
 	/**
 	* CREATE_DDEDITOR
+	* Builds a ckeditor ddEditor instance
+	* This instance uses custom limited toolbar and is used
+	* by component_text_area
 	* @param object editor_config
 	* @return promise
+	* 	Resolve editor
 	*/
 	this.create_ddEditor = function(editor_config) {
 
@@ -245,7 +296,6 @@ export const service_ckeditor = function() {
 			// ckEditor is initiated without user interface
 			ckeditor.ddEditor.create( self.value_container, {
 				// initialData: value
-
 			})
 			.then( editor => {
 
@@ -263,13 +313,18 @@ export const service_ckeditor = function() {
 				// setup_events
 					self.setup_events(editor_config);
 
+				// read_only
+					if(editor_config.read_only) {
+						editor.enableReadOnlyMode( 'read_only_ mode' );
+					}
+
 				// setup_button_reference
 					self.setup_button_reference();
 
 				// Drag and Drop control
-				// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
-				// the drop event doesn't has any effect in the final position of the drop,
-				// the final check position is fired in the clipboardInput event.
+					// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
+					// the drop event doesn't has any effect in the final position of the drop,
+					// the final check position is fired in the clipboardInput event.
 					editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
 
 						// target is undefined unless a existing element is focus on paste or drop
@@ -611,22 +666,23 @@ export const service_ckeditor = function() {
 				text_editor	: self
 			})
 			// create the new tag for the reference
-			const tag_type		='reference'
-			const last_tag_id	= self.get_last_tag_id(tag_type, self)
-			const note_number	= parseInt(last_tag_id) + 1
+			const tag_type			='reference'
+			const last_tag_id		= 0 //self.get_last_tag_id(tag_type, self)
+			const refrence_number	= parseInt(last_tag_id) + 1
 			const reference_tag		= {
 				type	: tag_type,
-				label	: 'reference ' + note_number,
-				tag_id	: String(note_number),
+				label	: 'reference ' + refrence_number,
+				tag_id	: String(refrence_number),
 				state	: 'n',
 				data	: ''
 			}
+			const tag = self.caller.build_view_tag_obj(reference_tag, reference_tag.tag_id)
 			// render the modal
 			self.caller.render_reference({
 				self		: self.caller,
 				text_editor	: self,
 				i			: key,
-				tag			: reference_tag
+				tag			: tag
 			})
 		} );
 
