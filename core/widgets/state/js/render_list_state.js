@@ -29,19 +29,15 @@ render_list_state.prototype.list = async function(options) {
 
 	const self = this
 
-	// options
-		const render_level = options.render_level
-
 	// content_data
 		const content_data = await get_content_data_list(self)
-		if (render_level==='content') {
-			return content_data
-		}
+		console.log('content_data:', content_data);
 
 	// wrapper. ui build_edit returns widget wrapper
 		const wrapper = ui.widget.build_wrapper_edit(self, {
-			content_data : content_data
+			// content_data : content_data
 		})
+		wrapper.appendChild(content_data)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -69,8 +65,6 @@ const get_content_data_list = async function(self) {
 	// values
 		const ipo			= self.ipo
 		const ipo_length	= ipo.length
-		// console.log('ipo:', ipo);
-		// console.log('self.value:', self.value);
 
 		for (let i = 0; i < ipo_length; i++) {
 			const data			= self.value.filter(el => el.key===i)
@@ -78,14 +72,8 @@ const get_content_data_list = async function(self) {
 			values_container.appendChild(value_element)
 		}
 
-	// content_data
-		const content_data = ui.create_dom_element({
-			element_type : 'div'
-		})
-		content_data.appendChild(fragment)
 
-
-	return content_data
+	return fragment
 }//end get_content_data_list
 
 
@@ -136,7 +124,7 @@ const get_value_element = (i, data, self) => {
 				// console.log('state_total:', state_total.value, state_total);
 
 				if(situation_total.value > 0 || state_total.value > 0){
-					// node for the colum situation
+					// node for the column situation
 					const situation = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'state_icon ' + output_item.id,
@@ -253,7 +241,7 @@ const get_value_tooltip = (output_item, data, self) => {
 												&& item.column === 'situation'
 												&& item.type ==='total')
 
-		// node for the colum situation
+		// node for the column situation
 		const situation = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'situation',
@@ -325,7 +313,7 @@ const get_value_tooltip = (output_item, data, self) => {
 											&& item.column === 'state'
 											&& item.type ==='total')
 
-		// node for state colum
+		// node for state column
 			const state = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'state',
