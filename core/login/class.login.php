@@ -6,6 +6,8 @@
 */
 class login extends common {
 
+
+
 	protected $id;
 	protected $tipo;
 	protected $lang;

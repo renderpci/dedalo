@@ -82,7 +82,7 @@ component_date.prototype.load_editor = async function() {
 
 	const self = this
 
-	// flatpickr calendar. load dependences js/css
+	// flatpickr calendar. load dependencies js/css
 		const load_promises = []
 
 		// css file load
