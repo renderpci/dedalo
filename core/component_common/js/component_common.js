@@ -60,9 +60,9 @@ component_common.prototype.init = async function(options) {
 	// var containers
 		self.events_tokens	= [] // array of events of current component
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-		self.tools			= []
+		// self.tools		= []
 		//rqo
-		// self.rqo 		= {}
+		// self.rqo			= {}
 
 	// caller pointer
 		self.caller = options.caller
