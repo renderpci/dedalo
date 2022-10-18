@@ -208,16 +208,15 @@ component_common.prototype.build = async function(autoload=false){
 				// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
 				dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
 
-			// context
-				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-				if (!context) {
-					console.error("context not found in api_response:", api_response);
+
+			// Context
+				if(!self.context){
+					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+					if (!context) {
+						console.error("context not found in api_response:", api_response);
+					}
+					self.context = context
 				}
-				// preserve view across builds
-				if(self.context && self.context.view) {
-					context.view = self.context.view
-				}
-				self.context = context
 
 			// data
 				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
@@ -1127,8 +1126,10 @@ component_common.prototype.change_mode = async function(options) {
 			: true
 		const view = (options.view)
 			? options.view
-			: self.context.view
-
+			: mode==='edit'
+				? 'line'
+				: self.mode
+console.log('self.context:----------*********----------------', self.context);
 	// short vars
 		// set
 		const current_context		= self.context
@@ -1178,7 +1179,7 @@ component_common.prototype.change_mode = async function(options) {
 				ui.component.activate(new_instance)
 			}
 		}
-
+console.log('new_instance:----------*********----------------', new_instance.context);
 	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
 		self.destroy(
 			true, // delete_self
