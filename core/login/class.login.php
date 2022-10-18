@@ -610,10 +610,12 @@ class login extends common {
 			}
 
 		// is_global_admin (before set user session vars)
-			$_SESSION['dedalo']['auth']['is_global_admin'] = (bool)security::is_global_admin($user_id);
+			$is_global_admin = (bool)security::is_global_admin($user_id);
+			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
 
 		// is_developer (before set user session vars)
-			$_SESSION['dedalo']['auth']['is_developer'] = (bool)login::is_developer($user_id);
+			$is_developer = (bool)login::is_developer($user_id);
+			$_SESSION['dedalo']['auth']['is_developer'] = $is_developer;
 
 		// session : If backup is ok, fix session data
 			$_SESSION['dedalo']['auth']['user_id']			= $user_id;
@@ -657,6 +659,17 @@ class login extends common {
 				debug_log(__METHOD__." $e ", logger::CRITICAL);
 			}
 
+		// precalculate profiles datalist security access in background
+		// This file is generated on every user login
+			$status = dd_cache::cache_to_file((object)[
+				'process_file' => dirname(dirname(__FILE__)) . '/component_security_access/calculate_tree.php',
+				'data' => (object)[
+					'session_id' => session_id(),
+					'user_id' => $user_id
+				],
+				'file_name' => $user_id.'.cache_tree.json'
+			]);
+			debug_log(__METHOD__." Generating security access datalist in background ".to_string($status), logger::DEBUG);
 
 		// log : Prepare and save login action
 			$browser = $_SERVER["HTTP_USER_AGENT"];
@@ -1224,3 +1237,42 @@ class login extends common {
 
 
 }//end login class
+
+class exec {
+    /**
+     * Run Application in background
+     *
+     * @param     unknown_type $Command
+     * @param     unknown_type $Priority
+     * @return     PID
+     */
+    function background($Command, $Priority = 0){
+       if($Priority)
+           $PID = shell_exec("nohup nice -n $Priority $Command > /dev/null & echo $!");
+       else
+           $PID = shell_exec("nohup $Command > /dev/null & echo $!");
+       return($PID);
+   }
+   /**
+    * Check if the Application running !
+    *
+    * @param     unknown_type $PID
+    * @return     boolen
+    */
+   function is_running($PID){
+       exec("ps $PID", $ProcessState);
+       return(count($ProcessState) >= 2);
+   }
+   /**
+    * Kill Application PID
+    *
+    * @param  unknown_type $PID
+    * @return boolen
+    */
+   function kill($PID){
+       if(exec::is_running($PID)){
+           exec("kill -KILL $PID");
+           return true;
+       }else return false;
+   }
+};

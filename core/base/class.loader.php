@@ -3,6 +3,7 @@
 	FIXED CLASSES TO LOAD
 */
 include(DEDALO_CORE_PATH . '/base/class.Error.php');
+include(DEDALO_CORE_PATH . '/base/class.dd_cache.php');
 include(DEDALO_CORE_PATH . '/logger/class.logger.php');
 include(DEDALO_CORE_PATH . '/db/class.DBi.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php');
