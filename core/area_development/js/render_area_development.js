@@ -371,6 +371,7 @@ export const build_form = function(widget_object) {
 			class_name		: 'form_container',
 			parent			: body_info
 		})
+
 		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
 
@@ -480,6 +481,7 @@ export const build_form = function(widget_object) {
 			parent			: form_container
 		})
 		button_submit.addEventListener('click', function(){
+
 			// if (confirm( (get_label["seguro"] || "Sure?") )) {
 
 			// 	for (let i = 0; i < input_nodes.length; i++) {
