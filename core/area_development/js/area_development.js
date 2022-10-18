@@ -163,7 +163,7 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 		return document.getElementById(input_id).value
 	}
 
-	// load dependences js/css
+	// load dependencies js/css
 	load_json_editor_files()
 	.then(()=>{
 
@@ -247,7 +247,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 		const print_response	= widget_object.print_response
 
 
-	// load dependences js/css
+	// load dependencies js/css
 	const js_promise = load_json_editor_files().then(()=>{
 
 		// dom elements
@@ -279,7 +279,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 				return api_response
 			})
 
-		// text area hiden
+		// text area hidden
 			const editor_text_area = document.getElementById(editor_id)
 				  // Hide real data container
 				  editor_text_area.style.display = "none"
@@ -326,7 +326,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 */
 const load_json_editor_files = function() {
 
-	// load dependences js/css
+	// load dependencies js/css
 	const load_promises = []
 
 	const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
