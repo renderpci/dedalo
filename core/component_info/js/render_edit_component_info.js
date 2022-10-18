@@ -7,6 +7,8 @@
 	import {view_default_edit_info} from './view_default_edit_info.js'
 	import {view_mini_info} from './view_mini_info.js'
 
+
+
 /**
 * RENDER_EDIT_COMPONENT_info
 * Manage the components logic and appearance in client side
