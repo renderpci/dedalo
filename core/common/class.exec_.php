@@ -51,7 +51,8 @@ class exec_ {
 			#exec("sh $file > /dev/null &", $output); # funciona!!! <<<<
 			#exec("sh $file > /dev/null 2>&1 & echo $!", $output); # return pid
 
-			$response = exec("sh $file > /dev/null 2>&1 & echo $!", $output);
+			// $response = exec("sh $file > /dev/null 2>&1 & echo $!", $output);
+			$response = exec("sh $file > /dev/null &", $output);
 
 			if ( !$response )
 				throw new Exception("Error Processing media file", 1);

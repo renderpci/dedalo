@@ -752,7 +752,7 @@ section.prototype.load_section_tool_files = function() {
 
 	const self = this
 
-	// load dependences js/css
+	// load dependencies js/css
 		// const load_promises = []
 
 		// css file load

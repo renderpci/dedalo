@@ -2114,7 +2114,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 */
 export const render_tree_data = async function(data, target_node) {
 
-	// load dependences js/css
+	// load dependencies js/css
 		const load_promises = []
 
 	// css file load

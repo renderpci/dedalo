@@ -1129,7 +1129,7 @@ component_common.prototype.change_mode = async function(options) {
 			: mode==='edit'
 				? 'line'
 				: self.mode
-console.log('self.context:----------*********----------------', self.context);
+
 	// short vars
 		// set
 		const current_context		= self.context
@@ -1179,11 +1179,11 @@ console.log('self.context:----------*********----------------', self.context);
 				ui.component.activate(new_instance)
 			}
 		}
-console.log('new_instance:----------*********----------------', new_instance.context);
-	// destroy self instance (delete_self=true, delete_dependences=false, remove_dom=false)
+
+	// destroy self instance (delete_self=true, delete_dependencies=false, remove_dom=false)
 		self.destroy(
 			true, // delete_self
-			true, // delete_dependences
+			true, // delete_dependencies
 			true // remove_dom
 		)
 
