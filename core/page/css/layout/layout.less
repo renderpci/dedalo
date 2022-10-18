@@ -681,6 +681,10 @@
 		>.content_data {
 			color: @color_grey_ultradark; // #9e9e9e;
 			height: inherit;
+
+			>.button_exit_edit {
+				display: none;
+			}
 		}
 
 		&.edit, &.search, &.tm, &.edit_in_list, &.player {
@@ -834,6 +838,16 @@
 			}
 			>.label {
 				// color: @color_orange_dedalo !important;
+			}
+
+			.close {
+				position: absolute;
+				// top: 0px;
+				// right: -3px;
+				top: -6px;
+				right: -9px;
+				z-index: 3;
+				display: block;
 			}
 
 			&.inside {
@@ -1030,11 +1044,15 @@
 					width: 3em;
 				}
 
-				>.close {
+				.close99 {
 					position: absolute;
-					top: 0px;
-					right: -3px;
+					// top: 0px;
+					// right: -3px;
+					top: -6px;
+					right: -9px;
 					z-index: 3;
+
+					display: none;
 				}
 
 				&.vertical {

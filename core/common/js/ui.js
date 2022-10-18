@@ -383,6 +383,19 @@ export const ui = {
 			button_close_node.addEventListener('click', async function(e){
 				e.stopPropagation()
 				await ui.component.deactivate(instance)
+
+				const change_mode = instance.context.properties.with_value
+				&& instance.context.properties.with_value.mode !== instance.mode
+					? instance.context.properties.with_value.mode
+					: instance.context.properties.mode
+
+				const change_view = instance.context.properties.with_value
+					&& instance.context.properties.with_value.view !== instance.context.view
+						? instance.context.properties.with_value.view
+						: instance.context.properties.view
+
+				console.log('change_mode:', change_mode);
+				console.log('change_view:', change_view);
 				// change mode destroy current instance and render a fresh full element node in the new mode
 				instance.change_mode({
 					mode		: target_mode,
