@@ -38,12 +38,12 @@ self.onmessage = function(e) {
 	}else{
 		// error
 		response.result	= false
-		response.error	= 'Invalid target function name!'
+		response.error	= 'Invalid target function name! ' + e.data.fn
 		response.msg	= 'Task done in ms: ' + performance.now()-t1 + ' ms'
 		console.warn("Worker error:", response.error);
 	}
 
-	console.log("__***Time performance.now()-t1 worker:", fn, performance.now()-t1);
+	console.log("__***Time performance.now()-t1 worker:", fn, response.result.length, performance.now()-t1);
 
 	self.postMessage(response);
 }//end onmessage
@@ -64,28 +64,68 @@ self.onmessage = function(e) {
 	}
 * @return array ar_children
 */
-function get_children(item, datalist) {
+// self.get_children = function(item, datalist) {
+// 	// console.log('datalist_map:', datalist_map);
 
-	let ar_children = []
+// 	const ar_children = []
 
-	// const children = (item.model==='section' || item.model.indexOf('area')===0)
-	const children = (item.tipo===item.section_tipo)
-		? datalist.filter(el => el.parent === item.tipo) // section / area case
-		: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
+// 	// const children = (item.model==='section' || item.model.indexOf('area')===0)
+// 	const children = (item.tipo===item.section_tipo)
+// 		? datalist.filter(el => el.parent === item.tipo) // section / area case
+// 		: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
 
-	const children_length = children.length
-	if(children_length>0){
-		// ar_children.push(...children)
-		ar_children = children
-		const children_length = children.length
-		for (let i = 0; i < children_length; i++) {
-			const recursive_parents = get_children( children[i], datalist )
-			ar_children.push(...recursive_parents)
-		}
+// 	const children_length = children.length
+// 	if(children_length>0){
+// 		// add
+// 		ar_children.push(...children)
+// 		// recursion
+// 		for (let i = 0; i < children_length; i++) {
+// 			const recursive_parents = self.get_children( children[i], datalist )
+// 			ar_children.push(...recursive_parents)
+// 		}
+// 	}
+
+// 	return ar_children
+// }//end get_children
+
+
+
+/**
+* GET_CHILDREN
+* Get datalist children recursively from given item
+* @param object item
+* 	datalist item with info about tipo, model, value as
+	{
+		label: "Descripción"
+		model: "section_group"
+		parent: "mht39"
+		tipo: "mht55"
+		section_tipo: "mht5"
 	}
+* @return array ar_children
+*/
+	self.get_children = function(item, datalist) {
 
-	return ar_children
-}//end get_children
+		let ar_children = []
+
+		// const children = (item.model==='section' || item.model.indexOf('area')===0)
+		const children = (item.tipo===item.section_tipo)
+			? datalist.filter(el => el.parent === item.tipo) // section / area case
+			: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
+
+		const children_length = children.length
+		if(children_length>0){
+			// ar_children.push(...children)
+			ar_children = children
+			const children_length = children.length
+			for (let i = 0; i < children_length; i++) {
+				const recursive_parents = self.get_children( children[i], datalist )
+				ar_children.push(...recursive_parents)
+			}
+		}
+
+		return ar_children
+	}//end get_children
 
 
 
@@ -103,7 +143,7 @@ function get_children(item, datalist) {
 	}
 * @return array ar_parents
 */
-function get_parents(item, datalist) {
+self.get_parents = function(item, datalist) {
 
 	let ar_parents = []
 

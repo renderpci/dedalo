@@ -351,11 +351,23 @@ const render_area_item = function(item, datalist, value, self) {
 				}
 				// fn_global_radio()
 
+
 				// delegates get_children task to worker. When finish, create global radio for current area
 					when_in_viewport(
 						li, // DOM node
 						function() {
-							const current_worker = new Worker('../component_security_access/js/worker.js', {
+
+							// console.log('datalist:', typeof datalist, datalist);
+							// const datalist_map = new Map(datalist.map(i => [i.key, i.val]));
+							// const mySet1 = new Set()
+							// const length = datalist.length
+							// for (let i = length - 1; i >= 0; i--) {
+							// 	mySet1.add(datalist[i])
+							// }
+							// // mySet1.add(...datalist)
+							// console.log('mySet1:', mySet1);
+
+							const current_worker = new Worker('../component_security_access/js/worker_security_access.js', {
 								type : 'module'
 							});
 							current_worker.postMessage({
@@ -364,6 +376,7 @@ const render_area_item = function(item, datalist, value, self) {
 							});
 							current_worker.onmessage = function(e) {
 								const children = e.data.result
+								// console.log('children:', children);
 								fn_global_radio(children)
 								current_worker.terminate()
 							}
