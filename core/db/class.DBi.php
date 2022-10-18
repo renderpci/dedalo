@@ -89,6 +89,42 @@ abstract class DBi {
 
 
 	/**
+	* _GETCONNECTIONPDO
+	* Returns an PgSql\Connection instance on success, or false on failure.
+	* @return resource|object $pg_conn (object in PHP >=8.1)
+	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	*/
+	public static function _getConnectionPDO(
+		string|null $host	= DEDALO_HOSTNAME_CONN,
+		string $user		= DEDALO_USERNAME_CONN,
+		string $password	= DEDALO_PASSWORD_CONN,
+		string $database	= DEDALO_DATABASE_CONN,
+		string|null $port	= DEDALO_DB_PORT_CONN,
+		string|null $socket	= DEDALO_SOCKET_CONN,
+		bool $cache			= true
+		) : object|false {
+
+		static $pg_pdo_conn;
+		if($cache===true && isset($pg_pdo_conn)) {
+			return($pg_pdo_conn);
+		}
+
+		// PDO
+			try {
+				$pg_pdo_conn = new PDO(
+				'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
+					PDO::ATTR_ERRMODE   =>  PDO::ERRMODE_EXCEPTION,
+				));
+			} catch (\PDOException $e) {
+				throw new \PDOException($e->getMessage(), (int)$e->getCode());
+			}
+
+		return $pg_pdo_conn;
+	}//end _getConnectionPDO
+
+
+
+	/**
 	* _GETCONNECTION_MYSQL
 	* @return resource $mysqli
 	*/
@@ -110,8 +146,8 @@ abstract class DBi {
 		/*
 			$mysqli = new mysqli($host, $user, $password, $database, $port);
 			if ($mysqli->connect_errno) {
-			    echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-			    die();
+				echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
+				die();
 			}
 			#echo $mysqli->host_info . "\n";
 
