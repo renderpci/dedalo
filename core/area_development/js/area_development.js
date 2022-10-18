@@ -72,7 +72,7 @@ area_development.prototype.build = async function(autoload=true) {
 		self.status = 'building'
 
 	// rqo_config
-		self.rqo_config	= self.context.request_config
+		self.rqo_config	= (self.context && self.context.request_config)
 			? self.context.request_config.find(el => el.api_engine==='dedalo')
 			: {}
 
@@ -93,7 +93,30 @@ area_development.prototype.build = async function(autoload=true) {
 				self.datum	= api_response.result
 
 			// set context and data to current instance
-				self.context	= self.datum.context.find(el => el.tipo===self.tipo)
+			// set Context
+				// context is only set when it's empty the origin context,
+				// if the instance has previous context, it will need to preserve.
+				// because the context could be modified by ddo configuration and it can no be changed
+				// ddo_map -----> context
+				// ex: oh27 define the specific ddo_map for rsc368
+				// 		{ mode: list, view: line, children_view: text ... }
+				// if you call to API to get the context of the rsc368 the context will be the default config
+				// 		{ mode: edit, view: default }
+				// but it's necessary preserve the specific ddo_map configuration in the new context.
+				// Context is set and changed in section_record.js to get the ddo_map configuration
+				if(!self.context){
+					const context = self.datum.context.find(el => el.tipo===self.tipo)
+					if (!context) {
+						console.error("context not found in api_response:", api_response);
+					}
+					// // preserve view across builds
+					// if(self.context && self.context.view) {
+					// 	context.view = self.context.view
+					// }
+
+					// properties recover
+					self.context = context
+				}
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
 				self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
 
