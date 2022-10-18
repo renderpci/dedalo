@@ -513,7 +513,7 @@ export const instantiate_page_element = function(self, context) {
 			section_id		: section_id ,
 			mode			: mode,
 			lang			: lang,
-			context			: context // note that context is injected here because start API function returns the full context (login case, for example)
+			// context			: context // note that context is injected here because start API function returns the full context (login case, for example)
 		}
 
 		// id_variant . Propagate a custom instance id to children

@@ -160,7 +160,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 		// build
 			await self.time_machine.build(true)
-
+console.log('self.time_machine:-------------------------------', self.time_machine);
 		// add to self instances list
 			self.ar_instances.push(self.time_machine)
 
