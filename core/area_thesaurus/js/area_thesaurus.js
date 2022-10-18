@@ -165,7 +165,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 	// rqo
 		const generate_rqo = async function(){
 			// rqo_config. get the rqo_config from context
-			self.rqo_config	= self.context.request_config
+			self.rqo_config	= (self.context && self.context.request_config)
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
 				: {}
 
@@ -176,32 +176,10 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 		await generate_rqo()
 
-	// old
-		// // dd_request
-		// 	const request_config	= self.context ? self.context.request_config : null
-		// 	self.dd_request.show	= self.build_rqo('show', request_config, 'get_data')
-
-		// // debug
-		// 	const dd_request_show_original = clone(self.dd_request.show)
-
-		// // build_options. Add custom area build_options to source
-		// 	const source = self.dd_request.show.find(element => element.typo==='source')
-		// 		  source.build_options = self.build_options
-
 	// load data if not yet received as an option
 		if (autoload===true) {
 			// get context and data
 				// const api_response = await data_manager.read(self.dd_request.show)
-
-				if(self.context.hierarchy_sections){
-					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
-				}
-				if(self.context.hierarchy_terms){
-					self.rqo.source.hierarchy_terms = self.context.hierarchy_terms
-				}
-				if(self.context.thesaurus_mode){
-					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
-				}
 				const api_response = await data_manager.request({body:self.rqo})
 					// console.log("AREA_THESAURUS api_response:", self.id, api_response);
 
@@ -209,7 +187,14 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				self.datum = api_response.result
 
 			// set context and data to current instance
-				self.context	= self.datum.context.find(element => element.tipo===self.tipo)
+				if(!self.context){
+					const context =  self.datum.context.find(element => element.tipo===self.tipo)
+					if (!context) {
+						console.error("context not found in api_response:", api_response);
+					}
+					// set context
+					self.context = context
+				}
 				self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
 				self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
 
@@ -223,7 +208,15 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 			// // rqo build
 			// 	self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')
-
+				if(self.context.hierarchy_sections){
+					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
+				}
+				if(self.context.hierarchy_terms){
+					self.rqo.source.hierarchy_terms = self.context.hierarchy_terms
+				}
+				if(self.context.thesaurus_mode){
+					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
+				}
 			// rqo regenerate
 				await generate_rqo()
 				console.log("SECTION self.rqo after load:", clone(self.rqo));
