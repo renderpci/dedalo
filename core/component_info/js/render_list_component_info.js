@@ -8,8 +8,9 @@
 	import {view_mini_info} from './view_mini_info.js'
 
 
+
 /**
-* render_list_component_info
+* RENDER_LIST_COMPONENT_INFO
 * Manage the components logic and appearance in client side
 */
 export const render_list_component_info = function() {

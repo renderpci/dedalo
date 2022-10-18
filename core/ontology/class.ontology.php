@@ -330,7 +330,7 @@ class ontology {
 				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
 				$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
 
-				# Virtual section too is neccesary (buttons specifics)
+				# Virtual section too is necessary (buttons specifics)
 				$ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
 				$ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
 				break;
@@ -342,11 +342,17 @@ class ontology {
 				break;
 		}
 
-
-		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+		// ar_exclude_model
+			$ar_exclude_model = array(
+				'component_security_administrator',
+				'section_list','search_list',
+				'component_semantic_node',
+				'box_elements',
+				'exclude_elements'
+			);
 
 		// ar_exclude_components
-			$dedalo_version = explode(".", DEDALO_VERSION);
+			$dedalo_version = explode('.', DEDALO_VERSION);
 			if ( (int)$dedalo_version[0]>5 ) {
 				$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? DEDALO_AR_EXCLUDE_COMPONENTS : [];
 			}else{
@@ -357,11 +363,11 @@ class ontology {
 
 			// Remove_exclude_models
 				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-				if( in_array($component_model, $ar_exclude_modelo)) {
+				if( in_array($component_model, $ar_exclude_model)) {
 					continue ;
 				}
 
-			// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+			// remove_exclude_terms : config excludes. If installation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
 				if (in_array($element_tipo, $ar_exclude_components)) {
 					continue;
 				}

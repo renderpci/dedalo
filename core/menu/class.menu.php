@@ -41,6 +41,7 @@ class menu extends common {
 	* @return array $ar_areas
 	*/
 	public function get_tree_datalist() : array {
+		$start_time = start_time();
 
 		$ar_areas = [];
 
@@ -106,15 +107,16 @@ class menu extends common {
 
 				$current_area = $ar_areas[$i];
 
-				$datalist_item = (object)[
-					'tipo'		=> $current_area->tipo,
-					'model'		=> $current_area->model,
-					'parent'	=> $current_area->parent,
-					'label'		=> $current_area->label
-				];
+				// item
+					$datalist_item = (object)[
+						'tipo'		=> $current_area->tipo,
+						'model'		=> $current_area->model,
+						'parent'	=> $current_area->parent,
+						'label'		=> $current_area->label
+					];
 
 				// section_tool case
-					if($current_area->model==='section_tool'){
+					if($current_area->model==='section_tool') {
 
 						$section_tool_tipo	= $current_area->tipo;
 						$properties			= $current_area->properties;
@@ -144,12 +146,16 @@ class menu extends common {
 							}
 					}//end if($current_area->model==='section_tool'){
 
-
-
 				// add
 					$tree_datalist[] = $datalist_item;
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
-			// dump($tree_datalist, ' tree_datalist ++ '.to_string());
+
+
+		// debug
+			debug_log(
+				__METHOD__.' Resolved get_tree_datalist (total: '.count($tree_datalist).') in  '.exec_time_unit($start_time,'ms').' ms',
+				logger::DEBUG
+			);
 
 		return $tree_datalist;
 	}//end get_tree_datalist

@@ -28,22 +28,19 @@ abstract class backup {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed '.__METHOD__;
 
-		# Force liberate browser session
+		# Force to unlock browser session
 			session_write_close();
 
 		try {
 			# NAME : File name formatted as date . (One hour resolution)
 			# $user_id 		= isset($_SESSION['dedalo']['auth']['user_id']) ? $_SESSION['dedalo']['auth']['user_id'] : '';
-			$ar_dd_data_version = get_current_version_in_db();
-			if($skip_backup_time_range===true) {
-				$db_name	= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version);
-			}else{
-				$db_name	= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
-			}
+			$ar_dd_data_version	= get_current_version_in_db();
+			$db_name			= ($skip_backup_time_range===true)
+				? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
+				: date("Y-m-d_H")   .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
 
+			// Backups folder exists verify
 			$file_path = DEDALO_BACKUP_PATH_DB;
-
-			# Backups folder exists verify
 			if( !is_dir($file_path) ) {
 				if(!mkdir($file_path, 0700, true)) {
 					#throw new Exception(" Error on read or create backup directory. Permission denied");

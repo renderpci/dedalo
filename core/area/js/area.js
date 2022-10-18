@@ -161,7 +161,7 @@ area.prototype.init_json_editor = async function(widget_object) {
 		return document.getElementById(input_id).value
 	}
 
-	// load dependences js/css
+	// load dependencies js/css
 	const js_promise = load_json_editor_files().then(()=>{
 
 		const editor_text_area = document.getElementById(editor_id)
