@@ -60,7 +60,36 @@
 
 			}
 		}
-
 	}//end .wrapper_widget
+
+
+	&.list {
+		display: contents;
+
+		>.wrapper_widget {
+			display: contents;
+
+			// ul
+			>.values_container {
+				display: contents;
+
+				// li
+				>.widget_item {
+					display: flex;
+					flex-wrap: wrap;
+					// background-color: #c3f2bc;
+
+					// span
+					>.state_icon {
+						// flex: 1 1 auto;
+						display: inline-block;
+						// width: 1.5rem;
+						// height: 1.5rem;
+					}
+				}
+			}
+		}
+
+	}
 
 }//end .component_info
