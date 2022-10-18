@@ -6,10 +6,8 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {
-		get_content_data_edit
-	}
-	from './view_default_edit_info.js'
+	// import {get_content_data_edit} from './view_default_edit_info.js'
+
 
 
 /**
@@ -24,7 +22,7 @@ export const view_default_list_info = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render component node to use in list
 * @return DOM node wrapper
 */
@@ -33,17 +31,41 @@ view_default_list_info.render = async function(self, options) {
 	// widgets load
 		await self.get_widgets()
 
-	// short vars
-		const content_data = get_content_data_edit(self)
+	// content_data
+		const content_data = await get_content_data(self)
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-
-		})
+		const wrapper = ui.component.build_wrapper_list(self, {})
 
 	// Set value
 		wrapper.appendChild(content_data)
 
 
 	return wrapper
-}//end list
+}//end render
+
+
+
+/**
+* GET_CONTENT_DATA
+* @return DOM DocumentFragment
+*/
+export const get_content_data = async function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// values (inputs)
+		const widgets			= self.ar_instances
+		const widgets_length	= widgets.length
+		for (let i = 0; i < widgets_length; i++) {
+
+			const current_widget = widgets[i]
+
+			await current_widget.build()
+			const widget_node = await current_widget.render()
+			fragment.appendChild(widget_node)
+		}
+
+
+	return fragment
+}//end get_content_data

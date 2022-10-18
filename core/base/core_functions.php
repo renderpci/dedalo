@@ -1454,7 +1454,7 @@ function session_start_manager(array $request_options) : bool {
 					session_name($options->session_name);
 				}
 
-			// save_path
+			// aditional_save_path
 				if ($options->aditional_save_path!==false) {
 					// Change the save path. Sessions stored in the same path
 					// all share the same lifetime; the lowest lifetime will be

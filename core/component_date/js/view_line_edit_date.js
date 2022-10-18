@@ -5,7 +5,8 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {
+	// import {set_before_unload} from '../../common/js/events.js'
+		import {
 		input_element_date,
 		input_element_range,
 		input_element_period,
@@ -14,15 +15,14 @@
 	} from './render_edit_component_date.js'
 
 
-
 /**
-* VIEW_DEFAULT_EDIT_DATE
+* VIEW_LINE_EDIT_DATE
 * Manage the components logic and appearance in client side
 */
-export const view_default_edit_date = function() {
+export const view_line_edit_date = function() {
 
 	return true
-}//end view_default_edit_date
+}//end view_line_edit_date
 
 
 
@@ -32,7 +32,7 @@ export const view_default_edit_date = function() {
 * @param object options
 * @return DOM node
 */
-view_default_edit_date.render = async function(self, options) {
+view_line_edit_date.render = async function(self, options) {
 
 	// render_level
 		const render_level = options.render_level || 'full'
@@ -45,17 +45,20 @@ view_default_edit_date.render = async function(self, options) {
 
 	// content_data
 		const content_data = get_content_data_edit(self)
+
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+		content_data.appendChild(button_exit_edit)
+
+
 		if (render_level==='content') {
 			return content_data
 		}
 
-	// buttons
-		const buttons = get_buttons(self)
-
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons
+			label 			: null
 		})
 	// set pointer to content_data
 		wrapper.content_data = content_data
@@ -99,63 +102,6 @@ const get_content_data_edit = function(self) {
 
 
 
-/**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
-
-	const fragment = new DocumentFragment()
-
-	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: fragment
-			})
-			// event to insert new input
-			button_add_input.addEventListener('mouseup', function() {
-
-				const changed_data = [Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,
-					value	: null
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: true
-				})
-				.then(()=>{
-					const inputs_container = self.node.content_data.inputs_container
-
-					// add new dom input element
-					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
-					inputs_container.appendChild(new_input)
-					// set the pointer
-					inputs_container[changed_data.key] = new_input
-				})
-			})
-		}
-
-	// buttons tools
-		if (!is_inside_tool && mode==='edit') {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
-
-
 
 /**
 * GET_INPUT_ELEMENT_EDIT
@@ -164,7 +110,7 @@ const get_buttons = (self) => {
 * @param object self
 * @return DOM node content_value
 */
-export const get_input_element_edit = (i, current_value, self) => {
+const get_input_element_edit = (i, current_value, self) => {
 
 	const mode		= self.mode
 	const date_mode	= self.get_date_mode()
@@ -200,30 +146,6 @@ export const get_input_element_edit = (i, current_value, self) => {
 
 	// add input_node to the content_value
 		content_value.appendChild(input_node)
-
-	// button remove
-		const remove_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button remove hidden_button',
-			parent			: content_value
-		})
-		remove_node.addEventListener('mouseup', function(){
-			// force possible input change before remove
-			document.activeElement.blur()
-
-			const current_value = input_node.value ? input_node.value : null
-
-			const changed_data = [Object.freeze({
-				action	: 'remove',
-				key		: i,
-				value	: null
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				label			: current_value,
-				refresh			: true
-			})
-		})
 
 	return content_value
 }//end get_input_element_edit

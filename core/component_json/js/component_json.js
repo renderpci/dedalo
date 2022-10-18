@@ -5,7 +5,7 @@
 
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -79,7 +79,7 @@ component_json.prototype.load_editor_files = function() {
 
 	const self = this
 
-	// load dependences js/css
+	// load dependencies js/css
 		const load_promises = []
 
 		// css file load

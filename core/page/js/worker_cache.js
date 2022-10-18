@@ -56,6 +56,7 @@
 self.onmessage = async function(e) {
 	const t1 = performance.now()
 
+
 	// options
 		const url			= e.data.url
 		// const dd_api		= e.data.dd_api
@@ -65,6 +66,7 @@ self.onmessage = async function(e) {
 	// Dynamic import
 		// const data_manager_instance	= await import('../../common/js/data_manager.js')
 		// const data_manager			= data_manager_instance.data_manager
+
 
 	// data_manager
 		const api_response = await data_manager.request({

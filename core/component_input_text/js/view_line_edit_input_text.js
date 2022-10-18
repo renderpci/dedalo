@@ -64,6 +64,10 @@ const get_content_data_edit = function(self) {
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+		content_data.appendChild(button_exit_edit)
+
 	// values (inputs)
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
 		const value_length	= inputs_value.length

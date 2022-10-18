@@ -3,6 +3,7 @@
 	FIXED CLASSES TO LOAD
 */
 include(DEDALO_CORE_PATH . '/base/class.Error.php');
+include(DEDALO_CORE_PATH . '/base/class.dd_cache.php');
 include(DEDALO_CORE_PATH . '/logger/class.logger.php');
 include(DEDALO_CORE_PATH . '/db/class.DBi.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php');
@@ -20,15 +21,6 @@ include(DEDALO_CORE_PATH . '/common/class.filter.php');
 include(DEDALO_CORE_PATH . '/common/class.counter.php');
 include(DEDALO_CORE_PATH . '/common/class.tools.php');
 include(DEDALO_CORE_PATH . '/common/class.label.php');
-// media_engine. media auxiliary classes
-include(DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 #include(DEDALO_CORE_PATH . '/common/class.operator.php');
 include(DEDALO_CORE_PATH . '/common/class.locator.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
@@ -38,6 +30,15 @@ include(DEDALO_CORE_PATH . '/common/class.ddo_map_object.php'); # new 28-07-2019
 include(DEDALO_CORE_PATH . '/common/class.request_query_object.php'); # new 16-05-2021
 include(DEDALO_CORE_PATH . '/common/class.request_config_object.php'); # new 16-05-2021
 include(DEDALO_CORE_PATH . '/common/class.search_query_object.php'); # new 30-06-2021
+// media_engine. media auxiliary classes
+include(DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
+include(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 include(DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'); # new 27-07-2021
 include(DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'); # new 28-07-2021
 #include(DEDALO_CORE_PATH . '/common/class.relation.php');
@@ -177,7 +178,5 @@ $autoloader	= new class_loader();
 
 
 
-# INIT NAVIGATOR
+# INIT NAVIGATOR at end
 $navigator	= new navigator();
-
-
