@@ -144,8 +144,6 @@ section.prototype.init = async function(options) {
 		// config
 		self.config					= options.config || null
 
-
-
 	// event subscriptions
 		// new_section_ event
 			self.events_tokens.push(

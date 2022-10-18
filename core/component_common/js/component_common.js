@@ -80,9 +80,9 @@ component_common.prototype.init = async function(options) {
 	// view_properties. object . Defines useful view custom properties to take control
 	// of some common component behaviors
 		self.view_properties = {
-			disable_save_animation : false,
-			disable_buttons_container: false,
-			disable_value_buttons : false,
+			disable_save_animation		: false, // bool false
+			disable_buttons_container	: false, // bool false
+			disable_value_buttons		: false  // bool false
 		}
 
 	// pagination info
@@ -949,9 +949,9 @@ component_common.prototype.change_value = async function(options) {
 const function_queue = function(context, pool, fn, options) {
 
 	const wrap_function = function(fn, context, params) {
-	    return function() {
-	        fn.apply(context, params);
-	    };
+		return function() {
+			fn.apply(context, params);
+		};
 	}
 	const fun = wrap_function(fn, context, [options]);
 
