@@ -1430,7 +1430,7 @@ export const ui = {
 			// short vars
 				// const id	= instance.id || 'id is not set'
 				const mode	= instance.mode 	// like 'edit'
-				const type	= "widget"
+				const type	= 'widget'
 				const name	= instance.constructor.name
 
 			// fragment
@@ -1439,7 +1439,7 @@ export const ui = {
 			// content_data
 				if (items.content_data) {
 					const content_data = items.content_data
-					content_data.classList.add("content_data", type)
+					content_data.classList.add('content_data', type)
 					fragment.appendChild(content_data)
 				}
 

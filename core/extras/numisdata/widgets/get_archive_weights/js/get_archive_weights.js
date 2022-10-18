@@ -49,11 +49,11 @@ get_archive_weights.prototype.init = async function(options) {
 
 	const self = this
 
-	// call the generic commom init
+	// call the generic common init
 		const common_init = widget_common.prototype.init.call(this, options);
 
 
-	// // load dependences js/css
+	// // load dependencies js/css
 	// 	const load_promises = []
 	//
 	// 	// css file load
