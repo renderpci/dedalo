@@ -231,6 +231,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 				const ddo_map			= self.tool_config && self.tool_config.ddo_map
 					? self.tool_config.ddo_map
 					: []
+
 				const ddo_map_length	= ddo_map.length
 				for (let i = 0; i < ddo_map_length; i++) {
 
@@ -250,27 +251,30 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 						// context. If not provided, it is obtained from the caller or requested from the API
 							const context = el.context
 								? el.context
-								: await (async function(){
+								: null
 
-									// only component_portal needs to calculate the context (for proper pagination limit resolution)
-										if (el.model!=='component_portal') {
-											return {}
-										}
+								// await (async function(){
 
-									// caller context
-										const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
-										if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
-											// get context from available caller
-											return caller_context
-										}
+								// 	// only component_portal needs to calculate the context (for proper pagination limit resolution)
+								// 		if (el.model!=='component_portal') {
+								// 			return {}
+								// 		}
 
-									// resolve whole context from API (init event observer problem..)
-									// (!) This is mandatory now because some components (e.g. component_portal) need
-									// the rqo_config to generate rqo correctly
-										const api_response = await data_manager.get_element_context(el)
+								// 	// caller context
+								// 		const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
+								// 		if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
+								// 			// get context from available caller
+								// 			return caller_context
+								// 		}
 
-									return api_response.result[0] || null
-								 })()
+								// 	// resolve whole context from API (init event observer problem..)
+								// 	// (!) This is mandatory now because some components (e.g. component_portal) need
+								// 	// the rqo_config to generate rqo correctly
+								// 		const api_response = await data_manager.get_element_context(el)
+
+								// 	return api_response.result[0] || null
+								//  })()
+
 
 						// generic try
 							// const element_instance = load_component_generic({
@@ -299,6 +303,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 								const load_data = true // el.model.indexOf('component')!==-1 || el.model==='area_thesaurus'
 								element_instance.build( load_data ) // build, loading data
 								.then(function(){
+									console.log('element_instance', element_instance)
 									resolve(element_instance)
 								})
 							})
@@ -327,7 +332,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 		await load_ddo_map()
 
 	// load data if is not already received as option
-		if (autoload===true) {
+		if (autoload===true && !self.context) {
 
 			// mandatory vars check. (!) Not mandatory anymore
 				// if (!self.section_tipo || self.section_tipo.lenght<2) {
