@@ -17,7 +17,7 @@ class exec_ {
 
 		try {
 
-			# Scape command for security
+			# escape command for security
 			$command = escapeshellcmd($command) . ' '.$to;
 
 
@@ -29,7 +29,6 @@ class exec_ {
 				error_log("Output: ".$output);
 			}
 
-
 			if( !$output )
 				throw new Exception("Error processing media command", 1);
 
@@ -37,6 +36,7 @@ class exec_ {
 
 			return ('Exception: '. $e->getMessage(). "\n");
 		}
+
 		return true ;
 	}//end exec_command
 
@@ -82,7 +82,6 @@ class exec_ {
 		} else {
 			return false;
 		}
-
 	}//end getCommandPath
 
 
@@ -132,7 +131,7 @@ class exec_ {
 
 /* An easy way to keep in track of external processes.
  * Ever wanted to execute a process in php, but you still wanted to have somewhat controll of the process ? Well.. This is a way of doing it.
- * @compability: Linux only. (Windows does not work).
+ * @compatibility: Linux only. (Windows does not work).
  * @author: Peec
  */
 class Process{
@@ -178,5 +177,3 @@ class Process{
         else return false;
     }
 }//end class Process
-
-

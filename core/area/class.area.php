@@ -39,7 +39,7 @@ class area extends area_common  {
 			// 	return $_SESSION['dedalo']['ontology']['all_areas'][DEDALO_APPLICATION_LANG];
 			// }
 
-		// get the config_areas file to allow and denny some especific areas defined by installation.
+		// get the config_areas file to allow and deny some specific areas defined by installation.
 			$config_areas = self::get_config_areas();
 
 		// root_areas

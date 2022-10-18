@@ -245,13 +245,16 @@ class login extends common {
 			$full_username				= login::get_full_username($user_id);
 			$init_user_login_sequence	= login::init_user_login_sequence($user_id, $username, $full_username);
 			if ($init_user_login_sequence->result===false) {
-				# RETURN FALSE
+
+				// return false
 				$response->result			= false;
 				$response->msg				= $init_user_login_sequence->msg;
 				$response->errors			= isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
 				$response->result_options	= $init_user_login_sequence->result_options;
+
 			}else if($init_user_login_sequence->result===true) {
-				# RETURN OK AND RELOAD PAGE
+
+				// return ok and reload page
 				$response->result			= true;
 				$response->msg				= " Login.. ";
 				$response->errors			= isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
@@ -563,7 +566,7 @@ class login extends common {
 
 	/**
 	* INIT_USER_LOGIN_SEqUENCE
-	* Init login sequence when all is OK
+	* init login sequence when all is OK
 	* @param string|int $user_id
 	* @param string $username
 	* @return object $response
