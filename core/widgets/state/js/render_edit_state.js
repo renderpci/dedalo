@@ -29,7 +29,8 @@ render_edit_state.prototype.edit = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level
+	// options
+		const render_level = options.render_level
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -41,6 +42,8 @@ render_edit_state.prototype.edit = async function(options) {
 		const wrapper = ui.widget.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -69,7 +72,8 @@ const get_content_data_edit = async function(self) {
 
 		for (let i = 0; i < ipo_length; i++) {
 			const data = self.value.filter(item => item.key === i)
-			get_value_element(i, data , values_container, self)
+			const value_element	= get_value_element(i, data, self)
+			values_container.appendChild(value_element)
 		}
 
 	// content_data
@@ -86,15 +90,14 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return DOM node li
+* @return DOM node value_element
 */
-const get_value_element = (i, data, values_container, self) => {
+const get_value_element = (i, data, self) => {
 
 	// li, for every ipo will create a li node
-		const li = ui.create_dom_element({
+		const value_element = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'widget_item state',
-			parent			: values_container
+			class_name		: 'widget_item state'
 		})
 
 	// header. First row with the header labels
@@ -102,7 +105,7 @@ const get_value_element = (i, data, values_container, self) => {
 			element_type	: 'div',
 			class_name		: 'li_item header',
 			inner_html		: '',
-			parent			: li
+			parent			: value_element
 		})
 		// group_name_column
 			const group_name_column = ui.create_dom_element({
@@ -124,8 +127,8 @@ const get_value_element = (i, data, values_container, self) => {
 			})
 
 		// important!, data don't has all info
-		// is neccesary get the langs for create the all lang nodes
-		// when the component is traslatable, data can't has all languages, in the data will only has the langs that has value
+		// is necessary get the langs for create the all lang nodes
+		// when the component is translatable, data can't has all languages, in the data will only has the langs that has value
 		// but when the component id non translatable, data has always the node reference (empty or with value)
 		const project_langs	= page_globals.dedalo_projects_default_langs
 		const nolan			= page_globals.dedalo_data_nolan
@@ -134,7 +137,7 @@ const get_value_element = (i, data, values_container, self) => {
 		// we will store the nodes to re-create the value when the components change our data and send the 'update_widget_value' event
 		const ar_nodes = []
 
-		// every ipo has one output array wiht the objects for every row
+		// every ipo has one output array whit the objects for every row
 		// get the output for reference of the rows
 		for (let o = 0; o < output.length; o++) {
 			const output_item = output[o]
@@ -142,7 +145,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const container = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'li_item container',
-					parent			: li
+					parent			: value_element
 				})
 
 				// label for the row
@@ -256,7 +259,7 @@ const get_value_element = (i, data, values_container, self) => {
 													&& item.column === 'state'
 													&& item.type ==='total')
 
-				// node for state colum
+				// node for state column
 				const state = ui.create_dom_element({
 					element_type 	: 'div',
 					class_name		: 'state',
@@ -380,5 +383,6 @@ const get_value_element = (i, data, values_container, self) => {
 			}// end for (let o = node_length - 1; o >= 0; o--)
 		}//end fn_update_widget_value
 
-	return li
+
+	return value_element
 }//end get_value_element
