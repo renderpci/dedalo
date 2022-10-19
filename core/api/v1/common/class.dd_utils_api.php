@@ -134,13 +134,6 @@ final class dd_utils_api {
 		];
 		$response->msg 	  = 'Ok. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end dedalo_version
@@ -166,13 +159,6 @@ final class dd_utils_api {
 		$response->result	= $info;
 		$response->msg		= 'Ok. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end database_info
@@ -259,13 +245,6 @@ final class dd_utils_api {
 		$response->result	= backup::make_backup();
 		$response->msg		= 'Ok. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options = $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end make_backup
@@ -390,15 +369,6 @@ final class dd_utils_api {
 		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
 
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options = $request_options;
-				$response->debug = $debug;
-			}
-
-
 		return $response;
 	}//end update_structure
 
@@ -447,15 +417,6 @@ final class dd_utils_api {
 		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
 
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options = $request_options;
-				$response->debug = $debug;
-			}
-
-
 		return $response;
 	}//end structure_to_json
 
@@ -495,15 +456,6 @@ final class dd_utils_api {
 		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
 
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options = $request_options;
-				$response->debug = $debug;
-			}
-
-
 		return $response;
 	}//end import_structure_from_json
 
@@ -524,13 +476,6 @@ final class dd_utils_api {
 		$response->result	= tools_register::import_tools();
 		$response->msg		= 'Ok. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end register_tools
@@ -554,13 +499,6 @@ final class dd_utils_api {
 		$response->result	= css::build_structure_css();
 		$response->msg		= 'Ok. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end build_structure_css
@@ -583,12 +521,6 @@ final class dd_utils_api {
 		$response->result	= install::build_install_version();
 		$response->msg		= 'OK. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end build_install_version
@@ -618,15 +550,6 @@ final class dd_utils_api {
 
 		$response->result	= $update_version_response->result ?? false;
 		$response->msg		= $update_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
-
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
-			// error_log('--> update_version response:' .PHP_EOL. json_encode($response, JSON_PRETTY_PRINT));
 
 
 		return $response;
@@ -677,14 +600,6 @@ final class dd_utils_api {
 		}
 
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
-
 		return $response;
 	}//end convert_search_object_to_sql_query
 
@@ -724,13 +639,8 @@ final class dd_utils_api {
 				$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;
 			}
 
-		// Debug
-			$debug = new stdClass();
-				$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-				$debug->options		= $options;
-			$response->debug = $debug;
-
-		debug_log(__METHOD__." response ".to_string($response), logger::DEBUG);
+		// debug
+			debug_log(__METHOD__." response ".to_string($response), logger::DEBUG);
 
 
 		return $response;
@@ -756,13 +666,6 @@ final class dd_utils_api {
 			// $areas					= area::get_areas();
 			// $ar_label				= label::get_ar_label();
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end login
@@ -798,17 +701,10 @@ final class dd_utils_api {
 					$response->saml_redirect = SAML_CONFIG['logout_url'];
 				}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
-
-				$response->debug = $debug;
-			}
-
 
 		return $response;
 	}//end quit
+
 
 
 	/**
@@ -881,6 +777,7 @@ final class dd_utils_api {
 				break;
 		}
 
+
 		return $response;
 	}//end install
 
@@ -926,13 +823,6 @@ final class dd_utils_api {
 		// generate_relations_table_data
 		$response = area_development::generate_relations_table_data($tables);
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end regenerate_relations
@@ -1139,17 +1029,7 @@ final class dd_utils_api {
 						break;
 				}
 
-			// debug
-				if(SHOW_DEBUG===true) {
-
-					$debug = new stdClass();
-						$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-						$debug->request_options	= $request_options;
-
-					$response->debug = $debug;
-				}
-
-		} catch (RuntimeException $e) {
+		}catch (RuntimeException $e) {
 
 			$response->msg .= ' Request failed: '. $e->getMessage();
 			debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
@@ -1196,7 +1076,7 @@ final class dd_utils_api {
 				$event_element->full_username	= $full_username;
 				$event_element->date			= date("Y-m-d H:i:s");
 
-		// response ok
+		// response
 			$response = (object)lock_components::update_lock_components_state( $event_element );
 
 

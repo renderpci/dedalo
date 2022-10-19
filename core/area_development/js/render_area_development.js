@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
@@ -109,8 +109,15 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.type)
+			  content_data.classList.add('content_data', self.type, 'invisible')
 			  content_data.appendChild(fragment)
+
+		 // remove invisible class to prevent flickering
+			when_in_viewport(content_data, ()=>{
+				setTimeout(function(){
+					content_data.classList.remove('invisible')
+				}, 75)
+			})
 
 
 	return content_data
@@ -157,7 +164,8 @@ const build_widget = (item, self) => {
 				content_data		: body,
 				collapsed_id		: 'collapsed_' + item.id,
 				collapse_callback	: collapse,
-				expose_callback		: expose
+				expose_callback		: expose,
+				default_state		: 'closed'
 			})
 		})
 		function collapse() {
