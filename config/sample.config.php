@@ -275,7 +275,7 @@
 
 
 // dedalo default config values
-	// dedalo_prefix_tipos. Array of tipos to import and manage by Dédalo. mandatory: ['dd','rsc','tool','hierarchy','lg']
+	// dedalo_prefix_tipos. Array of tipos (FIXME: available tipos?) to import and manage by Dédalo. mandatory: ['dd','rsc','tool','hierarchy','lg']
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
 		'rsc',
