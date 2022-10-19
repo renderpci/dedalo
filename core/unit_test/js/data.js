@@ -232,6 +232,69 @@
 		return result
 	}
 
+	export const random_3d_data = function() {
+
+		const file_name = random_string(128) + '_' + random_number(99) + ''
+
+		const value = [
+		  {
+		    "lib_data": null,
+		    "files_info": [
+		      {
+		        "quality": "original",
+		        "file_url": `/v6/media/media_development/av/original/${file_name}.AVI`,
+		        "file_name": `${file_name}.AVI`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/original/${file_name}.AVI`,
+		        "file_size": 22126087,
+		        "file_time": {
+		          "day": 11,
+		          "hour": 11,
+		          "time": 64992281681,
+		          "year": 2022,
+		          "month": 2,
+		          "minute": 34,
+		          "second": 41,
+		          "timestamp": "2022-02-11 11:34:41"
+		        },
+		        "upload_info": {
+		          "date": {
+		            "day": 11,
+		            "hour": 11,
+		            "time": 64992281681,
+		            "year": 2022,
+		            "month": 2,
+		            "minute": 34,
+		            "second": 41,
+		            "timestamp": "2022-02-11 11:34:41"
+		          },
+		          "user": null,
+		          "file_name": `${file_name}.AVI`
+		        }
+		      },
+		      {
+		        "quality": "404",
+		        "file_url": `/v6/media/media_development/av/404/${file_name}.mp4`,
+		        "file_name": `${file_name}.mp4`,
+		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/404/${file_name}.mp4`,
+		        "file_size": 22126087,
+		        "file_time": {
+		          "day": 11,
+		          "hour": 11,
+		          "time": 64992281681,
+		          "year": 2022,
+		          "month": 2,
+		          "minute": 34,
+		          "second": 41,
+		          "timestamp": "2022-02-11 11:34:41"
+		        }
+		      }
+		    ]
+		  }
+		]
+
+		return value
+	}
+
 	export const random_av_data = function() {
 
 		const file_name = random_string(128) + '_' + random_number(99) + ''
