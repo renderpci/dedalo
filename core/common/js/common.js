@@ -99,7 +99,9 @@ common.prototype.build = async function () {
 
 /**
 * SET_CONTEXT_VARS
+* Set getters and setter to access context properties
 * type, label, tools, fields_separator, permissions
+* @return bool true
 */
 export const set_context_vars = function(self) {
 
@@ -109,26 +111,42 @@ export const set_context_vars = function(self) {
 		// self.tools		= self.context.tools || [] //set the tools of the component
 		// self.permissions	= self.context.permissions || null
 
-		const ar_getters = [
-			'type',
-			'label',
-			'tools',
-			'permissions',
-			'view'
-		]
-		const ar_getters_length = ar_getters.length
-		for (let i = 0; i < ar_getters_length; i++) {
-			if (self[ar_getters[i]]) {
-				console.warn('ignored already set context getter assign:', ar_getters[i], self.status, self.model);
-				continue;
+		// getters
+			const ar_getters = [
+				'type',
+				'label',
+				'tools',
+				'permissions',
+				'view'
+			]
+			const ar_getters_length = ar_getters.length
+			for (let i = 0; i < ar_getters_length; i++) {
+				if (self[ar_getters[i]]) {
+					console.warn('ignored already set context getter assign:', ar_getters[i], self.status, self.model);
+					continue;
+				}
+				Object.defineProperty(self, ar_getters[i], {
+					get : function() {
+						return self.context[ar_getters[i]];
+					},
+					set : function(value) {
+						return self.context[ar_getters[i]] = value;
+					}
+				});
 			}
-			Object.defineProperty(self, ar_getters[i], {
+
+		// others.
+	}
+
+	// rqo_test. Used to simulate component call to API to load data and context
+		if (!self.hasOwnProperty('rqo_test')) {
+			Object.defineProperty(self, 'rqo_test', {
 				get : function() {
-					return self.context[ar_getters[i]];
+					return get_rqo_test(self);
 				}
 			});
 		}
-	}
+
 
 	return true
 }//end set_context_vars
@@ -644,7 +662,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 /**
 * CREATE_SOURCE
 * @param object self
-* 	Element intance (component, section, etc.)
+* 	Element instance (component, section, etc.)
 * @return object source
 * 	sample
 * {
@@ -661,17 +679,18 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 */
 export const create_source = function (self, action) {
 
-	const source = { // source object
-		typo			: "source",
-		type			: self.type,
-		action			: action,
-		model			: self.model,
-		tipo			: self.tipo,
-		section_tipo	: self.section_tipo || self.tipo,
-		section_id		: self.section_id,
-		mode			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
-		lang			: self.lang
-	}
+	// ddo source
+		const source = { // source object
+			typo			: 'source',
+			type			: self.type,
+			action			: action,
+			model			: self.model,
+			tipo			: self.tipo,
+			section_tipo	: self.section_tipo || self.tipo,
+			section_id		: self.section_id,
+			mode			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
+			lang			: self.lang
+		}
 
 	// matrix_id optional (used in time machine mode)
 		if (true===self.hasOwnProperty('matrix_id') && self.matrix_id) {
@@ -680,6 +699,28 @@ export const create_source = function (self, action) {
 
 	return source
 }//end create_source
+
+
+
+/**
+* GET_RQO_TEST
+* Build a basic rqo of the component for test and debug purposes.
+* It could be copy and paste in the Area Development Playground environment
+* Set as a getter during the element build process
+* @param object self
+* @return object rqo
+*/
+const get_rqo_test = function(self) {
+
+	const source = create_source(self, 'get_data')
+
+	const rqo = {
+		action	: 'read',
+		source	: source
+	}
+
+	return rqo
+}//end get_rqo_test
 
 
 
