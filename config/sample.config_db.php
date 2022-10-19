@@ -22,7 +22,7 @@ define('DEDALO_DATABASE_CONN'		, 'dedalo_mydatabase');
 define('DEDALO_USERNAME_CONN'		, 'myusername');
 // DEDALO_PASSWORD_CONN: string
 define('DEDALO_PASSWORD_CONN'		, 'mypassword');
-// DEDALO_INFORMACION: string . (!) Don't change it after install
+// DEDALO_INFORMACION: string . (!) Change it to any string before install, but don't change it after install
 define('DEDALO_INFORMACION'			, 'Dédalo install version');
 // DEDALO_INFO_KEY: string . (!) Change it with any string before install, but don't change it after install
 define('DEDALO_INFO_KEY'			, DEDALO_ENTITY);
