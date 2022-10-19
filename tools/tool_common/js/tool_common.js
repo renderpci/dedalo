@@ -146,7 +146,7 @@ tool_common.prototype.init = async function(options) {
 					// from caller config (transcription case for example)
 						self.tool_config = clone(self.caller.config.tool_context.tool_config)
 						if(SHOW_DEBUG===true) {
-							// console.log("section_tool case self.caller.config -> self.tool_config:",self.tool_config);
+							// console.log("/// -> section_tool case self.caller.config -> self.tool_config:", self.tool_config);
 						}
 
 				}else if (self.caller.tools) {
@@ -156,7 +156,7 @@ tool_common.prototype.init = async function(options) {
 					const tool_found = self.caller.tools.find(el => el.model===self.model)
 
 					if(SHOW_DEBUG===true) {
-						// console.log("component case tool_found:",tool_found);
+						// console.log("component case tool_found:", tool_found);
 						// console.log("component case self.caller.tools:",self.caller.tools);
 						// console.log("component case tool_found:",tool_found);
 					}
@@ -179,7 +179,9 @@ tool_common.prototype.init = async function(options) {
 									role			: 'main_element'
 								}]
 							}
-							console.log("fallback case self.tool_config:", self.tool_config);
+							if(SHOW_DEBUG===true) {
+								console.log("---->>> final fallback case self.tool_config:", self.tool_config);
+							}
 					}
 			}
 			// parse ddo_map section_id
@@ -238,6 +240,8 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					// el. components / sections / areas used by the tool defined in tool_config.ddo_map
 					const el = ddo_map[i]
 
+					console.log('+++++ el:', el);
+
 					// lang. If is defined in properties, parse and use it, else use the tool lang
 					// taking care to do not re-parse the value
 						const current_el_lang = el.lang
@@ -274,7 +278,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 								// 	return api_response.result[0] || null
 								//  })()
-
+								 // console.log('context:', context);
 
 						// generic try
 							// const element_instance = load_component_generic({
@@ -303,7 +307,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 								const load_data = true // el.model.indexOf('component')!==-1 || el.model==='area_thesaurus'
 								element_instance.build( load_data ) // build, loading data
 								.then(function(){
-									console.log('element_instance', element_instance)
+									console.log('--->>> element_instance', element_instance)
 									resolve(element_instance)
 								})
 							})
@@ -316,7 +320,8 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					self.ar_instances = ar_instances
 				})
 				return true
-			  }
+			  }//end async function() load_ddo_map
+
 
 	// previous status
 		// const previous_status = self.status
@@ -330,6 +335,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 	// load_ddo_map. Exec load ddo_map elements
 		await load_ddo_map()
+
 
 	// load data if is not already received as option
 		if (autoload===true && !self.context) {
@@ -583,26 +589,28 @@ tool_common.prototype.load_component = async function(options) {
 * Init, build and render the tool requested.
 * Called by page observe event (init)
 * To load tool, don't call directly, publish a event as
-*	event_manager.publish('open_tool', {*
-* 		caller 		 : self,
-* 		tool_context : {
-* 			css: "/v6/tools/tool_lang/css/tool_lang.css"
-*			icon: "/v6/tools/tool_lang/img/icon.svg"
-*			label: "Translation"
-*			mode: "edit"
-*			model: "tool_lang"
-*			name: "tool_lang"
-*			properties: {open_as: 'modal', windowFeatures: null}
-*			section_id: 8
-*			section_tipo: "dd1324"
-*			show_in_component: true
-* 		}
-*	})
+	*	event_manager.publish('open_tool', {*
+	* 		caller 		 : self,
+	* 		tool_context : {
+	* 			css: "/v6/tools/tool_lang/css/tool_lang.css"
+	*			icon: "/v6/tools/tool_lang/img/icon.svg"
+	*			label: "Translation"
+	*			mode: "edit"
+	*			model: "tool_lang"
+	*			name: "tool_lang"
+	*			properties: {open_as: 'modal', windowFeatures: null}
+	*			section_id: 8
+	*			section_tipo: "dd1324"
+	*			show_in_component: true
+	* 		}
+	*	})
 * The event is fired by the tool button created with method ui.build_tool_button.
 * When the user triggers the click event, a publish 'open_tool' is made
 * @param object options
 * @return object|bool
-* 	object is a tool instance
+* 	object is
+
+a tool instance
 */
 export const open_tool = async (options) => {
 	console.warn("------ open_tool call options:",options);

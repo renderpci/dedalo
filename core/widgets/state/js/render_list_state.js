@@ -31,7 +31,6 @@ render_list_state.prototype.list = async function(options) {
 
 	// content_data
 		const content_data = await get_content_data_list(self)
-		console.log('content_data:', content_data);
 
 	// wrapper. ui build_edit returns widget wrapper
 		const wrapper = ui.widget.build_wrapper_edit(self, {

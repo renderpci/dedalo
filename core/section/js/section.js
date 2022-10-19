@@ -508,12 +508,12 @@ section.prototype.build = async function(autoload=false) {
 		}//end if (autoload===true)
 
 	// Update section mode/label with context declarations
-		const section_context = self.context || {
-			mode		: 'edit',
-			label		: 'Section without permissions '+self.tipo,
-			permissions	: 0
-		}
-		self.mode 	= section_context.mode
+		// const section_context = self.context || {
+		// 	mode		: 'edit',
+		// 	label		: 'Section without permissions '+self.tipo,
+		// 	permissions	: 0
+		// }
+		// self.mode 	= section_context.mode
 
 	// update instance properties from context
 		set_context_vars(self, self.context)

@@ -136,7 +136,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	try {
 
 		// fix main_element for convenience
-			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 		// time_machine
@@ -160,7 +160,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 		// build
 			await self.time_machine.build(true)
-console.log('self.time_machine:-------------------------------', self.time_machine);
+
 		// add to self instances list
 			self.ar_instances.push(self.time_machine)
 

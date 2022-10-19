@@ -57,6 +57,7 @@ export const component_portal = function() {
 	this.rqo_config				= null
 	this.rqo					= null
 
+
 	return true
 }//end  component_portal
 
