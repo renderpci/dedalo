@@ -106,7 +106,7 @@ component_portal.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = component_common.prototype.init.call(self, options);
+		const common_init = await component_common.prototype.init.call(self, options);
 
 	// autocomplete. set default values of service autocomplete
 		self.autocomplete			= null

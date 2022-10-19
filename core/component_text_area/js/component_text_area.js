@@ -238,7 +238,7 @@ component_text_area.prototype.init = async function(options) {
 			}
 
 	// call the generic method
-		const common_init = component_common.prototype.init.call(self, options);
+		const common_init = await component_common.prototype.init.call(self, options);
 
 	// service_text_editor
 		// self.service_text_editor	= service_tinymce
@@ -293,7 +293,7 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 		}
 
 	// call the generic common method
-		const common_destroy = common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom);
+		const common_destroy = await common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom);
 
 
 	return common_destroy
@@ -425,7 +425,7 @@ component_text_area.prototype.save = async function(changed_data = undefined) {
 		: self.data.changed_data
 
 	// call the generic common tool init
-		const save_promise = component_common.prototype.save.call(this, safe_changed_data);
+		const save_promise = await component_common.prototype.save.call(this, safe_changed_data);
 
 
 	return save_promise

@@ -202,7 +202,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		}
 
 	// call generic common tool build
-		const component_instance = tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
 
 	return component_instance

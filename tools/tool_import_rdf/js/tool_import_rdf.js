@@ -79,7 +79,7 @@ tool_import_rdf.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// call generic commom tool build
+	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, true);
 
 	// main_element. fix main_element for convenience
@@ -116,14 +116,11 @@ tool_import_rdf.prototype.load_component = async function(lang) {
 		}
 
 	// call generic common tool build
-		const component_instance = tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
-			console.log("component_instance:",component_instance);
 
 	return component_instance
 }//end load_component
-
-
 
 
 
@@ -176,5 +173,3 @@ tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_value
 			})
 		})
 }//end get_rdf_data
-
-
