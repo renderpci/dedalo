@@ -497,13 +497,14 @@ page.prototype.add_events = function() {
 export const instantiate_page_element = function(self, context) {
 
 	// short vars
-		const tipo			= context.tipo
-		const section_tipo	= context.section_tipo || tipo
-		const model			= context.model
-		const section_id	= context.section_id || null
-		const mode			= context.mode
-		const lang			= context.lang
-		const config		= context.config || null
+		const tipo				= context.tipo
+		const section_tipo		= context.section_tipo || tipo
+		const model				= context.model
+		const section_id		= context.section_id || null
+		const mode				= context.mode
+		const lang				= context.lang
+		const config			= context.config || null
+		const request_config	= context.request_config
 
 	// instance options
 		const instance_options = {
@@ -512,8 +513,8 @@ export const instantiate_page_element = function(self, context) {
 			section_tipo	: section_tipo,
 			section_id		: section_id ,
 			mode			: mode,
-			lang			: lang,
-			// context			: context // note that context is injected here because start API function returns the full context (login case, for example)
+			lang			: lang
+			// context		: context // note that context is injected here because start API function returns the full context (login case, for example)
 		}
 
 		// id_variant . Propagate a custom instance id to children
@@ -526,6 +527,15 @@ export const instantiate_page_element = function(self, context) {
 				instance_options.id_variant	= config.source_section_tipo
 				instance_options.config		= config
 			}
+
+		// request_config
+			if (request_config) {
+				instance_options.request_config = request_config
+			}
+
+
+		console.log('instance_options:', instance_options);
+		console.log('context:', context);
 
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
