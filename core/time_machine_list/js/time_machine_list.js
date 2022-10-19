@@ -62,12 +62,12 @@ export const time_machine_list = function() {
 * @param object options
 * @return bool common_init
 */
-time_machine_list.prototype.init = function(options) {
+time_machine_list.prototype.init = async function(options) {
 
 	const self = this
 
 	// call the generic common tool init
-		const common_init = common.prototype.init.call(this, options);
+		const common_init = await common.prototype.init.call(this, options);
 
 	// status update
 	self.status = 'initiated'

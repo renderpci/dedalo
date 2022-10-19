@@ -330,10 +330,8 @@ tool_user_admin.prototype.load_component_sample = async function(lang) {
 		}
 
 	// call generic common tool build
-		const component_instance = tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
 
 	return component_instance
 }//end load_component_sample
-
-

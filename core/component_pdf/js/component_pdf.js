@@ -72,11 +72,12 @@ component_pdf.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// call generic component commom build
-		const common_build = component_common.prototype.build.call(this, autoload);
+	// call generic component common build
+		const common_build = await component_common.prototype.build.call(this, autoload);
 
 	// fix the pfd.js viewer
 		self.pdf_viewer	= null
+
 	// fix useful vars
 		self.allowed_extensions		= self.context.allowed_extensions
 		self.default_target_quality	= self.context.default_target_quality

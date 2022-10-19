@@ -205,6 +205,7 @@ login.prototype.action_dispatch = async function(api_response) {
 
 	// custom_action_dispatch. Injected by caller
 		if(self.custom_action_dispatch && typeof self.custom_action_dispatch==='function'){
+			// stop here !
 			return self.custom_action_dispatch(api_response)
 		}
 

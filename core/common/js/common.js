@@ -104,10 +104,30 @@ common.prototype.build = async function () {
 export const set_context_vars = function(self) {
 
 	if (self.context) {
-		self.type						= self.context.type // typology of current instance, usually 'component'
-		self.label						= self.context.label // label of current component like 'summary'
-		self.tools						= self.context.tools || [] //set the tools of the component
-		self.permissions				= self.context.permissions || null
+		// self.type		= self.context.type // typology of current instance, usually 'component'
+		// self.label		= self.context.label // label of current component like 'summary'
+		// self.tools		= self.context.tools || [] //set the tools of the component
+		// self.permissions	= self.context.permissions || null
+
+		const ar_getters = [
+			'type',
+			'label',
+			'tools',
+			'permissions',
+			'view'
+		]
+		const ar_getters_length = ar_getters.length
+		for (let i = 0; i < ar_getters_length; i++) {
+			if (self[ar_getters[i]]) {
+				console.warn('ignored already set context getter assign:', ar_getters[i], self.status, self.model);
+				continue;
+			}
+			Object.defineProperty(self, ar_getters[i], {
+				get : function() {
+					return self.context[ar_getters[i]];
+				}
+			});
+		}
 	}
 
 	return true

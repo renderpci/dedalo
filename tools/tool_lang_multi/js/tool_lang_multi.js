@@ -143,7 +143,7 @@ tool_lang_multi.prototype.load_component = async function(lang) {
 		}
 
 	// call generic common tool build
-		const component_instance = tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
 
 	return component_instance

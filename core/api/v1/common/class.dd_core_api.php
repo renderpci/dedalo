@@ -27,8 +27,8 @@ final class dd_core_api {
 		// static $context;
 		static $ddo_map = []; // fixed in get_structure_context()
 
-	// static debug sql_query searchs
-		static $sql_query_searchs = [];
+	// static debug sql_query search
+		static $sql_query_search = [];
 
 
 
@@ -422,8 +422,8 @@ final class dd_core_api {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
-				if (!empty(dd_core_api::$sql_query_searchs)) {
-					$response->debug->sql_query_searchs = dd_core_api::$sql_query_searchs;
+				if (!empty(dd_core_api::$sql_query_search)) {
+					$response->debug->sql_query_search = dd_core_api::$sql_query_search;
 				}
 			}
 

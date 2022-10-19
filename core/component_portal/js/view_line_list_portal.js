@@ -71,12 +71,12 @@ view_line_list_portal.render = async function(self, options) {
 			const change_mode = self.context.properties.with_value
 				&& self.context.properties.with_value.mode !== self.mode
 					? self.context.properties.with_value.mode
-					: self.context.properties.mode
+					: 'edit'
 
 			const change_view = self.context.properties.with_value
 				&& self.context.properties.with_value.view !== self.context.view
 					? self.context.properties.with_value.view
-					: self.context.properties.view
+					: 'line'
 
 			self.change_mode({
 				mode	: change_mode,

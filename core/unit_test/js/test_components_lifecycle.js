@@ -23,6 +23,7 @@ import {get_instance} from '../../common/js/instances.js'
 	const elements_length	= elements.length
 
 
+
 const content = document.getElementById('content');
 
 
@@ -32,22 +33,8 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 	// elements iterate
 	for (let i = 0; i < elements_length; i++) {
 
+		// element is an object with the instance options
 		const element = elements[i]
-
-		// direct minimum context
-		const request_config = [{
-			api_engine	: 'dedalo',
-			show		: {
-				ddo_map : []
-			},
-			sqo			: {
-				section_tipo : [element.section_tipo]
-			}
-		}]
-		element.context = {
-			request_config : request_config // [source]
-		}
-
 
 		describe(`${element.model.toUpperCase()}`, async function() {
 
@@ -55,7 +42,6 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 			for (let k = 0; k < ar_mode_length; k++) {
 
 				element.mode = ar_mode[k]
-				element.context.view = element.context.view || 'default'
 
 				// exec
 				life_cycle_test(element)
@@ -63,9 +49,8 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 
 			// views_edit iterate
 			for (let k = 0; k < ar_view_edit.length; k++) {
-
 				element.mode = 'edit'
-				element.context.view = ar_view_edit[k]
+				element.view = ar_view_edit[k]
 
 				// exec
 				life_cycle_test(element)
@@ -75,7 +60,7 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 			for (let k = 0; k < ar_view_list.length; k++) {
 
 				element.mode = 'list'
-				element.context.view = ar_view_list[k]
+				element.view = ar_view_list[k]
 
 				// exec
 				life_cycle_test(element)
@@ -94,7 +79,7 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 */
 async function life_cycle_test(element) {
 
-	describe(`${element.model} ${element.mode} ${element.context.view}`, async function() {
+	describe(`${element.model} ${element.mode} ${element.view}`, async function() {
 
 		let new_instance = null
 

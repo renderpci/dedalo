@@ -358,7 +358,7 @@ class search {
 				// debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 				// debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
 				// error_log("sql_query: \n" . to_string($sql_query));
-				dd_core_api::$sql_query_searchs[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
+				dd_core_api::$sql_query_search[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
 			}
 
 
@@ -401,7 +401,7 @@ class search {
 					$records_data->debug->strQuery				= $count_sql_query;
 					$this->search_query_object->generated_time	= $exec_time;
 
-					dd_core_api::$sql_query_searchs[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
+					dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
 				}
 
 		//sleep(4);

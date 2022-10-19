@@ -106,7 +106,7 @@ component_portal.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = component_common.prototype.init.call(self, options);
+		const common_init = await component_common.prototype.init.call(self, options);
 
 	// autocomplete. set default values of service autocomplete
 		self.autocomplete			= null
@@ -217,6 +217,7 @@ component_portal.prototype.build = async function(autoload=false) {
 			self.rqo_config	= self.context && self.context.request_config
 				? self.context.request_config.find(el => el.api_engine==='dedalo')
 				: {}
+
 			// rqo build
 			const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= false
@@ -263,21 +264,27 @@ component_portal.prototype.build = async function(autoload=false) {
 				// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
 				dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
 
-			// set context and data to current instance
-				// await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
-
-			// Context
-				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-				if (!context) {
-					console.error("context not found in api_response:", api_response);
+			// set Context
+				// context is only set when it's empty the origin context,
+				// if the instance has previous context, it will need to preserve.
+				// because the context could be modified by ddo configuration and it can no be changed
+				// ddo_map -----> context
+				// ex: oh27 define the specific ddo_map for rsc368
+				// 		{ mode: list, view: line, children_view: text ... }
+				// if you call to API to get the context of the rsc368 the context will be the default config
+				// 		{ mode: edit, view: default }
+				// but it's necessary preserve the specific ddo_map configuration in the new context.
+				// Context is set and changed in section_record.js to get the ddo_map configuration
+				if(!self.context){
+					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+					if (!context) {
+						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
+					}
 				}
-				// preserve view across builds
-				if(self.context && self.context.view) {
-					context.view = self.context.view
-				}
-				self.context = context
 
-			// Data
+			// set Data
 				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
@@ -884,7 +891,10 @@ component_portal.prototype.sort_data = function(options) {
 				}
 		})
 
+	return true
 };//end order_data
+
+
 
 /**
 * GET_LAST_OFFSET
@@ -918,5 +928,3 @@ component_portal.prototype.sort_data = function(options) {
 
 	// 	return offset_last
 	// }//end  get_last_offset
-
-

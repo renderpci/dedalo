@@ -160,7 +160,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 		// build
 			await self.time_machine.build(true)
-
+console.log('self.time_machine:-------------------------------', self.time_machine);
 		// add to self instances list
 			self.ar_instances.push(self.time_machine)
 
@@ -202,7 +202,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		}
 
 	// call generic common tool build
-		const component_instance = tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
 
 	return component_instance
