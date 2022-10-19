@@ -279,14 +279,9 @@ component_portal.prototype.build = async function(autoload=false) {
 					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
 					}
-					// // preserve view across builds
-					// if(self.context && self.context.view) {
-					// 	context.view = self.context.view
-					// }
-
-					// properties recover
-					self.context = context
 				}
 
 			// set Data
@@ -896,7 +891,10 @@ component_portal.prototype.sort_data = function(options) {
 				}
 		})
 
+	return true
 };//end order_data
+
+
 
 /**
 * GET_LAST_OFFSET
@@ -930,5 +928,3 @@ component_portal.prototype.sort_data = function(options) {
 
 	// 	return offset_last
 	// }//end  get_last_offset
-
-

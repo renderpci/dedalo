@@ -191,9 +191,9 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 					const context =  self.datum.context.find(element => element.tipo===self.tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
 					}
-					// set context
-					self.context = context
 				}
 				self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
 				self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
