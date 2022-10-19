@@ -1,0 +1,181 @@
+/**
+* component_3d
+*
+* Included from main.less file
+*/
+.component_3d {
+
+	&.edit, &.view_player {
+
+		&.view_player {
+			box-shadow: none;
+			display: block;
+
+			.label {
+				display: none;
+			}
+			>.content_data {
+				display: grid;
+				height: 100%;
+			}
+		}
+
+		>.content_data {
+			justify-content: center;
+			max-height: @media_max_height;
+			min-height: @media_min_height;
+
+			@media screen and (max-width: @width_break_point_1) {
+				min-height: unset;
+			}
+
+			// video_container
+			>.content_value {
+				background-color: #faf8fc;
+				height: 404px;
+				width: 100%;
+
+				@media screen and (max-width: @width_break_point_1) {
+					height: unset;
+					max-height: 404px;
+				}
+			}
+
+			// posterframe
+			.posterframe {
+				height: 100%;
+				max-height: 100%;
+				width: 100%;
+				// width: 100%;
+				max-width: 100%;
+				min-width: 100%;
+
+				//min-height: 14em;
+				//background-position: initial;
+				//background-size: cover;
+				background-repeat: no-repeat;
+				background-size: contain;
+				background-position: center;
+				object-fit: contain;
+				object-position: center;
+				align-self: center;
+
+				// on focus adds a soft shadow and outline
+				&:focus {
+					.hilite_mixin(-1px);
+				}
+			}
+
+			.quality_selector {
+				margin: 0px;
+				position: absolute;
+				// bottom: 0;
+				// margin-left: 1em;
+				// width: calc(100% - 2em);
+				// margin-bottom: 1em;
+				// background-color: @color_grey_dark;
+				// opacity: 1;
+				// color: white;
+				top: 0.5rem;
+				width: 5rem;
+				right: 1rem;
+				height: 1.25rem;
+				font-size: 0.9rem;
+				border: 0px;
+				outline: none;
+				padding: 0px;
+				z-index: 1;
+
+				.fullscreen& {
+					width: auto !important;
+				}
+			}
+		}
+	}//end .edit
+
+
+	// player av_control_buttons
+	.av_control_buttons {
+		display: flex;
+		flex-wrap: wrap;
+		width: 100%;
+		align-items: center;
+		justify-content: center;
+		padding-bottom: 0.75rem;
+		padding-top: 0.75rem;
+
+		>button {
+			height: 2rem;
+			text-align: center;
+			margin-bottom: 0.25rem;
+			margin-top: 0.25rem;
+
+			&:before {
+				margin: 0px;
+			}
+
+			&:last-of-type {
+				margin-right: 0px;
+			}
+		}
+		.smpte {
+			// width: 9rem;
+			// padding-left: 0.75rem;
+			// padding-right: 0.75rem;
+			// font-size: 1.2rem;
+			color: #fd7f26;
+			padding: 0px;
+			margin-left: 1rem;
+			margin-right: 1rem;
+			font-family: Verdana, Geneva, sans-serif;
+			font-size: 1.65rem;
+			width: auto;
+			height: 1em;
+			display: inline-block;
+			vertical-align: baseline;
+			text-shadow: 1px 2px 2px #b9b9b9;
+		}
+	}//end .av_control_buttons
+
+
+	&.viewer {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		background-color: #000000;
+
+		>.content_data {
+			height: unset;
+			width: 100%;
+			text-align: center;
+
+			video {
+				width: 100%;
+			}
+		}
+
+		// button download
+		.download {
+			bottom: 10px;
+			height: 3em;
+			position: fixed;
+			right: 10px;
+			width: 3em;
+			z-index: 2;
+			padding: unset;
+			margin: unset;
+
+			&:before {
+				height: 1.5em;
+				width: 1.5em;
+				margin: unset;
+			}
+		}
+	}//end &.viewer
+
+
+}//end .component_3d
