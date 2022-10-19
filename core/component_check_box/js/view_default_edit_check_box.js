@@ -68,7 +68,7 @@ export const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true
 		})
-		content_data.classList.add('nowrap')
+		// content_data.classList.add('nowrap')
 
 	// build options
 		const datalist_length = datalist.length
