@@ -116,6 +116,9 @@ component_portal.prototype.init = async function(options) {
 		self.columns_map		= options.columns_map
 		self.add_component_info	= false
 
+	// request_config
+		self.request_config		= options.request_config || null
+
 	// Standalone
 	// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum
 	// if the property is set to false, the component will use datum to get his data and is forced to update datum to share his data with others
@@ -213,10 +216,18 @@ component_portal.prototype.build = async function(autoload=false) {
 
 	// rqo
 		const generate_rqo = async function() {
-			// rqo_config. get the rqo_config from context
-			self.rqo_config	= self.context && self.context.request_config
-				? self.context.request_config.find(el => el.api_engine==='dedalo')
-				: {}
+
+			if (self.context) {
+				// rqo_config. get the rqo_config from context
+				self.rqo_config	= self.context && self.context.request_config
+					? self.context.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+			}else{
+				// rqo_config. get the rqo_config from request_config
+				self.rqo_config = self.request_config
+					? self.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+			}
 
 			// rqo build
 			const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'

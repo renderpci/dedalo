@@ -144,6 +144,9 @@ section.prototype.init = async function(options) {
 		// config
 		self.config					= options.config || null
 
+		// request_config
+		self.request_config			= options.request_config || null
+
 	// event subscriptions
 		// new_section_ event
 			self.events_tokens.push(
@@ -301,10 +304,17 @@ section.prototype.build = async function(autoload=false) {
 	// rqo
 		const generate_rqo = async function(){
 
-			// rqo_config. get the rqo_config from context
-			self.rqo_config	= self.context && self.context.request_config
-				? self.context.request_config.find(el => el.api_engine==='dedalo')
-				: {}
+			if (self.context) {
+				// rqo_config. get the rqo_config from context
+				self.rqo_config	= self.context && self.context.request_config
+					? self.context.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+			}else{
+				// rqo_config. get the rqo_config from request_config
+				self.rqo_config = self.request_config
+					? self.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+			}
 
 			// rqo build
 			const action	= 'search'
