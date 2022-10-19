@@ -47,7 +47,8 @@ final class dd_manager {
 				'login',
 				'change_lang',
 				'get_login_context',
-				'install'
+				'install',
+				'get_element_context'
 			];
 			if (true===in_array($rqo->action, $no_loggin_needed_actions)) {
 				// do not check login here
