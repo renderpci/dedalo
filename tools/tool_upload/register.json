@@ -1,173 +1,178 @@
 {
-    "label": "Desarrollo de herramientas",
-    "relations": [
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd200"
-        },
-        {
-            "type": "dd675",
-            "section_id": "1",
-            "section_tipo": "dd153",
-            "from_component_tipo": "dd1337"
-        },
-        {
-            "type": "dd151",
-            "section_id": "2",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1331"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1332"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1354"
-        },
-        {
-            "type": "dd151",
-            "section_id": "8",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "30",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "50",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "20",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "26",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd197"
-        }
-    ],
-    "components": {
-        "dd199": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 9,
-                            "hour": 19,
-                            "time": 64925178597,
-                            "year": 2020,
-                            "month": 1,
-                            "minute": 49,
-                            "second": 57
-                        }
-                    }
-                ]
-            }
-        },
-        "dd201": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 7,
-                            "hour": 12,
-                            "time": 64999976120,
-                            "year": 2022,
-                            "month": 5,
-                            "minute": 55,
-                            "second": 20
-                        }
-                    }
-                ]
-            }
-        },
-        "dd612": {
-            "dato": {
-                "lg-eng": [
-                    "Upload selected file to the server"
-                ]
-            }
-        },
-        "dd799": {
-            "dato": {
-                "lg-eng": [
-                    "Upload "
-                ]
-            }
-        },
-        "dd1326": {
-            "dato": {
-                "lg-nolan": [
-                    "tool_upload"
-                ]
-            }
-        },
-        "dd1327": {
-            "dato": {
-                "lg-nolan": [
-                    "2.0.0"
-                ]
-            }
-        },
-        "dd1328": {
-            "dato": {
-                "lg-nolan": [
-                    "6.0.0"
-                ]
-            }
-        },
-        "dd1335": {
-            "inf": "Propiedades [component_json]",
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "open_as": "window",
-                        "windowFeatures": {
-                            "top": 0,
-                            "left": "return screen.width -760",
-                            "width": 760,
-                            "height": 500
-                        }
-                    }
-                ]
-            }
-        },
-        "dd1372": {
-            "dato": {
-                "lg-nolan": [
-                    {}
-                ]
-            }
-        }
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
     },
-    "section_id": 3,
-    "created_date": "2020-01-09 19:49:57",
-    "section_tipo": "dd1340",
-    "modified_date": "2022-05-07 12:55:20",
-    "diffusion_info": null,
-    "created_by_userID": -1,
-    "section_real_tipo": "dd1324",
-    "modified_by_userID": -1
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "8",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "30",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "50",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "20",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "26",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "52",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 9,
+              "hour": 19,
+              "time": 64925178597,
+              "year": 2020,
+              "month": 1,
+              "minute": 49,
+              "second": 57
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 19,
+              "hour": 17,
+              "time": 65014419761,
+              "year": 2022,
+              "month": 10,
+              "minute": 2,
+              "second": 41
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "dato": {
+        "lg-eng": [
+          "Upload selected file to the server"
+        ]
+      }
+    },
+    "dd799": {
+      "dato": {
+        "lg-eng": [
+          "Upload "
+        ]
+      }
+    },
+    "dd1326": {
+      "dato": {
+        "lg-nolan": [
+          "tool_upload"
+        ]
+      }
+    },
+    "dd1327": {
+      "dato": {
+        "lg-nolan": [
+          "2.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "dato": {
+        "lg-nolan": [
+          "6.0.0"
+        ]
+      }
+    },
+    "dd1335": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "window",
+            "windowFeatures": {
+              "top": 0,
+              "left": "return screen.width -760",
+              "width": 760,
+              "height": 500
+            }
+          }
+        ]
+      }
+    },
+    "dd1372": {
+      "dato": {
+        "lg-nolan": [
+          {}
+        ]
+      }
+    }
+  },
+  "section_id": 3,
+  "created_date": "2020-01-09 19:49:57",
+  "section_tipo": "dd1340",
+  "modified_date": "2022-10-19 17:02:41",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd1324",
+  "modified_by_userID": -1
 }
