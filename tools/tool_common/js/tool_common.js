@@ -612,13 +612,13 @@ export const open_tool = async (options) => {
 		const tool_context	= clone(options.tool_context) // (!) full clone here to avoid circular references
 
 	// open_as. Mode of tool visualization: modal, tab, popup
-		const open_as = tool_context.properties && tool_context.properties.open_as
+		const open_as = tool_context && tool_context.properties && tool_context.properties.open_as
 			? tool_context.properties.open_as
 			: 'modal' // default is 'modal'
 
 	// windowFeatures. Features to pass to the tool visualizer
 	// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
-		const windowFeatures = tool_context.properties && tool_context.properties.windowFeatures
+		const windowFeatures = tool_context && tool_context.properties && tool_context.properties.windowFeatures
 			? tool_context.properties.windowFeatures
 			: null
 
