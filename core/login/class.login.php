@@ -44,7 +44,10 @@ class login extends common {
 		$this->set_lang(DEDALO_DATA_LANG);
 		$this->set_modo($modo);
 
-		parent::load_structure_data();
+		// boolean $result
+		$result = parent::load_structure_data();
+
+		return $result;
 	}//end __construct
 
 
@@ -950,16 +953,13 @@ class login extends common {
 
 	/**
 	* GET_LOGIN_TIPO
-	* @return string|null
+	* @return string
 	*/
-	private static function get_login_tipo() : ?string {
+	private static function get_login_tipo() : string {
 
-		$ar_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='login', $prefijo='dd');
+		$tipo = 'dd229'; // fixed because do not change never
 
-		if(!empty($ar_tipo[0]))
-		return $ar_tipo[0];
-
-		return null;
+		return $tipo;
 	}//end get_login_tipo
 
 

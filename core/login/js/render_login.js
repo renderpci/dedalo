@@ -55,7 +55,9 @@ render_login.prototype.edit = async function(options) {
 	// auto-focus username
 		setTimeout(()=>{
 			const username = content_data.querySelector('#username')
-			username.focus()
+			if (username) {
+				username.focus()
+			}
 		}, 600)
 
 
@@ -120,6 +122,17 @@ const get_content_data = function(self) {
 
 	// login_items
 		const login_items = self.context.properties.login_items
+
+	// check login_items. If there were problems with type resolution, maybe the Ontology tables are not reachable
+		if (!login_items || !login_items.find(el => el.tipo==='dd255')) {
+
+			return ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'content_data error',
+				inner_html		: 'Error on create login form. login_items are invalid. Check your database connection and integrity or reinstall Dédalo',
+				parent			: fragment
+			})
+		}
 
 	// User name input
 		const login_item_username = login_items.find(el => el.tipo==='dd255')

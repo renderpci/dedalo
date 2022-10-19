@@ -121,14 +121,50 @@ final class dd_core_api {
 				// check_basic_system (lang and structure files)
 					$is_system_ready = check_basic_system();
 					if ($is_system_ready->result===false) {
-						return $is_system_ready;
+						$msg = 'System is not ready. check_basic_system returns errors';
+						$response->result	= false;
+						$response->error	= $msg;
+						$response->msg		= $msg;
+						return $response;
 					}
 
 				// page context elements [login]
 					$login = new login();
 
 				// add to page context
-					$context[] = $login->get_structure_context();
+					try {
+						$login_context = $login->get_structure_context();
+					} catch (Exception $e) {
+						debug_log(__METHOD__." Caught exception: Error on get login context ". $e->getMessage(), logger::DEBUG);
+					}
+					if (empty($login_context) ||
+						empty($login_context->properties->login_items) // indicates table matrix_descriptors serious problem
+						) {
+
+						// Warning: running with database problems. Load installer context instead login context
+							if(defined('DEDALO_INSTALL_STATUS') &&  DEDALO_INSTALL_STATUS==='installed') {
+
+								// status is 'installed' but database it's not available
+								$msg = "Error. Your installation is set as 'installed' (DEDALO_INSTALL_STATUS) but the ontology tables are not available";
+								debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+								$response->result	= false;
+								$response->error	= $msg;
+								$response->msg		= $msg;
+								return $response;
+
+							}else{
+
+								// run install process
+								$install = new install();
+								$context[] = $install->get_structure_context();
+							}
+
+					}else{
+
+						// all is OK.
+
+						$context[] = $login_context;
+					}
 
 			}else{
 
@@ -1054,7 +1090,7 @@ final class dd_core_api {
 
 		// response
 			$response->result	= $context;
-			$response->msg		= 'Ok. Request done';
+			$response->msg		= 'OK. Request done successfully';
 
 
 		return $response;

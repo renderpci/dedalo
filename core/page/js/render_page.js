@@ -234,7 +234,7 @@ render_page.render_server_response_error = function(msg, add_wrapper=true) {
 		ui.create_dom_element({
 			element_type	: 'h1',
 			class_name		: 'server_response_error',
-			inner_html		: 'Server response error: ' + msg,
+			inner_html		: 'Server response error: <br>' + msg,
 			parent			: error_container
 		})
 

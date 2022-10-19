@@ -650,9 +650,10 @@ abstract class RecordDataBoundObject {
 			$result = pg_query($this->get_connection(), $strQuery);
 			if ($result===false) {
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
-				}else{
-					trigger_error("Error on DB query");
+					// throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
+					// }else{
+					// trigger_error("Error on DB query");
+					debug_log(__METHOD__."  Error on DB query ". pg_last_error(DBi::_getConnection()), logger::ERROR);
 				}
 				return [];
 			}

@@ -112,8 +112,13 @@ class install extends common {
 			$properties->php_version			= PHP_VERSION;
 			$properties->php_version_supported	= test_php_version_supported(); // >= 8.1.0
 
+		// max_execution_time
+			$max_execution_time = ini_get('max_execution_time');
+			$properties->max_execution_time	= $max_execution_time;
+
 		// dd_object
 			$dd_object->set_properties($properties);
+
 
 		return $dd_object;
 	}//end get_structure_context
@@ -449,6 +454,9 @@ class install extends common {
 	* @return object $response
 	*/
 	public static function install_db_from_default_file() {
+
+		// set timeout in seconds
+		set_time_limit(600); // 10 minutes (10*60)
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1394,6 +1402,9 @@ class install extends common {
 	* @return object $response
 	*/
 	private static function import_hierarchy_main_records() {
+
+		// set timeout in seconds
+		set_time_limit(600); // 10 minutes (10*60)
 
 		$response = new stdClass();
 			$response->result	= false;

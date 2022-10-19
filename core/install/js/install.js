@@ -101,10 +101,12 @@ install.prototype.build = async function(autoload=false) {
 	// autoload
 		if (autoload===true) {
 
-			// rqo build
+			// rqo build.
+			// Note that get_install_context does not need a previous login action as similar call get_element_context
 				const rqo = {
-					action : 'get_element_context',
-					source : create_source(self, null)
+					action	: 'get_install_context',
+					dd_api	: 'dd_utils_api',
+					source	: create_source(self, null)
 				}
 
 			// load data. get context and data

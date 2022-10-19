@@ -48,13 +48,13 @@ final class dd_utils_api {
 	/**
 	* GET_LOGIN_CONTEXT
 	* This function is not used in normal login behavior (login is called directly in start API).
-	* It could be caller when the instance of the login has been build with autoload in true.
+	* It could be called when the instance of the login has been build with autoload in true.
 	* This function could be caller by external processes as install to get the context of the login to create the login instance
 	* Login only need context, it not need data to be render.
-	* @param object $request_options
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function get_login_context(object $request_options) : object {
+	public static function get_login_context(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -62,7 +62,7 @@ final class dd_utils_api {
 
 		$login = new login();
 
-		// login json
+		// login JSON
 			$get_json_options = new stdClass();
 				$get_json_options->get_context	= true;
 				$get_json_options->get_data		= false;
@@ -73,17 +73,44 @@ final class dd_utils_api {
 
 		// response
 			$response->result	= $context;
-			$response->msg		= 'Ok. Request done';
+			$response->msg		= 'OK. Request done';
 
-		// Debug
-			if(SHOW_DEBUG===true) {
-				$debug = new stdClass();
-					$debug->request_options	= $request_options;
-				$response->debug = $debug;
-			}
 
 		return $response;
 	}//end get_login_context
+
+
+
+	/**
+	* GET_INSTALL_CONTEXT
+	* This function is an alias of get_element_context and does not need to login before
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function get_install_context(object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$install = new install();
+
+		// install JSON
+			$get_json_options = new stdClass();
+				$get_json_options->get_context	= true;
+				$get_json_options->get_data		= false;
+			$install_json = $install->get_json($get_json_options);
+
+		// context add
+			$context = $install_json->context;
+
+		// response
+			$response->result	= $context;
+			$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end get_install_context
 
 
 
