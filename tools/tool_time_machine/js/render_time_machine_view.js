@@ -46,6 +46,7 @@ export const render_time_machine_view = async function(self, options) {
 			return content_data
 		}
 
+
 	// paginator container node
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
@@ -138,11 +139,12 @@ const get_content_data = async function(ar_section_record, self) {
 					const render_promise_node = ar_section_record[i].render()
 					ar_promises.push(render_promise_node)
 				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record_node = values[i]
-					fragment.appendChild(section_record_node)
-				  }
+				await Promise.all(ar_promises)
+				.then(function(values) {
+					for (let i = 0; i < ar_section_record_length; i++) {
+						const section_record_node = values[i]
+						fragment.appendChild(section_record_node)
+					}
 				});
 		}
 

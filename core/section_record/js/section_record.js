@@ -345,7 +345,9 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 							// check if the column of the component is already loaded, if exists don't load it.
 							const exists = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
-							if(exists) continue
+							if(exists) {
+								continue
+							}
 
 							// add to the ddo to the column
 							ar_column_ddo.push(current_ddo)
@@ -380,6 +382,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 							// new_context. clone the current_context to prevent changes in the original.
 								const new_context = clone(current_context) //Object.freeze(current_context);
+								new_context.properties = new_context.properties || {}
 								new_context.columns_map = (current_column.columns_map)
 									? current_column.columns_map
 									: false
@@ -429,7 +432,14 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								}
 
 							// instance create and set
-								const current_instance = await build_instance(self, new_context, section_id, current_data, current_column.id)
+								const current_instance = await build_instance(
+									self,
+									new_context,
+									section_id,
+									current_data,
+									current_column.id
+								)
+
 								self.ar_instances.push(current_instance)
 
 						}// end if(current_ddo.column_id..

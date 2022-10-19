@@ -122,18 +122,21 @@ export const set_context_vars = function(self) {
 			const ar_getters_length = ar_getters.length
 			for (let i = 0; i < ar_getters_length; i++) {
 				if (self[ar_getters[i]]) {
-					console.warn('ignored already set context getter assign:', ar_getters[i], self.status, self.model);
+					// console.warn('ignored already set context getter assign:', ar_getters[i], self.status, self.model);
 					continue;
 				}
-				Object.defineProperty(self, ar_getters[i], {
-					get : function() {
-						return self.context[ar_getters[i]];
-					},
-					set : function(value) {
-						return self.context[ar_getters[i]] = value;
-					}
-				});
+				// if (!self.hasOwnProperty(ar_getters[i])) {
+					Object.defineProperty(self, ar_getters[i], {
+						get : function() {
+							return self.context[ar_getters[i]];
+						},
+						set : function(value) {
+							return self.context[ar_getters[i]] = value;
+						}
+					});
+				// }
 			}
+			// console.log('self.label:', self.label, self.model, self.context);
 
 		// others.
 	}

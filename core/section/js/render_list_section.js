@@ -497,7 +497,7 @@ render_list_section.render_column_id = function(options){
 			default:
 
 				// edit button (pen)
-					if (self.permissions>1) {
+					if (permissions>1) {
 						// button_edit
 							const button_edit = ui.create_dom_element({
 								element_type	: 'button',
@@ -519,8 +519,8 @@ render_list_section.render_column_id = function(options){
 
 								// sqo. Note that sqo will be used as request_config.sqo on navigate
 									const sqo	= clone(self.rqo_config.sqo)
-									sqo.limit	= 1
-									sqo.offset	= offset
+										  sqo.limit		= 1
+										  sqo.offset	= offset
 
 								// user_navigation
 									const user_navigation_rqo = {
@@ -528,6 +528,7 @@ render_list_section.render_column_id = function(options){
 										source		: source,
 										sqo			: sqo
 									}
+									// page js is observing this event
 									event_manager.publish('user_navigation', user_navigation_rqo)
 							})
 							button_edit.appendChild(section_id_node)
@@ -630,7 +631,7 @@ const get_buttons = function(self) {
 			inner_html		: get_label.buscar || 'Search',
 			parent			: buttons_container
 		})
-		filter_button.addEventListener('click', function() {
+		filter_button.addEventListener('mousedown', function() {
 			event_manager.publish('toggle_search_panel', this)
 		})
 
@@ -811,4 +812,3 @@ const no_records_node = () => {
 
 	return node
 }//end no_records_node
-

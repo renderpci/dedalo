@@ -25,7 +25,7 @@ export const view_default_list_section_record = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list with all columns and rendered components
 * @param array ar_instances
 * @return Promise DOM node wrapper
@@ -37,8 +37,9 @@ view_default_list_section_record.render = async function(self, options) {
 
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
-		const ar_columns_instances = await self.get_ar_columns_instances_list()
-		const columns_map = await self.columns_map
+		const ar_columns_instances	= await self.get_ar_columns_instances_list()
+		const columns_map			= await self.columns_map
+
 
 	const fragment = new DocumentFragment()
 

@@ -241,7 +241,7 @@ render_menu.prototype.edit = async function() {
 			function fn_update_section_label(instance) {
 				// console.log("------ fn_update_section_label instance:",instance);
 				// console.log("------ instances:", instances.filter(el => el.type==='section'));
-				if((instance.type==='section'|| instance.type==='area') && instance.mode!=='tm'){
+				if((instance.type==='section' || instance.type==='area') && instance.mode!=='tm'){
 
 					if (current_instance && instance.tipo===current_instance.tipo && current_instance.mode!=='edit') {
 						// nothing to do. We are already on a list
