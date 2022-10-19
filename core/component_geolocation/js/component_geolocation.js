@@ -113,7 +113,7 @@ component_geolocation.prototype.init = async function(options) {
 		}]
 
 	// call the generic common tool init
-		const common_init = component_common.prototype.init.call(this, options);
+		const common_init = await component_common.prototype.init.call(this, options);
 
 	// set the self specific libraries and variables not defined by the generic init
 		// load dependencies js/css

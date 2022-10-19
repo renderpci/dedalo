@@ -60,7 +60,7 @@ tool_tc.prototype.init = async function(options) {
 
 	const self = this
 
-	// call the generic commom tool init
+	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// set the self specific vars not defined by the generic init (in tool_common)
@@ -124,7 +124,7 @@ tool_tc.prototype.load_component = async function(lang) {
 		}
 
 	// call generic common tool build
-		const component_instance = tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
 
 	return component_instance

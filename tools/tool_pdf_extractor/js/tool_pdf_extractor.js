@@ -79,7 +79,7 @@ tool_pdf_extractor.prototype.init = async function(options) {
 */
 tool_pdf_extractor.prototype.build = async function(autoload=false) {
 
-	// call generic commom tool build
+	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 
@@ -197,5 +197,3 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 
 	 return final_text
 }//end process_pdf_data
-
-

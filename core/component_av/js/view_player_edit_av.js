@@ -88,7 +88,7 @@ export const get_content_data_player = function(options) {
 			const video_url	= file_info
 				? file_info.url
 				: null
-
+console.log('quality:', self);
 	// player
 		if (video_url) {
 
@@ -141,7 +141,7 @@ export const get_content_data_player = function(options) {
 				self.video = video
 				fragment.appendChild(video)
 		}
-
+console.log('self.video:', self.video);
 	// av_control_buttons
 		if (with_control_buttons) {
 			const av_control_buttons = get_av_control_buttons(self)

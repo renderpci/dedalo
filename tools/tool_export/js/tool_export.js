@@ -89,7 +89,7 @@ tool_export.prototype.init = async function(options) {
 		self.lang	= options.lang // from page_globals.dedalo_data_lang
 		self.langs	= page_globals.dedalo_projects_default_langs
 
-	// shor vars
+	// short vars
 		self.events_tokens			= []
 		self.parent_node			= null
 		self.components_list		= {}
@@ -116,7 +116,7 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// call generic commom tool build
+	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, true);
 
 	try {

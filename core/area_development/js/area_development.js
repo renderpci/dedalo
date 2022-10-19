@@ -72,7 +72,7 @@ area_development.prototype.build = async function(autoload=true) {
 		self.status = 'building'
 
 	// rqo_config
-		self.rqo_config	= self.context.request_config
+		self.rqo_config	= (self.context && self.context.request_config)
 			? self.context.request_config.find(el => el.api_engine==='dedalo')
 			: {}
 
@@ -81,7 +81,7 @@ area_development.prototype.build = async function(autoload=true) {
 		self.rqo.prevent_lock = true
 
 	// debug
-		const rqo_original = clone(self.rqo)
+		// const rqo_original = clone(self.rqo)
 
 	// load from DDBB
 		if (autoload===true) {
@@ -93,7 +93,25 @@ area_development.prototype.build = async function(autoload=true) {
 				self.datum	= api_response.result
 
 			// set context and data to current instance
-				self.context	= self.datum.context.find(el => el.tipo===self.tipo)
+			// set Context
+				// context is only set when it's empty the origin context,
+				// if the instance has previous context, it will need to preserve.
+				// because the context could be modified by ddo configuration and it can no be changed
+				// ddo_map -----> context
+				// ex: oh27 define the specific ddo_map for rsc368
+				// 		{ mode: list, view: line, children_view: text ... }
+				// if you call to API to get the context of the rsc368 the context will be the default config
+				// 		{ mode: edit, view: default }
+				// but it's necessary preserve the specific ddo_map configuration in the new context.
+				// Context is set and changed in section_record.js to get the ddo_map configuration
+				if(!self.context){
+					const context = self.datum.context.find(el => el.tipo===self.tipo)
+					if (!context) {
+						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
+					}
+				}
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
 				self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
 
@@ -323,6 +341,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 /**
 * LOAD_JSON_EDITOR_FILES
+* @return Promise
 */
 const load_json_editor_files = function() {
 
@@ -338,9 +357,7 @@ const load_json_editor_files = function() {
 	load_promises.push( load_promise )
 
 	const load_all = Promise.all(load_promises)
-	// .then(async function(response){
-		//console.log("JSONEditor:",response);
-	// })
+
 
 	return load_all
 }//end load_json_editor_files
