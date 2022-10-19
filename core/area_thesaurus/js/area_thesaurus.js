@@ -82,7 +82,7 @@ area_thesaurus.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = area_common.prototype.init.call(this, options);
+		const common_init = await area_common.prototype.init.call(this, options);
 
 	// events subscription
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons

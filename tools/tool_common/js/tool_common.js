@@ -408,7 +408,7 @@ tool_common.prototype.render = async function(options={}) {
 	// call the generic common render or render tool generic error
 		const result = typeof self.error!=='undefined'
 			? render_error(this, options)
-			: common.prototype.render.call(this, options);
+			: await common.prototype.render.call(this, options);
 
 
 	return result

@@ -47,23 +47,22 @@ export const get_archive_weights = function(){
 */
 get_archive_weights.prototype.init = async function(options) {
 
-	const self = this
-
 	// call the generic common init
-		const common_init = widget_common.prototype.init.call(this, options);
+		const common_init = await widget_common.prototype.init.call(this, options);
 
+	// load dependencies js/css
+		// 	const load_promises = []
+		//
+		// 	// css file load
+		// 		const lib_css_file = '../css/get_archive_weights.css'
+		// 		load_promises.push( widget_common.prototype.load_style(lib_css_file) )
+		//
+		// const js_promise = Promise.all(load_promises)
+		//
+		//
+		// return js_promise
 
-	// // load dependencies js/css
-	// 	const load_promises = []
-	//
-	// 	// css file load
-	// 		const lib_css_file = '../css/get_archive_weights.css'
-	// 		load_promises.push( widget_common.prototype.load_style(lib_css_file) )
-	//
-	// const js_promise = Promise.all(load_promises)
-	//
-	//
-	// return js_promise
+	return common_init
 }//end init
 
 
