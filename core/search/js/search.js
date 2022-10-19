@@ -598,14 +598,15 @@ search.prototype.get_component_instance = async function(options) {
 			const serial	= performance.now()
 			const key		= section_tipo +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
 		// context
-			const context = {
-				model			: model,
-				type			: 'component',
-				tipo			: component_tipo,
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				mode			: 'search'
-			}
+			// const context = {
+			// 	model			: model,
+			// 	type			: 'component',
+			// 	tipo			: component_tipo,
+			// 	section_tipo	: section_tipo,
+			// 	section_id		: section_id,
+			// 	mode			: 'search',
+			// 	permissions		: 2
+			// }
 		// instance
 			const component_options = {
 				key				: key,
@@ -615,7 +616,7 @@ search.prototype.get_component_instance = async function(options) {
 				section_id		: section_id,
 				mode			: 'search',
 				lang			: lang,
-				context			: context
+				// context			: context
 				// data			: current_data,
 				// datum		: current_datum
 			}
@@ -633,7 +634,7 @@ search.prototype.get_component_instance = async function(options) {
 		component_instance.data.value = value
 
 	// inject permissions. Search is always enable for all users
-		component_instance.permissions = 2
+		component_instance.context.permissions = 2
 
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
