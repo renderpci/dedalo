@@ -1718,33 +1718,44 @@ function get_current_version_in_db() : array {
 			return $calculated_current_version;
 		}
 
-	// Query the last row of matrix_updates, it is the last update, and the current version.
-		$strQuery = 'SELECT id, datos
-					 FROM "matrix_updates"
-					 ORDER BY id DESC
-					 LIMIT 1';
+	$current_version = [];
 
-		$result = JSON_RecordObj_matrix::search_free($strQuery);
-		// loop the rows
-		while ($rows = pg_fetch_assoc($result)) {
-			$id				= (int)$rows['id'];
-			$datos_encoded	= (string)$rows['datos'];
-			$datos			= (object)json_handler::decode($datos_encoded);
-		}
+	try {
 
-	// version
-		$current_version = [];
-		if (isset($datos)) {
+		// Query the last row of matrix_updates, it is the last update, and the current version.
+			$strQuery = 'SELECT id, datos
+						 FROM "matrix_updates"
+						 ORDER BY id DESC
+						 LIMIT 1';
 
-			$ar_version = explode(".", $datos->dedalo_version);
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			// loop the rows
+			if ($result!==false) {
+				while ($rows = pg_fetch_assoc($result)) {
+					$id				= (int)$rows['id'];
+					$datos_encoded	= (string)$rows['datos'];
+					$datos			= (object)json_handler::decode($datos_encoded);
+					break;
+				}
+			}
 
-			$current_version[0]	= (int)$ar_version[0];
-			$current_version[1]	= (int)$ar_version[1];
-			$current_version[2]	= (int)$ar_version[2];
+		// version
+			if (isset($datos)) {
 
-			// cache
-			$calculated_current_version = $current_version;
-		}
+				$ar_version = explode(".", $datos->dedalo_version);
+
+				$current_version[0]	= (int)$ar_version[0];
+				$current_version[1]	= (int)$ar_version[1];
+				$current_version[2]	= (int)$ar_version[2];
+
+				// cache
+				$calculated_current_version = $current_version;
+			}
+	} catch (Exception $e) {
+		// error_log( 'Caught exception: ' . $e->getMessage() );
+		debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
+	}
+
 
 	return $current_version;
 }//end get_current_version_in_db
@@ -1798,18 +1809,34 @@ function check_basic_system() : object {
 		foreach ($ar_langs as $lang => $label) {
 			$label_path = '/common/js/lang/' . $lang . '.js';
 			if (!file_exists(DEDALO_CORE_PATH.$label_path)) {
-				$ar_label = label::get_ar_label($lang); // Get all properties
-				file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				$ar_label	= label::get_ar_label($lang); // Get all properties
+				$write		= file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				if ($write===false) {
+					$response->msg = 'Error on write js/lang file. Permission denied. '.DEDALO_CORE_PATH.$label_path;
+					debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+					return $response;
+				}
 				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ", logger::WARNING);
 			}
 		}
+
 	// structure css
-		# Generate css structure file (if not extist)
-		$file_path = DEDALO_CORE_PATH.'/common/css/structure.css';
-		if (!file_exists($file_path)) {
-			$build_structure_css_response = (object)css::build_structure_css();
-			debug_log(__METHOD__." Generated structure css file: $file_path ".$build_structure_css_response->msg, logger::WARNING);
-		}
+		// Generate css structure file (if not exist)
+		// Removed!. No longer used
+		// $file_path = DEDALO_CORE_PATH.'/common/css/structure.css';
+		// if (!file_exists($file_path)) {
+		// 	$build_structure_css_response = (object)css::build_structure_css();
+		// 	debug_log(__METHOD__." Generated structure css file: $file_path ".$build_structure_css_response->msg, logger::WARNING);
+		// }
+
+	// database is available
+		// $db_install_conn = install::get_db_install_conn();
+		// if ($db_install_conn===false) {
+		// 	$response->msg = 'Error on connect with database.';
+		// 	debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+		// 	return $response;
+		// }
+
 
 	$response->result 	= true;
 	$response->msg 		= 'Ok. check_basic_system done';

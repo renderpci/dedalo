@@ -107,11 +107,11 @@ login.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// rqo build.
-			// Note that get_login_context don't need previous login action as similar call get_element_context
+			// Note that get_login_context does not need a previous login action as similar call get_element_context
 				const rqo = {
-					action : 'get_login_context',
-					dd_api : 'dd_utils_api',
-					source : create_source(self, null)
+					action	: 'get_login_context',
+					dd_api	: 'dd_utils_api',
+					source	: create_source(self, null)
 				}
 
 			// load data. get context and data

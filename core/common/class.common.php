@@ -227,51 +227,51 @@ abstract class common {
 	/**
 	* LOAD STRUCTURE DATA
 	* Get data once from structure (tipo, modelo, norden, estraducible, etc.)
+	* @return bool
 	*/
-	protected function load_structure_data() {
+	protected function load_structure_data() : bool {
 
-		if( empty($this->tipo) ) {
-			dump($this, " DUMP ELEMENT WITHOUT TIPO - THIS ");
-			throw new Exception("Error (3): tipo is mandatory!", 1);
-		}
-
+		// check mandatory property tipo
+			if( empty($this->tipo) ) {
+				// dump($this, " DUMP ELEMENT WITHOUT TIPO - THIS ");
+				// throw new Exception("Error (3): tipo is mandatory!", 1);
+				debug_log(__METHOD__."  Error: trying to load structure on element without tipo ! ". get_called_class(), logger::ERROR);
+				return false;
+			}
 
 		if( !$this->bl_loaded_structure_data) {
 
 			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
 
-			# Fix vars
-			$this->model		= $this->RecordObj_dd->get_modelo();
-			$this->norden		= $this->RecordObj_dd->get_norden();
-			// $this->required	= $this->RecordObj_dd->get_usableIndex();  // (!) Not used in structure anymore (usableIndex)
+			// fix vars
+				$this->model	= $this->RecordObj_dd->get_modelo();
+				$this->norden	= $this->RecordObj_dd->get_norden();
+				$this->label	= RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
+			// translatable
+				$this->traducible = $this->RecordObj_dd->get_traducible();
+				// If the element is not translatable, we set its 'lang' to 'lg-nolan' (DEDALO_DATA_NOLAN)
+				if ($this->traducible==='no') {
+					$this->fix_language_nolan();
+				}
 
-			$this->label = RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
+			// properties : Always JSON decoded
+				$properties = $this->RecordObj_dd->get_properties();
+				$this->properties = !empty($properties) ? $properties : false;
 
+			// matrix_table
+				// if(!isset($this->matrix_table))
+				// $this->matrix_table = self::get_matrix_table_from_tipo($this->tipo);
 
-			# TRADUCIBLE
-			$this->traducible = $this->RecordObj_dd->get_traducible();
-			# Si el elemento no es traducible, fijamos su 'lang' en 'lg-nolan' (DEDALO_DATA_NOLAN)
-			if ($this->traducible==='no') {
-				$this->fix_language_nolan();
-			}
+			// notify : We notify the loading of the element to common
+				$modelo_name = get_called_class();
+				common::notify_load_lib_element_tipo($modelo_name, $this->modo);
 
-			# properties : Always JSON decoded
-			#dump($this->RecordObj_dd->get_properties()," ");
-			$properties = $this->RecordObj_dd->get_properties();
-			$this->properties = !empty($properties) ? $properties : false;
-
-			# MATRIX_TABLE
-			#if(!isset($this->matrix_table))
-			#$this->matrix_table = self::get_matrix_table_from_tipo($this->tipo);
-
-			# NOTIFY : Notificamos la carga del elemento a common
-			$modelo_name = get_called_class();
-			common::notify_load_lib_element_tipo($modelo_name, $this->modo);
-
-			# BL_LOADED_STRUCTURE_DATA
-			$this->bl_loaded_structure_data = true;
+			// bl_loaded_structure_data
+				$this->bl_loaded_structure_data = true;
 		}
+
+		return true;
 	}//end load_structure_data
 
 

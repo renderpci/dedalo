@@ -350,7 +350,7 @@ const render_init_test_block = function(self) {
 		if (!init_test || init_test.result===false) {
 			const msg = init_test && init_test.msg
 				? init_test.msg.join('<br>')
-				: 'Init test fails (server error)'
+				: 'Init test fails (unknown server error)'
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'msg error',
