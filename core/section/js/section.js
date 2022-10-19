@@ -365,8 +365,9 @@ section.prototype.build = async function(autoload=false) {
 					const context	= self.datum.context.find(el => el.section_tipo===self.section_tipo) || {}
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
 					}
-					self.context = context
 				}
 
 			// set Data

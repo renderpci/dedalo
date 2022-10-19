@@ -81,7 +81,7 @@ area_development.prototype.build = async function(autoload=true) {
 		self.rqo.prevent_lock = true
 
 	// debug
-		const rqo_original = clone(self.rqo)
+		// const rqo_original = clone(self.rqo)
 
 	// load from DDBB
 		if (autoload===true) {
@@ -108,14 +108,9 @@ area_development.prototype.build = async function(autoload=true) {
 					const context = self.datum.context.find(el => el.tipo===self.tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
 					}
-					// // preserve view across builds
-					// if(self.context && self.context.view) {
-					// 	context.view = self.context.view
-					// }
-
-					// properties recover
-					self.context = context
 				}
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
 				self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
@@ -346,6 +341,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 /**
 * LOAD_JSON_EDITOR_FILES
+* @return Promise
 */
 const load_json_editor_files = function() {
 
@@ -361,9 +357,7 @@ const load_json_editor_files = function() {
 	load_promises.push( load_promise )
 
 	const load_all = Promise.all(load_promises)
-	// .then(async function(response){
-		//console.log("JSONEditor:",response);
-	// })
+
 
 	return load_all
 }//end load_json_editor_files

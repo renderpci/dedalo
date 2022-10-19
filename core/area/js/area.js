@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, import */
+/*global get_label, page_globals, SHOW_DEBUG, JSONEditor, import */
 /*eslint no-undef: "error"*/
 
 
@@ -6,7 +6,7 @@
 // imports
 	import {common,load_data_debug} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_area} from './render_area.js'
@@ -79,7 +79,7 @@ area.prototype.build = async function(autoload=true) {
 		self.rqo.prevent_lock = true
 
 	// debug
-		const rqo_original = clone(self.rqo)
+		// const rqo_original = clone(self.rqo)
 
 	// load from DDBB
 		if (autoload===true) {
@@ -105,8 +105,9 @@ area.prototype.build = async function(autoload=true) {
 					const context	= self.datum.context.find(el => el.tipo===self.tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
 					}
-					self.context = context
 				}
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
 				self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
@@ -160,88 +161,85 @@ area.prototype.render = async function(options={}) {
 
 
 
-
 /**
 * INIT_JSON_EDITOR
 */
-area.prototype.init_json_editor = async function(widget_object) {
+	// area.prototype.init_json_editor = async function(widget_object) {
 
-	const self = this
+	// 	const self = this
 
-	const editor_id			= widget_object.editor_id
-	const trigger			= widget_object.trigger
-	const body_response		= widget_object.body_response
-	const print_response	= widget_object.print_response
+	// 	const editor_id			= widget_object.editor_id
+	// 	const trigger			= widget_object.trigger
+	// 	const body_response		= widget_object.body_response
+	// 	const print_response	= widget_object.print_response
 
-	const get_input_value = function(input_id) {
-		return document.getElementById(input_id).value
-	}
+	// 	const get_input_value = function(input_id) {
+	// 		return document.getElementById(input_id).value
+	// 	}
 
-	// load dependencies js/css
-	const js_promise = load_json_editor_files().then(()=>{
+	// 	return new Promise(function(resolve){
 
-		const editor_text_area = document.getElementById(editor_id)
-			  // Hide real data container
-			  editor_text_area.style.display = "none"
+	// 	// load dependencies js/css
+	// 		load_json_editor_files()
+	// 		.then(()=>{
 
-		const result_div = document.getElementById("convert_search_object_to_sql_query_response")
+	// 			const editor_text_area = document.getElementById(editor_id)
+	// 				  // Hide real data container
+	// 				  editor_text_area.style.display = "none"
 
-		// create the editor
-		const container	= document.getElementById(editor_id + '_container')
-		const options	= {
-			mode	: 'code',
-			modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-			onError	: function (err) {
-				alert(err.toString());
-			},
-			onChange: async function () {
-				const editor_text = editor.getText()
-				if (editor_text.length<3) return
+	// 			const result_div = document.getElementById("convert_search_object_to_sql_query_response")
 
-				// check is json valid and store
-					const body_options = JSON.parse(editor_text)
-					if (body_options) {
-						window.localStorage.setItem('json_editor_sqo', editor_text);
-					}
+	// 			// create the editor
+	// 			const container	= document.getElementById(editor_id + '_container')
+	// 			const options	= {
+	// 				mode	: 'code',
+	// 				modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+	// 				onError	: function (err) {
+	// 					alert(err.toString());
+	// 				},
+	// 				onChange: async function () {
+	// 					const editor_text = editor.getText()
+	// 					if (editor_text.length<3) return
 
-				const dd_api = trigger.dd_api.indexOf("get_input_value:")!==-1
-					? get_input_value( trigger.dd_api.replace('get_input_value:', '') )
-					: trigger.dd_api
+	// 					// check is json valid and store
+	// 						const body_options = JSON.parse(editor_text)
+	// 						if (body_options) {
+	// 							window.localStorage.setItem('json_editor_sqo', editor_text);
+	// 						}
 
-				const action = trigger.action.indexOf("get_input_value:")!==-1
-					? get_input_value( trigger.action.replace('get_input_value:', '') )
-					: trigger.action
+	// 					const dd_api = trigger.dd_api.indexOf("get_input_value:")!==-1
+	// 						? get_input_value( trigger.dd_api.replace('get_input_value:', '') )
+	// 						: trigger.dd_api
 
-				// data_manager
-				const api_response = await data_manager.request({
-					body : {
-						dd_api	: dd_api,
-						action	: action,
-						options	: editor_text
-					}
-				})
-				console.log("api_response:",api_response);
+	// 					const action = trigger.action.indexOf("get_input_value:")!==-1
+	// 						? get_input_value( trigger.action.replace('get_input_value:', '') )
+	// 						: trigger.action
 
-				print_response(body_response, api_response)
+	// 					// data_manager
+	// 					const api_response = await data_manager.request({
+	// 						body : {
+	// 							dd_api	: dd_api,
+	// 							action	: action,
+	// 							options	: editor_text
+	// 						}
+	// 					})
 
-				return api_response
-			}
-		}
+	// 					print_response(body_response, api_response)
 
-		// const editor_value	= null; //'{"id":"temp","filter":[{"$and":[{"$or":[{"q":"{\"section_id\":\"4\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]},{"q":"{\"section_id\":\"2\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]}]},{"q":"1932","lang":"all","path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]}]}],"select":[{"path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"},{"name":"Catálogo","modelo":"component_input_text","section_tipo":"numisdata300","component_tipo":"numisdata303"}]},{"path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]},{"path":[{"name":"Ceca","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata30"},{"name":"Ceca","modelo":"component_input_text","section_tipo":"numisdata6","component_tipo":"numisdata16"}]},{"path":[{"name":"Autoridad","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata29"},{"name":"Apellidos","modelo":"component_input_text","section_tipo":"numisdata22","component_tipo":"rsc86"}]},{"path":[{"name":"Denominación","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata34"},{"name":"Denominación","modelo":"component_input_text","section_tipo":"numisdata33","component_tipo":"numisdata97"}]}],"limit":50,"offset":0}'
-		// localStorage.removeItem('json_editor_api');
-		const sample_data	= null
-		const saved_value	= localStorage.getItem('json_editor_sqo')
-		const editor_value	= JSON.parse(saved_value) || sample_data
+	// 					return api_response
+	// 				}
+	// 			}
 
-		// editor instance
-		const editor = new JSONEditor(container, options, editor_value)
+	// 			// const editor_value	= null; //'{"id":"temp","filter":[{"$and":[{"$or":[{"q":"{\"section_id\":\"4\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]},{"q":"{\"section_id\":\"2\",\"section_tipo\":\"numisdata300\",\"component_tipo\":\"numisdata309\"}","lang":"all","path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"}]}]},{"q":"1932","lang":"all","path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]}]}],"select":[{"path":[{"name":"Catálogo","modelo":"component_select","section_tipo":"numisdata3","component_tipo":"numisdata309"},{"name":"Catálogo","modelo":"component_input_text","section_tipo":"numisdata300","component_tipo":"numisdata303"}]},{"path":[{"name":"Número Catálogo","modelo":"component_input_text","section_tipo":"numisdata3","component_tipo":"numisdata27"}]},{"path":[{"name":"Ceca","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata30"},{"name":"Ceca","modelo":"component_input_text","section_tipo":"numisdata6","component_tipo":"numisdata16"}]},{"path":[{"name":"Autoridad","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata29"},{"name":"Apellidos","modelo":"component_input_text","section_tipo":"numisdata22","component_tipo":"rsc86"}]},{"path":[{"name":"Denominación","modelo":"component_autocomplete","section_tipo":"numisdata3","component_tipo":"numisdata34"},{"name":"Denominación","modelo":"component_input_text","section_tipo":"numisdata33","component_tipo":"numisdata97"}]}],"limit":50,"offset":0}'
+	// 			// localStorage.removeItem('json_editor_api');
+	// 			const sample_data	= null
+	// 			const saved_value	= localStorage.getItem('json_editor_sqo')
+	// 			const editor_value	= JSON.parse(saved_value) || sample_data
 
-		return editor
-	})
+	// 			// editor instance
+	// 			const editor = new JSONEditor(container, options, editor_value)
 
-
-	return true
-}//end init_json_editor
-
-
+	// 			resolve(editor)
+	// 		})
+	// 	})
+	// }//end init_json_editor

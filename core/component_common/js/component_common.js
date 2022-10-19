@@ -214,8 +214,9 @@ component_common.prototype.build = async function(autoload=false){
 					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
+					}else{
+						self.context = context
 					}
-					self.context = context
 				}
 
 			// data
