@@ -25,8 +25,7 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 		describe("Builds page instance from options", function() {
 			make_test(
 				{
-					model	: 'page',
-					context	: []
+					model : 'page'
 				},
 				page
 			);
@@ -39,8 +38,7 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 					model	: 'component_input_text',
 					tipo	: 'test52',
 					mode	: mode,
-					lang	: lang,
-					context	: {}
+					lang	: lang
 				},
 				component_input_text
 			);

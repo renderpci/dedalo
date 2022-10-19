@@ -21,20 +21,7 @@ describe("COMPONENTS DATA CHANGES", function() {
 			}
 
 		const element = elements[i]
-		// add minimum context
-			const request_config = [{
-				api_engine	: 'dedalo',
-				show		: {
-					ddo_map : []
-				},
-				sqo			: {
-					section_tipo : [element.section_tipo]
-				}
-			}]
-			element.context = {
-				request_config : request_config // [source]
-			}
-			element.mode = 'edit' // force edit mode
+			  element.mode = 'edit' // force edit mode
 
 		describe(element.model, function() {
 

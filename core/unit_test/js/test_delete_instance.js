@@ -22,8 +22,7 @@ describe("INSTANCES : DELETE_INSTANCE", function() {
 				section_tipo	: section_tipo,
 				section_id		: section_id,
 				mode			: mode,
-				lang			: lang,
-				context			: {}
+				lang			: lang
 			}
 			const deleted = await delete_instance(options);
 			assert.equal(deleted, expected);

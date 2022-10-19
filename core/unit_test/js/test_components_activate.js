@@ -21,20 +21,7 @@ describe("COMPONENTS ACTIVATE", async function() {
 		// if (i!=0) continue
 
 		const element = elements[i]
-		// add minimum context
-			const request_config = [{
-				api_engine	: 'dedalo',
-				show		: {
-					ddo_map : []
-				},
-				sqo			: {
-					section_tipo : [element.section_tipo]
-				}
-			}]
-			element.context = {
-				request_config : request_config // [source]
-			}
-			element.mode = 'edit'
+			  element.mode = 'edit'
 
 		describe(`component: ${element.model} :`,  function() {
 
