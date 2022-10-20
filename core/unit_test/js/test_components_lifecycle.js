@@ -137,12 +137,16 @@ async function life_cycle_test(element) {
 			assert.notEqual(new_instance.node, null);
 
 			if (new_instance.mode==='edit' && new_instance.view!=='line') {
-				assert.notEqual(new_instance.node.content_data, null);
-				assert.notEqual(new_instance.node.content_data, undefined);
+				// assert.notEqual(
+				// 	new_instance.node.content_data,
+				// 	null,
+				// 	'element node content data must be null'
+				// );
+				// assert.notEqual(new_instance.node.content_data, undefined);
 				assert.notEqual(
 					new_instance.node.querySelector('.label'),
 					null,
-					'label must be a DOM node on edit mode'
+					`label must be a DOM node on edit mode. (view: ${new_instance.view} - mode: ${new_instance.mode})`
 				);
 
 				assert.notEqual(new_instance.node.querySelector('.buttons_container'), null);

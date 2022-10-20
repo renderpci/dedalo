@@ -34,17 +34,17 @@ view_default_list_filter_records.render = async function(self, options) {
 		const value_string	= value.join(' | ')
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
-		})
-		wrapper.addEventListener('click', function(e){
-			e.stopPropagation()
+		// const wrapper = ui.component.build_wrapper_list(self, {
+		// 	value_string : value_string
+		// })
+		// wrapper.addEventListener('click', function(e){
+		// 	e.stopPropagation()
 
-			self.change_mode({
-				mode : 'edit',
-				view : 'line'
-			})
-		})
+		// 	self.change_mode({
+		// 		mode : 'edit',
+		// 		view : 'line'
+		// 	})
+		// })
 
 
 	return wrapper
