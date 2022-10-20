@@ -6,6 +6,7 @@
 // imports
 	import {view_default_edit_image} from './view_default_edit_image.js'
 	import {view_mini_image} from './view_mini_image.js'
+	import {view_viewer_image} from './view_viewer_image.js'
 
 /**
 * RENDER_EDIT_COMPONENT_image
@@ -29,9 +30,12 @@ render_edit_component_image.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view	= self.view || 'default'
 
 	switch(view) {
+
+		case 'viewer':
+			return view_viewer_image.render(self, options)
 
 		case 'mini':
 			return view_mini_image.render(self, options)

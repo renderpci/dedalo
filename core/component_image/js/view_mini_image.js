@@ -25,7 +25,7 @@ export const view_mini_image = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_mini_image.prototype.render = function(self, options) {
+view_mini_image.render = function(self, options) {
 
 	// short vars
 		const datalist = self.data.datalist || []
