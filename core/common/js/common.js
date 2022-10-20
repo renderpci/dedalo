@@ -106,39 +106,50 @@ common.prototype.build = async function () {
 export const set_context_vars = function(self) {
 
 	if (self.context) {
-		// self.type		= self.context.type // typology of current instance, usually 'component'
-		// self.label		= self.context.label // label of current component like 'summary'
-		// self.tools		= self.context.tools || [] //set the tools of the component
-		// self.permissions	= self.context.permissions || null
+		self.type			= self.context.type // typology of current instance, usually 'component'
+		self.label			= self.context.label // label of current component like 'summary'
+		self.tools			= self.context.tools || [] //set the tools of the component
+		self.permissions	= self.context.permissions || null
+
+		// view. Swaps the value with the context value and makes it a getter/setter of the context value
+		// this allow sync self.view and self.context.view after building the instance
+			self.view = self.context.view || self.view
+			Object.defineProperty(self, 'view', {
+				get : function() {
+					return self.context.view || self.view;
+				},
+				set : function(value) {
+					return self.context.view = value;
+				}
+			});
 
 		// getters
-			const ar_getters = [
-				'type',
-				'label',
-				'tools',
-				'permissions',
-				'view'
-			]
-			const ar_getters_length = ar_getters.length
-			for (let i = 0; i < ar_getters_length; i++) {
-				if (self[ar_getters[i]]) {
-					// console.warn('ignored already set context getter assign:', ar_getters[i], self.status, self.model);
-					continue;
-				}
-				// if (!self.hasOwnProperty(ar_getters[i])) {
-					Object.defineProperty(self, ar_getters[i], {
-						get : function() {
-							return self.context[ar_getters[i]];
-						},
-						set : function(value) {
-							return self.context[ar_getters[i]] = value;
-						}
-					});
-				// }
-			}
+			// const ar_getters = [
+			// 	'type',
+			// 	'label',
+			// 	'tools',
+			// 	'permissions',
+			// 	'view'
+			// ]
+			// const ar_getters_length = ar_getters.length
+			// for (let i = 0; i < ar_getters_length; i++) {
+			// 	const name = ar_getters[i]
+			// 	// if (self[name]) {
+			// 	// 	// console.warn('ignored already set context getter assign:', name, self.status, self.model);
+			// 	// 	continue;
+			// 	// }
+			// 	// if (!self.hasOwnProperty(name)) {
+			// 		Object.defineProperty(self, name, {
+			// 			get : function() {
+			// 				return self.context[name];
+			// 			},
+			// 			set : function(value) {
+			// 				return self.context[name] = value;
+			// 			}
+			// 		});
+			// 	// }
+			// }
 			// console.log('self.label:', self.label, self.model, self.context);
-
-		// others.
 	}
 
 	// rqo_test. Used to simulate component call to API to load data and context
@@ -691,6 +702,7 @@ export const create_source = function (self, action) {
 			section_tipo	: self.section_tipo || self.tipo,
 			section_id		: self.section_id,
 			mode			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
+			view			: self.view || 'default',
 			lang			: self.lang
 		}
 

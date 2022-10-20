@@ -64,6 +64,9 @@ component_common.prototype.init = async function(options) {
 		//rqo
 		// self.rqo			= {}
 
+	// view
+		self.view = options.view
+
 	// caller pointer
 		self.caller = options.caller
 
@@ -153,7 +156,6 @@ component_common.prototype.init = async function(options) {
 		//})
 
 		//event_manager.publish('component_init', self)
-
 
 	// status update
 		self.status = 'initiated'

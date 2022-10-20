@@ -147,12 +147,15 @@ const get_content_data = async function(self) {
 					})
 
 				// instance
-					const current_instance = await instantiate_page_element(self, current_context)
+					const current_instance = await instantiate_page_element(
+						self, // object page instance
+						current_context // object is used as source
+					)
 
 					self.ar_instances.push(current_instance)
 
 					// build (load data)
-					const autoload = true // current_instance.status==='initiated' // avoid reload menu data
+					const autoload = true // Note that it's necessary to load data here (in addition to context)
 					current_instance.build(autoload)
 					.then(function(){
 						// render instance
