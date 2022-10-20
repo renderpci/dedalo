@@ -60,10 +60,11 @@ view_default_list_iri.render = async function(self, options) {
 		})
 		wrapper.addEventListener('click', function(e){
 			e.stopPropagation()
-			self.change_mode(
-				'edit_in_list',
-				true // autoload. On true, load data from API when user click to edit_in_list
-			)
+
+			self.change_mode({
+				mode : 'edit',
+				view : 'line'
+			})
 		})
 
 

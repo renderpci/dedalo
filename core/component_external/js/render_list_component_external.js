@@ -40,10 +40,11 @@ render_list_component_external.prototype.list = async function() {
 		})
 		wrapper.addEventListener('click', function(e){
 			e.stopPropagation()
-			self.change_mode(
-				'edit_in_list',
-				true // autoload. On true, load data from API when user click to edit_in_list
-			)
+
+			self.change_mode({
+				mode : 'edit',
+				view : 'line'
+			})
 		})
 
 
