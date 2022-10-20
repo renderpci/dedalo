@@ -958,9 +958,11 @@ class component_autocomplete_hi extends component_relation_common {
 		// q_operator
 			$q_operator = $result_query_object->q_operator ?? null;
 
-		# Clone and modify query_object for search in relations_search too
-		$relation_search_obj = clone $result_query_object;
-			$relation_search_obj->component_path = ['relations_search'];
+		# Clone and modify query_object for search in relations_search too if the operator is different to ==
+			$relation_search_obj = clone $result_query_object;
+			if ($q_operator!=='==') {
+				$relation_search_obj->component_path = ['relations_search'];
+			}
 
 		# Group the two query_object in a 'or' clause
 		$operator = '$or';
@@ -975,6 +977,24 @@ class component_autocomplete_hi extends component_relation_common {
 	}//end resolve_query_object_sql
 
 
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+
+		$ar_operators = [
+			'*'		=> 'no_vacio', // not null
+			'!*'	=> 'vacio',
+			'!='	=> 'distinto_de',
+			'='		=> 'similar_a',
+			'=='	=> 'literal',
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
+
 
 }
-?>
+
