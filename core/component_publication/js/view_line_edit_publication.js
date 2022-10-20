@@ -7,20 +7,19 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data,
-		get_buttons
+		get_content_data
 	} from './render_edit_component_publication.js'
 
 
 
 /**
-* VIEW_DEFAULT_EDIT_PUBLICATION
+* VIEW_LINE_EDIT_PUBLICATION
 * Manage the components logic and appearance in client side
 */
-export const view_default_edit_publication = function() {
+export const view_line_edit_publication = function() {
 
 	return true
-}//end view_default_edit_publication
+}//end view_line_edit_publication
 
 
 
@@ -29,26 +28,25 @@ export const view_default_edit_publication = function() {
 * Render node for use in edit mode
 * @return DOM node wrapper
 */
-view_default_edit_publication.render = async function(self, options) {
+view_line_edit_publication.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
 
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+
 	// content_data
 		const content_data = get_content_data(self)
+		content_data.appendChild(button_exit_edit)
 		if (render_level==='content') {
 			return content_data
 		}
 
-	// buttons
-		const buttons = self.mode==='edit_in_list'
-			? null
-			: get_buttons(self)
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons
+			label			: null
 		})
 		// set pointers
 		wrapper.content_data = content_data
