@@ -2319,11 +2319,11 @@ abstract class common {
 
 		// options
 			$options = new stdClass();
-				$options->tipo			= null;
-				$options->external		= false;
-				$options->section_tipo	= null;
-				$options->mode			= 'list';
-				$options->section_id	= null;
+				$options->tipo			= null; 	// string
+				$options->external		= false; 	// bool
+				$options->section_tipo	= null; 	// string
+				$options->mode			= 'list'; 	// string
+				$options->section_id	= null; 	// string|int|null
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// options fix
@@ -2367,7 +2367,6 @@ abstract class common {
 						$properties		= $RecordObj_dd->get_properties();
 					}
 					break;
-
 				default:
 					// edit mode or components without section_list defined (other than portals or sections)
 					$RecordObj_dd	= new RecordObj_dd($tipo);
@@ -2376,25 +2375,33 @@ abstract class common {
 			}
 
 		// pagination defaults. Note that limit defaults are set on element construction based on properties
-			$limit = (function() use($model, $tipo, $section_tipo, $mode){
+			$offset	= 0;
+			$limit	= (function() use($model, $tipo, $section_tipo, $mode) {
+
+				$resolved_limit = 10; // default
 				switch (true) {
 					case $model==='section':
 						$section = section::get_instance(null, $tipo, $mode, true);
-						return $section->pagination->limit;
+						$resolved_limit = $section->pagination->limit;
 						break;
 					case strpos($model, 'component_')===0:
 						$translatable	= RecordObj_dd::get_translatable($tipo);
 						$current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$component = component_common::get_instance($model, $tipo, null, $mode, $current_lang, $section_tipo);
-
-						return $component->pagination->limit;
+						$component		= component_common::get_instance($model,
+							$tipo,
+							null,
+							$mode,
+							$current_lang,
+							$section_tipo
+						);
+						$resolved_limit = $component->pagination->limit;
 						break;
 					default:
 						break;
 				}
-				return 10;
+
+				return $resolved_limit;
 			})();
-			$offset	= 0;
 
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
@@ -2465,7 +2472,7 @@ abstract class common {
 								return $ddo;
 							}, $ar_section_tipo);
 
-						// filter_by_list. get the filter_by_list (to set the prefilter selector)
+						// filter_by_list. get the filter_by_list (to set the pre-filter selector)
 							if (isset($item_request_config->sqo->filter_by_list)) {
 								$parsed_item->sqo->filter_by_list = component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
 							}
@@ -2583,10 +2590,10 @@ abstract class common {
 
 								//fields_map; used by components external to map to different API format, defined in the component, when this property is present and true, get the component fields_map
 									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
-										$RecordObj_dd	= new RecordObj_dd($current_ddo->tipo);
-										$properties		= $RecordObj_dd->get_properties();
-										$current_ddo->properties = $properties;
-										$current_ddo->fields_map = isset($properties->fields_map)
+										$RecordObj_dd				= new RecordObj_dd($current_ddo->tipo);
+										$properties					= $RecordObj_dd->get_properties();
+										$current_ddo->properties	= $properties;
+										$current_ddo->fields_map	= isset($properties->fields_map)
 											? $properties->fields_map
 											: [];
 										$current_ddo->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -2762,7 +2769,6 @@ abstract class common {
 								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
 							}
 						}
-
 						break;
 					case 'list':
 					case 'search':
@@ -2819,16 +2825,21 @@ abstract class common {
 							$ar_related_clean[] = $current_tipo;
 						}
 					}
-					// check ar_related_clean is legal
-						$without_related_term_models = [
-							'component_relation_index',
-							'component_select_lang',
-							'component_input_text'
-						];
-						if (empty($ar_related_clean) && !in_array($model, $without_related_term_models)) {
-							// $ar_related_clean = [$tipo]; Loop de la muerte (!)
-							debug_log(__METHOD__." Empty related items. Review your structure config to fix this error. model:$model - tipo:$tipo - ar_related_clean:".to_string($ar_related_clean), logger::ERROR);
-						}
+					// check ar_related_clean is legal.
+					// (!) Removed 20-10-2022 because it's no longer necessary this check
+						// $without_related_term_models = [
+						// 	'component_relation_index',
+						// 	'component_select_lang',
+						// 	'component_input_text'
+						// ];
+						// if (empty($ar_related_clean) && !in_array($model, $without_related_term_models)) {
+						// 	// $ar_related_clean = [$tipo]; Loop de la muerte (!)
+						// 	debug_log(__METHOD__
+						// 		." Empty related items. Review your structure config to fix this error. model:$model - tipo:$tipo - ar_related_clean:"
+						// 		.to_string($ar_related_clean)
+						// 		, logger::ERROR
+						// 	);
+						// }
 
 				// target_section_tipo
 					if (!isset($target_section_tipo)) {
@@ -2857,7 +2868,7 @@ abstract class common {
 						? $tipo_properties->children_view
 						: null;
 
-				// auth. Check each element permissions
+				// auth. Check the permissions of each element
 					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
 						// check each element permissions
 						$result = [];
@@ -2874,10 +2885,10 @@ abstract class common {
 				// ddo_map
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
-						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$current_tipo_RecordObj_dd	= new RecordObj_dd($current_tipo);
 						$current_tipo_properties	= $current_tipo_RecordObj_dd->get_properties();
-						$own_view = isset($current_tipo_properties->view)
+						$own_view					= isset($current_tipo_properties->view)
 							? $current_tipo_properties->view
 							: ($model === 'component_portal'
 								? 'line'
@@ -2902,8 +2913,8 @@ abstract class common {
 									}
 								}
 								if(isset($properties->mode)){
-									$current_mode = $properties->mode;
-									$current_fixed_mode = true;
+									$current_mode		= $properties->mode;
+									$current_fixed_mode	= true;
 								}
 							}
 
