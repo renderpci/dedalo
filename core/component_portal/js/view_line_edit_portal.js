@@ -62,11 +62,6 @@ view_line_edit_portal.render = async function(self, options) {
 
 	// content_data
 		const content_data = await get_content_data(self, ar_section_record)
-
-	// button_exit_edit
-		const button_exit_edit = ui.component.build_button_exit_edit(self)
-		content_data.appendChild(button_exit_edit)
-
 		if (render_level==='content') {
 			return content_data
 		}
@@ -104,34 +99,38 @@ const get_content_data = async function(self, ar_section_record) {
 	// build_values
 		const fragment = new DocumentFragment()
 
-		// add all section_record rendered nodes
-			const ar_section_record_length	= ar_section_record.length
-			if (ar_section_record_length===0) {
+	// button_exit_edit
+		// const button_exit_edit = ui.component.build_button_exit_edit(self)
+		// fragment.appendChild(button_exit_edit)
 
-				// no records found case
-				// const row_item = no_records_node()
-				// fragment.appendChild(row_item)
-			}else{
+	// add all section_record rendered nodes
+		const ar_section_record_length	= ar_section_record.length
+		if (ar_section_record_length===0) {
 
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise = ar_section_record[i].render()
-					ar_promises.push(render_promise)
-				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
+			// no records found case
+			// const row_item = no_records_node()
+			// fragment.appendChild(row_item)
+		}else{
 
-					const section_record = values[i]
-					fragment.appendChild(section_record)
-				  }
-				});
-			}//end if (ar_section_record_length===0)
-
-		// build references
-			if(self.data.references && self.data.references.length > 0){
-				const references_node = render_references(self.data.references)
-				fragment.appendChild(references_node)
+			const ar_promises = []
+			for (let i = 0; i < ar_section_record_length; i++) {
+				const render_promise = ar_section_record[i].render()
+				ar_promises.push(render_promise)
 			}
+			await Promise.all(ar_promises).then(function(values) {
+			  for (let i = 0; i < ar_section_record_length; i++) {
+
+				const section_record = values[i]
+				fragment.appendChild(section_record)
+			  }
+			});
+		}//end if (ar_section_record_length===0)
+
+	// build references
+		if(self.data.references && self.data.references.length > 0){
+			const references_node = render_references(self.data.references)
+			fragment.appendChild(references_node)
+		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
