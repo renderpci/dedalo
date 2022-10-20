@@ -25,19 +25,20 @@ export const view_mini_json = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
 view_mini_json.render = async function(self, options) {
 
 	// value_string
-		const value_string = get_value_string()
+		const value_string = get_value_string(self)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
 			value_string : value_string
 		})
 
+
 	return wrapper
-}//end mini
+}//end render

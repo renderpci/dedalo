@@ -25,19 +25,19 @@ export const view_mini_list_svg = function() {
 
 
 /**
-* MINI
-* Render node to be used by service autocomplete or any datalist
+* RENDER
+* Render node to be used by this view
 * @return DOM node
 */
-view_mini_list_svg.prototype.mini = function(self, options) {
+view_mini_list_svg.render = function(self, options) {
 
 	// value
 		const fragment = get_value_fragment(self)
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self)
+		const wrapper = ui.component.build_wrapper_render(self)
 		wrapper.appendChild(fragment)
 
 
 	return wrapper
-}//end mini
+}//end render

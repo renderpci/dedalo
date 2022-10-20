@@ -42,8 +42,10 @@ render_edit_component_json.prototype.edit = async function(options) {
 			return view_default_edit_json.render(self, options)
 	}
 
+
 	return null
 }//end edit
+
 
 
 /**
