@@ -378,7 +378,6 @@ final class dd_core_api {
 					}//end switch (true)
 			}//end if (login::is_logged()!==true)
 
-
 		// response OK
 			$response->result	= $context;
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
@@ -1468,6 +1467,7 @@ final class dd_core_api {
 		// source vars
 			$action			= $ddo_source->action ?? 'search';
 			$mode			= $ddo_source->mode ?? 'list';
+			$view			= $ddo_source->view ?? null;
 			$lang			= $ddo_source->lang ?? null;
 			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id		= $ddo_source->section_id ?? null;
@@ -1715,6 +1715,11 @@ final class dd_core_api {
 										$element->matrix_id = $ddo_source->matrix_id;
 									}
 									// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+
+								// view optional
+									if (!empty($view)) {
+										$element->set_view($view);
+									}
 
 								// pagination. fix pagination vars (defined in class component_common)
 									if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {

@@ -51,6 +51,9 @@ abstract class common {
 	// cache of calculated context, used to get the context that was calculated and reuse it.
 	static $structure_context_cache = [];
 
+	// view. Specific element view combined with mode is used to render elements
+	public $view;
+
 
 	// REQUIRED METHODS
 	#abstract protected function define_id($id);
@@ -3828,9 +3831,9 @@ abstract class common {
 
 				// join all with the inverse format
 				// name -> people to study -> interview
-				$column[]	= $current_ddo;
-				$column		= array_merge($column, $parents);
-				$ar_inverted_paths[]= $column;
+				$column[]				= $current_ddo;
+				$column					= array_merge($column, $parents);
+				$ar_inverted_paths[]	= $column;
 			}
 
 		return $ar_inverted_paths;
@@ -3892,6 +3895,7 @@ abstract class common {
 
 		return $view;
 	}//end get_view
+
 
 
 	/**
