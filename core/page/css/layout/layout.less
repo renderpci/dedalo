@@ -681,13 +681,9 @@
 		>.content_data {
 			color: @color_grey_ultradark; // #9e9e9e;
 			height: inherit;
-
-			>.button_exit_edit {
-				display: none;
-			}
 		}
 
-		&.edit, &.search, &.tm, &.edit_in_list, &.player {
+		&.edit, &.search, &.tm, &.player {
 			// grey line left and down of wrapper
 			// box-shadow: -1px 1px 0 @color_grey_medium;
 			box-shadow: -1px 1px 0 @color_grey_medium, inset -1px 1px 0 @color_grey_medium;
@@ -713,6 +709,17 @@
 					color: white !important;
 				}
 			}
+
+			.button_exit_edit {
+				display: none;
+				position: absolute;
+				// top: 0px;
+				// right: -3px;
+				top: -6px;
+				right: -9px;
+				z-index: 3;
+			}
+
 			// content data defaults
 			>.content_data {
 				height: inherit;
@@ -779,14 +786,6 @@
 			// }
 		}//end &.list
 
-		&.edit_in_list {
-			// box-shadow: none !important;
-
-			>.content_data  {
-				// padding: 0 !important;
-			}
-		}//end &.edit_in_list
-
 		// resizable
 			// resize: both;
 			// overflow: auto;
@@ -840,15 +839,15 @@
 				// color: @color_orange_dedalo !important;
 			}
 
-			.close {
-				position: absolute;
-				// top: 0px;
-				// right: -3px;
-				top: -6px;
-				right: -9px;
-				z-index: 3;
-				display: block;
-			}
+			// .close {
+			// 	position: absolute;
+			// 	// top: 0px;
+			// 	// right: -3px;
+			// 	top: -6px;
+			// 	right: -9px;
+			// 	z-index: 3;
+			// 	display: block;
+			// }
 
 			&.inside {
 				// >.buttons_container {

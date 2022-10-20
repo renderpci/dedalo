@@ -5,7 +5,7 @@
 */
 .component_publication {
 
-	&.edit, &.edit_in_list {
+	&.edit {
 
 		>.content_data {
 			@switch_height: 26px;
@@ -84,6 +84,14 @@
 				}
 			}//end >.content_value
 		}//end >.content_data
+
+		&.view_line {
+			>.content_data {
+				>.content_value {
+					margin: 0.25rem;
+				}
+			}
+		}
 	}//end .edit
 
 	&.search {
