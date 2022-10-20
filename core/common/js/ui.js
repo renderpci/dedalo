@@ -99,7 +99,7 @@ export const ui = {
 			if (msg_type==='ok') {
 				ui.message_timeout = setTimeout(()=>{
 					message_wrap.remove()
-				}, 7000)
+				}, 10000)
 			}
 
 
@@ -347,12 +347,11 @@ export const ui = {
 		build_content_data : (instance, options={}) => {
 
 			// options
-				const button_close	= options.button_close
-				const autoload		= typeof options.autoload!=='undefined' ? options.autoload : true
 				const type			= instance.type
 				const component_css	= instance.context.css || {}
 
-			const content_data = document.createElement('div')
+			// div container
+				const content_data = document.createElement('div')
 
 			// css
 				const content_data_structure_css = typeof component_css.content_data!=='undefined' ? component_css.content_data : []
@@ -366,6 +365,8 @@ export const ui = {
 			return content_data
 		},//end build_content_data
 
+
+
 		/**
 		* build_button_exit_edit
 		* @param object options = {}
@@ -378,10 +379,11 @@ export const ui = {
 
 			const button_close_node = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'button close button_exit_edit'
+				class_name		: 'button close button_exit_edit show_on_active'
 			})
 			button_close_node.addEventListener('click', async function(e){
 				e.stopPropagation()
+
 				await ui.component.deactivate(instance)
 
 				const change_mode = instance.context.properties.with_value
