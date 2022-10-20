@@ -100,7 +100,8 @@ view_default_list_image.render = function(self, options) {
 						tipo			: self.tipo,
 						section_tipo	: self.section_tipo,
 						id				: self.section_id,
-						mode			: 'viewer',
+						mode			: 'edit',
+						view			: 'viewer',
 						menu			: false
 					}
 					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)

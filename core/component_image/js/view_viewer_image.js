@@ -10,24 +10,22 @@
 
 
 /**
-* RENDER_VIEWER_COMPONENT_IMAGE
+* view_viewer_image
 * Manage the components logic and appearance in client side
 */
-export const render_viewer_component_image = function() {
+export const view_viewer_image = function() {
 
 	return true
-}//end render_viewer_component_image
+}//end view_viewer_image
 
 
 
 /**
-* VIEWER
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node wrapper
 */
-render_viewer_component_image.prototype.viewer = function() {
-
-	const self = this
+view_viewer_image.render = function(self, options) {
 
 	// short vars
 		const datalist = self.data.datalist || []
@@ -101,7 +99,7 @@ render_viewer_component_image.prototype.viewer = function() {
 
 
 	return wrapper
-}//end viewer
+}//end render
 
 
 

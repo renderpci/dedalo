@@ -77,6 +77,7 @@ export const component_image = function(){
 component_image.prototype.init = async function(options) {
 
 	const self = this
+
 	// image node
 		self.object_node 			= null
 	// image size
