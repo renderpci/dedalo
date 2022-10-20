@@ -1248,6 +1248,7 @@ final class dd_utils_api {
 			'tif'	=> 'image/tiff',
 			'svg'	=> 'image/svg+xml',
 			'svgz'	=> 'image/svg+xml',
+			'heic'	=> 'image/heic',
 
 			// archives
 			'zip'	=> 'application/zip',
