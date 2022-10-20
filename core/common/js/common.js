@@ -4,13 +4,13 @@
 
 
 // imports
-	// import * as dd from '../../common/js/dd.common.funtions.js'
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_elements_css_object} from '../../page/js/css.js'
+
 
 
 /**
@@ -158,7 +158,7 @@ export const set_context_vars = function(self) {
 
 /**
 * RENDER
-* @param object options
+* @param object options = {}
 *	render_level : level of deep that is rendered (full | content)
 * @return promise
 *	node first DOM node stored in instance 'node' array
@@ -254,10 +254,6 @@ common.prototype.render = async function (options={}) {
 			render_level : render_level
 		})
 
-
-	// status update
-		self.status = 'rendered'
-
 	// result_node render based in render_level
 		const result_node = await (async () => {
 			// console.warn("///////////////////// render_level:",render_level, self.id);
@@ -349,6 +345,9 @@ common.prototype.render = async function (options={}) {
 
 			return result
 		})()//end result_node fn
+
+	// status update
+		self.status = 'rendered'
 
 	// event publish
 		event_manager.publish('render_'+self.id, result_node)
