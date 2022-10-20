@@ -88,8 +88,7 @@ async function life_cycle_test(element) {
 			// init instance
 				new_instance = await get_instance(element)
 
-			const expected = 'initiated'
-			assert.equal(new_instance.status, expected);
+			assert.equal(new_instance.status, 'initiated', 'Instance status must be initiated ');
 			assert.equal(new_instance.mode, element.mode);
 			assert.equal(new_instance.context, null);
 			assert.equal(new_instance.node, null);
@@ -130,23 +129,28 @@ async function life_cycle_test(element) {
 				// console.log('new_node:', new_node);
 
 			// insert in DOM
-				// if (new_instance.mode==='list') {
+				// if (new_instance.mode==='edit') {
 				// 	content.prepend(new_node)
 				// }
 
 			assert.equal(new_instance.status, 'rendered');
 			assert.notEqual(new_instance.node, null);
 
-			if (new_instance.mode==='edit') {
+			if (new_instance.mode==='edit' && new_instance.view!=='line') {
 				assert.notEqual(new_instance.node.content_data, null);
 				assert.notEqual(new_instance.node.content_data, undefined);
-				assert.notEqual(new_instance.node.querySelector('.label'), null);
+				assert.notEqual(
+					new_instance.node.querySelector('.label'),
+					null,
+					'label must be a DOM node on edit mode'
+				);
+
 				assert.notEqual(new_instance.node.querySelector('.buttons_container'), null);
 				assert.notEqual(new_instance.node.querySelector('.content_data'), null);
 			}
 			else if(new_instance.mode==='list') {
 				assert.Equal(new_instance.node.content_data, undefined);
-				assert.Equal(new_instance.node.querySelector('.label'), null);
+				assert.Equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
 				assert.Equal(new_instance.node.querySelector('.buttons_container'), null);
 				assert.Equal(new_instance.node.querySelector('.content_data'), null);
 			}
