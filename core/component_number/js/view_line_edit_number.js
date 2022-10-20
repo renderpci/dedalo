@@ -8,20 +8,19 @@
 	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data_edit,
-		get_buttons
+		get_content_data_edit
 	} from './render_edit_component_number.js'
 
 
 
 /**
-* VIEW_DEFAULT_EDIT_NUMBER
+* VIEW_LINE_EDIT_NUMBER
 * Manage the components logic and appearance in client side
 */
-export const view_default_edit_number = function() {
+export const view_line_edit_number = function() {
 
 	return true
-}//end view_default_edit_number
+}//end view_line_edit_number
 
 
 
@@ -30,24 +29,25 @@ export const view_default_edit_number = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-view_default_edit_number.render = async function(self, options) {
+view_line_edit_number.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
 
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+
 	// content_data
 		const content_data = get_content_data_edit(self)
+		content_data.appendChild(button_exit_edit)
 		if (render_level==='content') {
 			return content_data
 		}
 
-	// buttons
-		const buttons = get_buttons(self)
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			label			: null
 		})
 		// set pointers
 		wrapper.content_data = content_data
