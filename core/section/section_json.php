@@ -53,7 +53,10 @@
 		if ($modo==='tm') {
 
 			// context. Section context is a normal context like in any other mode
-				$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+				$this->context = $this->get_structure_context(
+					$permissions,
+					true // bool add_rqo
+				);
 				$context[] = $this->context;
 
 			// subcontext. Is specific for tm and is calculated in class section
@@ -67,7 +70,10 @@
 
 		}else{
 
-			$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+			$this->context = $this->get_structure_context(
+				$permissions,
+				true // bool add_rqo
+			);
 			$context[] = $this->context;
 
 			// subdata

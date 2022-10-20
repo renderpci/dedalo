@@ -44,7 +44,10 @@
 	$data		= [];
 
 	// Component structure context (tipo, relations, properties, etc.)
-		$this->context = $this->get_structure_context($permissions, $add_rqo=true);
+		$this->context = $this->get_structure_context(
+			$permissions,
+			true // bool add_rqo
+		);
 		$context[] = $this->context;
 
 	if($permissions>0) {

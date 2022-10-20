@@ -1338,11 +1338,10 @@ abstract class common {
 	* 	Common function to resolve element context
 	* @param int $permissions = 0
 	* @param bool $add_request_config = false
-	* @param callable $callback = null
 	*
-	* @return object $dd_object
+	* @return dd_object $dd_object
 	*/
-	public function get_structure_context(int $permissions=0, bool $add_request_config=false, callable $callback=null) : object {
+	public function get_structure_context(int $permissions=0, bool $add_request_config=false) : dd_object {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
@@ -1579,11 +1578,6 @@ abstract class common {
 				}
 				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_time_unit($start_time) );
 
-		// callback
-			if ($callback!==null) {
-				$callback($dd_object);
-			}
-
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
 
@@ -1617,10 +1611,12 @@ abstract class common {
 
 
 	/**
-	* GET_STRUCTURE_CONTEXT_simple
-	* @return object $dd_object
+	* GET_STRUCTURE_CONTEXT_SIMPLE
+	* @param int $permissions = 0
+	* @param bool $add_request_config = false
+	* @return dd_object $full_ddo
 	*/
-	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : object {
+	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
 		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
 

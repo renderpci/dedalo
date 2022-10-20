@@ -20,13 +20,19 @@
 
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions, $add_rqo);
+				$context[] = $this->get_structure_context_simple(
+					$permissions,
+					$add_rqo
+				);
 				break;
 
 			default:
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions, $add_rqo);
+					$context[] = $this->get_structure_context(
+						$permissions,
+						$add_rqo
+					);
 
 				// add buttons
 					$context = array_merge($context, $this->get_structure_buttons($permissions));

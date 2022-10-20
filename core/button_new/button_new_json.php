@@ -4,9 +4,9 @@
 
 
 // component configuration vars
-	$tipo 				= $this->get_tipo();	
+	$tipo 				= $this->get_tipo();
 	$section_tipo 		= $this->get_section_tipo();
-	$permissions		= common::get_permissions($section_tipo, $tipo); 	
+	$permissions		= common::get_permissions($section_tipo, $tipo);
 	$modo				= $this->get_modo();
 
 
@@ -20,7 +20,7 @@
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
-			
+
 			default:
 				$context[] = $this->get_structure_context($permissions);
 				break;
