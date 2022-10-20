@@ -739,7 +739,8 @@ final class dd_utils_api {
 					$db_tables		= backup::get_tables(); // returns array empty if not is imported
 					$db_is_imported	= (bool)in_array('matrix_users', $db_tables);
 					if ($db_is_imported===true) {
-						$response->msg = 'Error. Current database is not empty: ' . DEDALO_DATABASE_CONN;
+						$response->msg  = 'Error. Current database is not empty: ' . DEDALO_DATABASE_CONN .'. ';
+						$response->msg .= "Maybe your DEDALO_INSTALL_STATUS var it's not set as 'installed'";
 						return $response;
 					}
 
