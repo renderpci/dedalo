@@ -16,8 +16,11 @@
 	$data		= [];
 
 	// context
-		$this->context	= $this->get_structure_context($permissions, $add_request_config=true);
-		$context[]		= $this->context;
+		$this->context = $this->get_structure_context(
+			$permissions,
+			true // bool add_request_config
+		);
+		$context[] = $this->context;
 
 	if($permissions>0) {
 

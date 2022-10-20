@@ -13,7 +13,10 @@
 	if($options->get_context===true){
 
 		// element structure context (tipo, relations, properties, etc.)
-			$structure_context = $this->get_structure_context($permissions, $add_rqo=false);
+			$structure_context = $this->get_structure_context(
+				$permissions,
+				false // bool add_rqo
+			);
 				// $structure_context->request_config = $this->get_rqo();
 
 		$context[] = $structure_context;

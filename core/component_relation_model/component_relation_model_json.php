@@ -21,21 +21,19 @@
 				break;
 
 			default:
-				$item_context = $this->get_structure_context(
-					$permissions,
-					false, // add_request_config
-					$callback = function($dd_object) {
-						// add target_sections to the context
-						$dd_object->set_target_sections(
-							array_map(function($tipo) {
-								return [
-									'tipo'	=> $tipo,
-									'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
-								];
-							}, $this->get_ar_target_section_tipo())
-						);
-					}
-				);
+				// item_context
+					$item_context = $this->get_structure_context(
+						$permissions,
+						false // bool add_request_config
+					);
+				// target_sections add
+					$target_sections = array_map(function($tipo) {
+						return [
+							'tipo'	=> $tipo,
+							'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
+						];
+					}, $this->get_ar_target_section_tipo());
+					$item_context->set_target_sections($target_sections);
 				break;
 		}
 

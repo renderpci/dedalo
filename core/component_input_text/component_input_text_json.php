@@ -1,7 +1,6 @@
 <?php
 // JSON data component controller
-// if(SHOW_DEBUG===true) $start_time = start_time();
-// error_log('input text json .......................................................');
+
 
 
 // component configuration vars
@@ -15,19 +14,26 @@
 	$context = [];
 
 	if($options->get_context===true) { //  && $permissions>0
+
 		$add_rqo = isset($properties->unique) ? true : false;
 		switch ($options->context_type) {
 
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$this->context	= $this->get_structure_context_simple($permissions, $add_rqo);
-				$context[]		= $this->context;
+				$this->context	= $this->get_structure_context_simple(
+					$permissions,
+					$add_rqo
+				);
+				$context[] = $this->context;
 				break;
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
-				$this->context	= $this->get_structure_context($permissions, $add_rqo);
-				$context[]		= $this->context;
+				$this->context	= $this->get_structure_context(
+					$permissions,
+					$add_rqo
+				);
+				$context[] = $this->context;
 
 				// add buttons
 				$context = array_merge($context, $this->get_structure_buttons($permissions));
