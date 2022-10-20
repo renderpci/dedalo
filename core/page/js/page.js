@@ -133,7 +133,7 @@ page.prototype.init = async function(options) {
 									sqo			: sqo
 								}]
 							}
-							const context = source
+							// const context = source
 
 						// destroy previous page instances
 							// await self.ar_instances.map(async function(el){
@@ -150,7 +150,7 @@ page.prototype.init = async function(options) {
 						// new_page_element_instance. Like 'section'
 							const new_page_element_instance = await instantiate_page_element(
 								self, // object page instance
-								context // object source is used as context
+								source // object source
 							)
 						// check valid element. Only checks if new source of page element is actually valid for instantiation
 						// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
@@ -186,7 +186,7 @@ page.prototype.init = async function(options) {
 							const base_models				= ['menu']
 							const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
 							// add current source from options
-								context_elements_to_stay.push(context)
+								context_elements_to_stay.push(source)
 							// fix new page clean context
 								self.context = context_elements_to_stay
 
@@ -491,20 +491,22 @@ page.prototype.add_events = function() {
 * Creates the instance of current element, usually a section or menu
 * calling instance.get_instance(...). This function only load and init the instance file
 * @param object self (instance)
-* @param object context
+* @param object source
+* 	Could be full context of element return by start API function or an basic source on page navigation
 * @return promise current_instance init promise
 */
-export const instantiate_page_element = function(self, context) {
+export const instantiate_page_element = function(self, source) {
 
 	// short vars
-		const tipo				= context.tipo
-		const section_tipo		= context.section_tipo || tipo
-		const model				= context.model
-		const section_id		= context.section_id || null
-		const mode				= context.mode
-		const lang				= context.lang
-		const config			= context.config || null
-		const request_config	= context.request_config
+		const tipo				= source.tipo
+		const section_tipo		= source.section_tipo || tipo
+		const model				= source.model
+		const section_id		= source.section_id || null
+		const mode				= source.mode
+		const lang				= source.lang
+		const config			= source.config || null
+		const request_config	= source.request_config
+		const view				= source.view
 
 	// instance options
 		const instance_options = {
@@ -514,7 +516,7 @@ export const instantiate_page_element = function(self, context) {
 			section_id		: section_id ,
 			mode			: mode,
 			lang			: lang
-			// context		: context // note that context is injected here because start API function returns the full context (login case, for example)
+			// context		: source // note that context is injected here because start API function returns the full context (login case, for example)
 		}
 
 		// id_variant . Propagate a custom instance id to children
@@ -533,9 +535,10 @@ export const instantiate_page_element = function(self, context) {
 				instance_options.request_config = request_config
 			}
 
-
-		console.log('instance_options:', instance_options);
-		console.log('context:', context);
+		// view
+			if (view) {
+				instance_options.view = view
+			}
 
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
