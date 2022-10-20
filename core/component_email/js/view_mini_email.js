@@ -21,13 +21,11 @@ export const view_mini_email = function() {
 
 
 /**
-* MINI
-* Render node to be used by service autocomplete or any datalist
+* RENDER
+* Render node to be used by this view
 * @return DOM node
 */
-view_mini_email.render = async function() {
-
-	const self = this
+view_mini_email.render = async function(self, options) {
 
 	// short vars
 		const data = self.data
@@ -44,6 +42,4 @@ view_mini_email.render = async function() {
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 	return wrapper
-}//end mini
-
-
+}//end render

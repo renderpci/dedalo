@@ -17,9 +17,10 @@ export const view_mini_date = function() {
 }//end view_mini_date
 
 
+
 /**
-* MINI
-* Render node to be used by service autocomplete or any datalist
+* RENDER
+* Render node to be used in current view
 * @return DOM node
 */
 view_mini_date.render = async function(self, options) {
@@ -33,6 +34,4 @@ view_mini_date.render = async function(self, options) {
 		})
 
 	return wrapper
-}//end mini
-
-
+}//end render

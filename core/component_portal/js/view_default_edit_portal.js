@@ -25,21 +25,21 @@
 
 
 /**
-* VIEW_TABLE_EDIT_PORTAL
+* view_default_edit_portal
 * Manage the components logic and appearance in client side
 */
-export const view_table_edit_portal = function() {
+export const view_default_edit_portal = function() {
 
 	return true
-}//end view_table_edit_portal
+}//end view_default_edit_portal
 
 
 
 /**
-* VIEW_TABLE_EDIT_PORTAL
+* RENDER
 * Manages the component's logic and appearance in client side
 */
-view_table_edit_portal.render = async function(self, options) {
+view_default_edit_portal.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -129,7 +129,7 @@ view_table_edit_portal.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
@@ -277,7 +277,7 @@ const rebuild_columns_map = async function(self) {
 * RENDER_COLUMN_ID
 * @return DocumentFragment
 */
-	// view_table_edit_portal.render_column_id = function(options){
+	// view_default_edit_portal.render_column_id = function(options){
 
 	// 	// options
 	// 		const self			= options.caller

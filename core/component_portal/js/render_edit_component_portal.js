@@ -12,7 +12,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-	import {view_table_edit_portal} from './view_table_edit_portal.js'
+	import {view_default_edit_portal} from './view_default_edit_portal.js'
 	import {view_line_edit_portal} from './view_line_edit_portal.js'
 	import {view_tree_edit_portal} from './view_tree_edit_portal.js'
 	import {view_mosaic_edit_portal} from './view_mosaic_edit_portal.js'
@@ -57,36 +57,35 @@ render_edit_component_portal.prototype.edit = async function(options) {
 		const view	= self.context.view || 'table'
 
 	// wrapper
-		let wrapper
 		switch(view) {
 
 			case 'text':
-				wrapper = view_text_portal.render(self, options)
+				return view_text_portal.render(self, options)
 				break;
 
 			case 'line':
-				wrapper = view_line_edit_portal.render(self, options)
+				return view_line_edit_portal.render(self, options)
 				break;
 
 			case 'tree':
-				wrapper = view_tree_edit_portal.render(self, options)
+				return view_tree_edit_portal.render(self, options)
 				break;
 
 			case 'mosaic':
-				wrapper = view_mosaic_edit_portal.render(self, options)
+				return view_mosaic_edit_portal.render(self, options)
 				break;
 
 			case 'indexation':
-				wrapper = view_indexation_edit_portal.render(self, options)
+				return view_indexation_edit_portal.render(self, options)
 				break;
 
 			case 'table':
 			default:
-				wrapper = view_table_edit_portal.render(self, options)
+				return view_default_edit_portal.render(self, options)
 				break;
 		}
 
-	return wrapper
+	return null
 }//end edit
 
 
