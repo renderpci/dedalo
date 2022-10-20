@@ -39,32 +39,33 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 		describe(`${element.model.toUpperCase()}`, async function() {
 
 			// modes iterate for each element
-			for (let k = 0; k < ar_mode_length; k++) {
+				for (let k = 0; k < ar_mode_length; k++) {
 
-				element.mode = ar_mode[k]
+					element.mode = ar_mode[k]
+					element.view = 'default'
 
-				// exec
-				life_cycle_test(element)
-			}
-
-			// views_edit iterate
-			for (let k = 0; k < ar_view_edit.length; k++) {
-				element.mode = 'edit'
-				element.view = ar_view_edit[k]
-
-				// exec
-				life_cycle_test(element)
-			}
+					// exec
+					life_cycle_test(element, element.view)
+				}
 
 			// views_edit iterate
-			for (let k = 0; k < ar_view_list.length; k++) {
+				for (let k = 0; k < ar_view_edit.length; k++) {
+					element.mode = 'edit'
+					element.view = ar_view_edit[k]
 
-				element.mode = 'list'
-				element.view = ar_view_list[k]
+					// exec
+					life_cycle_test(element, element.view)
+				}
 
-				// exec
-				life_cycle_test(element)
-			}
+			// views_edit iterate
+				for (let k = 0; k < ar_view_list.length; k++) {
+
+					element.mode = 'list'
+					element.view = ar_view_list[k]
+
+					// exec
+					life_cycle_test(element, element.view)
+				}
 		});
 
 	}//end for (let i = 0; i < elements_length; i++)
@@ -77,9 +78,9 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 * @param object element
 * @return void
 */
-async function life_cycle_test(element) {
+async function life_cycle_test(element, view) {
 
-	describe(`${element.model} ${element.mode} ${element.view}`, async function() {
+	describe(`${element.model} ${element.mode} ${view} `, async function() {
 
 		let new_instance = null
 
@@ -136,7 +137,7 @@ async function life_cycle_test(element) {
 			assert.equal(new_instance.status, 'rendered');
 			assert.notEqual(new_instance.node, null);
 
-			if (new_instance.mode==='edit' && new_instance.view!=='line') {
+			if (new_instance.mode==='edit' && new_instance.view!=='line' && new_instance.view!=='mini') {
 				// assert.notEqual(
 				// 	new_instance.node.content_data,
 				// 	null,
