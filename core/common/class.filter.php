@@ -9,6 +9,7 @@ abstract class filter {
 
 
 	public static $user_authorized_projects_cache;
+	public static $user_projects_cache;
 
 
 
@@ -65,14 +66,14 @@ abstract class filter {
 	/**
 	* GET_USER_PROJECTS
 	* Return all user active projects from user section data (component_filter_master)
+	* @param int $user_id
 	* @return array|null $dato
 	*/
 	public static function get_user_projects(int $user_id) : ?array {
 
 		// cache
-			static $user_projects_cache;
-			if (isset($user_projects_cache[$user_id])) {
-				return $user_projects_cache[$user_id];
+			if (isset(filter::$user_projects_cache[$user_id])) {
+				return filter::$user_projects_cache[$user_id];
 			}
 
 		$dato = null;
@@ -89,7 +90,8 @@ abstract class filter {
 		}
 
 		// cache
-		$user_projects_cache[$user_id] = $dato;
+			filter::$user_projects_cache[$user_id] = $dato;
+
 
 		return $dato;
 	}//end get_user_projects
@@ -100,6 +102,8 @@ abstract class filter {
 	* GET_USER_AUTHORIZED_PROJECTS
 	* Get all projects filtered by user authorized projects
 	* Works like ar_list_of_values but filtered by user authorized projects
+	* @param int $user_id
+	* @param string $from_component_tipo
 	* @return array $ar_projects
 	*/
 	public static function get_user_authorized_projects(int $user_id, string $from_component_tipo) : array {
@@ -107,8 +111,9 @@ abstract class filter {
 
 		// cache
 			$cache_key = $user_id .'_'. $from_component_tipo;
-			if (isset($user_authorized_projects_cache[$cache_key])) {
-				return $user_authorized_projects_cache[$cache_key];
+			if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+				// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
+				return filter::$user_authorized_projects_cache[$cache_key];
 			}
 
 		// projects_section_tipo
@@ -124,9 +129,9 @@ abstract class filter {
 			$section_map = reset($ar_section_map); // expected 'dd267'
 
 		// projects_name_tipo. Get ts_map for locate name component (for future )
-			$RecordObj_dd = new RecordObj_dd($section_map);
-			$properties  = $RecordObj_dd->get_properties();
-			if (!$properties) {
+			$RecordObj_dd	= new RecordObj_dd($section_map);
+			$properties		= $RecordObj_dd->get_properties();
+			if (empty($properties)) {
 				dump($properties, ' properties ++ '.to_string($section_map));
 				throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
 				// trigger_error("Error Processing Request. properties for section_map: $section_map is empty !");
@@ -136,7 +141,6 @@ abstract class filter {
 		// typology tipo
 			$typology_tipo = $properties->thesaurus->typology ?? 'dd157';
 
-
 		// filter by filter_master
 			$user_id 		 = navigator::get_user_id();
 			$is_global_admin = security::is_global_admin($user_id);
@@ -144,7 +148,7 @@ abstract class filter {
 				// bypass filter
 				$filter = '';
 			}else{
-				// filter_master data builds filter ooptions
+				// filter_master data builds filter options
 				$component_filter_master = component_common::get_instance(
 					'component_filter_master',
 					DEDALO_FILTER_MASTER_TIPO,
@@ -217,7 +221,7 @@ abstract class filter {
 		foreach ($result->ar_records as $row) {
 
 			$label = !empty($row->{$projects_name_tipo})
-				? component_common::get_value_with_fallback_from_dato_full( $row->{$projects_name_tipo}, true)
+				? component_common::get_value_with_fallback_from_dato_full( $row->{$projects_name_tipo}, true )
 				: '';
 
 			$locator = new locator();
@@ -238,12 +242,12 @@ abstract class filter {
 
 
 		// cache
-		$user_authorized_projects_cache[$cache_key] = $ar_projects;
+			filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
 
-
-		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms", logger::DEBUG);
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo", logger::DEBUG);
+			}
 
 
 		return $ar_projects;
@@ -264,14 +268,16 @@ abstract class filter {
 
 		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
 
-			$modelo_name 	= 'component_filter_records';
-			$tipo 			= DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO;
-			$component 		= component_common::get_instance($modelo_name,
-															 $tipo,
-															 $user_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 DEDALO_SECTION_USERS_TIPO);
+			$modelo_name	= 'component_filter_records';
+			$tipo			= DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO;
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$tipo,
+				$user_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
 			$filter_user_records_by_id = $component->get_dato();
 		}
 
