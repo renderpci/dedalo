@@ -38,6 +38,7 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 		case 'line':
 			return view_line_edit_radio_button.render(self, options)
 			break;
+
 		case 'default':
 		default:
 			return view_default_edit_radio_button.render(self, options)
@@ -191,9 +192,9 @@ export const get_buttons = (self) => {
 		const fragment = new DocumentFragment()
 
 	// button edit (go to target section)
-		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
+		if(!is_inside_tool) {
 
-			const target_sections			= self.context.target_sections
+			const target_sections			= self.context.target_sections || []
 			const target_sections_length	= target_sections.length
 			for (let i = 0; i < target_sections_length; i++) {
 
