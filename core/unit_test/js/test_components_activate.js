@@ -22,8 +22,9 @@ describe("COMPONENTS ACTIVATE", async function() {
 
 		const element = elements[i]
 			  element.mode = 'edit'
+			  element.view = 'default'
 
-		describe(`component: ${element.model} :`,  function() {
+		describe(`component: ${element.model} ${element.mode} ${element.view} :`,  function() {
 
 			// const component_instance = await get_instance(element)
 			// await component_instance.build(true)
