@@ -586,8 +586,13 @@ abstract class component_common extends common {
 
 		$dato = $this->dato;
 		if (!is_null($dato) && !is_array($dato)) {
-			debug_log(__METHOD__.' - '. get_called_class() . ' -> tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
-				.'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. Type: '. gettype($dato) .' - dato: '. to_string($dato), logger::ERROR);
+			debug_log(__METHOD__ . ' '
+				. 'RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
+				. 'model: '. get_called_class() .PHP_EOL
+				. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+				. 'table: '. common::get_matrix_table_from_tipo($this->section_tipo)
+				, logger::ERROR
+			);
 		}
 
 		return $dato; # <- Se aplicará directamente el fallback de idioma para el modo list
