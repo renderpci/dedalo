@@ -9,20 +9,19 @@
 	// import {strip_tags} from '../../../core/common/js/utils/index.js'
 	// import {set_before_unload} from '../../common/js/events.js'
 	import {
-		get_content_data,
-		get_buttons
+		get_content_data
 	} from './render_edit_component_iri.js'
 
 
 
 /**
-* VIEW_DEFAULT_EDIT_IRI
+* VIEW_LINE_EDIT_IRI
 * Manage the components logic and appearance in client side
 */
-export const view_default_edit_iri = function() {
+export const view_line_edit_iri = function() {
 
 	return true
-}//end view_default_edit_iri
+}//end view_line_edit_iri
 
 
 
@@ -31,26 +30,27 @@ export const view_default_edit_iri = function() {
 * Render node for use in current view
 * @return DOM node
 */
-view_default_edit_iri.render = async function(self, options) {
+view_line_edit_iri.render = async function(self, options) {
 
 	self.data.value = self.data.value || []
 
 	// options
 		const render_level = options.render_level || 'full'
 
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+
 	// content_data
 		const content_data = get_content_data(self)
+		content_data.appendChild(button_exit_edit)
 		if (render_level==='content') {
 			return content_data
 		}
 
-	// buttons
-		const buttons = get_buttons(self)
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons
+			label			: null
 		})
 		// set pointers
 		wrapper.content_data = content_data
