@@ -653,16 +653,12 @@ class search {
 				# Only for count
 
 				// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
-				$column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
+					$column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
 
 				# SELECT
-					#$sql_query .= 'SELECT ' . $sql_query_select;
-					// $sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.'.$column_id;
-					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine') {
-						$sql_query .= 'SELECT '.$this->main_section_tipo_alias.'.section_id';
-					}else{
-						$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
-					}
+					$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
+						? 'SELECT '.$this->main_section_tipo_alias.'.section_id'
+						: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
 				# FROM
 					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# join virtual tables
@@ -704,8 +700,8 @@ class search {
 		// sql_filter_by_locators
 			case (isset($this->filter_by_locators) && !empty($this->filter_by_locators)):
 
-				$sql_filter_by_locators		 = $this->build_sql_filter_by_locators();
-				$sql_filter_by_locators_order= empty($this->search_query_object->order)
+				$sql_filter_by_locators			= $this->build_sql_filter_by_locators();
+				$sql_filter_by_locators_order	= empty($this->search_query_object->order)
 					? $this->build_sql_filter_by_locators_order() // only if empty order
 					: 'ORDER BY ' . $this->build_sql_query_order();
 
@@ -962,7 +958,7 @@ class search {
 
 
 	/**
-	* build_union_query
+	* BUILD_UNION_QUERY
 	* Rewrite query string building sql union for each different matrix table
 	* @param string $sql_query
 	* @return string $sql_query
@@ -1001,6 +997,8 @@ class search {
 
 	/**
 	* BUILD_SQL_QUERY_SELECT
+	*
+	* @param bool $full_count = false
 	* @return string $sql_query_select
 	*/
 	public function build_sql_query_select(bool $full_count=false) : string {
@@ -1039,11 +1037,9 @@ class search {
 					$select_object_type	= isset($select_object->type) ? $select_object->type : 'string';
 					#$apply_distinct	= isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
 					$apply_distinct		= (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
-					$component_path		= implode(',', $select_object->component_path);
-					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-						# In activity section, data container is always 'dato'
-						$component_path  = str_replace('valor_list', 'dato', $component_path);
-					}
+					$component_path		= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO)
+						? str_replace('valor_list', 'dato', $component_path) // In activity section, data container is always 'dato'
+						: implode(',', $select_object->component_path);
 
 					$sql_select = '';
 
@@ -1144,9 +1140,9 @@ class search {
 			return $sql_projects_filter;
 		}
 
-		$section_tipo 	 = $this->main_section_tipo;
-		$section_alias 	 = $this->main_section_tipo_alias;
-		$datos_container = ($this->matrix_table==='matrix_time_machine') ? 'dato' : 'datos';
+		$section_tipo		= $this->main_section_tipo;
+		$section_alias		= $this->main_section_tipo_alias;
+		$datos_container	= ($this->matrix_table==='matrix_time_machine') ? 'dato' : 'datos';
 
 		# Logged user id
 		$user_id = (int)navigator::get_user_id();
@@ -1240,14 +1236,16 @@ class search {
 						$sql_filter .= ')';
 
 					# PROJECTS FILTER
-						$component_filter_master_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
-						$component_filter_master = component_common::get_instance($component_filter_master_model, // 'component_filter_master',
-																				   DEDALO_FILTER_MASTER_TIPO,
-																				   navigator::get_user_id(),
-																				   'list',
-																				   DEDALO_DATA_NOLAN,
-																				   DEDALO_SECTION_USERS_TIPO);
-						$filter_master_dato 	 = (array)$component_filter_master->get_dato();
+						$component_filter_master_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
+						$component_filter_master		= component_common::get_instance(
+							$component_filter_master_model, // 'component_filter_master',
+							DEDALO_FILTER_MASTER_TIPO,
+							navigator::get_user_id(),
+							'list',
+							DEDALO_DATA_NOLAN,
+							DEDALO_SECTION_USERS_TIPO
+						);
+						$filter_master_dato = (array)$component_filter_master->get_dato();
 						// check empty ar_area_tipo case
 							if (empty($filter_master_dato)) {
 								debug_log(__METHOD__." Filter master without data!! ", logger::ERROR);
@@ -1286,12 +1284,12 @@ class search {
 					}
 					$sql_filter .= PHP_EOL . ' AND ';
 
-					# SECTION FILTER TIPO : Actual component_filter de esta sección
+					# SECTION FILTER TIPO : Actual component_filter of this section
 					# params: $section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false
 					$ar_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_filter'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 					if (!isset($ar_component_filter[0])) {
 						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
-						trigger_error("Error Processing Request. Filter not found is this section ($section_tipo) $section_name");
+						debug_log(__METHOD__." Error Processing Request. Filter not found is this section ($section_tipo) $section_name ".to_string(), logger::ERROR);
 					}else{
 						$component_filter_tipo = $ar_component_filter[0];
 					}
@@ -1369,7 +1367,7 @@ class search {
 				$sql_projects_filter = $sql_filter;
 			}
 
-		}//endif ($is_global_admin!==true) {
+		}//end if ($is_global_admin!==true) {
 		#dump($sql_projects_filter, ' sql_projects_filter ++ '.to_string());
 
 		# Cache
@@ -1735,7 +1733,7 @@ class search {
 			if (!property_exists($search_object,'path')) {
 				# Case operator
 				// $op2	= key($search_object); deprecated PHP>=8.1
-				$op2	= array_key_first(get_object_vars($search_object));
+				$op2		= array_key_first(get_object_vars($search_object));
 
 				$ar_value2 	= $search_object->$op2;
 
@@ -1785,13 +1783,14 @@ class search {
 		$sql_query_select = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
 
 		return $sql_query_select;
-	}//end
+	}//end build_full_count_sql_query_select
 
 
 
 	/**
 	* BUILD_SQL_JOIN
 	* Builds one table join based on requested path
+	* @param array $path
 	* @return bool true
 	*/
 	public function build_sql_join(array $path) : bool {
@@ -2051,10 +2050,10 @@ class search {
 				case 'typeof':
 					// typeof case.
 					if(SHOW_DEBUG===true) {
-						$component_path_data 	= end($path);
-						$component_tipo 		= $component_path_data->component_tipo;
-						$component_name 		= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-						$modelo_name 			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component_path_data	= end($path);
+						$component_tipo			= $component_path_data->component_tipo;
+						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
+						$modelo_name			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
 					}
 
@@ -2153,6 +2152,7 @@ class search {
 
 	/**
 	* IS_SEARCH_OPERATOR
+	* @param object $search_object
 	* @return bool
 	*/
 	public static function is_search_operator(object $search_object) : bool {
@@ -2170,6 +2170,7 @@ class search {
 
 	/**
 	* GET_TABLE_ALIAS_FROM_PATH
+	* @param array $path
 	* @return string $table_alias
 	*/
 	public function get_table_alias_from_path(array $path) : string {
@@ -2222,9 +2223,13 @@ class search {
 	* GET_QUERY_PATH
 	* Recursive function to obtain final complete path of each element in json query object
 	* Used in component common and section to build components path for select
+	* @param string $tipo
+	* @param string $section_tipo
+	* @param bool $resolve_related = true
+	* @param bool|string $related_tipo = false
 	* @return array $path
 	*/
-	public static function get_query_path(string $tipo, string $section_tipo, bool $resolve_related=true, bool $related_tipo=false) : array {
+	public static function get_query_path(string $tipo, string $section_tipo, bool $resolve_related=true, bool|string $related_tipo=false) : array {
 
 		$path = [];
 
@@ -2361,6 +2366,9 @@ class search {
 	* @see section::get_inverse_locators
 	* @param object $reference_locator
 	*	Basic locator with section_tipo and section_id properties
+	* @param int|null $limit = null
+	* @param int|null $offset = null
+	* @param bool $count = false
 	* @return array $ar_inverse_locators
 	*/
 	public static function calculate_inverse_locators( object $reference_locator, int $limit=null, int $offset=null, bool $count=false ) : array {
@@ -2380,38 +2388,34 @@ class search {
 		$ar_tables_to_search = common::get_matrix_tables_with_relations();
 		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
 
-		$ar_query=array();
-		foreach ($ar_tables_to_search as $table) {
+		// ar_query
+			$ar_query = array();
+			foreach ($ar_tables_to_search as $table) {
 
-			$query	 = '';
-			$query	.= ($count===true)
-				? PHP_EOL . 'SELECT COUNT(*)'
-				: PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
-			$query	.= PHP_EOL . 'FROM "'.$table.'"';
-			$query	.= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
+				$query	 = '';
+				$query	.= ($count===true)
+					? PHP_EOL . 'SELECT COUNT(*)'
+					: PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
+				$query	.= PHP_EOL . 'FROM "'.$table.'"';
+				$query	.= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 
-			$ar_query[] = $query;
-		}
+				$ar_query[] = $query;
+			}
 
-		$strQuery  = '';
-		$strQuery .= implode(' UNION ALL ', $ar_query);
-		// Set order to maintain results stable
-
-		if($count===false) {
-			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
-			if($limit!==null){
-				$strQuery .= PHP_EOL . 'LIMIT '.$limit;
-				if($offset!==null){
-					$strQuery .= PHP_EOL . 'OFFSET '.$offset;
+		// strQuery
+			$strQuery  = '';
+			$strQuery .= implode(' UNION ALL ', $ar_query);
+			// Set order to maintain results stable
+			if($count===false) {
+				$strQuery .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
+				if($limit!==null){
+					$strQuery .= PHP_EOL . 'LIMIT '.$limit;
+					if($offset!==null){
+						$strQuery .= PHP_EOL . 'OFFSET '.$offset;
+					}
 				}
 			}
-		}
-
-		$strQuery .= ';';
-
-		if(SHOW_DEBUG===true) {
-			//debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
-		}
+			$strQuery .= ';';
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
 		if ($result===false) {
@@ -2445,7 +2449,6 @@ class search {
 					}
 				}
 			}
-			#debug_log(__METHOD__." ar_inverse_locators ".to_string($ar_inverse_locators), logger::DEBUG);
 
 		}else{
 			while ($rows = pg_fetch_assoc($result)) {
@@ -2572,13 +2575,14 @@ class search {
 	/**
 	* PROPAGATE_COMPONENT_DATO_TO_RELATIONS_TABLE
 	* Get complete component relation dato and generate rows into relations table for fast LEFT JOIN
+	* @param object $request_options
 	* @return object $response
 	*/
 	public static function propagate_component_dato_to_relations_table( object $request_options ) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= array('Error. Request failed '.__METHOD__);
+			$response->result	= false;
+			$response->msg		= array('Error. Request failed '.__METHOD__);
 
 		// options
 			$options = new stdClass();
@@ -2711,9 +2715,15 @@ class search {
 	* FILTER_GET_USER_PRESETS
 	* Return all saved user presets of current section
 	* Used to build list of user presets in filter
-	* @return array $component_presets
+	* @param int $user_id
+	* @param string|null $target_section_tipo
+	* @param string $section_tipo = 'dd623'
+	* 	section 'Search presets' (matrix_list)
+	* @return array $user_presets
 	*/
-	public static function filter_get_user_presets(int $user_id=null, string $target_section_tipo=null, string $section_tipo='dd623') : array {
+	public static function filter_get_user_presets(int $user_id, string $target_section_tipo=null, string $section_tipo='dd623') : array {
+
+		$user_presets = array();
 
 		#$section_tipo 		 			= 'dd623'; // Presets list dd623 or dd655 (temp)
 		$name_component_tipo 			= 'dd624'; // Name field
@@ -2738,10 +2748,6 @@ class search {
 			$filter .= "AND datos#>'{components,{$target_section_component_tipo},dato,lg-nolan}' @> '[\"".$target_section_tipo."\"]' ";
 		}
 
-		if (empty($user_id)) {
-			$user_id = navigator::get_user_id();
-		}
-
 		# is_global_admin filter
 		$is_global_admin = security::is_global_admin( $user_id );
 		$is_global_admin = false;
@@ -2762,52 +2768,50 @@ class search {
 
 		$strQuery 	= "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE (section_tipo='$section_tipo') $filter ORDER BY section_id ASC ";
 		$result		= JSON_RecordObj_matrix::search_free($strQuery);
+		if ($result!==false) {
+			while ($rows = pg_fetch_assoc($result)) {
 
-		$user_presets=array();
-		while ($rows = pg_fetch_assoc($result)) {
+				$element = new stdClass();
+					// $element->section_tipo	= $target_section_tipo;
+					$element->section_id		= $rows['section_id'];
+					$element->name				= $rows['name'];
+					$element->json_preset		= $rows['json_preset'];
 
-			$element = new stdClass();
-				#$element->section_tipo 	= $target_section_tipo;
-				$element->section_id 	= $rows['section_id'];
-				$element->name 		 	= $rows['name'];
-				$element->json_preset 	= $rows['json_preset'];
+					$public						= false;
+					$default					= false;
+					$save_arguments				= false;
 
-				$public  		= false;
-				$default 		= false;
-				$save_arguments = false;
-
-				$relations 	= json_decode($rows['relations']);
-
-				if (!empty($relations)) {
-					# Public to bool
-					if (true===locator::in_array_locator($locator_public_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
-						$public = true;
+					$relations = json_decode($rows['relations']);
+					if (!empty($relations)) {
+						// Public to bool
+						if (true===locator::in_array_locator($locator_public_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
+							$public = true;
+						}
+						// Default to bool
+						$locator_default_true = clone($locator_public_true);
+							$locator_default_true->set_from_component_tipo($default_component_tipo); // Override from_component_tipo
+						if (true===locator::in_array_locator($locator_default_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
+							$default = true;
+						}
+						// Save arguments to bool
+						$locator_save_arguments_true = clone($locator_public_true);
+							$locator_save_arguments_true->set_from_component_tipo($save_arguments_component_tipo); // Override from_component_tipo
+						if (true===locator::in_array_locator($locator_save_arguments_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
+							$save_arguments = true;
+						}
 					}
-					# Default to bool
-					$locator_default_true = clone($locator_public_true);
-						$locator_default_true->set_from_component_tipo($default_component_tipo); // Override from_component_tipo
-					if (true===locator::in_array_locator($locator_default_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
-						$default = true;
-					}
-					# Save arguments to bool
-					$locator_save_arguments_true = clone($locator_public_true);
-						$locator_save_arguments_true->set_from_component_tipo($save_arguments_component_tipo); // Override from_component_tipo
-					if (true===locator::in_array_locator($locator_save_arguments_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
-						$save_arguments = true;
-					}
-				}
 
-				$element->public  		 = $public;
-				$element->default 		 = $default;
-				$element->save_arguments = $save_arguments;
+					$element->public			= $public;
+					$element->default			= $default;
+					$element->save_arguments	= $save_arguments;
 
-			# Add element
-			$user_presets[] = $element;
+				// Add element
+				$user_presets[] = $element;
+			}//end while ($rows = pg_fetch_assoc($result))
 		}
-		#dump($user_presets, ' user_presets ++ '.to_string($strQuery));
 
 
-		return (array)$user_presets;
+		return $user_presets;
 	}//end filter_get_user_presets
 
 
@@ -2866,7 +2870,10 @@ class search {
 	* SAVE_TEMP_PRESET
 	* Saves current search panel configuration for persistence
 	* Saves filter in section list (dd655) a private list for temporal data
-	* @return bool
+	* @param int $user_id
+	* @param string $target_section_tipo
+	* @param object $filter_object
+	* @return array $result
 	*/
 	public static function save_temp_preset(int $user_id, string $target_section_tipo, object $filter_object) : array {
 
@@ -2879,7 +2886,6 @@ class search {
 			# Create new section if not exists
 			$section	= section::get_instance(null, $section_tipo);
 			$preset_id	= $section->Save();
-				dump($preset_id, ' preset_id ++ '.to_string($section_tipo));
 		}else{
 			#$section	= section::get_instance($preset_id, $section_tipo);
 			$preset_id	= $preset_obj->section_id;
@@ -2891,12 +2897,14 @@ class search {
 		# FILTER. COMPONENT_JSON
 			$tipo			= 'dd625'; // component_json
 			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance($modelo_name,
-															 $tipo,
-															 $preset_id,
-															 'edit',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$tipo,
+				$preset_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$component->set_dato([$filter_object]);
 			#$component->save_to_database = false;
 			$result[] = $component->Save();
@@ -2905,12 +2913,14 @@ class search {
 		# SECTION_TIPO
 			$tipo			= 'dd642'; // component_input_text
 			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance($modelo_name,
-															 $tipo,
-															 $preset_id,
-															 'edit',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$tipo,
+				$preset_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$component->set_dato( array($target_section_tipo) );
 			#$component->save_to_database = false;
 			$result[] = $component->Save();
@@ -2919,12 +2929,14 @@ class search {
 		# USER
 			$tipo			= 'dd654'; // component_select
 			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance($modelo_name,
-															 $tipo,
-															 $preset_id,
-															 'edit',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$tipo,
+				$preset_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$user_locator = new locator();
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 				$user_locator->set_section_id($user_id);
@@ -2946,6 +2958,8 @@ class search {
 	/**
 	* GET_SEARCH_SELECT_FROM_SECTION
 	* Temporal method to obtain search select paths to build a search_json_object
+	* @param object $section_obj
+	* @param array|null $layout_map = null
 	* @return array $path
 	*/
 	public static function get_search_select_from_section(object $section_obj, array $layout_map=null) : array {
@@ -3121,12 +3135,15 @@ class search {
 
 	/**
 	* RESOLVE_PATH_LEVEL
+	* @param object $path_item
+	* @param array $ar_locator
 	* @return array $result
 	*/
 	public static function resolve_path_level(object $path_item, array $ar_locator) : array {
 
 		$result = [];
 		foreach ($ar_locator as $locator) {
+
 			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($path_item->component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
