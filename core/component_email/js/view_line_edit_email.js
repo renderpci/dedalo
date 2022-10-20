@@ -14,13 +14,13 @@
 
 
 /**
-* VIEW_DEFAULT_EDIT_EMAIL
+* VIEW_line_EDIT_EMAIL
 * Manage the components logic and appearance in client side
 */
-export const view_default_edit_email = function() {
+export const view_line_edit_email = function() {
 
 	return true
-}//end view_default_edit_email
+}//end view_line_edit_email
 
 
 
@@ -29,24 +29,25 @@ export const view_default_edit_email = function() {
 * Render node for use in current view
 * @return DOM node
 */
-view_default_edit_email.render = async function(self, options) {
+view_line_edit_email.render = async function(self, options) {
 
 	// render_level
 		const render_level = options.render_level || 'full'
 
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+
 	// content_data
 		const content_data = get_content_data(self)
+		content_data.appendChild(button_exit_edit)
 		if (render_level==='content') {
 			return content_data
 		}
 
-	// buttons
-		const buttons = get_buttons(self)
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons
+			label			: null
 		})
 		// set pointers
 		wrapper.content_data = content_data
