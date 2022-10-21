@@ -350,6 +350,20 @@
 		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
+	// 3d media
+		// dedalo_3d_foler. string default '/av'
+		define('DEDALO_3D_FOLDER'					, '/3d');
+		// dedalo_3d_extension. string default 'gltf'
+		define('DEDALO_3D_EXTENSION'				, 'gltf');
+		// dedalo_3d_extensions_supported. array default ['gltf', 'glb', 'obj', 'fbx', 'dae']
+		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['gltf', 'glb', 'obj', 'fbx', 'dae']);
+
+		// dedalo_3d_obj2gltf_path normally /usr/bin/obj2gltf
+		define('DEDALO_3D_OBJ2GLTF_PATH'			, '/usr/bin/obj2gltf');
+		// dedalo_3d_fbx2gltf_path normally /usr/bin/FBX2glTF
+		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/bin/FBX2glTF');
+		// dedalo_3d_collada2gltf_path normally /usr/bin/COLLADA2GLTF-bin
+		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/bin/COLLADA2GLTF-bin');
 
 	// image media
 		// image_folder. Default: '/image'
