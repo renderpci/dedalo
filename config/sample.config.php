@@ -357,6 +357,8 @@
 		define('DEDALO_3D_EXTENSION'				, 'gltf');
 		// dedalo_3d_extensions_supported. array default ['gltf', 'glb', 'obj', 'fbx', 'dae']
 		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['gltf', 'glb', 'obj', 'fbx', 'dae']);
+		// dedalo_3d_mime_type. string default 'model/gltf+json'
+		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf+json');
 
 		// dedalo_3d_obj2gltf_path normally /usr/bin/obj2gltf
 		define('DEDALO_3D_OBJ2GLTF_PATH'			, '/usr/bin/obj2gltf');
