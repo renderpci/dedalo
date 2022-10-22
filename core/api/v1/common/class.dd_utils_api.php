@@ -1264,6 +1264,13 @@ final class dd_utils_api {
 			'qt'	=> 'video/quicktime',
 			'mov'	=> 'video/quicktime',
 
+			// 3d
+			'gltf'	=> 'model/gltf+json',
+			'glb'	=> 'model/gltf-binary',
+			'obj'	=> 'model/obj',
+			'fbx'	=> 'application/octet-stream',
+			'dae'	=> 'model/vnd.collada+xml',
+			
 			// adobe
 			'pdf'	=> 'application/pdf',
 			'psd'	=> 'image/vnd.adobe.photoshop',
