@@ -353,12 +353,12 @@
 	// 3d media
 		// dedalo_3d_foler. string default '/av'
 		define('DEDALO_3D_FOLDER'					, '/3d');
-		// dedalo_3d_extension. string default 'gltf'
+		// dedalo_3d_extension. string default 'glb'
 		define('DEDALO_3D_EXTENSION'				, 'gltf');
-		// dedalo_3d_extensions_supported. array default ['gltf', 'glb', 'obj', 'fbx', 'dae']
-		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['gltf', 'glb', 'obj', 'fbx', 'dae']);
+		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
+		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
 		// dedalo_3d_mime_type. string default 'model/gltf+json'
-		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf+json');
+		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
 
 		// dedalo_3d_obj2gltf_path normally /usr/bin/obj2gltf
 		define('DEDALO_3D_OBJ2GLTF_PATH'			, '/usr/bin/obj2gltf');
