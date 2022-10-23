@@ -275,7 +275,8 @@
 
 
 // dedalo default config values
-	// dedalo_prefix_tipos. Array of tipos (FIXME: available tipos?) to import and manage by Dédalo. mandatory: ['dd','rsc','tool','hierarchy','lg']
+	// dedalo_prefix_tipos. Array of main active tipos of the ontology to be imported and managed by Dédalo.
+	// mandatory: ['dd','rsc','tool','hierarchy','lg']
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
 		'rsc',
@@ -351,7 +352,7 @@
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
 	// 3d media
-		// dedalo_3d_foler. string default '/av'
+		// dedalo_3d_foler. string default '/3d'
 		define('DEDALO_3D_FOLDER'					, '/3d');
 		// dedalo_3d_extension. string default 'gltf'
 		define('DEDALO_3D_EXTENSION'				, 'gltf');
@@ -359,6 +360,8 @@
 		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['gltf', 'glb', 'obj', 'fbx', 'dae']);
 		// dedalo_3d_mime_type. string default 'model/gltf+json'
 		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf+json');
+
+// FIXME: to define quality as DEDALO_AV_QUALITY_ORIGINAL & DEDALO_AV_AR_QUALITY or DEDALO_IMAGE_QUALITY_ORIGINAL & DEDALO_IMAGE_AR_QUALITY
 
 		// dedalo_3d_obj2gltf_path normally /usr/bin/obj2gltf
 		define('DEDALO_3D_OBJ2GLTF_PATH'			, '/usr/bin/obj2gltf');
