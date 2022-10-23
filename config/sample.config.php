@@ -362,6 +362,8 @@
 		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
 		// dedalo_3d_quality_original. string default 'original'
 		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
+		// quality default normally 'original'
+		define('DEDALO_3D_QUALITY_DEFAULT'			, 'original');
 		// quality folders array (sort desc quality)
 		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
 
