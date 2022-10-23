@@ -363,7 +363,7 @@
 		// dedalo_3d_quality_original. string default 'original'
 		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
 		// quality folders array (sort desc quality)
-		define('DEDALO_AV_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
+		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
 
 		// dedalo_3d_obj2gltf_path normally /usr/bin/obj2gltf
 		define('DEDALO_3D_OBJ2GLTF_PATH'			, '/usr/bin/obj2gltf');
