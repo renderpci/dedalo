@@ -355,13 +355,15 @@
 		// dedalo_3d_foler. string default '/3d'
 		define('DEDALO_3D_FOLDER'					, '/3d');
 		// dedalo_3d_extension. string default 'glb'
-		define('DEDALO_3D_EXTENSION'				, 'gltf');
+		define('DEDALO_3D_EXTENSION'				, 'glb');
 		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
 		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
 		// dedalo_3d_mime_type. string default 'model/gltf+json'
 		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
-
-// FIXME: to define quality as DEDALO_AV_QUALITY_ORIGINAL & DEDALO_AV_AR_QUALITY or DEDALO_IMAGE_QUALITY_ORIGINAL & DEDALO_IMAGE_AR_QUALITY
+		// dedalo_3d_quality_original. string default 'original'
+		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
+		// quality folders array (sort desc quality)
+		define('DEDALO_AV_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
 
 		// dedalo_3d_obj2gltf_path normally /usr/bin/obj2gltf
 		define('DEDALO_3D_OBJ2GLTF_PATH'			, '/usr/bin/obj2gltf');
