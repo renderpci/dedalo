@@ -101,29 +101,29 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// update_structure
+		// update_ontology
 			$item = new stdClass();
-				$item->id		= 'update_structure';
+				$item->id		= 'update_ontology';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
 
 				if (defined('ONTOLOGY_DB')) {
-					$item->label	= label::get_label('actualizar_estructura');
+					$item->label	= label::get_label('update_ontology');
 					$item->info		= null;
 					$item->body		= 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
 				}else{
-					$item->label	= label::get_label('actualizar_estructura');
+					$item->label	= label::get_label('update_ontology');
 					$item->info		= null;
 					$item->body		= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
 						'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
 						'<hr>TLD: <tt>' . implode(', ', $DEDALO_PREFIX_TIPOS).'</tt>' :
-						label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY;
+						label::get_label('update_ontology')." is a disabled for ".DEDALO_ENTITY;
 					$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
 					$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
 					$confirm_text	 = '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
 					$confirm_text	.= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
-					$confirm_text	.= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
+					$confirm_text	.= 'Are you sure to IMPORT and overwrite current ontology data with LOCAL FILE: ';
 					$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
 					$item->run[]	= (object)[
 						'fn' 	  => 'init_form',
@@ -142,7 +142,7 @@ class area_development extends area_common {
 					];
 					$item->trigger 	= (object)[
 						'dd_api'	=> 'dd_utils_api',
-						'action'	=> 'update_structure',
+						'action'	=> 'update_ontology',
 						'options'	=> null
 					];
 				}

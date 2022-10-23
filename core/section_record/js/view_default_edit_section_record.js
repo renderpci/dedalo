@@ -119,15 +119,18 @@ const get_content_data_edit = async function(self, ar_instances) {
 			}
 
 			const current_instance		= ar_instances[i]
-			const current_instance_node	= current_instance.node || await current_instance.render()
 
 			// component_filter case . Send to inspector
 				if (current_instance.model==='component_filter') {
 					// render_component_filter_xx event is observed by inspector init
 					// to get the component DOM node and to place it into the inspector container
-					event_manager.publish('render_component_filter_' + current_instance.section_tipo, current_instance_node)
+					event_manager.publish('render_component_filter_' + current_instance.section_tipo, current_instance)
 					continue;
 				}
+
+			const current_instance_node	= current_instance.node || await current_instance.render()
+
+
 
 			// parent_grouper. get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper

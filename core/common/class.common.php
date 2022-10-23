@@ -5,6 +5,8 @@
 */
 abstract class common {
 
+
+
 	// permissions. int value from 0 to 3
 	public $permissions;
 
@@ -54,12 +56,11 @@ abstract class common {
 	// view. Specific element view combined with mode is used to render elements
 	public $view;
 
-
-	// REQUIRED METHODS
-	#abstract protected function define_id($id);
-	#abstract protected function define_tipo();
-	#abstract protected function define_lang();
-	#abstract public function get_html();
+	// required methods
+		// abstract protected function define_id($id);
+		// abstract protected function define_tipo();
+		// abstract protected function define_lang();
+		// abstract public function get_html();
 
 
 	// temporal excluded/mapped models
@@ -219,8 +220,9 @@ abstract class common {
 
 	/**
 	* SET_PERMISSIONS
+	* @param int $number
 	*/
-	public function set_permissions( int $number ) {
+	public function set_permissions( int $number ) : void {
 
 		$this->permissions = (int)$number;
 	}//end set_permissions
@@ -229,7 +231,7 @@ abstract class common {
 
 	/**
 	* LOAD STRUCTURE DATA
-	* Get data once from structure (tipo, modelo, norden, estraducible, etc.)
+	* Get data once from Ontology (tipo, modelo, norden, estraducible, etc.)
 	* @return bool
 	*/
 	protected function load_structure_data() : bool {
@@ -306,7 +308,7 @@ abstract class common {
 		// model
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			if (empty($modelo_name)) {
-				debug_log(__METHOD__." Current tipo ($tipo) modelo name is empty. Default table 'matrix' was used.".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Current tipo ($tipo) model name is empty. Default table 'matrix' was used.".to_string(), logger::ERROR);
 			}
 
 		if ($modelo_name==='section') {
@@ -355,7 +357,6 @@ abstract class common {
 			}
 			throw new Exception("Error Processing Request. Don't use non section tipo ($tipo - $modelo_name) to calculate matrix_table. Use always section_tipo", 1);
 
-
 			// # COMPONENT CASE
 			// # Heredamos la tabla de la sección parent (si la hay)
 			// $ar_parent_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name='section', $relation_type='parent');
@@ -385,16 +386,15 @@ abstract class common {
 	*/
 	public static function get_matrix_tables_with_relations() : array {
 
-		static $ar_tables;
+		static $ar_tables_with_relations;
 
-		if (isset($ar_tables)) {
-			return $ar_tables;
+		if (isset($ar_tables_with_relations)) {
+			return $ar_tables_with_relations;
 		}
 
-		$ar_tables = [];
+		$ar_tables_with_relations = [];
 
-		# Tables
-		# define('DEDALO_TABLES_LIST_TIPO', 'dd627'); // Matrix tables box elements
+		// tables
 		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
 		foreach ($ar_children_tables as $table_tipo) {
 			$RecordObj_dd	= new RecordObj_dd( $table_tipo );
@@ -404,23 +404,22 @@ abstract class common {
 			}
 			$properties = $RecordObj_dd->get_properties();
 			if (isset($properties) && property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
-				$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+				$ar_tables_with_relations[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			}
 		}
 
-		if (empty($ar_tables)) {
-			trigger_error("Error on read structure tables list. Old structure version < 26-01-2018 !");
-			$ar_tables = [
+		if (empty($ar_tables_with_relations)) {
+			debug_log(__METHOD__." Error on read Ontology tables list. Old Ontology version < 26-01-2018 ! ".to_string(), logger::ERROR);
+			$ar_tables_with_relations = [
 				"matrix",
 				"matrix_list",
 				"matrix_activities",
 				"matrix_hierarchy"
 			];
 		}
-		#debug_log(__METHOD__." ar_tables ".json_encode($ar_tables), logger::DEBUG);
 
 
-		return $ar_tables;
+		return $ar_tables_with_relations;
 	}//end get_matrix_tables_with_relations
 
 
@@ -492,9 +491,9 @@ abstract class common {
 	* @return string $main_lang
 	*/
 	public static function get_main_lang( string $section_tipo, $section_id=null ) : string {
-		#dump($section_tipo, ' section_tipo ++ '.to_string());
-		# Always fixed lang of languages as English
-		if ($section_tipo==='lg1') {
+
+		// Always fixed lang of languages as English (section tipo = lg1)
+		if ($section_tipo===DEDALO_LANGS_SECTION_TIPO) {
 			return 'lg-eng';
 		}
 
@@ -612,7 +611,7 @@ abstract class common {
 	/**
 	* SETVARDATA
 	* @param string $name
-	* @param onject $data_obj
+	* @param object|false $data_obj
 	*/
 	public static function setVarData(string $name, $data_obj, $default=false) {
 
