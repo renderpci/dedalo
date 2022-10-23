@@ -123,7 +123,7 @@ class area_development extends area_common {
 					$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
 					$confirm_text	 = '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
 					$confirm_text	.= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
-					$confirm_text	.= 'Are you sure to IMPORT and overwrite current structure data with LOCAL FILE: ';
+					$confirm_text	.= 'Are you sure to IMPORT and overwrite current ontology data with LOCAL FILE: ';
 					$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
 					$item->run[]	= (object)[
 						'fn' 	  => 'init_form',
