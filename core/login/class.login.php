@@ -600,8 +600,8 @@ class login extends common {
 
 				// errors found on init test (Don't stop execution here)
 					if ($init_response->result===false) {
-						debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
-						// Don't stop here. Only inform user of init error via jasvascript
+						debug_log(__METHOD__." Init test error: ".to_string($init_response->msg), logger::ERROR);
+						// Don't stop here. Only inform user of init error via JavaScript
 							# $response->result 	= false;
 							# $response->msg 		= $init_response->msg;
 							# return $response;
@@ -677,7 +677,7 @@ class login extends common {
 			debug_log(__METHOD__." Generating security access datalist in background ".to_string($status), logger::DEBUG);
 
 		// log : Prepare and save login action
-			$browser = $_SERVER["HTTP_USER_AGENT"];
+			$browser = $_SERVER['HTTP_USER_AGENT'];
 			if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
 			$activity_datos['result']		= "allow";
