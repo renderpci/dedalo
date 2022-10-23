@@ -252,10 +252,10 @@ final class dd_utils_api {
 
 
 	/**
-	* UPDATE_STRUCTURE
+	* UPDATE_ONTOLOGY
 	* @return object $response
 	*/
-	public static function update_structure(object $request_options=null) : object {
+	public static function update_ontology(object $request_options=null) : object {
 		$start_time = start_time();
 
 		// session_write_close();
@@ -370,7 +370,7 @@ final class dd_utils_api {
 
 
 		return $response;
-	}//end update_structure
+	}//end update_ontology
 
 
 
