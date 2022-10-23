@@ -21,15 +21,15 @@ class dd_cache {
 		// options
 			// string process_file. File to manage the data process
 			// Sample: dirname(dirname(__FILE__)) . '/component_security_access/calculate_tree.php'
-			$process_file = $options->process_file;
+			$process_file	= $options->process_file;
 			// object data
-			$data = $options->data;
+			$data			= $options->data;
 			// string file_name
 			// Sample: 1.cache_tree.json
-			$file_name = $options->file_name;
+			$file_name		= $options->file_name;
 
 		// navigator. force to re-init navigator (!)
-			$navigator = new navigator();
+			// $navigator = new navigator();
 
 		// sh_data
 			$sh_data = [
@@ -45,11 +45,11 @@ class dd_cache {
 		// server_vars
 			$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
-		// path. Use same session_save_path to save the files
-			$path = session_save_path();
+		// base_path. Used to save the files. Usually '/tmp'
+			$base_path = DEDALO_CACHE_MANAGER->files_path;
 
 		// output. $output = '> /dev/null &';
-			$output	= '> '.$path.'/'.$file_name.' &';
+			$output	= '> '.$base_path.'/'.$file_name.' &';
 
 		// command
 			$command = PHP_BIN_PATH ." $process_file '$server_vars' $output";
@@ -82,14 +82,18 @@ class dd_cache {
 			// Sample: 1.cache_tree.json
 			$file_name = $options->file_name;
 
-		// base_path. Use same session_save_path to save the files
-			$base_path = session_save_path();
+		// base_path. Used to save the files. Usually '/tmp'
+			$base_path = DEDALO_CACHE_MANAGER->files_path;
 
 		// path
 			$path = $base_path . '/' . $file_name;
 
 		// contents
 			$contents = file_get_contents($path);
+			if ($contents===false) {
+				// error reading the file
+				debug_log(__METHOD__." Error: reading cache file fail:  ".to_string($path), logger::ERROR);
+			}
 
 
 		return $contents;

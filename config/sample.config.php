@@ -110,8 +110,12 @@
 
 
 // cache
-	// dedalo_cache_manager. string|bool : redis | memcached | zebra_db | false . Default is false
-	define('DEDALO_CACHE_MANAGER', false);
+	// dedalo_cache_manager. bool|object.
+	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
+	define('DEDALO_CACHE_MANAGER', (object)[
+		'manager'		=> 'files',
+		'files_path'	=> '/tmp'
+	]);
 
 
 
