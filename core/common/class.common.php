@@ -120,11 +120,11 @@ abstract class common {
 		];
 		public static $groupers = [
 			'section_group',
+			'section_group_div',
 			'section_tab',
-			'tab',
-			'section_group_relation',
-			'section_group_portal',
-			'section_group_div'
+			'tab'
+			// 'section_group_relation',
+			// 'section_group_portal'
 		];
 
 
@@ -2729,15 +2729,22 @@ abstract class common {
 						if ($model==='section') {
 							// section
 							$table						= common::get_matrix_table_from_tipo($tipo);
-							$ar_modelo_name_required	= ['component_','section_group','section_tab','tab','section_group_relation','section_group_portal','section_group_div'];
+							$ar_modelo_name_required	= [
+								'component_',
+								'section_group',
+								'section_group_div',
+								'section_tab',
+								'tab'
+								// 'section_group_relation',
+								// 'section_group_portal',
+							];
 							$ar_related					= section::get_ar_children_tipo_by_modelo_name_in_section(
 								$tipo,
 								$ar_modelo_name_required,
 								true, // bool from_cache
 								true, // bool resolve_virtual
 								true, // bool recursive
-								false, // bool search_exact
-								false // array|false ar_tipo_exclude_elements
+								false // bool search_exact
 							);
 						}elseif (in_array($model, common::$groupers)) {
 							// groupers
@@ -2746,7 +2753,12 @@ abstract class common {
 							// components
 							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
 							// semantic node
-							$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'component_semantic_node', 'children', true);
+							$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+								$tipo,
+								'component_semantic_node',
+								'children',
+								true
+							);
 							if(!empty($ds_component)){
 								$ar_related = array_merge($ds_component, $ar_related );
 							}
@@ -2755,11 +2767,25 @@ abstract class common {
 					case 'related_list':
 						if ($model==='section') {
 							// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
-							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, ['relation_list'], $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=true);
+							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
+								$tipo,
+								['relation_list'], // array ar_modelo_name_required
+								true, // bool from_cache
+								false, // bool resolve_virtual
+								false, // bool recursive
+								true // bool search_exact
+							);
 
 							// If not found children, try resolving real section
 							if (empty($ar_terms)) {
-								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section($tipo, ['relation_list'], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
+									$tipo,
+									['relation_list'], // array ar_modelo_name_required
+									true, // bool from_cache
+									true, // bool resolve_virtual
+									false, // bool recursive
+									true // bool search_exact
+								);
 							}// end if (empty($ar_terms))
 
 							if(isset($ar_terms[0])) {
