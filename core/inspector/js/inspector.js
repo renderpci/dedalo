@@ -85,9 +85,9 @@ inspector.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('render_component_filter_' + self.section_tipo, fn_render_filter)
 			)
-			function fn_render_filter(instance_node) {
+			async function fn_render_filter(filter_instance) {
 				// fix rendered node
-				self.component_filter_node = instance_node
+				self.component_filter_node = await filter_instance.render()
 				// update project_container_body if it is already defined (pagination cases)
 				if (self.project_container_body) {
 					update_project_container_body(self)
