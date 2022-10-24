@@ -30,18 +30,21 @@ abstract class filter {
 
 				// Reference:
 				// {
-				//	"tipo": "ich1",
-				//	"value": 3,
+				//	"tipo": "ich70",
+				//	"value": 2,
 				//	"section_tipo": "ich1"
 				// }
 
 				$entences_sql = [];
 
 				// value 3 try
-				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":3}]]\'';
+				// $entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":3}]]\'';
 
 				// value 2 try
-				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":2}]]\'';
+				// $entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":2}]]\'';
+
+				// new v6 data format
+				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":2}]\'';
 
 				$ar_filter[] = '('. implode(' OR ', $entences_sql) .')';
 			}
@@ -166,10 +169,10 @@ abstract class filter {
 					"q": "'.implode(',', $ar_id).'",
 					"path": [
 					  {
-					    "section_tipo": "'.$projects_section_tipo.'",
-					    "component_tipo": "section_id",
-					    "modelo": "component_section_id",
-					    "name": "section_id"
+						"section_tipo": "'.$projects_section_tipo.'",
+						"component_tipo": "section_id",
+						"modelo": "component_section_id",
+						"name": "section_id"
 					  }
 					]
 				}';
@@ -182,33 +185,33 @@ abstract class filter {
 				  "section_tipo": "'.$projects_section_tipo.'",
 				  "limit":0,
 				  "filter": {
-				    "$and": [
-				      '.$filter.'
-				    ]
+					"$and": [
+					  '.$filter.'
+					]
 				  },
 				  "select": [
-				    {
-				      "path": [
-				        {
-				          "section_tipo": "'.$projects_section_tipo.'",
-				          "component_tipo": "'.$projects_name_tipo.'",
-				          "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($projects_name_tipo,true).'",
-				          "name": "Project name",
-				          "lang": "all"
-				        }
-				      ]
-				    },
-				     {
-				      "path": [
-				        {
-				          "section_tipo": "'.$projects_section_tipo.'",
-				          "component_tipo": "'.$typology_tipo.'",
-				          "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($typology_tipo,true).'",
-				          "name": "Project typology",
-				          "lang": "all"
-				        }
-				      ]
-				    }
+					{
+					  "path": [
+						{
+						  "section_tipo": "'.$projects_section_tipo.'",
+						  "component_tipo": "'.$projects_name_tipo.'",
+						  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($projects_name_tipo,true).'",
+						  "name": "Project name",
+						  "lang": "all"
+						}
+					  ]
+					},
+					 {
+					  "path": [
+						{
+						  "section_tipo": "'.$projects_section_tipo.'",
+						  "component_tipo": "'.$typology_tipo.'",
+						  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($typology_tipo,true).'",
+						  "name": "Project typology",
+						  "lang": "all"
+						}
+					  ]
+					}
 				  ]
 				}
 			');
