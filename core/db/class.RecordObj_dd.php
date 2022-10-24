@@ -355,25 +355,26 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_TERMINO_BY_TIPO
 	* Static version
+	* @return string|null $result
 	*/
 	public static function get_termino_by_tipo(string $terminoID, string $lang=null, bool $from_cache=false, bool $fallback=true) : ?string {
 		#$from_cache=false;
 
 		static $termino_by_tipo;
 
+		// cache
 		$cache_uid = $terminoID . '_' . $lang . (int)$fallback;
-		#if ($from_cache===true && isset($_SESSION['dedalo']['config']['termino_by_tipo'][$cache_uid])) {
 		if (isset($termino_by_tipo[$cache_uid])) {
-			#return $_SESSION['dedalo']['config']['termino_by_tipo'][$cache_uid];
 			return $termino_by_tipo[$cache_uid];
 		}
-		$tipo 	= 'termino';
-		$result = self::get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback);
 
-		#if($from_cache===true) {
-			#$_SESSION['dedalo']['config']['termino_by_tipo'][$cache_uid] = $result;
-			$termino_by_tipo[$cache_uid] = $result;
-		#}
+		$tipo	= 'termino';
+		$result	= self::get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback);
+
+
+		// cache
+		$termino_by_tipo[$cache_uid] = $result;
+
 
 		return $result;
 	}//end get_termino_by_tipo
@@ -384,7 +385,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_DEF_BY_TIPO
 	* Static version
 	*/
-	public static function get_def_by_tipo($terminoID, $lang=false) : ?string {
+	public static function get_def_by_tipo(string $terminoID, $lang=false) : ?string {
 
 		return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'def');
 	}//end get_def_by_tipo
@@ -395,7 +396,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_OBS_BY_TIPO
 	* Static version
 	*/
-	public static function get_obs_by_tipo($terminoID, $lang=false) : ?string {
+	public static function get_obs_by_tipo(string $terminoID, $lang=false) : ?string {
 
 		return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'obs');
 	}//end get_obs_by_tipo
@@ -466,25 +467,26 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_MODELO_NAME_BY_TIPO
 	* Static version
+	* @param string $tipo
+	* @param bool $from_cache = true
+	* @return string $modelo_name
 	*/
-	public static function get_modelo_name_by_tipo(string $tipo, bool $from_cache=false) : string {
-		#$from_cache=false;
+	public static function get_modelo_name_by_tipo(string $tipo, bool $from_cache=true) : string {
 
 		static $modelo_name_by_tipo;
 
+		// cache
 		$cache_uid = $tipo;
-
-		#if ($from_cache===true && isset($_SESSION['dedalo']['config']['modelo_name_by_tipo'][$tipo])) {
 		if (isset($modelo_name_by_tipo[$cache_uid])) {
 			return $modelo_name_by_tipo[$cache_uid];
 		}
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$modelo_name  = (string)$RecordObj_dd->get_modelo_name();
 
-		#if($from_cache===true) {
-			#$_SESSION['dedalo']['config']['modelo_name_by_tipo'][$tipo] = $modelo_name;
-			$modelo_name_by_tipo[$cache_uid] = $modelo_name;
-		#}
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$modelo_name	= $RecordObj_dd->get_modelo_name();
+
+		// cache
+		$modelo_name_by_tipo[$cache_uid] = $modelo_name;
+
 
 		return $modelo_name;
 	}//end get_modelo_name_by_tipo
