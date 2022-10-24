@@ -1575,9 +1575,10 @@ class section extends common {
 		if ($from_cache===true) {
 			if (isset($cache_ar_children_tipo[$cache_uid])) {
 				return $cache_ar_children_tipo[$cache_uid];
-			}elseif (isset($_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
-				return $_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid];
 			}
+			// elseif (isset($_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
+			// 	return $_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid];
+			// }
 		}
 
 		$ar_terminos_relacionados_to_exclude = [];
@@ -1707,9 +1708,9 @@ class section extends common {
 			}
 		}//end foreach($ar_recursive_childrens as $current_terminoID)
 
-		# Cache session store
+		// Cache session store
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
-		$_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
+		// $_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
 
 
 		return $section_ar_children_tipo;
