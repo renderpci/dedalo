@@ -1204,14 +1204,14 @@ class search {
 							$security_areas_dato = security::get_ar_authorized_areas_for_user();
 							$ar_area_tipo = [];
 							foreach ($security_areas_dato as $item) {
-								if($item->value===3){
+								if($item->value===2){
 									$ar_area_tipo[] = $item->tipo;
 								}
 							}
 							// check empty ar_area_tipo case
 								if (empty($ar_area_tipo)) {
 									debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed security_areas data!! ", logger::ERROR);
-									header("Location: " . DEDALO_ROOT_WEB);
+									// header("Location: " . DEDALO_ROOT_WEB);
 									exit();
 								}
 
@@ -1220,7 +1220,7 @@ class search {
 							// check empty ar_profile_id case
 							if (empty($ar_profile_id)) {
 								debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed ar_profile_id data!! ", logger::ERROR);
-								header("Location: " . DEDALO_ROOT_WEB);
+								// header("Location: " . DEDALO_ROOT_WEB);
 								exit();
 							}
 						$ar_filter_profile = [];
@@ -1249,7 +1249,7 @@ class search {
 						// check empty ar_area_tipo case
 							if (empty($filter_master_dato)) {
 								debug_log(__METHOD__." Filter master without data!! ", logger::ERROR);
-								header("Location: " . DEDALO_ROOT_WEB);
+								// header("Location: " . DEDALO_ROOT_WEB);
 								exit();
 							}
 						$ar_values_string = '';
