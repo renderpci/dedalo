@@ -30,18 +30,21 @@ abstract class filter {
 
 				// Reference:
 				// {
-				//	"tipo": "ich1",
-				//	"value": 3,
+				//	"tipo": "ich70",
+				//	"value": 2,
 				//	"section_tipo": "ich1"
 				// }
 
 				$entences_sql = [];
 
 				// value 3 try
-				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":3}]]\'';
+				// $entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":3}]]\'';
 
 				// value 2 try
-				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":2}]]\'';
+				// $entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":2}]]\'';
+
+				// new v6 data format
+				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":2}]\'';
 
 				$ar_filter[] = '('. implode(' OR ', $entences_sql) .')';
 			}
@@ -76,7 +79,7 @@ abstract class filter {
 				return filter::$user_projects_cache[$user_id];
 			}
 
-		$dato = null;
+		$final_data = null;
 		if ( !empty($user_id) || abs($user_id)>0 ) {
 			$component_filter_master = component_common::get_instance(
 				'component_filter_master',
