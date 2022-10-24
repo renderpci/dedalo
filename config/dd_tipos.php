@@ -38,6 +38,7 @@ define('DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO'	, 'dd1067'); // TOOLS PRO
 define('DEDALO_SECTION_PROJECTS_TIPO'					, 'dd153');
 define('DEDALO_PROJECTS_NAME_TIPO'						, 'dd156'); // remember: is 'component_input_text' model
 define('DEDALO_COMPONENT_PROJECT_LANGS_TIPO'			, 'dd267');
+define('DEDALO_PROJECTS_CHILDREN_TIPO'					, 'dd1594');
 
 // dedalo_diffusion_tipo
 define('DEDALO_DIFFUSION_TIPO'							, 'dd3');
