@@ -8,8 +8,8 @@
 	// import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import {object_to_url_vars} from '../../common/js/utils/index.js'
-	import {view_column_list_av} from './view_column_list_av.js'
-	import {view_mini_list_av} from './view_mini_list_av.js'
+	import {view_column_list_3d} from './view_column_list_3d.js'
+	import {view_mini_list_3d} from './view_mini_list_3d.js'
 
 
 
@@ -39,12 +39,12 @@ render_list_component_3d.prototype.list = async function(options) {
 	switch(view) {
 
 		case 'mini':
-			return view_mini_list_av.render(self, options)
+			return view_mini_list_3d.render(self, options)
 
 		case 'column':
 		case 'default':
 		default:
-			return view_column_list_av.render(self, options)
+			return view_column_list_3d.render(self, options)
 	}
 
 	return null

@@ -4,9 +4,9 @@
 
 
 // imports
-	import {view_default_edit_av} from './view_default_edit_av.js'
-	import {view_player_edit_av} from './view_player_edit_av.js'
-	import {view_viewer_edit_av} from './view_viewer_edit_av.js'
+	import {view_default_edit_3d} from './view_default_edit_3d.js'
+	import {view_player_edit_3d} from './view_player_edit_3d.js'
+	import {view_viewer_edit_3d} from './view_viewer_edit_3d.js'
 
 
 
@@ -36,14 +36,14 @@ render_edit_component_3d.prototype.edit = async function(options) {
 	switch(view) {
 
 		case 'player':
-			return view_player_edit_av.render(self, options)
+			return view_player_edit_3d.render(self, options)
 
 		case 'viewer':
-			return view_viewer_edit_av.render(self, options)
+			return view_viewer_edit_3d.render(self, options)
 
 		case 'default':
 		default:
-			return view_default_edit_av.render(self, options)
+			return view_default_edit_3d.render(self, options)
 	}
 
 

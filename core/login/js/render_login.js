@@ -1,4 +1,4 @@
-/*global get_label, page_globals, DEDALO_CORE_URL*/
+/* global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -213,17 +213,34 @@ const get_content_data = function(self) {
 					}
 				})
 				.then((api_response)=>{
+					if(SHOW_DEBUG===true) {
+						console.log('api_response:', api_response);
+					}
 
 					// hide spinner and show button label
 						button_enter_label.classList.remove('hide')
 						button_enter_loading.classList.add('hide')
 						button_enter.classList.remove('white')
 
-					const message	= api_response.msg
-					const msg_type	= api_response.result===true ? 'ok' : 'error'
-					ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
-					self.action_dispatch(api_response)
+					if (api_response.errors && api_response.errors.length>0 || api_response.result===false) {
+
+						// errors found
+
+						const message	= api_response.errors || ['Unknown login error happen']
+						const msg_type	= 'error'
+						ui.show_message(messages_container, message, msg_type, 'component_message', true)
+
+					}else{
+
+						// success case
+
+						const message	= api_response.msg
+						const msg_type	= api_response.result===true ? 'ok' : 'error'
+						ui.show_message(messages_container, message, msg_type, 'component_message', true)
+
+						self.action_dispatch(api_response)
+					}
 				})
 		})//end button_enter.addEventListener('click', function(e)
 
