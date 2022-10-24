@@ -374,7 +374,7 @@ class layout_map {
 		// cache
 			$key_cache = implode('_', [$tipo, $section_tipo, $user_id, $modo, $view]);
 			if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache])) {
-				// return $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache];
+				return $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache];
 			}
 
 		// preset const
