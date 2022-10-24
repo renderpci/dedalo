@@ -1275,7 +1275,6 @@ class search {
 						$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
 
 						$sql_filter .= ')';
-
 					break;
 				##### DEFAULT #########################################################
 				default:
