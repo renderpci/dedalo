@@ -3606,10 +3606,10 @@ abstract class common {
 
 		// cache
 			$cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
-			// static $cache_get_tools;
-			// if (isset($cache_get_tools[$cache_key])) {
-			// 	return $cache_get_tools[$cache_key];
-			// }
+			static $cache_get_tools;
+			if (isset($cache_get_tools[$cache_key])) {
+				return $cache_get_tools[$cache_key];
+			}
 			if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
 				return $_SESSION['dedalo']['tools'][$cache_key];
 			}
@@ -3667,9 +3667,8 @@ abstract class common {
 			}//end foreach ($registered_tools as $tool)
 
 		// cache
-			// $cache_get_tools[$cache_key] = $tools;
+			$cache_get_tools[$cache_key] = $tools;
 			$_SESSION['dedalo']['tools'][$cache_key] = $tools;
-
 
 
 		return $tools;
