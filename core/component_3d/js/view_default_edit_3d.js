@@ -12,13 +12,13 @@
 
 
 /**
-* VIEW_DEFAULT_EDIT_AV
+* VIEW_DEFAULT_EDIT_3D
 * Manages the component's logic and appearance in client side
 */
-export const view_default_edit_av = function() {
+export const view_default_edit_3d = function() {
 
 	return true
-}//end  view_default_edit_av
+}//end  view_default_edit_3d
 
 
 
@@ -27,7 +27,7 @@ export const view_default_edit_av = function() {
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
-view_default_edit_av.render = async function(self, options) {
+view_default_edit_3d.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -51,7 +51,7 @@ view_default_edit_av.render = async function(self, options) {
 
 
 	return wrapper
-}//end view_default_edit_av
+}//end view_default_edit_3d
 
 
 
@@ -314,7 +314,7 @@ const get_buttons = (self) => {
 		// })
 		// button_info.addEventListener("mouseup", async (e) =>{
 
-		// 	const player_av = await instances.get_instance({
+		// 	const player_3d = await instances.get_instance({
 		// 		model 			: 'component_3d',
 		// 		section_tipo	: self.section_tipo,
 		// 		section_id		: self.section_id,
@@ -323,11 +323,11 @@ const get_buttons = (self) => {
 		// 		mode 			: 'player'
 		// 	})
 
-		// 	await player_av.build(true)
+		// 	await player_3d.build(true)
 
-		// 	player_av.fragment = {tc_in: 3, tc_out: 5}
+		// 	player_3d.fragment = {tc_in: 3, tc_out: 5}
 
-		// 	const node = await player_av.render()
+		// 	const node = await player_3d.render()
 
 		// 	// cotainer, for every ipo will create a li node
 		// 		const cotainer = ui.create_dom_element({
