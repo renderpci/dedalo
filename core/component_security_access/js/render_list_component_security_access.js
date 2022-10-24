@@ -28,7 +28,7 @@ export const render_list_component_security_access = function() {
 * Render node for use in list
 * @return DOM node
 */
-render_list_component_security_access.prototype.list = async function() {
+render_list_component_security_access.prototype.list = async function(options) {
 
 	const self = this
 
