@@ -11,6 +11,7 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {get_ar_instances} from './section.js'
+	import {render_server_response_error} from './render_common_section.js'
 	// import * as instances from '../../common/js/instances.js'
 
 
@@ -36,6 +37,13 @@ render_list_section.prototype.list = async function(options) {
 	const self = this
 
 	const render_level = options.render_level || 'full'
+
+	// running_with_errors case
+		if (self.running_with_errors) {
+			return render_server_response_error(
+				self.running_with_errors
+			);
+		}
 
 	// columns_map
 		const columns_map = await rebuild_columns_map(self)
