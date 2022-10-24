@@ -627,6 +627,19 @@
 	}
 
 
+
+// cache
+	if (!defined('DEDALO_CACHE_MANAGER') || empty(DEDALO_CACHE_MANAGER)) {
+		$init_response->msg[]	= '
+			Error Processing Request: DEDALO_CACHE_MANAGER is mandatory.
+			Please check your config file and set a valid value. You can see some examples in sample.config file';
+		$init_response->errors	= true;
+		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+
+		return $init_response;
+	}
+
+
 // LANGS JS (moved to login.php !)
 	#	# Generate js files with all labels (in not extist current lang file)
 	#	$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
