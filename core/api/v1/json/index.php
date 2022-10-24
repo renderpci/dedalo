@@ -160,6 +160,7 @@ $global_start_time = hrtime(true);
 	// debug
 		// $current = (hrtime(true) - $global_start_time) / 1000000;
 		// error_log('--------------------------------------- current 3 (before echo) ms: '.$current);
+		// dump($_SESSION, ' _SESSION ++ '.to_string());
 
 
 // output_string_and_close_connection($output_string);
