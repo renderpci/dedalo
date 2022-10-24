@@ -725,7 +725,7 @@ class login extends common {
 		}else{
 			$backup_info = 'Deactivated "on login backup" for this domain';
 		}
-		
+
 		try {
 			// remove lock_components elements
 				if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
@@ -734,7 +734,7 @@ class login extends common {
 
 			# GET ENTITY DIFFUSION TABLES / SECTIONS . Store for speed
 			# $entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
-			# $_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;	
+			# $_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__." $e ", logger::CRITICAL);

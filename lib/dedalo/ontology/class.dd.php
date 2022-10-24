@@ -368,12 +368,10 @@ class dd extends dd_elements {
 		$html .= "<div class=\"tsHeader {$add_class}\">";
 
 	        $html .= "<div class=\"tsHeaderLeft\">";
-	        $html .= ucfirst($this->jer_tipoText) ; 	#return("jer_tipoText: ". $this->jer_tipoText );
-			#RecordObj_jer::get_nombre_by_id()
-			#$html .= ' ['.ucfirst($this->nombre).']' ;
+	        // $html .= ucfirst($this->jer_tipoText);
+	        $html .= 'Ontology';
 
 			$parent0 = (string)$this->prefijo.'0';
-
 			if($this->modo==='tesauro_rel')
 			{
 				# caso indexación

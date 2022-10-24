@@ -9,7 +9,7 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/lib/dedalo/config/config4.p
 # mode
 if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
-	
+
 /**
 * SET_PSW
 */
@@ -27,10 +27,11 @@ if($mode==='set_psw') {
 
 	// Test encrypt and decrypt data cycle
 		if (dedalo_decrypt_openssl($password_encripted) !== $password) {
-			echo "Error: sorry an error ocurred on UPDATE record. Encrytp and decrypt cylce is wrong!";
+			echo "Error: sorry an error occurred on UPDATE record. Encrypt and decrypt cycle is wrong!";
+			debug_log(__METHOD__." Error: sorry an error occurred on UPDATE record. Encrypt and decrypt cycle is wrong! ".to_string(), logger::ERROR);
 			exit();
-		}	
-	
+		}
+
 	$section	= section::get_instance(-1, DEDALO_SECTION_USERS_TIPO);
 	$dato		= $section->get_dato();
 	$tipo		= DEDALO_USER_PASSWORD_TIPO;
@@ -43,22 +44,22 @@ if($mode==='set_psw') {
 			$dato->components->{$tipo}->valor	= new stdClass();
 		}
 
-	# Set dato 
+	# Set dato
 	$dato->components->{$tipo}->dato->$lang		= $password_encripted;
 	# Set valor
 	$dato->components->{$tipo}->valor->$lang	= $password_encripted;
-	
+
 	$strQuery	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
 	$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
 	if(!$result) {
 		debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::ERROR);
-		if(SHOW_DEBUG) {			
+		if(SHOW_DEBUG) {
 			throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);
 		}
 		echo "Error: sorry an error ocurred on UPDATE record. Data is not saved";
 		exit();
-	}	
-	
+	}
+
 	unset($_SESSION['dedalo4']['auth']);
 
 }//if($mode=='set_psw')

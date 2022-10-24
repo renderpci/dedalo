@@ -32,7 +32,7 @@ abstract class DBi {
 			$str_connect = "port=$port ".$str_connect;
 		}
 
-		# Host is optional. When false, use default sockect connection
+		# Host is optional. When false, use default socket connection
 		if($host!==false) {
 			$str_connect = "host=$host ".$str_connect;
 		}
@@ -53,7 +53,7 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTION
-	* Get a new postgresql database connection without rehuse existing connections
+	* Get a new PostgreSQL database connection without reuse existing connections
 	*/
 	public static function _getNewConnection(
 		$host=DEDALO_HOSTNAME_CONN,
@@ -71,7 +71,7 @@ abstract class DBi {
 			$str_connect = "port=$port ".$str_connect;
 		}
 
-		# Host is optional. When false, use default sockect connection
+		# Host is optional. When false, use default socket connection
 		if($host!==false) {
 			$str_connect = "host=$host ".$str_connect;
 		}
