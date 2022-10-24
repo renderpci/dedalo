@@ -151,6 +151,7 @@ class lang {
 			return null;
 		}
 
+		// cache
 		$cache_uid = $code.'_'.$lang;
 		if ($from_cache===true && isset($_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid])) {
 			return $_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid];
@@ -170,7 +171,6 @@ class lang {
 
 		# Set names from object result
 		$names  = $result->names;
-			#dump($names, '$names ++ '.to_string());
 
 		# Fallback
 		if (!empty($names->$lang)) {

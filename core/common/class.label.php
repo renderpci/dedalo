@@ -30,17 +30,21 @@ abstract class label {
  		# DEBUG NOT STORE SESSION LABELS
  		#if(SHOW_DEBUG===true) unset($ar_label);
 
- 		if(isset(label::$ar_label[$lang])) return label::$ar_label[$lang];
+		// static cache case
+	 		if(isset(label::$ar_label[$lang])) {
+	 			return label::$ar_label[$lang];
+	 		}
 
-			# Using php session as cache
-
+		// Using php session as cache
 			if( isset($_SESSION['dedalo']['config']['ar_label'][$lang]) ) {
-				# Get from session
+				// Get from session
 				label::$ar_label[$lang] = $_SESSION['dedalo']['config']['ar_label'][$lang];
 			}else{
-				# Calculate label for current lang and store
+				// Calculate label for current lang and store
 				label::$ar_label[$lang] = self::set_static_label_vars( $lang );
 				$_SESSION['dedalo']['config']['ar_label'][$lang] = label::$ar_label[$lang];
+
+				debug_log(__METHOD__." Generating security access datalist in background ".to_string($lang), logger::DEBUG);
 			}
 
 
