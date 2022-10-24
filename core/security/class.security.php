@@ -111,7 +111,11 @@ class security {
 
 		static $permissions_table;
 
+		// cache file
+			$file_name = DEDALO_ENTITY .'_'. navigator::get_user_id() . '.cache_permissions_table.json';
+
 		switch (true) {
+
 			// STATIC CACHE (RAM)
 			case (isset($permissions_table)):
 				// Cached once by script run
@@ -119,20 +123,32 @@ class security {
 				break;
 
 			// DEVELOPMENT_SERVER (Non session cache is used)
-			case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
-				// Break and continue calculation without session cache
-				break;
+				// case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
+				// 	// Break and continue calculation without session cache
+				// 	break;
 
 			// SESSION CACHE (HD)
-			case (isset($_SESSION['dedalo']['auth']['permissions_table'])):
-				// debug_log(__METHOD__." Loaded permissions_table session");
-				$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
-				return $permissions_table;
-				break;
+				// case (isset($_SESSION['dedalo']['auth']['permissions_table'])):
+				// 	// debug_log(__METHOD__." Loaded permissions_table session");
+				// 	$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
+				// 	return $permissions_table;
+				// 	break;
 
 			// DEFAULT
 			default:
 				// Continue calculating
+
+				// cache file
+				$cache_data = dd_cache::cache_from_file((object)[
+					'file_name' => $file_name
+				]);
+				if ($cache_data) {
+
+					$permissions_table = json_decode($cache_data);
+
+					debug_log(__METHOD__." returning permissions_table from cache disk file ".to_string($file_name), logger::DEBUG);
+					return $permissions_table;
+				}
 				break;
 		}
 
@@ -140,10 +156,16 @@ class security {
 			$permissions_table = security::get_ar_permissions_in_matrix_for_current_user();
 
 		// session cached table
-			$_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+			// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+			// cache
+				dd_cache::cache_to_file((object)[
+					'file_name'	=> $file_name,
+					'data'		=> $permissions_table
+				]);
 
 
-		return (array)$permissions_table;
+
+		return $permissions_table;
 	}//end get_permissions_table
 
 
