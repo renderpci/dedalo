@@ -353,6 +353,9 @@ section.prototype.build = async function(autoload=false) {
 					// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
 				}
 				if (!api_response || !api_response.result) {
+					self.running_with_errors = [
+						'section build autoload api_response: '+ (api_response.error || api_response.msg)
+					]
 					console.error("Error: section build autoload api_response:", api_response);
 					return false
 				}

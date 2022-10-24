@@ -81,7 +81,7 @@
 					$section_id		= $this->get_section_id();
 					$section_tipo	= $this->get_tipo();
 
-			if(!empty($section_id)){
+			if(!empty($section_id)) {
 
 				$locator = new locator();
 				 	$locator->set_section_tipo($section_tipo);

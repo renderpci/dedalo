@@ -111,7 +111,12 @@
 				}
 
 				// section instance
-					$section = $section_class::get_instance($section_id, $section_tipo, $modo, $cache=true);
+					$section = $section_class::get_instance(
+						$section_id,
+						$section_tipo,
+						$modo,
+						true // bool cache
+					);
 
 				// pagination. fix pagination vars (defined in class component_common)
 					$limit	= $this->search_query_object->limit;
