@@ -60,7 +60,7 @@ export const get_content_data = function(self) {
 	// short vars
 		const data				= self.data || {}
 		const datalist			= data.datalist || []
-		const datalist_length	= datalist.length
+		// const datalist_length	= datalist.length
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -73,131 +73,79 @@ export const get_content_data = function(self) {
 				parent			: content_data
 			})
 
-		// render all items sequentially
-			const tree_object = {}
-			for (let i = 0; i < datalist_length; i++) {
+		// get tree nodes with children recursively
+		const get_children_node = function(element){
 
-				const datalist_item = datalist[i];
+			const children_elements = datalist.filter(
+				el => el.parent && el.parent.section_tipo === element.section_tipo
+				&& el.parent.section_id === element.section_id
+			)
+			const children_elements_len = children_elements.length
 
-				const tree_node = (datalist_item.type==='typology')
-					? get_grouper_element(i, datalist_item, self) // grouper
-					: get_input_element(i, datalist_item, self) // input checkbox
+			const has_children = (children_elements_len > 0)
+				? true
+				: false
 
-				tree_node.item = datalist_item
+			element.has_children = has_children
 
-				// store in the tree_object
-				const key = datalist_item.section_tipo +'_'+ datalist_item.section_id
-				tree_object[key] = tree_node
-				// set the pointer
-				if(datalist_item.type!=='typology'){
-					ul_branch[i] = tree_node
+			const element_node = get_input_element(element, self)
+
+			if(children_elements_len > 0){
+
+				for (let i = 0; i < children_elements_len; i++) {
+					const current_child = children_elements[i]
+					const child_node = get_children_node(current_child)
+					element_node.branch.appendChild(child_node)
 				}
 			}
+			return element_node;
+		}
 
-		// hierarchize nodes
-			const tree_fragment = new DocumentFragment()
-			for(const key in tree_object) {
+	// root nodes
+		const root_elements = datalist.filter(el => el.parent === null)
 
-				const tree_node	= tree_object[key]
+		const root_elements_len = root_elements.length
 
-				if (!tree_node.item.parent) {
-					// add to root level
-					tree_fragment.appendChild(tree_node)
-				}else{
-					// add to parent typology branch
-					const parent_key = tree_node.item.parent.section_tipo + '_' + tree_node.item.parent.section_id
-					if(tree_object[parent_key]) {
-						// add to parent branch
-						tree_object[parent_key].branch.appendChild(tree_node)
-						// console.log("Added to parent branch:", key, parent_key);
-					}else{
-						// add to root level
-						tree_fragment.appendChild(tree_node)
-					}
-				}
-			}
-			ul_branch.appendChild(tree_fragment)
+		for (let i = 0; i < root_elements_len; i++) {
+			const current_element = root_elements[i]
+			const element_node = get_children_node(current_element)
+			ul_branch.appendChild(element_node)
 
+		}
 
 	return content_data
 }//end get_content_data
-
-
-
-/**
-* GET_GROUPER_ELEMENT
-*	Typology element
-* @return DOM node li
-*/
-const get_grouper_element = (i, datalist_item, self) => {
-
-	const key = datalist_item.section_tipo +'_'+ datalist_item.section_id
-
-	// grouper
-		const grouper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'grouper'
-		})
-
-	// grouper_label
-		const grouper_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'grouper_label icon_arrow',
-			inner_html		: datalist_item.label,
-			parent			: grouper
-		})
-
-	// branch
-		const branch = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'branch',
-			parent			: grouper
-		})
-		grouper.branch = branch
-
-	// collapse_toggle_track
-		ui.collapse_toggle_track({
-			header				: grouper_label,
-			content_data		: branch,
-			collapsed_id		: 'collapsed_component_filter_group_' + key,
-			collapse_callback	: collapse,
-			expose_callback		: expose
-		})
-		function collapse() {
-			grouper_label.classList.remove('up')
-		}
-		function expose() {
-			grouper_label.classList.add('up')
-		}
-
-
-	return grouper
-}//end get_grouper_element
-
 
 
 /**
 * GET_INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element = (i, current_value, self) => {
+const get_input_element = (element, self) => {
 
 	// short vars
 		const value				= self.data.value || []
 		const value_length		= value.length
-		const datalist_item		= current_value
-		const datalist_value	= datalist_item.value
-		const label				= datalist_item.label
-		const section_id		= datalist_item.section_id
+		const datalist_value	= element.value
+		const label				= element.label
+		const section_id		= element.section_id
+		const section_tipo		= element.section_tipo
 
+		const class_list = (element.has_children)
+			? 'item_li grouper'
+			: 'item_li'
 	// create li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'item_li'
+			class_name		: class_list
 		})
 
 	// label
 		const label_string = (SHOW_DEBUG===true) ? label + ' [' + section_id + ']' : label
+		// const class_list = (element.has_children)
+		// 	? 'icon_arrow'
+		// 	:''
+
 		const label_node = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'item_label',
@@ -224,18 +172,44 @@ const get_input_element = (i, current_value, self) => {
 				value	: changed_value
 			})
 
-			// direct save
-				// self.change_value({
-				// 	changed_data	: changed_data,
-				// 	refresh			: false,
-				// 	remove_dialog	: ()=>{
-				// 		return true
-				// 	}
-				// })
-
 			// fix instance changed_data
 				self.set_changed_data(changed_data_item)
 		})//end change event
+
+		if(element.has_children){
+
+			const key = section_tipo +'_'+ section_id
+
+			const icon_arrow = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'icon_arrow',
+					parent 			: li
+				})
+
+			// branch
+				const branch = ui.create_dom_element({
+					element_type	: 'ul',
+					class_name		: 'branch',
+					parent 			: li
+				})
+				// branch.appendChild(li)
+				li.branch = branch
+
+			// collapse_toggle_track
+				ui.collapse_toggle_track({
+					header				: icon_arrow,
+					content_data		: branch,
+					collapsed_id		: 'collapsed_component_filter_group_' + key,
+					collapse_callback	: collapse,
+					expose_callback		: expose
+				})
+				function collapse() {
+					li.classList.remove('up')
+				}
+				function expose() {
+					li.classList.add('up')
+				}
+		}
 
 		// checked option set on match
 		for (let j = 0; j < value_length; j++) {

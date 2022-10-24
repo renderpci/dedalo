@@ -346,7 +346,7 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_DATALIST
 	* Works like ar_list_of_values but filtered by user authorized projects
-	* @return array $ar_datalist
+	* @return array $datalist
 	*/
 	public function get_datalist() : array {
 		$start_time = start_time();
@@ -356,25 +356,25 @@ class component_filter extends component_relation_common {
 			$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		// ar_projects_parsed
-			$ar_projects_parsed		= [];
-			$ar_typology_section_id	= [];
+			$datalist		= [];
+			// $ar_typology_section_id	= [];
 			foreach ($ar_projects as $project_item) {
 
-				if (empty($project_item->typology)) {
+				// if (empty($project_item->typology)) {
 
-					$project = new stdClass();
-						$project->type			= 'project';
-						$project->label			= $project_item->label;
-						$project->section_tipo	= $project_item->locator->section_tipo;
-						$project->section_id	= $project_item->locator->section_id;
-						$project->value			= $project_item->locator;
-						$project->parent		= null;
+				// 	$project = new stdClass();
+				// 		$project->type			= 'project';
+				// 		$project->label			= $project_item->label;
+				// 		$project->section_tipo	= $project_item->locator->section_tipo;
+				// 		$project->section_id	= $project_item->locator->section_id;
+				// 		$project->value			= $project_item->locator;
+				// 		$project->parent		= null;
 
-					$ar_projects_parsed[] = $project;
+				// 	$ar_projects_parsed[] = $project;
 
-				}else{
+				// }else{
 
-					foreach ((array)$project_item->typology as $typology_locator) {
+					// foreach ((array)$project_item->typology as $typology_locator) {
 
 						$project = new stdClass();
 							$project->type			= 'project';
@@ -382,53 +382,54 @@ class component_filter extends component_relation_common {
 							$project->section_tipo	= $project_item->locator->section_tipo;
 							$project->section_id	= $project_item->locator->section_id;
 							$project->value			= $project_item->locator;
-							$project->parent		= $typology_locator;
+							$project->parent		= $project_item->parent;
 
-						$ar_projects_parsed[] = $project;
+						$datalist[] = $project;
 
 						// add section_id if not exists
-						if(!in_array($typology_locator->section_id, $ar_typology_section_id)) {
-							$ar_typology_section_id[] = $typology_locator->section_id;
-						}
-					}
-				}
+						// if(!in_array($typology_locator->section_id, $ar_typology_section_id)) {
+
+						// 	$ar_typology_section_id[] = $typology_locator->section_id;
+						// }
+					// }
+			// 	}
 			}
 			#$ar_projects_parsed = array_unique($ar_projects_parsed, SORT_REGULAR);
 			// dump($ar_projects_parsed, ' ar_projects_parsed ++ '.to_string());
 
 		// typology section records search
-			$typology_section_tipo = 'dd1318';
-			$sqo = json_decode('
-				{
-				    "section_tipo": "'.$typology_section_tipo.'",
-				    "limit": 0,
-				    "offset": 0,
-				    "full_count": false,
-				    "filter": null
-				}
-			');
-			$current_search = search::get_instance($sqo);
-			$search_result  = $current_search->search();
+		// 	$typology_section_tipo = 'dd1318';
+		// 	$sqo = json_decode('
+		// 		{
+		// 		    "section_tipo": "'.$typology_section_tipo.'",
+		// 		    "limit": 0,
+		// 		    "offset": 0,
+		// 		    "full_count": false,
+		// 		    "filter": null
+		// 		}
+		// 	');
+		// 	$current_search = search::get_instance($sqo);
+		// 	$search_result  = $current_search->search();
 
-		// typology groupers
-			$ar_groupers = [];
-			foreach ($search_result->ar_records as $row) {
+		// // typology groupers
+		// 	$ar_groupers = [];
+		// 	foreach ($search_result->ar_records as $row) {
 
-				$section_id		= $row->section_id;
-				$section_tipo	= $row->section_tipo;
-				$datos			= $row->datos;
+		// 		$section_id		= $row->section_id;
+		// 		$section_tipo	= $row->section_tipo;
+		// 		$datos			= $row->datos;
 
-				if(in_array($section_id, $ar_typology_section_id)) {
-					$ar_groupers = array_merge($ar_groupers, $this->get_project_groupers($section_tipo, $section_id, $datos));
-				}
-			}
-			$ar_groupers = array_unique($ar_groupers, SORT_REGULAR); // remove posible duplicates when parent resolution is called
+		// 		if(in_array($section_id, $ar_typology_section_id)) {
+		// 			$ar_groupers = array_merge($ar_groupers, $this->get_project_groupers($section_tipo, $section_id, $datos));
+		// 		}
+		// 	}
+		// 	$ar_groupers = array_unique($ar_groupers, SORT_REGULAR); // remove posible duplicates when parent resolution is called
 
-		// ar_datalist final merge all element
-			$ar_datalist = array_merge($ar_groupers, $ar_projects_parsed);
+		// // ar_datalist final merge all element
+		// 	$ar_datalist = array_merge($ar_groupers, $ar_projects_parsed);
 
 		// sort by label asc
-			usort($ar_datalist, function($a, $b) {
+			usort($datalist, function($a, $b) {
 				return strcasecmp($a->label, $b->label);
 			});
 
@@ -438,7 +439,7 @@ class component_filter extends component_relation_common {
 			}
 
 
-		return $ar_datalist;
+		return $datalist;
 	}//end get_datalist
 
 
@@ -455,7 +456,7 @@ class component_filter extends component_relation_common {
 		$name_tipo		= 'dd1320';
 		$parent_tipo	= 'dd169';
 
-		// section. inject alrady calculated data to the section to avoid reconect to database
+		// section. inject alrady calculated data to the section to avoid reconnect to database
 			$section = section::get_instance($section_id, $section_tipo);
 			$section->set_dato($datos);
 			$section->set_bl_loaded_matrix_data(true);
