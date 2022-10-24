@@ -22,11 +22,11 @@ export const view_default_list_security_access = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
 * @return DOM node
 */
-view_default_list_security_access.list = async function(self, options) {
+view_default_list_security_access.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data || {}
@@ -42,4 +42,4 @@ view_default_list_security_access.list = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render

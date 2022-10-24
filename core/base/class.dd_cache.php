@@ -27,9 +27,8 @@ class dd_cache {
 			// string file_name
 			// Sample: 1.cache_tree.json
 			$file_name		= $options->file_name;
-
-		// navigator. force to re-init navigator (!)
-			// $navigator = new navigator();
+			// wait until process ends
+			$wait			= $options->wait ?? false;
 
 		// sh_data
 			$sh_data = [
@@ -42,21 +41,34 @@ class dd_cache {
 			foreach ($data as $key => $value) {
 				$sh_data[$key] = $value;
 			}
+
 		// server_vars
 			$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
 		// base_path. Used to save the files. Usually '/tmp'
+			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
+				debug_log(__METHOD__." Error: Check your DEDALO_CACHE_MANAGER config to fix it ".to_string(), logger::ERROR);
+				return false;
+			}
 			$base_path = DEDALO_CACHE_MANAGER->files_path;
 
 		// output. $output = '> /dev/null &';
-			$output	= '> '.$base_path.'/'.$file_name.' &';
+			$output	= '> '.$base_path.'/'.$file_name.' ';
+
+		// wait
+			if ($wait!==true) {
+				$output	.= '&';
+			}
 
 		// command
 			$command = PHP_BIN_PATH ." $process_file '$server_vars' $output";
 
 		// debug
-			error_log("------> COMMAND CACHE_TO_FILE --------------------------------------------------------:"
-				.PHP_EOL.PHP_EOL. $command .PHP_EOL);
+			debug_log(__METHOD__.
+				" ------> COMMAND CACHE_TO_FILE: $file_name --------------------------------------------------------:"
+				.PHP_EOL.PHP_EOL. $command .PHP_EOL,
+				logger::DEBUG
+			);
 
 		// exec command
 			$status = exec($command);

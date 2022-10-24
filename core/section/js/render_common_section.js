@@ -234,3 +234,59 @@ const render_relation_list = function(options) {
 
 	return relation_list_container
 }//end render_relation_list
+
+
+
+/**
+* RENDER_SERVER_RESPONSE_ERROR
+* Render generic page error (Raspa background)
+* @param string msg
+* @return DOM node wrapper|error_container
+*/
+export const render_server_response_error = function(msg, add_wrapper=false) {
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper page'
+		})
+
+	// error_container
+		const error_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'page_error_container',
+			parent			: wrapper
+		})
+
+	// icon_dedalo
+		ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'icon_dedalo',
+			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
+			parent			: error_container
+		})
+
+	// server_response_error h1
+		ui.create_dom_element({
+			element_type	: 'h1',
+			class_name		: 'server_response_error',
+			inner_html		: 'Server response error: <br>' + msg,
+			parent			: error_container
+		})
+
+	// more_info
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'more_info',
+			inner_html		: 'Received data format is not as expected. See your server log for details',
+			parent			: error_container
+		})
+
+	// add_wrapper false  case
+		if (add_wrapper===false) {
+			return error_container
+		}
+
+
+	return wrapper
+}//end render_server_response_error

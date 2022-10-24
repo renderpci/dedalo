@@ -1210,18 +1210,20 @@ class search {
 							}
 							// check empty ar_area_tipo case
 								if (empty($ar_area_tipo)) {
+									dump($security_areas_dato, ' security_areas_dato +++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
 									debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed security_areas data!! ", logger::ERROR);
 									// header("Location: " . DEDALO_ROOT_WEB);
-									exit();
+									throw new Exception("Error Processing Request", 1);
 								}
 
 					# SEARCH PROFILES WITH CURRENT USER AREAS
 						$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
 							// check empty ar_profile_id case
 							if (empty($ar_profile_id)) {
+								dump($ar_area_tipo, ' ar_area_tipo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
 								debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed ar_profile_id data!! ", logger::ERROR);
 								// header("Location: " . DEDALO_ROOT_WEB);
-								exit();
+								throw new Exception("Error Processing Request", 1);
 							}
 						$ar_filter_profile = [];
 						foreach ($ar_profile_id as $current_profile_id) {
@@ -1250,7 +1252,7 @@ class search {
 							if (empty($filter_master_dato)) {
 								debug_log(__METHOD__." Filter master without data!! ", logger::ERROR);
 								// header("Location: " . DEDALO_ROOT_WEB);
-								exit();
+								throw new Exception("Error Processing Request", 1);
 							}
 						$ar_values_string = '';
 						foreach ($filter_master_dato as $project_section_id => $state) {
@@ -1275,7 +1277,6 @@ class search {
 						$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
 
 						$sql_filter .= ')';
-
 					break;
 				##### DEFAULT #########################################################
 				default:

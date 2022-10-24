@@ -10,6 +10,7 @@
 	import {set_element_css} from '../../page/js/css.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_ar_instances} from './section.js'
+	import {render_server_response_error} from './render_common_section.js'
 
 
 
@@ -34,6 +35,13 @@ render_edit_section.prototype.edit = async function(options) {
 	const self = this
 
 	const render_level = options.render_level || 'full'
+
+	// running_with_errors case
+		if (self.running_with_errors) {
+			return render_server_response_error(
+				self.running_with_errors
+			);
+		}
 
 	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0

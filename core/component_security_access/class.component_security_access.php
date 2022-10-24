@@ -75,7 +75,7 @@ class component_security_access extends component_common {
 
 		// cache from file. This file is generated in background on every user login
 			$contents = dd_cache::cache_from_file((object)[
-				'file_name' => navigator::get_user_id() . '.cache_tree.json'
+				'file_name' => DEDALO_ENTITY .'_'. navigator::get_user_id() . '.cache_tree.json'
 			]);
 			$datalist = (!empty($contents))
 				? json_decode($contents)

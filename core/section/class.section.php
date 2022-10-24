@@ -83,59 +83,58 @@ class section extends common {
 	* GET_INSTANCE
 	* Cache section instances (singleton pattern)
 	* @param string|int|null $section_id = null
-	* @param string|null $tipo = null
-	* @param string|null $modo = 'edit'
+	* @param string $tipo = null
+	* @param string|null $modo = 'list'
 	* @param bool $cache = true
 	*
 	* @return instance section
 	*/
-	public static function get_instance($section_id=null, string $tipo=null, string $modo='edit', bool $cache=true) : object {
+	public static function get_instance($section_id=null, string $tipo=null, string $modo='list', bool $cache=true) : section {
 
-		if ($modo==1) {
-			throw new Exception("Error Processing Request", 1);
-
-		}
-		if (empty($tipo)) {
-			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
-		}
-
-		# Not cache new sections (without section_id)
-		if (empty($section_id)) {
-			return new section(null, $tipo, $modo);
-		}
-
-		# Direct construct without cache instance
-		# Use this config in imports
-		if ($cache===false) {
-			return new section($section_id, $tipo, $modo);
-		}
-
-		# key for cache
-		$key = $section_id .'_'. $tipo;
-
-		$max_cache_instances = 300*3; // Default 300
-		$cache_slice_on 	 = 100*3; // Default 100
-
-		# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
-		# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
-		if (isset(self::$ar_section_instances) && sizeof(self::$ar_section_instances)>$max_cache_instances) {
-			self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__.' '.DEDALO_HOST." Overload sections prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
+		// check valid tipo
+			if (empty($tipo)) {
+				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
 			}
 
-			// let GC do the memory job
-			//time_nanosleep(0, 10000000); // 10 ms
-			time_nanosleep(0, 2000000); // 02 ms
-		}
+		// Not cache new sections (without section_id)
+			if (empty($section_id)) {
+				return new section(null, $tipo, $modo);
+			}
 
-		# FIND CURRENT INSTANCE IN CACHE
-		if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
-			self::$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
-		}
+		return new section($section_id, $tipo, $modo);
 
+		// removed cache features temporally (!) Verify real speed benefits
+			// // Direct construct without cache instance
+			// // Use this config in imports
+			// 	if ($cache===false) {
+			// 		return new section($section_id, $tipo, $modo);
+			// 	}
 
-		return self::$ar_section_instances[$key];
+			// # key for cache
+			// $key = $section_id .'_'. $tipo.'_'.$modo;
+
+			// $max_cache_instances = 300*3; // Default 300
+			// $cache_slice_on 	 = 100*3; // Default 100
+
+			// # OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
+			// # array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
+			// if (isset(self::$ar_section_instances) && sizeof(self::$ar_section_instances)>$max_cache_instances) {
+			// 	self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
+			// 	if(SHOW_DEBUG===true) {
+			// 		debug_log(__METHOD__.' '.DEDALO_HOST." Overload sections prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
+			// 	}
+
+			// 	// let GC do the memory job
+			// 	//time_nanosleep(0, 10000000); // 10 ms
+			// 	time_nanosleep(0, 2000000); // 02 ms
+			// }
+
+			// # FIND CURRENT INSTANCE IN CACHE
+			// if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
+			// 	self::$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
+			// }
+
+			// return self::$ar_section_instances[$key];
 	}//end get_instance
 
 

@@ -406,7 +406,7 @@
 // PGPASS FILE
 	$php_user_home 	= getenv("HOME"); //$_SERVER['HOME'];
 	$path 			= $php_user_home . '/.pgpass';
-	if (!file_exists($path )) {
+	if (!file_exists($path)) {
 
 		$init_response->msg[]	= 'Warning: File .pgpass not found at: '.$path . PHP_EOL . ' Check your .pgpass file into php user home dir';
 		$init_response->errors	= true;
@@ -630,6 +630,7 @@
 
 // cache
 	if (!defined('DEDALO_CACHE_MANAGER') || empty(DEDALO_CACHE_MANAGER)) {
+
 		$init_response->msg[]	= '
 			Error Processing Request: DEDALO_CACHE_MANAGER is mandatory.
 			Please check your config file and set a valid value. You can see some examples in sample.config file';
@@ -637,6 +638,41 @@
 		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
 		return $init_response;
+	}else{
+
+		$files_path = DEDALO_CACHE_MANAGER->files_path ?? null;
+		if ( !is_dir($files_path) ) {
+
+			$init_response->msg[]	= 'Warning: Cache dir unavailable at: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
+			$init_response->errors	= true;
+			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+
+			return $init_response;
+		}else{
+			// write test file
+			$file_name = DEDALO_ENTITY .'_'. $user_id.'.cache_test_file.json';
+			dd_cache::cache_to_file((object)[
+				'process_file' => DEDALO_CORE_PATH . '/base/cache_test_file.php',
+				'data' => (object)[
+					'session_id' => session_id(),
+					'user_id' => $user_id
+				],
+				'file_name' => $file_name,
+				'wait' => true
+			]);
+			// read test file
+			$cache_data = dd_cache::cache_from_file((object)[
+				'file_name' => $file_name
+			]);
+
+			if (empty($cache_data)) {
+				$init_response->msg[]	= 'Warning: cache data stream fails. Check your DEDALO_CACHE_MANAGER config to fix it';
+				$init_response->errors	= true;
+				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+
+				return $init_response;
+			}
+		}
 	}
 
 

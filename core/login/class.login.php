@@ -667,12 +667,12 @@ class login extends common {
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login
 			$status = dd_cache::cache_to_file((object)[
-				'process_file' => dirname(dirname(__FILE__)) . '/component_security_access/calculate_tree.php',
+				'process_file' => DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 				'data' => (object)[
 					'session_id' => session_id(),
 					'user_id' => $user_id
 				],
-				'file_name' => $user_id.'.cache_tree.json'
+				'file_name' => DEDALO_ENTITY .'_'. $user_id.'.cache_tree.json'
 			]);
 			debug_log(__METHOD__." Generating security access datalist in background ".to_string($status), logger::DEBUG);
 
