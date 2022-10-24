@@ -651,7 +651,7 @@
 		}else{
 			// write test file
 			$file_name = DEDALO_ENTITY .'_'. $user_id.'.cache_test_file.json';
-			dd_cache::cache_to_file((object)[
+			dd_cache::process_and_cache_to_file((object)[
 				'process_file' => DEDALO_CORE_PATH . '/base/cache_test_file.php',
 				'data' => (object)[
 					'session_id' => session_id(),
