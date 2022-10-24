@@ -86,14 +86,33 @@ abstract class filter {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$dato = (array)$component_filter_master->get_dato();
+			$final_data = (array)$component_filter_master->get_dato();
+
+			foreach ($final_data as $current_locator) {
+
+				$children_data = component_relation_children::get_children(
+					$current_locator->section_id,
+					$current_locator->section_tipo,
+					DEDALO_PROJECTS_CHILDREN_TIPO,
+					$recursive=true,
+					$is_recursion=false
+				);
+
+				foreach ($children_data as $child_locator) {
+					$found = locator::in_array_locator($child_locator, $final_data, ['section_tipo','section_id']);
+
+					if(!$found){
+						$final_data[] = $child_locator;
+					}
+				}
+
+			}
 		}
-
 		// cache
-			filter::$user_projects_cache[$user_id] = $dato;
+			filter::$user_projects_cache[$user_id] = $final_data;
 
 
-		return $dato;
+		return $final_data;
 	}//end get_user_projects
 
 
