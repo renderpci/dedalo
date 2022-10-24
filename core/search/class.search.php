@@ -1204,24 +1204,26 @@ class search {
 							$security_areas_dato = security::get_ar_authorized_areas_for_user();
 							$ar_area_tipo = [];
 							foreach ($security_areas_dato as $item) {
-								if($item->value===3){
+								if($item->value===2){
 									$ar_area_tipo[] = $item->tipo;
 								}
 							}
 							// check empty ar_area_tipo case
 								if (empty($ar_area_tipo)) {
+									dump($security_areas_dato, ' security_areas_dato +++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
 									debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed security_areas data!! ", logger::ERROR);
-									header("Location: " . DEDALO_ROOT_WEB);
-									exit();
+									// header("Location: " . DEDALO_ROOT_WEB);
+									throw new Exception("Error Processing Request", 1);
 								}
 
 					# SEARCH PROFILES WITH CURRENT USER AREAS
 						$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
 							// check empty ar_profile_id case
 							if (empty($ar_profile_id)) {
+								dump($ar_area_tipo, ' ar_area_tipo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
 								debug_log(__METHOD__." ERROR STOP EXECUTION. user_id ($user_id) without allowed ar_profile_id data!! ", logger::ERROR);
-								header("Location: " . DEDALO_ROOT_WEB);
-								exit();
+								// header("Location: " . DEDALO_ROOT_WEB);
+								throw new Exception("Error Processing Request", 1);
 							}
 						$ar_filter_profile = [];
 						foreach ($ar_profile_id as $current_profile_id) {
@@ -1249,8 +1251,8 @@ class search {
 						// check empty ar_area_tipo case
 							if (empty($filter_master_dato)) {
 								debug_log(__METHOD__." Filter master without data!! ", logger::ERROR);
-								header("Location: " . DEDALO_ROOT_WEB);
-								exit();
+								// header("Location: " . DEDALO_ROOT_WEB);
+								throw new Exception("Error Processing Request", 1);
 							}
 						$ar_values_string = '';
 						foreach ($filter_master_dato as $project_section_id => $state) {
