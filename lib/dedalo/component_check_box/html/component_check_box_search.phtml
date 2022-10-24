@@ -43,7 +43,15 @@
 				# Add from_component_tipo
 				$locator->from_component_tipo = $tipo;
 
-				$locator_json = json_encode($locator);
+				if($modo === 'dataframe_search'){
+					$rel_locator	= new stdClass();
+						$locator->type = 'dd558';
+						$rel_locator->dataframe = [$locator];
+				}else{
+					$rel_locator = $locator;
+				}
+
+				$locator_json = json_encode($rel_locator);
 
 				$checked  = '';
 				if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {

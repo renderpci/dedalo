@@ -4,7 +4,7 @@
 *
 *
 */
-class dataframe extends common {
+class dataframe extends component_relation_common {
 
 	public $tipo;
 
@@ -66,7 +66,7 @@ class dataframe extends common {
 
 	/**
 	* GET_AR_CHILDRENS : private alias of RecordObj_dd::get_ar_recursive_childrens
-	* Note th use of $ar_exclude_models to exclude not desired section elements, like auxiliar structure terms that are not necesary here
+	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary structure terms that are not necessary here
 	*/
 	public function get_ar_childrens() {
 		#$RecordObj_dd			= new RecordObj_dd($tipo);

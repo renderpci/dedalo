@@ -107,6 +107,12 @@ function load_components($json_data) {
 
 		$component_tipo	= $component_info->component_tipo;
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_info->component_tipo,true);
+		if($modelo_name === 'dataframe'){
+			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($component_info->component_tipo, ['component'], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false);
+			$component_info->component_tipo = $ar_children[0];
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_info->component_tipo,true);
+			$component_info->modo = "dataframe_search";
+		}
 		$component		= component_common::get_instance(
 			$modelo_name,
 			$component_info->component_tipo,

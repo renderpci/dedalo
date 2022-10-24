@@ -12,6 +12,17 @@
 
 	$html	.= '<div class="section_label no-print">'.$section_label.'</div>';
 
+	$html	.= '<div class="lang_selector">'.label::get_label('default_lang_of_file_to_import').'</div>';
+
+	#
+	# LANG SELECTOR
+	$html .= '<div class="lang_selector">';
+
+		// $html .= "<span>". label::get_label('idioma') .":</span>";
+		$html .= html_page::get_dedalo_aplication_langs_selector_html();
+
+	$html .= "</div>";#end lang_selector_in_header
+
 	$html	.= '<div id="wrap_tool_import_rdf" class="wrap_tool wrap_tool_import_rdf_page">';
 
 	// $html .= '</div><!-- /content_data -->';

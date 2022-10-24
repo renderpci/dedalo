@@ -65,14 +65,15 @@ class tool_import_rdf extends tool_common {
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;
-		$component_tipo = component_common::get_instance($modelo,
+		$component = component_common::get_instance($modelo,
 														 $component_tipo,
 														 $section_id,
 														 'list',
 														 $lang,
 														 $this->section_tipo);
 
-		$component_dato = $component_tipo->get_dato();
+		// $component_dato = $component->get_dato();
+		$component_dato = component_common::extract_component_dato_fallback($component);
 
 		return $component_dato;
 	}//end get_component_dato($section_id,	$component_tipo);

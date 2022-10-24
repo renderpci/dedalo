@@ -3333,6 +3333,36 @@ class search_development2 {
 						// Add element
 						$ar_result[] = $element;
 
+						if( $modelo_name==='component_autocomplete'){
+							$RecordObj_dd	=  new RecordObj_dd($component_tipo);
+							$propiedades	= $RecordObj_dd->get_propiedades(true);
+
+							if(isset($propiedades->dataframe)){
+								$dataframe			= $propiedades->dataframe[0];
+
+									// element object base
+								$df_element = new stdClass();
+									$df_element->section_group_tipo			= $section_group_tipo;
+									$df_element->section_group_model		= $section_group_model;
+									$df_element->section_group_label		= $section_group_label;
+									$df_element->section_tipo				= $section_tipo;
+									$df_element->section_label				= $section_label;
+									$df_element->component_tipo				= $dataframe->tipo;
+									$df_element->component_label			= $element->component_label. ' ' .RecordObj_dd::get_termino_by_tipo($dataframe->type, DEDALO_DATA_LANG , true, true);
+									$df_element->path						= $path;
+									$df_element->has_subquery				= false; // Default (changes when component_portal/component_autocomplete)
+									$df_element->target_section				= false; // Default (changes when component_portal/component_autocomplete)
+									$df_element->ar_tipo_exclude_elements	= false; // default (changes when component_portal/component_autocomplete and ar_terminos_relacionados_to_exclude)
+								// Add modelo_name
+									$df_element->modelo_name = 'dataframe';
+
+								// Add element
+									$ar_result[] = $df_element;
+
+							}
+
+
+						}
 
 						// store as added to avoid duplicates
 						$ar_added_components[] = $component_tipo;
