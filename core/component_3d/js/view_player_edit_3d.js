@@ -10,13 +10,13 @@
 
 
 /**
-* VIEW_PLAYER_EDIT_AV
+* VIEW_PLAYER_EDIT_3D
 * Manages the component's logic and appearance in client side
 */
-export const view_player_edit_av = function() {
+export const view_player_edit_3d = function() {
 
 	return true
-}//end  view_player_edit_av
+}//end  view_player_edit_3d
 
 
 
@@ -26,7 +26,7 @@ export const view_player_edit_av = function() {
 * @param object options
 * @return DOM node wrapper
 */
-view_player_edit_av.render = async function(self, options) {
+view_player_edit_3d.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -142,10 +142,10 @@ console.log('quality:', self);
 				fragment.appendChild(video)
 		}
 console.log('self.video:', self.video);
-	// av_control_buttons
+	// threeD_control_buttons
 		if (with_control_buttons) {
-			const av_control_buttons = get_av_control_buttons(self)
-			fragment.appendChild(av_control_buttons)
+			const threeD_control_buttons = get_3d_control_buttons(self)
+			fragment.appendChild(threeD_control_buttons)
 		}
 
 	// content_data
@@ -159,101 +159,101 @@ console.log('self.video:', self.video);
 
 
 /**
-* GET_AV_CONTROL_BUTTONS
+* GET_3D_CONTROL_BUTTONS
 * @param object instance
-* @return DOM node av_control_buttons
+* @return DOM node threeD_control_buttons
 */
-const get_av_control_buttons =  (self) =>{
+const get_3d_control_buttons =  (self) =>{
 
 	const fragment = new DocumentFragment()
 
 	// css
 		const btn_class = 'light'
 
-	// av_begin_button. button go to begin of av
-		const av_begin_button = ui.create_dom_element({
+	// threeD_begin_button. button go to begin of 3d
+		const threeD_begin_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			inner_html		: get_label.inicio || 'Beginning',
 			parent			: fragment
 		})
-		av_begin_button.addEventListener('mouseup', () =>{
+		threeD_begin_button.addEventListener('mouseup', () =>{
 			const seconds = 0
 			self.go_to_time({
 				seconds : seconds
 			});
 		})
 
-	// av_play_button. play / pause media
-		const av_play_button = ui.create_dom_element({
+	// threeD_play_button. play / pause media
+		const threeD_play_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class + ' play',
 			// text_content	: get_label.play || 'Play',
 			parent			: fragment
 		})
-		//listen the av state
+		//listen the 3d state
 		self.video.addEventListener('pause', async () =>{
-			av_play_button.classList.remove('pause')
-			av_play_button.classList.add('play')
+			threeD_play_button.classList.remove('pause')
+			threeD_play_button.classList.add('play')
 		})
 		self.video.addEventListener('play', async () =>{
-			av_play_button.classList.remove('play')
-			av_play_button.classList.add('pause')
+			threeD_play_button.classList.remove('play')
+			threeD_play_button.classList.add('pause')
 		})
-		// change the state of the av
-		av_play_button.addEventListener('mouseup', () =>{
+		// change the state of the 3d
+		threeD_play_button.addEventListener('mouseup', () =>{
 			self.play_pause();
 		})
 
-	// av_smpte. Show the SMPTE (time code)
-		const av_smpte = ui.create_dom_element({
+	// threeD_smpte. Show the SMPTE (time code)
+		const threeD_smpte = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'smpte',
 			parent			: fragment,
 			inner_html		: self.get_current_tc()
 		})
 		self.video.addEventListener('timeupdate', async () =>{
-			av_smpte.innerHTML = self.get_current_tc();
+			threeD_smpte.innerHTML = self.get_current_tc();
 		})
 
-	// av_minus_10_seg. Go to 10 seconds before of the current time ( - 10 seconds )
-		const av_minus_10_seg = ui.create_dom_element({
+	// threeD_minus_10_seg. Go to 10 seconds before of the current time ( - 10 seconds )
+		const threeD_minus_10_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '< 10s',
 			parent			: fragment
 		})
-		av_minus_10_seg.addEventListener('mouseup', () =>{
+		threeD_minus_10_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime - 10
 			self.go_to_time({
 				seconds : seconds
 			});
 		})
 
-	// av_minus_5_seg. Go to 5 seconds before of the current time ( - 5 seconds )
-		const av_minus_5_seg = ui.create_dom_element({
+	// threeD_minus_5_seg. Go to 5 seconds before of the current time ( - 5 seconds )
+		const threeD_minus_5_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '< 5s',
 			parent			: fragment
 		})
-		av_minus_5_seg.addEventListener('mouseup', () =>{
+		threeD_minus_5_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime - 5
 			self.go_to_time({
 				seconds : seconds
 			});
 		})
 
-	// av_minus_1_frame. Go to 1 frame before of the current time ( - 1 frame )
+	// threeD_minus_1_frame. Go to 1 frame before of the current time ( - 1 frame )
 		// the server send the head information in the media_info streams
 		// the video is the first item of the streams array
-		const av_minus_1_frame = ui.create_dom_element({
+		const threeD_minus_1_frame = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '- 1',
 			parent			: fragment
 		})
-		av_minus_1_frame.addEventListener('mouseup', () =>{
+		threeD_minus_1_frame.addEventListener('mouseup', () =>{
 			// get the r_frame_rate of the video stream and get the time for 1 frame
 			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
 			const ar_frame_rate_opeartor	= r_frame_rate.split('/')
@@ -265,16 +265,16 @@ const get_av_control_buttons =  (self) =>{
 			});
 		})
 
-	// av_plus_1_frame. go to 1 frame after of the current time ( + 1 frame )
+	// threeD_plus_1_frame. go to 1 frame after of the current time ( + 1 frame )
 		// the server send the head information in the media_info streams
 		// the video is the first item of the streams array
-		const av_plus_1_frame = ui.create_dom_element({
+		const threeD_plus_1_frame = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '+ 1',
 			parent			: fragment
 		})
-		av_plus_1_frame.addEventListener('mouseup', () =>{
+		threeD_plus_1_frame.addEventListener('mouseup', () =>{
 
 			//get the r_frame_rate of the video stream and get the time for 1 frame
 			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
@@ -287,44 +287,44 @@ const get_av_control_buttons =  (self) =>{
 			});
 		})
 
-	// av_plus_5_seg. Go to 5 seconds after of the current time ( + 5 seconds )
-		const av_plus_5_seg = ui.create_dom_element({
+	// threeD_plus_5_seg. Go to 5 seconds after of the current time ( + 5 seconds )
+		const threeD_plus_5_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '> 5s',
 			parent			: fragment
 		})
-		av_plus_5_seg.addEventListener('mouseup', () =>{
+		threeD_plus_5_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime + 5
 			self.go_to_time({
 				seconds : seconds
 			});
 		})
 
-	// av_plus_10_seg. Go to 10 seconds after of the current time ( + 10 seconds )
-		const av_plus_10_seg = ui.create_dom_element({
+	// threeD_plus_10_seg. Go to 10 seconds after of the current time ( + 10 seconds )
+		const threeD_plus_10_seg = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
 			text_content	: '> 10s',
 			parent			: fragment
 		})
-		av_plus_10_seg.addEventListener('mouseup', () =>{
+		threeD_plus_10_seg.addEventListener('mouseup', () =>{
 			const seconds = self.video.currentTime + 10
 			self.go_to_time({
 				seconds : seconds
 			});
 		})
 
-	// av_control_buttons main container
-		const av_control_buttons = ui.create_dom_element({
+	// threeD_control_buttons main container
+		const threeD_control_buttons = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'av_control_buttons'
+			class_name		: 'threeD_control_buttons'
 		})
-		av_control_buttons.appendChild(fragment)
+		threeD_control_buttons.appendChild(fragment)
 
 
-	return av_control_buttons
-}//end get_av_control_buttons
+	return threeD_control_buttons
+}//end get_3d_control_buttons
 
 
 

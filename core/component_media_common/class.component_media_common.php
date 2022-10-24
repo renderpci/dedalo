@@ -57,7 +57,8 @@ class component_media_common extends component_common {
 			'component_av',
 			'component_image',
 			'component_pdf',
-			'component_svg'
+			'component_svg',
+			'component_3d'
 		];
 	}//end get_media_components
 

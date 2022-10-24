@@ -110,8 +110,12 @@
 
 
 // cache
-	// dedalo_cache_manager. string|bool : redis | memcached | zebra_db | false . Default is false
-	define('DEDALO_CACHE_MANAGER', false);
+	// dedalo_cache_manager. bool|object.
+	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
+	define('DEDALO_CACHE_MANAGER', (object)[
+		'manager'		=> 'files',
+		'files_path'	=> '/tmp'
+	]);
 
 
 
@@ -355,19 +359,23 @@
 		// dedalo_3d_foler. string default '/3d'
 		define('DEDALO_3D_FOLDER'					, '/3d');
 		// dedalo_3d_extension. string default 'glb'
-		define('DEDALO_3D_EXTENSION'				, 'gltf');
+		define('DEDALO_3D_EXTENSION'				, 'glb');
 		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
 		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
 		// dedalo_3d_mime_type. string default 'model/gltf+json'
 		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
+		// dedalo_3d_quality_original. string default 'original'
+		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
+		// quality default normally 'original'
+		define('DEDALO_3D_QUALITY_DEFAULT'			, 'original');
+		// quality folders array (sort desc quality)
+		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
 
-// FIXME: to define quality as DEDALO_AV_QUALITY_ORIGINAL & DEDALO_AV_AR_QUALITY or DEDALO_IMAGE_QUALITY_ORIGINAL & DEDALO_IMAGE_AR_QUALITY
-
-		// dedalo_3d_obj2gltf_path normally /usr/bin/obj2gltf
-		define('DEDALO_3D_OBJ2GLTF_PATH'			, '/usr/bin/obj2gltf');
-		// dedalo_3d_fbx2gltf_path normally /usr/bin/FBX2glTF
+		// dedalo_3d_gltfpack_path normally /usr/bin/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
+		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/bin/gltfpack');
+		// dedalo_3d_fbx2gltf_path normally /usr/bin/FBX2glTF (converts .fbx to .glb/.gltf)
 		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/bin/FBX2glTF');
-		// dedalo_3d_collada2gltf_path normally /usr/bin/COLLADA2GLTF-bin
+		// dedalo_3d_collada2gltf_path normally /usr/bin/COLLADA2GLTF-bin (converts .fbx to .glb/.gltf)
 		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/bin/COLLADA2GLTF-bin');
 
 	// image media

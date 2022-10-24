@@ -12,13 +12,13 @@
 
 
 /**
-* VIEW_COLUMN_LIST_AV
+* VIEW_COLUMN_LIST_3D
 * Manages the component's logic and appearance in client side
 */
-export const view_column_list_av = function() {
+export const view_column_list_3d = function() {
 
 	return true
-}//end  view_column_list_av
+}//end  view_column_list_3d
 
 
 
@@ -27,7 +27,7 @@ export const view_column_list_av = function() {
 * Render node for use in list as column
 * @return DOM node wrapper
 */
-view_column_list_av.render = async function(self, options) {
+view_column_list_3d.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -97,7 +97,7 @@ view_column_list_av.render = async function(self, options) {
 							menu			: false
 						}
 						const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-						const current_window	= window.open(url, 'av_viewer', 'width=1024,height=720')
+						const current_window	= window.open(url, 'threeD_viewer', 'width=1024,height=720')
 						current_window.focus()
 				}
 			})

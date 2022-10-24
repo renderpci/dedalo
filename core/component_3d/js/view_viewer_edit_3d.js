@@ -6,18 +6,18 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_content_data_player} from './view_player_edit_av.js'
+	import {get_content_data_player} from './view_player_edit_3d.js'
 
 
 
 /**
-* VIEW_VIEWER_EDIT_AV
+* VIEW_VIEWER_EDIT_3D
 * Manage the components logic and appearance in client side
 */
-export const view_viewer_edit_av = function() {
+export const view_viewer_edit_3d = function() {
 
 	return true
-}//end view_viewer_edit_av
+}//end view_viewer_edit_3d
 
 
 
@@ -26,7 +26,7 @@ export const view_viewer_edit_av = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_viewer_edit_av.render = async function(self, options) {
+view_viewer_edit_3d.render = async function(self, options) {
 
 	// short vars
 		const datalist = self.data.datalist || []
@@ -38,7 +38,7 @@ view_viewer_edit_av.render = async function(self, options) {
 		})
 
 	// url
-		const quality		= page_globals.dedalo_av_quality_default // '404'
+		const quality		= page_globals.dedalo_3d_quality_default // 'original'
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
 		const url			= (typeof url_object==='undefined')
 			? DEDALO_CORE_URL + '/themes/default/0.jpg'
@@ -85,7 +85,7 @@ view_viewer_edit_av.render = async function(self, options) {
 				? self.data.value[0].original_file_name
 				: self.tipo+'_'+self.section_tipo+'_'+self.section_id
 
-			download_original_av({
+			download_original_3d({
 				download_url : download_url,
 				name : name
 			})
@@ -104,7 +104,7 @@ view_viewer_edit_av.render = async function(self, options) {
 * download the file
 * @return bool
 */
-const download_original_av = function (options) {
+const download_original_3d = function (options) {
 
 	const download_url	= options.download_url
 	const name			= options.name
@@ -121,4 +121,4 @@ const download_original_av = function (options) {
 	document.body.removeChild(download_image_temp);
 
 	return true
-}// end download_original_av
+}// end download_original_3d
