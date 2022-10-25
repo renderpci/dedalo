@@ -77,8 +77,8 @@ render_section_group.prototype.edit = async function(options) {
 
 			// collapse_toggle_track
 				ui.collapse_toggle_track({
-					header				: component_label,
-					content_data		: content_data,
+					toggler				: component_label,
+					container			: content_data,
 					collapsed_id		: collapsed_id,
 					collapse_callback	: collapse,
 					expose_callback		: expose

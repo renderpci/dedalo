@@ -715,8 +715,8 @@ const get_buttons = function(self) {
 
 		// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: show_other_buttons_button,
-			content_data		: other_buttons_block,
+			toggler				: show_other_buttons_button,
+			container			: other_buttons_block,
 			collapsed_id		: 'section_other_buttons_block',
 			collapse_callback	: collapse,
 			expose_callback		: expose,

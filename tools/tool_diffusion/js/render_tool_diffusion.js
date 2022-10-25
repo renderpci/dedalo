@@ -145,8 +145,8 @@ const get_content_data = async function(self) {
 			parent			: diffusion_info_container
 		})
 		ui.collapse_toggle_track({
-			header			: button_info,
-			content_data	: info_div,
+			toggler			: button_info,
+			container		: info_div,
 			collapsed_id	: 'collapsed_tool_diffusion_info'
 		})
 

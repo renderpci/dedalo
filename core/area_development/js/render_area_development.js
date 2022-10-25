@@ -160,8 +160,8 @@ const build_widget = (item, self) => {
 	// collapse_toggle_track
 		when_in_viewport(label, ()=>{
 			ui.collapse_toggle_track({
-				header				: label,
-				content_data		: body,
+				toggler				: label,
+				container			: body,
 				collapsed_id		: 'collapsed_' + item.id,
 				collapse_callback	: collapse,
 				expose_callback		: expose,

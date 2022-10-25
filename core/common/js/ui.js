@@ -1794,8 +1794,8 @@ export const ui = {
 	collapse_toggle_track : (options) => {
 
 		// options
-			const header			= options.header // DOM item (usually label)
-			const content_data		= options.content_data // DOM item (usually the body)
+			const toggler			= options.toggler // DOM item (usually label)
+			const container			= options.container // DOM item (usually the body)
 			const collapsed_id		= options.collapsed_id // id to set DDBB record id
 			const collapse_callback	= options.collapse_callback // function
 			const expose_callback	= options.expose_callback // function
@@ -1818,8 +1818,8 @@ export const ui = {
 
 				if (is_collapsed) {
 
-					if (!content_data.classList.contains('hide')) {
-						content_data.classList.add('hide')
+					if (!container.classList.contains('hide')) {
+						container.classList.add('hide')
 					}
 
 					// exec function
@@ -1836,7 +1836,7 @@ export const ui = {
 
 					}else{
 
-						content_data.classList.remove('hide')
+						container.classList.remove('hide')
 						// exec function
 						if (typeof expose_callback==='function') {
 							expose_callback()
@@ -1846,13 +1846,13 @@ export const ui = {
 			})
 
 		// event attach
-			header.addEventListener('click', fn_toggle_collapse)
+			toggler.addEventListener('click', fn_toggle_collapse)
 
 		// fn_toggle_collapse
 			function fn_toggle_collapse(e) {
 				e.stopPropagation()
 
-				const collapsed	= content_data.classList.contains('hide')
+				const collapsed	= container.classList.contains('hide')
 				if (!collapsed) {
 
 					// close
@@ -1867,7 +1867,7 @@ export const ui = {
 							collapsed_table
 						)
 
-					content_data.classList.add('hide')
+					container.classList.add('hide')
 
 					// exec function
 					if (typeof collapse_callback==='function') {
@@ -1897,7 +1897,7 @@ export const ui = {
 						)
 					}
 
-					content_data.classList.remove('hide')
+					container.classList.remove('hide')
 
 					// exec function
 					if (typeof expose_callback==='function') {

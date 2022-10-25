@@ -326,8 +326,8 @@ const render_area_item = function(item, datalist, value, self) {
 					}
 				}
 				ui.collapse_toggle_track({
-					header				: label,
-					content_data		: branch,
+					toggler				: label,
+					container			: branch,
 					collapsed_id		: 'security_acccess_' + item.tipo,
 					collapse_callback	: collapse,
 					expose_callback		: expose,
