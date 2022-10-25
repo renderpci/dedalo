@@ -158,26 +158,19 @@ abstract class filter {
 				throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
 				// trigger_error("Error Processing Request. properties for section_map: $section_map is empty !");
 			}
-			$projects_name_tipo		= $properties->thesaurus->term; // dd156
-			$projects_children_tipo	= $properties->thesaurus->children; // dd1594
+			$projects_name_tipo	= $properties->thesaurus->term; // dd156
 
-		// filter by filter_master
+		// dato . Array of locators
 			$is_global_admin = security::is_global_admin($user_id);
 			$dato = [];
 			if ($is_global_admin===true) {
-				// bypass filter
-				$filter = '';
 
+				// search all without limit
 				$search_query_object = json_decode('
 					{
-						"id": "get_ar_projects_for_current_section",
 						"section_tipo": "'.$projects_section_tipo.'",
-						"limit":0,
-						"filter": {
-							"$and": [
-								'.$filter.'
-							]
-						}
+						"limit": 0,
+						"filter": ""
 					}
 				');
 
@@ -191,52 +184,58 @@ abstract class filter {
 
 					$dato[] = $locator;
 				}
-
 			}else{
-				$dato	= filter::get_user_projects($user_id);
+
+				// get current user assigned projects
+				$dato = filter::get_user_projects($user_id);
 			}//end if ($is_global_admin===false)
 
-		$ar_projects = [];
-		$parent = null;
-		foreach ($dato as $current_locator) {
-			$model = RecordObj_dd::get_modelo_name_by_tipo($projects_name_tipo);
-			$component_term = component_common::get_instance(
-				$model, // string model
-				$projects_name_tipo, // string tipo
-				$current_locator->section_id, // string section_id
-				'list', // string modo
-				DEDALO_DATA_LANG, // string lang
-				$current_locator->section_tipo // string section_tipo
-			);
+		// resolve label and parent
+			$ar_projects	= [];
+			foreach ($dato as $current_locator) {
 
-			$label = component_common::extract_component_dato_fallback(
-				$component_term,
-				DEDALO_DATA_LANG, // lang
-				DEDALO_DATA_LANG_DEFAULT
-			); // main_lang
+				$parent			= null;
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($projects_name_tipo);
+				$component_term	= component_common::get_instance(
+					$model, // string model
+					$projects_name_tipo, // string tipo
+					$current_locator->section_id, // string section_id
+					'list', // string modo
+					DEDALO_DATA_LANG, // string lang
+					$current_locator->section_tipo // string section_tipo
+				);
 
-			$ar_all_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root=true);
+				$label = component_common::extract_component_dato_fallback(
+					$component_term,
+					DEDALO_DATA_LANG, // lang
+					DEDALO_DATA_LANG_DEFAULT
+				); // main_lang
 
-			foreach ($ar_all_parents as $current_parent) {
+				$ar_all_parents = component_relation_parent::get_parents_recursive(
+					$current_locator->section_id,
+					$current_locator->section_tipo,
+					true // bool skip_root
+				);
+				foreach ($ar_all_parents as $current_parent) {
 
-				$found = locator::in_array_locator($current_parent, $dato, ['section_tipo','section_id']);
-				if ( $found ) {
-					$locator = new locator();
-						$locator->set_section_tipo($current_parent->section_tipo);
-						$locator->set_section_id($current_parent->section_id);
+					$found = locator::in_array_locator($current_parent, $dato, ['section_tipo','section_id']);
+					if ( $found ) {
+						$locator = new locator();
+							$locator->set_section_tipo($current_parent->section_tipo);
+							$locator->set_section_id($current_parent->section_id);
 
-					$parent = $locator;
-					break;
+						$parent = $locator;
+						break;
+					}
 				}
-			}
 
-			$element = new stdClass();
-				$element->label		= reset($label);
-				$element->locator	= $current_locator;
-				$element->parent	= $parent;
+				$element = new stdClass();
+					$element->label		= reset($label);
+					$element->locator	= $current_locator;
+					$element->parent	= $parent;
 
-			$ar_projects[] = $element;
-		}
+				$ar_projects[] = $element;
+			}//end foreach ($dato as $current_locator)
 
 		// cache
 			filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
@@ -245,6 +244,7 @@ abstract class filter {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo", logger::DEBUG);
 			}
+
 
 		return $ar_projects;
 	}//end get_user_authorized_projects
