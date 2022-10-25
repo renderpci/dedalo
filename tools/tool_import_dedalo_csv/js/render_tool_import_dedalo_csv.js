@@ -783,8 +783,8 @@ const render_columns_mapper = async function(self, item) {
 
 	// collapse_toggle_track
 		ui.collapse_toggle_track({
-			header				: header,
-			content_data		: body,
+			toggler				: header,
+			container			: body,
 			collapsed_id		: 'collapsed_' + item.section_tipo,
 			collapse_callback	: collapse,
 			expose_callback		: expose

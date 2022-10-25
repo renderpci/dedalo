@@ -52,8 +52,8 @@ render_inspector.prototype.edit = async function(options) {
 		})
 		// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: label,
-			content_data		: content_data,
+			toggler				: label,
+			container			: content_data,
 			collapsed_id		: 'inspector_element_info_block',
 			collapse_callback	: collapse,
 			expose_callback		: expose
@@ -592,8 +592,8 @@ export const render_component_info = function(self, component) {
 
 		// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: value_label_node,
-			content_data		: value_node,
+			toggler				: value_label_node,
+			container			: value_node,
 			collapsed_id		: 'inspector_component_value',
 			collapse_callback	: collapse,
 			expose_callback		: expose,
@@ -654,8 +654,8 @@ const render_element_info = function(self) {
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: element_info_head,
-			content_data		: element_info_body,
+			toggler				: element_info_head,
+			container			: element_info_body,
 			collapsed_id		: 'inspector_element_info_block',
 			collapse_callback	: collapse,
 			expose_callback		: expose
@@ -706,8 +706,8 @@ const render_project_block = function(self) {
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: project_head,
-			content_data		: project_container_body,
+			toggler				: project_head,
+			container			: project_container_body,
 			collapsed_id		: 'inspector_project_block',
 			collapse_callback	: collapse,
 			expose_callback		: expose
@@ -775,8 +775,8 @@ const render_indexation_list = function(self) {
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: indexation_list_head,
-			content_data		: indexation_list_body,
+			toggler				: indexation_list_head,
+			container			: indexation_list_body,
 			collapsed_id		: 'inspector_indexation_list_block',
 			collapse_callback	: collapse,
 			expose_callback		: expose,
@@ -846,8 +846,8 @@ const render_relation_list = function(self) {
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: relation_list_head,
-			content_data		: relation_list_body,
+			toggler				: relation_list_head,
+			container			: relation_list_body,
 			collapsed_id		: 'inspector_relation_list',
 			collapse_callback	: unload_relation_list,
 			expose_callback		: load_relation_list,
@@ -932,8 +932,8 @@ const render_time_machine_list = function(self) {
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: time_machine_list_head,
-			content_data		: time_machine_list_body,
+			toggler				: time_machine_list_head,
+			container			: time_machine_list_body,
 			collapsed_id		: 'inspector_time_machine_list',
 			collapse_callback	: unload_time_machine_list,
 			expose_callback		: load_time_machine_list,
@@ -1019,8 +1019,8 @@ const render_activity_info = function(self) {
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: activity_info_head,
-			content_data		: activity_info_body,
+			toggler				: activity_info_head,
+			container			: activity_info_body,
 			collapsed_id		: 'inspector_activity_info',
 			collapse_callback	: collapse,
 			expose_callback		: expose

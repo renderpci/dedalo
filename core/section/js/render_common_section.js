@@ -195,8 +195,8 @@ const render_relation_list = function(options) {
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
-			header				: relation_list_head,
-			content_data		: relation_list_body,
+			toggler				: relation_list_head,
+			container			: relation_list_body,
 			collapsed_id		: 'inspector_relation_list',
 			collapse_callback	: unload_relation_list,
 			expose_callback		: load_relation_list,
