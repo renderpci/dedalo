@@ -4,9 +4,9 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {view_default_edit_select} from './view_default_edit_select.js'
 	import {view_line_edit_select} from './view_line_edit_select.js'
 
@@ -211,16 +211,24 @@ const get_content_value = (i, current_value, self) => {
 					const target_section_id		= selected_locator.section_id
 
 				// open a new window
-					const url_vars = {
+					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 						tipo			: target_section_tipo,
-						section_tipo	: target_section_tipo,
 						id				: target_section_id,
 						mode			: 'edit',
 						menu			: false
-					}
-					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-					const current_window	= window.open(url, '', 'width=1030,height=500')
-					current_window.focus()
+					})
+					const new_window = open_window({
+						url		: url,
+						name	: 'record_view',
+						width	: 1280,
+						height	: 740
+					})
+					new_window.addEventListener('blur', function() {
+						// refresh current instance
+						self.refresh({
+							build_autoload : true
+						})
+					})
 
 				// navigation
 					// const user_navigation_options = {
@@ -271,7 +279,7 @@ export const get_buttons = (self) => {
 	const fragment = new DocumentFragment()
 
 	// button edit (go to target section)
-		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
+		if(!is_inside_tool) {
 
 			const target_sections			= self.context.target_sections || []
 			const target_sections_length	= target_sections.length
@@ -279,27 +287,47 @@ export const get_buttons = (self) => {
 
 				const item = target_sections[i]
 
-				const label = (SHOW_DEBUG===true)
-					? `${item.label} [${item.tipo}]`
-					: item.label
-
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button edit',
-					title			: label,
-					parent			: fragment
-				})
-				button_edit.addEventListener("click", function(e){
-					e.stopPropagation()
-					// navigate link
-					event_manager.publish('user_navigation', {
-						source : {
-							tipo	: item.tipo,
-							model	: 'section',
-							mode	: 'list'
-						}
+				// button edit
+					const label = (SHOW_DEBUG===true)
+						? `${item.label} [${item.tipo}]`
+						: item.label
+					const button_edit = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button edit',
+						title			: label,
+						parent			: fragment
 					})
-				})
+					button_edit.addEventListener('click', function(e){
+						e.stopPropagation()
+
+						// navigate link
+							// event_manager.publish('user_navigation', {
+							// 	source : {
+							// 		tipo	: item.tipo,
+							// 		model	: 'section',
+							// 		mode	: 'list'
+							// 	}
+							// })
+
+						// open a new window
+							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+								tipo	: item.tipo,
+								mode	: 'list',
+								menu	: false
+							})
+							const new_window = open_window({
+								url		: url,
+								name	: 'section_view',
+								width	: 1280,
+								height	: 740
+							})
+							new_window.addEventListener('blur', function() {
+								// refresh current instance
+								self.refresh({
+									build_autoload : true
+								})
+							})
+					})
 			}
 		}
 

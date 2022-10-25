@@ -5,7 +5,8 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {view_default_edit_filter} from './view_default_edit_filter.js'
 	import {view_line_edit_filter} from './view_line_edit_filter.js'
 
@@ -58,13 +59,13 @@ render_edit_component_filter.prototype.edit = async function(options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data				= self.data || {}
-		const datalist			= data.datalist || []
+		const data					= self.data || {}
+		const datalist				= data.datalist || []
 		// const datalist_length	= datalist.length
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add('nowrap')
+			  // content_data.classList.add('nowrap')
 
 		// ul
 			const ul_branch = ui.create_dom_element({
@@ -89,23 +90,20 @@ export const get_content_data = function(self) {
 			element.has_children = has_children
 
 			const element_node = get_input_element(element, self)
-
-			if(children_elements_len > 0){
-
+			if(children_elements_len > 0) {
 				for (let i = 0; i < children_elements_len; i++) {
 					const current_child = children_elements[i]
 					const child_node = get_children_node(current_child)
 					element_node.branch.appendChild(child_node)
 				}
 			}
+
 			return element_node;
 		}
 
 	// root nodes
-		const root_elements = datalist.filter(el => el.parent === null)
-
-		const root_elements_len = root_elements.length
-
+		const root_elements		= datalist.filter(el => el.parent === null)
+		const root_elements_len	= root_elements.length
 		for (let i = 0; i < root_elements_len; i++) {
 			const current_element = root_elements[i]
 			const element_node = get_children_node(current_element)
@@ -113,8 +111,10 @@ export const get_content_data = function(self) {
 
 		}
 
+
 	return content_data
 }//end get_content_data
+
 
 
 /**
@@ -131,21 +131,16 @@ const get_input_element = (element, self) => {
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
 
-		const class_list = (element.has_children)
-			? 'item_li grouper'
-			: 'item_li'
-	// create li
+
+	// li container
+		const li_class_name = (element.has_children) ? ' grouper' : ''
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: class_list
+			class_name		: 'item_li' + li_class_name
 		})
 
 	// label
 		const label_string = (SHOW_DEBUG===true) ? label + ' [' + section_id + ']' : label
-		// const class_list = (element.has_children)
-		// 	? 'icon_arrow'
-		// 	:''
-
 		const label_node = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'item_label',
@@ -180,7 +175,8 @@ const get_input_element = (element, self) => {
 
 			const key = section_tipo +'_'+ section_id
 
-			const icon_arrow = ui.create_dom_element({
+			// icon_arrow
+				const icon_arrow = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'icon_arrow',
 					parent 			: li
@@ -192,13 +188,12 @@ const get_input_element = (element, self) => {
 					class_name		: 'branch',
 					parent 			: li
 				})
-				// branch.appendChild(li)
 				li.branch = branch
 
 			// collapse_toggle_track
 				ui.collapse_toggle_track({
-					header				: icon_arrow,
-					content_data		: branch,
+					toggler				: icon_arrow,
+					container			: branch,
 					collapsed_id		: 'collapsed_component_filter_group_' + key,
 					collapse_callback	: collapse,
 					expose_callback		: expose
@@ -258,16 +253,36 @@ export const get_buttons = (self) => {
 					title			: label,
 					parent			: fragment
 				})
-				button_edit.addEventListener("click", function(e){
+				button_edit.addEventListener('click', function(e){
 					e.stopPropagation()
+
 					// navigate link
-					event_manager.publish('user_navigation', {
-						source : {
+						// event_manager.publish('user_navigation', {
+						// 	source : {
+						// 		tipo	: item.tipo,
+						// 		model	: 'section',
+						// 		mode	: 'list'
+						// 	}
+						// })
+
+					// open a new window
+						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 							tipo	: item.tipo,
-							model	: 'section',
-							mode	: 'list'
-						}
-					})
+							mode	: 'list',
+							menu	: false
+						})
+						const new_window = open_window({
+							url		: url,
+							name	: 'section_view',
+							width	: 1280,
+							height	: 740
+						})
+						new_window.addEventListener('blur', function() {
+							// refresh current instance
+							self.refresh({
+								build_autoload : true
+							})
+						})
 				})
 			}
 		}

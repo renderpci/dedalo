@@ -1,11 +1,12 @@
-/*global, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {view_default_edit_radio_button} from './view_default_edit_radio_button.js'
 	import {view_line_edit_radio_button} from './view_line_edit_radio_button.js'
 
@@ -172,6 +173,7 @@ const get_input_element_edit = (i, datalist_item, self) => {
 			}
 		}
 
+
 	return content_value
 }//end get_input_element_edit
 
@@ -200,32 +202,52 @@ export const get_buttons = (self) => {
 
 				const item = target_sections[i]
 
-				const label = (SHOW_DEBUG===true)
-					? `${item.label} [${item.tipo}]`
-					: item.label
-
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button edit',
-					title			: label,
-					parent			: fragment
-				})
-				button_edit.addEventListener("click", function(e){
-					e.stopPropagation()
-					// navigate link
-					event_manager.publish('user_navigation', {
-						source : {
-							tipo	: item.tipo,
-							model	: 'section',
-							mode	: 'list'
-						}
+				// button edit
+					const label = (SHOW_DEBUG===true)
+						? `${item.label} [${item.tipo}]`
+						: item.label
+					const button_edit = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button edit',
+						title			: label,
+						parent			: fragment
 					})
-				})
+					button_edit.addEventListener('click', function(e){
+						e.stopPropagation()
+
+						// navigate link
+							// event_manager.publish('user_navigation', {
+							// 	source : {
+							// 		tipo	: item.tipo,
+							// 		model	: 'section',
+							// 		mode	: 'list'
+							// 	}
+							// })
+
+						// open a new window
+							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+								tipo	: item.tipo,
+								mode	: 'list',
+								menu	: false
+							})
+							const new_window = open_window({
+								url		: url,
+								name	: 'section_view',
+								width	: 1280,
+								height	: 740
+							})
+							new_window.addEventListener('blur', function() {
+								// refresh current instance
+								self.refresh({
+									build_autoload : true
+								})
+							})
+					})
 			}
 		}
 
 	// button reset
-		if(mode==='edit' || mode==='edit_in_list'){// && !is_inside_tool){
+		if(!is_inside_tool) {
 			const reset_button = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button reset',
@@ -253,7 +275,7 @@ export const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if (!is_inside_tool && mode==='edit') {
+		if (!is_inside_tool) {
 			ui.add_tools(self, fragment)
 		}
 
