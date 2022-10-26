@@ -225,39 +225,44 @@ const get_content_value = (i, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	const is_inside_tool = self.is_inside_tool
 
 	const fragment = new DocumentFragment()
 
+	// prevent to show buttons inside tool
+		if (is_inside_tool) {
+			return fragment
+		}
+
 	// button add input
-		const button_add = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button add',
-			title			: 'Add new input field',
-			parent			: fragment
-		})
-		button_add.addEventListener('click', function(e) {
-			e.stopPropagation()
-
-			const changed_data = [Object.freeze({
-				action	: 'insert',
-				key		: self.data.value.length,
-				value	: null
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: true
+		if (!is_inside_tool) {
+			const button_add = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button add',
+				title			: 'Add new input field',
+				parent			: fragment
 			})
-			.then(()=>{
-				// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
-				const input_node = self.node.content_data[changed_data.key].querySelector('input')
-				if (input_node) {
-					input_node.focus()
-				}
-			})
-		})//end event click
+			button_add.addEventListener('click', function(e) {
+				e.stopPropagation()
 
+				const changed_data = [Object.freeze({
+					action	: 'insert',
+					key		: self.data.value.length,
+					value	: null
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: true
+				})
+				.then(()=>{
+					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
+					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					if (input_node) {
+						input_node.focus()
+					}
+				})
+			})//end event click
+		}
 
 	// buttons tools
 		if (!is_inside_tool) {
