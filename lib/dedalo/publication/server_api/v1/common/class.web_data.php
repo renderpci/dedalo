@@ -5433,6 +5433,50 @@ class web_data {
 
 
 
+	/**
+	* GET_TABLE_THESAURUS_MAP
+	* Read var table_thesaurus_map from config if exists
+	* and return the value
+	* @return array|null $table_thesaurus_map
+	* 	Like: [
+	* 		'dc1' => 'ts_chronological',
+	*		'ts1' => 'ts_themes',
+	*		'on1' => 'ts_onomastic'
+	*	]
+	*/
+	public static function get_table_thesaurus_map() : ?array {
+		// global from config
+		global $table_thesaurus_map;
+
+		if (!isset($table_thesaurus_map)) {
+			return null;
+		}
+
+		return $table_thesaurus_map;
+	}//end get_table_thesaurus_map
+
+
+
+	/**
+	* GET_TABLE_THESAURUS
+	* Read constant TABLE_THESAURUS from config if exists
+	* and return the value
+	* @return string|null $table_thesaurus
+	* 	Like: 'ts_chronological,ts_themes,ts_onomastic'
+	*/
+	public static function get_table_thesaurus() : ?string {
+
+		// global from config
+		if (defined('TABLE_THESAURUS')) {
+			return TABLE_THESAURUS;
+		}
+
+
+		return null;
+	}//end get_table_thesaurus
+
+
+
 }//end class web_data
 
 

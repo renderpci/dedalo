@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.23",
-    "title" : "Dédalo Publication Server REST API 1.0.23",
+    "version" : "1.0.24",
+    "title" : "Dédalo Publication Server REST API 1.0.24",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -13,7 +13,7 @@
       "url" : "https://dedalo.dev/publication_api"
     }
   },
-  "host" : "dedalo4.antropolis.net",
+  "host" : "dedalo.render.es",
   "schemes" : [ "http", "https" ],
   "basePath" : "/dedalo/lib/dedalo/publication/server_api/v1/json",
   "produces" : [ "application/json" ],
@@ -187,6 +187,44 @@
         }
       }
     },
+    "/table_thesaurus" : {
+      "get" : {
+        "summary" : "Info about table_thesaurus from server config",
+        "description" : "This is a fixed value to group tables as thesaurus to easy search (creates a UNION clause).",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        } ],
+        "tags" : [ "Info" ],
+        "responses" : {
+          "200" : {
+            "description" : "Return string|null",
+            "schema" : {
+              "type" : "string",
+              "example" : "ts_chronological,ts_themes,ts_onomastic"
+            }
+          }
+        }
+      }
+    },
+    "/table_thesaurus_map" : {
+      "get" : {
+        "summary" : "Info about table_thesaurus_map from server config",
+        "description" : "This is a fixed tld to table name correspondence map",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        } ],
+        "tags" : [ "Info" ],
+        "responses" : {
+          "200" : {
+            "description" : "Return object|null",
+            "schema" : {
+              "type" : "object",
+              "example" : "{\"dc1\":\"ts_chronological\",\"ts1\":\"ts_themes\",\"on1\":\"ts_onomastic\"}"
+            }
+          }
+        }
+      }
+    },
     "/records" : {
       "post" : {
         "tags" : [ "Records" ],
@@ -279,7 +317,7 @@
         }, {
           "name" : "map",
           "in" : "query",
-          "description" : " Deprecated. <br>Use \"process_result\" instead Call using json representation of array of objects like<br>[{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}] <br> Already defined functions: <br> resolve_geolocation",
+          "description" : " Deprecated. <br>Use \"process_result\" instead <br>Call using json representation of array of objects like<br>[{ \"table\": \"informant\", \"field\":birthplace_id\", \"function\":\"resolve_geolocation\", \"output_field\":\"birthplace_obj\" }] <br> Already defined functions: <br> resolve_geolocation",
           "required" : false,
           "type" : "string",
           "format" : "string"

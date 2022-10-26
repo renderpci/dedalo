@@ -68,6 +68,19 @@ class manager {
 				$dedalo_data = (array)web_data::get_publication_schema( );
 				break;
 
+			## INFO table_thesaurus ##
+			case 'table_thesaurus':
+				#
+				# Execute data retrieving
+				$dedalo_data = web_data::get_table_thesaurus(); // string|null
+				break;
+
+			## INFO table_thesaurus_map ##
+			case 'table_thesaurus_map':
+				#
+				# Execute data retrieving
+				$dedalo_data = web_data::get_table_thesaurus_map(); // array|null
+				break;
 
 			## THESAURUS ##
 			case 'reel_terms':
@@ -155,7 +168,7 @@ class manager {
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_full_interview( $options );
 				break;
-				
+
 
 			## GLOBAL_SEARCH ##
 			case 'global_search':
