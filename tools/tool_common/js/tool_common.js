@@ -180,7 +180,7 @@ tool_common.prototype.init = async function(options) {
 								}]
 							}
 							if(SHOW_DEBUG===true) {
-								console.log("---->>> final fallback case self.tool_config:", self.tool_config);
+								console.log("-> tool_common init final fallback case self.tool_config:", self.tool_config);
 							}
 					}
 			}
@@ -239,8 +239,6 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 					// el. components / sections / areas used by the tool defined in tool_config.ddo_map
 					const el = ddo_map[i]
-
-					console.log('+++++ el:', el);
 
 					// lang. If is defined in properties, parse and use it, else use the tool lang
 					// taking care to do not re-parse the value
@@ -307,7 +305,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 								const load_data = true // el.model.indexOf('component')!==-1 || el.model==='area_thesaurus'
 								element_instance.build( load_data ) // build, loading data
 								.then(function(){
-									console.log('--->>> element_instance', element_instance)
+									// console.log('--->>> element_instance', element_instance)
 									resolve(element_instance)
 								})
 							})
