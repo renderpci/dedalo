@@ -27,7 +27,7 @@
     "name" : "Thesaurus",
     "description" : "Specific hierarchy and thesaurus functions"
   }, {
-    "name" : "Thesaurus Legacy"
+    "name" : "Thesaurus Legacy (Deprecated)"
   }, {
     "name" : "Free",
     "description" : "Search functions in transcription text"
@@ -590,7 +590,7 @@
     },
     "/thesaurus_autocomplete" : {
       "post" : {
-        "tags" : [ "Thesaurus Legacy" ],
+        "tags" : [ "Thesaurus Legacy (Deprecated)" ],
         "summary" : "Predictive autocomplete search",
         "description" : "Search string in database (begins with $q) and get array of max 25 records",
         "parameters" : [ {
@@ -723,7 +723,7 @@
     },
     "/thesaurus_video_view_data" : {
       "post" : {
-        "tags" : [ "Thesaurus Legacy" ],
+        "tags" : [ "Thesaurus Legacy (Deprecated)" ],
         "summary" : "Video player data",
         "description" : "Deprecated (!). Gets data needed to build video fragment",
         "parameters" : [ {
