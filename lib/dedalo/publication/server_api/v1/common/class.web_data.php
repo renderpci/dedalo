@@ -5448,7 +5448,7 @@ class web_data {
 		// global from config
 		global $table_thesaurus_map;
 
-		if (!isset($table_thesaurus_map)) {
+		if (!isset($table_thesaurus_map) || empty($table_thesaurus_map)) {
 			return null;
 		}
 
@@ -5467,10 +5467,9 @@ class web_data {
 	public static function get_table_thesaurus() : ?string {
 
 		// global from config
-		if (defined('TABLE_THESAURUS')) {
+		if (defined('TABLE_THESAURUS') && !empty(TABLE_THESAURUS)) {
 			return TABLE_THESAURUS;
 		}
-
 
 		return null;
 	}//end get_table_thesaurus
