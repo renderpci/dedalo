@@ -107,14 +107,12 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
+				$item->info		= null;
+				$item->label	= label::get_label('update_ontology');
 
 				if (defined('ONTOLOGY_DB')) {
-					$item->label	= label::get_label('update_ontology');
-					$item->info		= null;
-					$item->body		= 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
+					$item->body = 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
 				}else{
-					$item->label	= label::get_label('update_ontology');
-					$item->info		= null;
 					$item->body		= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
 						'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
 						'<hr>TLD: <tt>' . implode(', ', $DEDALO_PREFIX_TIPOS).'</tt>' :
@@ -198,31 +196,36 @@ class area_development extends area_common {
 				$item->label	= label::get_label('importar_estructura_json');
 				$item->info		= null;
 
-				$file_name		= 'structure.json';
-				$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
-				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
-				$item->body		= $file_path;
-				$confirm_text	= label::get_label('seguro');
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'inputs' => [
-							(object)[
-								'type'		=> 'text',
-								'name'		=> 'dedalo_prefix_tipos',
-								'label'		=> 'Dédalo prefix tipos to import',
-								'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
-								'mandatory'	=> false
-							]
-						],
-						'confirm_text' => $confirm_text
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'import_structure_from_json',
-					'options'	=> null
-				];
+				if (defined('ONTOLOGY_DB')) {
+					$item->body	= 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
+				}else{
+					$file_name		= 'structure.json';
+					$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+					// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
+					$item->body		= $file_path;
+					$confirm_text	= label::get_label('seguro');
+
+					$item->run[]	= (object)[
+						'fn'		=> 'init_form',
+						'options'	=> (object)[
+							'inputs' => [
+								(object)[
+									'type'		=> 'text',
+									'name'		=> 'dedalo_prefix_tipos',
+									'label'		=> 'Dédalo prefix tipos to import',
+									'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
+									'mandatory'	=> false
+								]
+							],
+							'confirm_text' => $confirm_text
+						]
+					];
+					$item->trigger 	= (object)[
+						'dd_api'	=> 'dd_utils_api',
+						'action'	=> 'import_structure_from_json',
+						'options'	=> null
+					];
+				}
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
