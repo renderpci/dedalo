@@ -69,20 +69,15 @@ export const render_time_machine_list_view = async function(self, options) {
 		})
 		// flat columns create a sequence of grid widths taking care of sub-column space
 		// like 1fr 1fr 1fr 3fr 1fr
-		const items				= ui.flat_column_items(columns_map)
-		const template_columns	= items.join(' ')
-		// Object.assign(
-		// 	list_body.style,
-		// 	{
-		// 		"grid-template-columns": template_columns
-		// 	}
-		// )
+		// const items				= ui.flat_column_items(columns_map)
+		// const template_columns	= items.join(' ')
+		const template_columns	= '1fr 1fr 1fr 2fr';
 		const css_object = {
 			'.list_body' : {
 				'grid-template-columns': template_columns
 			}
 		}
-		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.edit`
+		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.${self.mode}`
 		set_element_css(selector, css_object)
 
 	// list_header_node. Create and append if ar_instances is not empty
@@ -169,22 +164,36 @@ const get_content_data = async function(ar_section_record, self) {
 */
 const rebuild_columns_map = async function(self) {
 
-	// const columns_map = []
+	const columns_map = []
 
-	// column section_id check
-	// 	columns_map.push({
-	// 		id			: 'section_id',
-	// 		label		: 'Id',
-	// 		width 		: 'auto',
-	// 		callback	: render_column_id
-	// 	})
+	// columns base
+		const base_columns_map = await self.columns_map
 
-	// // columns base
-		// const base_columns_map = await self.columns_map
-	// 	columns_map.push(...base_columns_map)
+	// modify list and labels
+		const base_columns_map_length = base_columns_map.length
+		for (let i = 0; i < base_columns_map_length; i++) {
+			const el = base_columns_map[i]
+
+			// ignore matrix_id
+				if (el.tipo==='dd1573') {
+					continue;
+				}
+
+			// short label
+				switch (el.tipo) {
+					case 'dd201':
+						el.label = 'Date'
+						break;
+					case 'dd197':
+						el.label = 'User'
+						break;
+				}
+
+			columns_map.push(el)
+		}
 
 
-	return await self.columns_map
+	return columns_map
 }//end rebuild_columns_map
 
 

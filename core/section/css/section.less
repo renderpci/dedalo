@@ -27,7 +27,7 @@
 	// }
 
 	&.edit {
-		width: calc(100vw - 16rem);
+		width: calc(100vw - @inspector_width - 0.25rem);
 
 		&.no_inspector {
 			width: 100%;
@@ -46,7 +46,6 @@
 
 		>.inspector_container {
 			// @top_distance : 75px;
-			@inspector_width : 15rem;
 			overflow: auto;
 			height: 100%;
 			width: @inspector_width;
@@ -54,7 +53,7 @@
 			// outline: 1px solid @color_grey_light;
 			position: fixed;
 			// top: @top_distance;
-			left: calc(100vw - 16.4rem);
+			left: calc(100vw - @inspector_width - 0.75rem);
 
 
 			// prevent content from shifting left when the vertical scrollbar appears
@@ -131,10 +130,6 @@
 				justify-content: flex-end;
 				width: 100%;
 				padding: 0px;
-
-				button {
-
-				}
 			}
 
 			// button show_other_buttons_button
@@ -143,6 +138,21 @@
 				transform: rotate(90deg);
 				width: 1rem;
 				padding: 12px;
+
+				&:before {
+					// content: 'Toggle buttons';
+					content: attr(data-label);
+					display: block;
+					transform: rotate(-90deg);
+					margin-top: 9rem;
+					white-space: nowrap;
+				}
+
+				&.up {
+					&:before {
+						display: none;
+					}
+				}
 			}
 
 			// >.button {
