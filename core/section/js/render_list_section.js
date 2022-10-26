@@ -703,10 +703,14 @@ const get_buttons = function(self) {
 		ui.add_tools(self, other_buttons_block)
 
 	// show_other_buttons_button
-		const show_other_buttons_button = ui.create_dom_element({
+		const show_other_buttons_label	= get_label.mostrar_botones || 'Show buttons'
+		const show_other_buttons_button	= ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'icon_arrow show_other_buttons_button',
-			title			: 'Toggle buttons',
+			title			: show_other_buttons_label,
+			dataset			: {
+				label : show_other_buttons_label
+			},
 			parent			: buttons_container
 		})
 		show_other_buttons_button.addEventListener('click', function(e) {
