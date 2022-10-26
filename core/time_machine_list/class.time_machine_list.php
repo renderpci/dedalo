@@ -57,9 +57,16 @@ class time_machine_list extends common {
 			$offset=0;
 		}
 
-		$ar_time_machine_records = RecordObj_time_machine::get_ar_time_machine_of_this('', $this->section_id, null, $this->section_tipo, $limit, $offset);
+		$ar_time_machine_records = RecordObj_time_machine::get_ar_time_machine_of_this(
+			'', // string tipo
+			$this->section_id, // int|string section_id
+			null, // string lang
+			$this->section_tipo, // string section_tipo
+			$limit, // int limit
+			$offset // int offset
+		);
 		# Get calculated inverse locators for all matrix tables
-		#dump($ar_time_machine_records, '$ar_time_machine_records**************');
+		// dump($ar_time_machine_records, '$ar_time_machine_records**************');
 
 		if($count === true){
 			$json->data 	= $ar_time_machine_records;

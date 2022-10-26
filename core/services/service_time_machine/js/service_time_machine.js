@@ -91,8 +91,9 @@ service_time_machine.prototype.init = function(options) {
 
 /**
 * BUILD
+* @param bool autoload = false
 * @return promise
-*	bool true
+*	resolve bool true
 */
 service_time_machine.prototype.build = async function(autoload=false) {
 
@@ -228,6 +229,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 * Build a new service_time_machine custom request config based on caller requirements
 * Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
 * Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
+* @return object context
 */
 service_time_machine.prototype.build_context = function() {
 
@@ -247,7 +249,7 @@ service_time_machine.prototype.build_context = function() {
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
 		const ddo_map = [
-			//  matrix id
+			//  matrix id . tm info -> Id
 			{
 				tipo			: 'dd1573',
 				type			: 'component',
@@ -256,7 +258,8 @@ service_time_machine.prototype.build_context = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				label			: 'Matrix id',
-				mode			: 'list'
+				mode			: 'list',
+				view			: 'mini'
 			},
 			// modification date DEDALO_SECTION_INFO_MODIFIED_DATE dd201
 			{
@@ -267,7 +270,8 @@ service_time_machine.prototype.build_context = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				label			: 'Modification date',
-				mode			: 'list'
+				mode			: 'list',
+				view			: 'mini'
 			},
 			// modification user id DEDALO_SECTION_INFO_MODIFIED_BY_USER dd197
 			{
@@ -278,11 +282,24 @@ service_time_machine.prototype.build_context = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				label			: 'Modification user',
-				mode			: 'list'
+				mode			: 'list',
+				view			: 'mini'
+			},
+			// where
+			{
+				tipo			: 'dd546',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_input_text',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				label			: 'Where',
+				mode			: 'list',
+				view			: 'mini'
 			}
 		]
 
-		// sqo
+	// sqo
 		const sqo = {
 			id					: 'tmp',
 			mode				: 'tm',
@@ -295,7 +312,8 @@ service_time_machine.prototype.build_context = function() {
 			}]
 		}
 
-		// component. add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
+	// component
+	// add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
 		if(main_element){
 
 			if (main_element.model==='section') {
@@ -327,7 +345,8 @@ service_time_machine.prototype.build_context = function() {
 					model			: main_element.model,
 					parent			: section_tipo,
 					label			: main_element.label,
-					mode			: 'list'
+					mode			: 'list',
+					view			: 'mini'
 				})
 
 				sqo.filter_by_locators = [{
@@ -350,7 +369,8 @@ service_time_machine.prototype.build_context = function() {
 				}
 			}
 		}else{
-			// fallback (time machine list case)
+
+			// fallback (time machine list case) tm info -> Value
 			ddo_map.push({
 				tipo			: 'dd1574', // generic tm info ontology item 'Value'
 				type			: 'component',
@@ -359,15 +379,16 @@ service_time_machine.prototype.build_context = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				label			: 'Value',
-				mode			: 'list'
+				mode			: 'list',
+				view			: 'mini'
 			})
 
 			sqo.filter_by_locators = [{
 				section_tipo	: section_tipo,
-				section_id		: section_id,
-				lang			: lang // (!) used only in time machine to filter by column lang
+				section_id		: section_id
+				// removed because limit components by lang
+				// lang			: lang // (!) used only in time machine to filter by column lang
 			}]
-
 		}
 
 
@@ -381,7 +402,7 @@ service_time_machine.prototype.build_context = function() {
 			}
 		}]
 
-	// // context
+	// context
 		const context = {
 			type			: 'tm',
 			typo			: 'ddo',
@@ -419,5 +440,3 @@ service_time_machine.prototype.tm = async function(options) {
 
 	return self.view(self, options)
 }//end tm
-
-

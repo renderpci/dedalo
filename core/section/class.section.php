@@ -3946,36 +3946,92 @@ class section extends common {
 							break;
 
 						case DEDALO_SECTION_INFO_MODIFIED_BY_USER: // 'dd197' Modified by user
-							$user_id_tipo	= DEDALO_SECTION_INFO_MODIFIED_BY_USER; // 'dd197' Modified by user
-							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($user_id_tipo,true); // select
-							$component		= component_common::get_instance(
-								$modelo_name,
-								$user_id_tipo,
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
+							// des
+								// $user_id_tipo	= $current_tipo; // 'dd197' Modified by user
+								// $modelo_name	= 'component_portal';// RecordObj_dd::get_modelo_name_by_tipo($user_id_tipo,true); // component_select
+								// $component		= component_common::get_instance(
+								// 	$modelo_name,
+								// 	$user_id_tipo,
+								// 	$section_id,
+								// 	'list',
+								// 	DEDALO_DATA_NOLAN,
+								// 	$section_tipo
+								// );
+								// // dato
+								// 	$locator = new locator();
+								// 		$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+								// 		$locator->set_section_id($user_id);
+								// 		$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+								// 	$component_dato = [$locator];
+								// 	$component->set_dato($component_dato);
+								// 	$component->set_permissions(1);
+
+								// // get component json
+								// 	$get_json_options = new stdClass();
+								// 		$get_json_options->get_context	= false;
+								// 		$get_json_options->get_data		= true;
+								// 	$element_json = $component->get_json($get_json_options);
+								// 		dump($element_json, ' element_json ++ '.to_string());
+
+								// // edit section_id to match section locator data item
+								// 	$current_item = reset($element_json->data);
+								// 		$current_item->matrix_id = $id;
+
+							$locator = new locator();
+								$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+								$locator->set_section_id($user_id);
+								$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+							$ar_values = component_relation_common::get_locator_value(
+								$locator,
+								DEDALO_DATA_LANG, // lang
+								false, // show_parents
+								['dd132'], // array|bool ar_components_related
+								true // bool include_self
 							);
-							// dato
-								$locator = new locator();
-									$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-									$locator->set_section_id($user_id);
-									$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-								$component_dato = [$locator];
+							$current_item = (object)[
+								'section_id'			=> $section_id,
+								'section_tipo'			=> $section_tipo,
+								'tipo'					=> $current_tipo,
+								'lang'					=> DEDALO_DATA_NOLAN,
+								'from_component_tipo'	=> $current_tipo,
+								'value'					=> $ar_values,
+								'debug_model'			=> 'component_select',
+								'debug_label'			=> 'modified by user',
+								'debug_mode'			=> 'list',
+								'matrix_id'				=> $id
+							];
 
-								$component->set_dato($component_dato);
-								$component->set_permissions(1);
+							$data[] = $current_item;
+							break;
 
-							// get component json
-								$get_json_options = new stdClass();
-									$get_json_options->get_context	= false;
-									$get_json_options->get_data		= true;
-								$element_json = $component->get_json($get_json_options);
-
-							// edit section_id to match section locator data item
-								$current_item = reset($element_json->data);
-									$current_item->matrix_id = $id;
-
+						case 'dd546': // Where
+							// section_label
+								// $section_label = RecordObj_dd::get_termino_by_tipo(
+								// 	$section_tipo, // string terminoID
+								// 	DEDALO_DATA_LANG, // string lang
+								// 	true, // bool from_cache
+								// 	true // bool fallback
+								// );
+							// component_label
+								$component_label = RecordObj_dd::get_termino_by_tipo(
+									$tipo, // string terminoID
+									DEDALO_DATA_LANG, // string lang
+									true, // bool from_cache
+									true // bool fallback
+								);
+							$current_value = $component_label;
+							$current_item = (object)[
+								'section_id'			=> $section_id,
+								'section_tipo'			=> $section_tipo,
+								'tipo'					=> $current_tipo,  // fake tipo only used to match ddo with data
+								'lang'					=> DEDALO_DATA_LANG,
+								'from_component_tipo'	=> $current_tipo,  // fake tipo only used to match ddo with data
+								'value'					=> [$current_value], // .' ['.$section_tipo.']'
+								'debug_model'			=> 'component_input_text',
+								'debug_label'			=> 'Where',
+								'debug_mode'			=> 'list',
+								'matrix_id'				=> $id
+							];
 							$data[] = $current_item;
 							break;
 
@@ -4031,6 +4087,7 @@ class section extends common {
 
 								// inject current_dato
 									$current_element->set_dato($current_dato);
+									$current_element->set_permissions(1);
 
 							// valor as plain text
 								// $valor = $current_element->get_valor();
