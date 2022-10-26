@@ -24,7 +24,7 @@ export const view_mini_list_select = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_mini_list_select.prototype.render = async function(self, options) {
+view_mini_list_select.render = async function(self, options) {
 
 	// short vars
 		const value_string	= self.data.value || ''
