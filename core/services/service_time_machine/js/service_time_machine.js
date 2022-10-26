@@ -51,7 +51,7 @@ export const service_time_machine = function () {
 /**
 * INIT
 */
-service_time_machine.prototype.init = function(options) {
+service_time_machine.prototype.init = async function(options) {
 	// console.log("service_time_machine INIT options:",options);
 
 	const self = this
@@ -69,8 +69,8 @@ service_time_machine.prototype.init = function(options) {
 	self.id_variant		= options.id_variant || self.model
 
 	self.datum			= options.datum || null
-	self.context		= options.context || {}
-	self.data			= options.data || {}
+	self.context		= options.context
+	self.data			= options.data
 
 	self.type			= 'tm'
 	self.node			= null
@@ -80,6 +80,8 @@ service_time_machine.prototype.init = function(options) {
 
 	self.limit			= options.limit || 10
 	self.offset			= options.offset || 0
+
+	self.request_config = await self.build_request_config()
 
 	// status update
 	self.status = 'initiated'
@@ -116,12 +118,20 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		self.data = self.data || {}
 
 	// rqo
-		self.context = await self.build_context()
+		// self.context = await self.build_context()
 		const generate_rqo = async function(){
-			// rqo_config. get the rqo_config from context
-			self.rqo_config	= self.context.request_config
-				? self.context.request_config.find(el => el.api_engine==='dedalo')
-				: {}
+
+			if (self.context) {
+				// rqo_config. get the rqo_config from context
+				self.rqo_config	= self.context && self.context.request_config
+					? self.context.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+			}else{
+				// rqo_config. get the rqo_config from request_config
+				self.rqo_config = self.request_config
+					? self.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+			}
 
 			// rqo build
 			const action	= 'search'
@@ -129,6 +139,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
 		}
 		await generate_rqo()
+
 		// console.log("JSON.parse(JSON.stringify(self.rqo)): ----",JSON.parse(JSON.stringify(self.rqo)));
 
 	// load data if is not already received as option
@@ -143,8 +154,9 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				}
 
 			// set the result to the datum
-				self.datum	= api_response.result
-				self.data	= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
+				self.datum		= api_response.result
+				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
+				self.context	= self.datum.context.find(el => el.type==='section')
 
 			// count rows
 				if (!self.total) {
@@ -225,13 +237,13 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
-* BUILD_CONTEXT
+* BUILD_REQUEST_CONFIG
 * Build a new service_time_machine custom request config based on caller requirements
 * Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
 * Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
 * @return object context
 */
-service_time_machine.prototype.build_context = function() {
+service_time_machine.prototype.build_request_config = function() {
 
 	const self = this
 
@@ -261,31 +273,31 @@ service_time_machine.prototype.build_context = function() {
 				mode			: 'list',
 				view			: 'mini'
 			},
-			// modification date DEDALO_SECTION_INFO_MODIFIED_DATE dd201
+			// when dd547 (from activity section)
 			{
-				tipo			: 'dd201',
+				tipo			: 'dd547',
 				type			: 'component',
 				typo			: 'ddo',
 				model			: 'component_date',
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
-				label			: 'Modification date',
+				debug_label		: 'When',
 				mode			: 'list',
 				view			: 'mini'
 			},
-			// modification user id DEDALO_SECTION_INFO_MODIFIED_BY_USER dd197
+			// who dd543 (from activity section)
 			{
-				tipo			: 'dd197',
+				tipo			: 'dd543',
 				type			: 'component',
 				typo			: 'ddo',
-				model			: 'component_select',
+				model			: 'component_input_text',
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
-				label			: 'Modification user',
+				debug_label		: 'Who',
 				mode			: 'list',
 				view			: 'mini'
 			},
-			// where
+			// where dd546 (from activity section)
 			{
 				tipo			: 'dd546',
 				type			: 'component',
@@ -293,7 +305,7 @@ service_time_machine.prototype.build_context = function() {
 				model			: 'component_input_text',
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
-				label			: 'Where',
+				debug_label		: 'Where',
 				mode			: 'list',
 				view			: 'mini'
 			}
@@ -378,7 +390,7 @@ service_time_machine.prototype.build_context = function() {
 				model			: 'component_input_text',
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
-				label			: 'Value',
+				debug_label		: 'Value',
 				mode			: 'list',
 				view			: 'mini'
 			})
@@ -391,33 +403,19 @@ service_time_machine.prototype.build_context = function() {
 			}]
 		}
 
-
 	// request_config
 		const request_config = [{
 			api_engine	: 'dedalo',
-			// source		: source,
+			// source	: source,
 			sqo			: sqo,
 			show		: {
 				ddo_map : ddo_map
 			}
 		}]
 
-	// context
-		const context = {
-			type			: 'tm',
-			typo			: 'ddo',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			lang			: lang,
-			mode			: 'tm',
-			model			: 'time_machine',
-			parent			: section_tipo,
-			request_config	: request_config
-		}
 
-
-	return context
-}//end build_context
+	return request_config
+}//end build_request_config
 
 
 

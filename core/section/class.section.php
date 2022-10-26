@@ -3744,11 +3744,23 @@ class section extends common {
 
 		$fixed_components = [
 			'dd784', // fake tipo only used to match ddo with data 'dd784' (matrix ID)
-			DEDALO_SECTION_INFO_MODIFIED_DATE, // dd201 (component_date)
-			DEDALO_SECTION_INFO_MODIFIED_BY_USER, // dd197 (component_select)
+			// DEDALO_SECTION_INFO_MODIFIED_DATE, // dd201 (component_date)
+			// DEDALO_SECTION_INFO_MODIFIED_BY_USER, // dd197 (component_select)
+			'dd547', // when
+			'dd543', // who
+			'dd546' // where
 		];
 		foreach ($ddo_map as $key => $item) {
 			if (in_array($item->tipo, $fixed_components)) {
+
+				$label = isset($item->label)
+					? $item->label
+					: RecordObj_dd::get_termino_by_tipo(
+						$item->tipo, // string terminoID
+						DEDALO_DATA_LANG, // string lang
+						true, // bool from_cache
+						true // bool fallback
+					);
 
 				// fixed components
 				$current_dd_object = new dd_object(
@@ -3758,7 +3770,7 @@ class section extends common {
 						'model'			=> $item->model,
 						'tipo'			=> $item->tipo,
 						'section_tipo'	=> $item->section_tipo, // this tipo
-						'label'			=> $item->label,
+						'label'			=> $label,
 						'mode'			=> $item->mode, // 'list',
 						'parent'		=> $item->parent, // this tipo
 						'translatable'	=> RecordObj_dd::get_translatable($item->tipo)
@@ -3795,7 +3807,7 @@ class section extends common {
 				$context = array_merge($context, $component_context);
 			}
 		}
-		// dump($context, ' context ++ '.to_string());
+
 
 		return (array)$context;
 	}//end get_tm_context
@@ -3891,10 +3903,10 @@ class section extends common {
 						? DEDALO_DATA_NOLAN
 						: ((bool)RecordObj_dd::get_translatable($current_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
 
-				//
+				// switch by ddo tipo
 					switch ($current_tipo) {
 
-						case 'dd1573': // section_id
+						case 'dd1573': // id (model: component_section_id)
 							$current_item = (object)[
 								'section_id'			=> $section_id,
 								'section_tipo'			=> $section_tipo,
@@ -3910,9 +3922,9 @@ class section extends common {
 							$data[] = $current_item;
 							break;
 
-						case DEDALO_SECTION_INFO_MODIFIED_DATE: // 'dd201' Modification date
+						case 'dd547': // When (model: component_date) from activity section
 
-							$timestamp_tipo	= DEDALO_SECTION_INFO_MODIFIED_DATE; // 'dd201' Modification date
+							$timestamp_tipo	= $current_tipo;
 							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($timestamp_tipo,true);
 							$component		= component_common::get_instance(
 								$modelo_name,
@@ -3945,7 +3957,7 @@ class section extends common {
 							$data[] = $current_item;
 							break;
 
-						case DEDALO_SECTION_INFO_MODIFIED_BY_USER: // 'dd197' Modified by user
+						case 'dd543': // Who (model: component_autocomplete) from activity section
 							// des
 								// $user_id_tipo	= $current_tipo; // 'dd197' Modified by user
 								// $modelo_name	= 'component_portal';// RecordObj_dd::get_modelo_name_by_tipo($user_id_tipo,true); // component_select
@@ -4004,14 +4016,7 @@ class section extends common {
 							$data[] = $current_item;
 							break;
 
-						case 'dd546': // Where
-							// section_label
-								// $section_label = RecordObj_dd::get_termino_by_tipo(
-								// 	$section_tipo, // string terminoID
-								// 	DEDALO_DATA_LANG, // string lang
-								// 	true, // bool from_cache
-								// 	true // bool fallback
-								// );
+						case 'dd546': // Where (model: component_input_text)
 							// component_label
 								$component_label = RecordObj_dd::get_termino_by_tipo(
 									$tipo, // string terminoID
@@ -4019,6 +4024,18 @@ class section extends common {
 									true, // bool from_cache
 									true // bool fallback
 								);
+								// on tool_time_machine prepend section label
+								$rqo = dd_core_api::$rqo ?? null;
+								if ( $rqo && $rqo->source->tipo!==$rqo->source->section_tipo ) {
+									// section_label
+										$section_label = RecordObj_dd::get_termino_by_tipo(
+											$section_tipo, // string terminoID
+											DEDALO_DATA_LANG, // string lang
+											true, // bool from_cache
+											true // bool fallback
+										);
+										$component_label = $section_label.': '.$component_label;
+								}
 							$current_value = $component_label;
 							$current_item = (object)[
 								'section_id'			=> $section_id,
