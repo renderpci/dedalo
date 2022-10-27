@@ -33,15 +33,15 @@ export const view_default_list_section_record = function() {
 view_default_list_section_record.render = async function(self, options) {
 
 	// options
-		const render_level = options.render_level || 'full'
+		// const render_level = options.render_level || 'full'
 
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances	= await self.get_ar_columns_instances_list()
 		const columns_map			= await self.columns_map
 
-
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// render the columns
 		const columns_map_length = columns_map.length
@@ -78,9 +78,9 @@ view_default_list_section_record.render = async function(self, options) {
 
 			// get the specific instances for the current column
 				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_column.id)
+				const ar_instances_length = ar_instances.length
 
 			// loop the instances for select the parent node
-				const ar_instances_length = ar_instances.length
 
 			// case zero (user don't have enough privileges cases)
 				if (ar_instances_length===0) {
@@ -253,12 +253,12 @@ view_default_list_section_record.render = async function(self, options) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			wrapper.addEventListener("click", function(e){
+			wrapper.addEventListener('click', function(e){
 				if (e.altKey) {
 					e.stopPropagation()
 					e.preventDefault()
 					// common.render_tree_data(instance, document.getElementById('debug'))
-					console.log("/// selected instance:", self);
+					console.log('/// selected instance:', self);
 				}
 			})
 			// wrapper.classList.add('_'+self.id)

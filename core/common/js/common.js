@@ -878,6 +878,7 @@ export const get_columns_map = function(context, datum_context) {
 	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create the final grid.
 		const request_config_length	= request_config.length
 		for (let i = 0; i < request_config_length; i++) {
+
 			const request_config_item = request_config[i]
 
 			// get the ddo map to be used
@@ -888,7 +889,7 @@ export const get_columns_map = function(context, datum_context) {
 					: request_config_item.show.ddo_map
 
 			// get the direct components of the caller (component or section)
-			const ar_first_level_ddo = ddo_map.filter(item => item.parent === tipo)
+			const ar_first_level_ddo		= ddo_map.filter(item => item.parent === tipo)
 			const ar_first_level_ddo_len	= ar_first_level_ddo.length
 
 			// store the current component in the full ddo map
@@ -924,7 +925,8 @@ export const get_columns_map = function(context, datum_context) {
 					// create a new column with the ddo information or join all components in one column
 
 					// semantic node is a exception, it will create a column for itself,
-					// it works with different sqo than his parent portal and it's necessary always his own space to change the sqo active.
+					// it works with different sqo than his parent portal and it's necessary always his own space
+					// to change the active sqo.
 						if(dd_object.model==='component_semantic_node'){
 
 							columns_map.push(
@@ -942,10 +944,12 @@ export const get_columns_map = function(context, datum_context) {
 						// component_portal will join the components that doesn't has columns defined.
 						case 'line':
 
-							// find if the general column was created, if not create new one with the tipo of the component_portal to include all components.
+							// find if the general column was created, if not create new one with the tipo
+							// of the component_portal to include all components.
 							const found	= columns_map.find(el => el.id===tipo)
 
-							// if the column exist add general column to ddo information, else create the general column and add the id to the component.
+							// if the column exist add general column to ddo information,
+							// else create the general column and add the id to the component.
 							if(found){
 								dd_object.column_id = found.id
 
@@ -961,7 +965,8 @@ export const get_columns_map = function(context, datum_context) {
 								dd_object.column_id = column.id
 							}
 							break;
-						// in the mosaic case add the in_mosaic: true or false to create the mosaic and the alternative table with all ddo
+						// in the mosaic case add the in_mosaic: true or false to create the mosaic and
+						// the alternative table with all ddo
 						case 'mosaic':
 							dd_object.in_mosaic = dd_object.in_mosaic
 								? true
@@ -979,9 +984,9 @@ export const get_columns_map = function(context, datum_context) {
 								}
 							)
 							dd_object.column_id	= dd_object.tipo
-
 							break;
-						// by default every component will create the own column if the column is not defined, this behavior is used by sections.
+						// by default every component will create the own column if the column is not defined,
+						// this behavior is used by sections.
 						default:
 							columns_map.push(
 								{

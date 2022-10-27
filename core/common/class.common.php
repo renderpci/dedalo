@@ -2586,7 +2586,8 @@ abstract class common {
 											? 'list'
 											: $mode);
 
-								//fields_map; used by components external to map to different API format, defined in the component, when this property is present and true, get the component fields_map
+								// fields_map. Used by component external to map to different API format, defined in the component,
+								// when this property is present and true, get the component fields_map
 									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
 										$RecordObj_dd				= new RecordObj_dd($current_ddo->tipo);
 										$properties					= $RecordObj_dd->get_properties();

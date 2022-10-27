@@ -25,12 +25,10 @@ export const view_mini_list_publication = function() {
 * Render node to be used in current mode
 * @return DOM node
 */
-view_mini_list_publication.render = async function() {
-
-	const self = this
+view_mini_list_publication.render = async function(self, options) {
 
 	// short vars
-		const value_string = self.data.value
+		const value_string = self.data.value || ''
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
