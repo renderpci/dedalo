@@ -2637,6 +2637,15 @@ export const ui = {
 			return []
 		}
 
+		// defaults definitions by model
+		// if ddo width is not defined, use this defaults
+			const width_defaults = {
+				component_publication	: '5rem',
+				component_info			: 'minmax(5rem, 1fr)',
+				component_image			: '102px',
+				component_av			: '102px'
+			}
+
 		let ar_elements = []
 		const list_length = list.length
 		for (let i = 0; i < list_length; i++) {
@@ -2647,11 +2656,16 @@ export const ui = {
 				// already defined width cases
 				ar_elements.push(item.width)
 			}else{
-				// non defined width cases, uses default grid measure like '1fr'
-				const unit = (item.columns_map && item.columns_map.length>0)
-					? ui.flat_column_items(item.columns_map, level_max, type, level++).length || 1
-					: 1
-				ar_elements.push(unit+type) // like '1fr'
+				// default defined by model
+				if (width_defaults[item.model]) {
+					ar_elements.push(width_defaults[item.model])
+				}else{
+					// non defined width cases, uses default grid measure like '1fr'
+					const unit = (item.columns_map && item.columns_map.length>0)
+						? ui.flat_column_items(item.columns_map, level_max, type, level++).length || 1
+						: 1
+					ar_elements.push(unit+type) // like '1fr'
+				}
 			}
 		}
 

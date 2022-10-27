@@ -1021,13 +1021,23 @@ export const get_columns_map = function(context, datum_context) {
 							: ddo_object.section_tipo
 						: null
 
-				//  sortable
+				// sortable
 					const found = datum_context
 						? datum_context.find(el => el.tipo===column_item.tipo)
 						: false
 					column_item.sortable = found
 						? found.sortable
 						: false
+
+				// model
+					column_item.model = found
+						? found.model
+						: null
+
+				// width
+					column_item.width = ddo_object && ddo_object.width
+						? ddo_object.width
+						: null
 
 				// path
 					if (column_item.sortable===true) {
