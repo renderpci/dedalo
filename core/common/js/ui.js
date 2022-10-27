@@ -2372,6 +2372,7 @@ export const ui = {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'name',
+					title			: label.join(' '),
 					inner_html		: label.join(' '),
 					parent			: header_item
 				})
@@ -2386,6 +2387,7 @@ export const ui = {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'name',
+							title			: label.join(' '),
 							inner_html		: label.join(' '),
 							parent			: header_item
 						})
@@ -2413,6 +2415,7 @@ export const ui = {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'name',
+							title			: current_column.label,
 							inner_html		: current_column.label,
 							parent			: sub_header_item
 						})
