@@ -377,6 +377,7 @@ service_time_machine.prototype.build_request_config = function() {
 				for (let i = 0; i < element_show.length; i++) {
 					const item = element_show[i]
 						  item.mode = 'list'
+						  item.view = 'mini'
 					ddo_map.push(item)
 				}
 			}
