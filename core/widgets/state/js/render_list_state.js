@@ -132,9 +132,20 @@ const get_value_element = (i, data, self) => {
 
 					situation.addEventListener('click', function() {
 						// delete the tool_tip node every time that user click in the icons
-						if (tooltip_node) {
-							tooltip_node.remove()
+							if (tooltip_node) {
+								tooltip_node.remove()
+							}
+
+						if (this.classList.contains('active')) {
+							this.classList.remove('active')
+							return
 						}
+
+						// reset and active current
+							[].forEach.call(this.parentNode.children, function(child) {
+								child.classList.remove('active')
+							});
+							this.classList.add('active')
 
 						// tooltip_node
 						tooltip_node = ui.create_dom_element({
@@ -142,8 +153,15 @@ const get_value_element = (i, data, self) => {
 							class_name		: 'state_tooltip',
 							parent			: value_element
 						})
-						tooltip_node.addEventListener('click', function(){
-							tooltip_node.remove()
+						tooltip_node.addEventListener('click', function(e){
+							e.stopPropagation()
+
+							tooltip_node.remove();
+
+							// reset active
+							[].forEach.call(situation.parentNode.children, function(child) {
+								child.classList.remove('active')
+							});
 						})
 
 						// get the value of specific output (situation, state ) with the totals
