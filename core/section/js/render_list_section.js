@@ -234,7 +234,7 @@ const rebuild_columns_map = async function(self) {
 				// note that component_tipo=section_id is valid here
 				// because section_id is a direct column in search
 				component_tipo	: 'section_id',
-				// optionals. Only added for stetic
+				// optional. Just added for aesthetics
 				modelo			: 'component_section_id',
 				name			: 'ID',
 				section_tipo	: self.section_tipo

@@ -82,8 +82,8 @@ view_default_list_image.render = function(self, options) {
 
 			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
 			// else open the player to show the image
-			const file_no_exist = data.datalist.find(item => item.file_exist === false)
-			if(file_no_exist){
+			const file_does_not_exist = data.datalist.find(item => item.file_exist === false)
+			if(file_does_not_exist){
 
 				// get the upload tool to be fired
 					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
