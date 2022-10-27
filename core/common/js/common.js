@@ -875,7 +875,8 @@ export const get_columns_map = function(context, datum_context) {
 		const full_ddo_map = []
 		full_ddo_map.push(context)
 
-	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create the final grid.
+	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create
+	// the final grid.
 		const request_config_length	= request_config.length
 		for (let i = 0; i < request_config_length; i++) {
 
@@ -901,14 +902,17 @@ export const get_columns_map = function(context, datum_context) {
 				// set the view if it is defined in ontology set it else get the parent view
 				dd_object.view 	= dd_object.view || children_view || view || 'default'
 
-				// if the ddo has a column_id and columns_maps are defined in the properties, get the column as it has defined.
+				// if the ddo has a column_id and columns_maps are defined in the properties,
+				// get the column as it has defined.
 				if (dd_object.column_id && source_columns_map.length >0){
 
-					// column_exists. If the column has stored by previous ddo, don't touch the array, it's necessary maintain the order of the columns_map
+					// column_exists. If the column has stored by previous ddo, don't touch the array,
+					// it's necessary to preserve the order of the columns_map
 						const column_exists = columns_map.find(el => el.id === dd_object.column_id)
 						if(column_exists) continue
 
-					// check if the ddo has defined the column_id in the columns_map, if not add new column with the ddo information.
+					// check if the ddo has defined the column_id in the columns_map,
+					// if not, add new column with the ddo information.
 						const found	= source_columns_map.find(el => el.id===dd_object.column_id)
 						const column = (found)
 							? found
@@ -916,6 +920,9 @@ export const get_columns_map = function(context, datum_context) {
 								id		: dd_object.tipo,
 								label	: dd_object.tipo
 							  }
+
+						// column width set
+						column.width = dd_object.width || column.width || null
 
 					dd_object.column_id = column.id
 					columns_map.push(column)
@@ -1001,6 +1008,7 @@ export const get_columns_map = function(context, datum_context) {
 			}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
 		}//end for (let i = 0; i < request_config_length; i++)
 
+
 	// parse_columns
 		// Resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
 		// here will be using the full_ddo_map to find the specific ddo
@@ -1040,9 +1048,11 @@ export const get_columns_map = function(context, datum_context) {
 						: null
 
 				// width
-					column_item.width = ddo_object && ddo_object.width
-						? ddo_object.width
-						: null
+					column_item.width = column_item.width
+						? column_item.width
+						: ddo_object && ddo_object.width
+							? ddo_object.width
+							: null
 
 				// path
 					if (column_item.sortable===true) {
