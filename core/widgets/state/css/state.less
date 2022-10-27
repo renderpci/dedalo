@@ -49,6 +49,7 @@
 
 
 	&.list {
+
 		// icons (list only)
 		.state_icon {
 			-webkit-mask-repeat: no-repeat;
@@ -80,7 +81,25 @@
 			&.translation {
 				-webkit-mask-image: url('../../widgets/state/img/tl.svg');
 			}
+
+			&.active {
+				background-color: @color_orange_dedalo;
+				cursor: pointer;
+			}
 		}//end .state_icon
+
+		.state_tooltip {
+			font-size: 80%;
+			padding-left: 2px;
+			padding-right: 2px;
+			width: 100%;
+			display: block;
+			letter-spacing: -0.3px;
+
+			.output_label {
+				padding: 0px;
+			}
+		}
 	}
 
 }//end .wrapper_widget.state

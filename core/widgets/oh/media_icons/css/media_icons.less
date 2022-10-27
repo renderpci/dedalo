@@ -6,23 +6,25 @@
 .wrapper_widget.media_icons {
 	font-family: 'Menlo', monospace;
 	font-size: 12px;
+	display: block;
+	width: 100%;
 
 	>.content_data {
 
 		// ul
 		>.values_container {
-			// display: contents;
+			display: contents;
+			// grid mode
+				// display: grid;
+				// grid-template-columns: minmax(29px, 1fr) repeat(4, 1fr) minmax(88px, 1fr);
+				// // grid-template-columns: repeat(6, auto);
+				// column-gap: 0.25rem;
+				// row-gap: 0.2rem;
 
-			display: grid;
-			grid-template-columns: minmax(29px, 1fr) repeat(4, 1fr) minmax(88px, 1fr);
-			// grid-template-columns: repeat(6, auto);
-			column-gap: 0.25rem;
-			row-gap: 0.2rem;
-			padding: 0.25rem;
-			padding-right: 0.33rem;
-			opacity: 0.6;
-			width: min-content;
-
+			// padding: 0.25rem;
+			// padding-right: 0.33rem;
+			// opacity: 0.6;
+			// width: min-content;
 
 			// li
 			>.widget_item.media_icons {
@@ -30,7 +32,13 @@
 				// opacity: 0.6;
 				// display: grid;
 				// grid-template-columns: 29px repeat(4, 1fr) 88px;
-				display: contents;
+				// display: contents;
+
+				display: flex;
+				flex-wrap: wrap;
+				margin-left: 2rem;
+				margin-bottom: 0.25rem;
+				margin-top: 0.25rem;
 
 				>.value {
 					// background-color: #c4dbfd;
@@ -42,26 +50,40 @@
 					margin: 0px;
 					padding: 0px;
 					line-height: 1rem;
-					// flex: 0;
+					flex: 0 1 auto;
 
 					&.id {
-						// flex: 0 0 1.8rem;
+						flex: 0 0 2rem;
 						text-align: end;
+						margin-right: 2px;
+						margin-left: -1.95rem;
 					}
 
 					&.av {
+						flex: 0 0 1.2rem;
 						padding: 0px;
 						.file_av {
 							position: relative;
-							top: -1px;
+							// top: 1px;
 							margin: 0px;
 							padding: 0px;
 						}
 					}
 
-					// &.tc {
-					// 	padding-right: 0.5rem;
-					// }
+					&.tr,
+					&.in,
+					&.tl {
+						flex: 0 0 1.2rem;
+						margin-left: 1px;
+						margin-right: 1px;
+
+					}
+
+					&.tc {
+						// flex: 0 1 auto;
+						// padding-left: 1.5rem;
+						padding: 0px;
+					}
 
 					&.link:hover {
 						opacity: 1 !important;
@@ -69,7 +91,6 @@
 						background-color: @color_orange_dedalo;
 						color: white;
 					}
-
 				}
 			}
 		}//end .values_container
