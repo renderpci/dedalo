@@ -921,7 +921,7 @@ export const get_columns_map = function(context, datum_context) {
 								label	: dd_object.tipo
 							  }
 
-						// column width set
+					// column width set
 						column.width = dd_object.width || column.width || null
 
 					dd_object.column_id = column.id
