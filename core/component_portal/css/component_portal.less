@@ -186,23 +186,37 @@
 				// overflow: hidden;
 				overflow-y: hidden;
 
-				.wrapper_component.media {
-					// display: none;
+				.wrapper_component {
+					padding: 0px;
+					margin: 0px;
+
+					.content_value {
+						margin: 0px;
+						padding: 0.25rem;
+					}
+				}
+
+				.button_exit_edit {
+					display: none;
 				}
 			}
 
 			>.content_data {
 
+				>.hover_body {
+					position: relative;
+				}
+
 				.sr_mosaic_hover {
 					// background-color: rgb(255 255 255 / 35%);
 					position: absolute;
-					width: 100% !important;
-					height: 100% !important;
+					width: 100%;
+					height: 100%;
 					display: grid;
 					grid-template-columns: 73px auto 60px;
 					// grid-template-rows: 25% auto 22%;
 					grid-template-rows: 1fr 2fr 1fr;
-					overflow: hidden !important;
+					overflow: hidden;
 					@bg_color_buttons: rgb(255 255 255 / 70%);
 
 					>.column {

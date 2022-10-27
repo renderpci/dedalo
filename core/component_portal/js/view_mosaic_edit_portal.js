@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
@@ -29,6 +29,7 @@
 	} from './drag_and_drop.js'
 
 
+
 /**
 * VIEW_MOSAIC_EDIT_PORTAL
 * Manage the components logic and appearance in client side
@@ -41,7 +42,7 @@ export const view_mosaic_edit_portal = function() {
 
 
 /**
-* view_mosaic_edit_portal
+* RENDER
 * Manages the component's logic and appearance in client side
 */
 view_mosaic_edit_portal.render = async function(self, options) {
@@ -142,10 +143,11 @@ view_mosaic_edit_portal.render = async function(self, options) {
 
 			const content_data		= await get_content_data(self, ar_section_record)
 
+		// (!) No need to add the nodes here. On user mouseover/click, they will be added
 		// alt_list_body . Prepend hidden node into content_data to allow refresh on render_level 'content'
-			content_data.prepend( alt_list_body )
+			// content_data.prepend( alt_list_body )
 		// hover_body. add hover node to the content_data
-			content_data.prepend( hover_body )
+			// content_data.prepend( hover_body )
 
 
 		// render_level
