@@ -258,6 +258,13 @@ render_menu.prototype.edit = async function() {
 
 					// update current instance
 					current_instance = instance
+
+					// toggle inspector view
+					if (instance.mode==='edit') {
+						toggle_inspector.classList.remove('hide')
+					}else{
+						toggle_inspector.classList.add('hide')
+					}
 				}
 			}
 			section_label.addEventListener('click', async (e) => {
