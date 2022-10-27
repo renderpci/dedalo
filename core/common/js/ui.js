@@ -2393,11 +2393,23 @@ export const ui = {
 						})
 					}
 
-					const sub_header	= ui.create_dom_element({
+					const sub_header = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'sub_header',
 						parent			: header_item
 					})
+
+					// grid column calculate
+						const items				= ui.flat_column_items(column.columns_map)
+						const template_columns	= items.join(' ')
+						const css_object = {
+							'.sub_header' : {
+								'grid-template-columns' : template_columns
+							}
+						}
+						const selector = 'head_column.'+id
+						set_element_css(selector, css_object)
+
 
 					const current_column_map	= column.columns_map
 					const columns_map_length	= current_column_map.length
@@ -2641,7 +2653,7 @@ export const ui = {
 		// if ddo width is not defined, use this defaults
 			const width_defaults = {
 				component_publication	: '5rem',
-				component_info			: 'minmax(5rem, 1fr)',
+				component_info			: 'minmax(9rem, 1fr)',
 				component_image			: '102px',
 				component_av			: '102px'
 			}
