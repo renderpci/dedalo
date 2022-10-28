@@ -61,12 +61,16 @@
 			$item = $this->get_data_item($value);
 			// add useful properties
 			// posterframe_url
-				$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
+				$item->posterframe_url	= $this->get_posterframe_url(
+					true, // bool test_file
+					false, // bool absolute
+					false // avoid_cache
+				);
 			// default quality video URL (usually from 404)
 				$item->video_url		= $this->file_exist()
 					? $this->get_url(false)
 					: null;
-			//  files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
+			// files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
 				$item->datalist = $this->get_files_info();
 
 		// player mode case. Send the media header when the component are working as player

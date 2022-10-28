@@ -85,7 +85,7 @@ const t0 = performance.now()
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
+				// console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
 				// dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
 			}
 	})()
