@@ -30,7 +30,7 @@ class dd_object {
 		# request_config	: [],
 		# ar_sections_tipo	: ['oh1']
 		# columns_map		: array
-		# view				: string like 'table'
+		# view				: string|null like 'table'
 		# children_view		: string like "text"
 		# fixed_mode		: string like 'edit'
 		# section_id		: int like 1 // Used by tools
@@ -383,7 +383,7 @@ class dd_object {
 	/**
 	* SET_VIEW
 	*/
-	public function set_view(string $value) : void {
+	public function set_view(?string $value) : void {
 
 		$this->view = $value;
 	}//end set_view
@@ -393,7 +393,7 @@ class dd_object {
 	/**
 	* SET_CHILDREN_VIEW
 	*/
-	public function set_children_view(string $value) : void {
+	public function set_children_view(?string $value) : void {
 
 		$this->children_view = $value;
 	}//end set_view

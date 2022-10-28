@@ -116,7 +116,10 @@ export const set_context_vars = function(self) {
 			self.view = self.context.view || self.view
 			Object.defineProperty(self, 'view', {
 				get : function() {
-					return self.context.view || self.view;
+					return self.context.view
+						? self.context.view
+						: null
+					// return self.context.view || self.view;
 				},
 				set : function(value) {
 					return self.context.view = value;
@@ -900,7 +903,7 @@ export const get_columns_map = function(context, datum_context) {
 
 				const dd_object = ar_first_level_ddo[j]
 				// set the view if it is defined in ontology set it else get the parent view
-				dd_object.view 	= dd_object.view || children_view || view || 'default'
+				dd_object.view 	= dd_object.view || children_view || view || null // 'default'
 
 				// if the ddo has a column_id and columns_maps are defined in the properties,
 				// get the column as it has defined.
@@ -1093,7 +1096,7 @@ export const get_columns_map = function(context, datum_context) {
 * GET_AR_INVERTED_PATHS
 * Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc)
 * get the path in inverse format, the last in the chain will be the first object [0]
-* @return array ar_inverted_paths the the speific paths, with inverse path format.
+* @return array ar_inverted_paths the the specific paths, with inverse path format.
 */
 export const get_ar_inverted_paths = function(full_ddo_map){
 
