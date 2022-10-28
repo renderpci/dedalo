@@ -5,6 +5,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {get_ar_raw_data_value} from './render_edit_component_date.js'
 
 
 /**
@@ -26,7 +27,9 @@ export const view_mini_date = function() {
 view_mini_date.render = async function(self, options) {
 
 	// Value as string
-		const value_string = self.data.value
+		// const value_string = self.data.value
+		const ar_value		= get_ar_raw_data_value(self)
+		const value_string	= ar_value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
