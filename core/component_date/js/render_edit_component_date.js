@@ -63,7 +63,7 @@ render_edit_component_date.prototype.edit = async function(options) {
 */
 export const get_ar_raw_data_value = (self) => {
 
-	const value		= self.data.value || []
+	const value	= self.data.value || []
 
 	const date_mode	= self.get_date_mode()
 	const ar_raw_value = []
@@ -77,14 +77,27 @@ export const get_ar_raw_data_value = (self) => {
 
 			case 'range':
 				if (current_value.start || current_value.end) {
+
+					const ar_text_range = []
+
 					const input_value_start	= (current_value && current_value.start)
 						? self.date_to_string(current_value.start)
-						: ' '
+						: null
+						if (input_value_start) {
+							ar_text_range.push(input_value_start)
+						}
+
 					const input_value_end	= (current_value && current_value.end)
 						? self.date_to_string(current_value.end)
-						: ' '
-						const text_range = input_value_start + ' <> '+input_value_end
-						ar_raw_value.push(text_range)
+						: null
+						if (input_value_end) {
+							ar_text_range.push(input_value_end)
+						}
+
+					// const text_range = input_value_start + ' <> '+ input_value_end
+					const text_range = ar_text_range.join(' <> ')
+
+					ar_raw_value.push(text_range)
 				}
 				break;
 
