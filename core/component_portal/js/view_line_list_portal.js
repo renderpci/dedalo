@@ -7,7 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {
-		activate_autocomplete,
+		// activate_autocomplete,
 		render_references
 	} from './render_edit_component_portal.js'
 
@@ -27,7 +27,7 @@ export const view_line_list_portal = function() {
 
 /**
 * RENDER
-* Manages the component's logic and appearance in client side
+* Render component nodes in current view
 * @param component_portal instance self
 * @param object options
 * @return promise
@@ -43,7 +43,7 @@ view_line_list_portal.render = async function(self, options) {
 
 	// ar_section_record
 		const ar_section_record	= await self.get_ar_instances({
-			view	: children_view
+			view : children_view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
@@ -64,7 +64,7 @@ view_line_list_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// autocomplete
+	// change_mode
 		wrapper.addEventListener('click', function(e) {
 			e.stopPropagation()
 
@@ -100,31 +100,34 @@ const get_content_data = async function(self, ar_section_record) {
 	// build_values
 		const fragment = new DocumentFragment()
 
-		// add all section_record rendered nodes
-			const ar_section_record_length	= ar_section_record.length
-			if (ar_section_record_length===0) {
+	// add all section_record rendered nodes
+		const ar_section_record_length	= ar_section_record.length
+		if (ar_section_record_length===0) {
 
-			}else{
+			// no records found case
+			// const row_item = no_records_node()
+			// fragment.appendChild(row_item)
+		}else{
 
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise = ar_section_record[i].render()
-					ar_promises.push(render_promise)
-				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-
-					const section_record = values[i]
-					fragment.appendChild(section_record)
-				  }
-				});
-			}//end if (ar_section_record_length===0)
-
-		// build references
-			if(self.data.references && self.data.references.length > 0){
-				const references_node = render_references(self.data.references)
-				fragment.appendChild(references_node)
+			const ar_promises = []
+			for (let i = 0; i < ar_section_record_length; i++) {
+				const render_promise = ar_section_record[i].render()
+				ar_promises.push(render_promise)
 			}
+			await Promise.all(ar_promises).then(function(values) {
+			  for (let i = 0; i < ar_section_record_length; i++) {
+
+				const section_record = values[i]
+				fragment.appendChild(section_record)
+			  }
+			});
+		}//end if (ar_section_record_length===0)
+
+	// build references
+		if(self.data.references && self.data.references.length > 0){
+			const references_node = render_references(self.data.references)
+			fragment.appendChild(references_node)
+		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
@@ -135,4 +138,3 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
-

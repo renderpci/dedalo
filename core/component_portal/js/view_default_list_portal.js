@@ -28,11 +28,13 @@ export const view_default_list_portal = function() {
 
 
 /**
-* LIST
-* Render node for use in list
-* @return DOM node wrapper
+* RENDER
+* Render component nodes in current view
+* @param component_portal instance self
+* @param object options
+* @return promise
+* 	DOM node wrapper
 */
-// view_default_list_portal.prototype.list = render_edit_component_portal.prototype.edit
 view_default_list_portal.render = async function(self, options) {
 
 	// options
@@ -41,6 +43,7 @@ view_default_list_portal.render = async function(self, options) {
 	// view
 		const children_view	= self.context.children_view || self.context.view || 'default'
 
+	// ar_section_record
 		const ar_section_record	= await self.get_ar_instances({
 			view : children_view
 		})
@@ -111,13 +114,12 @@ view_default_list_portal.render = async function(self, options) {
 			// set pointers
 			wrapper.content_data	= content_data
 			wrapper.list_body		= list_body
+			// click event capture
 			wrapper.addEventListener('click', function(e) {
 				e.stopPropagation()
 				// nothing to do in list mode, only catch click event
 			})
 
-		// events
-			// add_events(self, wrapper)
 
 	return wrapper
 }//end list
@@ -131,7 +133,8 @@ view_default_list_portal.render = async function(self, options) {
 */
 const get_content_data = async function(self, ar_section_record) {
 
-	const fragment = new DocumentFragment()
+	// build_values
+		const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
 		const ar_section_record_length	= ar_section_record.length
@@ -151,7 +154,6 @@ const get_content_data = async function(self, ar_section_record) {
 			  for (let i = 0; i < ar_section_record_length; i++) {
 
 				const section_record = values[i]
-
 				fragment.appendChild(section_record)
 			  }
 			});
