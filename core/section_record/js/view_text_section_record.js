@@ -168,9 +168,12 @@ view_text_section_record.render = async function(self, options) {
 	// component_info
 		const component_info = self.get_component_info()
 		if (component_info){
-			const info_value	= component_info.value.join('')
-			const info			= document.createTextNode(info_value)
-			wrapper.appendChild(info)
+
+			const info_value	= '&nbsp;' + component_info.value.join('&nbsp;')
+			const info			= document.createElement('span')
+				  info.innerHTML= info_value
+
+			wrapper.append(...info.childNodes)
 		}
 
 
