@@ -182,6 +182,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			if (self.matrix_id) {
 				instance_options.matrix_id = self.matrix_id
 			}
+
 		// column id
 			if(column_id){
 				instance_options.column_id = column_id
