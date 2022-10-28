@@ -2655,7 +2655,9 @@ export const ui = {
 				component_publication	: '5rem',
 				component_info			: 'minmax(9rem, 1fr)',
 				component_image			: '102px',
-				component_av			: '102px'
+				component_av			: '102px',
+				component_svg			: '102px',
+				component_pdf			: '102px'
 			}
 
 		let ar_elements = []

@@ -918,7 +918,8 @@ export const get_columns_map = function(context, datum_context) {
 							? found
 							: {
 								id		: dd_object.tipo,
-								label	: dd_object.tipo
+								label	: dd_object.tipo,
+								model	: dd_object.model
 							  }
 
 					// column width set
@@ -940,11 +941,12 @@ export const get_columns_map = function(context, datum_context) {
 								{
 									id		: dd_object.tipo,
 									label	: dd_object.tipo,
-									tipo	: dd_object.tipo
+									tipo	: dd_object.tipo,
+									model	: dd_object.model
 								}
 							)
 							dd_object.column_id = dd_object.tipo
-							continue
+							continue;
 						}
 
 					switch(view){
@@ -964,7 +966,8 @@ export const get_columns_map = function(context, datum_context) {
 								//create the general column with the tipo of the component_portal
 								const column = {
 									id		: tipo,
-									label	: tipo
+									label	: tipo,
+									model	: dd_object.model
 								}
 
 								columns_map.push(column)
@@ -987,7 +990,8 @@ export const get_columns_map = function(context, datum_context) {
 									id			: dd_object.tipo,
 									label		: dd_object.tipo,
 									in_mosaic	: dd_object.in_mosaic,
-									hover		: dd_object.hover
+									hover		: dd_object.hover,
+									model		: dd_object.model
 								}
 							)
 							dd_object.column_id	= dd_object.tipo
@@ -998,7 +1002,8 @@ export const get_columns_map = function(context, datum_context) {
 							columns_map.push(
 								{
 									id		: dd_object.tipo,
-									label	: dd_object.tipo
+									label	: dd_object.tipo,
+									model	: dd_object.model
 								}
 							)
 							dd_object.column_id = dd_object.tipo
@@ -1043,9 +1048,9 @@ export const get_columns_map = function(context, datum_context) {
 						: false
 
 				// model
-					column_item.model = found
+					column_item.model = found && found.model
 						? found.model
-						: null
+						: column_item.model || null
 
 				// width
 					column_item.width = column_item.width
@@ -1078,7 +1083,6 @@ export const get_columns_map = function(context, datum_context) {
 			// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
 			// console.log("columns_map:",columns_map); // throw 'stop'
 		}
-
 
 	return columns_map
 }//end get_columns_map
