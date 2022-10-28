@@ -1550,6 +1550,7 @@ abstract class common {
 					$filter_by_list = component_relation_common::get_filter_list_data($filter_list);
 					$dd_object->filter_by_list = $filter_by_list;
 				}
+
 			// component specific
 				if (strpos($model, 'component_')===0) {
 					if ($mode==='list') {
@@ -1565,10 +1566,12 @@ abstract class common {
 						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
 					}
 				}
-			// view, all components has view, used to change the render view. the default value is "default" except in component_portal
+
+			// view, all components has view, used to change the render view.
+			// the default value is "default" except in component_portal
 				$dd_object->view = $this->get_view();
 
-			// sometimes the component define the view of his children (see rsc368)
+			// children_view. Sometimes the component define the view of his children (see rsc368)
 				if (isset($properties->children_view)) {
 					$dd_object->children_view = $this->get_children_view();
 				}
@@ -2890,9 +2893,11 @@ abstract class common {
 						: $mode;
 
 				// view
-					$tipo_RecordObj_dd	= new RecordObj_dd($tipo);
-					$tipo_properties	= $tipo_RecordObj_dd->get_properties();
-					$children_view = isset($tipo_properties->children_view)
+					// $tipo_RecordObj_dd	= new RecordObj_dd($tipo);
+					// $tipo_properties	= $tipo_RecordObj_dd->get_properties();
+					// (!) Changed because is already calculated and properties could be different from $tipo when in a section_list
+					$tipo_properties	= $properties;
+					$children_view		= isset($tipo_properties->children_view)
 						? $tipo_properties->children_view
 						: null;
 
@@ -2913,14 +2918,14 @@ abstract class common {
 				// ddo_map
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
-						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 						$current_tipo_RecordObj_dd	= new RecordObj_dd($current_tipo);
 						$current_tipo_properties	= $current_tipo_RecordObj_dd->get_properties();
 						$own_view					= isset($current_tipo_properties->view)
 							? $current_tipo_properties->view
 							: ($model === 'component_portal'
 								? 'line'
-								: 'default');
+								: null); // 'default'
 
 						$view = isset($children_view)
 							? $children_view
@@ -3871,18 +3876,37 @@ abstract class common {
 
 	/**
 	* GET_VIEW
-	* @return string $view
+	* @return string|null $view
 	*/
-	public function get_view() : string {
+	public function get_view() : ?string {
 
 		// When view is injected by ddo_map
 			if(isset($this->view)){
 				return $this->view;
 			}
 
+		// list mode
+			if ($this->modo==='list' && strpos(get_called_class(), 'component_')===0) {
+				// section list
+				$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$this->tipo,
+					'section_list',
+					'children',
+					true
+				);
+				if(isset($ar_terms[0])) {
+					$current_term	= $ar_terms[0];
+					$RecordObj_dd	= new RecordObj_dd($current_term);
+					$properties		= $RecordObj_dd->get_properties();
+					if( isset($properties->view) ) {
+						return $properties->view;
+					}
+				}
+			}
+
 		// properties defined case
 			$properties = $this->get_properties();
-			if(isset($properties->view)){
+			if( isset($properties->view) ) {
 				return $properties->view;
 			}
 
@@ -3916,7 +3940,7 @@ abstract class common {
 					$view = 'html_text';
 					break;
 				default:
-					$view = 'default';
+					$view = null; // 'default';
 					break;
 			}
 
