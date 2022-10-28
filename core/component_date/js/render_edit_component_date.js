@@ -67,11 +67,16 @@ export const get_ar_raw_data_value = (self) => {
 
 	const date_mode	= self.get_date_mode()
 	const ar_raw_value = []
-	const inputs_value	= (value.length<1) ? [''] : value
+	const inputs_value	= (value.length<1) ? [] : value
 	const value_length	= inputs_value.length
 	for (let i = 0; i < value_length; i++) {
 
 		const current_value = inputs_value[i]
+		if (!current_value) {
+			console.error('Ignored component_date empty value:', i, inputs_value);
+			console.log('Check this component value:', self);
+			continue;
+		}
 
 		switch(date_mode) {
 
