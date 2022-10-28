@@ -2586,6 +2586,9 @@ abstract class common {
 											? 'list'
 											: $mode);
 
+								// model
+									$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
+
 								// fields_map. Used by component external to map to different API format, defined in the component,
 								// when this property is present and true, get the component fields_map
 									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
