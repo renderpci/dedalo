@@ -345,16 +345,16 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 						if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
 							// check if the column of the component is already loaded, if exists don't load it.
-							const exists = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
-							if(exists) {
-								continue
-							}
+								const exists = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
+								if(exists) {
+									continue
+								}
 
 							// add to the ddo to the column
-							ar_column_ddo.push(current_ddo)
+								ar_column_ddo.push(current_ddo)
 
 							// current_data. get the component data to assign to it and create the instance
-							const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 
 							// current_context. check if the section_tipo of the component
 								const current_context = Array.isArray(current_ddo.section_tipo)
