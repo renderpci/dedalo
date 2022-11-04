@@ -18,7 +18,7 @@ abstract class backup {
 
 	/**
 	* INIT_BACKUP_SECUENCE
-	* Make backup (compresed mysql dump) of current dedalo DB before login
+	* Make backup (compressed MYSQL dump) of current dedalo DB before login
 	* @return $db_name." ($file_bk_size)";
 	*/
 	public static function init_backup_secuence($user_id, $username, $skip_backup_time_range=false) {
@@ -32,12 +32,12 @@ abstract class backup {
 
 		if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
 			$response->result 	= true;
-			$response->msg 		= 'Ok. Skipped request by db config managment '.__METHOD__;
+			$response->msg 		= 'Ok. Skipped request by db config management '.__METHOD__;
 			return $response;
 		}
 
 		try {
-			# NAME : File name formated as date . (One hour resolution)
+			# NAME : File name formatted as date . (One hour resolution)
 			$ar_dd_data_version = tool_administration::get_current_version_in_db();
 			$db_name = ($skip_backup_time_range===true)
 				? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
@@ -66,7 +66,7 @@ abstract class backup {
 				#
 				# Time range for backups in hours
 				if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
-					define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+					define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
 				}
 				$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
 				$current_time_secs 			 = time();
@@ -92,22 +92,26 @@ abstract class backup {
 				return $response;
 			}
 
-			// Export the database and output the status to the page
-			$command='';	#'sleep 1 ;';
-			# $command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
+			// command. Export the database and output the status to the page
 			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
 
 			if($skip_backup_time_range===true) {
 
-				$command = 'nice -n 19 '.$command;
-				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
+				// forced backup case. Wait until finish
+
+				$command = 'nice -n 19 ' . $command;
+				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::WARNING);
+				error_log("Backup command [skip_backup_time_range]: " . $command);
 
 				# EXEC DIRECTLY AND WAIT RESULT
 				shell_exec($command);
 
 			}else{
 
-				$command = 'sleep 180s; nice -n 19 '.$command;
+				// default backup case. Async dump
+
+				$command = 'sleep 180s; nice -n 19 ' . $command;
+				error_log("Backup command [default]: " . $command);
 
 				# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
 				$prgfile = DEDALO_LIB_BASE_PATH.'/backup/temp/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//

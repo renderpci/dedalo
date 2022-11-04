@@ -1043,7 +1043,7 @@ function update_dedalo_code($json_data) {
 				"File size: "	. format_size_units( filesize($target_file) )
 			];
 
-		// extract files fom zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
+		// extract files from zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
 			$zip = new ZipArchive;
 			$res = $zip->open($target_file);
 			if ($res!==true) {
