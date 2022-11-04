@@ -107,7 +107,6 @@ export const render_time_machine_list_view = async function(self, options) {
 
 
 
-
 /**
 * GET_CONTENT_DATA
 * @return DOM node content_data
@@ -145,15 +144,13 @@ const get_content_data = async function(ar_section_record, self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
 			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data
-
-
 
 
 
@@ -245,5 +242,3 @@ const rebuild_columns_map = async function(self) {
 
 	// 	return fragment
 	// }//end render_column_id()
-
-

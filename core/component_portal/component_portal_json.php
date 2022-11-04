@@ -118,8 +118,8 @@
 
 					$data[] = $item;
 
+				// subdatum
 					$subdatum = $this->get_subdatum($tipo, $value);
-
 						// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
 
 					$ar_subcontext = $subdatum->context;
@@ -131,6 +131,7 @@
 					foreach ($ar_subdata as $sub_value) {
 						$data[] = $sub_value;
 					}
+
 
 				// subdata from subcontext items
 					// 	$ar_subdata = $this->get_ar_subdata($value);

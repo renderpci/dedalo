@@ -247,7 +247,7 @@ const render_column_id = function(options) {
 						}else{
 							// error case
 							console.warn("response:",response);
-							alert(response.msg || 'Error. Unknow error on apply tm value');
+							alert(response.msg || 'Error. Unknown error on apply tm value');
 						}
 					})
 			}else{
