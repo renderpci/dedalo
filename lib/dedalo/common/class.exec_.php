@@ -31,49 +31,54 @@ class exec_ {
 
 
 			if( !$output )
-				throw new Exception("Error processing media command", 1);				
-			
+				throw new Exception("Error processing media command", 1);
+
 		}catch(Exception $e){
-			
-			return ('Exception: '. $e->getMessage(). "\n");		
+
+			return ('Exception: '. $e->getMessage(). "\n");
 		}
 		return true ;
 	}//end exec_command
 
 
-	
+
 	/**
 	* EXEC SH FILE
+	* @param string $file
 	*/
 	public static function exec_sh_file($file) {
 
-		try {			
+		try {
 			#exec("sh $file > /dev/null &", $output); # funciona!!! <<<<
 			#exec("sh $file > /dev/null 2>&1 & echo $!", $output); # return pid
 
-			$response = exec("sh $file > /dev/null 2>&1 & echo $!", $output); 
-			
-			if ( !$response )
+			// $response = exec("sh $file > /dev/null 2>&1 & echo $!", $output);
+			$response = exec("sh $file > /dev/null &", $output);
+
+			if ( $response===false ) {
 				throw new Exception("Error Processing media file", 1);
+			}
 
-			if(!empty($output[0]))
+			if( !empty($output[0]) ) {
 				return intval($output[0]);
-			
+			}
+
 		}catch(Exception $e){
-			
-			return ('Exception: '. $e->getMessage(). "\n");		
+
+			$msg = 'Exception: '. $e->getMessage();
+			debug_log(__METHOD__." ERROR:  ".$msg, logger::ERROR);
+			return $msg . PHP_EOL;
 		}
-
 	}//end exec_sh_file
-	
 
-	
+
+
 	/**
 	* GETCOMMANDPATH
 	*/
 	private static function getCommandPath($command='') {
-		// note: security vulnerability... 
-		// should validate that $command doesn't 
+		// note: security vulnerability...
+		// should validate that $command doesn't
 		// contain anything bad
 		$path = `which $command`;
 		if ($path != null) {
@@ -82,7 +87,7 @@ class exec_ {
 		} else {
 			return false;
 		}
-	
+
 	}//end getCommandPath
 
 
