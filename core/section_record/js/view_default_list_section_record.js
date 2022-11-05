@@ -28,6 +28,7 @@ export const view_default_list_section_record = function() {
 * RENDER
 * Render node for use in list with all columns and rendered components
 * @param array ar_instances
+* @para object options
 * @return Promise DOM node wrapper
 */
 view_default_list_section_record.render = async function(self, options) {

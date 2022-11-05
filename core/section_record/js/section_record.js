@@ -184,7 +184,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			}
 
 		// column id
-			if(column_id){
+			if(column_id) {
 				instance_options.column_id = column_id
 			}
 
@@ -655,7 +655,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				tipo			: ddo.tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id,
-				info			: 'No component data is found',
+				info			: 'No data found for this component',
 				value			: [],
 				fallback_value	: ['']
 			}

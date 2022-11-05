@@ -24,10 +24,9 @@ export const common = function(){
 
 
 /**
-* INITING
+* INIT
 * @param object options
-* Generic agnostic init function created to maintain
-* unity of calls.
+* Generic agnostic init function created to preserve calls unity.
 * (!) For components, remember to use always common.init()
 * @return bool true
 */
