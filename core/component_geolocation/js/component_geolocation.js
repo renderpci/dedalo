@@ -1217,6 +1217,31 @@ component_geolocation.prototype.layer_data_change = function(change) {
 };//end layer_data_change
 
 
+/**
+* CREATE_POINT
+* @param point object with the coordinates of the new point
+* {
+*	lat : 39.46861766020243, //float
+*	lng : -0.40077683642303136 //float
+* }
+* @return bool
+*/
+component_geolocation.prototype.create_point = function(point) {
+
+	const self = this
+
+	// create new point in the coordinates
+	const new_point = L.marker(point).addTo(self.map);
+
+	// add new point to the active layer
+	self.FeatureGroup[self.active_layer_id].addLayer(new_point)
+
+	// update the layer data with the new point
+	self.update_draw_data(self.active_layer_id)
+
+	return true
+};//end create_point
+
 
 /**
 * INIT_FEATURE

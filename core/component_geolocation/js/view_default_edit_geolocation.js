@@ -211,7 +211,6 @@ export const get_input_element_edit = (i, current_value, self) =>{
 	// refresh
 		const refresh_node = ui.create_dom_element({
 			element_type	: 'span',
-			// dataset		: { key : i },
 			parent			: inputs_container,
 			class_name		: 'map_reload'
 		})
@@ -238,6 +237,23 @@ export const get_input_element_edit = (i, current_value, self) =>{
 
 			// load all layers
 				self.layers_loader({load:'full'})
+		})
+
+	// create point
+		const add_point_node = ui.create_dom_element({
+			element_type	: 'span',
+			parent			: inputs_container,
+			class_name		: 'map_point'
+		})
+		add_point_node.addEventListener('click', function() {
+
+			const point = {
+				lat : parseFloat(lat_node.value),
+				lng : parseFloat(lon_node.value)
+			}
+
+			// create the point in the coordinates
+				self.create_point(point)
 		})
 
 	// map container
