@@ -2080,17 +2080,19 @@ abstract class common {
 
 		// requested_source is fixed from RQO calls to API when they exists like
 		// {
-	    //     "typo": "source",
-	    //     "action": "search",
-	    //     "model": "section",
-	    //     "tipo": "dd64",
-	    //     "section_tipo": "dd64",
-	    //     "section_id": null,
-	    //     "mode": "edit",
-	    //     "lang": "lg-eng"
-	    // }
+		//     "typo": "source",
+		//     "action": "search",
+		//     "model": "section",
+		//     "tipo": "dd64",
+		//     "section_tipo": "dd64",
+		//     "section_id": null,
+		//     "mode": "edit",
+		//     "lang": "lg-eng"
+		// }
 		$requested_source = dd_core_api::$rqo->source ?? false;
-		if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
+
+		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
+		if(false!==$requested_source && $requested_source->tipo===$this->tipo) {
 
 			// set the request_config with the API rqo sent by client
 
