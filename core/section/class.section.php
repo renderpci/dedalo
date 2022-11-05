@@ -3783,9 +3783,9 @@ class section extends common {
 				// current time machine component/s
 				$component_context = (function($tipo, $section_tipo, $lang) {
 
-					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					$component		= component_common::get_instance(
-						$modelo_name,
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$component	= component_common::get_instance(
+						$model,
 						$tipo,
 						null,
 						'list',
