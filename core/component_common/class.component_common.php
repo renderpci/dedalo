@@ -550,11 +550,12 @@ abstract class component_common extends common {
 
 				if (empty($this->matrix_id)) {
 					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
-					return false;
+					return null;
 				}
 
 				// tm dato. Note that no lang or section_id is needed, only matrix_id
 				$dato_tm = component_common::get_component_tm_dato($this->tipo, $this->section_tipo, $this->matrix_id);
+
 				// inject dato to component
 				$this->dato_resolved = $dato_tm;
 
