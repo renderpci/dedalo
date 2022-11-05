@@ -56,7 +56,8 @@ render_table_dd_grid.prototype.table = function() {
 * @param data; array of objects; full data sent by the server with all information.
 * @return DOM node with the table
 */
-const get_table_nodes = function(data, data_format){
+const get_table_nodes = function(data, data_format) {
+
 	// the root node
 	const fragment = new DocumentFragment()
 	// First row;
