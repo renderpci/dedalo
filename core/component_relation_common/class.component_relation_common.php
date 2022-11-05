@@ -230,6 +230,7 @@ class component_relation_common extends component_common {
 	}//end load_component_dato
 
 
+
 	/**
 	* GET_VALUE
 	* Get the value of the components. By default will be get_dato().
@@ -240,7 +241,7 @@ class component_relation_common extends component_common {
 	*/
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+		// ddo customs: set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
 			$records_separator	= $ddo->records_separator ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
@@ -267,8 +268,8 @@ class component_relation_common extends component_common {
 		// get the ddo_map to be used to create the components related to the portal
 		$ddo_map = $dedalo_request_config->show->ddo_map;
 
-		$ar_cells		= [];
-		$ar_columns_obj	= [];
+		$ar_cells			= [];
+		$ar_columns_obj		= [];
 		$sub_row_count		= 0;
 		$sub_column_count	= null;
 		// the column_object could be injected for the caller or build new one
@@ -486,6 +487,7 @@ class component_relation_common extends component_common {
 
 		return $value;
 	}//end get_value
+
 
 
 	/**
@@ -719,7 +721,7 @@ class component_relation_common extends component_common {
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
-			// if not already receved 'valor', force component load 'dato' from DB
+			// if not already received 'valor', force component load 'dato' from DB
 			$dato = $this->get_dato();
 		}else{
 			// use parsed received json string as dato
@@ -998,7 +1000,8 @@ class component_relation_common extends component_common {
 	* @param array|null $ar_components_related
 	* @param bool $include_self = true
 	*
-	* @return array|null $ar_value e.g. ['pepe','lope']
+	* @return array|null $ar_value
+	* 	Sample: ['pepe','lope']
 	*/
 	public static function get_locator_value(
 		object $locator,
