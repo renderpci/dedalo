@@ -11,17 +11,17 @@ abstract class DBi {
 	/**
 	* _GETCONNECTION
 	* Returns an PgSql\Connection instance on success, or false on failure.
-	* @return resource|object $pg_conn (object in PHP >=8.1)
+	* @return resource|object $pg_conn
 	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
 	*/
 	public static function _getConnection(
-		string|null $host	= DEDALO_HOSTNAME_CONN,
-		string $user		= DEDALO_USERNAME_CONN,
-		string $password	= DEDALO_PASSWORD_CONN,
-		string $database	= DEDALO_DATABASE_CONN,
-		string|null $port	= DEDALO_DB_PORT_CONN,
-		string|null $socket	= DEDALO_SOCKET_CONN,
-		bool $cache			= true
+		string|null $host		= DEDALO_HOSTNAME_CONN,
+		string 		$user		= DEDALO_USERNAME_CONN,
+		string 		$password	= DEDALO_PASSWORD_CONN,
+		string 		$database	= DEDALO_DATABASE_CONN,
+		string|null $port		= DEDALO_DB_PORT_CONN,
+		string|null $socket		= DEDALO_SOCKET_CONN,
+		bool 		$cache		= true
 		) : object|false {
 
 		static $pg_conn;
@@ -44,13 +44,22 @@ abstract class DBi {
 		}
 
 		// Connecting, selecting database
-		$pg_conn = pg_connect($str_connect);
+		$pg_conn_real = pg_connect($str_connect);
 		if($pg_conn===false) {
 			debug_log(__METHOD__.' Error. Could not connect to database (52) : '.to_string($database), logger::ERROR);
 			if(SHOW_DEBUG===true) {
 				// throw new Exception("Error. Could not connect to database (52)", 1);
 			}
 		}
+
+		// no cache case return fresh connection
+			if ($cache!==true) {
+				return $pg_conn_real;
+			}
+
+		// set as static
+			$pg_conn = $pg_conn_real;
+
 
 		return $pg_conn;
 	}//end _getConnection
@@ -65,12 +74,12 @@ abstract class DBi {
 	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
 	*/
 	public static function _getNewConnection(
-		$host		= DEDALO_HOSTNAME_CONN,
-		$user		= DEDALO_USERNAME_CONN,
-		$password	= DEDALO_PASSWORD_CONN,
-		$database	= DEDALO_DATABASE_CONN,
-		$port		= DEDALO_DB_PORT_CONN,
-		$socket		= DEDALO_SOCKET_CONN
+		string|null $host		= DEDALO_HOSTNAME_CONN,
+		string 		$user		= DEDALO_USERNAME_CONN,
+		string 		$password	= DEDALO_PASSWORD_CONN,
+		string 		$database	= DEDALO_DATABASE_CONN,
+		string|null $port		= DEDALO_DB_PORT_CONN,
+		string|null $socket		= DEDALO_SOCKET_CONN
 		) : object|false {
 
 		$pg_conn = DBi::_getConnection(
@@ -80,7 +89,7 @@ abstract class DBi {
 			$database,
 			$port,
 			$socket,
-			false // bool cache
+			false // bool use cache (!
 		);
 
 		return $pg_conn;
