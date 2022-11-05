@@ -3012,8 +3012,15 @@ abstract class component_common extends common {
 			$item->section_tipo			= $this->get_section_tipo();
 			$item->tipo					= $this->get_tipo();
 			$item->lang					= $this->get_lang();
-			$item->from_component_tipo	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->from_component_tipo	= $this->from_component_tipo ?? $item->tipo;
 			$item->value				= $value;
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$item->debug_model = $this->get_model();
+				$item->debug_label = $this->get_label();
+				$item->debug_mode = $this->get_modo();
+			}
 
 		return $item;
 	}//end get_data_item
