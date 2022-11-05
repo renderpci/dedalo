@@ -226,7 +226,8 @@ class component_date extends component_common {
 			$date_mode	= $this->get_date_mode();
 
 		// ar_values
-			$data = $this->get_dato();
+			$ar_values	= [];
+			$data		= $this->get_dato();
 			foreach ($data as $key => $current_dato) {
 
 				$ar_values[$key] = ''; // default
