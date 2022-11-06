@@ -11,32 +11,30 @@
 
 
 /**
-* RENDER_TABLE_DD_GRID
+* VIEW_TABLE_DD_GRID
 * Manage the components logic and appearance in client side
 */
-export const render_table_dd_grid = function() {
+export const view_table_dd_grid = function() {
 
 	return true
-}//end render_table_dd_grid
+}//end view_table_dd_grid
 
 
 
 /**
-* TABLE
+* RENDER
 * Render node for use in table
 * @return DOM node wrapper
 */
-render_table_dd_grid.prototype.table = function() {
+view_table_dd_grid.render = function(self, options) {
 
-	const self = this
-
-	// Options vars
+	// data
 		const data = self.data
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'table',
-			class_name		: 'wrapper_dd_grid' + ' ' + self.tipo + ' ' + self.mode
+			class_name		: `wrapper_dd_grid ${self.tipo} ${self.mode} view_${self.view}`
 		})
 
 	// grid. Value as string
@@ -53,8 +51,10 @@ render_table_dd_grid.prototype.table = function() {
 
 /**
 * GET_TABLE_NODES
-* @param data; array of objects; full data sent by the server with all information.
-* @return DOM node with the table
+* @param array data
+* 	array of objects; full data sent by the server with all information.
+* @return DocumentFragment
+* 	DOM node with the table
 */
 const get_table_nodes = function(data, data_format) {
 
@@ -69,6 +69,7 @@ const get_table_nodes = function(data, data_format) {
 	// ar_columns_obj will be the map of the columns, used for create the header of the table and for extract the data and fill the empty values.
 	const ar_columns		= data[0].value
 	const ar_columns_obj	= ar_columns.map(item => item.ar_columns_obj)
+
 
 	// build the header
 	// get every column to create the header of the table, get the node and add to the root node
@@ -100,6 +101,7 @@ const get_table_nodes = function(data, data_format) {
 
 	return fragment
 }//end get_table_nodes
+
 
 
 /**
@@ -494,5 +496,3 @@ const get_section_id_column = function(current_data) {
 
 	return section_id_node
 }//end get_section_id_column
-
-

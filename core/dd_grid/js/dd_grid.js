@@ -9,7 +9,7 @@
 	import {common} from '../../common/js/common.js'
 	// import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
 	import {render_list_dd_grid} from '../../dd_grid/js/render_list_dd_grid.js'
-	import {render_table_dd_grid} from '../../dd_grid/js/render_table_dd_grid.js'
+	// import {render_table_dd_grid} from '../../dd_grid/js/render_table_dd_grid.js'
 	// import {ui} from '../../common/js/ui.js'
 
 
@@ -43,36 +43,67 @@ export const dd_grid = function(){
 */
 // prototypes assign
 	// lifecycle
-	dd_grid.prototype.init			= common.prototype.init
-	// dd_grid.prototype.build		= common.prototype.build
-	dd_grid.prototype.render		= common.prototype.render
-	dd_grid.prototype.refresh		= common.prototype.refresh
-	dd_grid.prototype.destroy		= common.prototype.destroy
+	// dd_grid.prototype.init	= common.prototype.init
+	// dd_grid.prototype.build	= common.prototype.build
+	dd_grid.prototype.render	= common.prototype.render
+	dd_grid.prototype.refresh	= common.prototype.refresh
+	dd_grid.prototype.destroy	= common.prototype.destroy
 
-	//render
-	dd_grid.prototype.list			= render_list_dd_grid.prototype.list
-	dd_grid.prototype.table			= render_table_dd_grid.prototype.table
-	// dd_grid.prototype.csv			= render_csv_dd_grid.prototype.table
+	// render
+	dd_grid.prototype.list		= render_list_dd_grid.prototype.list
+	// dd_grid.prototype.table	= render_table_dd_grid.prototype.table
+	// dd_grid.prototype.csv	= render_csv_dd_grid.prototype.table
+
+
+
+/**
+* INIT
+* @return promise
+* 	bool true
+*/
+dd_grid.prototype.init	= async function(options) {
+
+	const self = this
+
+	// call the generic common tool init
+		const common_init = await common.prototype.init.call(this, options);
+
+	// set data if exists
+		self.data = options.data
+	// column_id
+		self.column_id = options.column_id
+	// view. When caller is section_record, the view is inside context
+		self.view = options.view || (options.context ? options.context.view : 'default')
+		console.log('dd_grid self.view:', self.view);
+
+	return common_init
+}//end build
 
 
 
 /**
 * BUILD
-* @return promise
-* 	bool true
+* @param bool autoload = true
+* @return bool true
 */
-dd_grid.prototype.build	= async function(autoload=true){
+dd_grid.prototype.build	= async function(autoload=false) {
 
 	const self = this
 
 	// status update
 		self.status = 'building'
 
-	const api_response = await data_manager.request({body:self.rqo})
+	// api request
+		if (autoload===true) {
+			const api_response = await data_manager.request({
+				body : self.rqo
+			})
+			self.data = api_response.result || null
+		}
 
-	self.data = api_response.result || null
 	// status update
 		self.status = 'built'
 
-	return
+
+	return true
 }//end build
