@@ -11,32 +11,30 @@
 
 
 /**
-* RENDER_csv_DD_GRID
+* VIEW_CSV_DD_GRID
 * Manage the components logic and appearance in client side
 */
-export const render_csv_dd_grid = function() {
+export const view_csv_dd_grid = function() {
 
 	return true
-}//end render_csv_dd_grid
+}//end view_csv_dd_grid
 
 
 
 /**
-* TABLE
+* RENDER
 * Render node for use in table
 * @return DOM node wrapper
 */
-render_csv_dd_grid.prototype.table = function() {
+view_csv_dd_grid.render = function(self, options) {
 
-	const self = this
-
-	// Options vars
+	// data
 		const data = self.data
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'table',
-			class_name		: 'wrapper_dd_grid' + ' ' + self.tipo + ' ' + self.mode
+			class_name		: `wrapper_dd_grid ${self.tipo} ${self.mode} view_${self.view}`
 		})
 
 	// grid. Value as string
