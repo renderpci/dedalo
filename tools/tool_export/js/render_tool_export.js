@@ -28,7 +28,7 @@ export const render_tool_export = function() {
 * Render DOM nodes of the tool
 * @return DOM node wrapper
 */
-render_tool_export.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_export.prototype.edit = async function (options) {
 
 	const self = this
 
@@ -45,6 +45,8 @@ render_tool_export.prototype.edit = async function (options={render_level:'full'
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// tool_container container
 		// if (!window.opener) {
@@ -343,20 +345,24 @@ const get_content_data_edit = async function(self) {
 
 /**
 * BUILD_EXPORT_COMPONENT
-* @return dom object
+* Creates and place export_component
+* @param DOM node parent_div
+* @param array path
+* @param object ddo
+* @return DOM node export_component
 */
 render_tool_export.prototype.build_export_component = async function(parent_div, path, ddo) {
 
 	const self = this
 
-	const last_item		= path[path.length-1]
-	const first_item	= path[0]
+	// short vars
+		const last_item		= path[path.length-1]
+		const first_item	= path[0]
 
-
-	// export_component container. Create dom element before load html from trigger
+	// export_component container. Create DOM element before load html from trigger
 		const export_component = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "export_component",
+			class_name		: 'export_component',
 			parent			: parent_div
 			// data_set		: {
 			// 	path		: path_plain,
@@ -364,8 +370,8 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			// }
 		})
 
-	// component  node
-	const component_node = ui.create_dom_element({
+	// component_label
+		ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'component_label',
 			inner_html		: ddo.label,
@@ -383,7 +389,9 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 			parent			: export_component,
 			class_name		: "button close"
 		})
-		export_component_button_close.addEventListener("click",function(e){
+		export_component_button_close.addEventListener('click',function(e) {
+			e.stopPropagation()
+
 			// remove search box and content (component) from dom
 			export_component.parentNode.removeChild(export_component)
 			// delete the ddo from the array to export ddos
@@ -429,15 +437,15 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 
 	// label component source if exists
 		if (first_item!==last_item) {
-			//console.log("first_item:",first_item);
-			const label_add = parent_div.querySelector("span.label_add")
+			// console.log("first_item:",first_item);
+			const label_add = parent_div.querySelector('span.label_add')
 			if (label_add) {
-				label_add.innerHTML = first_item.name +" "+ label_add.innerHTML
+				label_add.innerHTML = first_item.name +' '+ label_add.innerHTML
 			}
 		}
 
 	// show hidden parent container
-		parent_div.classList.remove("hide")
+		parent_div.classList.remove('hide')
 
 	// store ddo in local DB
 		const id = 'tool_export_config'
@@ -475,7 +483,5 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 		})
 
 
-	return true
+	return export_component
 }//end build_export_component
-
-

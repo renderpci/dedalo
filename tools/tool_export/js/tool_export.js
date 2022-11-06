@@ -197,14 +197,15 @@ tool_export.prototype.get_export_grid = async function(options) {
 			section_tipo	: self.caller.section_tipo,
 			// section_id	: section_id,
 			tipo			: self.caller.section_tipo,
-			mode			: 'table',
+			mode			: 'list',
+			view			: 'table',
 			lang			: page_globals.dedalo_data_lang,
-			data_format 	: data_format,
+			data_format		: data_format,
 			rqo				: rqo
 		})
 
 	// render dd_grid
-		await dd_grid.build()
+		await dd_grid.build(true)
 		const dd_grid_node = await dd_grid.render()
 
 		self.ar_instances.push(dd_grid)
@@ -228,10 +229,11 @@ tool_export.prototype.get_export_csv = async function (options) {
 		section_tipo	: self.caller.section_tipo,
 		// section_id	: section_id,
 		tipo			: self.caller.section_tipo,
-		mode			: 'csv',
+		mode			: 'list',
+		view			: 'csv',
 		lang			: page_globals.dedalo_data_lang,
-		data_format		: data_format,
-		rqo				: rqo
+		// data_format	: data_format,
+		// rqo			: rqo
 	})
 
 	return dd_grid
@@ -245,8 +247,6 @@ tool_export.prototype.get_export_csv = async function (options) {
 tool_export.prototype.get_export_xsl = async function (options) {
 
 	const self = this
-
-
 
 	// const workbook = XLSX.utils.book_new();
 	// const ws1 = XLSX.utils.table_to_book(table);
