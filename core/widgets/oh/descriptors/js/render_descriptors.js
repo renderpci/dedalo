@@ -152,24 +152,24 @@ const get_value_element = (i, data, values_container, self) => {
 			e.stopPropagation();
 			e.preventDefault();
 
-			// toggle visiblity when is already loaded
+			// toggle visibility when is already loaded
 				if (descriptors_list_container.hasChildNodes()) {
 					descriptors_list_container.classList.toggle('hide')
 					return
 				}
 
 			// dd_grid build
-				const dd_grid = await instances.get_instance({
+				const dd_grid_data	= [data.find(el => el.id==='terms').value]
+				const dd_grid		= await instances.get_instance({
 					model			: 'dd_grid',
 					section_tipo	: self.section_tipo,
 					section_id		: self.section_id,
 					tipo			: self.section_tipo,
 					mode			: 'list',
 					lang			: page_globals.dedalo_data_lang,
+					data			: dd_grid_data
 				})
-				// set data
-				dd_grid.data = [data.find(el => el.id==='terms').value]
-
+				await dd_grid.build(false)
 				const node = await dd_grid.render()
 				descriptors_list_container.appendChild(node)
 		})
