@@ -1956,12 +1956,15 @@ export const ts_object = new function() {
 				section_id		: section_id,
 				tipo			: component_tipo,
 				mode			: 'list',
+				view			: 'default',
 				lang			: page_globals.dedalo_data_lang,
 				rqo				: rqo
 			})
-			await dd_grid.build()
-			const node = await dd_grid.render()
-			target_div.appendChild(node)
+			await dd_grid.build(true)
+			dd_grid.render()
+			.then(function(node){
+				target_div.appendChild(node)
+			})
 
 
 		return dd_grid
