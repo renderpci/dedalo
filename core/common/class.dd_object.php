@@ -58,7 +58,8 @@ class dd_object {
 		'login',
 		'menu',
 		'tool',
-		'detail' // used by time_machine_list, relation_list, component_history_list
+		'detail', // used by time_machine_list, relation_list, component_history_list
+		'dd_grid'
 	];
 
 
@@ -109,6 +110,8 @@ class dd_object {
 				$type = 'menu';
 			}elseif ($model==='install') {
 				$type = 'install';
+			}elseif ($model==='dd_grid') {
+				$type = 'dd_grid';
 			}elseif (strpos($model, 'tool_')===0) {
 				$type = 'tool';
 			}else{
