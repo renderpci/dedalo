@@ -469,16 +469,21 @@
 			padding: 0.5rem;
 		}
 
-		.mini & {
-			outline: none;
-
-			img {
-				height: 3rem;
-			}
-		}
 
 		&.column_info {
 			// padding: 0.5em;
+		}
+
+		&.column_ddinfo {
+			span {
+				padding: 0.25rem;
+				display: inline-block;
+				word-break: break-word;
+
+				@media screen and (max-width: @width_break_point_0) {
+					padding-left: 0.3rem;
+				}
+			}
 		}
 
 		&.remove_column {
@@ -487,6 +492,14 @@
 
 		&.component_portal {
 
+		}
+
+		.mini & {
+			outline: none;
+
+			img {
+				height: 3rem;
+			}
 		}
 
 		// >*:not(.media):not(.portal):not(.edit_button) {
@@ -541,6 +554,7 @@
 				// display: inline-block;
 			}
 		}
+
 
 		.component_image {
 			// background-color: #a0ecf5 !important;

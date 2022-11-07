@@ -112,8 +112,16 @@ const get_content_data = async function(self) {
 			class_name		: 'current_component_container',
 			parent			: fragment
 		})
-		if(self.main_element.model !=='section'){
-			await add_component(self, current_component_container, self.main_element.lang, get_label.ahora, 'edit', null)
+		if(self.main_element.model !=='section') {
+			// add component
+			await add_component(
+				self, // tool instance
+				current_component_container, // DOM node container
+				self.main_element.lang, // string lang
+				get_label.ahora || 'Now', // string label 'Now'
+				'edit', // string mode = 'edit'
+				null // int|null  matrix_id (time machine variant)
+			)
 		}
 
 	// preview_component_container
@@ -233,7 +241,7 @@ const get_content_data = async function(self) {
 * @param string mode
 * @param string|int matrix_id = null
 *
-* @return bool
+* @return DOM node|bool
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
 
@@ -248,12 +256,12 @@ export const add_component = async (self, component_container, lang_value, label
 
 	// component load
 		const component = matrix_id===null
-			? self.main_element // self.caller
+			? self.main_element
 			: await self.load_component(lang_value, mode, matrix_id)
 
 	// render node
 		const node = await component.render({
-			render_mode : 'edit'
+			render_mode : mode // 'edit'
 		})
 
 	// clean previous and append rendered node
@@ -272,5 +280,5 @@ export const add_component = async (self, component_container, lang_value, label
 		})
 
 
-	return true
+	return node
 }//end add_component

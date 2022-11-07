@@ -50,6 +50,9 @@ view_default_list_section_record.render = async function(self, options) {
 
 			const current_column = columns_map[i]
 
+			// console.log('current_column:', current_column);
+			// console.log('ar_columns_instances:', ar_columns_instances);
+
 			// callback column case
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
 				if(current_column.callback && typeof current_column.callback==='function'){
@@ -104,12 +107,15 @@ view_default_list_section_record.render = async function(self, options) {
 						}else{
 							current_instance.render()
 							.then(function(current_instance_node){
+								// bad node case
 								if (!current_instance_node) {
+									console.error('Invalid instance_node', current_instance);
 									reject(false)
 									return
 								}
 								resolve(true)
 							}).catch((errorMsg) => {
+								// error occurred case
 								console.error(errorMsg);
 							})
 						}
