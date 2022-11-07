@@ -133,6 +133,8 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
+
+
 	try {
 
 		// fix main_element for convenience
@@ -189,7 +191,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_element.tipo && el.matrix_id)
 
 	// context (clone and edit)
-		const context = Object.assign(clone(self.main_element.context),{
+		const context = Object.assign(clone(self.main_element.context), {
 			lang		: lang,
 			mode		: mode,
 			section_id	: self.main_element.section_id,

@@ -46,7 +46,6 @@ export const render_time_machine_view = async function(self, options) {
 			return content_data
 		}
 
-
 	// paginator container node
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',

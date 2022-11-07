@@ -2092,7 +2092,7 @@ abstract class common {
 		$requested_source = dd_core_api::$rqo->source ?? false;
 
 		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
-		if(false!==$requested_source && $requested_source->tipo===$this->tipo) {
+		if(false!==$requested_source &&	$requested_source->tipo===$this->tipo) {
 
 			// set the request_config with the API rqo sent by client
 

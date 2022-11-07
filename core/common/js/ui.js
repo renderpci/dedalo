@@ -408,6 +408,8 @@ export const ui = {
 			return button_close_node;
 		},// end build_button_exit_edit
 
+
+
 		/**
 		* BUILD_BUTTONS_CONTAINER
 		* @param object instance
@@ -438,10 +440,10 @@ export const ui = {
 				const value_string	= options.value_string
 
 			// short vars
-				const model			= instance.model 	// like component_input-text
-				const type			= instance.type 	// like 'component'
-				const tipo			= instance.tipo 	// like 'rsc26'
-				const section_tipo	= instance.section_tipo 	// like 'oh1'
+				const model			= instance.model 		// like component_input-text
+				const type			= instance.type 		// like 'component'
+				const tipo			= instance.tipo 		// like 'rsc26'
+				const section_tipo	= instance.section_tipo // like 'oh1'
 				const view			= instance.view || instance.context.view || null
 
 			// wrapper
@@ -522,7 +524,7 @@ export const ui = {
 				const wrapper = document.createElement('span')
 				// css
 					const ar_css = [
-						'mini_' + instance.model
+						instance.model + '_mini' // add suffix '_mini'
 					]
 					wrapper.classList.add(...ar_css)
 

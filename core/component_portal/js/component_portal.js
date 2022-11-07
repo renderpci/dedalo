@@ -324,7 +324,6 @@ component_portal.prototype.build = async function(autoload=false) {
 
 		}//end if (autoload===true)
 
-
 	// update instance properties from context
 		set_context_vars(self, self.context)
 
@@ -332,7 +331,7 @@ component_portal.prototype.build = async function(autoload=false) {
 		init_events_subscription(self)
 
 	// mode cases
-		if (self.mode==="edit" || self.mode==="tm" || self.mode==="edit_in_list") {
+		if (self.mode==='edit' || self.mode==='tm' || self.mode==='edit_in_list') {
 			// pagination vars only in edit mode
 
 			// pagination. update element pagination vars when are used
@@ -387,7 +386,6 @@ component_portal.prototype.build = async function(autoload=false) {
 					self.autocomplete_active = false
 					self.autocomplete 		 = null
 				}
-
 		}else if(self.mode==="search") {
 
 			// active / prepare the autocomplete in search mode
@@ -815,9 +813,6 @@ component_portal.prototype.navigate = async function(callback) {
 		}
 
 	// container
-		// const container = self.node.querySelector('.list_body') // view_table
-					   // || self.node.querySelector('.content_data') // view_line
-
 		const container = self.node.list_body // view table
 					   || self.node.content_data // view line
 
