@@ -5,8 +5,17 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
+	import {ui} from '../../common/js/ui.js'
+	import {
+		get_text_column,
+		get_av_column,
+		get_img_column,
+		get_label_column,
+		get_button_column,
+		get_json_column,
+		get_section_id_column
+	} from './render_list_dd_grid.js'
 
 
 
@@ -102,7 +111,10 @@ const get_grid_nodes = function(data) {
 
 						case 'text':
 						default:
-							const column_node = get_text_column(current_data)
+							const column_node = get_text_column(
+								current_data,
+								false // use fallback value
+							)
 							node.appendChild(column_node)
 							break;
 					}//end switch(current_data.cell_type)
@@ -147,161 +159,3 @@ const get_div_container = function(current_data) {
 
 	return div_container
 }//end get_div_container
-
-
-
-/**
-* GET_DIV_CONTAINER
-* @param object current_data
-* @return DOM node label_node (label)
-*/
-const get_label_column = function(current_data) {
-
-	const label_node = ui.create_dom_element({
-		element_type	: 'label',
-		inner_html		: current_data.label
-	})
-
-	return label_node
-}//end get_label_column
-
-
-
-/**
-* GET_TEXT_COLUMN
-* @param object current_data
-* @return DOM node text_node (span)
-*/
-const get_text_column = function(current_data) {
-
-	const class_list = current_data.class_list || ''
-
-	const text_node = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: class_list,
-		inner_html		: current_data.value.join('')
-	})
-
-	return text_node
-}//end get_text_column
-
-
-
-/**
-* GET_AV_COLUMN
-* @param object current_data
-* @return DOM node image (img)
-*/
-const get_av_column = function(current_data) {
-
-	const class_list = current_data.class_list || ''
-
-	// url
-		const posterframe_url 	= current_data.value[0].posterframe_url
-		const url 				= posterframe_url
-
-	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			class_name		: class_list,
-			src 			: url
-		})
-
-	return image
-}//end get_av_column
-
-
-/**
-* GET_IMG_COLUMN
-* @param object current_data
-* @return DOM node image (img)
-*/
-const get_img_column = function(current_data){
-
-	const class_list = current_data.class_list || ''
-
-	// url
-		const url = current_data.value[0]
-	// image
-		const image = ui.create_dom_element({
-			element_type	: "img",
-			class_name		: class_list,
-			src 			: url
-		})
-
-	return image
-}//end get_img_column
-
-
-
-/**
-* GET_BUTTON_COLUMN
-* @param object current_data
-* @return DOM node button (img)
-*/
-const get_button_column = function(current_data){
-
-	const value			= current_data.value[0]
-	const class_list	= value.class_list || ''
-
-	// image
-		const button = ui.create_dom_element({
-			element_type	: "img",
-			class_name		: class_list
-		})
-
-	// event
-		if (value.action && value.action.event) {
-
-			button.addEventListener(value.action.event, async (e)=>{
-				const options			= value.action.options
-				options.button_caller	= e.target
-
-				const module = await import (value.action.module_path)
-				module[value.action.method](options)
-			})
-		}
-
-	return button
-}//end get_button_column
-
-
-
-/**
-* GET_JSON_COLUMN
-* @param object current_data
-* @return DOM node text_json (span)
-*/
-const get_json_column = function(current_data) {
-
-	const class_list = current_data.class_list || ''
-
-	const text_json = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: class_list,
-		inner_html		: JSON.stringify(current_data.value)
-	})
-
-	return text_json
-}//end get_json_column
-
-
-
-/**
-* GET_SECTION_ID_COLUMN
-* @param object current_data
-* @return DOM node text_node (span)
-*/
-const get_section_id_column = function(current_data) {
-
-	const class_list = current_data.class_list || ''
-
-	const section_id_node = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: class_list,
-		inner_html		: current_data.value
-	})
-
-	return section_id_node
-}//end get_section_id_column
-
