@@ -469,7 +469,7 @@ export const ts_object = new function() {
 											title_label		: 'add'
 										})
 										// link_add event click
-											link_add.addEventListener("click", function(){
+											link_add.addEventListener('click', function(){
 
 												// mode set in dataset
 													this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
@@ -540,7 +540,8 @@ export const ts_object = new function() {
 										class_name		: 'id_column_link ts_object_delete',
 										title_label		: 'delete'
 									})
-									link_delete.addEventListener("click",()=>{
+									link_delete.addEventListener('click', (e)=>{
+										e.stopPropagation()
 										self.delete(link_delete)
 									})
 									// delete icon
@@ -561,7 +562,8 @@ export const ts_object = new function() {
 											class_name		: 'id_column_link ts_object_order_number',
 											text_node		: i+1
 										})
-										order_number.addEventListener("click",(e)=>{
+										order_number.addEventListener('click', (e)=>{
+											e.stopPropagation()
 											self.build_order_form(order_number, e)
 										})
 									}//if(is_descriptor===true && node_type!=='hierarchy_node')
@@ -576,7 +578,8 @@ export const ts_object = new function() {
 									class_name		: 'id_column_link ts_object_edit',
 									title_label		: 'edit'
 								})
-								link_edit.addEventListener("click",(e)=>{
+								link_edit.addEventListener('mousedown', (e)=>{
+									e.stopPropagation()
 									self.edit(link_edit, e)
 								})
 								// section_id number
@@ -673,7 +676,8 @@ export const ts_object = new function() {
 									data_set		: children_dataset,
 									text_node		: ar_children_data[i].ar_elements[j].value
 								})
-								element_children_nd.addEventListener("click", (e)=>{
+								element_children_nd.addEventListener('mousedown', (e)=>{
+									e.stopPropagation()
 									self.toggle_nd(element_children_nd, e)
 								})
 								break;
@@ -689,7 +693,8 @@ export const ts_object = new function() {
 									class_name		: class_for_all,
 									data_set		: children_dataset
 								})
-								element_link_children.addEventListener("click",(e)=>{
+								element_link_children.addEventListener('mousedown',(e)=>{
+									e.stopPropagation()
 									self.toggle_view_children(element_link_children, e)
 								})
 
@@ -724,7 +729,9 @@ export const ts_object = new function() {
 										data_set		: children_dataset,
 										text_node		: ar_children_data[i].ar_elements[j].value
 									})
-									element_show_indexations.addEventListener("click",(e)=>{
+									element_show_indexations.addEventListener('mousedown',(e)=>{
+										e.stopPropagation()
+
 										self.show_indexations({
 											button_obj		: element_show_indexations,
 											event			: e,
@@ -756,7 +763,8 @@ export const ts_object = new function() {
 										class_name		: class_for_all + ' term_img',
 										data_set		: children_dataset
 									})
- 									element_img.addEventListener("click",(e)=>{
+ 									element_img.addEventListener('mousedown',(e)=>{
+ 										e.stopPropagation()
 										self.show_component_in_ts_object(element_img, e)
 									})
  									// image
@@ -780,7 +788,8 @@ export const ts_object = new function() {
 									data_set		: children_dataset,
 									text_node		: ar_children_data[i].ar_elements[j].value
 								})
-								element_show_component.addEventListener("click",(e)=>{
+								element_show_component.addEventListener('mousedown',(e)=>{
+									e.stopPropagation()
 									self.show_component_in_ts_object(element_show_component, e)
 								})
 								break;
