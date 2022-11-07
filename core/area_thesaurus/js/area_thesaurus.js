@@ -89,13 +89,19 @@ area_thesaurus.prototype.init = async function(options) {
 		self.events_tokens.push(
 			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
 		)
-		async function fn_toggle_search_panel(el) {
+		async function fn_toggle_search_panel() {
 			if (self.search_container.children.length===0) {
-				await self.filter.build()
-				const filter_wrapper = await self.filter.render()
-				await self.search_container.appendChild(filter_wrapper)
+				// await add_to_container(self.search_container, self.filter)
+				await ui.load_item_with_spinner({
+					container	: self.search_container,
+					label		: 'filter',
+					callback	: async () => {
+						await self.filter.build()
+						return self.filter.render()
+					}
+				})
 			}
-			toggle_search_panel(self.filter, el)
+			toggle_search_panel(self.filter)
 		}
 
 		// render event
@@ -113,16 +119,16 @@ area_thesaurus.prototype.init = async function(options) {
 						? false
 						: true
 					if (is_open===true && self.search_container.children.length===0) {
-						const spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner',
-							parent			: self.search_container
+						// add_to_container(self.search_container, self.filter)
+						await ui.load_item_with_spinner({
+							container	: self.search_container,
+							label		: 'filter',
+							callback	: async () => {
+								await self.filter.build()
+								return self.filter.render()
+							}
 						})
-						await self.filter.build()
-						const filter_wrapper = await self.filter.render()
-						await self.search_container.appendChild(filter_wrapper)
 						toggle_search_panel(self.filter)
-						spinner.remove()
 					}
 				})
 		}
