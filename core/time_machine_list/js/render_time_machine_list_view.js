@@ -109,6 +109,12 @@ export const render_time_machine_list_view = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
+* Render previously built section_records into a content_data div container
+* Note that self here is a service_time_machine instance
+* @param array ar_section_record
+* 	Array of section_record instances
+* @param object self
+* 	service_time_machine instance
 * @return DOM node content_data
 */
 const get_content_data = async function(ar_section_record, self) {
@@ -129,17 +135,21 @@ const get_content_data = async function(ar_section_record, self) {
 
 		}else{
 			// rows
-			// parallel mode
+
+			// parallel render
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
 					const render_promise_node = ar_section_record[i].render()
 					ar_promises.push(render_promise_node)
 				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record_node = values[i]
-					fragment.appendChild(section_record_node)
-				  }
+
+			// once rendered, append it preserving the order
+				await Promise.all(ar_promises)
+				.then(function(section_record_nodes) {
+					for (let i = 0; i < ar_section_record_length; i++) {
+						const section_record_node = section_record_nodes[i]
+						fragment.appendChild(section_record_node)
+					}
 				});
 		}
 
@@ -171,12 +181,12 @@ const rebuild_columns_map = async function(self) {
 		for (let i = 0; i < base_columns_map_length; i++) {
 			const el = base_columns_map[i]
 
-			// ignore matrix_id
+			// ignore matrix_id column
 				if (el.tipo==='dd1573') {
 					continue;
 				}
 
-			// short label
+			// short label (for small width columns)
 				switch (el.tipo) {
 					case 'dd201':
 						el.label = 'Date'

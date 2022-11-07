@@ -58,6 +58,9 @@ export const dd_grid = function(){
 
 /**
 * INIT
+* Custom init method.
+* Call common init and then add custom properties
+* @param object options
 * @return promise
 * 	bool true
 */
@@ -83,7 +86,8 @@ dd_grid.prototype.init	= async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = true
+* Custom element builder
+* @param bool autoload = false
 * @return bool true
 */
 dd_grid.prototype.build	= async function(autoload=false) {

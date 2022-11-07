@@ -198,11 +198,9 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// event paginator_goto
 				const fn_paginator_goto = async function(offset) {
 					// loading
-						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
-						const node		= self.node
-							? self.node.querySelector(selector)
-							: null
-						if (node) node.classList.add('loading')
+						const container = self.node.list_body
+					   				   || self.node.content_data
+						if (container) container.classList.add('loading')
 
 					// fix new offset value
 						self.rqo.sqo.offset = offset
@@ -218,7 +216,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 						await self.refresh()
 
 					// loading
-						if (node) node.classList.remove('loading')
+						if (container) container.classList.remove('loading')
 				}
 				self.events_tokens.push(
 					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
@@ -384,11 +382,22 @@ service_time_machine.prototype.build_request_config = function() {
 		}else{
 
 			// fallback (time machine list case) tm info -> Value
+				// ddo_map.push({
+				// 	tipo			: 'dd1574', // generic tm info ontology item 'Value'
+				// 	type			: 'component',
+				// 	typo			: 'ddo',
+				// 	model			: 'component_input_text',
+				// 	section_tipo	: section_tipo,
+				// 	parent			: section_tipo,
+				// 	debug_label		: 'Value',
+				// 	mode			: 'list',
+				// 	view			: 'mini'
+				// })
 			ddo_map.push({
 				tipo			: 'dd1574', // generic tm info ontology item 'Value'
-				type			: 'component',
+				type			: 'dd_grid',
 				typo			: 'ddo',
-				model			: 'component_input_text',
+				model			: 'dd_grid', // (!) changed to dd_grid to allow identification
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				debug_label		: 'Value',

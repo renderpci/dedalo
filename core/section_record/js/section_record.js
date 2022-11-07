@@ -142,7 +142,7 @@ section_record.prototype.init = async function(options) {
 * @return promise current_instance
 * 	Instance of component / section_group initiated and built
 */
-const build_instance = async (self, context, section_id, current_data, column_id) => {
+const build_instance = async (self, context, section_id, current_data, column_id, autoload) => {
 
 	// current_context
 		const current_context = clone(context)
@@ -196,7 +196,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		}
 
 	// build. instance build await
-		await current_instance.build()
+		await current_instance.build(autoload)
 
 	// add
 		// ar_instances.push(current_instance)
@@ -433,16 +433,20 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								}
 
 							// instance create and set
+								const instance_data = current_ddo.model==='dd_grid'
+									? [current_data.value]
+									: current_data;
+
 								const current_instance = await build_instance(
-									self,
-									new_context,
-									section_id,
-									current_data,
-									current_column.id
+									self, // current section_record instance
+									new_context, // edit context
+									section_id, // current section_id
+									instance_data, // already calculated instance data
+									current_column.id, // column id
+									false // build autoload
 								)
-
+								// add built instance
 								self.ar_instances.push(current_instance)
-
 						}// end if(current_ddo.column_id..
 					}// end for (let k = 0; k < ar_first_level_ddo_len; k++)
 				}//end for (let j = 0; j < request_config_length; j++)
