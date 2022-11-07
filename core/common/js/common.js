@@ -704,7 +704,7 @@ export const create_source = function (self, action) {
 			section_tipo	: self.section_tipo || self.tipo,
 			section_id		: self.section_id,
 			mode			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
-			view			: self.view || 'default',
+			view			: self.view || null, // 'default',
 			lang			: self.lang
 		}
 
