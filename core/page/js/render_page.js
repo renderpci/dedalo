@@ -131,6 +131,27 @@ const get_content_data = async function(self) {
 						continue;
 					}
 
+				// load_item_with_spinner
+					ui.load_item_with_spinner({
+						container			: content_data,
+						preserve_content	: true,
+						label				: current_context.label || current_context.model,
+						callback			: async () => {
+							// instance
+							const current_instance = await instantiate_page_element(
+								self, // object page instance
+								current_context // object is used as source
+							)
+
+							self.ar_instances.push(current_instance)
+
+							// build (load data)
+							const autoload = true // Note that it's necessary to load data here (in addition to context)
+							await current_instance.build(autoload)
+							return current_instance.render()
+						}
+					})
+				/*
 				// container placeholder until page element is built and rendered
 					const label = current_context.label || current_context.model
 					const container_placeholder = ui.create_dom_element({
@@ -168,6 +189,7 @@ const get_content_data = async function(self) {
 							}
 						})
 					})
+					*/
 			}//end for (let i = 0; i < elements_length; i++)
 
 	// event page rendered (used by menu..)

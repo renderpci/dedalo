@@ -2938,13 +2938,16 @@ export const ui = {
 	load_item_with_spinner : async function(options) {
 
 		// options
-			const container	= options.container
-			const label		= options.label
-			const callback	= options.callback
+			const container			= options.container
+			const preserve_content	= options.preserve_content || false
+			const label				= options.label
+			const callback			= options.callback
 
 		// clean container
-			while (container.firstChild) {
-				container.removeChild(container.firstChild)
+			if (preserve_content===false) {
+				while (container.firstChild) {
+					container.removeChild(container.firstChild)
+				}
 			}
 
 		// container_placeholder
@@ -2961,8 +2964,13 @@ export const ui = {
 				parent			: container_placeholder
 			})
 
-		// callback wait
+		// callback wait (expect promise resolving DOM node)
 			const result_node = await callback()
+			if (!result_node) {
+				console.warn('Unexpected result. no node returned from callback:', options);
+				container_placeholder.remove()
+				return null
+			}
 
 		// replace node
 			await container_placeholder.replaceWith(result_node);
