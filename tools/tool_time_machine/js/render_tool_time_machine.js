@@ -268,6 +268,8 @@ export const add_component = async (self, component_container, lang_value, label
 				const node = await component.render({
 					render_mode : mode // 'edit'
 				})
+				node.classList.add('disabled_component')
+
 			return node
 		}
 	})
