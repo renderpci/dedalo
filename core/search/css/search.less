@@ -83,14 +83,14 @@
 			background-color: #f0f0f0;
 			padding-top: 0px;
 			position: sticky;
-			top: 62px;
+			top: 0.25rem;
 
 			.search_group_container {
 				display: flex;
 				position: -webkit-sticky;
 				position: -moz-sticky;
 				position: sticky;
-				top: 62px;
+				// top: 62px;
 
 				@media screen and (max-width: @width_break_point_0) {
 					flex-wrap: wrap;
@@ -98,16 +98,16 @@
 
 				.search_group {
 					max-width: 85%;
+					min-height: 5.25rem;
+					min-width: 165px;
 					// outline: 0.5px solid #b9b9b9;
+					margin: 0px;
 					padding: 5px;
 					padding-right: 24px;
 					padding-left: 28px;
 					//margin: 10px;
 					//margin-top: 0;
 					//margin-bottom: 0;
-					margin: 0px;
-					min-height: 66px;
-					min-width: 165px;
 					background-color: rgba(255, 255, 255, 0.5);
 					resize: both;
 					overflow: -webkit-paged-x;
@@ -555,7 +555,7 @@
 	cursor: pointer;
 	color: #f0f8ff;
 	padding: 0.25rem;
-	padding-top: 0.8rem;
+	padding-top: 0.75rem;
 	letter-spacing: 1px;
 
 	&:active {
