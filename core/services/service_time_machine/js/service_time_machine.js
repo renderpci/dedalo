@@ -200,7 +200,11 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					// loading
 						const container = self.node.list_body
 					   				   || self.node.content_data
-						if (container) container.classList.add('loading')
+						if (container) {
+							container.classList.add('loading')
+						}else{
+							console.warn('No container found for pagination. Node:', self.node);
+						}
 
 					// fix new offset value
 						self.rqo.sqo.offset = offset
@@ -411,6 +415,34 @@ service_time_machine.prototype.build_request_config = function() {
 				// removed because limit components by lang
 				// lang			: lang // (!) used only in time machine to filter by column lang
 			}]
+
+			// filter
+				// sqo.parsed = true,
+				// sqo.filter = {
+				// 	'$and' : [
+				// 		{
+				// 			q_parsed	: `\'${section_tipo}\'`,
+				// 			operator	: "=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'section_tipo'
+				// 		},
+				// 		{
+				// 			q_parsed	: `${section_id}`,
+				// 			operator	: "=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'section_id'
+				// 		},
+				// 		{
+				// 			q_parsed	: `\'${section_tipo}\'`,
+				// 			operator	: "!=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'tipo'
+				// 		}
+				// 	]
+				// }
 		}
 
 	// request_config

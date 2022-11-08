@@ -3875,6 +3875,7 @@ class section extends common {
 				// 	]
 				// }
 			$db_record = $this->get_record();
+
 			// empty record case catch
 				if (empty($db_record)) {
 					debug_log(__METHOD__." Empty record was received ! ".to_string(), logger::ERROR);
