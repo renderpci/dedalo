@@ -6,7 +6,9 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_input_element_edit} from '../../component_date/js/view_default_edit_date.js'
+	import {
+		get_input_element_edit
+	} from '../../component_date/js/view_default_edit_date.js'
 
 
 
@@ -30,7 +32,7 @@ render_search_component_date.prototype.search = async function() {
 
 	const self 	= this
 
-	const content_data = get_content_data_search(self)
+	const content_data = get_content_data(self)
 
 	// load editor files (calendar)
 		await self.load_editor()
@@ -49,17 +51,15 @@ render_search_component_date.prototype.search = async function() {
 
 
 /**
-* GET_CONTENT_DATA_SEARCH
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data_search = function(self) {
+const get_content_data = function(self) {
 
 	const value	= self.data.value
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {})
-
-	const fragment = new DocumentFragment()
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -68,7 +68,7 @@ const get_content_data_search = function(self) {
 			type			: 'text',
 			value			: q_operator,
 			class_name		: 'q_operator',
-			parent			: fragment
+			parent			: content_data
 		})
 		input_q_operator.addEventListener('focus', function() {
 			// force activate on input focus (tabulating case)
@@ -85,24 +85,16 @@ const get_content_data_search = function(self) {
 				event_manager.publish('change_search_element', self)
 		})
 
-	// inputs
-		const inputs_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'inputs_container',
-			parent			: fragment
-		})
-
 	// values (inputs)
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
-			inputs_container.appendChild(input_element_node)
+			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
 		}
 
-		content_data.appendChild(fragment)
 
 	return content_data
-}//end get_content_data_search
+}//end get_content_data
