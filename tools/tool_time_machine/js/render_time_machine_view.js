@@ -101,7 +101,8 @@ export const render_time_machine_view = async function(self, options) {
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
-		wrapper.content_data = content_data
+		wrapper.list_body		= list_body
+		wrapper.content_data	= content_data
 
 
 	return wrapper
