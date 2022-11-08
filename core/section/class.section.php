@@ -3913,19 +3913,25 @@ class section extends common {
 		// build data from elements
 			foreach ($ddo_map as $ddo) {
 
-				// tipo
-					$current_tipo = $ddo->tipo;
+				// ddo tipo
+					$current_ddo_tipo = $ddo->tipo;
 
-				// switch by ddo tipo
-					switch ($current_tipo) {
+				// ddo item model
+					$ddo->model = $ddo->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo, true);
 
-						case 'dd1573': // id (model: component_section_id)
+				// model of dato tipo
+					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true); // model of dato tipo
+
+				// switch cases
+					switch (true) {
+
+						case ($current_ddo_tipo==='dd1573'): // id (model: component_section_id)
 							$data_item = (object)[
 								'section_id'			=> $section_id,
 								'section_tipo'			=> $section_tipo,
-								'tipo'					=> $current_tipo,  // fake tipo only used to match ddo with data
+								'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 								'lang'					=> DEDALO_DATA_NOLAN,
-								'from_component_tipo'	=> $current_tipo,  // fake tipo only used to match ddo with data
+								'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 								'value'					=> $id,
 								'debug_model'			=> 'component_section_id',
 								'debug_label'			=> 'matrix ID',
@@ -3935,9 +3941,9 @@ class section extends common {
 							$data[] = $data_item;
 							break;
 
-						case 'dd547': // When (model: component_date) from activity section
+						case ($current_ddo_tipo==='dd547'): // When (model: component_date) from activity section
 
-							$timestamp_tipo	= $current_tipo;
+							$timestamp_tipo	= $current_ddo_tipo;
 							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($timestamp_tipo,true);
 							$component		= component_common::get_instance(
 								$modelo_name,
@@ -3970,9 +3976,9 @@ class section extends common {
 							$data[] = $data_item;
 							break;
 
-						case 'dd543': // Who (model: component_autocomplete) from activity section
+						case ($current_ddo_tipo==='dd543'): // Who (model: component_autocomplete) from activity section
 							// des
-								// $user_id_tipo	= $current_tipo; // 'dd197' Modified by user
+								// $user_id_tipo	= $current_ddo_tipo; // 'dd197' Modified by user
 								// $modelo_name	= 'component_portal';// RecordObj_dd::get_modelo_name_by_tipo($user_id_tipo,true); // component_select
 								// $component		= component_common::get_instance(
 								// 	$modelo_name,
@@ -4016,9 +4022,9 @@ class section extends common {
 							$data_item = (object)[
 								'section_id'			=> $section_id,
 								'section_tipo'			=> $section_tipo,
-								'tipo'					=> $current_tipo,
+								'tipo'					=> $current_ddo_tipo,
 								'lang'					=> DEDALO_DATA_NOLAN,
-								'from_component_tipo'	=> $current_tipo,
+								'from_component_tipo'	=> $current_ddo_tipo,
 								'value'					=> $ar_values,
 								'debug_model'			=> 'component_select',
 								'debug_label'			=> 'modified by user',
@@ -4029,7 +4035,7 @@ class section extends common {
 							$data[] = $data_item;
 							break;
 
-						case 'dd546': // Where (model: component_input_text)
+						case ($current_ddo_tipo==='dd546'): // Where (model: component_input_text)
 							// component_label
 								$component_label = RecordObj_dd::get_termino_by_tipo(
 									$tipo, // string terminoID
@@ -4053,9 +4059,9 @@ class section extends common {
 							$data_item		= (object)[
 								'section_id'			=> $section_id,
 								'section_tipo'			=> $section_tipo,
-								'tipo'					=> $current_tipo,  // fake tipo only used to match ddo with data
+								'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 								'lang'					=> DEDALO_DATA_LANG,
-								'from_component_tipo'	=> $current_tipo,  // fake tipo only used to match ddo with data
+								'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 								'value'					=> $current_value, // .' ['.$section_tipo.']'
 								'debug_model'			=> 'component_input_text',
 								'debug_label'			=> 'Where',
@@ -4065,27 +4071,48 @@ class section extends common {
 							$data[] = $data_item;
 							break;
 
+						case ($ddo->model==='dd_grid' && $model==='section'): // Value : section first tm creation record case
+							// model section case. If row dato model is section, create a pseudo dd_grid data
+							// simulate grid value
+							$dd_grid_value = (object)[
+								'type'		=> 'column',
+								'label'		=> 'section',
+								'cell_type'	=> 'text',
+								'value'		=> [
+									'Created: '.$db_record->dato->created_date,
+									'By user: '.$db_record->dato->created_by_userID
+								]
+							];
+							$data_item = (object)[
+								'section_id'			=> $section_id,
+								'section_tipo'			=> $section_tipo,
+								'tipo'					=> $current_ddo_tipo,
+								'lang'					=> DEDALO_DATA_NOLAN,
+								'from_component_tipo'	=> $current_ddo_tipo,
+								'from_section_tipo'		=> $section_tipo,
+								'value'					=> $dd_grid_value,
+								'debug_model'			=> $ddo->model,
+								'debug_label'			=> 'section',
+								'debug_mode'			=> 'mini',
+								'matrix_id'				=> $id
+							];
+							$data[] = $data_item;
+							break;
+
 						default:
 
-							// ddo item model
-								// $ddo_item_model = $ddo->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo, true);
-								// $ddo->model = $ddo->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo, true);
-
-							// tipo. Note that model 'ddo->model' is a generic container. Change it by record data tipo instead
-								// $component_tipo = ($ddo->model==='dd_grid')
-								// 	? $tipo // from db record dato ($db_record->tipo)
-								// 	: $ddo->tipo;
-								$component_tipo = $tipo; // always get from db record dato ($db_record->tipo)
-
 							// component
-								$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-								$is_relation	= in_array($model, $components_with_relations);
-								$lang			= $is_relation===true
+								$component_tipo	= ($source_model==='section')
+									? $ddo->tipo // get from ddo
+									: $tipo; 	 // get from db record dato ($db_record->tipo)
+								$component_model	= $ddo->model;
+								$is_relation		= in_array($component_model, $components_with_relations);
+								$lang				= $is_relation===true
 									? DEDALO_DATA_NOLAN
 									: ((bool)RecordObj_dd::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
 
 								$current_component = component_common::get_instance(
-									$model,
+									$component_model,
 									$component_tipo,
 									$section_id,
 									$mode,
@@ -4101,30 +4128,28 @@ class section extends common {
 										$data_item = $this->get_data_item(null);
 											$data_item->parent_tipo			= $section_tipo;
 											$data_item->parent_section_id	= $section_id;
-											$data_item->from_component_tipo	= $current_tipo;
+											$data_item->from_component_tipo	= $current_ddo_tipo;
 											$data_item->from_section_tipo	= $section_tipo;
 
-										$data = [$data_item];
+										$data[] = $data_item;
 										continue 2;
 									}//end if($current_component===null)
 
-							// properties
-								// if (isset($dd_object->properties)){
-								// 	$current_component->set_properties($dd_object->properties);
-								// }
-
 							// inject this tipo as related component from_component_tipo
-								$current_component->from_component_tipo	= $current_tipo;
+								$current_component->from_component_tipo	= $current_ddo_tipo;
 								$current_component->from_section_tipo	= $section_tipo;
 
 							// dato. inject dato from time machine record
 								$current_dato = ($source_model!=='section')
-									? $dato // from deleted component case
+									? $dato // from deleted component dato case
 									: (($is_relation===false) // from deleted section case
-										? $dato->components->{$current_tipo}->dato->{$lang} ?? null
-										: array_values(array_filter($dato->relations, function($el) use($current_tipo) {
-											return $el->from_component_tipo===$current_tipo;
+										? $dato->components->{$current_ddo_tipo}->dato->{$lang} ?? null
+										: array_values(array_filter($dato->relations, function($el) use($current_ddo_tipo) {
+											return $el->from_component_tipo===$current_ddo_tipo;
 										  })));
+									if ($ddo->tipo==='oh24') {
+										dump($current_dato, ' current_dato ++ '.$ddo->tipo.' +++++ '.to_string($component_model));
+									}
 
 								// empty dato case
 									// if (empty($current_dato) && $model!=='component_section_id') {
@@ -4143,21 +4168,24 @@ class section extends common {
 								// permissions. Set to allow all users read
 									$current_component->set_permissions(1);
 
-							$is_time_machine_list_value_column = $ddo->tipo==='dd1574';
-							if ($is_time_machine_list_value_column===true) {
+							$is_dd_grid_column = $ddo->model==='dd_grid';
+							if ($is_dd_grid_column===true) {
 
-								// value
-									$value		= $current_component->get_value();
-									$data_item	= $current_component->get_data_item($value);
+								// dd_grid case
+
+								// component value
+									$value = $current_component->get_value();
+								// data item
+									$data_item = $current_component->get_data_item($value);
 									// add matrix_id always
 									$data_item->matrix_id = $id;
 									// force tipo from ddo. If not forced, time_machine_list cannot match context ddo column
-									$data_item->tipo = $ddo->tipo;
-									// 	dump($value, ' value +++++++++++++++++++ '.$current_component->get_tipo().' '.$current_component->get_section_tipo().' '.$current_component->get_section_id() );
-									// 	dump($current_component->get_dato(), ' dato ++ '.to_string());
+									$data_item->tipo = $current_ddo_tipo;
 								// data add
 									$data[] = $data_item;
 							}else{
+
+								// normal case
 
 								// get component JSON data
 									$element_json = $current_component->get_json((object)[
@@ -4172,10 +4200,6 @@ class section extends common {
 											$data_item->parent_section_id	= $section_id;
 										$element_json->data = [$data_item];
 									}
-
-								// dump($element_json->data, ' element_json->data +++++++++++++++++++++++++++++++++++++++++ '.to_string($current_component->get_tipo()));
-								// $grid_value = $current_component->get_value();
-								// dump($grid_value, ' grid_value +++++++++++++++++++++++++++++++++++++++++ '.to_string($current_component->get_tipo()));
 
 								// parse component_data. Add matrix_id and unify output value
 									$component_data	= array_map(function($data_item) use($id, $section_id, $ddo, $current_component) {
@@ -4197,9 +4221,9 @@ class section extends common {
 
 								// data add
 									$data = array_merge($data, $component_data);
-							}//end if ($is_time_machine_list_value_column===true)
+							}//end if ($is_dd_grid_column===true)
 							break;
-					}//end switch ($current_tipo)
+					}//end switch(true)
 			}//end foreach ($ddo_map as $ddo)
 
 
