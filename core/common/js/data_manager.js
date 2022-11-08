@@ -68,7 +68,7 @@ data_manager.request = async function(options) {
 
 					// alert msg to user
 						const msg = result.msg || result.error
-						alert("An error occurred in the connection with the API. \n" + msg);
+						// alert("An error occurred in the connection with the API (data_manager). \n" + msg);
 
 					// custom behaviors
 						switch (result.error) {
