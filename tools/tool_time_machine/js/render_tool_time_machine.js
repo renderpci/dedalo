@@ -254,22 +254,40 @@ export const add_component = async (self, component_container, lang_value, label
 			return false
 		}
 
-	// component load
-		const component = matrix_id===null
-			? self.main_element
-			: await self.load_component(lang_value, mode, matrix_id)
+	const node = ui.load_item_with_spinner({
+		container			: component_container,
+		preserve_content	: false,
+		label				: label,
+		callback			: async () => {
+			// component load
+				const component = matrix_id===null
+					? self.main_element
+					: await self.load_component(lang_value, mode, matrix_id)
 
-	// render node
-		const node = await component.render({
-			render_mode : mode // 'edit'
-		})
-
-	// clean previous and append rendered node
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
+			// render node
+				const node = await component.render({
+					render_mode : mode // 'edit'
+				})
+			return node
 		}
-		node.classList.add('disabled_component')
-		component_container.appendChild(node)
+	})
+
+	// // component load
+	// 	const component = matrix_id===null
+	// 		? self.main_element
+	// 		: await self.load_component(lang_value, mode, matrix_id)
+
+	// // render node
+	// 	const node = await component.render({
+	// 		render_mode : mode // 'edit'
+	// 	})
+
+	// // clean previous and append rendered node
+	// 	while (component_container.firstChild) {
+	// 		component_container.removeChild(component_container.firstChild)
+	// 	}
+	// 	node.classList.add('disabled_component')
+	// 	component_container.appendChild(node)
 
 	// label
 		ui.create_dom_element({
