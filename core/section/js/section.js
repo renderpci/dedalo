@@ -232,7 +232,6 @@ section.prototype.init = async function(options) {
 				if (!self.search_container) {
 					return
 				}
-				console.log('self.search_container:', self.search_container);
 				if (self.search_container.children.length===0) {
 					// await add_to_container(self.search_container, self.filter)
 					await ui.load_item_with_spinner({

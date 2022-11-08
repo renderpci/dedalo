@@ -11,7 +11,10 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {get_ar_instances} from './section.js'
-	import {render_server_response_error} from './render_common_section.js'
+	import {
+		render_server_response_error,
+		no_records_node
+	} from './render_common_section.js'
 	// import * as instances from '../../common/js/instances.js'
 
 
@@ -77,12 +80,8 @@ render_list_section.prototype.list = async function(options) {
 				class_name		: 'search_container',
 				parent			: fragment
 			})
+			// set pointers
 			self.search_container = search_container
-			// self.filter.build().then(()=>{
-			// 	self.filter.render().then(filter_wrapper =>{
-			// 		search_container.appendChild(filter_wrapper)
-			// 	})
-			// })
 		}
 
 	// paginator container node
@@ -807,20 +806,3 @@ const get_buttons = function(self) {
 
 		// 	return wrapper
 	// }//end list_tm
-
-
-
-/**
-* NO_RECORDS_NODE
-* @return DOM node
-*/
-const no_records_node = () => {
-
-	const node = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'no_records',
-		inner_html		: get_label.no_records || 'No records found'
-	})
-
-	return node
-}//end no_records_node

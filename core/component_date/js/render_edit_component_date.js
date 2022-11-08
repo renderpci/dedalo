@@ -73,7 +73,7 @@ export const get_ar_raw_data_value = (self) => {
 
 		const current_value = inputs_value[i]
 		if (!current_value) {
-			console.error('Ignored component_date empty value:', i, inputs_value);
+			console.error('Ignored component_date empty value:', self.tipo, i, inputs_value);
 			console.log('Check this component value:', self);
 			continue;
 		}
