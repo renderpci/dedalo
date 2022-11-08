@@ -26,8 +26,8 @@ export const view_default_edit_date = function() {
 
 
 /**
-* EDIT
-* Render node for use in edit
+* RENDER
+* Render node for use in current view
 * @param object options
 * @return DOM node
 */
@@ -80,7 +80,7 @@ const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
-			autoload			: true
+			autoload : true
 		})
 
 	// build values
@@ -93,66 +93,9 @@ const get_content_data_edit = function(self) {
 			content_data[i] = input_element_edit
 		}
 
+
 	return content_data
 }//end get_content_data_edit
-
-
-
-/**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
-
-	const fragment = new DocumentFragment()
-
-	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
-			const button_add_input = ui.create_dom_element({
-				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: fragment
-			})
-			// event to insert new input
-			button_add_input.addEventListener('mouseup', function() {
-
-				const changed_data = [Object.freeze({
-					action	: 'insert',
-					key		: self.data.value.length,
-					value	: null
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: true
-				})
-				.then(()=>{
-					const inputs_container = self.node.content_data.inputs_container
-
-					// add new dom input element
-					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
-					inputs_container.appendChild(new_input)
-					// set the pointer
-					inputs_container[changed_data.key] = new_input
-				})
-			})
-		}
-
-	// buttons tools
-		if (!is_inside_tool && mode==='edit') {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-		buttons_container.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
 
 
 
@@ -165,7 +108,6 @@ const get_buttons = (self) => {
 */
 export const get_input_element_edit = (i, current_value, self) => {
 
-	const mode		= self.mode
 	const date_mode	= self.get_date_mode()
 
 	// content_value
@@ -227,3 +169,60 @@ export const get_input_element_edit = (i, current_value, self) => {
 	return content_value
 }//end get_input_element_edit
 
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return DOM node buttons_container
+*/
+const get_buttons = (self) => {
+
+	const is_inside_tool	= self.is_inside_tool
+	const mode				= self.mode
+
+	const fragment = new DocumentFragment()
+
+	// button add input
+		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+			const button_add_input = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'button add',
+				parent 			: fragment
+			})
+			// event to insert new input
+			button_add_input.addEventListener('mouseup', function() {
+
+				const changed_data = [Object.freeze({
+					action	: 'insert',
+					key		: self.data.value.length,
+					value	: null
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: true
+				})
+				.then(()=>{
+					const inputs_container = self.node.content_data.inputs_container
+
+					// add new dom input element
+					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
+					inputs_container.appendChild(new_input)
+					// set the pointer
+					inputs_container[changed_data.key] = new_input
+				})
+			})
+		}
+
+	// buttons tools
+		if (!is_inside_tool && mode==='edit') {
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		buttons_container.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons

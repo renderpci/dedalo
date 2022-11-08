@@ -11,6 +11,8 @@
 	import {ui} from '../../common/js/ui.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
 
+
+
 /**
 * RENDER_EDIT_COMPONENT_DATE
 * Manage the components logic and appearance in client side
@@ -65,8 +67,8 @@ export const get_ar_raw_data_value = (self) => {
 
 	const value	= self.data.value || []
 
-	const date_mode	= self.get_date_mode()
-	const ar_raw_value = []
+	const date_mode		= self.get_date_mode()
+	const ar_raw_value	= []
 	const inputs_value	= (value.length<1) ? [] : value
 	const value_length	= inputs_value.length
 	for (let i = 0; i < value_length; i++) {
@@ -160,6 +162,7 @@ export const get_ar_raw_data_value = (self) => {
 
 /**
 * INPUT_ELEMENT_DATE
+* @return DOM node node
 */
 export const input_element_date = (i, current_value, self) => {
 
@@ -215,6 +218,7 @@ export const input_element_range = (i, current_value, self) => {
 
 /**
 * INPUT_ELEMENT_PERIOD
+* @return DOM node input_wrap
 */
 export const input_element_period = (i, current_value, self) => {
 
