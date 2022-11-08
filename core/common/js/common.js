@@ -368,18 +368,18 @@ common.prototype.render = async function (options={}) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			const total = (performance.now()-t0).toFixed(3)
+			// const total = (performance.now()-t0).toFixed(3)
 
-			if (self.model==='section') {
-				dd_console(`__Time [common.render] to render section: ${total} ms`,'DEBUG')
-			}else{
-				const msg = `__Time [common.render] to render model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
-				if (total>100) {
-					console.log(msg, total, self);
-				}else{
-					// console.log(msg, total);
-				}
-			}
+			// if (self.model==='section') {
+			// 	dd_console(`__Time [common.render] to render section: ${total} ms`,'DEBUG')
+			// }else{
+			// 	const msg = `__Time [common.render] to render model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
+			// 	if (total>100) {
+			// 		console.log(msg, total, self);
+			// 	}else{
+			// 		// console.log(msg, total);
+			// 	}
+			// }
 		}
 
 

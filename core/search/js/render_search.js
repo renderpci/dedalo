@@ -496,7 +496,8 @@ render_search.prototype.render_search_buttons = function(){
 			parent			: reset_group
 
 		})
-		reset_button.addEventListener("click", function(e){
+		reset_button.addEventListener('click', function(e){
+			e.stopPropagation()
 			self.reset(this)
 			//self.toggle_search_panel()
 		})
@@ -507,7 +508,8 @@ render_search.prototype.render_search_buttons = function(){
 			inner_html		: get_label.mostrar_todos || 'Show all',
 			parent			: reset_group
 		})
-		show_all_button.addEventListener("click", function(e){
+		show_all_button.addEventListener('click', function(e){
+			e.stopPropagation()
 			self.show_all(this)
 			// Close search div
 			//self.toggle_search_panel()
@@ -718,7 +720,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 
 /**
 * RENDER_USER_PRESET_LIST
-* Auxiliary function to create dom elements needed for build components presets list
+* Auxiliary function to create DOM elements needed for build components presets list
 * @return bool
 */
 render_search.prototype.render_user_preset_list = function(ar_elements, permissions, target_section_tipo) {
@@ -1002,11 +1004,11 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			const status_id					= 'open_search_panel'
 			const status_table				= 'status'
 
-		if (search_global_container.classList.contains("hide")) {
+		if (search_global_container.classList.contains('hide')) {
 
 			self.search_panel_is_open = true
 
-			search_global_container.classList.remove("hide")
+			search_global_container.classList.remove('hide')
 
 			const data = {
 				id		: status_id,
@@ -1021,7 +1023,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			self.search_panel_is_open = false
 
-			search_global_container.classList.add("hide")
+			search_global_container.classList.add('hide')
 
 			data_manager.delete_local_db_data(
 				status_id,
@@ -1044,26 +1046,26 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		const search_container_selector = self.search_container_selector
 
 		// cookie to track state
-		const cookie_name = "fields_panel"
+		const cookie_name = 'fields_panel'
 
-		if (search_container_selector.classList.contains("display_none")) {
+		if (search_container_selector.classList.contains('display_none')) {
 
-			search_container_selector.classList.remove("display_none")
+			search_container_selector.classList.remove('display_none')
 
 			// Set search panel as closed
 				self.track_show_panel({
 					name	: cookie_name,
-					action	: "open"
+					action	: 'open'
 				})
 
 		}else{
 
-			search_container_selector.classList.add("display_none")
+			search_container_selector.classList.add('display_none')
 
 			// Set search panel as closed
 				self.track_show_panel({
 					name	: cookie_name,
-					action	: "close"
+					action	: 'close'
 				})
 		}
 
@@ -1143,22 +1145,20 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 
-	/**
-	* LOCALIZE_OPERATOR
-	* @return string localized
-	*/
-	const localize_operator = (operator) => {
+/**
+* LOCALIZE_OPERATOR
+* @return string localized
+*/
+const localize_operator = (operator) => {
 
-		// Remove '$' (first char)
-		const clean_operator = operator.slice(1)
+	// Remove '$' (first char)
+	const clean_operator = operator.slice(1)
 
-		const name = (clean_operator==="and") ? "y" :
-					 (clean_operator==="or") ? "o" :
-					 clean_operator
+	const name = (clean_operator==="and") ? "y" :
+				 (clean_operator==="or") ? "o" :
+				 clean_operator
 
-		const localized = get_label[name] || ''
+	const localized = get_label[name] || ''
 
-		return localized
-	}//end localize_operator
-
-
+	return localized
+}//end localize_operator

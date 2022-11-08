@@ -77,7 +77,7 @@ dd_grid.prototype.init	= async function(options) {
 		self.column_id = options.column_id
 	// view. When caller is section_record, the view is inside context
 		self.view = options.view || (options.context ? options.context.view : 'default')
-		console.log('dd_grid self.view:', self.view);
+
 
 	return common_init
 }//end build
