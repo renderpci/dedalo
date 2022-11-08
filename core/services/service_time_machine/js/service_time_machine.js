@@ -262,56 +262,58 @@ service_time_machine.prototype.build_request_config = function() {
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
-		const ddo_map = [
-			//  matrix id . tm info -> Id
-			{
-				tipo			: 'dd1573',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_section_id',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				label			: 'Matrix id',
-				mode			: 'list',
-				view			: 'mini'
-			},
-			// when dd547 (from activity section)
-			{
-				tipo			: 'dd547',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_date',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				debug_label		: 'When',
-				mode			: 'list',
-				view			: 'mini'
-			},
-			// who dd543 (from activity section)
-			{
-				tipo			: 'dd543',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_input_text',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				debug_label		: 'Who',
-				mode			: 'list',
-				view			: 'mini'
-			},
-			// where dd546 (from activity section)
-			{
-				tipo			: 'dd546',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_input_text',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				debug_label		: 'Where',
-				mode			: 'list',
-				view			: 'mini'
-			}
-		]
+		const ddo_map = main_element && main_element.model==='section'
+			? [] // em
+			: [
+				//  matrix id . tm info -> Id
+				{
+					tipo			: 'dd1573',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_section_id',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					label			: 'Matrix id',
+					mode			: 'list',
+					view			: 'mini'
+				},
+				// when dd547 (from activity section)
+				{
+					tipo			: 'dd547',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_date',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					debug_label		: 'When',
+					mode			: 'list',
+					view			: 'mini'
+				},
+				// who dd543 (from activity section)
+				{
+					tipo			: 'dd543',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_input_text',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					debug_label		: 'Who',
+					mode			: 'list',
+					view			: 'mini'
+				},
+				// where dd546 (from activity section)
+				{
+					tipo			: 'dd546',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_input_text',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					debug_label		: 'Where',
+					mode			: 'list',
+					view			: 'mini'
+				}
+			  ]
 
 	// sqo
 		const sqo = {
@@ -363,13 +365,43 @@ service_time_machine.prototype.build_request_config = function() {
 					view			: 'mini'
 				})
 
+				// filter_by_locators
 				sqo.filter_by_locators = [{
 					section_tipo	: section_tipo,
 					section_id		: section_id,
 					tipo			: main_element.tipo, // (!) used only in time machine to filter by column tipo
 					lang			: lang // (!) used only in time machine to filter by column lang
 				}]
-			}
+
+				// filter
+				// sqo.parsed = true,
+				// sqo.filter = {
+				// 	'$and' : [
+				// 		{
+				// 			q_parsed	: `\'${section_tipo}\'`,
+				// 			operator	: "=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'section_tipo'
+				// 		},
+				// 		{
+				// 			q_parsed	: `${section_id}`,
+				// 			operator	: "=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'section_id'
+				// 		},
+				// 		{
+				// 			q_parsed	: `\'${section_tipo}\'`,
+				// 			operator	: "!=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'tipo'
+				// 		}
+				// 	]
+				// }
+
+			}//end if (main_element.model==='section')
 
 			// main_element show . From rqo_config_show
 			const element_show = main_element.rqo_config && main_element.rqo_config.show && main_element.rqo_config.show.ddo_map
@@ -380,8 +412,18 @@ service_time_machine.prototype.build_request_config = function() {
 					const item = element_show[i]
 						  item.mode = 'list'
 						  item.view = 'mini'
+
+					item.section_tipo = Array.isArray(item.section_tipo)
+						? item.section_tipo[0]
+						: item.section_tipo
+
+					item.parent	= item.section_tipo
+					item.type	= 'component'
+					item.typo	= 'ddo'
+
 					ddo_map.push(item)
 				}
+				console.log('ddo_map:', ddo_map);
 			}
 		}else{
 
