@@ -84,7 +84,6 @@ class search {
 		if (is_string($search_query_object)) {
 			$search_query_object = json_decode($search_query_object);
 		}
-
 		// $search_class = (isset($search_query_object->mode) && $search_query_object->mode==='tm') ? 'search_tm' : 'search';
 
 		$mode = $search_query_object->mode ?? null;
@@ -1901,7 +1900,7 @@ class search {
 
 	/**
 	* GET_SQL_WHERE
-	* Builds a sql query string base on given filter search object
+	* Builds a SQL query string base on given filter search object
 	* @param object $search_object
 	* @return string $sql_where
 	*/
@@ -1909,11 +1908,11 @@ class search {
 
 		// sample object
 			// {
-			//   "q": "'.*\[".*ana.*'",						// the regext, text, number, etc that the component created
+			//   "q": "'.*\[".*ana.*'",						// the regex, text, number, etc that the component created
 			//   "unaccent":true,							// true or false
 			//   "operator":"~*",							// the operator for query
 			//   "type": "string",							// string or jsonb
-			//   "lang": "lg-nolan",						// if not defined lang = all langs, if defined lang = the lang sended
+			//   "lang": "lg-nolan",						// if not defined lang = all langs, if defined lang = the lang sent
 			//   "path": [									// path for locate the component into the joins
 			//     {
 			//       "section_tipo": "oh1",

@@ -493,7 +493,7 @@ template {
 html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   color: #353535;
-  font-size: 13px;
+  font-size: 0.813rem;
 }
 b,
 strong {
@@ -8275,6 +8275,7 @@ dd-modal .footer.content {
 .component_filter.edit > .content_data .branch > .item_li > .item_label .item_input,
 .component_filter_master.edit > .content_data .branch > .item_li > .item_label .item_input {
   margin-right: 0.25rem;
+  vertical-align: text-bottom;
 }
 .component_filter.edit > .content_data > .branch > .item_li,
 .component_filter_master.edit > .content_data > .branch > .item_li {

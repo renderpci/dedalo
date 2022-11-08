@@ -58,10 +58,8 @@ view_mosaic_list_image.render = function(self, options) {
 		// image.setAttribute('crossOrigin', 'Anonymous');
 		if(self.caller.caller.mode === 'edit'){
 			ui.component.add_image_fallback(image, load_error)
-
 			function load_error() {
 				url_object.file_exist = false
-
 			}
 		}
 
@@ -73,7 +71,7 @@ view_mosaic_list_image.render = function(self, options) {
 			image.classList.remove('hidden')
 		}
 
-	// set src
+	// set source url
 		image.src = url
 
 	// open viewer

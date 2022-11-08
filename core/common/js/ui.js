@@ -2928,9 +2928,10 @@ export const ui = {
 	* like filter
 	* @param object options
 	* 	{
-	* 		container	: DOM node,
-	* 		label		: string,
-	* 		callback	: function
+	* 		container			: DOM node,
+	* 		preserve_content	: bool false
+	* 		label				: string,
+	* 		callback			: function
 	* 	}
 	* @return promise
 	* 	Resolve: DOM node result_node
