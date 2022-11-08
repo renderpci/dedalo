@@ -9,7 +9,7 @@
 	import {common} from '../../common/js/common.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {render_time_machine_list} from './render_time_machine_list.js'
-	import {render_time_machine_list_view} from './render_time_machine_list_view.js'
+	import {view_time_machine_list} from './view_time_machine_list.js'
 	// import {service_time_machine} from '../../services/service_time_machine/js/service_time_machine.js'
 
 
@@ -105,7 +105,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 		})
 
 	// assign our view render (as callback render function to 'time_machine' instance)
-		self.time_machine.view = render_time_machine_list_view
+		self.time_machine.view = view_time_machine_list
 
 	// build
 		await self.time_machine.build(true)
