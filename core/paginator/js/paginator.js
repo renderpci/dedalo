@@ -131,14 +131,14 @@ paginator.prototype.build = async function(){
 
 
 	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("paginator [build] self:",self);
-			// console.log("paginator total:",total);
-			const time = performance.now()-t0
-			if (time>2) {
-				console.log("__Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
-			}
-		}
+		// if(SHOW_DEBUG===true) {
+		// 	// console.log("paginator [build] self:",self);
+		// 	// console.log("paginator total:",total);
+		// 	const time = performance.now()-t0
+		// 	if (time>2) {
+		// 		console.log("__Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
+		// 	}
+		// }
 
 	// status update
 		self.status = 'built'

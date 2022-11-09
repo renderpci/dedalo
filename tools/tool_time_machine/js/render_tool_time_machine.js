@@ -209,8 +209,18 @@ const get_content_data = async function(self) {
 		// })
 
 	// section list. Call time machine service render callback
-		const time_machine_node	= await self.time_machine.render()
-		fragment.appendChild(time_machine_node)
+		const time_machine_list_node = await self.time_machine.render()
+		fragment.appendChild(time_machine_list_node)
+
+		// const node = await ui.load_item_with_spinner({
+		// 	container			: fragment,
+		// 	preserve_content	: true,
+		// 	label				: 'Time Machine list',
+		// 	callback			: async () => {
+		// 		const node = await self.time_machine.render()
+		// 		return node
+		// 	}
+		// })
 
 	// buttons container
 		// const buttons_container = ui.create_dom_element({
