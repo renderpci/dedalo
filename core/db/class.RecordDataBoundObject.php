@@ -67,22 +67,23 @@ abstract class RecordDataBoundObject {
 			if (defined('ONTOLOGY_DB') && true===in_array($this->strTableName, $ontology_tables)) {
 
 				static $ontology_pg_conn;
-
 				if(isset($ontology_pg_conn)) {
 					return($ontology_pg_conn);
 				}
 
-				$ontology_pg_conn = DBi::_getNewConnection(
-					$host=ONTOLOGY_DB['DEDALO_HOSTNAME_CONN'],
-					$user=ONTOLOGY_DB['DEDALO_USERNAME_CONN'],
-					$password=ONTOLOGY_DB['DEDALO_PASSWORD_CONN'],
-					$database=ONTOLOGY_DB['DEDALO_DATABASE_CONN'],
-					$port=ONTOLOGY_DB['DEDALO_DB_PORT_CONN'],
-					$socket=ONTOLOGY_DB['DEDALO_SOCKET_CONN']
+				$ontology_pg_conn = DBi::_getConnection(
+					ONTOLOGY_DB['DEDALO_HOSTNAME_CONN'], // host
+					ONTOLOGY_DB['DEDALO_USERNAME_CONN'], // user
+					ONTOLOGY_DB['DEDALO_PASSWORD_CONN'], // password
+					ONTOLOGY_DB['DEDALO_DATABASE_CONN'], // database name
+					ONTOLOGY_DB['DEDALO_DB_PORT_CONN'], // port
+					ONTOLOGY_DB['DEDALO_SOCKET_CONN'], // socket
+					false // use cache
 				);
 				if($ontology_pg_conn===false){
 					throw new Exception("Error. Could not connect to database (52-2)", 1);
 				}
+
 				return $ontology_pg_conn;
 			}
 

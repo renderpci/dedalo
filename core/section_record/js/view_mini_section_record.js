@@ -137,7 +137,7 @@ view_mini_section_record.render = async function(self, options) {
 	// component_info
 		const component_info = self.get_component_info()
 		if (component_info){
-			const info_value = component_info.value.join('')
+			const info_value = component_info.value.join(' ')
 			const info = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'column column_info',

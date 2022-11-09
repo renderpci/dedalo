@@ -290,3 +290,20 @@ export const render_server_response_error = function(msg, add_wrapper=false) {
 
 	return wrapper
 }//end render_server_response_error
+
+
+
+/**
+* NO_RECORDS_NODE
+* @return DOM node
+*/
+export const no_records_node = () => {
+
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'no_records',
+		inner_html		: get_label.no_records || 'No records found'
+	})
+
+	return node
+}//end no_records_node

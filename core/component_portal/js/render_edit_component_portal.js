@@ -379,6 +379,10 @@ export const render_column_remove = function(options) {
 		button_remove.addEventListener('click', function(e){
 			e.stopPropagation()
 
+			if (self.permissions<2) {
+				return
+			}
+
 			// header
 				const header = ui.create_dom_element({
 					element_type	: 'div',
@@ -574,7 +578,7 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool		= self.is_inside_tool // 	(self.caller && self.caller.type==='tool')
+		const is_inside_tool		= self.caller && self.caller.type==='tool'
 		const target_section		= self.target_section
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant
@@ -582,6 +586,10 @@ export const get_buttons = (self) => {
 
 	// fragment
 		const fragment = new DocumentFragment()
+
+		if (is_inside_tool===true) {
+			return fragment
+		}
 
 	// button_add
 		const button_add = ui.create_dom_element({

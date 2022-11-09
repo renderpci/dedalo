@@ -105,10 +105,11 @@
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
 
-				$permissions	= common::get_permissions($section_tipo, $section_tipo);
-				if($permissions<1){
-					continue;
-				}
+				// permissions check
+					$permissions	= common::get_permissions($section_tipo, $section_tipo);
+					if($permissions<1){
+						continue;
+					}
 
 				// section instance
 					$section = $section_class::get_instance(

@@ -11,32 +11,30 @@
 
 
 /**
-* RENDER_csv_DD_GRID
+* VIEW_TABLE_DD_GRID
 * Manage the components logic and appearance in client side
 */
-export const render_csv_dd_grid = function() {
+export const view_table_dd_grid = function() {
 
 	return true
-}//end render_csv_dd_grid
+}//end view_table_dd_grid
 
 
 
 /**
-* TABLE
+* RENDER
 * Render node for use in table
 * @return DOM node wrapper
 */
-render_csv_dd_grid.prototype.table = function() {
+view_table_dd_grid.render = function(self, options) {
 
-	const self = this
-
-	// Options vars
+	// data
 		const data = self.data
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'table',
-			class_name		: 'wrapper_dd_grid' + ' ' + self.tipo + ' ' + self.mode
+			class_name		: `wrapper_dd_grid ${self.tipo} ${self.mode} view_${self.view}`
 		})
 
 	// grid. Value as string
@@ -53,13 +51,15 @@ render_csv_dd_grid.prototype.table = function() {
 
 /**
 * GET_TABLE_NODES
-* @param data; array of objects; full data sent by the server with all information.
-* @return DOM node with the table
+* @param array data
+* 	array of objects; full data sent by the server with all information.
+* @return DocumentFragment
+* 	DOM node with the table
 */
-const get_table_nodes = function(data, data_format){
+const get_table_nodes = function(data, data_format) {
+
 	// the root node
 	const fragment = new DocumentFragment()
-
 	// First row;
 	// get the columns form the first row of the data, it content the columns map with all columns calculated in the server for all data,
 	// sometimes the columns are section_id columns, that is, some columns comes from rows inside portals, all rows below the main portal will be converted to section_id columns
@@ -70,16 +70,19 @@ const get_table_nodes = function(data, data_format){
 	const ar_columns		= data[0].value
 	const ar_columns_obj	= ar_columns.map(item => item.ar_columns_obj)
 
+
 	// build the header
 	// get every column to create the header of the table, get the node and add to the root node
-	const column_labels = [];
+
 	const ar_columns_len = ar_columns.length
+	const row_header_node = get_row_container()
+		fragment.appendChild(row_header_node)
 	for (let i = 0; i < ar_columns_len; i++) {
 		const column = ar_columns[i]
-		const column_cell = get_table_columns(column)
-		const node_len = column_cell.length
+		const column_nodes = get_table_columns(column)
+		const node_len = column_nodes.length
 		for (let j = 0; j < node_len; j++) {
-			column_labels.push(column_cell)
+			row_header_node.appendChild(column_nodes[j])
 		}
 	}
 
@@ -98,6 +101,7 @@ const get_table_nodes = function(data, data_format){
 
 	return fragment
 }//end get_table_nodes
+
 
 
 /**
@@ -291,7 +295,10 @@ const get_table_columns = function(current_data){
 */
 const get_row_container = function() {
 
-	const row_container = '\n'
+	const row_container = ui.create_dom_element({
+		element_type	: 'tr'
+		// class_name	: class_list
+	})
 
 	return row_container
 }//end get_row_container
@@ -307,7 +314,11 @@ const get_header_column = function(current_data) {
 
 	const ar_labels		= current_data.ar_columns_obj.ar_labels || []
 	const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
-	const label_node 	= '"' + even_labels.join(' | ') + '"'
+	const label_node 	= ui.create_dom_element({
+		// id			: current_data.id,
+		element_type	: 'th',
+		inner_html		:  even_labels.join(' | ')
+	})
 
 	return label_node
 }//end get_header_column
@@ -324,15 +335,20 @@ const get_text_column = function(current_data) {
 
 	const class_list = current_data.class_list || ''
 
-	const text = current_data.value && Array.isArray(current_data.value)
+	const value = current_data.value && Array.isArray(current_data.value)
 		? current_data.value.join(' ')
 		: (current_data.value || '')
+
+	const fallback_value = current_data.fallback_value && Array.isArray(current_data.fallback_value)
+		? current_data.fallback_value.join(' ')
+		: (current_data.fallback_value || '')
+
 
 	const text_node = ui.create_dom_element({
 		// id			: current_data.id,
 		element_type	: 'td',
 		class_name		: class_list,
-		inner_html		: text
+		inner_html		: value || fallback_value
 	})
 
 	return text_node
@@ -391,7 +407,7 @@ const get_img_column = function(current_data){
 		const image = ui.create_dom_element({
 			element_type	: "img",
 			class_name		: class_list,
-			src 			: url,
+			src 			: window.location.origin + url,
 			parent 			: image_node
 		})
 
@@ -480,5 +496,3 @@ const get_section_id_column = function(current_data) {
 
 	return section_id_node
 }//end get_section_id_column
-
-

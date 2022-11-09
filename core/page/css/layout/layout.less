@@ -798,7 +798,8 @@
 		}
 		&.active {
 			// box-shadow: 3px 5px 8px 1px #c6c6c6;
-			z-index: 1;
+			// z-index: 1;
+			z-index: 3; // 3 allow over portal drag handlers
 			// outline: thin solid @color_orange_dedalo;
 			box-shadow: -1px 1px 0px @color_orange_dedalo, inset -1px 1px 0px @color_orange_dedalo;
 			color: @color_orange_dedalo;
@@ -1749,15 +1750,18 @@
 						// background-color: #30d305 !important;
 					// }
 
-					// Draggable background svg
+					@background-top: 5px;
+
+					// Drag-gable background svg
 					&.element_draggable {
 						cursor: move;
-						background: url('../../themes/default/draggable.svg');
+						// background: url('../../themes/default/draggable.svg');
+						background-image: url('../../themes/default/draggable.svg');
 						background-color: rgba(0, 0, 0, 0);
 						background-position-x: 0%;
 						background-position-y: 0%;
 						background-size: auto auto;
-						background-position: right 5px bottom 7px;
+						background-position: right 5px bottom @background-top;
 						background-repeat: no-repeat;
 						background-size: 12px;
 					}
@@ -1766,21 +1770,24 @@
 					&.has_subquery {
 						// background-color: #29ae03;
 						cursor: pointer;
-						background-position: right 1em bottom 7px;
+						background-position: right 1em bottom @background-top;
 
-						// Flecha
+						// Arrow
 						&:after {
-							content: " ";
-							display: inline-block;
+							content: ' ';
+							display: block;
 							pointer-events: none;
 							position: absolute;
-							background: url('../../themes/default/icons/play.svg');
+							// background: url('../../themes/default/icons/play.svg');
+							background-image: url('../../themes/default/icons/play.svg');
 							background-repeat: no-repeat;
 							background-position: center;
 							background-size: 0.55em;
 							width: 1em;
 							height: 1em;
 							right: 0px;
+							top: 3px;
+							cursor: pointer;
 						}
 
 						&.active {

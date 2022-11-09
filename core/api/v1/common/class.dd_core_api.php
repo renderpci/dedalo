@@ -1840,6 +1840,12 @@ final class dd_core_api {
 							$context	= $element_json->context;
 							$data		= $element_json->data;
 
+						// debug
+							// if ($tipo==='oh18') {
+							// 	dump($context, ' context ++ '.to_string());
+							// 	dump($data, ' data ++ '.to_string());
+							// }
+
 						// ar_all_section_id (experimental)
 							// $ar_all_section_id = $element->get_ar_all_section_id();
 							// 	dump($ar_all_section_id, ' ar_all_section_id ++ '.to_string());

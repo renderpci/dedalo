@@ -58,10 +58,8 @@ view_default_list_image.render = function(self, options) {
 		// image.setAttribute('crossOrigin', 'Anonymous');
 		if(self.caller && self.caller.caller && self.caller.caller.mode==='edit') {
 			ui.component.add_image_fallback(image, load_error)
-
 			function load_error() {
 				url_object.file_exist = false
-
 			}
 		}
 
@@ -73,15 +71,15 @@ view_default_list_image.render = function(self, options) {
 			image.classList.remove('hidden')
 		}
 
-	// set src
+	// set source url
 		image.src = url
 
 	// open viewer
 		image.addEventListener('mouseup', function (e) {
 			e.stopPropagation();
 
-			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
-			// else open the player to show the image
+			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so
+			// it could be used, else open the player to show the image
 			const file_does_not_exist = data.datalist.find(item => item.file_exist === false)
 			if(file_does_not_exist){
 

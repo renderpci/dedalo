@@ -24,10 +24,9 @@ export const common = function(){
 
 
 /**
-* INITING
+* INIT
 * @param object options
-* Generic agnostic init function created to maintain
-* unity of calls.
+* Generic agnostic init function created to preserve calls unity.
 * (!) For components, remember to use always common.init()
 * @return bool true
 */
@@ -220,15 +219,15 @@ common.prototype.render = async function (options={}) {
 				break;
 
 			case 'rendered':
-				// if render mode is equal than current already rendered node, return node 0
+				// if render mode is equal than current already rendered node, return node
 				if (self.render_level===render_level) {
 					if (self.node) {
 						console.warn(`Render unexpected status. Returning already rendered node 0. Expected status is 'built' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
 						return self.node
 					}else{
-						console.warn(`Render unexpected status. Node already rendered node not found but status is rendered:`, self.node, self.id);
+						console.warn(`Render unexpected status. Rendered node not found but status is rendered:`, self.node, self.id);
+						return false
 					}
-					// return self.node
 				}
 				break;
 
@@ -271,7 +270,6 @@ common.prototype.render = async function (options={}) {
 	// result_node render based in render_level
 		const result_node = await (async () => {
 			// console.warn("///////////////////// render_level:",render_level, self.id);
-			let result
 
 			// render_level
 			switch(render_level) {
@@ -297,67 +295,41 @@ common.prototype.render = async function (options={}) {
 
 					// replace
 						old_content_data_node.replaceWith(new_content_data_node);
-					// update the wrapper pointer to the new content_data node
+						// set pointers. Update the wrapper pointer to the new content_data node
 						self.node.content_data = new_content_data_node
 
-					/*
-						// replace old_content_data_node from parent wrapper. Note that in portals and sections, a 'list_body'
-						// could be the parent of the content_data_node instead the self wrapper
-							const content_data_parent = wrapper.list_body
-								? wrapper.list_body // wrapper.querySelector(":scope >.list_body")
-								: wrapper
-
-							if (!content_data_parent.contains( old_content_data_node )) {
-
-								// error. not found case
-								console.warn("------------- Ignored replaceChild. old_content_data_node is not found in content_data_parent")
-								console.warn("------------- content_data_parent:", content_data_parent);
-								console.warn("------------- old_content_data_node:", old_content_data_node);
-
-								// old_content_data_node.remove()
-								// content_data_parent.appendChild(new_content_data_node)
-							}else{
-
-								// success. found case
-								// replace child for the new one
-								content_data_parent.replaceChild(new_content_data_node, old_content_data_node)
-								// update the wrapper pointer to the new content_data node
-								self.node.content_data = new_content_data_node
-							}
-						*/
-
-					// return created node
-					result = self.node
+					// return created node (content_data)
+						return self.node
 					break;
 
 				case 'full':
 				default:
 					// set
 						// replaces DOM node if the node exist,
-						// ex: when it's called by event that need change data in component (update_data event) and the component need to be rendered in full as in list mode
+						// ex: when it's called by event that need change data in component (update_data event)
+						// and the component need to be rendered in full as in list mode
 						if(self.node) {
-							const parent = self.node.parentNode
-							if (!parent) {
-								console.warn('++++++++++++++ NO parent found for self.node:', self.node, ' render_level:', render_level);
-								console.warn('++++++++++++++ NO parent found for self:', self);
-							}else{
-								// replace
-								// parent.replaceChild(
-								// 	node, // new node
-								// 	self.node // old node
-								// )
-								self.node.replaceWith(node);
-							}
+							// const parent = self.node.parentNode
+							// if (!parent) {
+							// 	console.warn('++++++++++++++ NO parent found for self.node:', self.node, ' render_level:', render_level);
+							// 	console.warn('++++++++++++++ NO parent found for self:', self);
+							// }else{
+							// 	// replace
+							// 	// parent.replaceChild(
+							// 	// 	node, // new node
+							// 	// 	self.node // old node
+							// 	// )
+							// 	self.node.replaceWith(node);
+							// }
+							self.node.replaceWith(node);
 						}
-						// set/update instance node pointer
+						// set pointers. Update instance node pointer
 						self.node = node
 
 					// return the new created node
-					result = node
+						return node
 					break;
 			}//end switch(render_level)
-
-			return result
 		})()//end result_node fn
 
 	// status update
@@ -369,18 +341,18 @@ common.prototype.render = async function (options={}) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			const total = (performance.now()-t0).toFixed(3)
+			// const total = (performance.now()-t0).toFixed(3)
 
-			if (self.model==='section') {
-				dd_console(`__Time [common.render] to render section: ${total} ms`,'DEBUG')
-			}else{
-				const msg = `__Time [common.render] to render model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
-				if (total>100) {
-					console.log(msg, total, self);
-				}else{
-					// console.log(msg, total);
-				}
-			}
+			// if (self.model==='section') {
+			// 	dd_console(`__Time [common.render] to render section: ${total} ms`,'DEBUG')
+			// }else{
+			// 	const msg = `__Time [common.render] to render model: ${self.model}, tipo: ${self.tipo}, section_tipo: ${self.section_tipo}, total (ms): `
+			// 	if (total>100) {
+			// 		console.log(msg, total, self);
+			// 	}else{
+			// 		// console.log(msg, total);
+			// 	}
+			// }
 		}
 
 
@@ -705,7 +677,7 @@ export const create_source = function (self, action) {
 			section_tipo	: self.section_tipo || self.tipo,
 			section_id		: self.section_id,
 			mode			: (self.mode==='edit_in_list') ? 'edit' : self.mode,
-			view			: self.view || 'default',
+			view			: self.view || null, // 'default',
 			lang			: self.lang
 		}
 

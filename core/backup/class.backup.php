@@ -25,125 +25,122 @@ abstract class backup {
 	public static function init_backup_secuence(int $user_id, string $username, bool $skip_backup_time_range=false) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
 
-		# Force to unlock browser session
+		// Force to unlock browser session
 			session_write_close();
 
 		try {
-			# NAME : File name formatted as date . (One hour resolution)
-			# $user_id 		= isset($_SESSION['dedalo']['auth']['user_id']) ? $_SESSION['dedalo']['auth']['user_id'] : '';
-			$ar_dd_data_version	= get_current_version_in_db();
-			$db_name			= ($skip_backup_time_range===true)
-				? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
-				: date("Y-m-d_H")   .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
+			// name : file name formatted as date . (one hour resolution)
+				$ar_dd_data_version	= get_current_version_in_db();
+				$db_name			= ($skip_backup_time_range===true)
+					? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
+					: date("Y-m-d_H")   .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
 
 			// Backups folder exists verify
-			$file_path = DEDALO_BACKUP_PATH_DB;
-			if( !is_dir($file_path) ) {
-				if(!mkdir($file_path, 0700, true)) {
-					#throw new Exception(" Error on read or create backup directory. Permission denied");
-					$response->result 	= false;
-					$response->msg 		= "Error on read or create backup directory. Permission denied ".__METHOD__;
-					return $response;
+				$file_path = DEDALO_BACKUP_PATH_DB;
+				if( !is_dir($file_path) ) {
+					if(!mkdir($file_path, 0700, true)) {
+						#throw new Exception(" Error on read or create backup directory. Permission denied");
+						$response->result	= false;
+						$response->msg		= "Error on read or create backup directory. Permission denied ".__METHOD__;
+						return $response;
+					}
+					debug_log(__METHOD__." CREATED DIR: $file_path  ".to_string(), logger::DEBUG);
 				}
-				debug_log(__METHOD__." CREATED DIR: $file_path  ".to_string(), logger::DEBUG);
-			}
 
+			// time range check
+				if($skip_backup_time_range===true) {
 
-			if($skip_backup_time_range===true) {
-				#
-				# Direct backup is forced
-				debug_log(__METHOD__." Making backup without time range prevention ".to_string(), logger::DEBUG);
+					// Direct backup is forced
+					debug_log(__METHOD__." Making backup without time range prevention ".to_string(), logger::DEBUG);
 
-			}else{
-				#
-				# Time range for backups in hours
-				if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
-					define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
+				}else{
+
+					// Time range for backups in hours
+					if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
+						define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
+					}
+					$last_modification_time_secs	= get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
+					$current_time_secs				= time();
+					$difference_in_hours			= round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
+					if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
+						$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. It is not necessary to build another one";
+						debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+						$response->result	= true;
+						$response->msg		= $msg . " ".__METHOD__;
+						return $response;
+					}
 				}
-				$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
-				$current_time_secs 			 = time();
-				$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
-				if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
-					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. It is not necessary to build another one";
+
+
+			// Backup file exists (less than an hour apart)
+				$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
+				if (file_exists($mysqlExportPath)) {
+					$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). It is not necessary to build another one";
 					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 					$response->result	= true;
 					$response->msg		= $msg . " ".__METHOD__;
 					return $response;
 				}
-			}
 
-
-			#
-			# Backup file exists (less than an hour apart)
-			$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
-			if (file_exists($mysqlExportPath)) {
-				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). It is not necessary to build another one";
-				debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-				$response->result	= true;
-				$response->msg		= $msg . " ".__METHOD__;
-				return $response;
-			}
-
-			// Export the database and output the status to the page
-			$command='';	#'sleep 1 ;';
-			# $command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
-			$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN .$port_command. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
+			// command base. Export the database and output the status to the page
+				$port_str	= !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+				$command	= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN .$port_str. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
 
 			if($skip_backup_time_range===true) {
 
-				$command = 'nice -n 19 '.$command;
+				// forced backup case. Wait until finish
+
+				$command = 'nice -n 19 ' . $command;
+
 				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
 
-				# EXEC DIRECTLY AND WAIT RESULT
+				// exec directly and wait result
 				shell_exec($command);
 
 			}else{
 
-				$command = 'sleep 6s; nice -n 19 '.$command;
+				// default backup case. Async dump building sh file
 
-				# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
+				$command = 'sleep 6s; nice -n 19 ' . $command;
+
+				// build sh file with backup command if not exists
 				$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
 				if(!file_exists($prgfile)) {
 
-					# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)
-					try{
-						$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
-						# folder exists
-						if( !is_dir($target_folder_path) ) {
-							if(!mkdir($target_folder_path, 0775,true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
+					// target folder verify (exists and permissions)
+						try{
+							$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
+							# folder exists
+							if( !is_dir($target_folder_path) ) {
+								if(!mkdir($target_folder_path, 0775,true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
+							}
+						} catch (Exception $e) {
+							$msg = '<span class="error">'.$e->getMessage().'</span>';
+							#echo dd_error::wrap_error($msg);
+							debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
 						}
-					} catch (Exception $e) {
-						$msg = '<span class="error">'.$e->getMessage().'</span>';
-						#echo dd_error::wrap_error($msg);
-						debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
-					}
 
-					# SH FILE GENERATING
-					$fp = fopen($prgfile, "w");
-					fwrite($fp, "#!/bin/bash\n");
-					fwrite($fp, "$command\n");
-					fclose($fp);
-					# SH FILE PERMISSIONS
-					if(file_exists($prgfile)) {
-						chmod($prgfile, 0755);
-					}else{
-						throw new Exception("Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions", 1);
-					}
+					// sh file generating
+						$fp = fopen($prgfile, "w");
+						fwrite($fp, "#!/bin/bash\n");
+						fwrite($fp, "$command\n");
+						fclose($fp);
+
+					// sh file permissions
+						if(file_exists($prgfile)) {
+							chmod($prgfile, 0755);
+						}else{
+							throw new Exception("Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions", 1);
+						}
 				}
-
 				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
 
 
-				# RUN DELAYED COMMAND
+				// run delayed command
 				$res = exec_::exec_sh_file($prgfile);
-
-				#debug_log(__METHOD__." return:  ".to_string($res), logger::DEBUG);
-				#return $res;
-
 			}//end if($skip_backup_time_range===true)
 
 
@@ -168,26 +165,29 @@ abstract class backup {
 				// 		throw new Exception($msg, 1);
 				// }
 
-		} catch (Exception $e) {
+		}catch (Exception $e) {
+
 			$msg = "Sorry $username. ".  $e->getMessage(). "\n";
-			#trigger_error($msg);
 			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
-			$response->result	= false;
-			$response->msg		= "Exception: $msg ";
+
+			// response error
+				$response->result	= false;
+				$response->msg		= "Exception: $msg";
+
 			return $response;
 		}
 
-		# BK file size
-		$file_bk_size = "0 MB";
-		if(file_exists($mysqlExportPath)) {
-			$file_bk_size = format_size_units( filesize($mysqlExportPath) );
-		}
+		// bk file size
+			$file_bk_size = (file_exists($mysqlExportPath))
+				? format_size_units( filesize($mysqlExportPath) )
+				: '0 MB';
 
-		$response->result	= true;
-		$response->msg		= "OK. backup done. ".$db_name." ($file_bk_size)";
+		// response ok
+			$response->result	= true;
+			$response->msg		= "OK. backup done. ".$db_name." ($file_bk_size)";
 
 
-		return (object)$response;
+		return $response;
 	}//end init_backup_secuence
 
 

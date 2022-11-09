@@ -550,11 +550,12 @@ abstract class component_common extends common {
 
 				if (empty($this->matrix_id)) {
 					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
-					return false;
+					return null;
 				}
 
 				// tm dato. Note that no lang or section_id is needed, only matrix_id
 				$dato_tm = component_common::get_component_tm_dato($this->tipo, $this->section_tipo, $this->matrix_id);
+
 				// inject dato to component
 				$this->dato_resolved = $dato_tm;
 
@@ -3011,8 +3012,15 @@ abstract class component_common extends common {
 			$item->section_tipo			= $this->get_section_tipo();
 			$item->tipo					= $this->get_tipo();
 			$item->lang					= $this->get_lang();
-			$item->from_component_tipo	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->from_component_tipo	= $this->from_component_tipo ?? $item->tipo;
 			$item->value				= $value;
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$item->debug_model = $this->get_model();
+				$item->debug_label = $this->get_label();
+				$item->debug_mode = $this->get_modo();
+			}
 
 		return $item;
 	}//end get_data_item

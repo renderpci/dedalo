@@ -22,7 +22,7 @@ export const view_default_list_input_text = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render component node to use in list
 * @return DOM node wrapper
 */

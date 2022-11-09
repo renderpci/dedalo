@@ -27,7 +27,7 @@ export const view_mini_portal = function() {
 view_mini_portal.render = async function(self, options) {
 
 	// ar_section_record
-		const children_view	= self.context.children_view || self.context.view || 'default'
+		const children_view	= self.context.children_view || self.context.view || 'text'
 
 		const ar_section_record	= await self.get_ar_instances({
 			view : children_view

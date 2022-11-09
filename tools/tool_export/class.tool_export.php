@@ -6,21 +6,28 @@
 */
 class tool_export extends tool_common {
 
-	// public $section_tipo;
-	// public $section_obj;	# received section
-	// public $ar_records;		# Array of records to export (section_id) or null
-	// public $data_format;  	# string 'standard', 'dedalo'
 
-	// public static $quotes 	 		  = '"';
-	// public static $delimiter 		  = ';';
-	// public static $internal_separator = PHP_EOL;
+	// class properties
+		// public $section_tipo;
+		// public $section_obj;		// received section
+		// public static $quotes 	 		  = '"';
+		// public static $delimiter 		  = ';';
+		// public static $internal_separator = PHP_EOL;
+		// public $section_list_custom;
 
-	// public $section_list_custom;
+		// data_format. string 'standard', 'dedalo'
+			public $data_format;
+		// ar_ddo_map. array
+			public $ar_ddo_map;
+		// sqo. object
+			public $sqo;
+		// ar_records. array|null Array of records to export (section_id) or null
+			public $ar_records;
 
 
 
 	/**
-	* __CONSTRUCT
+	* __CONSTRUCT (OLD CONSTRUCT)
 	*/
 		// public function __construct(string $section_tipo, string $model, string $data_format='standard', array $ar_ddo_map=[], object $sqo=null) {
 
@@ -51,37 +58,105 @@ class tool_export extends tool_common {
 
 
 	/**
+	* SETUP
+	* Fix main class vars to de accessible
+	* @param object options
+	* @return void
+	*/
+	public function setup(object $options) : void {
+
+		// options
+			$data_format	= $options->data_format;
+			$ar_ddo_map		= $options->ar_ddo_map;
+			$sqo			= $options->sqo;
+			$model			= $options->model;
+
+		// fix data_format
+			$this->data_format = $data_format;
+
+		// fix ar_ddo_map
+			$this->ar_ddo_map = $ar_ddo_map;
+
+		// fix sqo
+			$this->sqo = $sqo;
+
+		// fix model
+			$this->model = $model;
+
+		// fix records
+			$this->ar_records = null;
+	}//end setup
+
+
+
+	/**
 	* GET_EXPORT_GRID
+	* Builds the grid ready to parse it in export_tool (client)
 	* @see class.request_query_object.php
+	* @param object options
+	* Sample:
+		* {
+		*    "section_tipo": "oh1",
+		*    "model": "section",
+		*    "data_format": "standard",
+		*    "ar_ddo_to_export": [
+		*        {
+		*            "id": "oh1_oh62_list_lg-nolan",
+		*            "tipo": "oh62",
+		*            "section_tipo": "oh1",
+		*            "model": "component_section_id",
+		*            "parent": "oh1",
+		*            "lang": "lg-nolan",
+		*            "mode": "search",
+		*            "label": "Id",
+		*            "path": [
+		*                {
+		*                    "section_tipo": "oh1",
+		*                    "component_tipo": "oh62",
+		*                    "modelo": "component_section_id",
+		*                    "name": "Id"
+		*                }
+		*            ]
+		*        }
+		*    ],
+		*    "sqo": {
+		*        "section_tipo": [
+		*            "oh1"
+		*        ],
+		*        "limit": 0,
+		*        "offset": 0
+		*    }
+		* }
 	* @return dd_grid object $result
 	*/
-	public static function get_export_grid(object $arguments) : object {
+	public static function get_export_grid(object $options) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// // validate input data
-		// 	if (empty($arguments->source->section_tipo) || empty($arguments->source->arguments->export_format) || empty($arguments->source->arguments->ar_ddo_to_export)) {
-		// 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty properties';
-		// 		return $response;
-		// 	}
-
-		// ddo_source
-			// $options = $arguments->source->arguments;
-
-		// source vars
-			$section_tipo		= $arguments->section_tipo ?? $ddo_source->tipo;
-			$model				= $arguments->model ?? 'section';
-			$data_format		= $arguments->data_format;
-			$ar_ddo_to_export	= $arguments->ar_ddo_to_export;
-			$sqo				= $arguments->sqo;
+		// options
+			$section_tipo		= $options->section_tipo ?? $ddo_source->tipo;
+			$model				= $options->model ?? 'section';
+			$data_format		= $options->data_format;
+			$ar_ddo_to_export	= $options->ar_ddo_to_export;
+			$sqo				= $options->sqo;
+			$model				= $options->model;
 
 		// export options
-			$tool_export	= new tool_export($section_tipo, $model, $data_format, $ar_ddo_to_export, $sqo);
-			$export_grid	= $tool_export->build_export_grid();
+			// $tool_export	= new tool_export($section_tipo, $model, $data_format, $ar_ddo_to_export, $sqo);
+			$tool_export = new tool_export(null, $section_tipo);
+			$tool_export->setup((object)[
+				'data_format'	=> $data_format,
+				'ar_ddo_map'	=> $ar_ddo_to_export,
+				'sqo'			=> $sqo,
+				'model'			=> $model
+			]);
+			$export_grid = $tool_export->build_export_grid();
 
-			$response->msg		= 'Ok. Request done';
+		// response OK
+			$response->msg		= 'OK. Request done';
 			$response->result	= $export_grid;
 
 		return $response;
@@ -99,12 +174,12 @@ class tool_export extends tool_common {
 		$records	= $this->get_records();
 
 		// get the section values
-		$section_grid_values	= [];
+		$section_grid_values = [];
 
 		$ar_head_columns = [];
 
 		// store the rows count for every portal inside the section
-			$ar_section_rows_count		= [];
+			$ar_section_rows_count = [];
 		// store the head rows to sum up with the total rows
 			$rows_max_count = [];
 		// rows values
@@ -176,45 +251,45 @@ class tool_export extends tool_common {
 		$ar_section_columns_count = sizeof($ar_columns_obj) ?? 0;
 
 		// build the header labels
-		for ($i=0; $i < $ar_section_columns_count; $i++) {
+			for ($i=0; $i < $ar_section_columns_count; $i++) {
 
-			$column_obj			= $ar_columns_obj[$i];
-			$column_path		= explode('|', $column_obj->id);
-			$column_tipos		= explode('_', $column_path[0]);
-			$column_labels		= [];
-			$column_tipos_len	= sizeof($column_tipos)-1;
-			foreach ($column_tipos as $column_key => $column_tipo) {
-				$column_label = RecordObj_dd::get_termino_by_tipo($column_tipo,DEDALO_APPLICATION_LANG,true);
-				if(sizeof($column_path)>1 && ($column_key === $column_tipos_len)){
-					$column_labels[] = $column_label.' '.$column_path[1]+1;
-				}else{
-					$column_labels[] = $column_label;
+				$column_obj			= $ar_columns_obj[$i];
+				$column_path		= explode('|', $column_obj->id);
+				$column_tipos		= explode('_', $column_path[0]);
+				$column_labels		= [];
+				$column_tipos_len	= sizeof($column_tipos)-1;
+				foreach ($column_tipos as $column_key => $column_tipo) {
+					$column_label = RecordObj_dd::get_termino_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
+					$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
+						? $column_label.' '.$column_path[1]+1
+						: $column_label;
 				}
+				$column_obj->ar_labels	= $column_labels;
+				$column_obj->label_tipo	= end($column_tipos);
+
+				// create the grid cell of the section
+					$section_grid = new dd_grid_cell_object();
+						$section_grid->set_type('column');
+						// $section_grid->set_label($ar_ddo_map[$i]->label);
+						$section_grid->set_ar_columns_obj($column_obj);
+						$section_grid->set_render_label(true);
+						$section_grid->set_class_list('caption section');
+						$section_grid->set_cell_type('header');
+
+				$ar_head_columns[] = $section_grid;
 			}
-			$column_obj->ar_labels	= $column_labels;
-			$column_obj->label_tipo	= end($column_tipos);
 
-			// create the grid cell of the section
-				$section_grid = new dd_grid_cell_object();
-					$section_grid->set_type('column');
-					// $section_grid->set_label($ar_ddo_map[$i]->label);
-					$section_grid->set_ar_columns_obj($column_obj);
-					$section_grid->set_render_label(true);
-					$section_grid->set_class_list('caption section');
-					$section_grid->set_cell_type('header');
+		// dd_grid_cell_object
+			$section_grid_row = new dd_grid_cell_object();
+				$section_grid_row->set_type('row');
+				$section_grid_row->set_value($ar_head_columns);
+				// sum the total rows for the section and add the total rows to the section row
+				$section_grid_row->set_row_count(1);
+				$section_grid_row->set_column_count($ar_section_columns_count);
 
-			$ar_head_columns[] = $section_grid;
-		}
-		$section_grid_row = new dd_grid_cell_object();
-			$section_grid_row->set_type('row');
-			$section_grid_row->set_value($ar_head_columns);
-			// sum the total rows for the section and add the total rows to the section row
-			$section_grid_row->set_row_count(1);
-			$section_grid_row->set_column_count($ar_section_columns_count);
-
-
-		$section_grid_values[] = $section_grid_row;
-		$section_grid_values = array_merge($section_grid_values, $ar_row_values);
+		// section_grid_values
+			$section_grid_values[] = $section_grid_row;
+			$section_grid_values = array_merge($section_grid_values, $ar_row_values);
 
 
 		return $section_grid_values;
@@ -224,16 +299,17 @@ class tool_export extends tool_common {
 
 	/**
 	* GET_RECORDS
-	* @return array
+	* @return array $this->ar_records
 	*/
 	public function get_records() : array {
 
-		if (!empty($this->ar_records)) {
-			return $this->ar_records;
-		}
+		// empty records case
+			if (!empty($this->ar_records)) {
+				return $this->ar_records;
+			}
 
-		#
-		# SEARCH_OPTIONS
+
+		// search_options
 		$section_tipo	= $this->section_tipo;
 		$model			= $this->model; // section tipo like section
 
@@ -243,15 +319,15 @@ class tool_export extends tool_common {
 				break;
 
 			default:
+				// sqo
 				$sqo = $this->sqo;
-
 				if(empty($sqo)){
-					debug_log(__METHOD__." section without sqo defined, please review the caller: $section_tipo ".to_string(), logger::WARNING);
+					debug_log(__METHOD__." section without sqo defined, please review the caller: $section_tipo ".to_string(), logger::ERROR);
 				}
 
 	 			// sections
-				$sections = sections::get_instance(null, $sqo, $section_tipo);
-				$this->ar_records = $sections->get_dato();
+				$sections			= sections::get_instance(null, $sqo, $section_tipo);
+				$this->ar_records	= $sections->get_dato();
 				break;
 		}
 
@@ -262,7 +338,7 @@ class tool_export extends tool_common {
 
 	/**
 	* GET_VALUE
-	*
+	* Builds ddgrid value object
 	* @param array $ar_ddo
 	* @param object $locator
 	*
@@ -292,12 +368,15 @@ class tool_export extends tool_common {
 				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->component_tipo, true);
 
-				$current_component	= component_common::get_instance($component_model,
-																	 $ddo->component_tipo,
-																	 $locator->section_id,
-																	 'edit',
-																	 $current_lang,
-																	 $locator->section_tipo, false);
+				$current_component	= component_common::get_instance(
+					$component_model, // string model
+					$ddo->component_tipo, // string tipo
+					$locator->section_id, // string|int|null section_id
+					'edit', // string mode
+					$current_lang, // string lang
+					$locator->section_tipo, // string section_tipo
+					false // bool cache
+				);
 				// set the locator to the new component it will be used to know; who create me.
 				$current_component->set_locator($locator);
 				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
@@ -306,7 +385,7 @@ class tool_export extends tool_common {
 				$current_component->column_obj = $column_obj;
 			// check if the component has ddo children in the path,
 			// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
-				$sub_ddo_map		= [];
+				$sub_ddo_map = [];
 				foreach ($current_ddo->path as $key => $child_ddo) {
 					if($key === 0) continue;
 					$new_ddo = new dd_object();
@@ -315,7 +394,8 @@ class tool_export extends tool_common {
 						$new_ddo->set_model($child_ddo->modelo);
 						$new_ddo->set_parent($current_ddo->path[$key-1]->component_tipo);
 						$new_ddo->set_label($child_ddo->name);
-						$sub_ddo_map[] = $new_ddo;
+					// add ddo
+					$sub_ddo_map[] = $new_ddo;
 				}
 
 				// if the component has sub_ddo, create the request_config to be injected to component
@@ -338,7 +418,6 @@ class tool_export extends tool_common {
 
 						// $ar_dato = [$locator];
 						$current_component->set_dato($component_dato);
-
 				}
 
 			// get component_value add
@@ -354,18 +433,18 @@ class tool_export extends tool_common {
 					$ar_columns_obj[] = $sub_ar_columns_obj[$i];
 				}
 
-			$ar_row_count[]		= $component_value->row_count ?? 1;
-			$ar_cells[]			= $component_value;
+			$ar_row_count[]	= $component_value->row_count ?? 1;
+			$ar_cells[]		= $component_value;
 
 		}// end foreach ($ar_children_ddo as $ddo)
 
 
-		// value final
+		// value final object
 			$value = new stdClass();
-				$value->ar_row_count		= $ar_row_count;
-				$value->ar_column_count		= sizeof($ar_columns_obj);
-				$value->ar_columns_obj		= $ar_columns_obj;
-				$value->ar_cells			= $ar_cells;
+				$value->ar_row_count	= $ar_row_count;
+				$value->ar_column_count	= sizeof($ar_columns_obj);
+				$value->ar_columns_obj	= $ar_columns_obj;
+				$value->ar_cells		= $ar_cells;
 
 
 		return $value;
