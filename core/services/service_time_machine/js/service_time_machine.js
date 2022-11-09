@@ -150,7 +150,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					body : self.rqo
 				})
 				if(SHOW_DEVELOPER===true) {
-					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']);
+					dd_console("[service_time_machine.build] by "+self.caller.model+" api_response:",
+						'DEBUG',
+						[self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']
+					);
 				}
 
 			// set the result to the datum
@@ -330,7 +333,7 @@ service_time_machine.prototype.build_request_config = function() {
 
 	// component
 	// add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
-		if(main_element){
+		if(main_element) {
 
 			if (main_element.model==='section') {
 
@@ -366,65 +369,67 @@ service_time_machine.prototype.build_request_config = function() {
 				})
 
 				// filter_by_locators
-				sqo.filter_by_locators = [{
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					tipo			: main_element.tipo, // (!) used only in time machine to filter by column tipo
-					lang			: lang // (!) used only in time machine to filter by column lang
-				}]
+					sqo.filter_by_locators = [{
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						tipo			: main_element.tipo, // (!) used only in time machine to filter by column tipo
+						lang			: lang // (!) used only in time machine to filter by column lang
+					}]
 
 				// filter
-				// sqo.parsed = true,
-				// sqo.filter = {
-				// 	'$and' : [
-				// 		{
-				// 			q_parsed	: `\'${section_tipo}\'`,
-				// 			operator	: "=",
-				// 			path		: [{}],
-				// 			format		: 'column',
-				// 			column_name	: 'section_tipo'
-				// 		},
-				// 		{
-				// 			q_parsed	: `${section_id}`,
-				// 			operator	: "=",
-				// 			path		: [{}],
-				// 			format		: 'column',
-				// 			column_name	: 'section_id'
-				// 		},
-				// 		{
-				// 			q_parsed	: `\'${section_tipo}\'`,
-				// 			operator	: "!=",
-				// 			path		: [{}],
-				// 			format		: 'column',
-				// 			column_name	: 'tipo'
-				// 		}
-				// 	]
-				// }
+					// sqo.parsed = true,
+					// sqo.filter = {
+					// 	'$and' : [
+					// 		{
+					// 			q_parsed	: `\'${section_tipo}\'`,
+					// 			operator	: "=",
+					// 			path		: [{}],
+					// 			format		: 'column',
+					// 			column_name	: 'section_tipo'
+					// 		},
+					// 		{
+					// 			q_parsed	: `${section_id}`,
+					// 			operator	: "=",
+					// 			path		: [{}],
+					// 			format		: 'column',
+					// 			column_name	: 'section_id'
+					// 		},
+					// 		{
+					// 			q_parsed	: `\'${section_tipo}\'`,
+					// 			operator	: "!=",
+					// 			path		: [{}],
+					// 			format		: 'column',
+					// 			column_name	: 'tipo'
+					// 		}
+					// 	]
+					// }
 
 			}//end if (main_element.model==='section')
 
 			// main_element show . From rqo_config_show
-			const element_show = main_element.rqo_config && main_element.rqo_config.show && main_element.rqo_config.show.ddo_map
-				? clone(main_element.rqo_config.show.ddo_map)
-				: null
-			if (element_show) {
-				for (let i = 0; i < element_show.length; i++) {
-					const item = element_show[i]
-						  item.mode = 'list'
-						  item.view = 'mini'
+				const element_show = main_element.rqo_config && main_element.rqo_config.show && main_element.rqo_config.show.ddo_map
+					? clone(main_element.rqo_config.show.ddo_map)
+					: null
+				if (element_show) {
+					for (let i = 0; i < element_show.length; i++) {
 
-					item.section_tipo = Array.isArray(item.section_tipo)
-						? item.section_tipo[0]
-						: item.section_tipo
+						const item = element_show[i]
+							  item.mode = 'list'
+							  item.view = 'mini'
 
-					item.parent	= item.section_tipo
-					item.type	= 'component'
-					item.typo	= 'ddo'
+						// item.section_tipo = Array.isArray(item.section_tipo)
+						// 	? item.section_tipo[0]
+						// 	: item.section_tipo
+						// item.section_tipo = main_element.section_tipo
 
-					ddo_map.push(item)
+						// item.parent	= item.section_tipo
+						item.type	= 'component'
+						item.typo	= 'ddo'
+
+						ddo_map.push(item)
+					}
+					// console.log('ddo_map:', ddo_map);
 				}
-				console.log('ddo_map:', ddo_map);
-			}
 		}else{
 
 			// fallback (time machine list case) tm info -> Value
