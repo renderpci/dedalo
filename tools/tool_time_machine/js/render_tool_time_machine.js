@@ -112,8 +112,16 @@ const get_content_data = async function(self) {
 			class_name		: 'current_component_container',
 			parent			: fragment
 		})
-		if(self.main_element.model !=='section'){
-			await add_component(self, current_component_container, self.main_element.lang, get_label.ahora, 'edit', null)
+		if(self.main_element.model !=='section') {
+			// add component
+			await add_component(
+				self, // tool instance
+				current_component_container, // DOM node container
+				self.main_element.lang, // string lang
+				get_label.ahora || 'Now', // string label 'Now'
+				'edit', // string mode = 'edit'
+				null // int|null  matrix_id (time machine variant)
+			)
 		}
 
 	// preview_component_container
@@ -201,8 +209,18 @@ const get_content_data = async function(self) {
 		// })
 
 	// section list. Call time machine service render callback
-		const time_machine_node	= await self.time_machine.render()
-		fragment.appendChild(time_machine_node)
+		const time_machine_list_node = await self.time_machine.render()
+		fragment.appendChild(time_machine_list_node)
+
+		// const node = await ui.load_item_with_spinner({
+		// 	container			: fragment,
+		// 	preserve_content	: true,
+		// 	label				: 'Time Machine list',
+		// 	callback			: async () => {
+		// 		const node = await self.time_machine.render()
+		// 		return node
+		// 	}
+		// })
 
 	// buttons container
 		// const buttons_container = ui.create_dom_element({
@@ -233,7 +251,7 @@ const get_content_data = async function(self) {
 * @param string mode
 * @param string|int matrix_id = null
 *
-* @return bool
+* @return DOM node|bool
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
 
@@ -246,22 +264,42 @@ export const add_component = async (self, component_container, lang_value, label
 			return false
 		}
 
-	// component load
-		const component = matrix_id===null
-			? self.main_element // self.caller
-			: await self.load_component(lang_value, mode, matrix_id)
+	const node = ui.load_item_with_spinner({
+		container			: component_container,
+		preserve_content	: false,
+		label				: label,
+		callback			: async () => {
+			// component load
+				const component = matrix_id===null
+					? self.main_element
+					: await self.load_component(lang_value, mode, matrix_id)
 
-	// render node
-		const node = await component.render({
-			render_mode : 'edit'
-		})
+			// render node
+				const node = await component.render({
+					render_mode : mode // 'edit'
+				})
+				node.classList.add('disabled_component')
 
-	// clean previous and append rendered node
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
+			return node
 		}
-		node.classList.add('disabled_component')
-		component_container.appendChild(node)
+	})
+
+	// // component load
+	// 	const component = matrix_id===null
+	// 		? self.main_element
+	// 		: await self.load_component(lang_value, mode, matrix_id)
+
+	// // render node
+	// 	const node = await component.render({
+	// 		render_mode : mode // 'edit'
+	// 	})
+
+	// // clean previous and append rendered node
+	// 	while (component_container.firstChild) {
+	// 		component_container.removeChild(component_container.firstChild)
+	// 	}
+	// 	node.classList.add('disabled_component')
+	// 	component_container.appendChild(node)
 
 	// label
 		ui.create_dom_element({
@@ -272,5 +310,5 @@ export const add_component = async (self, component_container, lang_value, label
 		})
 
 
-	return true
+	return node
 }//end add_component

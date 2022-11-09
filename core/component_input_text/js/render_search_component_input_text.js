@@ -22,17 +22,21 @@ export const render_search_component_input_text = function() {
 
 /**
 * SEARCH
-* Render node for use in edit
+* Render node for use in current mode
+* @param object options
 * @return DOM node wrapper
 */
-render_search_component_input_text.prototype.search = async function() {
+render_search_component_input_text.prototype.search = async function(options) {
 
 	const self = this
+
+	// options
+		const render_level = options.render_level || 'full'
 
 	// content data
 		const content_data = get_content_data(self)
 
-	// wrapper. ui build_edit returns component wrapper
+	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})

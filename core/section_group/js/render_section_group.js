@@ -104,6 +104,15 @@ render_section_group.prototype.edit = async function(options) {
 
 
 /**
+* LIST
+* Alias of edit
+* @return DOM node
+*/
+render_section_group.prototype.list = render_section_group.prototype.edit;
+
+
+
+/**
 * GET_WRAPPER
 * Render node for use in edit
 * @return DOM node
@@ -141,5 +150,3 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
-
-

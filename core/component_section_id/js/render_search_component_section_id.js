@@ -22,7 +22,8 @@ export const render_search_component_section_id = function() {
 
 /**
 * SEARCH
-* Render node for use in edit
+* Render node for use in current mode
+* @param object options
 * @return DOM node wrapper
 */
 render_search_component_section_id.prototype.search = async function(options) {
@@ -33,10 +34,10 @@ render_search_component_section_id.prototype.search = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// fix non value scenarios
-		self.data.value = (self.data.value.length<1) ? [null] : self.data.value
+		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// content_data
-		const content_data = get_content_data_search(self)
+		const content_data = get_content_data(self)
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
@@ -45,37 +46,36 @@ render_search_component_section_id.prototype.search = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// id
-		// wrapper.id = self.id
-
 
 	return wrapper
 }//end search
 
 
+
 /**
-* GET_CONTENT_DATA_SEARCH
+* GET_CONTENT_DATA
 * @return DOM node content_data
 */
-const get_content_data_search = function(self) {
+const get_content_data = function(self) {
 
-	const value = self.data.value || ['']
+	const value = self.data.value
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add('nowrap')
 
 	// values (inputs)
-		const inputs_value	= value
+		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_node = get_input_element_search(i, inputs_value[i], self)
-			content_data.appendChild(input_node)
+			const input_element_node = get_input_element_search(i, inputs_value[i], self)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
 
 
 	return content_data
-}//end get_content_data_search
+}//end get_content_data
 
 
 
@@ -91,12 +91,19 @@ const get_content_data_search = function(self) {
 */
 const get_input_element_search = (i, current_value, self) => {
 
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value
+			value			: current_value,
+			parent			: content_value
 		})
 		input.addEventListener('change', function() {
 
@@ -119,5 +126,5 @@ const get_input_element_search = (i, current_value, self) => {
 		})//end event change
 
 
-	return input
+	return content_value
 }//end get_input_element_search

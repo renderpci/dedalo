@@ -80,6 +80,11 @@
 	}
 
 	&.search {
+		>.content_data {
+			display: flex;
+			flex-wrap: nowrap;
+		}
+
 		.remove {
 			display: none;
 		}
@@ -87,5 +92,10 @@
 		.button.calendar {
 			cursor: default;
 		}
+	}
+
+	// with suffix _mini like 'component_date_mini'
+	&_mini {
+
 	}
 }//end .component_date

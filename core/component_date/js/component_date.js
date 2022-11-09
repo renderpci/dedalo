@@ -12,6 +12,7 @@
 	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
 
 
+
 export const component_date = function(){
 
 	this.id				= null
@@ -58,19 +59,20 @@ export const component_date = function(){
 	component_date.prototype.events_subscription	= events_subscription
 
 	// change data
-	component_date.prototype.save				= component_common.prototype.save
-	component_date.prototype.update_data_value	= component_common.prototype.update_data_value
-	component_date.prototype.update_datum		= component_common.prototype.update_datum
-	component_date.prototype.change_value		= component_common.prototype.change_value
-	component_date.prototype.set_changed_data	= component_common.prototype.set_changed_data
-	component_date.prototype.build_rqo			= common.prototype.build_rqo
+	component_date.prototype.save					= component_common.prototype.save
+	component_date.prototype.update_data_value		= component_common.prototype.update_data_value
+	component_date.prototype.update_datum			= component_common.prototype.update_datum
+	component_date.prototype.change_value			= component_common.prototype.change_value
+	component_date.prototype.set_changed_data		= component_common.prototype.set_changed_data
+	component_date.prototype.build_rqo				= common.prototype.build_rqo
 
 	// render
-	component_date.prototype.list				= render_list_component_date.prototype.list
-	component_date.prototype.edit				= render_edit_component_date.prototype.edit
-	component_date.prototype.edit_in_list		= render_edit_component_date.prototype.edit
-	component_date.prototype.search				= render_search_component_date.prototype.search
-	component_date.prototype.change_mode		= component_common.prototype.change_mode
+	component_date.prototype.list					= render_list_component_date.prototype.list
+	component_date.prototype.edit					= render_edit_component_date.prototype.edit
+	component_date.prototype.edit_in_list			= render_edit_component_date.prototype.edit
+	component_date.prototype.search					= render_search_component_date.prototype.search
+	component_date.prototype.change_mode			= component_common.prototype.change_mode
+
 
 
 /**
@@ -474,7 +476,7 @@ component_date.prototype.time_to_string = function(time) {
 		? `${time.second}`.padStart(2, '0')
 		: '00'
 	const ms 		= (time.ms)
-		? `${time.second}`.padStart(3, '0')
+		? `${time.ms}`.padStart(3, '0')
 		: '000'
 
 	const ar_time		= [hour, minute, second]
@@ -490,6 +492,10 @@ component_date.prototype.time_to_string = function(time) {
 * PARSE_STRING_TIME
 * @param string string_time
 * @return object response
+* 	Sample:
+* {
+*	result : dd_date
+* }
 */
 component_date.prototype.parse_string_time = function(string_time) {
 
@@ -517,7 +523,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 
 	// check if the user input other things than times
 	if(string_time.length >1 && (hour===null && minute===null && second===null)){
-		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+		const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
 		error.push({
 			msg		: error_msg +'. '+ string_time,
 			type	: 'full'

@@ -12,7 +12,7 @@
 
 
 /**
-* RENDER_TIME_MACHINE_LIST_VIEW
+* VIEW_TIME_MACHINE_LIST
 *
 * Used by time_machine to render by itself in the same way that portals views
 * the tool assign the name of this method when it create the time_machine instance in self.time_machine.view
@@ -24,7 +24,7 @@
 * 	The generic options, used for assign render_level
 * @return DOM node wrapper
 */
-export const render_time_machine_list_view = async function(self, options) {
+export const view_time_machine_list = async function(self, options) {
 
 	// options
 		const render_level 	= options.render_level || 'full'
@@ -103,13 +103,18 @@ export const render_time_machine_list_view = async function(self, options) {
 
 
 	return wrapper
-}//end render_time_machine_list_view
-
+}//end view_time_machine_list
 
 
 
 /**
 * GET_CONTENT_DATA
+* Render previously built section_records into a content_data div container
+* Note that self here is a service_time_machine instance
+* @param array ar_section_record
+* 	Array of section_record instances
+* @param object self
+* 	service_time_machine instance
 * @return DOM node content_data
 */
 const get_content_data = async function(ar_section_record, self) {
@@ -130,30 +135,32 @@ const get_content_data = async function(ar_section_record, self) {
 
 		}else{
 			// rows
-			// parallel mode
+
+			// parallel render
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
 					const render_promise_node = ar_section_record[i].render()
 					ar_promises.push(render_promise_node)
 				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record_node = values[i]
-					fragment.appendChild(section_record_node)
-				  }
+
+			// once rendered, append it preserving the order
+				await Promise.all(ar_promises)
+				.then(function(section_record_nodes) {
+					for (let i = 0; i < ar_section_record_length; i++) {
+						const section_record_node = section_record_nodes[i]
+						fragment.appendChild(section_record_node)
+					}
 				});
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
 			  content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data
-
-
 
 
 
@@ -174,12 +181,12 @@ const rebuild_columns_map = async function(self) {
 		for (let i = 0; i < base_columns_map_length; i++) {
 			const el = base_columns_map[i]
 
-			// ignore matrix_id
+			// ignore matrix_id column
 				if (el.tipo==='dd1573') {
 					continue;
 				}
 
-			// short label
+			// short label (for small width columns)
 				switch (el.tipo) {
 					case 'dd201':
 						el.label = 'Date'
@@ -245,5 +252,3 @@ const rebuild_columns_map = async function(self) {
 
 	// 	return fragment
 	// }//end render_column_id()
-
-

@@ -142,7 +142,7 @@ section_record.prototype.init = async function(options) {
 * @return promise current_instance
 * 	Instance of component / section_group initiated and built
 */
-const build_instance = async (self, context, section_id, current_data, column_id) => {
+const build_instance = async (self, context, section_id, current_data, column_id, autoload) => {
 
 	// current_context
 		const current_context = clone(context)
@@ -184,7 +184,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			}
 
 		// column id
-			if(column_id){
+			if(column_id) {
 				instance_options.column_id = column_id
 			}
 
@@ -196,7 +196,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		}
 
 	// build. instance build await
-		await current_instance.build()
+		await current_instance.build(autoload)
 
 	// add
 		// ar_instances.push(current_instance)
@@ -356,10 +356,12 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 							// current_data. get the component data to assign to it and create the instance
 								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 
-							// current_context. check if the section_tipo of the component
-								const current_context = Array.isArray(current_ddo.section_tipo)
-									? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
-									: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+							// current_context. check if the section_tipo of the component match
+								// const current_context = Array.isArray(current_ddo.section_tipo)
+								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+								// 	: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+								// (!) Unified 09-11-2022 because time machine portal sub-context does not match in cases where section_tipo is not array (case oh18)
+								const current_context = self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 
 								// const current_context = Array.isArray(current_ddo.section_tipo)
 								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
@@ -433,16 +435,21 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								}
 
 							// instance create and set
+								const instance_data = current_ddo.model==='dd_grid'
+									? [current_data.value]
+									: current_data;
+
 								const current_instance = await build_instance(
-									self,
-									new_context,
-									section_id,
-									current_data,
-									current_column.id
+									self, // current section_record instance
+									new_context, // edit context
+									section_id, // current section_id
+									instance_data, // already calculated instance data
+									current_column.id, // column id
+									false // build autoload
 								)
 
+								// add built instance
 								self.ar_instances.push(current_instance)
-
 						}// end if(current_ddo.column_id..
 					}// end for (let k = 0; k < ar_first_level_ddo_len; k++)
 				}//end for (let j = 0; j < request_config_length; j++)
@@ -655,7 +662,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				tipo			: ddo.tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id,
-				info			: 'No component data is found',
+				info			: 'No data found for this component',
 				value			: [],
 				fallback_value	: ['']
 			}

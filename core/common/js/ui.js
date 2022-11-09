@@ -408,6 +408,8 @@ export const ui = {
 			return button_close_node;
 		},// end build_button_exit_edit
 
+
+
 		/**
 		* BUILD_BUTTONS_CONTAINER
 		* @param object instance
@@ -438,10 +440,10 @@ export const ui = {
 				const value_string	= options.value_string
 
 			// short vars
-				const model			= instance.model 	// like component_input-text
-				const type			= instance.type 	// like 'component'
-				const tipo			= instance.tipo 	// like 'rsc26'
-				const section_tipo	= instance.section_tipo 	// like 'oh1'
+				const model			= instance.model 		// like component_input-text
+				const type			= instance.type 		// like 'component'
+				const tipo			= instance.tipo 		// like 'rsc26'
+				const section_tipo	= instance.section_tipo // like 'oh1'
 				const view			= instance.view || instance.context.view || null
 
 			// wrapper
@@ -522,7 +524,7 @@ export const ui = {
 				const wrapper = document.createElement('span')
 				// css
 					const ar_css = [
-						'mini_' + instance.model
+						instance.model + '_mini' // add suffix '_mini'
 					]
 					wrapper.classList.add(...ar_css)
 
@@ -2914,7 +2916,68 @@ export const ui = {
 		// })
 
 		return ontoly_term_link
-	}//end get_ontoly_term_link
+	},//end get_ontoly_term_link
+
+
+
+	/**
+	* LOAD_ITEM_WITH_SPINNER
+	* Render a spinner item while callback function is calculating
+	* When is finished, spinner will be replaced by callback result node
+	* Usually, callback is a async function that builds and render a element
+	* like filter
+	* @param object options
+	* 	{
+	* 		container			: DOM node,
+	* 		preserve_content	: bool false
+	* 		label				: string,
+	* 		callback			: function
+	* 	}
+	* @return promise
+	* 	Resolve: DOM node result_node
+	*/
+	load_item_with_spinner : async function(options) {
+
+		// options
+			const container			= options.container
+			const preserve_content	= options.preserve_content || false
+			const label				= options.label
+			const callback			= options.callback
+
+		// clean container
+			if (preserve_content===false) {
+				while (container.firstChild) {
+					container.removeChild(container.firstChild)
+				}
+			}
+
+		// container_placeholder
+			const container_placeholder = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'container container_placeholder ' + label,
+				inner_html		: 'Loading ' + label,
+				parent			: container
+			})
+			// spinner
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner',
+				parent			: container_placeholder
+			})
+
+		// callback wait (expect promise resolving DOM node)
+			const result_node = await callback()
+			if (!result_node) {
+				console.warn('Unexpected result. no node returned from callback:', options);
+				container_placeholder.remove()
+				return null
+			}
+
+		// replace node
+			await container_placeholder.replaceWith(result_node);
+
+		return result_node
+	}//end load_item_with_spinner
 
 
 

@@ -310,34 +310,18 @@
 			}
 		}
 
-		// edit_in_list
-		&.edit_in_list {
-			>.content_data {
-				padding-top: 0.5rem;
-				padding-bottom: 0.5rem;
-			}
-		}
-
 		// content_data
 		>.content_data {
-			// background-color: #f0c2fe !important;
-			// display: grid;
 			display: block;
 			padding-left: 0px;
 
-			// when parent wrapper is in search mode only (share space with q_operator)
-			.search& {
-				align-items: baseline;
-				display: flex;
-			}
-
 			// section_record list
-			.section_record { // .list
+			.section_record {
 				// background-color: #b8ecfe;
 				display: flex;
 				flex-wrap: wrap;
 				height: unset;
-				padding-left: 1rem;
+				// padding-left: 1rem; // don't remove this (!)
 				// @media screen and (max-width: @width_break_point_1) {
 				// 	flex-wrap: wrap;
 				// }
@@ -381,7 +365,8 @@
 					vertical-align: middle;
 					word-break: break-word;
 					line-height: unset;
-					*:not(.icon, button, .button, .wrapper_component.edit) {
+					// *:not(.icon, button, .button, .wrapper_component.edit) {
+					*:not(.icon, button, .button, .wrapper_component) {
 						display: inline;
 						vertical-align: middle;
 						word-break: break-word;
@@ -426,7 +411,33 @@
 				}
 			}
 		}
-	}
+
+		&.list {
+			// section_record list
+			.section_record {
+
+			}
+		}
+
+		// edit
+		&.edit {
+			>.content_data {
+				padding-top: 0.5rem;
+				padding-bottom: 0.5rem;
+
+				.section_record {
+					padding-left: 1rem; // don't remove this (!)
+				}
+			}
+		}//end &.edit
+
+		&.search {
+			>.content_data {
+				display: flex;
+				align-items: baseline;
+			}
+		}
+	}//end &.view_line
 
 	// view_indexation
 	&.view_indexation {
@@ -527,6 +538,22 @@
 			}
 		}
 	}
+
+	// suffix '_mini' as 'component_portal_mini'
+	&_mini {
+		// background-color: #e7b6d0;
+
+		.section_record {
+			// display: flex;
+			// flex-wrap: wrap;
+		}
+
+		.column {
+			outline: none;
+			padding-right: 0.33rem;
+		}
+
+	}//end &_mini
 }//end &.component_portal, &.portal
 
 

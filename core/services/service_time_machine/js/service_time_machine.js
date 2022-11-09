@@ -150,7 +150,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					body : self.rqo
 				})
 				if(SHOW_DEVELOPER===true) {
-					dd_console("service_TIME_MACHINE api_response:", 'DEBUG', [self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']);
+					dd_console("[service_time_machine.build] by "+self.caller.model+" api_response:",
+						'DEBUG',
+						[self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']
+					);
 				}
 
 			// set the result to the datum
@@ -198,11 +201,13 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// event paginator_goto
 				const fn_paginator_goto = async function(offset) {
 					// loading
-						const selector	= self.mode==='list' ? '.list_body' : '.content_data.section'
-						const node		= self.node
-							? self.node.querySelector(selector)
-							: null
-						if (node) node.classList.add('loading')
+						const container = self.node.list_body
+					   				   || self.node.content_data
+						if (container) {
+							container.classList.add('loading')
+						}else{
+							console.warn('No container found for pagination. Node:', self.node);
+						}
 
 					// fix new offset value
 						self.rqo.sqo.offset = offset
@@ -218,7 +223,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 						await self.refresh()
 
 					// loading
-						if (node) node.classList.remove('loading')
+						if (container) container.classList.remove('loading')
 				}
 				self.events_tokens.push(
 					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
@@ -260,56 +265,58 @@ service_time_machine.prototype.build_request_config = function() {
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
-		const ddo_map = [
-			//  matrix id . tm info -> Id
-			{
-				tipo			: 'dd1573',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_section_id',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				label			: 'Matrix id',
-				mode			: 'list',
-				view			: 'mini'
-			},
-			// when dd547 (from activity section)
-			{
-				tipo			: 'dd547',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_date',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				debug_label		: 'When',
-				mode			: 'list',
-				view			: 'mini'
-			},
-			// who dd543 (from activity section)
-			{
-				tipo			: 'dd543',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_input_text',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				debug_label		: 'Who',
-				mode			: 'list',
-				view			: 'mini'
-			},
-			// where dd546 (from activity section)
-			{
-				tipo			: 'dd546',
-				type			: 'component',
-				typo			: 'ddo',
-				model			: 'component_input_text',
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				debug_label		: 'Where',
-				mode			: 'list',
-				view			: 'mini'
-			}
-		]
+		const ddo_map = main_element && main_element.model==='section'
+			? [] // em
+			: [
+				//  matrix id . tm info -> Id
+				{
+					tipo			: 'dd1573',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_section_id',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					label			: 'Matrix id',
+					mode			: 'list',
+					view			: 'mini'
+				},
+				// when dd547 (from activity section)
+				{
+					tipo			: 'dd547',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_date',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					debug_label		: 'When',
+					mode			: 'list',
+					view			: 'mini'
+				},
+				// who dd543 (from activity section)
+				{
+					tipo			: 'dd543',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_input_text',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					debug_label		: 'Who',
+					mode			: 'list',
+					view			: 'mini'
+				},
+				// where dd546 (from activity section)
+				{
+					tipo			: 'dd546',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_input_text',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					debug_label		: 'Where',
+					mode			: 'list',
+					view			: 'mini'
+				}
+			  ]
 
 	// sqo
 		const sqo = {
@@ -326,7 +333,7 @@ service_time_machine.prototype.build_request_config = function() {
 
 	// component
 	// add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
-		if(main_element){
+		if(main_element) {
 
 			if (main_element.model==='section') {
 
@@ -361,34 +368,87 @@ service_time_machine.prototype.build_request_config = function() {
 					view			: 'mini'
 				})
 
-				sqo.filter_by_locators = [{
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					tipo			: main_element.tipo, // (!) used only in time machine to filter by column tipo
-					lang			: lang // (!) used only in time machine to filter by column lang
-				}]
-			}
+				// filter_by_locators
+					sqo.filter_by_locators = [{
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						tipo			: main_element.tipo, // (!) used only in time machine to filter by column tipo
+						lang			: lang // (!) used only in time machine to filter by column lang
+					}]
+
+				// filter
+					// sqo.parsed = true,
+					// sqo.filter = {
+					// 	'$and' : [
+					// 		{
+					// 			q_parsed	: `\'${section_tipo}\'`,
+					// 			operator	: "=",
+					// 			path		: [{}],
+					// 			format		: 'column',
+					// 			column_name	: 'section_tipo'
+					// 		},
+					// 		{
+					// 			q_parsed	: `${section_id}`,
+					// 			operator	: "=",
+					// 			path		: [{}],
+					// 			format		: 'column',
+					// 			column_name	: 'section_id'
+					// 		},
+					// 		{
+					// 			q_parsed	: `\'${section_tipo}\'`,
+					// 			operator	: "!=",
+					// 			path		: [{}],
+					// 			format		: 'column',
+					// 			column_name	: 'tipo'
+					// 		}
+					// 	]
+					// }
+
+			}//end if (main_element.model==='section')
 
 			// main_element show . From rqo_config_show
-			const element_show = main_element.rqo_config && main_element.rqo_config.show && main_element.rqo_config.show.ddo_map
-				? clone(main_element.rqo_config.show.ddo_map)
-				: null
-			if (element_show) {
-				for (let i = 0; i < element_show.length; i++) {
-					const item = element_show[i]
-						  item.mode = 'list'
-						  item.view = 'mini'
-					ddo_map.push(item)
+				const element_show = main_element.rqo_config && main_element.rqo_config.show && main_element.rqo_config.show.ddo_map
+					? clone(main_element.rqo_config.show.ddo_map)
+					: null
+				if (element_show) {
+					for (let i = 0; i < element_show.length; i++) {
+
+						const item = element_show[i]
+							  item.mode = 'list'
+							  item.view = 'mini'
+
+						// item.section_tipo = Array.isArray(item.section_tipo)
+						// 	? item.section_tipo[0]
+						// 	: item.section_tipo
+						// item.section_tipo = main_element.section_tipo
+
+						// item.parent	= item.section_tipo
+						item.type	= 'component'
+						item.typo	= 'ddo'
+
+						ddo_map.push(item)
+					}
+					// console.log('ddo_map:', ddo_map);
 				}
-			}
 		}else{
 
 			// fallback (time machine list case) tm info -> Value
+				// ddo_map.push({
+				// 	tipo			: 'dd1574', // generic tm info ontology item 'Value'
+				// 	type			: 'component',
+				// 	typo			: 'ddo',
+				// 	model			: 'component_input_text',
+				// 	section_tipo	: section_tipo,
+				// 	parent			: section_tipo,
+				// 	debug_label		: 'Value',
+				// 	mode			: 'list',
+				// 	view			: 'mini'
+				// })
 			ddo_map.push({
 				tipo			: 'dd1574', // generic tm info ontology item 'Value'
-				type			: 'component',
+				type			: 'dd_grid',
 				typo			: 'ddo',
-				model			: 'component_input_text',
+				model			: 'dd_grid', // (!) changed to dd_grid to allow identification
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				debug_label		: 'Value',
@@ -402,6 +462,34 @@ service_time_machine.prototype.build_request_config = function() {
 				// removed because limit components by lang
 				// lang			: lang // (!) used only in time machine to filter by column lang
 			}]
+
+			// filter
+				// sqo.parsed = true,
+				// sqo.filter = {
+				// 	'$and' : [
+				// 		{
+				// 			q_parsed	: `\'${section_tipo}\'`,
+				// 			operator	: "=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'section_tipo'
+				// 		},
+				// 		{
+				// 			q_parsed	: `${section_id}`,
+				// 			operator	: "=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'section_id'
+				// 		},
+				// 		{
+				// 			q_parsed	: `\'${section_tipo}\'`,
+				// 			operator	: "!=",
+				// 			path		: [{}],
+				// 			format		: 'column',
+				// 			column_name	: 'tipo'
+				// 		}
+				// 	]
+				// }
 		}
 
 	// request_config

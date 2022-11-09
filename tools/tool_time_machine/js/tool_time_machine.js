@@ -65,7 +65,6 @@ tool_time_machine.prototype.init = async function(options) {
 
 	const self = this
 
-
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
@@ -82,7 +81,6 @@ tool_time_machine.prototype.init = async function(options) {
 			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
 		)
 		async function fn_tm_edit_record(data) {
-			console.log('data:', data);
 			const matrix_id	= data.matrix_id
 			const date		= data.date
 			// render. Create and add new component to preview container
@@ -133,6 +131,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
+
 	try {
 
 		// fix main_element for convenience
@@ -146,7 +145,8 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				model			: 'service_time_machine',
 				section_tipo	: self.caller.section_tipo,
 				section_id		: self.caller.section_id,
-				tipo			: self.main_element.tipo,
+				// tipo			: self.main_element.tipo,
+				tipo			: self.caller.section_tipo,
 				mode			: 'tm',
 				lang			: page_globals.dedalo_data_nolan,
 				main_element	: self.main_element,
@@ -160,6 +160,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 		// build
 			await self.time_machine.build(true)
+
 
 		// add to self instances list
 			self.ar_instances.push(self.time_machine)
@@ -188,7 +189,7 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_element.tipo && el.matrix_id)
 
 	// context (clone and edit)
-		const context = Object.assign(clone(self.main_element.context),{
+		const context = Object.assign(clone(self.main_element.context), {
 			lang		: lang,
 			mode		: mode,
 			section_id	: self.main_element.section_id,

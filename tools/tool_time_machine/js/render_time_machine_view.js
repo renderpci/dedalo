@@ -46,7 +46,6 @@ export const render_time_machine_view = async function(self, options) {
 			return content_data
 		}
 
-
 	// paginator container node
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
@@ -102,7 +101,8 @@ export const render_time_machine_view = async function(self, options) {
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
-		wrapper.content_data = content_data
+		wrapper.list_body		= list_body
+		wrapper.content_data	= content_data
 
 
 	return wrapper
@@ -247,7 +247,7 @@ const render_column_id = function(options) {
 						}else{
 							// error case
 							console.warn("response:",response);
-							alert(response.msg || 'Error. Unknow error on apply tm value');
+							alert(response.msg || 'Error. Unknown error on apply tm value');
 						}
 					})
 			}else{

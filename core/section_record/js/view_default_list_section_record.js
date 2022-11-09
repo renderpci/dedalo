@@ -28,6 +28,7 @@ export const view_default_list_section_record = function() {
 * RENDER
 * Render node for use in list with all columns and rendered components
 * @param array ar_instances
+* @para object options
 * @return Promise DOM node wrapper
 */
 view_default_list_section_record.render = async function(self, options) {
@@ -48,6 +49,9 @@ view_default_list_section_record.render = async function(self, options) {
 		for (let i = 0; i < columns_map_length; i++) {
 
 			const current_column = columns_map[i]
+
+			// console.log('current_column:', current_column);
+			// console.log('ar_columns_instances:', ar_columns_instances);
 
 			// callback column case
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
@@ -77,8 +81,8 @@ view_default_list_section_record.render = async function(self, options) {
 				}
 
 			// get the specific instances for the current column
-				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_column.id)
-				const ar_instances_length = ar_instances.length
+				const ar_instances			= ar_columns_instances.filter(el => el.column_id === current_column.id)
+				const ar_instances_length	= ar_instances.length
 
 			// loop the instances for select the parent node
 
@@ -101,14 +105,18 @@ view_default_list_section_record.render = async function(self, options) {
 						if (current_instance.node!==null) {
 							resolve(true)
 						}else{
+
 							current_instance.render()
 							.then(function(current_instance_node){
+								// bad node case
 								if (!current_instance_node) {
+									console.error('Invalid instance_node', current_instance);
 									reject(false)
 									return
 								}
 								resolve(true)
 							}).catch((errorMsg) => {
+								// error occurred case
 								console.error(errorMsg);
 							})
 						}
@@ -141,7 +149,9 @@ view_default_list_section_record.render = async function(self, options) {
 								? found_node
 								: (()=>{
 									const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
+									// push column in ar_column_nodes
 									ar_column_nodes.push(new_column_node)
+									// add node to fragment
 									fragment.appendChild(new_column_node)
 
 									return new_column_node
@@ -190,7 +200,7 @@ view_default_list_section_record.render = async function(self, options) {
 
 		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
-			if (self.caller.model==='section' || self.caller.model==='time_machine') {
+			if (self.caller.model==='section' || self.caller.model==='time_machine' || self.caller.model==='service_time_machine') {
 				let hilite_row
 
 				// remove_hilite (if is set)
