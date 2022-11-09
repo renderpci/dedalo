@@ -200,7 +200,7 @@ view_default_list_section_record.render = async function(self, options) {
 
 		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
-			if (self.caller.model==='section' || self.caller.model==='time_machine') {
+			if (self.caller.model==='section' || self.caller.model==='time_machine' || self.caller.model==='service_time_machine') {
 				let hilite_row
 
 				// remove_hilite (if is set)
