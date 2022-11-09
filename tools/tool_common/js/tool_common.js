@@ -65,6 +65,8 @@ tool_common.prototype.init = async function(options) {
 
 		// caller. Could be direct assigned (modal) or by URL caller_id (new window)
 			self.caller = options.caller // optional, only for refresh on tool exit
+			// notify caller is already calculated (new window case)
+			self.caller_is_calculated = !self.caller
 			// caller fallback to window.opener.callers variable or local data base
 			if (!self.caller) {
 
@@ -91,6 +93,11 @@ tool_common.prototype.init = async function(options) {
 
 						// set and build caller
 							self.caller = await get_instance( caller_ddo )
+
+						// set current tool as caller
+							self.caller.caller = self
+
+						// build
 							await self.caller.build(true)
 
 						// set tool_config
@@ -249,6 +256,13 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 								: page_globals.dedalo_data_lang // current data lang (DEDALO_DATA_LANG)
 
 					ar_promises.push( new Promise(async (resolve) => {
+
+						// new window cases. Caller is calculated, NOT from existing component, so we recycle the instance
+							if (self.caller_is_calculated && el.tipo===self.caller.tipo) {
+								console.log('Used already resolved caller instance:', self.caller);
+								resolve(self.caller)
+								return
+							}
 
 						// context. If not provided, it is obtained from the caller or requested from the API
 							const context = el.context
