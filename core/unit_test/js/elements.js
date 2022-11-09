@@ -12,23 +12,23 @@ import * as fn from './data.js'
 
 	// components general values
 	export const section_tipo	= 'test3'
-	export const section_id	= 1
+	export const section_id		= 1
 	export const mode			= 'edit'
 	export const lang			= 'lg-eng'
 	export const permissions	= 2
 
 
 	// component_3d
-		elements.push({
-			model				: 'component_3d',
-			tipo				: 'test212',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_3d_data, // return array
-			new_value_params	: [section_tipo, section_id, 'test212']
-		})
+		// elements.push({
+		// 	model				: 'component_3d',
+		// 	tipo				: 'test212',
+		// 	section_tipo		: section_tipo,
+		// 	section_id			: section_id,
+		// 	mode				: mode,
+		// 	lang				: page_globals.dedalo_data_nolan,
+		// 	new_value			: fn.random_3d_data, // return array
+		// 	new_value_params	: [section_tipo, section_id, 'test212']
+		// })
 
 	// component_av
 		elements.push({
