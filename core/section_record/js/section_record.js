@@ -356,10 +356,12 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 							// current_data. get the component data to assign to it and create the instance
 								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 
-							// current_context. check if the section_tipo of the component
-								const current_context = Array.isArray(current_ddo.section_tipo)
-									? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
-									: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+							// current_context. check if the section_tipo of the component match
+								// const current_context = Array.isArray(current_ddo.section_tipo)
+								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+								// 	: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+								// (!) Unified 09-11-2022 because time machine portal sub-context does not match in cases where section_tipo is not array (case oh18)
+								const current_context = self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 
 								// const current_context = Array.isArray(current_ddo.section_tipo)
 								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
@@ -445,6 +447,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 									current_column.id, // column id
 									false // build autoload
 								)
+
 								// add built instance
 								self.ar_instances.push(current_instance)
 						}// end if(current_ddo.column_id..
