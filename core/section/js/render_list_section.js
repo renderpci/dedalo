@@ -691,6 +691,16 @@ const get_buttons = function(self) {
 							// 	sqo				: delete_sqo
 							// })
 							break;
+						case 'button_import':
+
+							// open_tool (tool_common)
+								open_tool({
+									tool_context	: current_button.tools[0],
+									caller			: self
+								})
+
+
+							break;
 						default:
 							event_manager.publish('click_' + current_button.model)
 							break;
