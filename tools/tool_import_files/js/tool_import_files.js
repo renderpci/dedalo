@@ -102,15 +102,8 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 				ar_promises.push( new Promise(async (resolve) => {
 
-					// context. In is not given get from caller or request to the API
-						// const context = el.context
-						// 	? el.context
-						// 	: await (async function(){
-						// 		// resolve whole context from API (init event observer problem..)
-						// 		const api_response	= await data_manager.get_element_context(el)
-						// 		return api_response.result[0]
-						// 	  })()
-						const context = {}
+					// context. it's not given, so, get it from request API
+						const context = null
 
 					const element_options = {
 						model			: el.model,
@@ -124,6 +117,7 @@ tool_import_files.prototype.build = async function(autoload=false) {
 						id_variant		: self.model,  // id_variant prevents id conflicts
 						caller			: self // set tool as caller of the component :-)
 					}
+
 					// init and build instance
 						get_instance(element_options) // load and init
 						.then(function(element_instance){
