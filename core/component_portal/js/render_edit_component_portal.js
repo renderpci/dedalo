@@ -379,6 +379,10 @@ export const render_column_remove = function(options) {
 		button_remove.addEventListener('click', function(e){
 			e.stopPropagation()
 
+			if (self.permissions<2) {
+				return
+			}
+
 			// header
 				const header = ui.create_dom_element({
 					element_type	: 'div',
