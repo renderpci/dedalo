@@ -317,6 +317,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					// dd_console(`ar_instances`, 'DEBUG', ar_instances)
 					self.ar_instances = ar_instances
 				})
+
 				return true
 			  }//end async function() load_ddo_map
 

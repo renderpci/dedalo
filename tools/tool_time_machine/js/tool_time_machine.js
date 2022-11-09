@@ -65,7 +65,6 @@ tool_time_machine.prototype.init = async function(options) {
 
 	const self = this
 
-
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
@@ -82,7 +81,6 @@ tool_time_machine.prototype.init = async function(options) {
 			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
 		)
 		async function fn_tm_edit_record(data) {
-			console.log('data:', data);
 			const matrix_id	= data.matrix_id
 			const date		= data.date
 			// render. Create and add new component to preview container
@@ -134,7 +132,6 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
 
-
 	try {
 
 		// fix main_element for convenience
@@ -163,6 +160,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 		// build
 			await self.time_machine.build(true)
+
 
 		// add to self instances list
 			self.ar_instances.push(self.time_machine)

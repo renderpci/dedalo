@@ -81,8 +81,8 @@ view_default_list_section_record.render = async function(self, options) {
 				}
 
 			// get the specific instances for the current column
-				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_column.id)
-				const ar_instances_length = ar_instances.length
+				const ar_instances			= ar_columns_instances.filter(el => el.column_id === current_column.id)
+				const ar_instances_length	= ar_instances.length
 
 			// loop the instances for select the parent node
 
@@ -105,6 +105,7 @@ view_default_list_section_record.render = async function(self, options) {
 						if (current_instance.node!==null) {
 							resolve(true)
 						}else{
+
 							current_instance.render()
 							.then(function(current_instance_node){
 								// bad node case
@@ -148,7 +149,9 @@ view_default_list_section_record.render = async function(self, options) {
 								? found_node
 								: (()=>{
 									const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
+									// push column in ar_column_nodes
 									ar_column_nodes.push(new_column_node)
+									// add node to fragment
 									fragment.appendChild(new_column_node)
 
 									return new_column_node

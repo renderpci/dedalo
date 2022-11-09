@@ -4147,9 +4147,6 @@ class section extends common {
 										: array_values(array_filter($dato->relations, function($el) use($current_ddo_tipo) {
 											return $el->from_component_tipo===$current_ddo_tipo;
 										  })));
-									if ($ddo->tipo==='oh24') {
-										dump($current_dato, ' current_dato ++ '.$ddo->tipo.' +++++ '.to_string($component_model));
-									}
 
 								// empty dato case
 									// if (empty($current_dato) && $model!=='component_section_id') {
@@ -4208,6 +4205,7 @@ class section extends common {
 										// $data_item->row_section_id	= $section_id; // they are not necessary here !
 										// $data_item->parent_tipo		= $this->tipo; // they are not necessary here !
 										// $data_item->row_section_id	= $id;
+										// $data_item->section_tipo		= $ddo->section_tipo;
 
 										return $data_item;
 									}, $element_json->data);
