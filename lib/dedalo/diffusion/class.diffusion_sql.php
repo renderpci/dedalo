@@ -3807,6 +3807,23 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* MAP_LOCATOR_TO_BOOLEAN
+	* Transform locator value (usually a radio button)
+	* Get only the first locator section_id if exists
+	* @return string JSON encoded bool
+	*/
+	public static function map_locator_to_boolean($options=null, $dato=null) {
+
+		$value = (!empty($dato) && isset($dato[0]))
+			? ($dato[0]->section_id==1) // bool
+			: false;
+
+		return json_encode($value);
+	}//end map_locator_to_boolean
+
+
+
+	/**
 	* BUILD_GEOLOCATION_DATA
 	* @return string
 	*/
