@@ -321,7 +321,12 @@ class component_image extends component_media_common {
 					$locator->set_section_id($this->get_section_id());
 					$locator->set_component_tipo($this->get_tipo());
 
-				$image_id	= $locator->get_flat();
+				if (empty($locator->section_id)) {
+					debug_log(__METHOD__." Error. Invalid locator with empty section_id ".to_string(), logger::ERROR);
+					$image_id = null;
+				}else{
+					$image_id = $locator->get_flat();
+				}
 			}
 
 		// fix value
@@ -464,13 +469,15 @@ class component_image extends component_media_common {
 	/**
 	* GET_IMAGE_URL
 	* Get image url for current quality
-	* @param string | bool $quality
-	*	optional default (bool)false
-	* @param bool $test_file
-	*	Check if file exists. If not use 0.jpg as output. Default true
-	* @param bool $absolute
-	* @return strin|null $image_url
-	*	Return relative o absolute url. Default false (relative)
+	*
+	* @param string|bool $quality = null
+	* @param bool $test_file = true
+	*	Check if file exists. If not use 0.jpg as output
+	* @param bool $absolute = false
+	* @param bool $default_add = true
+	*
+	* @return string|null $image_url
+	*	Return relative o absolute url
 	*/
 	public function get_image_url(?string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
 
@@ -485,7 +492,7 @@ class component_image extends component_media_common {
 		// Check ImageObj
 			if (!isset($this->ImageObj)) {
 				// throw new Exception("Error Processing Request (get_image_url)", 1);
-				trigger_error('Error Processing Request (get_image_url)');
+				debug_log(__METHOD__." Error. this->ImageObj is not set ".to_string(), logger::ERROR);
 				return null;
 			}
 
