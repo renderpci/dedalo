@@ -391,7 +391,7 @@ class component_image extends component_media_common {
 							$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
 
 						// update component dato. Final dato must be an array to saved into component_input_text
-							$final_dato = array( $ar_additional_path[$this->image_id] );
+							$final_dato = array( $additional_path );
 							$component->set_dato( $final_dato );
 
 						// save if mode is edit
