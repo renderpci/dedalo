@@ -5,9 +5,9 @@
 */
 
 // imports
-@import '../../../core/page/css/layout/vars.less';
+@import '../../../core/page/css/layout/vars';
 
-
+@tool_main_color: #4271a4; // blue
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -15,39 +15,144 @@
 
 		>.content_data {
 
-			// row
-			.column_right {
-				// opacity: 0;
-				padding-top: 20px;
-
-				// &.active {
-				// 	opacity: 1;
-				// }
+			// common
+			input[type='checkbox'] {
+				margin-left: 0.5rem;
+				vertical-align: middle;
+				transform: scale(1.2);
 			}
 
+			>.component.options {
+
+			}
+
+			>.tool_configuration_options {
+
+				>.name_control_field {
+
+				}
+			}
+
+			>.drop_zone {
+				background-color: #b0feee;
+			}
 
 			// template_container. Where de rows are placed
-				.template_container {
-					border: 1px solid #eeeeee;
-					padding: 1em;
-					margin-top: 1em;
-				}//end .template_container
+			>.template_container {
+				outline: 1px solid @color_grey_medium;
+				padding: 0.25rem;
+				padding-left: 0.25rem;
+				padding-bottom: 0.25rem;
+				margin-top: 1em;
 
-			// file-row. Each row line
+				// container for buttons and progress bar
+				>.row {
+					display: flex;
+					margin: 1rem;
+					margin-bottom: 0px;
+					padding-bottom: 0px;
+					// background-color: #fdfcc0;
+
+					// buttons add files etc.
+					>.column_left {
+
+					}
+					// progress bar
+					>.column_right {
+
+					}
+				}
+
+				>.table {
+					margin-top: 1rem;
+					margin-bottom: 1rem;
+				}
+
+				// file-row. Each row line
 				.file-row {
 					margin: 1em;
-					display: flex;
-					flex-wrap: wrap;
-					justify-content: left;
+					margin-bottom: 0px;
+					margin-top: 0.5rem;
+					// display: flex;
+					// flex-wrap: wrap;
+					// justify-content: left;
+					// align-items: center;
+					outline: 1px solid #f9f5f5;
+					min-height: 72px;
+
+					// grid way
+					display: grid;
+    				grid-template-columns: 128px 2fr 1fr 1fr 1fr 3rem;
 					align-items: center;
 
 					// each column inside
 					>* {
 						margin-right: 1em;
-						min-width: 128px;
+						// min-width: 128px;
+					}
 
+					>.preview_wrapp {
+						overflow: hidden;
+						height: 100%;
+
+						img {
+							width: 100%;
+							height: 100%;
+							object-fit: contain;
+							background-color: #f9f5f5;
+							border: 1px solid #f9f5f5;
+						}
+					}
+
+					.details_wrapp {
+						// width: 23%;
+						padding: 0.5rem;
+						padding-left: 1rem;
+						padding-right: 1rem;
+
+						>.name {
+							margin-right: 0.33rem;
+						}
+						>.error {
+							margin-right: 0.33rem;
+						}
+						>.size {
+							margin-right: 0.33rem;
+						}
 					}
 				}//end .file-row
+			}
+
+			>.inputs_container {
+				margin-top: 1.5rem;
+				margin-bottom: 1.5rem;
+
+				.inputs_container_caption {
+					display: inline-block;
+					background-color: #e6e6e6;
+					width: auto;
+					padding: 0.5rem;
+					padding-left: 2rem;
+					padding-right: 2rem;
+					border-top-left-radius: 0.33rem;
+					border-top-right-radius: 0.33rem;
+					margin-left: -1px;
+				}
+			}
+
+			>.buttons_bottom_container {
+				display: flex;
+				justify-content: center;
+
+				// button IMPORT
+				>.processing_import {
+					padding-left: 1.5em;
+					padding-right: 1.5em;
+					background-color: @tool_main_color;
+					border-color: darken(@tool_main_color, 3%);
+				}
+			}
+
 
 			// inputs_container. Temporal sections container ???????????? REVIEW (!)
 				// .inputs_container {
@@ -64,5 +169,5 @@
 
 // modal header tool modification
 	.tool_header.tool_import_files {
-		background-color: #4271a4;
+		background-color: @tool_main_color;
 	}
