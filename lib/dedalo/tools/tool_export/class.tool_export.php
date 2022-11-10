@@ -347,6 +347,17 @@ class tool_export extends tool_common {
 									// prepare array with iteration keys
 										$current_value = is_array($current_value) ? $current_value : array($current_value);
 										foreach ($current_value as $value_key => $cvvalue) {
+
+											if ($this->data_format==='breakdown') {
+												// add htmlspecialchars to parse html chars
+													// Sample htmlentities vs htmlspecialchars
+													// echo htmlentities('<Il était une fois un être>.');
+													// Output: &lt;Il &eacute;tait une fois un &ecirc;tre&gt;
+													// echo htmlspecialchars('<Il était une fois un être>.');
+													// Output: &lt;Il était une fois un être&gt;.
+												$cvvalue = htmlspecialchars($cvvalue);
+											}
+
 											$ar_columns_keys[] = [
 												'header_key'	=> $h_key,
 												'header_tipo'	=> $h_item->component_tipo.'_'.$h_item->section_tipo.'_'.$h_item->from_section_tipo.'_'.$h_item->from_component_tipo,#$h_item->component_tipo,
@@ -364,18 +375,27 @@ class tool_export extends tool_common {
 											$current_value 	= implode($inter_value, $current_value);
 										}
 
+									// remove html in standard mode
+										if ($this->data_format==='standard') {
+											// $current_value = strip_tags($current_value); // (!) Removed 10-09-2022 because breaks '<10' cases
+
+											// add htmlspecialchars to parse html chars
+												// Sample htmlentities vs htmlspecialchars
+												// echo htmlentities('<Il était une fois un être>.');
+												// Output: &lt;Il &eacute;tait une fois un &ecirc;tre&gt;
+												// echo htmlspecialchars('<Il était une fois un être>.');
+												// Output: &lt;Il était une fois un être&gt;.
+											$current_value = htmlspecialchars($current_value);
+										}
+
 									// safe format with quotes etc
 										$current_value = self::safe_cell_string($current_value);
 
-									// remove html in standard mode
-										if ($this->data_format==='standard') {
-											$current_value = strip_tags($current_value);
-										}
 
 									// add
 										$ar_columns[] = $current_value;
 								}
-						}
+						}//end foreach ($header_tipos as $h_key => $h_item)
 						#dump($ar_columns, ' ar_columns ++ '.to_string());
 						#dump(count($ar_columns), 'count($ar_columns) ++ '.to_string());
 						#dump(count($header_tipos), 'count($header_tipos) ++ '.to_string());
@@ -1215,4 +1235,4 @@ class tool_export extends tool_common {
 
 
 
-}//end class
+}//end class tool_export
