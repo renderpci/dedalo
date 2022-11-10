@@ -3892,6 +3892,12 @@ class section extends common {
 				$tipo			= $db_record->tipo;
 				$dato			= $db_record->dato;
 
+			// empty tipo case catch
+				if (empty($tipo)) {
+					debug_log(__METHOD__." Empty tipo was received ! . db_record: ".PHP_EOL.to_string($db_record), logger::ERROR);
+					return $data;
+				}
+
 		// short vars
 			$source_model				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$components_with_relations	= component_relation_common::get_components_with_relations();
@@ -4105,7 +4111,7 @@ class section extends common {
 								$component_tipo	= ($source_model==='section')
 									? $ddo->tipo // get from ddo
 									: $tipo; 	 // get from db record dato ($db_record->tipo)
-								$component_model	= $ddo->model;
+								$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true); // $ddo->model;
 								$is_relation		= in_array($component_model, $components_with_relations);
 								$lang				= $is_relation===true
 									? DEDALO_DATA_NOLAN
