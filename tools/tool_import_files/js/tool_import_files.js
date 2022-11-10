@@ -89,7 +89,10 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// load_input_ddo_map
+
+	try {
+
+		// load_input_ddo_map
 		const load_input_ddo_map = async function() {
 
 			// ddo_map load all role 'input_component' elements inside ddo_map
@@ -144,11 +147,16 @@ tool_import_files.prototype.build = async function(autoload=false) {
 			return true
 		}//end load_input_ddo_map
 
-	// call generic common tool build
+		// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload, {
 			load_ddo_map : load_input_ddo_map // will be executed as callback in tool_common
 		});
+		return common_build
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
-	return common_build
 }//end build
