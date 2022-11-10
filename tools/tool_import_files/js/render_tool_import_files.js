@@ -385,16 +385,29 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
+		const inputs_container_caption = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'inputs_container_caption',
+			inner_html		: get_label.values || 'Values',
+			parent			: inputs_container
+		})
+
 		const inputs_nodes = await get_temp_sections(self)
 		inputs_container.appendChild(inputs_nodes)
 
+	// buttons_bottom_container
+		const buttons_bottom_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_bottom_container success',
+			parent			: fragment
+		})
 
 	// button process import
 		const button_process_import = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'processing_import success',
-			inner_html		: 'OK',
-			parent			: fragment
+			inner_html		: get_label.import || 'IMPORT',
+			parent			: buttons_bottom_container
 		})
 		button_process_import.addEventListener('click', function(){
 			// get the options from the every file uploaded
@@ -504,13 +517,16 @@ const create_template = async function(self) {
 				parent			: column_left
 			})
 
-		// button_submit_files
+		// button_start_upload
 			const button_submit_files = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'primary upload start',
-				inner_html		: get_label.submit || 'Start upload',
+				inner_html		: get_label.start_upload || 'Start upload',
 				parent			: column_left
 			})
+			// button_submit_files.addEventListener('click', function(e) {
+			// 	e.stopPropagation()
+			// })
 
 		// button_cancel_upload
 			const button_cancel_upload = ui.create_dom_element({
@@ -585,9 +601,10 @@ const create_template = async function(self) {
 				parent			: previews_container
 			})
 
-		// preview wrapp
+		// preview_wrapp
 			const preview_wrapp = ui.create_dom_element({
 				element_type	: 'div',
+				class_name 		: 'preview_wrapp',
 				parent			: template
 			})
 			// preview
@@ -604,9 +621,10 @@ const create_template = async function(self) {
 				})
 				// preview_image.dataset.dzThumbnail = ''
 
-		// Details
+		// details_wrapp
 			const details_wrapp = ui.create_dom_element({
 				element_type	: 'div',
+				class_name 		: 'details_wrapp',
 				parent			: template
 			})
 			// name
@@ -695,6 +713,7 @@ const create_template = async function(self) {
 		// row_progress_bar
 			const row_progress_bar = ui.create_dom_element({
 				element_type	: 'div',
+				class_name		: 'row_progress_bar',
 				parent			: template
 			})
 			// row_progress_bar
@@ -714,6 +733,7 @@ const create_template = async function(self) {
 		// row_buttons
 			const row_buttons = ui.create_dom_element({
 				element_type	: 'div',
+				class_name		: 'row_buttons',
 				parent			: template
 			})
 
@@ -730,26 +750,26 @@ const create_template = async function(self) {
 					element_type	: 'button',
 					class_name		: 'warning cancel',
 					inner_html		: get_label.cancel_upload || 'Cancel upload',
-					dataset 		: {dzRemove : ""},
+					dataset			: {dzRemove : ""},
 					parent			: row_buttons
 				})
 
 			// row_button_delete
-				const row_button_delete = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'button',
-					class_name		: 'danger delete hide',
+					class_name		: 'danger delete row_button_delete hide',
 					inner_html		: get_label.delete_file || 'Delete file',
-					dataset 		: {dzRemove : ""},
+					dataset			: {dzRemove : ""},
 					parent			: row_buttons
 				})
 
-			//row_delete_check_box
-				const row_delete_check_box = ui.create_dom_element({
-						element_type	: 'input',
-						type			: 'checkbox',
-						class_name 		: 'delete_checkbox hide',
-						parent 			: row_buttons
-					})
+			// row_delete_check_box
+				ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					class_name		: 'delete_checkbox row_delete_check_box hide',
+					parent			: row_buttons
+				})
 
 	// Get the template HTML and remove it from the document the template HTML and remove it from the document
 		const previewNode		= template;
@@ -904,13 +924,16 @@ const create_template = async function(self) {
 	// document.querySelector("#actions .start").onclick = function() {
 
 	// button_submit_files
-		button_submit_files.onclick = function() {
-			current_dropzone.enqueueFiles(current_dropzone.getFilesWithStatus(Dropzone.ADDED))
-		}
+		// button_submit_files.onclick = function() {
+		// 	current_dropzone.enqueueFiles(current_dropzone.getFilesWithStatus(Dropzone.ADDED))
+		// }
 
 	// button_submit_files
 		// document.querySelector("#actions .cancel").onclick = function() {
 		button_submit_files.onclick = function() {
+
+			current_dropzone.enqueueFiles(current_dropzone.getFilesWithStatus(Dropzone.ADDED))
+
 			// current_dropzone.removeAllFiles(true);
 			const files = current_dropzone.getFilesWithStatus(Dropzone.UPLOADING)
 			for (let i = files.length - 1; i >= 0; i--) {
