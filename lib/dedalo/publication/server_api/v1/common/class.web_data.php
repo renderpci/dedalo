@@ -4529,9 +4529,9 @@ class web_data {
 						$ar_filter[] = $start_date_filter;
 					}
 				}
-				# theme . like Espais de la Guerra Civil
+				# theme . varchar like '3'
 				if (!empty($json_data->filters->theme)) {
-					$ar_filter[] = "theme LIKE '%".escape_string($json_data->filters->theme)."%'";
+					$ar_filter[] = "theme = '".escape_string($json_data->filters->theme)."'";
 				}
 				# thesaurus . like [“es1_2352”, “es1_967”]
 				if (!empty($json_data->filters->thesaurus)) {
@@ -4548,7 +4548,7 @@ class web_data {
 						$ar_filter[] 	= $current_filter_thesaurus;
 					}
 				}
-				# title . like Ttile de la Guerra Civil
+				# title . like Title de la Guerra Civil
 				if (!empty($json_data->filters->title)) {
 					$ar_filter[] = "`title` LIKE '%".escape_string($json_data->filters->title)."%'";
 				}
