@@ -146,24 +146,23 @@ class calculation extends widget_common {
 					$section_id = $this->section_id;
 
 					foreach ($data->components as $current_component) {
-						$component_tipo = $current_component->tipo;
-						$var_name 		=  $current_component->var_name;
-						$options 		=  isset($current_component->options) ? $current_component->options : null;
-						$component 		= new RecordObj_dd($component_tipo);
-						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component_tipo	= $current_component->tipo;
+						$var_name		=  $current_component->var_name;
+						$options		=  isset($current_component->options) ? $current_component->options : null;
+						$component		= new RecordObj_dd($component_tipo);
+						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$lang			= ($component->get_traducible()==='no')
+							? DEDALO_DATA_NOLAN
+							: DEDALO_DATA_LANG;
 
-						if($component->get_traducible() === 'no'){
-							$lang = DEDALO_DATA_NOLAN;
-						}else{
-							$lang = DEDALO_DATA_LANG;
-						}
-
-						$current_component = component_common::get_instance($modelo_name,
-																			 $component_tipo,
-																			 $section_id,
-																			 'edit',
-																			 $lang,
-																			 $section_tipo);
+						$current_component = component_common::get_instance(
+							$modelo_name,
+							$component_tipo,
+							$section_id,
+							'edit',
+							$lang,
+							$section_tipo
+						);
 
 						$data_resolved->{$var_name} = $current_component->get_calculation_data($options);
 					}// end foreach ($data->component_tipo as $component_tipo)
@@ -171,21 +170,18 @@ class calculation extends widget_common {
 
 				case 'all':
 						foreach ($data->components as $current_component) {
-							$component_tipo = $current_component->tipo;
-							$var_name 		= $current_component->var_name;
-							$options 		=  isset($current_component->options) ? $current_component->options : null;
-							$component 		= new RecordObj_dd($component_tipo);
-							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-
-							if($component->get_traducible() === 'no'){
-								$lang = DEDALO_DATA_NOLAN;
-							}else{
-								$lang = DEDALO_DATA_LANG;
-							}
+							$component_tipo	= $current_component->tipo;
+							$var_name		= $current_component->var_name;
+							$options		=  isset($current_component->options) ? $current_component->options : null;
+							$component		= new RecordObj_dd($component_tipo);
+							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$lang			= ($component->get_traducible()==='no')
+								? DEDALO_DATA_NOLAN
+								: DEDALO_DATA_LANG;
 
 							$search_options = new StdClass;
-								$search_options->section_tipo   = $section_tipo;
-								$search_options->component_tipo = $component_tipo;
+								$search_options->section_tipo	= $section_tipo;
+								$search_options->component_tipo	= $component_tipo;
 
 							$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
 						}
@@ -198,21 +194,18 @@ class calculation extends widget_common {
 				case 'search_session':
 
 					foreach ($data->components as $current_component) {
-							$component_tipo = $current_component->tipo;
-							$var_name 		= $current_component->var_name;
-							$options 		=  isset($current_component->options) ? $current_component->options : null;
-							$component 		= new RecordObj_dd($component_tipo);
-							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-
-							if($component->get_traducible() === 'no'){
-								$lang = DEDALO_DATA_NOLAN;
-							}else{
-								$lang = DEDALO_DATA_LANG;
-							}
+							$component_tipo	= $current_component->tipo;
+							$var_name		= $current_component->var_name;
+							$options		=  isset($current_component->options) ? $current_component->options : null;
+							$component		= new RecordObj_dd($component_tipo);
+							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$lang			= ($component->get_traducible()==='no')
+								? DEDALO_DATA_NOLAN
+								: DEDALO_DATA_LANG;
 
 							$search_options = new StdClass;
-								$search_options->section_tipo   = $section_tipo;
-								$search_options->component_tipo = $component_tipo;
+								$search_options->section_tipo	= $section_tipo;
+								$search_options->component_tipo	= $component_tipo;
 
 							if($data->value ==='value'){
 								$data_resolved->{$var_name} = $this->get_values_from_component_tipo($search_options, $data);
@@ -220,7 +213,6 @@ class calculation extends widget_common {
 							}else if($data->value ==='sum'){
 								$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
 							}
-
 						}
 					break;
 
@@ -240,17 +232,19 @@ class calculation extends widget_common {
 					$options 		= isset($current_component->options) ? $current_component->options : null;
 
 					// Component (component_json) where is stored source data, a json search_query_object
-						$component 			= new RecordObj_dd($component_tipo);
-						$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$lang 				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-						$current_component 	= component_common::get_instance($modelo_name,
-																			 $component_tipo,
-																			 $this->section_id,
-																			 'edit',
-																			 $lang,
-																			 $this->section_tipo);
-						$dato = $current_component->get_dato();
-						$dato = is_array($dato) ? $dato : [$dato]; // Array always
+						$component			= new RecordObj_dd($component_tipo);
+						$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$lang				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+						$current_component	= component_common::get_instance(
+							$modelo_name,
+							$component_tipo,
+							$this->section_id,
+							'edit',
+							$lang,
+							$this->section_tipo
+						);
+						$dato	= $current_component->get_dato();
+						$dato	= is_array($dato) ? $dato : [$dato]; // Array always
 
 						if (empty($dato) || !isset($dato[0]->data)) {
 							continue; // Skip empty

@@ -1071,7 +1071,13 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_OBSERVER_DATO
-	* @return
+	*
+	* @param object $observer
+	* @param object $locator
+	* @param mixed $observable_dato
+	* @param string $observable_tipo
+	*
+	* @return array $ar_data
 	*/
 	public static function update_observer_dato(object $observer, object $locator, $observable_dato, string $observable_tipo) : array {
 
@@ -2071,7 +2077,7 @@ abstract class component_common extends common {
 	* @param string $termino_id
 	* @param string $locator_section_tipo
 	* @param string $locator_section_id
-	* @param string $ds_key
+	* @param int|string $ds_key
 	*	Dédalo semantics key
 	* @return object $response
 	*/
@@ -2122,6 +2128,8 @@ abstract class component_common extends common {
 	* @param string $termino_id
 	* @param string $locator_section_tipo
 	* @param string $locator_section_id
+	* @param int|string $ds_key
+	*	Dédalo semantics key
 	* @return object $response
 	*/
 	public function remove_index_semantic(object $new_ds_locator, string $locator_section_tipo, $locator_section_id, $ds_key) : object {
@@ -2430,9 +2438,9 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATAFRAME
-	* @return object $dataframe
+	* @return array $dataframe
 	*/
-	public function get_dataframe() {
+	public function get_dataframe() : array {
 
 		if(!isset($this->dataframe)) {
 			# MATRIX DATA : Load matrix data
@@ -2521,7 +2529,7 @@ abstract class component_common extends common {
 			$dato_full = $this->get_dato_full();
 
 		// set dataframe if exists or default empty array
-			$this->dataframe	= isset($dato_full->dataframe)
+			$this->dataframe = isset($dato_full->dataframe)
 				? (array)$component_data->dataframe
 				: [];
 
@@ -2906,13 +2914,12 @@ abstract class component_common extends common {
 	* @return $data
 	* get the data of the component for do a calculation
 	*/
-	public function get_calculation_data($options=null) {
+	public function get_calculation_data(?object $options=null) {
 
 		$data = $this->get_valor();
 
 		return $data;
 	}//end get_calculation_data
-
 
 
 

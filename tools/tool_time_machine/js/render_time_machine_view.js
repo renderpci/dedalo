@@ -95,7 +95,7 @@ export const render_time_machine_view = async function(self, options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
-			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
+			// class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
 			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 			class_name		: `wrapper_${self.type} ${self.model} ${self.section_tipo+'_'+self.tipo} ${self.tipo} ${self.mode}`
 		})
