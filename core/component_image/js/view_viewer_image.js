@@ -59,6 +59,7 @@ view_viewer_image.render = function(self, options) {
 			this.removeEventListener('load', set_bg_color, false)
 			ui.set_background_image(this, wrapper)
 			image.classList.remove('hidden')
+			image.classList.add('fit')
 		}
 	// button download
 		const download_image_button = ui.create_dom_element({
