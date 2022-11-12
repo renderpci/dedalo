@@ -250,7 +250,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		// options
 			$tipo						= $save_options->time_machine_tipo;
-			$section_id					= $save_options->time_machine_section_id;
+			$section_id					= $save_options->time_machine_section_id ?? null;
 			// saving from component cases
 			$previous_component_dato	= $save_options->previous_component_dato ?? null;
 			$component_lang				= $save_options->time_machine_lang ?? null;
