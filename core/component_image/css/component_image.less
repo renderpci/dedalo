@@ -98,11 +98,23 @@
 	}//end .list
 
 	&.viewer {
+		position: fixed;
+		left: 0px;
+		top: 0px;
+		width: 100%;
+		height: 100%;
 
+		// image
 		.viewer_image {
 			position: fixed;
 			left: 0px;
 			top: 0px;
+
+			&.fit {
+				width: 100%;
+				height: 100%;
+				object-fit: contain;
+			}
 		}
 
 		// button download
