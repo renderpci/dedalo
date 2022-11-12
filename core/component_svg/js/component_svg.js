@@ -64,3 +64,4 @@ export const component_svg = function(){
 	// render
 	component_svg.prototype.list				= render_list_component_svg.prototype.list
 	component_svg.prototype.edit				= render_edit_component_svg.prototype.edit
+	component_svg.prototype.tm					= render_edit_component_svg.prototype.edit

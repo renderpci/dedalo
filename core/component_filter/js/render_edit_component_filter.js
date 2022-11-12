@@ -235,7 +235,7 @@ export const get_buttons = (self) => {
 	const fragment = new DocumentFragment()
 
 	// button edit (go to target section)
-		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
+		if((mode==='edit') && !is_inside_tool) {
 
 			const target_sections			= self.context.target_sections
 			const target_sections_length	= target_sections.length

@@ -90,7 +90,6 @@ export const component_portal = function() {
 	component_portal.prototype.list					= render_list_component_portal.prototype.list
 	component_portal.prototype.edit					= render_edit_component_portal.prototype.edit
 	component_portal.prototype.tm					= render_edit_component_portal.prototype.edit
-	component_portal.prototype.edit_in_list			= render_edit_component_portal.prototype.edit
 	component_portal.prototype.search				= render_search_component_portal.prototype.search
 	component_portal.prototype.change_mode			= component_common.prototype.change_mode
 
@@ -331,7 +330,7 @@ component_portal.prototype.build = async function(autoload=false) {
 		init_events_subscription(self)
 
 	// mode cases
-		if (self.mode==='edit' || self.mode==='tm' || self.mode==='edit_in_list') {
+		if (self.mode==='edit' || self.mode==='tm') {
 			// pagination vars only in edit mode
 
 			// pagination. update element pagination vars when are used
@@ -386,7 +385,7 @@ component_portal.prototype.build = async function(autoload=false) {
 					self.autocomplete_active = false
 					self.autocomplete 		 = null
 				}
-		}else if(self.mode==="search") {
+		}else if(self.mode==='search') {
 
 			// active / prepare the autocomplete in search mode
 
