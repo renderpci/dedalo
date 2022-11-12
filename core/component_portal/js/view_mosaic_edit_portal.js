@@ -260,17 +260,19 @@ const get_content_data = async function(self, ar_section_record) {
 							caller 				: self
 						})
 
-						section_record_node.addEventListener('mouseover',function(e){
-							e.stopPropagation()
-							const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							event_manager.publish(event_id, this)
-						})
+						// mouseover event
+							section_record_node.addEventListener('mouseover',function(e){
+								e.stopPropagation()
+								const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+								event_manager.publish(event_id, this)
+							})
 
-						section_record_node.addEventListener('mouseleave',function(e){
-							e.stopPropagation()
-							const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							event_manager.publish(event_id, this)
-						})
+						// mouseleave event
+							section_record_node.addEventListener('mouseleave',function(e){
+								e.stopPropagation()
+								const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+								event_manager.publish(event_id, this)
+							})
 
 					// section record append
 						fragment.appendChild(section_record_node)

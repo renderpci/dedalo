@@ -344,6 +344,7 @@ export const init_events_subscription = function(self) {
 	// set as subscribed
 		self.init_events_subscribed = true
 
+
 	return true
 }//end init_events_subscription
 

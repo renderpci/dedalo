@@ -1507,26 +1507,24 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 
 	// fixed_filter
-	const fixed_filter	= rqo_config.sqo && rqo_config.sqo.fixed_filter
-		? rqo_config.sqo.fixed_filter
-		: false
-
+		const fixed_filter	= rqo_config.sqo && rqo_config.sqo.fixed_filter
+			? rqo_config.sqo.fixed_filter
+			: false
 
 	// filter_by_list if exists
-	const filter_by_list = rqo_config.sqo && rqo_config.sqo.filter_by_list
-		? rqo_config.sqo.filter_by_list
-		: false
+		const filter_by_list = rqo_config.sqo && rqo_config.sqo.filter_by_list
+			? rqo_config.sqo.filter_by_list
+			: false
 
+	// value_with_parents
+		// const value_with_parents = sqo_config.value_with_parents
+		// 	? sqo_config.value_with_parents
+		// 	: false
 
-	//value_with_parents
-	// const value_with_parents = sqo_config.value_with_parents
-	// 	? sqo_config.value_with_parents
-	// 	: false
-
-	//fields_separator
-	const fields_separator = sqo_config.fields_separator
-		? sqo_config.fields_separator
-		: ', '
+	// fields_separator
+		const fields_separator = sqo_config.fields_separator
+			? sqo_config.fields_separator
+			: ', '
 
 	// optional configuration to use when the serach will be built
 		const sqo_options = {
@@ -1542,12 +1540,12 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			? rqo_config.choose.ddo_map
 			: search_ddo_map
 
-		// get the sub elements with the ddo_map, the method is recursive,
-		// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
+	// columns. get the sub elements with the ddo_map, the method is recursive,
+	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
 		const columns = get_ar_inverted_paths(ddo_map)
 
 
-		//build the rqo
+	// rqo. Build the request query object
 		const rqo = {
 			id			: self.id,
 			action		: 'read',
@@ -2062,7 +2060,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 * Render main page data using a JSON viewer
 * @param object section instance self
 * @param promise load_data_promise
-* 	API resquest response from current section/area
+* 	API request response from current section/area
 * @param object rqo_show_original
 * 	Request query object sent to the API by current section/area
 * @return DOM node document fragment
@@ -2079,8 +2077,9 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 			return false
 		}
 
-	const response		= await load_data_promise
-	const dd_request	= self.dd_request
+	// dd_request
+		const response		= await load_data_promise
+		const dd_request	= self.dd_request
 
 	// load_data_promise response check
 		if (response.result===false) {
@@ -2254,7 +2253,7 @@ export const render_tree_data = async function(data, target_node) {
 /**
 * LOAD_DATA_FROM_DATUM
 * Get and set current element data from current datum (used on build components and sections)
-* when not already loaded data is vailable (injected on init for example)
+* when not already loaded data is available (injected on init for example)
 * @return mixed self.data
 */
 common.prototype.load_data_from_datum = function() {
@@ -2284,28 +2283,28 @@ common.prototype.load_data_from_datum = function() {
 * Applied in build moment to prevent duplicate events on refresh
 * @return array delete_events
 */
-export const remove_non_init_events = function(self) {
+	// export const remove_non_init_events = function(self) {
 
-	return true;
+	// 	return true;
 
-	// const events_tokens			= self.events_tokens || []
-	// const events_tokens_init	= self.events_tokens_init || null
-	// const delete_events			= events_tokens_init && events_tokens_init.length>0
-	// 	? (() =>{
-	// 		// delete only non init tokens
-	// 		for (let i = 0; i < events_tokens.length; i++) {
-	// 			const token = events_tokens[i] // token name
-	// 			// console.warn("++++++ token",token)
-	// 			if( events_tokens_init.indexOf(token)===-1 ) {
-	// 				event_manager.unsubscribe(token)
-	// 					console.log("removed event not in events_tokens_init. token:", token, self.id);
-	// 			}
-	// 		}
-	// 	  })()
-	// 	: null // events_tokens.map(current_token => event_manager.unsubscribe(current_token)) // remove all
+	// 	// const events_tokens			= self.events_tokens || []
+	// 	// const events_tokens_init	= self.events_tokens_init || null
+	// 	// const delete_events			= events_tokens_init && events_tokens_init.length>0
+	// 	// 	? (() =>{
+	// 	// 		// delete only non init tokens
+	// 	// 		for (let i = 0; i < events_tokens.length; i++) {
+	// 	// 			const token = events_tokens[i] // token name
+	// 	// 			// console.warn("++++++ token",token)
+	// 	// 			if( events_tokens_init.indexOf(token)===-1 ) {
+	// 	// 				event_manager.unsubscribe(token)
+	// 	// 					console.log("removed event not in events_tokens_init. token:", token, self.id);
+	// 	// 			}
+	// 	// 		}
+	// 	// 	  })()
+	// 	// 	: null // events_tokens.map(current_token => event_manager.unsubscribe(current_token)) // remove all
 
-	// return delete_events
-}//end remove_non_init_events
+	// 	// return delete_events
+	// }//end remove_non_init_events
 
 
 
@@ -2321,7 +2320,7 @@ common.prototype.get_section_elements_context = async function(options) {
 	const self = this
 
 	// section_tipo (string|array)
-		const section_tipo 	= options.section_tipo
+		const section_tipo = options.section_tipo
 
 	// components
 		const get_components = async () => {
@@ -2334,7 +2333,7 @@ common.prototype.get_section_elements_context = async function(options) {
 				// load data
 					const api_response = await data_manager.request({
 						body : {
-							action			: "get_section_elements_context",
+							action			: 'get_section_elements_context',
 							context_type	: 'simple',
 							ar_section_tipo	: section_tipo
 						}
@@ -2368,7 +2367,7 @@ common.prototype.get_section_elements_context = async function(options) {
 common.prototype.calculate_component_path = function(component_context, path) {
 
 	if (!Array.isArray(path)) {
-		console.log("[search2.calculate_component_path] Fixed bad path as array! :",path);
+		console.log("[search2.calculate_component_path] Fixed bad path as array! :", path);
 		path = []
 	}
 
@@ -2395,8 +2394,9 @@ common.prototype.calculate_component_path = function(component_context, path) {
 
 /**
 * VALIDATE_TIPO
-* 	Validate tipo format
-* @return string tipo
+* 	Validate tipo format by regex
+* @param string tipo
+* @return bool result
 */
 export const validate_tipo = function(tipo) {
 
@@ -2413,15 +2413,17 @@ export const validate_tipo = function(tipo) {
 }//end validate_tipo
 
 
+
 /**
 * GET_FALLBACK_VALUE
 * Get the fallback values when the current language version of the data is missing
-* @return array values data with fallback
+* @return array fallback_result
+* 	Values data with fallback
 */
 export const get_fallback_value = function(value, fallback_value) {
 
-	const fallback		= []
-	const value_length	= (value.length===0)
+	const fallback_result	= []
+	const value_length		= (value.length===0)
 		? 1
 		: value.length
 
@@ -2429,7 +2431,7 @@ export const get_fallback_value = function(value, fallback_value) {
 
 		if(value[i]){
 
-			fallback.push(value[i])
+			fallback_result.push(value[i])
 
 		}else{
 
@@ -2437,11 +2439,12 @@ export const get_fallback_value = function(value, fallback_value) {
 				? '<mark>'+fallback_value[i]+'</mark>'
 				: ''
 
-			fallback.push(marked_value)
+			fallback_result.push(marked_value)
 		}
 	}
 
-	return fallback
+
+	return fallback_result
 }//end get_fallback_value
 
 

@@ -399,9 +399,17 @@ component_portal.prototype.build = async function(autoload=false) {
 				// }
 		}// end if(self.mode==="edit")
 
+	// check self.context.request_config
+		if (!self.context.request_config) {
+			console.error('Error. context.request_config not found. self:', self);
+			throw 'Error';
+			return false
+		}
 
 	// target_section
-		self.target_section = self.rqo_config.sqo.section_tipo
+		self.target_section = self.rqo_config && self.rqo_config.sqo
+			? self.rqo_config.sqo.section_tipo
+			: null
 		// self.target_section = self.rqo.sqo.section_tipo
 
 	// columns
