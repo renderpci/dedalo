@@ -1571,10 +1571,8 @@ abstract class common {
 			// the default value is "default" except in component_portal
 				$dd_object->view = $this->get_view();
 
-			// children_view. Sometimes the component define the view of his children (see rsc368)
-				if (isset($properties->children_view)) {
-					$dd_object->children_view = $this->get_children_view();
-				}
+			// children_view. Sometimes the component defines the view of his children (see rsc368)
+				$dd_object->children_view = $this->get_children_view();
 
 			// relation_list // time_machine_list
 				if($model==='section'){
@@ -3954,9 +3952,9 @@ abstract class common {
 
 	/**
 	* GET_CHILDREN_VIEW
-	* @return string $view
+	* @return string|null $children_view
 	*/
-	public function get_children_view() : string {
+	public function get_children_view() : ?string {
 
 		// When view is injected by ddo_map
 			if(isset($this->children_view)){
@@ -3969,8 +3967,21 @@ abstract class common {
 				return $properties->children_view;
 			}
 
-		return null;
+		// based on real_model
+			$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+			switch ($real_model) {
+				case 'component_autocomplete':
+				case 'component_autocomplete_hi':
+					$children_view = 'text';
+					break;
+				default:
+					$children_view = null; // 'default';
+					break;
+			}
+
+		return $children_view;
 	}//end get_children_view
+
 
 
 }//end class common
