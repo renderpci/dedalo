@@ -396,11 +396,23 @@ class section extends common {
 			if ($component_data_type==='relation') {
 
 				// relation components
+					// previous component dato from unchanged section dato
+					$previous_component_dato = array_values(
+						array_filter($this->get_relations(), function($el) use ($component_tipo){
+							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+						})
+					);
 					$this->set_component_relation_dato( $component_obj );
 
 			}else{
 
 				// direct components
+					// previous component dato from unchanged section dato
+					$previous_component_dato = $this->get_component_dato(
+						$component_tipo,
+						$component_lang,
+						false // bool lang_fallback
+					);
 					$this->set_component_direct_dato( $component_obj );
 		}
 
@@ -420,6 +432,8 @@ class section extends common {
 				$save_options->time_machine_data	= $component_obj->get_dato_unchanged();
 				$save_options->time_machine_lang	= $component_lang;
 				$save_options->time_machine_tipo	= $component_tipo;
+				// previous_component_dato
+				$save_options->previous_component_dato	= $previous_component_dato;
 
 		// save section result
 			$result = $this->Save( $save_options );
@@ -721,6 +735,8 @@ class section extends common {
 				$options->time_machine_lang			= false;
 				$options->time_machine_tipo			= false;
 				$options->time_machine_section_id	= (int)$this->section_id; // always
+				$options->previous_component_dato	= null; // only when save from component
+
 
 			// save_options overwrite defaults
 			if (!empty($save_options)) {
