@@ -1647,7 +1647,7 @@ abstract class common {
 	* GET_SUBDATUM
 	* Used by sections and portal that has relations with other components and it need get the information of the other components
 	* subdatum: is the context and data of every section or component that the caller (this component) need to show, search or select
-	* ex: if the caller is a portal that call to toponomy section it will need the context and data of the pointer section and the components that will be showed or searched.
+	* ex: if the caller is a portal that call to toponymy section it will need the context and data of the pointer section and the components that will be showed or searched.
 	* This method use the data of the caller (ar_locators) to get only the data to be used, ex: only the first records of the section to show in list mode.
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
 	* @param string $from_parent = null
