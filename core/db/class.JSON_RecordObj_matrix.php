@@ -126,22 +126,57 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 
 	/**
-	* SAVE JSON MATRIX
+	* SAVE
+	* (json matrix)
 	* Call RecordDataBounceObject->Save() and RecordObj_time_machine->Save()
+	* @param object $save_options = null
+	* Sample:
+	* {
+	*	"is_portal": false,
+	*	"portal_tipo": false,
+	*	"main_components_obj": false,
+	*	"main_relations": false,
+	*	"top_tipo": "oh1",
+	*	"top_id": false,
+	*	"new_record": false,
+	*	"forced_create_record": false,
+	*	"time_machine_data": [
+	*		"Título entrevista uno b"
+	*	],
+	*	"time_machine_lang": "lg-eng",
+	*	"time_machine_tipo": "oh16",
+	*	"time_machine_section_id": 1,
+	* 	"previous_component_dato": [
+	*		{
+	*			"type": "dd151",
+	*			"section_id": "5",
+	*			"section_tipo": "dd898",
+	*			"from_component_tipo": "oh18"
+	*		},
+	*		{
+	*			"type": "dd151",
+	*			"section_id": "10",
+	*			"section_tipo": "dd898",
+	*			"from_component_tipo": "oh18"
+	*		}
+	*	]
+	* }
 	* @return int $id
+	* 	Matrix id from target table record
 	*/
 	public function Save( object $save_options=null ) : int {
 
-		if( $this->test_can_save()!==true ) {
-			$msg = " Error (test_can_save). No matrix data is saved! ";
-			trigger_error($msg, E_USER_ERROR);
-			debug_log(__METHOD__." $msg - matrix_table: $this->matrix_table - $this->section_tipo - $this->section_id - save_options: ".to_string($save_options), logger::ERROR);
-			return false;
-		}
+		// test_can_save
+			if( $this->test_can_save()!==true ) {
+				$msg = " Error (test_can_save). No matrix data is saved! ";
+				trigger_error($msg, E_USER_ERROR);
+				debug_log(__METHOD__." $msg - matrix_table: $this->matrix_table - $this->section_tipo - $this->section_id - save_options: ".to_string($save_options), logger::ERROR);
+				return false;
+			}
 
 		# MATRIX SAVE (with parent RecordDataBoundObject)
 		# Returned id can be false (error on save), matrix id (normal case), section_id (activity case)
-		$id = parent::Save($save_options);
+		// $id = parent::Save($save_options);
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
@@ -150,6 +185,11 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			# Exec time machine save and set returned id
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
 		}
+
+		// (!) MOVED AFTER TIME_MACHINE SAVE (12-11-2022) TO ALLOW SAVE UNSAVED COMPONENT VALUES (OLD IMPORTS..)
+		// MATRIX SAVE (with parent RecordDataBoundObject)
+		// Returned id can be false (error on save), matrix id (normal case), section_id (activity case)
+		$id = parent::Save($save_options);
 
 
 		return $id;
@@ -160,73 +200,149 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	/**
 	* SAVE TIME MACHINE
 	* @param object $save_options
-	* @return int $id_matrix
+	* Sample:
+	* {
+	*	"is_portal": false,
+	*	"portal_tipo": false,
+	*	"main_components_obj": false,
+	*	"main_relations": false,
+	*	"top_tipo": "oh1",
+	*	"top_id": false,
+	*	"new_record": false,
+	*	"forced_create_record": false,
+	*	"time_machine_data": [
+	*		"Título entrevista uno b"
+	*	],
+	*	"time_machine_lang": "lg-eng",
+	*	"time_machine_tipo": "oh16",
+	*	"time_machine_section_id": 1,
+	* 	"previous_component_dato": [
+	*		{
+	*			"type": "dd151",
+	*			"section_id": "5",
+	*			"section_tipo": "dd898",
+	*			"from_component_tipo": "oh18"
+	*		},
+	*		{
+	*			"type": "dd151",
+	*			"section_id": "10",
+	*			"section_tipo": "dd898",
+	*			"from_component_tipo": "oh18"
+	*		}
+	*	]
+	* }
+	* @return int $time_machine_id
 	*/
 	protected function save_time_machine( object $save_options ) : int {
 
 		// options
-			$time_machine_tipo = $save_options->time_machine_tipo ?? null;
-			$time_machine_lang = $save_options->time_machine_lang ?? null;
-			$time_machine_data = $save_options->time_machine_data ?? null;
+			$tipo						= $save_options->time_machine_tipo ?? null;
+			$section_id					= $save_options->time_machine_section_id ?? null;
+			$lang						= $save_options->time_machine_lang ?? null;
+			$time_machine_data			= $save_options->time_machine_data ?? null;
+			// saving from component cases
+			$previous_component_dato	= $save_options->previous_component_dato ?? null;
+			$time_machine_date			= $save_options->time_machine_date ?? component_date::get_timestamp_now_for_db();
 
-		// DES
-			// if (empty($save_options->time_machine_data)) {
-			// 	#dump($save_options,"save_time_machine save_options");
-			// 	#trigger_error("Warning: Nothing to save in  time machine: time_machine_data is empty");
-			// 	if(SHOW_DEBUG===true) {
-			// 		#error_log("DEBUG INFO: ".__METHOD__ . " Empty save_options->time_machine_data. No time machine saved data. section_tipo:$this->section_tipo, section_id:$this->section_id");
-			// 		#dump($save_options->time_machine_data, ' save_options->time_machine_data ++ '.to_string());
-			// 		debug_log(__METHOD__." Empty save_options->time_machine_data. nothing is saved in TM  ".to_string(), logger::DEBUG);
-			// 	}
-			// 	return false;
-			// }
+		// short vars
+			$section_tipo = $this->get_section_tipo();
 
-		$RecordObj_time_machine = new RecordObj_time_machine(null);
 
-		// Fields sample
-			# db field name			# property name
-			// "id"				=> "ID",		# integer
-			// "id_matrix"		=> "id_matrix",	# integer
-			// "section_id"		=> "section_id",# integer
-			// "section_tipo"	=> "section_tipo",# string charvar 32
-			// "tipo"			=> "tipo",		# string charvar 32
-			// "lang"			=> "lang", 		# string 16
-			// "timestamp"		=> "timestamp", # timestamp standard db format
-			// "userID"			=> "userID", 	# integer
-			// "state"			=> "state",		# string char 32
-			// "dato"			=> "dato",		# jsonb format
+		// RecordObj_time_machine instance
+			$RecordObj_time_machine = new RecordObj_time_machine(null);
+			// time_machine table fields sample
+				// db field name	   # property name
+				// "id"				=> "ID",			// integer
+				// "id_matrix"		=> "id_matrix",		// integer
+				// "section_id"		=> "section_id",	// integer
+				// "section_tipo"	=> "section_tipo",	// string varchar 32
+				// "tipo"			=> "tipo",			// string varchar 32
+				// "lang"			=> "lang", 			// string 16
+				// "timestamp"		=> "timestamp", 	// timestamp standard db format
+				// "userID"			=> "userID", 		// integer
+				// "state"			=> "state",			// string char 32
+				// "dato"			=> "dato",			// jsonb format
+
+		// time_machine save before.
+		// This allow safe time machine save data not already saved (old imports case for example)
+			if (!empty($previous_component_dato)) {
+
+				// already exists check
+				$data_already_exists = false;
+				// get_ar_time_machine_of_this return an array of found matrix_time_machine id values
+				$tm_records = RecordObj_time_machine::get_ar_time_machine_of_this(
+					$tipo, // string $tipo (component_tipo)
+					$section_id, // string|int section_id (component parent)
+					$lang, // string $lang
+					$section_tipo, // string section_tipo
+					0, // int limit
+					0 // int offset
+				);
+				if (!empty($tm_records)) {
+
+					// check if data match to current
+						// foreach ($tm_records as $tm_id) {
+						// 	$current_RecordObj_time_machine	= new RecordObj_time_machine($tm_id);
+						// 	$current_dato					= $current_RecordObj_time_machine->get_dato();
+						// 	if ($current_dato===$previous_component_dato) {
+						// 		$data_already_exists = true;
+						// 		break;
+						// 	}
+						// }
+
+					// (!) We understand here that data does already exists
+						$data_already_exists = true;
+				}
+				// empty records or not data match, mints that previous data exists in component but not in time_machine.
+				// To fix this, save before the previous data and later the new data
+				if ($data_already_exists===false) {
+					$new_options = clone $save_options;
+						// use previous data as to-save data
+						$new_options->time_machine_data = $previous_component_dato;
+						// clean previous component dato to prevent infinite loop
+						$new_options->previous_component_dato = null;
+						// date
+						$created_date = $this->datos->created_date;
+						$new_options->time_machine_date = $created_date;
+					$this->save_time_machine( $new_options );
+					debug_log(
+						__METHOD__." Saved time machine NOT already saved component dato. tipo: $tipo, section_tipo: $section_tipo, section_id: $section_id".PHP_EOL.to_string($previous_component_dato),
+						logger::WARNING
+					);
+				}
+			}//end if (!empty($previous_component_dato))
 
 		// configure time machine object
-			# id_matrix
-				#$RecordObj_time_machine->set_id_matrix( $this->get_ID() );
-			# section_id
+
+			// section_id
 				$RecordObj_time_machine->set_section_id( $this->get_section_id() );	// $save_options->time_machine_section_id
-			# section_tipo
+			// section_tipo
 				$RecordObj_time_machine->set_section_tipo( $this->get_section_tipo() );
-			# tipo
-				if (!empty($time_machine_tipo)) {
-					$RecordObj_time_machine->set_tipo( $time_machine_tipo );
+			// tipo
+				if (!empty($tipo)) {
+					$RecordObj_time_machine->set_tipo( $tipo );
 				}
-			# lang
-				if (!empty($time_machine_lang)) {
-					$RecordObj_time_machine->set_lang( $time_machine_lang );
+			// lang
+				if (!empty($lang)) {
+					$RecordObj_time_machine->set_lang( $lang );
 				}
-			# timestamp
-				$RecordObj_time_machine->set_timestamp( component_date::get_timestamp_now_for_db() );
-			# userID
+			// timestamp
+				$RecordObj_time_machine->set_timestamp( $time_machine_date );
+			// userID
 				$RecordObj_time_machine->set_userID( navigator::get_user_id() );
-			# dato
+			// dato
 				if (!empty($time_machine_data)) {
 					$RecordObj_time_machine->set_dato( $time_machine_data );
 				}
 
-		# Save obj
-		$RecordObj_time_machine->Save(); //  $save_options
+		// Save obj
+			$RecordObj_time_machine->Save();
 
-		$id_matrix = $RecordObj_time_machine->get_ID();
+		// time_machine_id. get from saved record
+			$time_machine_id = $RecordObj_time_machine->get_ID();
 
 
-		return $id_matrix;
+		return $time_machine_id;
 	}//end save_time_machine
 
 
