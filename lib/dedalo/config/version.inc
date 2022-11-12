@@ -2762,7 +2762,27 @@
 		Fixed error on 'propiedades' js trigger where changes of radio button (mdcat3047) were not saved
 		Valencia 04-10-2022T21:20:00
 		Fixed bug in tool_administration generate_relations_table_data method. Project relationships are rebuild correctly now
-
+		Valencia 11-10-2022T21:20:00
+		Fix dataframe click inside autocomplete
+		Add check if the install are finished to remove the change for root
+		Add latin lang
+		Add default language selector to tool_import_rdf
+		Remove dataframe in search_autocomplete
+		Add dataframe_search mode in component_check_box
+		Add dataframe_search mode in component_common
+		Add dataframe as component in search functionality
+		Fix to get permissions for dataframe_search
+		Add literal to component_autocompolete_hi to search without parents
+		Valencia 26-11-2022
+		Added publication server API feature: get_table_thesaurus_map and get_table_thesaurus to allow web developers easy access to server config about thesaurus. Updated swagger.json ui too (v1.0.24)
+		Added 'Deprecated' label to publication API ui Thesaurus Legacy
+		Valencia 04-11-2022
+		Fixed class exec issue where execution aync fails on exec_sh_file
+		Added diffusion method map_locator_to_boolean
+		Fixed error where tool_export values with html chars like '<10' breaks the output in standard format
+		Fixed global_search error where filter 'theme' were use LIKE instead =
+		Valencia 12-11-2022T21:20:00
+		Changed time machine behavior when previous dato is not already saved. Now, time machine save previous dato if not found in time_machine table
 
 	[/HISTORY]
 
@@ -2793,7 +2813,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-11-2022T10:46:00');
+	define('DEDALO_BUILD'	, '12-11-2022T12:07:00');
 
 
 
