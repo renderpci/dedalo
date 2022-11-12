@@ -46,7 +46,7 @@ export const component_pdf = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_pdf.prototype.init                = component_common.prototype.init
+	component_pdf.prototype.init				= component_common.prototype.init
 	component_pdf.prototype.render				= common.prototype.render
 	component_pdf.prototype.refresh				= common.prototype.refresh
 	component_pdf.prototype.destroy				= common.prototype.destroy
@@ -62,6 +62,7 @@ export const component_pdf = function(){
 	// render
 	component_pdf.prototype.list				= render_list_component_pdf.prototype.list
 	component_pdf.prototype.edit				= render_edit_component_pdf.prototype.edit
+	component_pdf.prototype.tm					= render_edit_component_pdf.prototype.edit
 
 
 

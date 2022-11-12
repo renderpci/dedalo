@@ -133,7 +133,7 @@ const get_content_value = (i, current_value, self) => {
 	// button remove
 		const mode				= self.mode
 		const is_inside_tool	= self.is_inside_tool
-		if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool) {
+		if((mode==='edit') && !is_inside_tool) {
 
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
@@ -157,7 +157,7 @@ const get_content_value = (i, current_value, self) => {
 					refresh			: true
 				})
 			})
-		}//end if((mode==='edit' || mode==='edit_in_list') && !is_inside_tool)
+		}//end if((mode==='edit') && !is_inside_tool)
 
 
 	return content_value

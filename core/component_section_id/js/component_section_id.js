@@ -55,6 +55,7 @@ export const component_section_id = function(){
 
 	// render
 	component_section_id.prototype.edit					= render_edit_component_section_id.prototype.edit
+	component_section_id.prototype.tm					= render_edit_component_section_id.prototype.edit
 	component_section_id.prototype.list					= render_list_component_section_id.prototype.list
 	component_section_id.prototype.search				= render_search_component_section_id.prototype.search
 

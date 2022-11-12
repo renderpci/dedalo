@@ -132,7 +132,7 @@ const get_content_value = (i, current_value, self) => {
 			if (e.key!=='Enter') set_unload_state(self, i);
 		})//end keyup
 
-	if((mode==='edit' || mode==='edit_in_list')) {
+	if(mode==='edit') {
 
 		// input iri field
 		//    const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
@@ -201,7 +201,7 @@ const get_content_value = (i, current_value, self) => {
 				const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
 				current_window.focus()
 		})
-	}//end if((mode==='edit' || mode==='edit_in_list'))
+	}//end if(mode==='edit')
 
 
 	return content_value

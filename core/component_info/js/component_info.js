@@ -44,16 +44,17 @@ export const component_info = function(){
 */
 // prototypes assign
 	// lifecycle
-	component_info.prototype.init					= component_common.prototype.init
-	component_info.prototype.build					= component_common.prototype.build
-	component_info.prototype.render					= common.prototype.render
-	component_info.prototype.refresh				= common.prototype.refresh
-	component_info.prototype.destroy				= common.prototype.destroy
+	component_info.prototype.init		= component_common.prototype.init
+	component_info.prototype.build		= component_common.prototype.build
+	component_info.prototype.render		= common.prototype.render
+	component_info.prototype.refresh	= common.prototype.refresh
+	component_info.prototype.destroy	= common.prototype.destroy
 
 	// render
-	component_info.prototype.list					= render_list_component_info.prototype.list
-	component_info.prototype.edit					= render_edit_component_info.prototype.edit
-	component_info.prototype.search					= render_edit_component_info.prototype.edit
+	component_info.prototype.list		= render_list_component_info.prototype.list
+	component_info.prototype.edit		= render_edit_component_info.prototype.edit
+	component_info.prototype.tm			= render_edit_component_info.prototype.edit
+	component_info.prototype.search		= render_edit_component_info.prototype.edit
 
 
 

@@ -129,7 +129,7 @@ export const ui = {
 				const section_tipo	= instance.section_tipo 	// like 'rsc26'
 				const mode			= instance.mode 	// like 'edit'
 				const view			= instance.view || instance.context.view || null
-				const label			= (mode==='edit_in_list') ? null : instance.label // instance.context.label
+				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
 
 			// fragment

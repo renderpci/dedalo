@@ -74,7 +74,7 @@ export const component_3d = function(){
 	// render
 	component_3d.prototype.list					= render_list_component_3d.prototype.list
 	component_3d.prototype.edit					= render_edit_component_3d.prototype.edit
-	// component_3d.prototype.edit_in_list			= render_edit_component_3d.prototype.edit
+	component_3d.prototype.tm					= render_edit_component_3d.prototype.edit
 	component_3d.prototype.search				= render_edit_component_3d.prototype.search
 	// component_3d.prototype.player			= render_player_component_3d.prototype.player
 	// component_3d.prototype.viewer			= render_viewer_component_3d.prototype.viewer

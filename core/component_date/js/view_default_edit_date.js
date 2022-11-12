@@ -184,7 +184,7 @@ const get_buttons = (self) => {
 	const fragment = new DocumentFragment()
 
 	// button add input
-		if(mode==='edit' || mode==='edit_in_list'){ // && !is_inside_tool
+		if(mode==='edit') { // && !is_inside_tool
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
 				class_name 		: 'button add',

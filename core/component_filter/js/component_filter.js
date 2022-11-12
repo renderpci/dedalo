@@ -60,7 +60,7 @@ export const component_filter = function(){
 	// render
 	component_filter.prototype.list					= render_list_component_filter.prototype.list
 	component_filter.prototype.edit					= render_edit_component_filter.prototype.edit
-	component_filter.prototype.edit_in_list			= render_edit_component_filter.prototype.edit
+	component_filter.prototype.tm					= render_edit_component_filter.prototype.edit
 	component_filter.prototype.search				= render_search_component_filter.prototype.search
 	component_filter.prototype.change_mode			= component_common.prototype.change_mode
 
