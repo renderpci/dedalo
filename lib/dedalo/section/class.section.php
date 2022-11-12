@@ -364,7 +364,7 @@ class section extends common {
 	* GET_ALL_COMPONENT_DATA
 	* @return component_data
 	* get all data of the component, with dato, valor, valor_list and dataframe
-	* this function will be the only comunication with the component for get the information (08-2017)
+	* this function will be the only communication with the component for get the information (08-2017)
 	*/
 	public function get_all_component_data($component_tipo) {
 
@@ -451,14 +451,28 @@ class section extends common {
 			throw new Exception("Error Processing Request: component_lang is empty", 1);
 		}
 
+
 		if ($component_data_type==='relation') {
 			##
 			# RELATION COMPONENTS
+				// previous component dato from unchanged section dato
+				$previous_component_dato = array_values(
+					array_filter($this->get_relations(), function($el) use ($component_tipo){
+						return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+					})
+				);
 				$this->set_component_relation_dato( $component_obj );
 
 		}else{
 			##
 			# DIRECT COMPONENTS
+				// previous component dato from unchanged section dato
+				$previous_component_dato = $this->get_component_dato(
+					$component_tipo,
+					$component_lang,
+					false // bool lang_fallback
+				);
+				// update section dato
 				$this->set_component_direct_dato( $component_obj );
 		}
 
@@ -482,10 +496,11 @@ class section extends common {
 		# TIME MACHINE DATA
 		# We save only current component lang 'dato' in time machine
 		$save_options = new stdClass();
-			$save_options->time_machine_data = $component_obj->get_dato_unchanged();
-			$save_options->time_machine_lang = $component_lang;
-			$save_options->time_machine_tipo = $component_tipo;
-
+			$save_options->time_machine_data		= $component_obj->get_dato_unchanged();
+			$save_options->time_machine_lang		= $component_lang;
+			$save_options->time_machine_tipo		= $component_tipo;
+			// previous_component_dato
+			$save_options->previous_component_dato	= $previous_component_dato;
 
 		$result = $this->Save( $save_options );
 
@@ -774,6 +789,7 @@ class section extends common {
 	/**
 	* SAVE
 	* Create a new section or update section record in matrix
+	* @param object $save_options
 	*/
 	public function Save( $save_options=null ) {
 
@@ -796,7 +812,8 @@ class section extends common {
 				$options->time_machine_data			= false;
 				$options->time_machine_lang			= false;
 				$options->time_machine_tipo			= false;
-				$options->time_machine_section_id 	= (int)$this->section_id; // always
+				$options->time_machine_section_id	= (int)$this->section_id; // always
+				$options->previous_component_dato	= null; // only when save from component
 
 		// save_options overwrite defaults
 			if ($save_options!==null) {
@@ -862,7 +879,7 @@ class section extends common {
 		}elseif ($this->section_id >= 1 && $options->forced_create_record===false) { # UPDATE RECORD
 
 			################################################################################
-			# UPDATE RECORD : Update current matrix section record trigered by one component
+			# UPDATE RECORD : Update current matrix section record triggered by one component
 
 			$save_action = 'update';
 
