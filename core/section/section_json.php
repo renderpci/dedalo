@@ -59,14 +59,24 @@
 				);
 				$context[] = $this->context;
 
-			// subcontext. Is specific for tm and is calculated in class section
-				$ar_subcontext = $this->get_tm_context($permissions);
-				foreach ($ar_subcontext as $current_context) {
-					$context[] = $current_context;
-				}
+			$record = $this->get_record();
+			if (!empty($record)) {
 
-			// subdata. Is specific for tm and is calculated in class section
-				$data = $this->get_tm_ar_subdata();
+				$value_tm = [$record];
+
+				// subcontext. Is specific for tm and is calculated in class section
+					$subdatum = $this->get_tm_subdatum($tipo, $value_tm);
+
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
+
+					$ar_subdata	= $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$data[] = $sub_value;
+					}
+			}
 
 		}else{
 
