@@ -2783,6 +2783,8 @@
 		Fixed global_search error where filter 'theme' were use LIKE instead =
 		Valencia 12-11-2022T21:20:00
 		Changed time machine behavior when previous dato is not already saved. Now, time machine save previous dato if not found in time_machine table
+		Fixed save_time_machine time_machine_section_id error on undefined case (new record)
+
 
 	[/HISTORY]
 
