@@ -44,29 +44,33 @@ class component_section_id extends component_common {
 	* overwrite in every different specific component
 	* The direct components can set the value with the dato directly
 	* The relation components will separate the locator in rows
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
-		if(isset($this->column_obj)){
-			$column_obj = $this->column_obj;
-		}else{
-			$column_obj = new stdClass();
-				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-		}
-
-		$value = new dd_grid_cell_object();
+		// column_obj
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 
 		$data	= $this->get_dato();
 		$label	= $this->get_label();
 
-		$value->set_type('column');
-		$value->set_label($label);
+	// value
+		$value = new dd_grid_cell_object();
+			$value->set_type('column');
+			$value->set_label($label);
+			$value->set_ar_columns_obj([$column_obj]);
+			$value->set_cell_type('section_id');
+			$value->set_row_count(1);
+			$value->set_value($data);
 
-		$value->set_ar_columns_obj([$column_obj]);
-		$value->set_cell_type('section_id');
-		$value->set_row_count(1);
-		$value->set_value($data);
 
 		return $value;
 	}//end get_raw_value

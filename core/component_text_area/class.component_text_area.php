@@ -168,9 +168,12 @@ class component_text_area extends component_common {
 	* GET_VALUE
 	* Get the value of the components.
 	* if the mode is "relation_list" create the fragments of the indexation
-	* @return object $value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -178,55 +181,59 @@ class component_text_area extends component_common {
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
 
+		// column_obj
 			if(isset($this->column_obj)){
 				$column_obj = $this->column_obj;
 			}else{
 				$column_obj = new stdClass();
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
-		$value = new dd_grid_cell_object();
 
-		$data = $this->get_dato();
+		// data
+			$data = $this->get_dato();
 
-		$procesed_data = [];
-		foreach ($data as $current_value) {
-			$current_value = trim($current_value);
-			if (!empty($current_value)) {
-				$procesed_data[] = TR::add_tag_img_on_the_fly($current_value);
+			$procesed_data = [];
+			foreach ($data as $current_value) {
+				$current_value = trim($current_value);
+				if (!empty($current_value)) {
+					$procesed_data[] = TR::add_tag_img_on_the_fly($current_value);
+				}
 			}
-		}
 
-		$cell_type = 'text';
+			$cell_type = 'text';
 
-		if($this->modo === 'indexation_list'){
+			if($this->modo === 'indexation_list'){
 
-			// process data for build the columns
-				$procesed_data = include 'component_text_area_value.php';
-				$cell_type = null;
-		}
+				// process data for build the columns
+					$procesed_data = include 'component_text_area_value.php';
+					$cell_type = null;
+			}
 
-		$label = $this->get_label();
+		// label
+			$label = $this->get_label();
 
-		$properties = $this->get_properties();
+		// records_separator
+			$properties = $this->get_properties();
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
 
-		$records_separator = isset($records_separator)
-			? $records_separator
-			: (isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ');
+		// value
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_ar_columns_obj([$column_obj]);
+				if(isset($cell_type)){
+					$value->set_cell_type($cell_type);
+				}
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_records_separator($records_separator);
+				$value->set_value($procesed_data);
 
-
-		$value->set_type('column');
-		$value->set_label($label);
-		$value->set_ar_columns_obj([$column_obj]);
-		if(isset($cell_type)){
-			$value->set_cell_type($cell_type);
-		}
-		if(isset($class_list)){
-			$value->set_class_list($class_list);
-		}
-		$value->set_records_separator($records_separator);
-		$value->set_value($procesed_data);
 
 		return $value;
 	}//end get_value
