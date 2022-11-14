@@ -677,9 +677,12 @@ abstract class component_common extends common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return object $value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -694,36 +697,38 @@ abstract class component_common extends common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
-		$value = new dd_grid_cell_object();
+		// short vars
+			$data		= $this->get_dato();
+			$label		= $this->get_label();
+			$properties	= $this->get_properties();
 
-		$data	= $this->get_dato();
-		$label	= $this->get_label();
+		// fields_separator
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
 
-		$properties = $this->get_properties();
+		// records_separator
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
 
-		$fields_separator = isset($fields_separator)
-			? $fields_separator
-			: (isset($properties->fields_separator)
-				? $properties->fields_separator
-				: ', ');
+		// dd_grid_cell_object
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_cell_type('text');
+				$value->set_ar_columns_obj([$column_obj]);
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_fields_separator($fields_separator);
+				$value->set_records_separator($records_separator);
+				$value->set_value($data);
 
-		$records_separator = isset($records_separator)
-			? $records_separator
-			: (isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ');
-
-
-		$value->set_type('column');
-		$value->set_label($label);
-		$value->set_cell_type('text');
-		$value->set_ar_columns_obj([$column_obj]);
-		if(isset($class_list)){
-			$value->set_class_list($class_list);
-		}
-		$value->set_fields_separator($fields_separator);
-		$value->set_records_separator($records_separator);
-		$value->set_value($data);
 
 		return $value;
 	}//end get_value
@@ -1063,6 +1068,7 @@ abstract class component_common extends common {
 
 		// store data to access later in api
 			$this->observers_data = $observers_data;
+
 
 		return $observers_data;
 	}//end propagate_to_observers

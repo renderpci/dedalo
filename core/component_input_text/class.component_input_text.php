@@ -75,14 +75,14 @@ class component_input_text extends component_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return object $value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$records_separator	= $ddo->records_separator ?? null;
-			$class_list		= $ddo->class_list ?? null;
-
+		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			if(isset($this->column_obj)){
 				$column_obj = $this->column_obj;
 			}else{
@@ -90,31 +90,41 @@ class component_input_text extends component_common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
-		$value = new dd_grid_cell_object();
+		// dato
+			$dato			= $this->get_dato();
+			$fallback_value	= component_common::extract_component_dato_fallback(
+				$this, // component instance this
+				$lang, // string lang
+				DEDALO_DATA_LANG_DEFAULT // string main_lang
+			);
 
-		$dato			= $this->get_dato();
-		$fallback_value	= component_common::extract_component_dato_fallback($this, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-		$label			= $this->get_label();
+		// records_separator
+				$properties			= $this->get_properties();
+				$records_separator	= isset($ddo->records_separator)
+				? $ddo->records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
 
-		$properties = $this->get_properties();
+		// class_list
+			$class_list = $ddo->class_list ?? null;
 
-     	$records_separator = isset($records_separator)
-			? $records_separator
-			: (isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ');
+		// label
+			$label = $this->get_label();
 
-		$value->set_type('column');
-		$value->set_label($label);
-		$value->set_ar_columns_obj([$column_obj]);
+		// value
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_ar_columns_obj([$column_obj]);
+				$value->set_cell_type('text');
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_records_separator($records_separator);
+				$value->set_value($dato);
+				$value->set_fallback_value($fallback_value);
 
-		$value->set_cell_type('text');
-		if(isset($class_list)){
-			$value->set_class_list($class_list);
-		}
-		$value->set_records_separator($records_separator);
-		$value->set_value($dato);
-		$value->set_fallback_value($fallback_value);
 
 		return $value;
 	}//end get_value

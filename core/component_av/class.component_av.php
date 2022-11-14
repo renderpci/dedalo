@@ -87,39 +87,49 @@ class component_av extends component_media_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
-		$value = new dd_grid_cell_object();
+		// column_obj
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 
-		if(isset($this->column_obj)){
-			$column_obj = $this->column_obj;
-		}else{
-			$column_obj = new stdClass();
-				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-		}
-
-		$dato = $this->get_dato();
-		if (!is_array($dato)) {
-			$dato = [$dato];
-		}
+		// dato
+			$dato = $this->get_dato();
+			if (!is_array($dato)) {
+				$dato = [$dato];
+			}
 
 		// data item
-		$item  = new stdClass();
-			$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
-			$item->video_url		= $this->file_exist()
-				? $this->get_url(false)
-				: null;
+			$item  = new stdClass();
+				$item->posterframe_url = $this->get_posterframe_url(
+					true, // bool test_file
+					false, // bool absolute
+					false // bool avoid_cache
+				);
+				$item->video_url = $this->file_exist()
+					? $this->get_url(false)
+					: null;
 
+		// label
+			$label = $this->get_label();
 
-		$label = $this->get_label();
+		// value
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_ar_columns_obj([$column_obj]);
+				$value->set_cell_type('av');
+				$value->set_value([$item]);
 
-		$value->set_type('column');
-		$value->set_label($label);
-		$value->set_ar_columns_obj([$column_obj]);
-		$value->set_cell_type('av');
-		$value->set_value([$item]);
 
 		return $value;
 	}//end get_value

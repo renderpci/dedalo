@@ -182,13 +182,14 @@ class component_image extends component_media_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$class_list 	= $ddo->class_list ?? null;
-
+		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			if(isset($this->column_obj)){
 				$column_obj = $this->column_obj;
 			}else{
@@ -196,31 +197,40 @@ class component_image extends component_media_common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
-		$value = new dd_grid_cell_object();
+		// current_url. get from dato
+			$dato = $this->get_dato();
+			if(isset($dato)){
+				$image_quality = ($this->modo==='edit')
+					? DEDALO_IMAGE_QUALITY_DEFAULT
+					: DEDALO_IMAGE_THUMB_DEFAULT;
 
-		$dato = $this->get_dato();
-		if(isset($dato)){
-			$image_quality = ($this->modo==='edit')
-				? DEDALO_IMAGE_QUALITY_DEFAULT
-				: DEDALO_IMAGE_THUMB_DEFAULT;
+				$current_url = $this->get_image_url(
+					$image_quality, // string quality
+					false, // bool test_file
+					false,  // bool absolute
+					false // bool default_add
+				);
+			}else{
+				$current_url = '';
+			}
 
-			$current_url = $this->get_image_url($image_quality, $test_file=false, $absolute=false, $default_add=false); // $quality=false, $test_file=true, $absolute=false, $default_add=true
+		// label
+			$label = $this->get_label();
 
-		}else{
-			$current_url = '';
-		}
+		// class_list
+			$class_list = $ddo->class_list ?? null;
 
+		// value
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_ar_columns_obj([$column_obj]);
+				$value->set_cell_type('img');
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_value([$current_url]);
 
-		$label = $this->get_label();
-
-		$value->set_type('column');
-		$value->set_label($label);
-		$value->set_ar_columns_obj([$column_obj]);
-		$value->set_cell_type('img');
-		if(isset($class_list)){
-			$value->set_class_list($class_list);
-		}
-		$value->set_value([$current_url]);
 
 		return $value;
 	}//end get_value
