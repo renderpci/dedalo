@@ -539,6 +539,9 @@ final class dd_utils_api {
 	public static function update_version(object $request_options=null) : object {
 		$start_time = start_time();
 
+		// set time limit
+			set_time_limit ( 259200 );  // 3 days
+
 		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
 
 		$response = new stdClass();
@@ -1270,7 +1273,7 @@ final class dd_utils_api {
 			'obj'	=> 'model/obj',
 			'fbx'	=> 'application/octet-stream',
 			'dae'	=> 'model/vnd.collada+xml',
-			
+
 			// adobe
 			'pdf'	=> 'application/pdf',
 			'psd'	=> 'image/vnd.adobe.photoshop',

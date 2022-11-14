@@ -203,19 +203,22 @@ class component_filter extends component_relation_common {
 	}//end propagate_filter
 
 
+
 	/**
 	* GET_VALUE
 	* Get the value of the component.
 	* component filter return a array of values
-	* @return object $value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
 			$records_separator	= $ddo->records_separator ?? null;
 			$class_list			= $ddo->class_list ?? null;
-
 			if(isset($this->column_obj)){
 				$column_obj = $this->column_obj;
 			}else{
@@ -223,57 +226,59 @@ class component_filter extends component_relation_common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
+		// User logged now
+			$user_id		= navigator::get_user_id();
+			$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
-		$value = new dd_grid_cell_object();
+		// dato
+			$dato		= $this->get_dato();
+			$ar_final	= [];
+			// check if the dato is available to the projects of the user has permissions.
+			foreach ((array)$ar_projects as $key => $row) {
+				if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
+					$ar_final[] = $row;
+				}
+			}//end foreach
 
-		# User logged now
-		$user_id		= navigator::get_user_id();
-		$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
-
-		$dato		= $this->get_dato();
-		$ar_final	= [];
-		//check if the dato is available to the projects of the user has permissions.
-		foreach ((array)$ar_projects as $key => $row) {
-			if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
-				$ar_final[] = $row;
+		// ar_values. With the clean dato for the user, get the label
+			$ar_values = [];
+			foreach ($ar_final as $row) {
+				$ar_values[] = $row->label;
 			}
-		}//end foreach
-
-		// with the clean dato for the user, get the label
-		$ar_values = [];
-		foreach ($ar_final as $row) {
-			$ar_values[] = $row->label;
-		}
 
 		// set the label of the component as column label
-		$label = $this->get_label();
+			$label = $this->get_label();
 
-		$properties = $this->get_properties();
+		// properties
+			$properties = $this->get_properties();
 
-		// set the separator text that will be used to render the column
-		$fields_separator = isset($fields_separator)
-			? $fields_separator
-			: (isset($properties->fields_separator)
-				? $properties->fields_separator
-				: ', ');
+		// fields_separator. set the separator text that will be used to render the column
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
 
-		$records_separator = isset($records_separator)
-			? $records_separator
-			: (isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ');
+		// records_separator
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
 
+		// dd_grid_cell_object
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_cell_type('text');
+				$value->set_ar_columns_obj([$column_obj]);
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_fields_separator($fields_separator);
+				$value->set_records_separator($records_separator);
+				$value->set_value($ar_values);
 
-		$value->set_type('column');
-		$value->set_label($label);
-		$value->set_cell_type('text');
-		$value->set_ar_columns_obj([$column_obj]);
-		if(isset($class_list)){
-			$value->set_class_list($class_list);
-		}
-		$value->set_fields_separator($fields_separator);
-		$value->set_records_separator($records_separator);
-		$value->set_value($ar_values);
 
 		return $value;
 	}//end get_value

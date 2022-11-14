@@ -6,11 +6,14 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {
+		render_links_list
+	} from './render_list_component_iri.js'
 
 
 
 /**
-* view_mini_iri
+* VIEW_MINI_IRI
 * Manage the components logic and appearance in client side
 */
 export const view_mini_iri = function() {
@@ -31,42 +34,13 @@ view_mini_iri.render = async function(self, options) {
 		const data	= self.data || {}
 		const value	= data.value || []
 
-	// DOM fragment
-		const fragment = new DocumentFragment()
-
-		const value_length		= value.length
-		for (let i = 0; i < value_length; i++) {
-			// create the new URL of the IRI
-			const url = (value[i].iri)
-				? new URL(value[i].iri)
-				: {};
-			// create the link node
-			const link_node = ui.create_dom_element({
-				element_type	: url
-					? 'a'
-					: 'span',
-				class_name 		: url
-					? 'link_iri'
-					: 'text_iri',
-				href 			: value[i].iri || null,
-				text_content	: value[i].title || url.hostname || '',
-				title 			: value[i].iri,
-				parent			: fragment
-			})
-
-			if(i < value_length-1){
-				const fields_separator_node = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'fields_separator',
-					text_content	: self.context.fields_separator,
-					parent			: fragment
-				})
-			}
-		}
+	// DOM fragment. Use common function render_links_list
+		const fragment = render_links_list(value)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {})
 		wrapper.appendChild(fragment)
+
 
 	return wrapper
 }//end mini

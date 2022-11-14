@@ -203,9 +203,12 @@ class component_date extends component_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @return object $value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
 		// ddo. set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -265,6 +268,7 @@ class component_date extends component_common {
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
 				$value->set_value($ar_values);
+
 
 		return $value;
 	}//end get_value

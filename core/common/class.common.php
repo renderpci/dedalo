@@ -1589,7 +1589,8 @@ abstract class common {
 				$time = exec_time_unit($start_time,'ms');
 
 				$debug = new stdClass();
-					$debug->exec_time = $time.' ms';
+					$debug->exec_time	= $time.' ms';
+					$debug->real_model	= RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
 
 				$dd_object->debug = $debug;
 
