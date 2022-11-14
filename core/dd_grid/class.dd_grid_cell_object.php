@@ -141,6 +141,16 @@ class dd_grid_cell_object {
 		'button'
 	];
 
+	// ar_cell_type_allowed. (!) Consider to implement this limitation (not used now)
+		// private static $ar_cell_type_allowed = [
+		// 	'av',
+		// 	'img',
+		// 	'iri',
+		// 	'button',
+		// 	'json',
+		// 	'section_id',
+		// 	'text'
+		// ];
 
 
 	/**

@@ -4,12 +4,12 @@
 
 
 // component configuration vars
-	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
-	$section_tipo 		= $this->section_tipo;
-	$lang 				= $this->lang;
-	$tipo 				= $this->get_tipo();
-	$properties 		= $this->get_properties() ?? new stdClass();
+	$permissions	= $this->get_component_permissions();
+	$modo			= $this->get_modo();
+	$section_tipo	= $this->section_tipo;
+	$lang			= $this->lang;
+	$tipo			= $this->get_tipo();
+	$properties		= $this->get_properties() ?? new stdClass();
 
 
 
@@ -52,16 +52,16 @@
 		);
 		$context[] = $this->context;
 
+
 	if($permissions>0) {
 
 		// get the data into DDBB
-		$dato 		= $this->get_dato();
+			$dato 		= $this->get_dato();
 
-
-		$value		= $this->get_dato_paginated();
-		$section_id	= $this->get_section_id();
-		$limit		= $this->pagination->limit;
-		$offset		= $this->pagination->offset;
+			$value		= $this->get_dato_paginated();
+			$section_id	= $this->get_section_id();
+			$limit		= $this->pagination->limit;
+			$offset		= $this->pagination->offset;
 
 		// data item
 			$item = $this->get_data_item($value);
@@ -70,34 +70,31 @@
 
 		if (!empty($dato)) {
 
-			// fix pagination vars
+			// pagination. Fix pagination vars
 				$pagination = new stdClass();
 					$pagination->total	= count($dato);
 					$pagination->limit	= $limit;
 					$pagination->offset	= $offset;
 				$item->pagination = $pagination;
 
-			$data[] = $item;
+			// data add
+				$data[] = $item;
 
-			// subdata.
-				// $ar_subdata = $this->get_ar_subdata($value);
+			// subdatum
+				$subdatum = $this->get_subdatum($tipo, $value);
 
-			$subdatum = $this->get_subdatum($tipo, $value);
-
-			$ar_subcontext	= $subdatum->context;
-			foreach ($ar_subcontext as $current_context) {
-				$context[] = $current_context;
-			}
-
-			$ar_subdata		= $subdatum->data;
+			// subcontext add
+				$ar_subcontext	= $subdatum->context;
+				foreach ($ar_subcontext as $current_context) {
+					$context[] = $current_context;
+				}
 
 			// subdata add
+				$ar_subdata	= $subdatum->data;
 				if ($modo==='list') {
 					foreach ($ar_subdata as $current_data) {
-
 						$current_data->parent_tipo			= $tipo;
 						$current_data->parent_section_id	= $section_id;
-
 						$data[] = $current_data;
 					}
 				}else{
@@ -107,13 +104,15 @@
 				}
 		}//end if (!empty($dato))
 
-		// get the references calculated by relations with other sections
-		$references = $this->get_calculated_references();
 
-		// references. Add to item if exists
-			if (isset($references)) {
-				$item->references = $references;
-			}
+		// references
+			// get the references calculated by relations with other sections. Return array
+				$references = $this->get_calculated_references();
+				// references. Add to item if exists
+				if (!empty($references)) {
+					$item->references = $references;
+				}
+
 
 		$data[] = $item;
 	}//end if $options->get_data===true && $permissions>0
