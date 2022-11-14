@@ -56,8 +56,7 @@
 
 		// get the data into DDBB
 		$dato 		= $this->get_dato();
-		// get the references calculated by relations with other sections
-		$references = $this->get_calculated_references();
+
 
 		$value		= $this->get_dato_paginated();
 		$section_id	= $this->get_section_id();
@@ -77,11 +76,6 @@
 					$pagination->limit	= $limit;
 					$pagination->offset	= $offset;
 				$item->pagination = $pagination;
-
-			// references. Add to item if exists
-				if (isset($references)) {
-					$item->references = $references;
-				}
 
 			$data[] = $item;
 
@@ -113,12 +107,15 @@
 				}
 		}//end if (!empty($dato))
 
-		// // references. Add to item if exists
-		// 	if (isset($references)) {
-		// 		$item->references = $references;
-		// 	}
+		// get the references calculated by relations with other sections
+		$references = $this->get_calculated_references();
 
-		// $data[] = $item;
+		// references. Add to item if exists
+			if (isset($references)) {
+				$item->references = $references;
+			}
+
+		$data[] = $item;
 	}//end if $options->get_data===true && $permissions>0
 
 

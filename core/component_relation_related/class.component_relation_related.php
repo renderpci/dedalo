@@ -75,7 +75,7 @@ class component_relation_related extends component_relation_common {
 		$request_config = $this->get_request_config_object();
 		$show = $request_config->show;
 
-		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
+		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain specific 'valor' form component
 		if ($ar_related_terms===false) {
 			// $ar_related_terms = $this->RecordObj_dd->get_relaciones();
 			// $ar_componets_related = array();
@@ -186,7 +186,6 @@ class component_relation_related extends component_relation_common {
 
 		$dato 		= $this->get_dato();
 		$references = $this->get_calculated_references(true);
-
 		$dato_with_references = array_merge($dato, $references);
 
 		return $dato_with_references;
@@ -306,6 +305,7 @@ class component_relation_related extends component_relation_common {
 															 DEDALO_DATA_NOLAN,
 															 $locator->section_tipo);
 			$ar_result = $ref_component->get_references();
+
 			foreach ($ar_result as $key => $result_locator) {
 				$pseudo_locator = $result_locator->section_tipo .'_'. $result_locator->section_id . '_'. $lang;
 				if (in_array($pseudo_locator, $ar_resolved)) {
