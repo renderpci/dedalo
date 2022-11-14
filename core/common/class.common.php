@@ -1660,7 +1660,6 @@ abstract class common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$start_time = start_time();
-
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
@@ -1714,7 +1713,7 @@ abstract class common {
 				}
 			}
 
-		// get the full ddo in every request_config, request_config
+		// full_ddo_map. Get the full ddo in every request_config
 			$full_ddo_map = [];
 			foreach ($request_config as $request_config_item) {
 
@@ -1723,10 +1722,9 @@ abstract class common {
 					debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
 					continue;
 				}
-				// merge all ddos of all request_config
+				// merge all ddo of all request_config
 				$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
 			}//end foreach ($request_config_dedalo as $request_config_item)
-
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
@@ -1737,9 +1735,13 @@ abstract class common {
 				// check locator format
 					if (!is_object($current_locator)) {
 						if(SHOW_DEBUG===true) {
-							dump($current_locator, ' current_locator ++ '.to_string());
-							dump($ar_locators, ' ar_locators ++ '.to_string());
-							throw new Exception("Error Processing Request. current_locator is not an object", 1);
+							// dump($current_locator, ' current_locator ++ '.to_string());
+							// dump($ar_locators, ' ar_locators ++ '.to_string());
+							// throw new Exception("Error Processing Request. current_locator is not an object", 1);
+							debug_log(
+								__METHOD__." Error Processing Request. urrent_locator is NOT an expected object. Ignored locator ! ".to_string($current_locator),
+								logger::ERROR
+							);
 						}
 						continue;
 					}
@@ -1776,7 +1778,7 @@ abstract class common {
 						$mode					= $dd_object->mode ?? $this->get_modo();
 						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$label					= $dd_object->label ?? '';
-						// $view					= $dd_object->view ?? null;
+						// $view				= $dd_object->view ?? null;
 
 					// ar_subcontext_calculated
 						// $cid = $current_section_tipo . '_' . $section_id . '_' . $current_tipo;
@@ -1818,19 +1820,20 @@ abstract class common {
 								// get component JSON (include context and data)
 									// $element_json = $section->get_json();
 									$related_element = $section;
-
 								break;
 
 							// component case
 							case (strpos($model, 'component_')===0):
 								// create the component child and inject his configuration (or use the default if the parent don't has specific request_config for it)
 								$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
-								$related_element	= component_common::get_instance($model,
-																					 $current_tipo,
-																					 $section_id,
-																					 $mode,
-																					 $current_lang,
-																					 $current_section_tipo);
+								$related_element	= component_common::get_instance(
+									$model,
+									$current_tipo,
+									$section_id,
+									$mode,
+									$current_lang,
+									$current_section_tipo
+								);
 
 								// virtual request_config, create new request config to be injected to the current_ddo.
 								// the current component has the configuration to all children components,
@@ -1840,6 +1843,7 @@ abstract class common {
 									// get the component rqo to be updated with the current config
 									$component_rqo_config = $related_element->build_request_config();
 									foreach ($request_config as $request_config_item) {
+
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
 										$api_engine			= $request_config_item->api_engine;
 										$children_show		= isset($request_config_item->show)
@@ -1851,6 +1855,7 @@ abstract class common {
 										$children_choose	= isset($request_config_item->choose)
 											? get_children_recursive($request_config_item->choose->ddo_map, $dd_object)
 											: null;
+
 										// select the current api_engine
 										$new_rqo_config = array_find($component_rqo_config, function($el) use($api_engine){
 											return $el->api_engine===$api_engine;
@@ -1868,9 +1873,9 @@ abstract class common {
 											$new_rqo_config->choose->ddo_map  = $children_choose;
 										}
 									}
+
 								// Inject the request_config inside the component
 									$related_element->request_config = $component_rqo_config;
-
 
 								// Inject this tipo as related component from_component_tipo
 									$source_model = get_called_class();
@@ -1879,12 +1884,13 @@ abstract class common {
 										$related_element->from_section_tipo		= $this->section_tipo;
 									}
 
-								// inject data for component_semantic_node
+								// Inject data for component_semantic_node
 									if($model==='component_semantic_node'){
 										$related_element->set_row_locator($current_locator);
 										$related_element->set_parent_section_tipo($this->section_tipo);
 										$related_element->set_parent_section_id($this->section_id);
 									}
+
 								// inject view
 									// if(isset($view)){
 									// 	$related_element->view = $view;
@@ -1968,7 +1974,6 @@ abstract class common {
 				$time_string = $time>100
 					? sprintf("\033[31m%s\033[0m", $time)
 					: $time;
-
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
