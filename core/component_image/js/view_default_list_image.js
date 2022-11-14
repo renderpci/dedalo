@@ -53,8 +53,8 @@ view_default_list_image.render = function(self, options) {
 			class_name		: 'hidden', // loading
 			parent			: wrapper
 		})
-		image.draggable = false
-		image.loading = 'lazy'
+		image.draggable	= false
+		image.loading	= 'lazy'
 		// image.setAttribute('crossOrigin', 'Anonymous');
 		if(self.caller && self.caller.caller && self.caller.caller.mode==='edit') {
 			ui.component.add_image_fallback(image, load_error)
@@ -83,14 +83,14 @@ view_default_list_image.render = function(self, options) {
 			const file_does_not_exist = data.datalist.find(item => item.file_exist === false)
 			if(file_does_not_exist){
 
-				// get the upload tool to be fired
-					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
+				// // get the upload tool to be fired
+				// 	const tool_upload = self.tools.find(el => el.model === 'tool_upload')
 
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
+				// // open_tool (tool_common)
+				// 	open_tool({
+				// 		tool_context	: tool_upload,
+				// 		caller			: self
+				// 	})
 			}else{
 
 				// open a new window
