@@ -6,7 +6,9 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_content_data_player} from './view_player_edit_av.js'
+	import {
+		get_content_data_player
+	} from './view_player_edit_av.js'
 
 
 

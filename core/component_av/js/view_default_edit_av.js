@@ -96,41 +96,30 @@ const get_content_value = (i, current_value, self) => {
 			class_name 		: 'content_value'
 		})
 
-	// urls
-		// posterframe url
-			const posterframe_url = self.data.posterframe_url
+	// posterframe
+		const posterframe_url	= self.data.posterframe_url
+		const posterframe		= ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'posterframe',
+			src				: posterframe_url,
+			parent			: content_value
+		})
+		// image background color
+		posterframe.addEventListener('load', set_bg_color, false)
+		function set_bg_color() {
+			this.removeEventListener('load', set_bg_color, false)
+			ui.set_background_image(this, content_value)
+			posterframe.remove()
+		}
+
+	// video
 		// media url from data.datalist based on selected context quality
-			const quality	= self.quality || self.context.quality
-			const datalist	= self.data.datalist
-			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
-			const video_url	= file_info
-				? file_info.url
-				: null
-
-		// background content_value. Load the posterframe image only to get the bg color, not for show it
-			// if (posterframe_url) {
-			// 	const image = ui.create_dom_element({
-			// 		element_type: 'img'
-			// 	})
-			// 	// image background color
-			// 	image.addEventListener('load', set_bg_color, false)
-			// 	function set_bg_color() {
-			// 		this.removeEventListener('load', set_bg_color, false)
-			// 		ui.set_background_image(this, content_value)
-			// 		image.remove()
-			// 	}
-			// 	image.src = posterframe_url
-			// }
-
-		// posterframe image
-			const posterframe = ui.create_dom_element({
-				element_type	: 'img',
-				class_name		: 'posterframe',
-				src				: posterframe_url,
-				parent			: content_value
-			})
-
-	// video / posterframe cases
+		const quality	= self.quality || self.context.quality
+		const datalist	= self.data.datalist
+		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+		const video_url	= file_info
+			? file_info.url
+			: null
 		if (video_url) {
 
 			const video = build_video_node(
