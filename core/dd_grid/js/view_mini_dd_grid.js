@@ -14,7 +14,8 @@
 		// get_label_column,
 		// get_button_column,
 		get_json_column,
-		get_section_id_column
+		get_section_id_column,
+		get_iri_column
 	} from './render_list_dd_grid.js'
 
 
@@ -111,6 +112,12 @@ const get_grid_nodes = function(data) {
 					case 'section_id':
 						nodes.push(
 							get_section_id_column(data_item)
+						)
+						break;
+
+					case 'iri':
+						nodes.push(
+							get_iri_column(data_item)
 						)
 						break;
 
