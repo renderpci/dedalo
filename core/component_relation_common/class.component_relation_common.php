@@ -1554,13 +1554,16 @@ class component_relation_common extends component_common {
 			if ($changed===true) {
 				$dato = array_values($dato);
 				foreach ($new_dato as $current_section) {
-					$component_to_update = component_common::get_instance(get_called_class(),
-																		$this->tipo,
-																		$current_section->section_id,
-																		'list',
-																		DEDALO_DATA_NOLAN,
-																		$current_section->section_tipo,
-																		false);
+
+					$component_to_update = component_common::get_instance(
+						get_called_class(),
+						$this->tipo,
+						$current_section->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$current_section->section_tipo,
+						false
+					);
 
 					// set the dato in all instances, included the same instance that current.
 					$component_to_update->set_dato($dato);

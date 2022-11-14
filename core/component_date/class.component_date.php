@@ -266,6 +266,7 @@ class component_date extends component_common {
 				$value->set_records_separator($records_separator);
 				$value->set_value($ar_values);
 
+
 		return $value;
 	}//end get_value
 

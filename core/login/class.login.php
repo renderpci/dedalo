@@ -102,7 +102,7 @@ class login extends common {
 			if( !is_array($ar_result) || empty($ar_result[0]) ) {
 
 				#
-				# STOP: USERNAME NOT EXISTS
+				# STOP: USERNAME DO NOT EXISTS
 				#
 				$activity_datos['result']	= 'deny';
 				$activity_datos['cause']	= 'User does not exist';
