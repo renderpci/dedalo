@@ -11,6 +11,9 @@
 	import {view_table_dd_grid} from './view_table_dd_grid.js'
 	import {view_default_dd_grid} from './view_default_dd_grid.js'
 	import {view_mini_dd_grid} from './view_mini_dd_grid.js'
+	import {
+		render_links_list
+	} from '../../component_iri/js/render_list_component_iri.js'
 
 
 
@@ -238,3 +241,31 @@ export const get_section_id_column = function(current_data) {
 
 	return section_id_node
 }//end get_section_id_column
+
+
+
+/**
+* GET_IRI_COLUMN
+* @param object current_data
+* @return DOM node text_node (span)
+*/
+export const get_iri_column = function(current_data) {
+
+	const class_list = current_data.class_list || ''
+
+	// value
+		const value = current_data.value || []
+
+	// DOM fragment
+		const fragment = render_links_list(value)
+
+	// column
+		const column = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: class_list
+		})
+		column.appendChild(fragment)
+
+
+	return column
+}//end get_iri_column

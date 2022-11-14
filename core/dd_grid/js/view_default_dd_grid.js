@@ -14,7 +14,8 @@
 		get_label_column,
 		get_button_column,
 		get_json_column,
-		get_section_id_column
+		get_section_id_column,
+		get_iri_column
 	} from './render_list_dd_grid.js'
 
 
@@ -93,6 +94,11 @@ const get_grid_nodes = function(data) {
 							node.appendChild(img_node)
 							break;
 
+						case 'iri':
+							const current_node = get_iri_column(current_data)
+							node.appendChild(current_node)
+							break;
+
 						case 'button':
 							const button_node = get_button_column(current_data)
 							node.appendChild(button_node)
@@ -107,7 +113,6 @@ const get_grid_nodes = function(data) {
 							const section_id_node = get_section_id_column(current_data)
 							node.appendChild(section_id_node)
 							break;
-
 
 						case 'text':
 						default:
