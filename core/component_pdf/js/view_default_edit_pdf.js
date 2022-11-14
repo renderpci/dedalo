@@ -22,8 +22,8 @@ export const view_default_edit_pdf = function() {
 
 
 /**
-* EDIT
-* Render node for use in edit
+* RENDER
+* Render node for use in current view
 * @return DOM node
 */
 view_default_edit_pdf.render = async function(self, options) {
@@ -65,7 +65,7 @@ view_default_edit_pdf.render = async function(self, options) {
 * GET_CONTENT_DATA_EDIT
 * @return DOM node content_data
 */
-const get_content_data_edit = function(self) {
+export const get_content_data_edit = function(self) {
 
 	// short vars
 		const data	= self.data || {}
