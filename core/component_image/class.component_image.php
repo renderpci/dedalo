@@ -486,7 +486,7 @@ class component_image extends component_media_common {
 	* @param bool $absolute = false
 	* @param bool $default_add = true
 	*
-	* @return string|null $image_url
+	* @return string|null $url
 	*	Return relative o absolute url
 	*/
 	public function get_image_url(?string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
@@ -511,7 +511,7 @@ class component_image extends component_media_common {
 			$ImageObj->set_quality($quality);
 
 		// url
-			$image_url = $ImageObj->get_media_path() .'/'. $image_id .'.'. $this->get_extension();
+			$url = $ImageObj->get_media_path() .'/'. $image_id .'.'. $this->get_extension();
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
@@ -520,16 +520,16 @@ class component_image extends component_media_common {
 					if ($default_add===false) {
 						return null;
 					}
-					$image_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
+					$url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 				}
 			}
 
 		// Absolute (Default false)
 			if ($absolute===true) {
-				$image_url = DEDALO_PROTOCOL . DEDALO_HOST . $image_url;
+				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
 			}
 
-		return $image_url;
+		return $url;
 	}//end get_image_url
 
 
