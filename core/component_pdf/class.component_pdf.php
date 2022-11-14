@@ -298,26 +298,32 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_PDF_URL
-	* Get pdf url for current quality
-	* @param string | bool $quality
-	*	optional default (bool)false
-	* @param bool $test_file
-	*	Check if file exists. If not use 0.jpg as output. Default true
-	* @param bool $absolute
-	*	Return relative o absolute url. Default false (relative)
-	* @return
+	* Get PDF url for current quality
+	*
+	* @param string|bool $quality = null
+	* @param bool $test_file = true
+	*	Check if file exists. If not use 0.jpg as output
+	* @param bool $absolute = false
+	* @param bool $default_add = true
+	*
+	* @return string|null $url
+	*	Return relative o absolute url
 	*/
-	public function get_pdf_url($quality=false, $test_file=true, $absolute=false, $default_add=false) {
+	public function get_pdf_url(?string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
 
 		// quality fallback to default
-			if(!$quality) $quality = $this->get_quality();
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
 
 		// pdf id
 			$pdf_id = $this->get_pdf_id();
 
 		// Check PdfObj
 			if (!isset($this->PdfObj)) {
-				throw new Exception("Error Processing Request (get_pdf_url)", 1);
+				// throw new Exception("Error Processing Request (get_pdf_url)", 1);
+				debug_log(__METHOD__." Error. this->ImageObj is not set ".to_string(), logger::ERROR);
+				return null;
 			}
 
 		// PdfObj
@@ -332,7 +338,7 @@ class component_pdf extends component_media_common {
 				$file = $PdfObj->get_local_full_path();
 				if(!file_exists($file)) {
 					if ($default_add===false) {
-						return false;
+						return null;
 					}
 					$url = DEDALO_CORE_URL . '/themes/default/0.pdf';
 				}

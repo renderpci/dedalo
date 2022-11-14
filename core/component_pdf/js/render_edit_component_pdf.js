@@ -6,6 +6,8 @@
 // imports
 	import {view_default_edit_pdf} from './view_default_edit_pdf.js'
 	import {view_mini_pdf} from './view_mini_pdf.js'
+	import {view_viewer_pdf} from './view_viewer_pdf.js'
+
 
 
 /**
@@ -36,6 +38,9 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 
 		case 'mini':
 			return view_mini_pdf.render(self, options)
+
+		case 'viewer':
+			return view_viewer_pdf.render(self, options)
 
 		case 'default':
 		default:
