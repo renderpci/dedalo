@@ -9,6 +9,8 @@
 
 class section extends common {
 
+
+
 	/**
 	* CLASS VARS
 	*/
@@ -291,7 +293,7 @@ class section extends common {
 
 	/**
 	* GET_COMPONENT_DATO
-	* Extrae del contenedor de la sección, el dato específico de cada componente en el idioma requerido
+	* Extract from the container of the section, the specific data of each component in the required language
 	* will be deprecated with the get_all_component_data (08-2017)
 	*/
 	public function get_component_dato(string $component_tipo, string $lang, bool $lang_fallback=false) {
@@ -348,9 +350,8 @@ class section extends common {
 
 	/**
 	* SAVE_COMPONENT_DATO
-	* Salva el dato del componente recibido en el contenedor JSON de la sección
-	* Reconstruye el objeto global de la sección (de momento no se puede salvar sólo una parte del objeto json en postgresql)
-	* procesa los datos indirectos del componente (valor y valor_list) y guarda el nuevo objeto global reemplazando el anterior
+	* Save the component data received in the JSON container of the section
+	* Rebuild the global object of the section (at the moment it is not possible to save only part of the JSON object in PostgreSQL)
 	* @param object $component_obj
 	* @param string $component_data_type
 	* @param bool $save_to_database
@@ -358,19 +359,19 @@ class section extends common {
 	*/
 	public function save_component_dato(object $component_obj, string $component_data_type, bool $save_to_database) {
 
-		// La sección es necesaria antes de gestionar el dato del componente. Si no existe, la crearemos previamente
+		// The section is necessary before managing the component data. If it does not exist, we will create it previously
 			if (abs(intval($this->get_section_id()))<1  && strpos((string)$this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
 				$section_id = $this->Save();
-				trigger_error("Se ha creado una sección ($section_id) disparada por el salvado del componente ".$component_obj->get_tipo());
+				trigger_error("A section has been created ($section_id) triggered by component save ".$component_obj->get_tipo());
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Warning : Trying save component in section without section_id. Created section and saved", 1);
+					// throw new Exception("Warning : Trying save component in section without section_id. Created section and saved", 1);
+					debug_log(__METHOD__." Warning : Trying save component in section without section_id. Created section and saved ".to_string(), logger::ERROR);
 				}
 			}
 
 		// des
 			// $this->get_dato();
 			// dump($this, ' this ++ '.to_string()); return;
-
 			// SECTION GLOBAL DATO : Dato objeto global de la sección
 			// #$dato = $this->get_dato();
 			// #	if (!is_object($dato)) {
@@ -381,13 +382,12 @@ class section extends common {
 		// current section conflicts (and for speed)
 			$component_obj->set_section_obj($this);
 
-		// component_global_dato : Extrae la parte del componente desde el objeto global de la sección
+		// component_global_dato : Extract the component portion from the section's global object
 			$component_tipo				= $component_obj->get_tipo();
 			$component_lang				= $component_obj->get_lang();
-			##$component_valor_lang		= $component_obj->get_valor_lang();
-			##$component_modelo_name	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			##$component_traducible		= $component_obj->get_traducible();
-
+			// $component_valor_lang	= $component_obj->get_valor_lang();
+			// $component_modelo_name	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			// $component_traducible	= $component_obj->get_traducible();
 			if (empty($component_tipo)) {
 				throw new Exception("Error Processing Request: component_tipo is empty", 1);
 			}
@@ -419,7 +419,7 @@ class section extends common {
 		// diffusion_info
 			$this->dato->diffusion_info = null;	// Always reset section diffusion_info on save components
 
-		// optional stop the save process to delay ddbb access
+		// optional stop the save process to delay DDBB access
 			if($save_to_database===false) {
 				# Stop here (remember make a real section save later!)
 				# No component time machine data will be saved when section saves later
@@ -442,7 +442,7 @@ class section extends common {
 			// #
 			// # DIFFUSION_INFO
 			// # Note that this process can be very long if there are many inverse locators in this section
-			// # To optimize save process in scripts of importation, you can dissable this option if is not really necessary
+			// # To optimize save process in scripts of importation, you can disable this option if is not really necessary
 			// #
 			// #$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
 			// #register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
@@ -503,7 +503,7 @@ class section extends common {
 
 				$component_global_dato = new stdClass();
 
-					// INFO : Creamos la info del componente actual
+					// INFO : We create the info of the current component
 						// $component_global_dato->info 		= new stdClass();
 						// 	$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
 						// 	$component_global_dato->info->modelo= $component_modelo_name;
@@ -544,12 +544,12 @@ class section extends common {
 			// }
 
 		#
-		# DATO : Actualizamos el dato en el idioma actual
+		# DATO : We update the data in the current language
 			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 				$component_global_dato->dato->{$component_lang} = $component_dato;
 
 		#
-		# VALOR : Actualizamos el valor en el idioma actual
+		# VALOR : We update the data in the current language
 			// switch ($component_modelo_name) {
 			// 	case 'component_security_access':
 			// 	case 'component_filter_records':
@@ -597,7 +597,7 @@ class section extends common {
 
 
 		#
-		# REPLACE COMPONENT PORTION OF GLOBAL OBJECT :  Actualizamos todo el componente en el objeto global
+		# REPLACE COMPONENT PORTION OF GLOBAL OBJECT :  We update the entire component in the global object
 			if (!isset($dato->components->{$component_tipo})) {
 				if (!isset($dato->components)) {
 					$dato->components = new stdClass();
@@ -674,12 +674,12 @@ class section extends common {
 
 	/**
 	* BUILD_AR_SECTION_CREATOR
-	* Construye el array con los datos de creación de la sección
-	* Se utilizará para filtrar las secciones virtuales en recuperación, que quedarán 'vinculadas' al portal desde donde se crearon
-	* Principalmente, se plantea para gestionar eficientemente los recursos compartidos (imágenes, documentos, etc.) y poder filtrarlos por 'creador'
-	* al acceder a los listados desde los mismos.
-	* Ej. Las fotos de informantes creadas desde el portal de informantes, debería acceder (botón '+ Existente') a los listados de las imágenes creadas
-	* desde ese portal para no mezclarlas con las imágenes de investigadores u otras secciones que acceden a la misma tipología de imagen
+	* Builds the array with the section creation data
+	* It will be used to filter the virtual sections in recovery, which will be 'linked' to the portal from where they were created
+	* Mainly, it is proposed to efficiently manage shared resources (images, documents, etc.) and to be able to filter them by 'creator'
+	* when accessing the listings from them.
+	* For example, the photos of informants created from the portal of informants, should access ('+ Existing' button) to the lists of the images created
+	* from that portal so as not to mix them with the images of researchers or other sections that access the same type of image
 	*
 	* @var top_tipo
 	*		Tipo de la sección principal en la que estamos trabajando 'top'. Se guarda por html_page en TOP_TIPO
@@ -2958,7 +2958,7 @@ class section extends common {
 
 	/**
 	* GET_RELATIONS
-	* Ver de fijar la variable en la sección al construir el objeto ......
+	* Consider the variable in the section when constructing the object ......
 	*
 	* @param string $relations_container = 'relations'
 	* @return array $relations
@@ -2969,7 +2969,7 @@ class section extends common {
 		$relations = [];
 
 		if (empty($this->section_id)) {
-			# Section not exists yet. Return empty array
+			// Section not exists yet. Return empty array
 			return $relations;
 		}
 
@@ -3662,15 +3662,19 @@ class section extends common {
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
 	* @param string $from_parent = null
 	* @param array $ar_db_record = []
+	* 	Array of natrix_time_machine table found records
 	* @return object $subdatum
-	* 	Object with two properties: context, data
+	* 	Object with two properties: array context, array data
+	*	{
+	*		context	: [],
+	* 		data	: []
+	* 	}
 	*/
 	public function get_tm_subdatum(string $from_parent=null, array $ar_db_record=[]) : object {
 
 		// debug
 			// if(SHOW_DEBUG===true) {
 			// 	$start_time = start_time();
-
 			// 	$len = !empty($this->tipo)
 			// 		? strlen($this->tipo)
 			// 		: 0;
@@ -3695,7 +3699,7 @@ class section extends common {
 				];
 			}
 
-		// get the full ddo in every request_config, request_config
+		// ddo_map. Get the full ddo in every request_config
 			$full_ddo_map = [];
 			foreach ($request_config as $request_config_item) {
 
@@ -3707,7 +3711,6 @@ class section extends common {
 				// merge all ddos of all request_config
 				$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
 			}//end foreach ($request_config_dedalo as $request_config_item)
-
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
@@ -3715,12 +3718,16 @@ class section extends common {
 		// get the context and data for every locator
 			foreach($ar_db_record as $db_record) {
 
-				// check locator format
+				// check record format
 					if (!is_object($db_record)) {
 						if(SHOW_DEBUG===true) {
-							dump($db_record, ' db_record ++ '.to_string());
-							dump($ar_db_record, ' ar_db_record ++ '.to_string());
-							throw new Exception("Error Processing Request. db_record is not an object", 1);
+							// dump($db_record, ' db_record ++ '.to_string());
+							// dump($ar_db_record, ' ar_db_record ++ '.to_string());
+							// throw new Exception("Error Processing Request. db_record is not an object", 1);
+							debug_log(
+								__METHOD__." Error Processing Request. db_record is NOT an expected object. Ignored record ! ".to_string($db_record),
+								logger::ERROR
+							);
 						}
 						continue;
 					}
@@ -3739,7 +3746,7 @@ class section extends common {
 				// empty tipo case catch
 					if (empty($tipo)) {
 						debug_log(__METHOD__." Empty tipo was received ! . db_record: ".PHP_EOL.to_string($db_record), logger::ERROR);
-						return $data;
+						continue;
 					}
 
 				// short vars
@@ -4031,7 +4038,6 @@ class section extends common {
 			// 	$time_string = $time>100
 			// 		? sprintf("\033[31m%s\033[0m", $time)
 			// 		: $time;
-
 			// 	$len = !empty($this->tipo)
 			// 		? strlen($this->tipo)
 			// 		: 0;
