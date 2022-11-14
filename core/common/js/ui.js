@@ -1517,7 +1517,7 @@ export const ui = {
 			const parent			= options.parent
 			const class_name		= options.class_name
 			const style				= options.style
-			const data_set			= (typeof options.dataset!=="undefined") ? options.dataset : options.data_set
+			const data_set			= (typeof options.dataset!=='undefined') ? options.dataset : options.data_set
 			const title_label		= options.title_label || options.title
 			const text_node			= options.text_node
 			const text_content		= options.text_content

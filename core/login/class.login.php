@@ -102,7 +102,7 @@ class login extends common {
 			if( !is_array($ar_result) || empty($ar_result[0]) ) {
 
 				#
-				# STOP: USERNAME NOT EXISTS
+				# STOP: USERNAME DO NOT EXISTS
 				#
 				$activity_datos['result']	= 'deny';
 				$activity_datos['cause']	= 'User does not exist';
@@ -161,7 +161,9 @@ class login extends common {
 				DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO
 			);
 			$ar_password_dato	= $component_password->get_dato();
-			$password_dato		= $ar_password_dato[0];
+			$password_dato		= is_array($ar_password_dato)
+				? $ar_password_dato[0]
+				: $ar_password_dato; // pre-v6 dato cases
 
 			// password match check
 				if( $password_encrypted!==$password_dato ) {

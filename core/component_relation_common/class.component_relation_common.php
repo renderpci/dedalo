@@ -237,18 +237,18 @@ class component_relation_common extends component_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
 		// ddo customs: set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
 			$records_separator	= $ddo->records_separator ?? null;
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
-
-		// value object (dd_grid_cell_object)
-			$value = new dd_grid_cell_object();
 
 		$data = $this->get_dato();
 
@@ -298,8 +298,7 @@ class component_relation_common extends component_common {
 				}
 			}
 
-
-		// // get last column
+		// get last column
 			// 	if (!function_exists('get_last_column_resursive')) {
 			// 		function get_last_column_resursive($ar_column) {
 			// 			$ar_last_children = [];
@@ -324,7 +323,7 @@ class component_relation_common extends component_common {
 
 		if(empty($data)){
 			$pseudo_locator = new stdClass();
-				$pseudo_locator->type			= 'dd151';
+				$pseudo_locator->type			= DEDALO_RELATION_TYPE_LINK; // 'dd151';
 				$pseudo_locator->section_tipo	= null;
 				$pseudo_locator->section_id		= null;
 			$data[] = $pseudo_locator;
@@ -333,7 +332,7 @@ class component_relation_common extends component_common {
 			$locator_column_obj	= [];
 			$ar_columns = [];
 			foreach ($ddo_direct_children as $ddo) {
-				// the the ddo has a multiple section_tipo (such as toponomy component_autocomplete), reset the section_tipo
+				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
 				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo ;
 				$section_tipo			= $locator->section_tipo;
@@ -473,17 +472,20 @@ class component_relation_common extends component_common {
 				? $properties->records_separator
 				: ' | ');
 
-		$value->set_type('column');
-		$value->set_row_count($row_count);
-		$value->set_column_count($column_count);
-		$value->set_label($label);
-		$value->set_ar_columns_obj($ar_columns_obj);
-		if(isset($class_list)){
-			$value->set_class_list($class_list);
-		}
-		$value->set_fields_separator($fields_separator);
-		$value->set_records_separator($records_separator);
-		$value->set_value($ar_cells);
+		// value object (dd_grid_cell_object)
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_row_count($row_count);
+				$value->set_column_count($column_count);
+				$value->set_label($label);
+				$value->set_ar_columns_obj($ar_columns_obj);
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_fields_separator($fields_separator);
+				$value->set_records_separator($records_separator);
+				$value->set_value($ar_cells);
+
 
 		return $value;
 	}//end get_value
@@ -1364,10 +1366,10 @@ class component_relation_common extends component_common {
 	* the result will be the result of the search to the external section and component
 	* and the combination with the dato of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
 	* @see used by component_autocomplete and component_portal
-	* @return dato
+	* @return bool
 	*/
-	public function set_dato_external(bool $save=false, bool $changed=false, $current_dato=false, int $references_limit=10) {
-		$start_time=start_time();
+	public function set_dato_external(bool $save=false, bool $changed=false, $current_dato=false, int $references_limit=10) : bool {
+		// $start_time=start_time();
 
 		// dato set
 			$dato = ($current_dato!==false)
@@ -1390,12 +1392,14 @@ class component_relation_common extends component_common {
 				// overwrite source locator
 					$component_to_search_tipo	= reset($ar_component_to_search);
 					$modelo_name				= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
-					$component_to_search		= component_common::get_instance($modelo_name,
-																				 $component_to_search_tipo,
-																				 $section_id,
-																				 'list',
-																				 DEDALO_DATA_NOLAN,
-																				 $section_tipo);
+					$component_to_search		= component_common::get_instance(
+						$modelo_name,
+						$component_to_search_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 					$component_to_search_dato = $component_to_search->get_dato();
 					foreach ($component_to_search_dato as $current_locator) {
 						$locator = new locator();
@@ -1410,12 +1414,14 @@ class component_relation_common extends component_common {
 
 						$data_from_field_tipo	= $properties->source->source_overwrite->data_from_field;
 						$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
-						$component_overwrite	= component_common::get_instance($modelo_name,
-																				 $data_from_field_tipo,
-																				 $locator->section_id,
-																				 'list',
-																				 DEDALO_DATA_NOLAN,
-																				 $locator->section_tipo);
+						$component_overwrite	= component_common::get_instance(
+							$modelo_name,
+							$data_from_field_tipo,
+							$locator->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$locator->section_tipo
+						);
 						$overwrite_dato = $component_overwrite->get_dato();
 
 						$this->set_dato($overwrite_dato);
@@ -1428,6 +1434,7 @@ class component_relation_common extends component_common {
 			}else{
 
 				// default normal case
+
 				// locator . get the locator of the current section for search in the component that call this section
 					$locator = new locator();
 						$locator->set_section_id($section_id);
@@ -1441,18 +1448,20 @@ class component_relation_common extends component_common {
 			$new_dato = [];
 
 		// data_from_field. get if the search need add fields data:
-			if(isset($properties->source->data_from_field)){
+			if( isset($properties->source->data_from_field) ) {
 				$data_from_field  = $properties->source->data_from_field;
 
 				foreach ($data_from_field as $current_component_tipo) {
 					$modelo_name				= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-					$component_data_for_search	= component_common::get_instance($modelo_name,
-																				 $current_component_tipo,
-																				 $locator->section_id,
-																				 'list',
-																				 DEDALO_DATA_NOLAN,
-																				 $locator->section_tipo,
-																				 false);
+					$component_data_for_search	= component_common::get_instance(
+						$modelo_name,
+						$current_component_tipo,
+						$locator->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$locator->section_tipo,
+						false
+					);
 					$component_dato = $component_data_for_search->get_dato_with_references();
 
 					foreach ($component_dato as $current_locator) {
@@ -1512,8 +1521,12 @@ class component_relation_common extends component_common {
 			$total_ar_result	= sizeof($ar_result);
 			$total_ar_dato		= sizeof($dato);
 
-			if ($total_ar_result>2000) {
-				# Not maintain order, is too expensive above 1000 locators
+			if ($total_ar_result===0 && $total_ar_dato===0) {
+				// empty values
+				$changed = false;
+
+			}else if ($total_ar_result>2000) {
+				// Not maintain order, is too expensive above 1000 locators
 				if ($total_ar_dato!==$total_ar_result) {
 					$changed = false; // avoid expensive save
 					$this->set_dato($ar_result);
@@ -1535,13 +1548,14 @@ class component_relation_common extends component_common {
 						if (empty($res)) {
 							unset($dato[$key]);
 							$changed = true;
+							break;
 						}
 					}
 
 				// dato update on change
 					if ($total_ar_dato!==$total_ar_result) {
 						foreach ($ar_result as $current_locator) {
-							if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false ){
+							if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=['section_id','section_tipo'])===false ){
 								array_push($dato, $current_locator);
 								$changed = true;
 							}
@@ -1554,13 +1568,16 @@ class component_relation_common extends component_common {
 			if ($changed===true) {
 				$dato = array_values($dato);
 				foreach ($new_dato as $current_section) {
-					$component_to_update = component_common::get_instance(get_called_class(),
-																		$this->tipo,
-																		$current_section->section_id,
-																		'list',
-																		DEDALO_DATA_NOLAN,
-																		$current_section->section_tipo,
-																		false);
+
+					$component_to_update = component_common::get_instance(
+						get_called_class(),
+						$this->tipo,
+						$current_section->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$current_section->section_tipo,
+						false
+					);
 
 					// set the dato in all instances, included the same instance that current.
 					$component_to_update->set_dato($dato);
