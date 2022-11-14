@@ -154,11 +154,13 @@ const get_content_data = async function(self) {
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'success button_apply',
-			inner_html		: 'OK',
+			inner_html		: get_label.actualizar || 'Update',
 			parent			: buttons_container
 		})
-		button_apply.addEventListener("click", function(e){
+		button_apply.addEventListener('click', function(e){
+			e.stopPropagation()
 			e.preventDefault()
+
 			// selection
 				const checked_list			= options_nodes.filter(el => el.checked===true)
 				const checked_list_length	= checked_list.length
@@ -185,5 +187,3 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
-
-

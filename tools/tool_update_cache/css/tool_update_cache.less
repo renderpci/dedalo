@@ -7,6 +7,8 @@
 // imports
 @import '../../../core/page/css/layout/vars.less';
 
+@tool_color: #62866a;
+
 
 
 // tool wrapper
@@ -37,7 +39,7 @@
 				column-gap: 1rem;
 				padding: 1rem;
 				width: 100%;
-				border: none;
+				border: 0px;
 
 				@media screen and (max-width: @width_break_point_1) {
 					display: block;
@@ -51,7 +53,6 @@
 
 					span {
 						color: #989898;
-						padding-left: 0.5rem;
 						font-weight: 200;
 						font-size: 0.8rem;
 						display: block;
@@ -69,7 +70,9 @@
 				padding: 1rem;
 
 				.button_apply {
-
+					background-color: @tool_color;
+					padding-left: 1.5rem;
+					padding-right: 1.5rem;
 				}
 			}
 		}//end content_data
@@ -79,5 +82,5 @@
 
 // modal header tool modification
 	.tool_header.tool_update_cache {
-		background-color: #62866a;
+		background-color: @tool_color;
 	}
