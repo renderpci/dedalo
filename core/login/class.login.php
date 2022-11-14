@@ -161,7 +161,9 @@ class login extends common {
 				DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO
 			);
 			$ar_password_dato	= $component_password->get_dato();
-			$password_dato		= $ar_password_dato[0];
+			$password_dato		= is_array($ar_password_dato)
+				? $ar_password_dato[0]
+				: $ar_password_dato; // pre-v6 dato cases
 
 			// password match check
 				if( $password_encrypted!==$password_dato ) {
