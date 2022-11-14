@@ -58,6 +58,3 @@ view_line_edit_iri.render = async function(self, options) {
 
 	return wrapper
 }//end render
-
-
-

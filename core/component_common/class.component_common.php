@@ -1091,7 +1091,7 @@ abstract class component_common extends common {
 			return $item->component_tipo === $observable_tipo;
 		});
 
-		if(isset($current_observer->filter) && $current_observer->filter !== false){
+		if(isset($current_observer->filter) && $current_observer->filter!==false) {
 			// get the from_component_tipo of the filter to set at observable locator
 			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
 			$elements	= reset($current_observer->filter);
@@ -1128,7 +1128,7 @@ abstract class component_common extends common {
 
 		// get the dato of the observable component to be used to create the observer component
 		// in case of any relation component will be used to find "the component that I call" or "use my relations"
-		if(isset($current_observer->mode) && $current_observer->mode=== 'use_observable_dato'){
+		if(isset($current_observer->mode) && $current_observer->mode==='use_observable_dato') {
 			$ar_section = array_merge($ar_section, $observable_dato);
 		}
 
