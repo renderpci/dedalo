@@ -4,7 +4,7 @@
 
 	$tool_name 			= get_class($this);
 	$modo 				= $this->modo;
-	$file_name			= $modo;	
+	$file_name			= $modo;
 	$tool_label 		= label::get_label($tool_name);
 
 	#$section_tipo 	= $this->section_tipo;
@@ -96,14 +96,14 @@
 				$target_dato = $target_component_obj->get_dato();
 				$sub_target_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($this->sub_target_component_tipo,true);
 				$ar_used_section_id_box = [];
-				foreach ($target_dato as $current_locator) {					
-					
+				foreach ($target_dato as $current_locator) {
+
 					$sub_target_component = component_common::get_instance( $sub_target_modelo_name,
 																			$this->sub_target_component_tipo,
 																			$current_locator->section_id,
 																			'list',
 																			DEDALO_DATA_LANG,
-																			$current_locator->section_tipo ); 
+																			$current_locator->section_tipo );
 					$sub_target_dato = $sub_target_component->get_dato();
 						#dump($sub_target_dato, ' sub_target_dato ++ '.to_string());
 					foreach ($sub_target_dato as $current_dato) {
@@ -120,7 +120,7 @@
 					$datum->data 		 = $this->get_data();
 						#dump($datum, ' datum ++ '.to_string());
 
-			
+
 
 			// options init
 				$options = new stdClass();
@@ -131,14 +131,14 @@
 					$options->sub_target_component_tipo	= $this->sub_target_component_tipo;
 					$options->ar_used_section_id 		= $ar_used_section_id;
 					$options->custom_order 				= $this->tool_properties->source_order;
-		
+
 				$options_json = json_encode($options);
-			
+
 
 			break;
 	}//end switch
 
-	
+
 
 
 	# INCLUDE FILE HTML

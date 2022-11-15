@@ -323,7 +323,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 						logger::WARNING
 					);
 				}
-			}
+			}//end if (!empty($previous_component_dato))
 
 		// configure $RecordObj_time_machine object
 			// section_id

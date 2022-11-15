@@ -1361,8 +1361,10 @@ abstract class common {
 				#	$element->debug = new stdClass();
 				#	$element->debug->exec_time = $exec_time;
 				#$json = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-				$json->debug = new stdClass();
-					$json->debug->exec_time = $exec_time;
+				if (!empty($json)) {
+					$json->debug = new stdClass();
+						$json->debug->exec_time = $exec_time;
+				}
 			}
 			#dump($json, ' json ++ '.to_string());
 
