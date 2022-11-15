@@ -372,6 +372,7 @@ export const build_form = function(widget_object) {
 		const print_response	= widget_object.print_response
 		const confirm_text		= widget_object.confirm_text
 		const inputs			= widget_object.inputs || []
+		const submit_label		= widget_object.submit_label || 'OK'
 
 	// create the form
 		const form_container = ui.create_dom_element({
@@ -485,7 +486,7 @@ export const build_form = function(widget_object) {
 		const button_submit = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light',
-			text_content	: 'OK',
+			text_content	: submit_label,
 			parent			: form_container
 		})
 		button_submit.addEventListener('click', function(){

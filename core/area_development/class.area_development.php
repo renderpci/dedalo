@@ -509,23 +509,19 @@ class area_development extends area_common {
 				$item->label	= 'TEST';
 				$item->info		= null;
 				$item->body		= '<button class="light" onclick="window.open(\'../unit_test\')">Open alpha unit test</button>';
-				// $item->body		.= '<hr><a href="../unit_test/test.php" target="_blank">Open clean_component_dato script</a>';
-				// $item->body		.= '<hr><a href="javascript:open_tool_import_dedalo_csv()">Tool import Dedalo CSV</a>';
-				// $item->script	= '
-				// 	function open_tool_import_dedalo_csv(){
-				// 		const tool_context = {
-				// 			label	: "Tool import Dedalo CSV",
-				// 			mode	: "edit",
-				// 			model	: "tool_import_dedalo_csv",
-				// 			name	: "tool_import_dedalo_csv"
-				// 		}
-				// 		event_manager.publish("load_tool", {
-				// 			tool_context	: tool_context,
-				// 			caller			: {}
-				// 		})
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'submit_label' => 'Create new empty test record',
+						'confirm_text' => label::get_label('seguro')
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'create_test_record',
+					'options'	=> null
+				];
 
-				// 	}
-				// ';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 

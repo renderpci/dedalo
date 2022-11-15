@@ -1148,6 +1148,56 @@ final class dd_utils_api {
 
 
 
+	/**
+	* CREATE_TEST_RECORD
+	* This record it's necessary to run unit_test checks
+	* Table 'matrix_test' must to exists
+	* @return object $response
+	*/
+	public static function create_test_record(object $request_options=null) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// short vars
+			$db_conn		= DBi::_getConnection();
+			$section_tipo	= 'test3';
+			$table			= 'matrix_test';
+
+		$dato = trim('
+			{
+			  "relations": [],
+			  "components": {},
+			  "modified_date": "2022-10-07 11:16:43",
+			  "diffusion_info": null,
+			  "modified_by_userID": 1
+			}
+		');
+		$sql = '
+			TRUNCATE "'.$table.'";
+			ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1;
+			INSERT INTO "'.$table.'" ("section_id", "section_tipo", "datos") VALUES (\'1\', \''.$section_tipo.'\', \''.$dato.'\');
+		';
+		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+		$result   = pg_query($db_conn, $sql);
+		if (!$result) {
+			$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+			debug_log(__METHOD__.$msg, logger::ERROR);
+			$response->msg = $msg;
+			return $response;
+		}
+
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end create_test_record
+
+
+
 	// private methods ///////////////////////////////////
 
 
