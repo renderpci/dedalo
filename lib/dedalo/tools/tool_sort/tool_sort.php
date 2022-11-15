@@ -18,15 +18,15 @@
 
 
 	switch($modo) {
-		
+
 		case 'button':
-					
+
 			break;
 
 		case 'page':
-				
+
 				// additional js / css
-					// css					
+					// css
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/section/css/section.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/css/component_portal.css";
 						css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/css/component_image.css";
@@ -39,8 +39,8 @@
 					// js
 						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/search/js/search2.js";
 						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_portal/js/component_portal.js";
-						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
-						
+						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+
 						// render_component js
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/render_component_portal.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/render_component_image.js";
@@ -48,11 +48,12 @@
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_number/js/render_component_number.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_relation_related/js/render_component_relation_related.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete/js/render_component_autocomplete.js";
-							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_section_id/js/render_component_section_id.js";					
+							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/js/render_component_autocomplete_hi.js";
+							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_section_id/js/render_component_section_id.js";
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/render_component_text_area.js";
 
 				//// additional js / css
-				//	// css	
+				//	// css
 				//	css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/css/component_portal.css";
 				//	css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/css/component_image.css";
 				//	css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/css/component_input_text.css";
@@ -61,24 +62,24 @@
 				//	js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/render_component_portal.js";
 				//	js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/render_component_image.js";
 				//	js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/js/render_component_input_text.js";
-				//	js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";		
+				//	js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 
 			// source component
 			 	$source_component_obj = $this->component_obj;
 			// 		$context = new stdClass();
-			// 			$context->context_name = 'tool_sort';					
+			// 			$context->context_name = 'tool_sort';
 			// 		$source_component_obj->set_context($context);
-			// 
+			//
  			// 	$source_html 		  = $source_component_obj->get_html();
-			// 
+			//
 
 
 			// section info
 			 	#$section_tipo 	= $source_component_obj->get_section_tipo();
  				#$section_id 	= $source_component_obj->get_parent();
 				$section_label  = RecordObj_dd::get_termino_by_tipo($section_tipo,DEDALO_APPLICATION_LANG);
-			
+
 
 			// target portal
 				$target_modelo_name   = RecordObj_dd::get_modelo_name_by_tipo($this->target_component_tipo,true);
