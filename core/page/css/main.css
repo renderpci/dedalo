@@ -493,7 +493,7 @@ template {
 html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   color: #353535;
-  font-size: 0.813rem;
+  font-size: 0.798rem;
 }
 b,
 strong {
@@ -3050,7 +3050,10 @@ input:-moz-placeholder {
 }
 .wrapper_component.list.component_image > img,
 .wrapper_component.list.component_av > img,
-.wrapper_component.list.component_svg > img {
+.wrapper_component.list.component_svg > img,
+.wrapper_component.list.component_image > .content_data > img,
+.wrapper_component.list.component_av > .content_data > img,
+.wrapper_component.list.component_svg > .content_data > img {
   display: block;
   padding: 0px;
   width: 100%;
@@ -4183,7 +4186,8 @@ dd-modal .footer.content {
   display: flex;
   width: 100%;
   margin: 0px;
-  padding: 0.5em;
+  padding: 0.5rem;
+  padding-top: 0.25rem;
   border-radius: 0px;
   justify-content: flex-end;
 }
@@ -5324,7 +5328,7 @@ dd-modal .footer.content {
   font-size: 1rem;
   color: #ffffff;
   line-height: 1.2em;
-  z-index: 3;
+  z-index: 4;
   /*
 		.menu_wrapper #current_section_label::before {
 			content: '';
@@ -8687,6 +8691,13 @@ dd-modal .footer.content {
   width: 1.5em;
   margin: unset;
 }
+.component_image.view_mosaic.list > .content_data {
+  display: inherit;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
 .vector_editor_tools {
   background-color: #f78a1c;
   width: 2.25rem;
@@ -9217,6 +9228,7 @@ dd-modal .footer.content {
 .component_portal > .content_data .references,
 .portal > .content_data .references {
   margin-top: 0.75em;
+  margin-left: 1rem;
 }
 .component_portal > .content_data .references > *,
 .portal > .content_data .references > * {
@@ -9225,6 +9237,7 @@ dd-modal .footer.content {
 .component_portal > .content_data .references > div,
 .portal > .content_data .references > div {
   margin-bottom: 0.5em;
+  opacity: 0.55;
 }
 .component_portal > .content_data .references > li,
 .portal > .content_data .references > li {
@@ -9272,6 +9285,7 @@ dd-modal .footer.content {
   flex: 0 0 auto;
   height: 100%;
   overflow-y: hidden;
+  overflow: unset;
 }
 .component_portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component,
 .portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component {
@@ -9305,7 +9319,7 @@ dd-modal .footer.content {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: 73px auto 60px;
+  grid-template-columns: 73px auto 73px;
   grid-template-rows: minmax(3rem, auto) 2fr minmax(3rem, auto);
   overflow: hidden;
 }
@@ -9408,6 +9422,10 @@ dd-modal .footer.content {
 .portal.view_line > .content_data .section_record .section_record {
   flex-wrap: wrap;
 }
+.component_portal.view_line > .content_data .section_record.view_text,
+.portal.view_line > .content_data .section_record.view_text {
+  margin-left: 1.5rem;
+}
 .component_portal.view_line > .content_data .section_record.view_text .column_section_id,
 .portal.view_line > .content_data .section_record.view_text .column_section_id {
   margin-right: 0.5rem;
@@ -9437,6 +9455,7 @@ dd-modal .footer.content {
 .component_portal.view_line > .content_data .section_record .column.column_section_id,
 .portal.view_line > .content_data .section_record .column.column_section_id {
   width: 1rem;
+  margin-left: -1.5rem;
 }
 .component_portal.view_line > .content_data .section_record .column.column_section_id,
 .portal.view_line > .content_data .section_record .column.column_section_id,
@@ -9487,6 +9506,12 @@ dd-modal .footer.content {
 .portal.view_line > .content_data .section_record .column.column_remove > .button_remove:hover .delete_bold {
   background-color: #dc3545;
   opacity: 1;
+}
+.component_portal.view_line > .content_data .section_record .column.column_section_id > .button_remove,
+.portal.view_line > .content_data .section_record .column.column_section_id > .button_remove,
+.component_portal.view_line > .content_data .section_record .column.column_remove > .button_remove,
+.portal.view_line > .content_data .section_record .column.column_remove > .button_remove {
+  margin-left: 0.33rem;
 }
 .component_portal.view_line > .content_data .section_record .column .ddinfo_value,
 .portal.view_line > .content_data .section_record .column .ddinfo_value {

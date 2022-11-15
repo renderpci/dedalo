@@ -741,6 +741,7 @@
 
 		&.list {
 
+			// wrapper
 			&.component_image, &.component_av, &.component_svg {
 				padding: 0px;
 				// background-color: #ffffff;
@@ -753,7 +754,8 @@
 					height: auto;
 				}
 
-				>img {
+				// image, content_data>img
+				>img, >.content_data>img {
 					display: block;
 					padding: 0px;
 					width: 100%;
