@@ -2784,6 +2784,9 @@
 		Valencia 12-11-2022T21:20:00
 		Changed time machine behavior when previous dato is not already saved. Now, time machine save previous dato if not found in time_machine table
 		Fixed save_time_machine time_machine_section_id error on undefined case (new record)
+		Valencia 15-11-2022
+		Added component_autocomplete_hi json controller file (added 15-11-2022 to Numismatic tool sort)
+
 
 
 	[/HISTORY]
@@ -2815,7 +2818,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-11-2022T12:07:00');
+	define('DEDALO_BUILD'	, '15-11-2022T10:00:00');
 
 
 
