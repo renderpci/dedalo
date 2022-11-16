@@ -3871,6 +3871,7 @@ dd-modal .footer.content {
 .wrapper_component.edit > .list_body {
   padding: 1rem;
   padding-top: 0px;
+  grid-template-rows: auto 1fr;
 }
 .alt_list_body {
   display: grid;
