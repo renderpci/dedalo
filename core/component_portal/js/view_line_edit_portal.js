@@ -151,29 +151,7 @@ const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
 
-	// column section_id check
-		columns_map.push({
-			id			: 'section_id',
-			label		: 'Id',
-			width 		: 'auto',
-			callback	: view_line_edit_portal.render_column_id
-		})
-
-
-	const base_columns_map = await self.columns_map
-
-	columns_map.push(...base_columns_map)
-
-	// column component_info check
-		if (self.add_component_info===true) {
-			columns_map.push({
-				id			: 'ddinfo',
-				label		: 'Info',
-				callback	: render_column_component_info
-			})
-		}
-
-	// button_remove
+	// column remove
 		if (self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
@@ -182,6 +160,28 @@ const rebuild_columns_map = async function(self) {
 				callback	: view_line_edit_portal.render_column_remove
 			})
 		}
+
+	// base_columns_map
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
+
+	// column component_info
+		if (self.add_component_info===true) {
+			columns_map.push({
+				id			: 'ddinfo',
+				label		: 'Info',
+				callback	: render_column_component_info
+			})
+		}
+
+	// column section_id
+		columns_map.push({
+			id			: 'section_id',
+			label		: 'Id',
+			width 		: 'auto',
+			callback	: view_line_edit_portal.render_column_id
+		})
+
 
 	return columns_map
 }//end rebuild_columns_map
