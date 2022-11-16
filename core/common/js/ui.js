@@ -340,6 +340,7 @@ export const ui = {
 
 		/**
 		* BUILD_CONTENT_DATA
+		* Component
 		* @param object instance
 		* @param object options = {}
 		* @return DOM node content_data
@@ -2685,6 +2686,7 @@ export const ui = {
 				}
 			}
 		}
+
 		return ar_elements
 	},//end flat_column_items
 

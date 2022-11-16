@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, ddEditor, ckeditor, DEDALO_ROOT_WEB */
+/*global get_label, page_globals, SHOW_DEBUG, ddEditor, ckeditor, DEDALO_ROOT_WEB, DEDALO_API_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -197,7 +197,7 @@ export const service_ckeditor = function() {
 				language: lang,
 				simpleUpload: {
 					 // The URL that the images are uploaded to.
-					uploadUrl: DEDALO_ROOT_WEB + "/core/api/v1/json/?resource_type=web"
+					uploadUrl: DEDALO_API_URL + '?resource_type=web'
 				}
 			})
 			.then( editor => {

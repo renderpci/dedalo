@@ -24,6 +24,31 @@ $global_start_time = hrtime(true);
 
 
 
+// PUBLIC API HEADERS (!) TEMPORAL 16-11-2022
+	// Allow CORS
+	header("Access-Control-Allow-Origin: *");
+	// header("Access-Control-Allow-Credentials: true");
+	// header("Access-Control-Allow-Methods: GET,POST"); // GET,HEAD,OPTIONS,POST,PUT
+	$allow_headers = [
+		// 'Access-Control-Allow-Headers',
+		// 'Origin,Accept',
+		// 'X-Requested-With',
+		'Content-Type',
+		// 'Access-Control-Request-Method',
+		// 'Access-Control-Request-Headers'
+	];
+	header("Access-Control-Allow-Headers: ". implode(', ', $allow_headers));
+
+
+
+	// CORS preflight OPTIONS requests
+		if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD']==='OPTIONS') {
+			error_log('Ignored '.print_r($_SERVER['REQUEST_METHOD'], true));
+			exit( 0 );
+		}
+
+
+
 // includes
 	// config dedalo
 	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
@@ -47,7 +72,7 @@ $global_start_time = hrtime(true);
 
 // received files case. Uploading from tool_upload or text editor images upload
 	if (isset($_FILES)) {
-		if (!isset($rqo)) {
+		if (!isset($rqo) && !empty($_FILES)) {
 			$rqo = new stdClass();
 				$rqo->action = 'upload';
 				$rqo->dd_api = 'dd_utils_api';
@@ -61,6 +86,15 @@ $global_start_time = hrtime(true);
 		foreach($_FILES as $key => $value) {
 				$rqo->{$key} = $value;
 		}
+	}
+
+
+
+// rqo check. Some cases like preflight, do not generates a rqo
+	if (empty($rqo)) {
+		error_log('! Ignored empty rqo');
+		// debug_log(__METHOD__." Error on API : Empty rqo ".to_string($_REQUEST), logger::ERROR);
+		exit( 0 );
 	}
 
 
@@ -126,7 +160,7 @@ $global_start_time = hrtime(true);
 
 
 
-// output the result json string
+// output the result JSON string
 	$output_string = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	// debug (browser Server-Timing)

@@ -1,4 +1,4 @@
-/*global get_label, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -7,7 +7,7 @@
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
 	// // import {get_instance, delete_instance} from '../../../common/js/instances.js'
-	import {clone, dd_console} from '../../../common/js/utils/index.js'
+	import {dd_console} from '../../../common/js/utils/index.js'
 	// import {ui} from '../../../common/js/ui.js'
 	import {common} from '../../../common/js/common.js'
 	import {render_edit_service_upload} from './render_edit_service_upload.js'
@@ -171,7 +171,7 @@ export const upload = async function(options) {
 	return new Promise(function(resolve){
 
 	// short vars
-		const api_url	= DEDALO_CORE_URL + '/api/v1/json/'
+		const api_url	= DEDALO_API_URL
 		const response = {result:false}
 
 	// check file extension
