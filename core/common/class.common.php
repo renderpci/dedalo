@@ -1553,14 +1553,14 @@ abstract class common {
 
 			// component specific
 				if (strpos($model, 'component_')===0) {
-					if ($mode==='list') {
+					if ($sortable===true) {
 						// add component path to allow sort columns properly
 						// ? remove if because forbids cache list mode uniformly
 						// if (!empty($this->from_parent)) {
 							$dd_object->path = $this->get_order_path($tipo, $section_tipo);
 						// }
 					}
-					elseif ($mode==='search') {
+					if ($mode==='search') {
 						// search operators info (tool tips)
 						$dd_object->search_operators_info	= $this->search_operators_info();
 						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
