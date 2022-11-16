@@ -7,7 +7,7 @@
 * {
 * 	"server" => [
 * 		 "HTTP_HOST"	: "127.0.0.1:8443",
-* 		 "REQUEST_URI"	: "/v6/core/api/v1/json/",
+* 		 "REQUEST_URI"	: "DEDALO_API_URL",
 * 		 "SERVER_NAME"	: "127.0.0.1"
 * 	],
 * 	"session_id"	: "3j4mkd21cq71fh9qp7gj1ka033",

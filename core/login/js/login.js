@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -223,7 +223,7 @@ login.prototype.action_dispatch = async function(api_response) {
 				});
 				current_worker.postMessage({
 					action	: 'clear_cache',
-					url		: DEDALO_CORE_URL + '/api/v1/json/'
+					url		: DEDALO_API_URL
 				});
 				current_worker.onmessage = function(e) {
 

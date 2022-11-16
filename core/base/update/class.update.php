@@ -168,9 +168,10 @@ class update {
 
 		$result = pg_query(DBi::_getConnection(), $SQL_update);
 		if(!$result) {
-			echo "Error: sorry an error ocurred on SQL_update code.";
+			echo "Error: an error occurred on SQL_update code.";
 			if(SHOW_DEBUG===true) {
 				trigger_error( "<span class=\"error\">Error Processing SQL_update Request </span>". pg_last_error(DBi::_getConnection()) );
+				debug_log(__METHOD__." Error Processing SQL_update Request ".to_string(), logger::DEBUG);
 				dump(null,"SQL_update ".to_string($SQL_update));
 				#throw new Exception("Error Processing SQL_update Request ". pg_last_error(DBi::_getConnection()), 1);;
 			}

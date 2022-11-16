@@ -139,6 +139,7 @@ session_write_close();
 // plain global vars
 	$plain_vars = [
 		'DEDALO_ENVIRONMENT'		=> true,
+		'DEDALO_API_URL'			=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
 		'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
 		'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
 		'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -220,7 +220,7 @@ const build_widget = (item, self) => {
 								type : 'module'
 							});
 							current_worker.postMessage({
-								url		: DEDALO_CORE_URL + '/api/v1/json/',
+								url		: DEDALO_API_URL,
 								dd_api	: item.trigger.dd_api,
 								action	: item.trigger.action,
 								options	: item.trigger.options
@@ -434,7 +434,7 @@ export const build_form = function(widget_object) {
 							type : 'module'
 						});
 						current_worker.postMessage({
-							url		: DEDALO_CORE_URL + '/api/v1/json/',
+							url		: DEDALO_API_URL,
 							dd_api	: widget_object.trigger.dd_api,
 							action	: widget_object.trigger.action,
 							options	: options

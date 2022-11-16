@@ -14,7 +14,7 @@
 		credentials	: 'omit'
 	});
 	current_worker.postMessage({
-		url		: DEDALO_CORE_URL + '/api/v1/json/',
+		url		: DEDALO_API_URL,
 		dd_api	: item.trigger.dd_api,
 		action	: item.trigger.action,
 		options	: item.trigger.options
@@ -112,7 +112,7 @@ data_manager.request = async function(options) {
 
 					// alert msg to user
 						const msg = result.msg || result.error
-						alert("An error occurred in the connection with the API (worker area development). \n" + msg);
+						console.error("An error occurred in the connection with the API (worker area development). \n" + msg);
 
 					// custom behaviors
 						switch (result.error) {
