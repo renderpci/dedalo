@@ -540,7 +540,7 @@ export const ui = {
 
 
 		/**
-		* BUILD_WRAPPER_search
+		* BUILD_WRAPPER_SEARCH
 		* Component wrapper unified builder
 		* @param object instance (self component instance)
 		* @param object items

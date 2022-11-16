@@ -186,7 +186,7 @@ class component_input_text extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -535,7 +535,7 @@ class component_input_text extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*

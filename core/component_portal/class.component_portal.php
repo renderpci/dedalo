@@ -506,7 +506,6 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
-
 		$path = [];
 
 		// from_section_tipo. If exists and is distinct to section_tipo, build and prepend the caller item
@@ -520,20 +519,19 @@ class component_portal extends component_relation_common {
 			}
 
 		// self component path
-			$path[] =
-				(object)[
-					'component_tipo'	=> $component_tipo,
-					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
-					'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
-					'section_tipo'		=> $section_tipo
-				];
+			$path[] = (object)[
+				'component_tipo'	=> $component_tipo,
+				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+				'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
+				'section_tipo'		=> $section_tipo
+			];
 
 		// ddo_map. request_config show ddo_map first item is used to sort
 		// must be calculated previously by the get_structure_context method
 			$request_config_item = array_find($this->request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
-			$show		= $request_config_item->show ?? null;
+			$show = $request_config_item->show ?? null;
 			if (empty($show)) {
 
 				debug_log(__METHOD__." Ignored empty request_config_item->show (mode:$this->modo) [$this->section_tipo - $this->tipo]", logger::ERROR);

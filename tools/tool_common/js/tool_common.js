@@ -905,6 +905,15 @@ const view_window = async function(options) {
 			// }
 		}
 
+	// close tool_window
+		// tool_window.addEventListener('close', fn_onclose, true);
+		// function fn_onclose() {
+		// 	// refresh caller
+		// 	if (caller) {
+		// 		caller.refresh()
+		// 	}
+		// }
+
 
 	return tool_window
 }//end view_window
