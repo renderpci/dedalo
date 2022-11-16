@@ -141,6 +141,12 @@
 		}
 	}
 
+	&.view_default, &.view_table {
+		>.list_body {
+			grid-template-rows: 1.8rem auto;
+		}
+	}
+
 	// view_autocomplete
 	&.view_autocomplete {
 		background-color: #83e1ee;
@@ -406,6 +412,7 @@
 
 					display: inline;
 					vertical-align: middle;
+					align-items: center;
 					word-break: break-word;
 					line-height: unset;
 					// *:not(.icon, button, .button, .wrapper_component.edit) {
@@ -416,12 +423,10 @@
 						line-height: unset;
 					}
 
-					align-items: center;
-
 					&.column_section_id {
 						// margin-left: -1rem;
 						width: 1rem;
-						margin-left: -1.5rem;
+						// margin-left: -1.5rem;
 					}
 
 					&.column_section_id, &.column_remove {
@@ -601,7 +606,6 @@
 			outline: none;
 			padding-right: 0.33rem;
 		}
-
 	}//end &_mini
 }//end &.component_portal, &.portal
 

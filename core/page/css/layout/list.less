@@ -130,7 +130,7 @@
 		padding: 1rem;
 		padding-top: 0.5rem; // padding to label (on top)
 		// header must be auto to prevent equal height than body
-		grid-template-rows: 1.8rem auto;
+		// grid-template-rows: 1.8rem auto;
 	}
 
 
@@ -552,6 +552,14 @@
 			>span {
 				// display: inline-block;
 			}
+
+			&.list.view_line {
+
+			}
+			.list.view_text {
+				margin: 0px;
+				padding: 0.25rem;
+			}
 		}
 
 
@@ -741,7 +749,7 @@
 			}
 
 			&.button_edit {
-				justify-content: space-between;
+				// justify-content: space-between;
 				// justify-content: flex-end;
 				@media screen and (max-width: @width_break_point_0) {
 					justify-content: flex-start;
