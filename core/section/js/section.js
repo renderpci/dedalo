@@ -350,7 +350,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// load data if is not already received as option
 		if (autoload===true) {
-			const t0 = performance.now()
+			// const t0 = performance.now()
 
 			// get context and data
 				const api_response = await data_manager.request({
