@@ -188,5 +188,3 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
-
-
