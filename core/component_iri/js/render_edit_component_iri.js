@@ -245,20 +245,25 @@ const update_value = function(self, i) {
 /**
 * SET_UNLOAD_STATE
 * Page unload event
+* @param instance self
+* @param int i
+*
 * @return bool
 */
 const set_unload_state = function(self, i) {
 
 	// values
-		const original_value	= self.db_data.value[i]
+		const original_value	= self.db_data.value[i] || null
 		const new_value			= self.build_value(i)
 
 	// compares new and old full values by property
 		let equal = true
-		for(const prop in new_value) {
-			if (!original_value[prop] || original_value[prop]!==new_value[prop]) {
-				equal = false
-				break
+		if (original_value) {
+			for(const prop in new_value) {
+				if (!original_value[prop] || original_value[prop]!==new_value[prop]) {
+					equal = false
+					break
+				}
 			}
 		}
 
