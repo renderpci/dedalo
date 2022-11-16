@@ -86,13 +86,6 @@
 			}
 		}
 	}
-	// direct list_body from component in edit mode
-	.wrapper_component.edit >.list_body {
-		padding: 1rem;
-		padding-top: 0px;
-		// header must be auto to prevent equal height than body
-		grid-template-rows: auto 1fr;
-	}
 
 	// portal alt_list_body
 	.alt_list_body {
@@ -135,7 +128,9 @@
 	// direct list_body from component in edit mode
 	.wrapper_component.edit >.list_body {
 		padding: 1rem;
-		padding-top: 0.5rem;
+		padding-top: 0.5rem; // padding to label (on top)
+		// header must be auto to prevent equal height than body
+		grid-template-rows: 1.8rem auto;
 	}
 
 
@@ -544,7 +539,7 @@
 				// }
 			// }
 
-			span {
+			>span {
 				padding: 0.25rem;
 				display: inline-block;
 				word-break: break-word;

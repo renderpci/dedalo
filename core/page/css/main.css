@@ -3868,11 +3868,6 @@ dd-modal .footer.content {
   height: 100%;
   overflow: hidden;
 }
-.wrapper_component.edit > .list_body {
-  padding: 1rem;
-  padding-top: 0px;
-  grid-template-rows: auto 1fr;
-}
 .alt_list_body {
   display: grid;
   width: 100%;
@@ -3891,6 +3886,7 @@ dd-modal .footer.content {
 .wrapper_component.edit > .list_body {
   padding: 1rem;
   padding-top: 0.5rem;
+  grid-template-rows: 1.8rem auto;
 }
 .section_record.mini {
   display: contents;
@@ -4110,13 +4106,13 @@ dd-modal .footer.content {
   margin: 0px;
   height: 100%;
 }
-.column .wrapper_component span {
+.column .wrapper_component > span {
   padding: 0.25rem;
   display: inline-block;
   word-break: break-word;
 }
 @media screen and (max-width: 1024px) {
-  .column .wrapper_component span {
+  .column .wrapper_component > span {
     padding-left: 0.3rem;
   }
 }
@@ -4971,7 +4967,7 @@ dd-modal .footer.content {
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group {
   max-width: 85%;
-  min-height: 5.25rem;
+  min-height: 5.8rem;
   min-width: 165px;
   margin: 0px;
   padding: 5px;
@@ -9170,7 +9166,7 @@ dd-modal .footer.content {
   margin: 0px;
   padding: 0.5em;
   background-image: url('../../themes/default/icons/drag.svg');
-  background-position: 85%;
+  background-position: 92%;
   background-repeat: no-repeat;
   background-size: 22px 22px;
   height: auto;
@@ -9425,7 +9421,8 @@ dd-modal .footer.content {
 }
 .component_portal.view_line > .content_data .section_record.view_text,
 .portal.view_line > .content_data .section_record.view_text {
-  margin-left: 1.5rem;
+  margin-left: 0.5rem;
+  line-height: 1.1rem;
 }
 .component_portal.view_line > .content_data .section_record.view_text .column_section_id,
 .portal.view_line > .content_data .section_record.view_text .column_section_id {
