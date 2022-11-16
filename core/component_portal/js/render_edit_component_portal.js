@@ -167,9 +167,10 @@ export const render_column_id = function(options){
 		})
 
 		// section_id
+		const small_css = section_id.length>5 ? ' small' : ''
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'section_id',
+			class_name		: 'section_id' + small_css,
 			text_content	: section_id,
 			parent			: button_edit
 		})
