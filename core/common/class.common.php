@@ -2242,9 +2242,13 @@ abstract class common {
 						$sqo_id	= implode('_', [$model,$section_tipo]);
 						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 							// replace default sqo with the already stored in session (except section_tipo to prevent to
-							// loose labels and limit to avoid overwrite list in edit and viceversa)
+							// loose labels and limit to avoid overwrite list in edit and vice-versa)
 							foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
-								if($key==='section_tipo' || $key==='limit' || $key==='generated_time') continue;
+								if($key==='section_tipo' || $key==='generated_time') continue;
+								// limit. Do no t apply null value. instead leave to calculate defaults
+								if ($key==='limit' && $value===null) {
+									continue;
+								}
 								if (!isset($dedalo_request_config->sqo)) {
 									$dedalo_request_config->sqo = new stdClass();
 								}
@@ -2488,6 +2492,9 @@ abstract class common {
 							if (isset($item_request_config->sqo->fixed_filter)) {
 								$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
 							}
+
+						// limit
+							// $parsed_item->sqo->limit = $limit;
 
 					// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
 						$parsed_item->set_show(
