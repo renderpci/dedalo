@@ -170,6 +170,10 @@ const get_content_data = function(self) {
 				})
 			}
 
+	// element_info
+		const element_info = render_element_info(self)
+		content_data.appendChild(element_info)
+
 	// project container
 		// (!) Note that the filter node is collected from a subscribed
 		// event 'render_component_filter_xx' from self inspector init event
@@ -177,10 +181,6 @@ const get_content_data = function(self) {
 			const project_block = render_project_block(self)
 			content_data.appendChild(project_block)
 		}
-
-	// element_info
-		const element_info = render_element_info(self)
-		content_data.appendChild(element_info)
 
 	// indexation_list container
 		// if (self.caller.context.indexation_list) {
