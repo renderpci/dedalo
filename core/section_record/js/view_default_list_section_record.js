@@ -205,27 +205,6 @@ view_default_list_section_record.render = async function(self, options) {
 
 					let hilite_row
 
-					// row_style
-						const wrapper_first_column	= wrapper.firstChild
-						const wrapper_last_column	= wrapper.lastChild
-						const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
-						const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
-						const row_style = {
-							left	: parseFloat(firstChild_el_rect.x) + 'px',
-							top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
-							height	: parseFloat(firstChild_el_rect.height) + 'px',
-							width	: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
-						}
-						window.addEventListener('resize', function() {
-							// update row_style values on resize
-							const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
-							const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
-							row_style.left				= parseFloat(firstChild_el_rect.x) + 'px',
-							row_style.top				= parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
-							row_style.height			= parseFloat(firstChild_el_rect.height) + 'px',
-							row_style.width				= parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
-						})
-
 					// fn_remove_hilite (if is set)
 						const fn_remove_hilite = () => {
 							if (hilite_row) {
@@ -245,6 +224,18 @@ view_default_list_section_record.render = async function(self, options) {
 								const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
 								if (width<960) {
 									return
+								}
+
+							// row_style
+								const wrapper_first_column	= wrapper.firstChild
+								const wrapper_last_column	= wrapper.lastChild
+								const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
+								const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
+								const row_style = {
+									left	: parseFloat(firstChild_el_rect.x) + 'px',
+									top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
+									height	: parseFloat(firstChild_el_rect.height) + 'px',
+									width	: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
 								}
 
 							// hilite_row. create and append
