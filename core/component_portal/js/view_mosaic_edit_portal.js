@@ -167,7 +167,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		// list_body
 			const list_body = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'list_body'
+				class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
 			})
 			// css des
 				// const items				= ui.flat_column_items(columns_map);
@@ -223,9 +223,14 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		wrapper.content_data	= content_data
 
 	// autocomplete
-		wrapper.addEventListener('click', function() {
-			activate_autocomplete(self, wrapper)
-		})
+		if (self.is_inside_tool===true || self.context.properties.source?.mode==='external') {
+			// Avoid to active activate_autocomplete
+		}else{
+			wrapper.addEventListener('click', function() {
+				activate_autocomplete(self, wrapper)
+			})
+		}
+
 
 	return wrapper
 }//end edit
@@ -268,11 +273,11 @@ const get_content_data = async function(self, ar_section_record) {
 							})
 
 						// mouseleave event
-							section_record_node.addEventListener('mouseleave',function(e){
-								e.stopPropagation()
-								const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-								event_manager.publish(event_id, this)
-							})
+							// section_record_node.addEventListener('mouseleave',function(e){
+							// 	e.stopPropagation()
+							// 	const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							// 	event_manager.publish(event_id, this)
+							// })
 
 					// section record append
 						fragment.appendChild(section_record_node)
