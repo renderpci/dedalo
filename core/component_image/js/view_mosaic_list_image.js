@@ -29,29 +29,56 @@ export const view_mosaic_list_image = function() {
 */
 view_mosaic_list_image.render = function(self, options) {
 
-	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+	// options
+		const render_level = options.render_level || 'full'
+
+	// content_data
+		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
 		wrapper.classList.add('media')
+		wrapper.appendChild(content_data)
+		// add pointers
+		wrapper.content_data = content_data
+
+
+	return wrapper
+}//end render
+
+
+
+/**
+* GET_CONTENT_DATA
+* @return DON node content_data
+*/
+const get_content_data = function(self) {
+
+	// short vars
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+
+	// content_data
+		const content_data = ui.component.build_content_data(self, {})
 
 	// url
 		// const value		= data.value
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= (typeof url_object==="undefined")
-			? DEDALO_CORE_URL + "/themes/default/0.jpg"
+			? DEDALO_CORE_URL + '/themes/default/0.jpg'
 			: url_object.url
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'hidden', // loading
-			parent			: wrapper
+			parent			: content_data
 		})
 		image.draggable = false
 		image.loading = 'lazy'
@@ -67,7 +94,7 @@ view_mosaic_list_image.render = function(self, options) {
 		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
 			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, wrapper)
+			ui.set_background_image(this, content_data)
 			image.classList.remove('hidden')
 		}
 
@@ -109,5 +136,5 @@ view_mosaic_list_image.render = function(self, options) {
 		})
 
 
-	return wrapper
-}//end render
+	return content_data
+}//end get_content_data
