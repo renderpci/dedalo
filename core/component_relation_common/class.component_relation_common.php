@@ -2189,6 +2189,72 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* GET_ORDER_PATH
+	* Calculate full path of current element to use in columns order path (context)
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return array $path
+	*/
+		// public function get_order_path(string $component_tipo, string $section_tipo) : array {
+
+		// 	$path = [];
+
+		// 	// from_section_tipo. If exists and is distinct to section_tipo, build and prepend the caller item
+		// 		if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
+		// 			$path[] = (object)[
+		// 				'component_tipo'	=> $this->from_component_tipo,
+		// 				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
+		// 				'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
+		// 				'section_tipo'		=> $this->from_section_tipo
+		// 			];
+		// 		}
+
+		// 	// self component path
+		// 		$path[] = (object)[
+		// 			'component_tipo'	=> $component_tipo,
+		// 			'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+		// 			'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
+		// 			'section_tipo'		=> $section_tipo
+		// 		];
+
+		// 	// ddo_map. request_config show ddo_map first item is used to sort
+		// 	// must be calculated previously by the get_structure_context method
+		// 		// $request_config_item = array_find($this->request_config, function($el){
+		// 		// 	return $el->api_engine==='dedalo';
+		// 		// });
+		// 		// $show = $request_config_item->show ?? null;
+		// 		// if (empty($show)) {
+
+		// 		// 	debug_log(__METHOD__." Ignored empty request_config_item->show (mode:$this->modo) [$this->section_tipo - $this->tipo]", logger::ERROR);
+
+		// 		// }else{
+
+		// 		// 	$first_item	= $show->ddo_map[0] ?? null;
+
+		// 		// 	if (empty($first_item)) {
+		// 		// 		debug_log(__METHOD__." Ignored show empty first_item (mode:$this->modo) [$this->section_tipo - $this->tipo]", logger::ERROR);
+		// 		// 		dump($show, ' show empty first_item ++++++++ '.to_string($this->tipo));
+		// 		// 	}else{
+		// 		// 		// target component
+		// 		// 		$path[] = (object)[
+		// 		// 			'component_tipo'	=> $first_item->tipo,
+		// 		// 			'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($first_item->tipo,true),
+		// 		// 			'name'				=> RecordObj_dd::get_termino_by_tipo($first_item->tipo),
+		// 		// 			// note that section_tipo is used only to give a name to the join item.
+		// 		// 			// results are not really filtered by this section_tipo
+		// 		// 			'section_tipo'		=> is_array($first_item->section_tipo)
+		// 		// 				? reset($first_item->section_tipo)
+		// 		// 				: $first_item->section_tipo
+		// 		// 		];
+		// 		// 	}
+		// 		// }
+
+		// 	return $path;
+		// }//end get_order_path
+
+
+
+	/**
 	* GET_LIST_VALUE
 	* Unified value list output
 	* By default, list value is equivalent to dato. Override in other cases.

@@ -1036,7 +1036,12 @@ export const get_columns_map = function(context, datum_context) {
 
 				// path
 					if (column_item.sortable===true) {
-						column_item.path = found.path
+						if (!found.path) {
+							console.warn('Error. Ignored column_item sortable without path', column_item, ddo_object );
+							column_item.sortable = false
+						}else{
+							column_item.path = found.path
+						}
 					}
 
 				// check if the ddo has label, if not empty label will set.
