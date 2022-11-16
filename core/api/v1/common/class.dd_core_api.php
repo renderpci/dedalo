@@ -1654,6 +1654,15 @@ final class dd_core_api {
 
 						// if ($model==='section'){
 
+							// resolve limit before use sqo
+								// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
+								// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
+								// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
+								// ) {
+								// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
+								// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
+								// }
+
 							// sections
 								$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 

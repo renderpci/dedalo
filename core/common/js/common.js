@@ -1338,10 +1338,10 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 			? sqo.limit
 			: (sqo_config && sqo_config.limit)
 				? sqo_config.limit
-				// : 0 // force to generate default limit from server (!)
-				: self.mode==='edit'
-					? (self.model==='section' ? 1 : 10) // section in edit mode = 1 or component_portal in edit mode = 10
-					: (self.model==='section' ? 10 : 1) // section in list mode = 10 or component_portal in list mode = 1
+				: null // force to generate default limit from server (!)
+				// : self.mode==='edit'
+				// 	? (self.model==='section' ? 1 : 10) // section in edit mode = 1 or component_portal in edit mode = 10
+				// 	: (self.model==='section' ? 10 : 1) // section in list mode = 10 or component_portal in list mode = 1
 
 		sqo.offset = (sqo.offset)
 			? sqo.offset
