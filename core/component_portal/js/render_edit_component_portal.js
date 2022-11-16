@@ -587,7 +587,7 @@ export const get_buttons = (self) => {
 	// fragment
 		const fragment = new DocumentFragment()
 
-		if (is_inside_tool===true) {
+		if (is_inside_tool===true || self.context.properties.source?.mode==='external') {
 			return fragment
 		}
 

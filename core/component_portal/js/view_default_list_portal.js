@@ -65,7 +65,7 @@ view_default_list_portal.render = async function(self, options) {
 		// list_body
 			const list_body = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'list_body',
+				class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
 				parent			: fragment
 			})
 			// const items				= flat_column_items(columns_map)
@@ -83,13 +83,15 @@ view_default_list_portal.render = async function(self, options) {
 				// 	}
 				// )
 			// new way to on-the fly js
-				const css_object = {
-					'.list_body' : {
-						'grid-template-columns': template_columns
+				if (self.view!=='mosaic') {
+					const css_object = {
+						'.list_body' : {
+							'grid-template-columns': template_columns
+						}
 					}
+					const selector = `${self.section_tipo}_${self.tipo}.list`
+					set_element_css(selector, css_object)
 				}
-				const selector = `${self.section_tipo}_${self.tipo}.list`
-				set_element_css(selector, css_object)
 
 		// header
 			// const list_header_node = build_header(columns_map, ar_section_record, self)
