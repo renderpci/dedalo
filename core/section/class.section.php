@@ -185,14 +185,22 @@ class section extends common {
 		// pagination
 			$this->pagination = new stdClass();
 				$this->pagination->offset	= 0; // default
-				$this->pagination->limit	= isset($properties->list_max_records)
-					? (int)$properties->list_max_records
-					: ($modo==='list' ? 10 : 1);
+				// limit
+				if ($modo==='edit') {
+					$this->pagination->limit = isset($properties->max_records)
+						? (int)$properties->max_records // old v5 definitions
+						: 1;
+				}else{
+					$this->pagination->limit = isset($properties->list_max_records)
+						? (int)$properties->list_max_records // old v5 definitions
+						: 10;
+				}
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.start_time()]=start_time();
 			}
+
 
 		return true;
 	}//end __construct
