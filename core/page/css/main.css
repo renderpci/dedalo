@@ -3866,7 +3866,6 @@ dd-modal .footer.content {
 .list_body .list_body .column {
   display: flex !important;
   height: 100%;
-  overflow: hidden;
 }
 .alt_list_body {
   display: grid;
@@ -3886,7 +3885,6 @@ dd-modal .footer.content {
 .wrapper_component.edit > .list_body {
   padding: 1rem;
   padding-top: 0.5rem;
-  grid-template-rows: 1.8rem auto;
 }
 .section_record.mini {
   display: contents;
@@ -4116,6 +4114,10 @@ dd-modal .footer.content {
     padding-left: 0.3rem;
   }
 }
+.column .wrapper_component .list.view_text {
+  margin: 0px;
+  padding: 0.25rem;
+}
 .column:has(>.section_record) {
   padding: 0.25rem;
 }
@@ -4194,11 +4196,6 @@ dd-modal .footer.content {
   height: 3rem;
   font-size: 1.25rem;
 }
-.column.column_section_id > button.button_edit.button_edit,
-.column.column_section_id > button.button_delete.button_edit,
-.column.column_section_id > button.link_button.button_edit {
-  justify-content: space-between;
-}
 @media screen and (max-width: 1024px) {
   .column.column_section_id > button.button_edit.button_edit,
   .column.column_section_id > button.button_delete.button_edit,
@@ -4239,6 +4236,11 @@ dd-modal .footer.content {
   padding-right: 3px;
   padding-left: 2px;
   pointer-events: none;
+}
+.column.column_section_id > button.button_edit > .section_id.small,
+.column.column_section_id > button.button_delete > .section_id.small,
+.column.column_section_id > button.link_button > .section_id.small {
+  font-size: 1rem;
 }
 .column.column_section_id > button.button_edit > .icon,
 .column.column_section_id > button.button_delete > .icon,
@@ -8112,6 +8114,7 @@ dd-modal .footer.content {
 .component_check_box.edit > .content_data > .content_value > label > input {
   cursor: pointer;
   margin-right: 0.5rem;
+  vertical-align: top;
 }
 .component_check_box.edit > .content_data > .content_value .show_on_active {
   margin-left: 0.5rem;
@@ -8205,7 +8208,9 @@ dd-modal .footer.content {
   unicode-range: U+002F;
 }
 .component_date > .content_data > .content_value > .dates_separator {
-  padding-right: 0.5rem;
+  font-size: 0.78rem;
+  padding: 0.06rem;
+  margin-left: -0.64rem;
 }
 .component_date > .content_data > .content_value > .remove {
   position: initial;
@@ -9157,7 +9162,7 @@ dd-modal .footer.content {
 }
 .component_portal > .list_body,
 .portal > .list_body {
-  min-height: 3.5rem;
+  min-height: 2.66rem;
 }
 .component_portal > .list_body .drag.icon,
 .portal > .list_body .drag.icon {
@@ -9207,7 +9212,7 @@ dd-modal .footer.content {
 }
 .component_portal > .content_data,
 .portal > .content_data {
-  min-height: 3.5rem;
+  min-height: 2.66rem;
 }
 .component_portal > .content_data ul,
 .portal > .content_data ul {
@@ -9243,6 +9248,12 @@ dd-modal .footer.content {
 .component_portal:not(.active) > .autocomplete_search_container,
 .portal:not(.active) > .autocomplete_search_container {
   display: none;
+}
+.component_portal.view_default > .list_body,
+.portal.view_default > .list_body,
+.component_portal.view_table > .list_body,
+.portal.view_table > .list_body {
+  grid-template-rows: 1.8rem auto;
 }
 .component_portal.view_autocomplete,
 .portal.view_autocomplete {
@@ -9282,7 +9293,6 @@ dd-modal .footer.content {
   flex: 0 0 auto;
   height: 100%;
   overflow-y: hidden;
-  overflow: unset;
 }
 .component_portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component,
 .portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component {
@@ -9406,14 +9416,13 @@ dd-modal .footer.content {
 .component_portal.view_line > .content_data,
 .portal.view_line > .content_data {
   display: block;
-  padding-left: 0px;
+  padding: 0px;
 }
 .component_portal.view_line > .content_data .section_record,
 .portal.view_line > .content_data .section_record {
   display: flex;
   flex-wrap: wrap;
-  height: unset;
-  display: block;
+  align-items: center;
 }
 .component_portal.view_line > .content_data .section_record .section_record,
 .portal.view_line > .content_data .section_record .section_record {
@@ -9430,18 +9439,13 @@ dd-modal .footer.content {
 }
 .component_portal.view_line > .content_data .section_record .column,
 .portal.view_line > .content_data .section_record .column {
-  display: flex;
-  flex-grow: 0;
-  flex-shrink: 1;
-  flex-basis: auto;
-  height: auto;
-  display: inline-block;
+  height: inherit;
   width: auto;
   display: inline;
   vertical-align: middle;
+  align-items: center;
   word-break: break-word;
   line-height: unset;
-  align-items: center;
 }
 .component_portal.view_line > .content_data .section_record .column *:not(.icon, button, .button, .wrapper_component),
 .portal.view_line > .content_data .section_record .column *:not(.icon, button, .button, .wrapper_component) {
@@ -9453,7 +9457,6 @@ dd-modal .footer.content {
 .component_portal.view_line > .content_data .section_record .column.column_section_id,
 .portal.view_line > .content_data .section_record .column.column_section_id {
   width: 1rem;
-  margin-left: -1.5rem;
 }
 .component_portal.view_line > .content_data .section_record .column.column_section_id,
 .portal.view_line > .content_data .section_record .column.column_section_id,
@@ -9505,11 +9508,17 @@ dd-modal .footer.content {
   background-color: #dc3545;
   opacity: 1;
 }
+.component_portal.view_line > .content_data .section_record .column.column_section_id > .button_edit,
+.portal.view_line > .content_data .section_record .column.column_section_id > .button_edit,
+.component_portal.view_line > .content_data .section_record .column.column_remove > .button_edit,
+.portal.view_line > .content_data .section_record .column.column_remove > .button_edit {
+  margin-left: 0.33rem;
+}
 .component_portal.view_line > .content_data .section_record .column.column_section_id > .button_remove,
 .portal.view_line > .content_data .section_record .column.column_section_id > .button_remove,
 .component_portal.view_line > .content_data .section_record .column.column_remove > .button_remove,
 .portal.view_line > .content_data .section_record .column.column_remove > .button_remove {
-  margin-left: 0.33rem;
+  margin-right: 0.33rem;
 }
 .component_portal.view_line > .content_data .section_record .column .ddinfo_value,
 .portal.view_line > .content_data .section_record .column .ddinfo_value {
@@ -9523,7 +9532,7 @@ dd-modal .footer.content {
 }
 .component_portal.view_line.edit > .content_data .section_record,
 .portal.view_line.edit > .content_data .section_record {
-  padding-left: 1rem;
+  padding-left: 0.5rem;
 }
 .component_portal.view_line.search > .content_data,
 .portal.view_line.search > .content_data {
