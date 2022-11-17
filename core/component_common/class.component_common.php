@@ -415,34 +415,47 @@ abstract class component_common extends common {
 
 		// pagination
 			$this->pagination = new stdClass();
+			$request_config = ( isset($properties->source->request_config) )
+				? $properties->source->request_config
+				: [];
+			$found = array_find($request_config, function($el){
+				return isset($el->api_engine) && $el->api_engine==='dedalo';
+			});
+			$rqo = !empty($found)
+				? $found
+				: (isset($request_config[0])
+					? $request_config[0]
+					: null);
 
-				$request_config = ( isset($properties->source->request_config) )
-					? $properties->source->request_config
-					: [];
+			if (empty($rqo)) {
+				// v5 config
+				// limit
+					$this->pagination->limit = isset($properties->max_records)
+						? (int)$properties->max_records
+						: 5;
 
-				$found = array_find($request_config, function($el){
-					return isset($el->api_engine) && $el->api_engine==='dedalo';
-				});
-				$rqo = !empty($found)
-					? $found
-					: (isset($request_config[0])
-						? $request_config[0]
-						: new stdClass());
+				// offset
+					$this->pagination->offset = isset($properties->offset)
+						? (int)$properties->offset
+						: 0;
 
-			// limit
-				$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
-					? (int)$rqo->sqo->limit
-					: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
-						// show limit
-						?  (int)$rqo->show->sqo_config->limit
-						: 5);
+			}else{
+				// v6 config
+				// limit
+					$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
+						? (int)$rqo->sqo->limit
+						: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+							// show limit
+							? (int)$rqo->show->sqo_config->limit
+							: 5);
 
-			// offset
-				$this->pagination->offset =  (isset($rqo->sqo) && isset($rqo->sqo->offset))
-					? (int)$rqo->sqo->offset
-					: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
-						? (int)$rqo->show->sqo_config->offset
-						: 0);
+				// offset
+					$this->pagination->offset = (isset($rqo->sqo) && isset($rqo->sqo->offset))
+						? (int)$rqo->sqo->offset
+						: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
+							? (int)$rqo->show->sqo_config->offset
+							: 0);
+			}
 
 
 		return true;
