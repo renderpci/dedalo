@@ -8,6 +8,9 @@ include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 // close session to unlock php tread
 session_write_close();
 
+// $environment = dd_core_api::get_environment();
+// dump($environment, ' environment ++ '.to_string()); die();
+
 // $page_globals = new stdClass();
 	// 	# version
 	// 	$page_globals->dedalo_version = DEDALO_VERSION;
