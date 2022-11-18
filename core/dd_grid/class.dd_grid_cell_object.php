@@ -164,17 +164,15 @@ class dd_grid_cell_object {
 
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return false;
-		}
-
-		// set all properties
+			// trigger_error("wrong data format. Object expected. Given: ".gettype($data));
+			debug_log("ERROR: wrong data format. Object expected. Given: ".gettype($data), logger::ERROR);		
+		}else{
+			// set all properties
 			foreach ($data as $key => $value) {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-
-		return true;
+		}		
 	}//end __construct
 
 

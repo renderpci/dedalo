@@ -29,8 +29,6 @@ class indexation_grid {
 		$this->section_id	= $section_id;
 		$this->section_tipo	= $section_tipo;
 		$this->value		= ($value!==false) ? $value : null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
-
-		return true;
 	}//end __construct
 
 
@@ -170,7 +168,7 @@ class indexation_grid {
 	* GET_VALUE
 	*
 	* @param array $ar_ddo
-	* @param obejct $locator
+	* @param object $locator
 	*
 	* @return object $value
 	*/
@@ -291,8 +289,8 @@ class indexation_grid {
 
 			// check without tipo case
 				if (!isset($current_ddo_map->tipo)) {
-					debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo), logger::ERROR);
-					dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($tipo));
+					debug_log(__METHOD__.  ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($current_ddo_map), logger::ERROR);
+					dump($current_ddo_map, ' ERROR. Ignored current_ddo_map don\'t have tipo: ++ '.to_string($section_tipo));
 					continue;
 				}
 

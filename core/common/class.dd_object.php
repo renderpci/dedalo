@@ -527,7 +527,7 @@ class dd_object {
 	* COMPARE_DDO
 	* @return bool $equal
 	*/
-	public static function compare_ddo(object $ddo1, object $ddo2, array $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) : bool {
+	public static function compare_ddo(object $ddo1, object $ddo2, array $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type'], array $ar_exclude_properties=[]) : bool {
 
 		// if (!is_object($ddo1) || !is_object($ddo2)) {
 		// 	return false;

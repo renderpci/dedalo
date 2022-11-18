@@ -24,16 +24,16 @@ class update {
 
 	/**
 	* GET_UPDATE_VERSION
-	* @return array $update_version
+	* @return array|null $update_version
 	*/
-	public static function get_update_version() {
+	public static function get_update_version() : ?array {
 
 		$update_version  = array();
 		$current_version = get_current_version_in_db();
 		if (empty($current_version)) {
 			#$current_version = array(4,0,9);	// Default minimun version
 			#return $current_version;
-			return false;
+			return null;
 		}
 
 		$updates = update::get_updates();
@@ -52,6 +52,8 @@ class update {
 				}
 			}
 		}
+
+		return null;
 	}//end get_update_version
 
 
