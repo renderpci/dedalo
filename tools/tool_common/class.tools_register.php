@@ -667,23 +667,27 @@ class tools_register {
 					$config_section = section::get_instance(null, $section_tools_config_tipo);
 					$config_section->forced_create_record();
 
-					$config_component = component_common::get_instance( $component_model,
-																		$component_tipo,
-																		$config_section->get_section_id(),
-																		'list',
-																		DEDALO_DATA_NOLAN,
-																		$section_tools_config_tipo);
+					$config_component = component_common::get_instance( 
+						$component_model,
+						$component_tipo,
+						$config_section->get_section_id(),
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tools_config_tipo
+					);
 
 					$config_component->set_dato($reg_dato);
 					$config_component->Save();
-					// create the name conponent in the config section
-					$$config_name_component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$config_name_component			= component_common::get_instance($component_model,
-																					 $component_tipo_tool_name,
-																					 $config_section->get_section_id(),
-																					 'list',
-																					 DEDALO_DATA_NOLAN,
-																					 $section_tools_config_tipo);
+					// create the name component in the config section
+					$config_name_component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$config_name_component			= component_common::get_instance(
+						$component_model,
+						$component_tipo_tool_name,
+						$config_section->get_section_id(),
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tools_config_tipo
+					);
 
 					$config_name_component->set_dato([$tool_name]);
 					$config_name_component->Save();

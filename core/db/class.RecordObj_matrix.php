@@ -12,7 +12,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	protected $tipo;
 	protected $lang;
 
-	# ESPECIFIC VARS
+	# SPECIFIC VARS
 	protected $ar_matrix_childrens_of_this;
 	protected $caller_obj; 	# optional
 

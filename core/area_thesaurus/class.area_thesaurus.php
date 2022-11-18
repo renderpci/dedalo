@@ -273,9 +273,9 @@ class area_thesaurus extends area_common {
 	public function get_typology_order($typology_section_id) : int {
 
 		# Store for speed
-		static $typology_names;
-		if (isset($typology_names[$typology_section_id])) {
-			return $typology_names[$typology_section_id];
+		static $typology_order_values;
+		if (isset($typology_order_values[$typology_section_id])) {
+			return $typology_order_values[$typology_section_id];
 		}
 
 		$tipo 			 = DEDALO_HIERARCHY_TYPES_ORDER;
@@ -284,15 +284,20 @@ class area_thesaurus extends area_common {
 		$modo 			 = 'list';
 		$lang 			 = DEDALO_DATA_LANG;
 		$section_tipo 	 = area_thesaurus::$typologies_section_tipo;
-
-		$component 		 = component_common::get_instance($modelo_name,
-														  $tipo,
-														  $parent,
-														  $modo,
-														  $lang,
-														  $section_tipo);
+		$component 		 = component_common::get_instance(
+			$modelo_name,
+			$tipo,
+			$parent,
+			$modo,
+			$lang,
+			$section_tipo
+		);
 		$dato = $component->get_dato();
 		$value = reset($dato);
+
+		// cache
+		$typology_order_values[$typology_section_id] = $value;
+
 
 		return (int)$value;
 	}//end get_typology_order
@@ -665,7 +670,7 @@ class area_thesaurus extends area_common {
 	* @return object $sqo
 	* 	Full Search query object
 	*/
-	public function get_hierarchy_terms_sqo(array $hierarchy_terms) : array {
+	public function get_hierarchy_terms_sqo(array $hierarchy_terms) : object {
 
 		#
 		# FILTER_CUSTOM. hierarchy_terms

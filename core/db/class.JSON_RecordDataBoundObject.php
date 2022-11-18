@@ -40,9 +40,6 @@ abstract class JSON_RecordDataBoundObject {
 			$this->ID 				= intval($id);
 		}
 		$this->arModifiedRelations	= array();
-
-
-		return true;
 	}//end __construct
 
 
@@ -429,7 +426,8 @@ abstract class JSON_RecordDataBoundObject {
 	* Perform a simple free sql query and exec in db return result resource
 	* @param string $strQuery Full SQL query like "SELECT id FROM table WHERE id>0"
 	* @param bool $wait to set syc/async exec. Default us true
-	* @return resource (PHP<8) OR object (PHP>=8) | false $result
+	* @return mixed $result
+	*   resource (PHP<8) OR object (PHP>=8) | false $result
 	* 	Database resource/object from exec query
 	*/
 	public static function search_free(string $strQuery, bool $wait=true) {

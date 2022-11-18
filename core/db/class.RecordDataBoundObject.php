@@ -45,8 +45,6 @@ abstract class RecordDataBoundObject {
 			$this->ID 				= $id;
 		}
 		$this->arModifiedRelations	= array();
-
-		return true;
 	}//end __construct
 
 
@@ -116,8 +114,8 @@ abstract class RecordDataBoundObject {
 
 
 
-	# SET_DATO : SET DATO UNIFICADO (JSON)
-	public function set_dato(string $dato, bool $raw=false) {
+	# SET_DATO : SET DATO UNIFIED (JSON)
+	public function set_dato($dato, bool $raw=false) {
 
 		# Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;

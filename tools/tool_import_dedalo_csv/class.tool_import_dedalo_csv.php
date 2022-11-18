@@ -148,7 +148,9 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->msg		= !empty($files_info)
 				? "Found ".count($files_info)." files"
 				: "No files found at $dir";
-			$response->error	= $error ?? null;
+			$response->error	= isset($error)
+				? $error
+				: null;
 
 
 		return (object)$response;
@@ -721,7 +723,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 				$response->result = false;
 				$response->msg	= "Sorry, component tipo: $component_tipo (model: $modelo_name) not found in section: $section_tipo";
-				return $respose;
+				return $response;
 			}
 
 			$response->result = true;
@@ -777,7 +779,7 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 		}
 
-		if (!isset($locator->section_id)) {
+		if (!isset($locator) || !isset($locator->section_id)) {
 			debug_log(__METHOD__." Error on get user locator value from: ".to_string($value), logger::ERROR);
 			return null;
 		}

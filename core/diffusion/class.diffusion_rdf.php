@@ -94,7 +94,7 @@ class diffusion_rdf extends diffusion {
 			if (!is_dir($folder_path)) {
 				if(!mkdir($folder_path, 0777, true)) {
 					$response->msg = trim(" Error on read or create directory. Permission denied");
-					return $init_response;
+					return $response;
 				}
 				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 			}
