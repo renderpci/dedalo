@@ -2786,6 +2786,8 @@
 		Fixed save_time_machine time_machine_section_id error on undefined case (new record)
 		Valencia 15-11-2022
 		Added component_autocomplete_hi json controller file (added 15-11-2022 to Numismatic tool sort)
+		Valencia 19-11-2022
+		Fixed PHP v8 issues with bad json data in web_data class
 
 
 
@@ -2818,7 +2820,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-11-2022T10:00:00');
+	define('DEDALO_BUILD'	, '19-11-2022T09:19:00');
 
 
 
