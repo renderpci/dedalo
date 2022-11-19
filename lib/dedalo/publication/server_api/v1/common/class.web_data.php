@@ -401,7 +401,7 @@ class web_data {
 
 			// ar_fields verify json encoded array (14-10-2021)
 				if (is_string($sql_options->ar_fields) && strpos($sql_options->ar_fields, '[')===0) {
-					// try to decode json formated array
+					// try to decode json formatted array
 					if ($decoded_array = json_decode($sql_options->ar_fields)) {
 						$sql_options->ar_fields = $decoded_array;
 					}
@@ -1143,13 +1143,13 @@ class web_data {
 
 			// resolve_portal. publication_schema
 				// When options 'resolve_portal' is true, we create a virtual 'resolve_portals_custom' options
-				// from 'publication_schema' whith all portals
+				// from 'publication_schema' with all portals
 				if ($resolve_portals_custom===false && $resolve_portal===true) {
 					$resolve_portals_custom = self::get_publication_schema($table);
 					// format resolve_portals_custom as object always
 					if (is_array($resolve_portals_custom)) {
 						$resolve_portals_custom = (object)$resolve_portals_custom;
-					}elseif (is_string($resolve_portals_custom)) {
+					}elseif (is_string($resolve_portals_custom) && !empty($resolve_portals_custom)) {
 						$resolve_portals_custom = json_decode($resolve_portals_custom);
 					}
 				}
@@ -1232,7 +1232,9 @@ class web_data {
 				//		columns : [{name : "parents"}]
 				// }
 				if ($process_result!==false && !empty($ar_data)) {
-					$process_result = is_string($process_result) ? json_decode($process_result) : $process_result;
+					$process_result = is_string($process_result) && !empty($process_result)
+						? json_decode($process_result)
+						: $process_result;
 					if (isset($process_result->fn)) {
 						$ar_call = explode('::', $process_result->fn);
 						if(true===method_exists($ar_call[0],$ar_call[1])) {
@@ -1459,7 +1461,9 @@ class web_data {
 			$result = $stmt->execute();
 
 			if($result) while ($row = $stmt->fetch()) {
-				$data = json_decode($row['data']);
+				$data = !empty($row['data'])
+					? json_decode($row['data'])
+					: null;
 				break;
 			}
 
@@ -1494,7 +1498,9 @@ class web_data {
 					$match_column	= $ar_bits[1]; // overwite var match_column (!)
 				}
 
-			$current_ar_value = json_decode($rows[$current_field_ar_id]);
+			$current_ar_value = !empty($rows[$current_field_ar_id])
+				? json_decode($rows[$current_field_ar_id])
+				: null;
 			if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
 
 				// check is is locator
@@ -1877,7 +1883,9 @@ class web_data {
 				die("Error. Ilegal av_section_id: ".$options->av_section_id);
 			}
 
-		$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
+		$ar_restricted_terms = defined('AR_RESTRICTED_TERMS') && !empty(AR_RESTRICTED_TERMS)
+			? json_decode(AR_RESTRICTED_TERMS)
+			: [];
 
 		$TRANSCRIPTION_TIPO			= TRANSCRIPTION_TIPO;
 		$AUDIOVISUAL_SECTION_TIPO	= AUDIOVISUAL_SECTION_TIPO;
@@ -1914,14 +1922,16 @@ class web_data {
 		if (is_array($rows_data->result)) foreach($rows_data->result as $key => $value) {
 
 			$term_id  	= $value[FIELD_TERM_ID];
-			$indexation = json_decode($value[$field_indexation]);
+			$indexation = !empty($value[$field_indexation])
+				? json_decode($value[$field_indexation])
+				: [];
 
 			# Skip optional restricted terms (defined in config)
 			if (in_array($term_id, $ar_restricted_terms)) {
 				continue;
 			}
 
-			# Skip already included (dumplicates)
+			# Skip already included (duplicates)
 			if (isset($ar_termns[$term_id])) {
 				continue;
 			}
@@ -2269,7 +2279,9 @@ class web_data {
 		$rows_data	= (object)web_data::get_rows_data( $options );
 			#dump($rows_data, ' rows_data ++ '.to_string($tag_id));
 
-		$AR_RESTRICTED_TERMS = json_decode(AR_RESTRICTED_TERMS);
+		$AR_RESTRICTED_TERMS = defined('AR_RESTRICTED_TERMS') && !empty(AR_RESTRICTED_TERMS)
+			? json_decode(AR_RESTRICTED_TERMS)
+			: [];
 		foreach ($rows_data->result as $key => $value) {
 			# Remove restricted terms
 			if (in_array($value['term_id'], $AR_RESTRICTED_TERMS)) {
@@ -2664,7 +2676,9 @@ class web_data {
 		foreach ((array)$rows_data->result as $ar_value) {
 
 			$current_term_id 	= $ar_value['term_id'];
-			$ar_index  			= json_decode($ar_value[$field_indexation]);
+			$ar_index  			= !empty($ar_value[$field_indexation])
+				? json_decode($ar_value[$field_indexation])
+				: [];
 				#dump($ar_index, ' ar_index ++ '.to_string());
 			foreach ((array)$ar_index as $key => $locator) {
 				if ($locator->section_tipo==$section_tipo && $locator->section_id==$section_id) {
@@ -2792,7 +2806,9 @@ class web_data {
 			# THESAURUS ROOT LEVEL TERMS
 				# Get data from each term
 				$ar_ts_terms=array();
-				$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
+				$ar_restricted_terms = defined('AR_RESTRICTED_TERMS') && !empty(AR_RESTRICTED_TERMS)
+					? json_decode(AR_RESTRICTED_TERMS)
+					: [];
 				foreach ((array)$rows_data->result as $ar_value) {
 
 					if (empty($ar_value)) {
@@ -3235,12 +3251,16 @@ class web_data {
 				$options->get_matching_terms	= false; # boolean
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			// ar_term_id. Could be an array or a sjon array or a coma separated terms
+			// ar_term_id. Could be an array or a JSON array or a coma separated terms
 				if (is_array($options->ar_term_id)) {
 					$ar_term_id = $options->ar_term_id;
 				}else{
-					if(!$ar_term_id = json_decode($options->ar_term_id)) {
-						$ar_term_id = explode(',',$options->ar_term_id);
+					if (!empty($options->ar_term_id)) {
+						if(!$ar_term_id = json_decode($options->ar_term_id)) {
+							$ar_term_id = explode(',',$options->ar_term_id);
+						}
+					}else{
+						$ar_term_id = [];
 					}
 				}
 				$ar_term_id = array_map(function($term_id){
@@ -3354,7 +3374,7 @@ class web_data {
 					$ar_indexation_resolved = (array)call_user_func_array('array_intersect',$ar_indexation);
 						#dump($ar_indexation_resolved, ' ar_indexation_resolved ++ '.to_string());
 
-					# Add real locators coincidents with resolved intersections
+					# Add real locators coincident with resolved intersections
 					$intersect_locators = array();
 					foreach ((array)$options->ar_ts_terms as $key => $ts_object) {
 						$ar_locators = json_decode($ts_object->indexation);
@@ -4169,9 +4189,11 @@ class web_data {
 		    		preg_match_all($pattern_geo, $value, $matches);
 
 		    		$layer_id = (int)$matches[$key_tag_id][0];
-		    		$geo_data = $matches[$key_data][0];
-		    		$geo_data = str_replace('\'', '"', $geo_data);
-		    		$geo_data = json_decode($geo_data);
+		    		$geo_data = $matches[$key_data][0] ?? null;
+		    		if(!empty($geo_data)) {
+		    			$geo_data = str_replace('\'', '"', $geo_data);
+		    			$geo_data = json_decode($geo_data);
+		    		}
 
 		    		$layer_data = $geo_data;
 
@@ -4399,7 +4421,7 @@ class web_data {
 
 			# Search string is expected rawurlencoded — URL-encode according to RFC 3986
 			# q escape
-				if ($options->q!==false) {
+				if (!empty($options->q)) {
 					$options->q = web_data::get_db_connection()->real_escape_string($options->q);
 				}
 				function escape_string($string) {
@@ -4807,11 +4829,12 @@ class web_data {
 				#dump($search_options, ' $search_options ++ '.to_string()); die();
 
 			if($rows_data->result===false) {
-				#$response->result = false;
-				$response->results = false;
-				#$response->msg 	  = 'Error. Request global_search failed. '.$rows_data->msg;
-				$response->error_msg  = 'Error. Request global_search failed. '.$rows_data->msg;
-				$response->error_id   = 1;
+				// $response->result	= false;
+				$response->results		= false;
+				// $response->msg		= 'Error. Request global_search failed. '.$rows_data->msg;
+				$response->error_msg	= 'Error. Request global_search failed. '.$rows_data->msg;
+				$response->error_id		= 1;
+
 				return $response;
 			}
 
@@ -4830,7 +4853,9 @@ class web_data {
 				foreach ($fields_data as $key => $value_obj) {
 
 					if ($value_obj->name==='descriptors') {
-						$value_obj->value = json_decode($value_obj->value);
+						$value_obj->value = !empty($value_obj->value)
+							? json_decode($value_obj->value)
+							: null;
 					}
 
 					$row_formated[$value_obj->name] = $value_obj->value;
@@ -4839,13 +4864,12 @@ class web_data {
 				$ar_result_final[] = $row_formated;
 			}
 
-			# Add vars for pagination
-			#$response->page_number 	 = $options->page_number;
-			#$response->rows_per_page = $options->rows_per_page;
-			$response->total 		 = $rows_data->total;
-
-			$response->results 		 = $ar_result_final; //$rows_data->result;
-			#$response->msg 		 = 'Ok. Request global_search done successfully';
+			// Add vars for pagination
+			// $response->page_number	= $options->page_number;
+			// $response->rows_per_page	= $options->rows_per_page;
+			$response->total			= $rows_data->total;
+			$response->results			= $ar_result_final; //$rows_data->result;
+			#$response->msg				= 'Ok. Request global_search done successfully';
 
 			if(SHOW_DEBUG===true) {
 				$response->debug = (object)[
@@ -5164,7 +5188,9 @@ class web_data {
 			foreach ($ar_tipos as $key => $row_tipo) {
 				if (empty($row_tipo->monedas)) continue;
 
-				$monedas = json_decode($row_tipo->monedas);
+				$monedas = !empty($row_tipo->monedas)
+					? json_decode($row_tipo->monedas)
+					: [];
 
 				$ar_filter = [];
 				foreach ((array)$monedas as $moneda_section_id) {
@@ -5364,7 +5390,9 @@ class web_data {
 		foreach ((array)$data->result as $key => $value) {
 
 			$value 		= (object)$value;
-			$childrens 	= json_decode($value->childrens);
+			$childrens 	= !empty($value->childrens)
+				? json_decode($value->childrens)
+				: [];
 
 			if (!empty($childrens)) {
 
