@@ -127,4 +127,5 @@ core/common/css/structure.css
 # core/common/js/lang/*
 
 .phpintel
+.vscode
 libs_dev
