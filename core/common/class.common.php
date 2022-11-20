@@ -2444,12 +2444,10 @@ abstract class common {
 						// limit
 							// $parsed_item->sqo->limit = $limit;
 
-					// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
-						$parsed_item->set_show(
-							($mode==='list' && isset($item_request_config->show_list))
-								? $item_request_config->show_list
-								: $item_request_config->show
-						);
+					// show (mandatory), in list mode is possible create specific ddo_map in a section_list term child of the portal or section.
+
+						// set show with the parse request_config
+						$parsed_item->show = $item_request_config->show;
 
 						// get the ddo_map from ontology, defined by specific term, like "section_map"
 							$get_ddo_map		= $parsed_item->show->get_ddo_map ?? false;
@@ -3007,7 +3005,6 @@ abstract class common {
 
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
-
 
 		return $ar_request_query_objects;
 	}//end get_ar_request_config
