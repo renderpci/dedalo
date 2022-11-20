@@ -2220,15 +2220,15 @@ abstract class common {
 		// 2. From structure
 			if (empty($request_config)) {
 
-				$options = new stdClass();
-					$options->tipo			= $tipo;
-					$options->external		= false;
-					$options->section_tipo	= $section_tipo;
-					$options->mode			= $mode;
-					$options->section_id	= $section_id;
-					$options->limit			= $limit;
+				// $options = new stdClass();
+				// 	$options->tipo			= $tipo;
+				// 	$options->external		= false;
+				// 	$options->section_tipo	= $section_tipo;
+				// 	$options->mode			= $mode;
+				// 	$options->section_id	= $section_id;
+				// 	$options->limit			= $limit;
 
-				$request_config = common::get_ar_request_config($options);
+				$request_config = $this->get_ar_request_config();
 			}
 
 
@@ -3359,21 +3359,21 @@ abstract class common {
 	public function get_request_config_object() : ?request_config_object {
 
 		// short vars
-			$mode			= $this->get_modo(); // records_mode;
-			$tipo			= $this->get_tipo();
-			$section_tipo	= $this->get_section_tipo();
-			$section_id		= $this->get_section_id();
-			$limit			= $this->pagination->limit;
+			// $mode			= $this->get_modo(); // records_mode;
+			// $tipo			= $this->get_tipo();
+			// $section_tipo	= $this->get_section_tipo();
+			// $section_id		= $this->get_section_id();
+			// $limit			= $this->pagination->limit;
 
 		// ar_request_config
-			$options = new stdClass();
-				$options->tipo			= $tipo;
-				$options->external		= false;
-				$options->section_tipo	= $section_tipo;
-				$options->mode			= $mode;
-				$options->section_id	= $section_id;
-				$options->limit			= $limit;
-			$ar_request_query_objects = common::get_ar_request_config($options);
+			// $options = new stdClass();
+			// 	$options->tipo			= $tipo;
+			// 	$options->external		= false;
+			// 	$options->section_tipo	= $section_tipo;
+			// 	$options->mode			= $mode;
+			// 	$options->section_id	= $section_id;
+			// 	$options->limit			= $limit;
+			$ar_request_query_objects = $this->get_ar_request_config();
 
 		// request_config_object
 			$request_config_object = reset($ar_request_query_objects) ?? null;
