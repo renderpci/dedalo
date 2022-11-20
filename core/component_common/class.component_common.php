@@ -2174,7 +2174,7 @@ abstract class component_common extends common {
 				# ds container add if not exits in current locator
 				if(!isset($current_locator->ds->$ds_key)) {
 					$response->msg = 'Sorry, current index not exists. Nothing is removed';
-					return $respose;
+					return $response;
 				}
 
 				# new ds locator is built from termino_id temporarily
@@ -2558,7 +2558,7 @@ abstract class component_common extends common {
 
 		// set dataframe if exists or default empty array
 			$this->dataframe = isset($dato_full->dataframe)
-				? (array)$component_data->dataframe
+				? (array)$dato_full->dataframe
 				: [];
 
 

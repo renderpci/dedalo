@@ -189,7 +189,8 @@ class component_json extends component_common {
 			$file_extension = strtolower(pathinfo($file_data->name, PATHINFO_EXTENSION));
 
 		// validate extension
-			if (!in_array($file_extension, $this->get_allowed_extensions())) {
+			$allowed_extensions = $this->get_allowed_extensions();
+			if (!in_array($file_extension, $allowed_extensions)) {
 				$response->msg  = "Error: " .$file_extension. " is an invalid file type ! ";
 				$response->msg .= "Allowed file extensions are: ". implode(', ', $allowed_extensions);
 				return $response;

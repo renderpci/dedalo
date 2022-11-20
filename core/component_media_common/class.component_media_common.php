@@ -131,6 +131,7 @@ class component_media_common extends component_common {
 
 		// validate extension
 			if (!$this->valid_file_extension($file_extension)) {
+				$allowed_extensions = $this->get_allowed_extensions();
 				$response->msg  = "Error: " .$file_extension. " is an invalid file type ! ";
 				$response->msg .= "Allowed file extensions are: ". implode(', ', $allowed_extensions);
 				return $response;

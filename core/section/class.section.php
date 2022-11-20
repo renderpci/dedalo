@@ -182,6 +182,9 @@ class section extends common {
 						section::$active_section_id = $this->get_section_id();
 			}
 
+		// properties
+			$properties = $this->get_properties();
+
 		// pagination
 			$this->pagination = new stdClass();
 				$this->pagination->offset	= 0; // default
@@ -315,6 +318,7 @@ class section extends common {
 				$component_dato = $all_component_data->dato->{$lang};
 			}else{
 				// fallback to default lang
+				$lang_default = DEDALO_DATA_LANG_DEFAULT;
 				$component_dato = ($lang!==$lang_default && !empty($all_component_data->dato->{$lang_default}))
 					? $all_component_data->dato->{$lang_default}
 					: null;

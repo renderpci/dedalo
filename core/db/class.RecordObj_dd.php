@@ -81,8 +81,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}*/
 
 		parent::__construct($terminoID);
-
-		return true;
 	}//end __construct
 
 
@@ -167,7 +165,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* Return the value of property 'properties', stored as plain text in table column 'properties'
 	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
 	* @param bool $json_decode
-	* @return object / string parent::$properties
+	* @return mixed $propiedades
+	*  object / string parent::$properties
 	*/
 	public function get_propiedades(bool $json_decode=false) {
 
@@ -660,13 +659,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string|null $esdescriptor
 	* @param string|null $esmodelo
 	* @param string|null $order_by
-	* @return array
+
+	* @return array $ar_childrens_of_this
 	*/
 	public function get_ar_childrens_of_this($esdescriptor='si', string $esmodelo=null, $order_by='norden') : array {
 
 		# COMPROBACIÓN
 		if(empty($this->terminoID))	{
-			return false;
+			return [];
 		}
 		#if(empty($this->prefijo)) 	return false;
 
@@ -701,7 +701,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$ar_childrens_of_this_stat_data[$key] = $ar_childrens_of_this;
 
-		return $ar_childrens_of_this ;
+
+		return $ar_childrens_of_this;
 	}//end get_ar_childrens_of_this
 
 
@@ -769,7 +770,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$this->get_ar_recursive_childrens_of_this($children_terminoID,1);
 		}
 
-		if(isset($this->ar_recursive_childrens_of_this)) return $this->ar_recursive_childrens_of_this ;
+		if(isset($this->ar_recursive_childrens_of_this)) {
+			return $this->ar_recursive_childrens_of_this;
+		}
+
+		return [];
 	}//end get_ar_recursive_childrens_of_this
 
 

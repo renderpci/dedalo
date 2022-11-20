@@ -137,7 +137,7 @@ class tool_export extends tool_common {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$section_tipo		= $options->section_tipo ?? $ddo_source->tipo;
+			$section_tipo		= $options->section_tipo ?? $options->tipo;
 			$model				= $options->model ?? 'section';
 			$data_format		= $options->data_format;
 			$ar_ddo_to_export	= $options->ar_ddo_to_export;

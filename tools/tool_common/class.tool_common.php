@@ -557,7 +557,7 @@ class tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$$options = new stdClass();
+			$options = new stdClass();
 				$options->component_tipo	= null;
 				$options->section_id		= null;
 				$options->section_tipo		= null;
@@ -636,7 +636,7 @@ class tool_common {
 
 						$user_profile = security::get_user_profile($user_id);
 						if (empty($user_profile)) {
-							return $user_tools; // empty array
+							return []; // empty array
 						}
 						$user_profile_id		= (int)$user_profile->section_id;
 						$security_tools_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
