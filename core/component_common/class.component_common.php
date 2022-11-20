@@ -2006,14 +2006,14 @@ abstract class component_common extends common {
 
 		// get_config_context normalized
 			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
-			$options = new stdClass();
-				$options->tipo			= $this->tipo;
-				$options->external		= false;
-				$options->section_tipo	= $this->section_tipo;
-				$options->mode			= $this->modo;
-				$options->section_id	= null;
-				$options->limit			= $this->pagination->limit;
-			$config_context = (array)common::get_ar_request_config($options);
+			// $options = new stdClass();
+			// 	$options->tipo			= $this->tipo;
+			// 	$options->external		= false;
+			// 	$options->section_tipo	= $this->section_tipo;
+			// 	$options->mode			= $this->modo;
+			// 	$options->section_id	= null;
+			// 	$options->limit			= $this->pagination->limit;
+			$config_context = $this->get_ar_request_config();
 
 		$ar_target_section_tipo = [];
 		foreach ($config_context as $config_context_item) {
