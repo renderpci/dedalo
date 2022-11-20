@@ -64,8 +64,6 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		}else{
 			parent::__construct(null);
 		}
-
-		return true;
 	}//end __construct
 
 

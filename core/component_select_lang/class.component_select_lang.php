@@ -63,7 +63,7 @@ class component_select_lang extends component_relation_common {
 							dump($dato," dato");
 						}
 						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_locator) .' : '. print_r($current_locator,true) );
-						return $valor;
+						return $current_locator;
 					}
 				}
 			}

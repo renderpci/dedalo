@@ -187,7 +187,7 @@ class component_relation_parent extends component_relation_common {
 						}
 						break;
 					default:
-						debug_log(__METHOD__." Error. action: '$action' not defined ! ".to_string(), logger::ERROR);
+						debug_log(__METHOD__." Error. action: '$changed_data->action' not defined ! ".to_string(), logger::ERROR);
 						break;
 				}
 			}

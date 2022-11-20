@@ -401,7 +401,7 @@ class dd extends dd_elements {
 	*/
 	function existeEsteTermino(string $termino, string $terminoID) : ?string {
 
-		$exists		= RecordObj_decriptors::termino_exists($termino,$terminoID);
+		$exists		= RecordObj_decriptors::termino_exists($termino, $terminoID);
 		if($exists) {
 			global 	$el_termino_ya_existe_title ;
 			$html	= "<div class=\"error\"> $el_termino_ya_existe_title: <b>$termino</b> </div>";

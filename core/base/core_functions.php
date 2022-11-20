@@ -4,11 +4,11 @@
 
 /**
 * DUMP
-* @param $val
+* @param mixed $val
 *	Value to show. Can be a string / array / object
-* @param $var_name
+* @param string $var_name = null
 *	Name of var received. Is optional
-* @param $expected
+* @param array $arguments = []
 *	Expected value for reference
 *
 * @return string $html
@@ -38,8 +38,8 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 			$html .= PHP_EOL . " name: <strong>". $var_name . '</strong>';
 
 		# EXPECTED
-		if(isset($expected))
-			$html .= PHP_EOL . " val expected: <em> $expected </em>";
+		// if(isset($expected))
+		//	$html .= PHP_EOL . " val expected: <em> $expected </em>";
 
 		# EXEC_TIME
 		if(isset($start_time)) {
@@ -1886,7 +1886,7 @@ function write_session_value(array $session_keys, $value) {
 
 	}else{
 
-		trigger_error( '!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_key) . ' - value: '. json_encode($value) );
+		trigger_error( '!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_keys) . ' - value: '. json_encode($value) );
 		$result = false;
 	}
 

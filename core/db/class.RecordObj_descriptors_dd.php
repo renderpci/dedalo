@@ -113,8 +113,6 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			if( $id<1 && (!empty($parent) && !empty($lang)) )
 			parent::calculate_ID();
 		}
-
-		return true;
 	}//end __construct
 
 
@@ -202,11 +200,13 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	*/
 	public static function termino_exists($dato, string $tipo) : bool {
 
+		$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(self::$descriptors_matrix_table, $tipo);
+
 		$arguments=array();
 		$arguments['dato']	= $dato;
 		$arguments['parent']= $tipo;
 		$arguments['tipo']	= 'termino';
-		$ar_id				= $this->search($arguments);
+		$ar_id				= $RecordObj_descriptors_dd->search($arguments);
 
 		if(count($ar_id)===0) return false;
 

@@ -3123,229 +3123,230 @@ abstract class common {
 	* Generic builder for search_query_object (override when need)
 	* @return object $query_object
 	*/
-	public static function build_search_query_object( object $request_options ) : object {
-		$start_time = start_time();
+		// public static function build_search_query_object( object $request_options ) : object {
+		// 	$start_time = start_time();
 
-		$options = new stdClass();
-			$options->q						= null;
-			$options->q_operator			= null;
-			$options->q_split				= null;
-			$options->limit					= 10;
-			$options->offset				= 0;
-			$options->lang					= 'all';
-			$options->logical_operator		= '$or';
-			$options->id					= 'temp';
-			$options->tipo					= null;
-			$options->section_tipo			= null; // use always array as value
-			$options->add_filter			= true;
-			$options->add_select			= true;
-			$options->order_custom			= null;
-			$options->full_count			= false;
-			$options->filter_by_locator		= false;
-			$options->filter_by_locators	= false; // different of 'filter_by_locator' (!)
-			$options->direct				= false; // true for section (!)
-			$options->mode					= 'list'; // It is necessary to calculate the ddo's to search / show (layout_map)
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// 	$options = new stdClass();
+		// 		$options->q						= null;
+		// 		$options->q_operator			= null;
+		// 		$options->q_split				= null;
+		// 		$options->limit					= 10;
+		// 		$options->offset				= 0;
+		// 		$options->lang					= 'all';
+		// 		$options->logical_operator		= '$or';
+		// 		$options->id					= 'temp';
+		// 		$options->tipo					= null;
+		// 		$options->section_tipo			= null; // use always array as value
+		// 		$options->add_filter			= true;
+		// 		$options->add_select			= true;
+		// 		$options->order_custom			= null;
+		// 		$options->full_count			= false;
+		// 		$options->filter_by_locator		= false;
+		// 		$options->filter_by_locators	= false; // different of 'filter_by_locator' (!)
+		// 		$options->direct				= false; // true for section (!)
+		// 		$options->mode					= 'list'; // It is necessary to calculate the ddo's to search / show (layout_map)
+		// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$id					= $options->id;
-		$logical_operator	= $options->logical_operator;
-		$tipo				= $options->tipo;
+		// 	$id					= $options->id;
+		// 	$logical_operator	= $options->logical_operator;
+		// 	$tipo				= $options->tipo;
+		// 	$mode				= $options->mode;
 
-		# Default from options (always array)
-		$section_tipo = is_array($options->section_tipo) ? $options->section_tipo : [$options->section_tipo];
+		// 	# Default from options (always array)
+		// 	$section_tipo = is_array($options->section_tipo) ? $options->section_tipo : [$options->section_tipo];
 
-		# Defaults
-		$filter_group = null;
-		$select_group = array();
-		$total_locators = false;
+		// 	# Defaults
+		// 	$filter_group = null;
+		// 	$select_group = array();
+		// 	$total_locators = false;
 
-		// filter_by_locator_builder
-			$filter_by_locator_builder = function($filter_by_locator, $section_tipo) {
+		// 	// filter_by_locator_builder
+		// 		$filter_by_locator_builder = function($filter_by_locator, $section_tipo) {
 
-				if (is_array($section_tipo)) {
-					$section_tipo = reset($section_tipo);
-				}
+		// 			if (is_array($section_tipo)) {
+		// 				$section_tipo = reset($section_tipo);
+		// 			}
 
-				// Is an array of objects
-					$ar_section_id = [];
-					foreach ((array)$filter_by_locator as $key => $value_obj) {
-						$current_section_id = (int)$value_obj->section_id;
-						if (!in_array($current_section_id, $ar_section_id)) {
-							$ar_section_id[] = $current_section_id;
-						}
-					}
+		// 			// Is an array of objects
+		// 				$ar_section_id = [];
+		// 				foreach ((array)$filter_by_locator as $key => $value_obj) {
+		// 					$current_section_id = (int)$value_obj->section_id;
+		// 					if (!in_array($current_section_id, $ar_section_id)) {
+		// 						$ar_section_id[] = $current_section_id;
+		// 					}
+		// 				}
 
-				$filter_element = new stdClass();
-					$filter_element->q 		= json_encode($ar_section_id);
-					$filter_element->path 	= json_decode('[
-						{
-							"section_tipo": "'.$section_tipo.'",
-							"component_tipo": "dummy",
-							"modelo": "component_section_id",
-							"name": "Searching"
-						}
-					]');
+		// 			$filter_element = new stdClass();
+		// 				$filter_element->q 		= json_encode($ar_section_id);
+		// 				$filter_element->path 	= json_decode('[
+		// 					{
+		// 						"section_tipo": "'.$section_tipo.'",
+		// 						"component_tipo": "dummy",
+		// 						"modelo": "component_section_id",
+		// 						"name": "Searching"
+		// 					}
+		// 				]');
 
-				$op = '$and';
-				$filter_group = new stdClass();
-					$filter_group->$op = [$filter_element];
+		// 			$op = '$and';
+		// 			$filter_group = new stdClass();
+		// 				$filter_group->$op = [$filter_element];
 
-				$total_locators = count($ar_section_id);
+		// 			$total_locators = count($ar_section_id);
 
-				return [
-					'filter_group' 	 => $filter_group,
-					'total_locators' => $total_locators
-				];
-			};
+		// 			return [
+		// 				'filter_group' 	 => $filter_group,
+		// 				'total_locators' => $total_locators
+		// 			];
+		// 		};
 
-		if ($options->direct===true) {
+		// 	if ($options->direct===true) {
 
-			# FILTER
-				if ($options->add_filter===true) {
+		// 		# FILTER
+		// 			if ($options->add_filter===true) {
 
-					if ($options->filter_by_locators!==false) {
+		// 				if ($options->filter_by_locators!==false) {
 
-						// filter_by_locators case
-						$filter_by_locators	= $options->filter_by_locators;
-						$filter_group		= false;
-						$total_locators		= count($filter_by_locators);
+		// 					// filter_by_locators case
+		// 					$filter_by_locators	= $options->filter_by_locators;
+		// 					$filter_group		= false;
+		// 					$total_locators		= count($filter_by_locators);
 
-					}elseif ($options->filter_by_locator!==false){
+		// 				}elseif ($options->filter_by_locator!==false){
 
-						// filter_by_locator case
-						$filter_by_locator_data = $filter_by_locator_builder($options->filter_by_locator, $section_tipo);
+		// 					// filter_by_locator case
+		// 					$filter_by_locator_data = $filter_by_locator_builder($options->filter_by_locator, $section_tipo);
 
-						$filter_group	= $filter_by_locator_data['filter_group'];
-						$total_locators	= $filter_by_locator_data['total_locators'];
-					}
+		// 					$filter_group	= $filter_by_locator_data['filter_group'];
+		// 					$total_locators	= $filter_by_locator_data['total_locators'];
+		// 				}
 
-				}//end if ($options->add_filter===true)
+		// 			}//end if ($options->add_filter===true)
 
-		}else{
+		// 	}else{
 
-			$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
-			$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_properties(true);
+		// 		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
+		// 		$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_properties(true);
 
-			// source search. If not defined, use fallback to legacy related terms and build one
-				$request_config = common::get_request_config($tipo, $external=false, $section_tipo, $mode);
+		// 		// source search. If not defined, use fallback to legacy related terms and build one
+		// 			$request_config = common::get_request_config($tipo, $external=false, $section_tipo, $mode);
 
-			// request_config iteration
-				foreach ($request_config as $source_search_item) {
+		// 		// request_config iteration
+		// 			foreach ($request_config as $source_search_item) {
 
-					// current section tipo
-						$current_section_tipo = $source_search_item->section_tipo;
+		// 				// current section tipo
+		// 					$current_section_tipo = $source_search_item->section_tipo;
 
-					foreach ($source_search_item->search as $current_tipo) {
+		// 				foreach ($source_search_item->search as $current_tipo) {
 
-						// check is real component
-							$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-							if (strpos($model,'component')!==0) {
-								debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
-								continue;
-							}
+		// 					// check is real component
+		// 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+		// 						if (strpos($model,'component')!==0) {
+		// 							debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
+		// 							continue;
+		// 						}
 
-						$path = search::get_query_path($current_tipo, $current_section_tipo);
+		// 					$path = search::get_query_path($current_tipo, $current_section_tipo);
 
-						# FILTER . filter_element (operator_group) - default is true
-							if ($options->add_filter===true) {
+		// 					# FILTER . filter_element (operator_group) - default is true
+		// 						if ($options->add_filter===true) {
 
-								if ($options->filter_by_locator!==false) {
+		// 							if ($options->filter_by_locator!==false) {
 
-									// filter_by_locators case
-									$filter_by_locators	= $options->filter_by_locators;
-									$filter_group		= false;
-									$total_locators		= count((array)$filter_by_locators);
+		// 								// filter_by_locators case
+		// 								$filter_by_locators	= $options->filter_by_locators;
+		// 								$filter_group		= false;
+		// 								$total_locators		= count((array)$filter_by_locators);
 
-								}elseif ($options->filter_by_locators!==false) {
+		// 							}elseif ($options->filter_by_locators!==false) {
 
-									// filter_by_locator case
-									$filter_by_locator_data = $filter_by_locator_builder($options->filter_by_locator, $current_section_tipo);
+		// 								// filter_by_locator case
+		// 								$filter_by_locator_data = $filter_by_locator_builder($options->filter_by_locator, $current_section_tipo);
 
-									$filter_group 	= $filter_by_locator_data['filter_group'];
-									$total_locators = $filter_by_locator_data['total_locators'];
+		// 								$filter_group 	= $filter_by_locator_data['filter_group'];
+		// 								$total_locators = $filter_by_locator_data['total_locators'];
 
-								}else{//end if ($options->filter_by_locator!==false)
+		// 							}else{//end if ($options->filter_by_locator!==false)
 
-									// if (!empty($options->q)) {
-										$filter_element = new stdClass();
-											$filter_element->q 		= $options->q ?? '';
-											$filter_element->lang 	= $options->lang;
-											$filter_element->path 	= $path;
+		// 								// if (!empty($options->q)) {
+		// 									$filter_element = new stdClass();
+		// 										$filter_element->q 		= $options->q ?? '';
+		// 										$filter_element->lang 	= $options->lang;
+		// 										$filter_element->path 	= $path;
 
-										$filter_group = new stdClass();
-											$filter_group->$logical_operator[] = $filter_element;
-									// }
-								}
-							}//end if ($options->add_filter===true)
-
-
-						# SELECT . Select_element (select_group)
-							if($options->add_select===true){
-
-								# Add options lang
-								$end_path = end($path);
-								$end_path->lang = $options->lang;
-
-								$select_element = new stdClass();
-									$select_element->path = $path;
-
-								$select_group[] = $select_element;
-							}
-
-					}//end foreach ($source_search_item->components as $current_tipo)
-
-				}//end foreach ($source_search as $source_search_item) {
-
-		}//end if ($options->direct===true)
-
-		$full_count		= $total_locators ?? $options->full_count;
-		$mode			= $options->mode ?? null;
-		$order_custom	= $options->order_custom ?? null;
-
-		// sqo
-			// $query_object = new stdClass();
-			// 	$query_object->typo			= 'sqo';
-			// 	$query_object->id			= $id;
-			// 	$query_object->section_tipo	= $section_tipo;
-			// 	$query_object->filter		= $filter_group;
-			// 	$query_object->select		= $select_group;
-			// 	$query_object->limit		= $options->limit;
-			// 	$query_object->offset		= $options->offset;
-			// 	$query_object->full_count	= $full_count;
-
-			// 	if (!empty($options->mode)) {
-			// 		$query_object->mode = $options->mode;
-			// 	}
-			// 	if (!empty($filter_by_locators)) {
-			// 		$query_object->filter_by_locators = $filter_by_locators;
-			// 	}
-			// 	if (!empty($options->order_custom)) {
-			// 		$query_object->order_custom = $options->order_custom;
-			// 	}
-
-		// sqo
-			$sqo = new build_search_query_object();
-				$sqo->set_id($id);
-				$sqo->set_section_tipo($section_tipo);
-				$sqo->set_filter($filter);
-				$sqo->set_select($select);
-				$sqo->set_limit($limit);
-				$sqo->set_offset($offset);
-				$sqo->set_full_count($full_count);
-
-				if (!empty($mode)) {
-					$sqo->set_mode($mode);
-				}
-				if (!empty($filter_by_locators)) {
-					$sqo->set_filter_by_locators($filter_by_locators);
-				}
-				if (!empty($order_custom)) {
-					$sqo->set_order_custom($order_custom);
-				}
+		// 									$filter_group = new stdClass();
+		// 										$filter_group->$logical_operator[] = $filter_element;
+		// 								// }
+		// 							}
+		// 						}//end if ($options->add_filter===true)
 
 
-		return (object)$query_object;
-	}//end build_search_query_object
+		// 					# SELECT . Select_element (select_group)
+		// 						if($options->add_select===true){
+
+		// 							# Add options lang
+		// 							$end_path = end($path);
+		// 							$end_path->lang = $options->lang;
+
+		// 							$select_element = new stdClass();
+		// 								$select_element->path = $path;
+
+		// 							$select_group[] = $select_element;
+		// 						}
+
+		// 				}//end foreach ($source_search_item->components as $current_tipo)
+
+		// 			}//end foreach ($source_search as $source_search_item) {
+
+		// 	}//end if ($options->direct===true)
+
+		// 	$full_count		= $total_locators ?? $options->full_count;
+		// 	$mode			= $options->mode ?? null;
+		// 	$order_custom	= $options->order_custom ?? null;
+
+		// 	// sqo
+		// 		// $query_object = new stdClass();
+		// 		// 	$query_object->typo			= 'sqo';
+		// 		// 	$query_object->id			= $id;
+		// 		// 	$query_object->section_tipo	= $section_tipo;
+		// 		// 	$query_object->filter		= $filter_group;
+		// 		// 	$query_object->select		= $select_group;
+		// 		// 	$query_object->limit		= $options->limit;
+		// 		// 	$query_object->offset		= $options->offset;
+		// 		// 	$query_object->full_count	= $full_count;
+
+		// 		// 	if (!empty($options->mode)) {
+		// 		// 		$query_object->mode = $options->mode;
+		// 		// 	}
+		// 		// 	if (!empty($filter_by_locators)) {
+		// 		// 		$query_object->filter_by_locators = $filter_by_locators;
+		// 		// 	}
+		// 		// 	if (!empty($options->order_custom)) {
+		// 		// 		$query_object->order_custom = $options->order_custom;
+		// 		// 	}
+
+		// 	// sqo
+		// 		$sqo = new build_search_query_object();
+		// 			$sqo->set_id($id);
+		// 			$sqo->set_section_tipo($section_tipo);
+		// 			$sqo->set_filter($filter);
+		// 			$sqo->set_select($select);
+		// 			$sqo->set_limit($limit);
+		// 			$sqo->set_offset($offset);
+		// 			$sqo->set_full_count($full_count);
+
+		// 			if (!empty($mode)) {
+		// 				$sqo->set_mode($mode);
+		// 			}
+		// 			if (!empty($filter_by_locators)) {
+		// 				$sqo->set_filter_by_locators($filter_by_locators);
+		// 			}
+		// 			if (!empty($order_custom)) {
+		// 				$sqo->set_order_custom($order_custom);
+		// 			}
+
+
+		// 	return (object)$query_object;
+		// }//end build_search_query_object
 
 
 
@@ -3851,16 +3852,16 @@ abstract class common {
 			if (!function_exists('get_parents')) {
 				function get_parents($ar_ddo, $dd_object) {
 					$ar_parents = [];
+					
 					$parent = array_find($ar_ddo, function($item) use($dd_object){
-
 						return $item->tipo===$dd_object->parent;
 					});
-
 					if (!empty($parent)) {
 						$ar_parents[]	= $parent;
 						$new_parents	= get_parents($ar_ddo, $parent);
 						$ar_parents[]	= array_merge($ar_parents, $new_parents);
 					}
+					
 					return $ar_parents;
 				}
 			}
