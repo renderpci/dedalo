@@ -691,24 +691,6 @@ abstract class common {
 
 
 	/**
-	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
-	* @return string $html
-	*	Get standard path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
-	*	and return rendered html code
-	*/
-		// public function get_html_DES() {
-
-		// 		# Class name is called class (ex. component_input_text), not this class (common)
-		// 		ob_start();
-		// 		include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
-		// 		$html = ob_get_clean();
-
-		// 	return (string)$html;
-		// }//end get_html
-
-
-
-	/**
 	* GET_AR_ALL_LANGS : Return array of all langs of all projects in Dédalo
 	* @return array $ar_all_langs
 	*	like (lg-eng=>locator,lg-spa=>locator) or resolved (lg-eng => English, lg-spa => Spanish)
@@ -1836,9 +1818,9 @@ abstract class common {
 									$current_section_tipo
 								);
 								// get limit from component calculation or if it's defined from ddo
-								$related_element->pagination->limit = isset($dd_object->limit)
-									? $dd_object->limit
-									: $related_element->pagination->limit;
+								if(isset($dd_object->limit)){
+									$related_element->pagination->limit = $dd_object->limit;
+								}
 
 								// virtual request_config, create new request config to be injected to the current_ddo.
 								// the current component has the configuration to all children components,
@@ -2318,39 +2300,17 @@ abstract class common {
 	* Resolves the component config context with backward compatibility
 	* The proper config in v6 is on term properties config, NOT as related terms
 	* Note that section tipo 'self' will be replaced by argument '$section_tipo'
-	* @param object options
-	*	 @param string $tipo
-	*		component tipo
-	*	 @param bool $external
-	*		optional default false
-	*	 @param string $section_tipo
-	*		optional default null
-	* 	@param string $mode
-	*		optional default 'list'
-	* 	@param string $section_id
-	*		optional default null
 	*
 	* @return array $ar_request_config
 	*/
-	public static function get_ar_request_config( object $request_options ) : array {
-
-		// options
-			$options = new stdClass();
-				$options->tipo			= null; 	// string
-				$options->external		= false; 	// bool
-				$options->section_tipo	= null; 	// string
-				$options->mode			= 'list'; 	// string
-				$options->section_id	= null; 	// string|int|null
-				$options->limit			= null; 	// int|null
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	public function get_ar_request_config() : array {
 
 		// options fix
-			$tipo			= $options->tipo;
-			$external		= $options->external;
-			$section_tipo	= $options->section_tipo;
-			$mode			= $options->mode;
-			$section_id		= $options->section_id;
-			$limit			= $options->limit;
+			$tipo			= $this->get_tipo();
+			$external		= false;
+			$section_tipo	= $this->get_section_tipo();
+			$mode			= $this->get_modo();
+			$section_id		= $this->get_section_id();
 
 		// debug
 			// if (to_string($section_tipo)==='self') {
@@ -2394,35 +2354,15 @@ abstract class common {
 			}
 
 		// pagination defaults. Note that limit defaults are set on element construction based on properties
-			$offset	= 0;
-			$limit	= (function() use($limit, $model, $tipo, $section_tipo, $mode) {
+			$offset	= isset($this->pagination->offset)
+				? $this->pagination->offset
+				: 0;
 
-				$resolved_limit = 10; // default
-				switch (true) {
-					case $model==='section':
-						$section = section::get_instance(null, $tipo, $mode, true);
-						$resolved_limit = $section->pagination->limit;
-						break;
-					case strpos($model, 'component_')===0:
-						// $translatable	= RecordObj_dd::get_translatable($tipo);
-						// $current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						// $component		= component_common::get_instance(
-						// 	$model,
-						// 	$tipo,
-						// 	null,
-						// 	$mode,
-						// 	$current_lang,
-						// 	$section_tipo
-						// );
-						$resolved_limit =  $limit;
-						break;
-					default:
-						break;
-				}
+			$limit	= isset($this->pagination->limit)
+				? $this->pagination->limit
+				: ( ($mode ==='list') ? 1 : 10 );
 
-				return $resolved_limit;
-			})();
-
+			
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
 			if(isset($properties->source->request_config) || $model==='component_autocomplete_hi') {
@@ -2640,6 +2580,17 @@ abstract class common {
 							if (!isset($parsed_item->show->sqo_config->operator)) {
 								$parsed_item->show->sqo_config->operator = '$or';
 							}
+							// limit
+							if (isset($parsed_item->show->sqo_config->limit)) {
+								//get session limit if it was defined
+								$sqo_id	= implode('_', [$model, $section_tipo]);
+								$parsed_item->show->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+									? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+									: $parsed_item->show->sqo_config->limit;
+								// set the limit in the instance
+								$this->pagination->limit = $parsed_item->show->sqo_config->limit;
+							}
+
 						}else{
 							// fallback non defined sqo_config
 							$sqo_config = new stdClass();
@@ -2652,6 +2603,8 @@ abstract class common {
 								$sqo_config->operator		= '$or';
 
 							$parsed_item->show->sqo_config = $sqo_config;
+							// set the limit in the instance
+							$this->pagination->limit = $limit;
 						}
 
 					// search
@@ -2702,6 +2655,16 @@ abstract class common {
 								if (!isset($parsed_item->search->sqo_config->operator)) {
 									$parsed_item->search->sqo_config->operator = '$or';
 								}
+								// limit
+								if (isset($parsed_item->search->sqo_config->limit)) {
+									//get session limit if it was defined
+									$sqo_id	= implode('_', [$model, $section_tipo]);
+									$parsed_item->search->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+										: $parsed_item->search->sqo_config->limit;
+									// set the limit in the instance
+									$this->pagination->limit = $parsed_item->search->sqo_config->limit;
+								}
 							}else{
 								// fallback non defined sqo_config
 								$sqo_config = new stdClass();
@@ -2714,6 +2677,8 @@ abstract class common {
 									$sqo_config->operator		= '$or';
 
 								$parsed_item->search->sqo_config = $sqo_config;
+								// set the limit in the instance
+								$this->pagination->limit = $limit;
 							}
 						}
 
@@ -2908,6 +2873,9 @@ abstract class common {
 						$sqo_config->offset			= $offset;
 						$sqo_config->mode			= $mode;
 						$sqo_config->operator		= '$or';
+
+				// set the limit in the instance
+					$this->pagination->limit = $limit;
 
 				// mode
 					$current_mode = ($model!=='section')
