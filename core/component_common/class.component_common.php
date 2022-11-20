@@ -430,9 +430,13 @@ abstract class component_common extends common {
 			if (empty($rqo)) {
 				// v5 config
 				// limit
-					$this->pagination->limit = isset($properties->max_records)
-						? (int)$properties->max_records
-						: 5;
+					// $this->pagination->limit = isset($properties->max_records)
+					// 	? (int)$properties->max_records
+					// 	: 5;
+
+					$this->pagination->limit = $this->modo==='edit'
+						? 1
+						: 10;
 
 				// offset
 					$this->pagination->offset = isset($properties->offset)
@@ -442,12 +446,16 @@ abstract class component_common extends common {
 			}else{
 				// v6 config
 				// limit
-					$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
-						? (int)$rqo->sqo->limit
-						: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
-							// show limit
-							? (int)$rqo->show->sqo_config->limit
-							: 5);
+					// $this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
+					// 	? (int)$rqo->sqo->limit
+					// 	: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+					// 		// show limit
+					// 		? (int)$rqo->show->sqo_config->limit
+					// 		: 5);
+
+					$this->pagination->limit = $this->modo==='edit'
+						? 1
+						: 10;
 
 				// offset
 					$this->pagination->offset = (isset($rqo->sqo) && isset($rqo->sqo->offset))
@@ -2004,6 +2012,7 @@ abstract class component_common extends common {
 				$options->section_tipo	= $this->section_tipo;
 				$options->mode			= $this->modo;
 				$options->section_id	= null;
+				$options->limit			= $this->pagination->limit;
 			$config_context = (array)common::get_ar_request_config($options);
 
 		$ar_target_section_tipo = [];
