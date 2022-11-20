@@ -1957,7 +1957,7 @@ class component_relation_common extends component_common {
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) : array {
+	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrived_section_tipo=null) : array {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
