@@ -422,7 +422,7 @@ class component_relation_related extends component_relation_common {
 			$search_query_object->set_limit(0);
 			$search_query_object->set_offset(0);
 			$search_query_object->set_full_count(false);
-		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' $search_query_object ++ '.to_string()); #die();
+		// dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' $search_query_object ++ '.to_string()); #die();
 
 		$search 		= search::get_instance($search_query_object);
 		$records_data 	= $search->search();
