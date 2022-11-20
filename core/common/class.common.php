@@ -2000,66 +2000,66 @@ abstract class common {
 	* BUILD_COMPONENT_SUBDATA
 	* @return object $element_json
 	*/
-	public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_dato='no_value') : object {
+		// public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_dato='no_value') : object {
 
-		// components
-			$current_component = component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				$mode,
-				$lang,
-				$section_tipo
-			);
-		// null component, when the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
-			if($current_component === null){
-				$value = false;
+		// 	// components
+		// 		$current_component = component_common::get_instance(
+		// 			$model,
+		// 			$tipo,
+		// 			$section_id,
+		// 			$mode,
+		// 			$lang,
+		// 			$section_tipo
+		// 		);
+		// 	// null component, when the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
+		// 		if($current_component === null){
+		// 			$value = false;
 
-				// data item
-				$item  = $this->get_data_item($value);
-					$item->parent_tipo			= $this->get_tipo();
-					$item->parent_section_id	= $this->get_section_id();
-					$data = [$item];
+		// 			// data item
+		// 			$item  = $this->get_data_item($value);
+		// 				$item->parent_tipo			= $this->get_tipo();
+		// 				$item->parent_section_id	= $this->get_section_id();
+		// 				$data = [$item];
 
-				$element_json = new stdClass();
-					$element_json->context 	= [];
-					$element_json->data 	= $data;
+		// 			$element_json = new stdClass();
+		// 				$element_json->context 	= [];
+		// 				$element_json->data 	= $data;
 
-				return $element_json;
-			}
+		// 			return $element_json;
+		// 		}
 
-		// properties
-			// if (isset($dd_object->properties)){
-			// 	$current_component->set_properties($dd_object->properties);
-			// }
-		// Inject this tipo as related component from_component_tipo
-			if (strpos($source_model, 'component_')===0){
-				$current_component->from_component_tipo = $this->tipo;
-				$current_component->from_section_tipo 	= $this->section_tipo;
-			}
+		// 	// properties
+		// 		// if (isset($dd_object->properties)){
+		// 		// 	$current_component->set_properties($dd_object->properties);
+		// 		// }
+		// 	// Inject this tipo as related component from_component_tipo
+		// 		if (strpos($source_model, 'component_')===0){
+		// 			$current_component->from_component_tipo = $this->tipo;
+		// 			$current_component->from_section_tipo 	= $this->section_tipo;
+		// 		}
 
-		// inject dato if is received
-			if ($custom_dato!=='no_value') {
-				$current_component->set_dato($custom_dato);
-			}
+		// 	// inject dato if is received
+		// 		if ($custom_dato!=='no_value') {
+		// 			$current_component->set_dato($custom_dato);
+		// 		}
 
-		// get component json
-			$get_json_options = new stdClass();
-				$get_json_options->get_context	= false;
-				$get_json_options->get_data		= true;
-			$element_json = $current_component->get_json($get_json_options);
+		// 	// get component json
+		// 		$get_json_options = new stdClass();
+		// 			$get_json_options->get_context	= false;
+		// 			$get_json_options->get_data		= true;
+		// 		$element_json = $current_component->get_json($get_json_options);
 
-		// dd_info, additional information to the component, like parents
-			// $value_with_parents = $dd_object->value_with_parents ?? false;
-			// if ($value_with_parents===true) {
-			// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
-			// 	$ar_subdata[] = $dd_info;
-			// }
+		// 	// dd_info, additional information to the component, like parents
+		// 		// $value_with_parents = $dd_object->value_with_parents ?? false;
+		// 		// if ($value_with_parents===true) {
+		// 		// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
+		// 		// 	$ar_subdata[] = $dd_info;
+		// 		// }
 
-		// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
+		// 	// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
 
-		return $element_json;
-	}//end build_component_subdata
+		// 	return $element_json;
+		// }//end build_component_subdata
 
 
 
