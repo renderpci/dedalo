@@ -2421,7 +2421,7 @@ abstract class common {
 
 						// section_tipo. get the ar_sections as ddo
 							$ar_section_tipo = isset($parsed_item->sqo->section_tipo)
-								? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id)
+								? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo)
 								: [$section_tipo];
 
 						// parsed_item (section_tipo). normalized ddo with tipo and label
