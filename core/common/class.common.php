@@ -2177,7 +2177,6 @@ abstract class common {
 			$section_tipo		= $this->get_section_tipo();
 			$section_id			= $this->get_section_id();
 			$user_id			= navigator::get_user_id();
-			$limit				= $this->pagination->limit;
 
 		// 1. From user preset
 			$user_preset = layout_map::search_user_preset_layout_map(

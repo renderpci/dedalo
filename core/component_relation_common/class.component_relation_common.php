@@ -1477,7 +1477,6 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 			$new_dato[] = $locator;
-
 		// get the inverse references
 			//old way done in relations table
 				// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
