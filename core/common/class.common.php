@@ -1835,6 +1835,10 @@ abstract class common {
 									$current_lang,
 									$current_section_tipo
 								);
+								// get limit from component calculation or if it's defined from ddo
+								$related_element->pagination->limit = isset($dd_object->limit)
+									? $dd_object->limit
+									: $related_element->pagination->limit;
 
 								// virtual request_config, create new request config to be injected to the current_ddo.
 								// the current component has the configuration to all children components,
@@ -2191,6 +2195,7 @@ abstract class common {
 			$section_tipo		= $this->get_section_tipo();
 			$section_id			= $this->get_section_id();
 			$user_id			= navigator::get_user_id();
+			$limit				= $this->pagination->limit;
 
 		// 1. From user preset
 			$user_preset = layout_map::search_user_preset_layout_map(
@@ -2221,6 +2226,7 @@ abstract class common {
 					$options->section_tipo	= $section_tipo;
 					$options->mode			= $mode;
 					$options->section_id	= $section_id;
+					$options->limit			= $limit;
 
 				$request_config = common::get_ar_request_config($options);
 			}
@@ -2335,6 +2341,7 @@ abstract class common {
 				$options->section_tipo	= null; 	// string
 				$options->mode			= 'list'; 	// string
 				$options->section_id	= null; 	// string|int|null
+				$options->limit			= null; 	// int|null
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// options fix
@@ -2343,6 +2350,7 @@ abstract class common {
 			$section_tipo	= $options->section_tipo;
 			$mode			= $options->mode;
 			$section_id		= $options->section_id;
+			$limit			= $options->limit;
 
 		// debug
 			// if (to_string($section_tipo)==='self') {
@@ -2387,7 +2395,7 @@ abstract class common {
 
 		// pagination defaults. Note that limit defaults are set on element construction based on properties
 			$offset	= 0;
-			$limit	= (function() use($model, $tipo, $section_tipo, $mode) {
+			$limit	= (function() use($limit, $model, $tipo, $section_tipo, $mode) {
 
 				$resolved_limit = 10; // default
 				switch (true) {
@@ -2396,16 +2404,17 @@ abstract class common {
 						$resolved_limit = $section->pagination->limit;
 						break;
 					case strpos($model, 'component_')===0:
-						$translatable	= RecordObj_dd::get_translatable($tipo);
-						$current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$component		= component_common::get_instance($model,
-							$tipo,
-							null,
-							$mode,
-							$current_lang,
-							$section_tipo
-						);
-						$resolved_limit = $component->pagination->limit;
+						// $translatable	= RecordObj_dd::get_translatable($tipo);
+						// $current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						// $component		= component_common::get_instance(
+						// 	$model,
+						// 	$tipo,
+						// 	null,
+						// 	$mode,
+						// 	$current_lang,
+						// 	$section_tipo
+						// );
+						$resolved_limit =  $limit;
 						break;
 					default:
 						break;
@@ -3353,6 +3362,7 @@ abstract class common {
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
 			$section_id		= $this->get_section_id();
+			$limit			= $this->pagination->limit;
 
 		// ar_request_config
 			$options = new stdClass();
@@ -3361,6 +3371,7 @@ abstract class common {
 				$options->section_tipo	= $section_tipo;
 				$options->mode			= $mode;
 				$options->section_id	= $section_id;
+				$options->limit			= $limit;
 			$ar_request_query_objects = common::get_ar_request_config($options);
 
 		// request_config_object
