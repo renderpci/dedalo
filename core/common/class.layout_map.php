@@ -302,10 +302,13 @@ class layout_map {
 
 
 		// common temporal excluded/mapped models *******-
-			$match_key = array_search($current_model, common::$ar_temp_map_models);
-			if (false!==$match_key) {
-				debug_log(__METHOD__." +++ Mapped model $current_model to $match_key from layout map ".to_string(), logger::WARNING);
-				$current_model = $match_key;
+			// $match_key = array_search($current_model, common::$ar_temp_map_models);
+			$mapped_model = isset(common::$ar_temp_map_models[$current_model])
+				? common::$ar_temp_map_models[$current_model]
+				: false;
+			if (false!==$mapped_model) {
+				debug_log(__METHOD__." +++ Mapped model $current_model to $mapped_model from layout map ".to_string(), logger::WARNING);
+				$current_model = $mapped_model;
 			}else if (in_array($current_model, common::$ar_temp_exclude_models)) {
 				debug_log(__METHOD__." +++ Excluded model $current_model from layout map ".to_string(), logger::WARNING);
 				return false;

@@ -75,7 +75,7 @@ class dd_object {
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
 			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return false;
+			return;
 		}
 
 		// set model in first time
@@ -118,11 +118,9 @@ class dd_object {
 				$msg = __METHOD__." UNDEFINED model: $model - ".$this->tipo;
 				debug_log($msg, logger::ERROR);
 				trigger_error($msg);
-				return false;
+				return;
 			}
 			$this->set_type($type);
-
-		return true;
 	}//end __construct
 
 
