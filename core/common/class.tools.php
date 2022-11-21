@@ -181,7 +181,7 @@ abstract class tools extends common {
 		//Return single string seperated by newline
 		return implode("\n", $cleanhtml_array);
 	}
-	//Function to seperate multiple tags one line
+	// Function to separate multiple tags one line
 	public static function fix_newlines_for_clean_html($fixthistext) {
 
 		$fixthistext_array = explode("\n", $fixthistext);

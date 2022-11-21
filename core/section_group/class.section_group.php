@@ -15,7 +15,7 @@ class section_group extends common {
 		protected $modo;
 		protected $lang;
 		# structure data
-		protected $RecordObj_dd;
+		// protected $RecordObj_dd;
 		protected $modelo;
 		protected $norden;
 		protected $label;
@@ -24,9 +24,8 @@ class section_group extends common {
 
 	/**
 	* __CONSTRUCT
-	* @return array $tools
 	*/
-	function __construct($tipo, $section_tipo, $modo) {
+	function __construct(string $tipo, string $section_tipo, string $modo) {
 
 		$this->tipo			= $tipo;
 		$this->section_tipo	= $section_tipo;
@@ -34,8 +33,6 @@ class section_group extends common {
 		$this->lang			= DEDALO_DATA_LANG;
 
 		$this->load_structure_data();
-
-		return true;
 	}//end __construct
 
 

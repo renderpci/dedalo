@@ -377,7 +377,7 @@ class component_number extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*

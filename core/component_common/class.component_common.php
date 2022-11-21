@@ -8,7 +8,7 @@ abstract class component_common extends common {
 
 
 
-	# GENERAL VARS
+	// GENERAL VARS
 		// string tipo. Component tipo in ontology e.g. ('dd22') -equivalent of 'terminoID'-
 		protected string $tipo;
 		// string|int parent. Component's section section_id
@@ -30,7 +30,7 @@ abstract class component_common extends common {
 		public $locator;					// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
 
 		// structure data
-		public $RecordObj_dd;				// obj ts
+		// public $RecordObj_dd;			// obj ts
 		protected $model;					// fixed on common->load_structure_data
 		protected $norden;
 		protected $label;					// component label in current lang like 'Transcription'

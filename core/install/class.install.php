@@ -17,7 +17,6 @@ class install extends common {
 	*/
 	public function __construct(string $mode='install') {
 
-
 		$id		= null;
 		$tipo	= 'dd1590';
 
@@ -26,7 +25,6 @@ class install extends common {
 		$this->set_lang(DEDALO_DATA_LANG);
 		$this->set_modo($mode);
 		$this->set_model('install');
-
 	}//end __construct
 
 
