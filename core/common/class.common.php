@@ -26,7 +26,7 @@ abstract class common {
 	// the css and css files to load
 	static $ar_loaded_modelos_name = array();
 
-	// identificador_unico. UID used to set dom elements id unique based on section_tipo, section_id, lang, modo, etc.
+	// identificador_unico. UID used to set DOM elements id unique based on section_tipo, section_id, lang, modo, etc.
 	public $identificador_unico;
 	// variant. Modifier of identificador_unico
 	public $variant;
@@ -1511,8 +1511,8 @@ abstract class common {
 			$buttons = $this->get_buttons_context();
 
 		// request_config
-			$request_config = $add_request_config===true
-				? ($this->build_request_config() ?? [])
+			$request_config = ($add_request_config===true)
+				? $this->build_request_config() // array
 				:  null;
 
 		// columns_map (the final calculation was moved to common JS)
@@ -2095,17 +2095,17 @@ abstract class common {
 			}
 
 		// requested_source is fixed from RQO calls to API when they exists like
-		// {
-		//     "typo": "source",
-		//     "action": "search",
-		//     "model": "section",
-		//     "tipo": "dd64",
-		//     "section_tipo": "dd64",
-		//     "section_id": null,
-		//     "mode": "edit",
-		//     "lang": "lg-eng"
-		// }
-		$requested_source = dd_core_api::$rqo->source ?? false;
+			// {
+			//     "typo": "source",
+			//     "action": "search",
+			//     "model": "section",
+			//     "tipo": "dd64",
+			//     "section_tipo": "dd64",
+			//     "section_id": null,
+			//     "mode": "edit",
+			//     "lang": "lg-eng"
+			// }
+			$requested_source = dd_core_api::$rqo->source ?? false;
 
 		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
 		if(false!==$requested_source &&	$requested_source->tipo===$this->tipo) {
@@ -2336,6 +2336,7 @@ abstract class common {
 			$section_tipo	= $this->get_section_tipo();
 			$mode			= $this->get_modo();
 			$section_id		= $this->get_section_id();
+			$model			= get_called_class();
 
 		// debug
 			// if (to_string($section_tipo)==='self') {
@@ -2349,11 +2350,9 @@ abstract class common {
 				return $resolved_request_properties_parsed[$resolved_key];
 			}
 
-		// model
-			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-
-		// properties. Get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
-		// by default or edit mode get the properties of the term itself.
+		// properties.
+			// Get the properties, if the mode is list, get the child term 'section_list' that had has the configuration
+			// of the list (for sections and portals) by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
 				case 'portal_list':
@@ -2366,7 +2365,8 @@ abstract class common {
 						$properties		= $RecordObj_dd->get_properties();
 					}
 					else{
-						// sometimes the portals don't has section_list defined, in these cases get the properties of the current tipo
+						// sometimes the portals don't has section_list defined.
+						// In these cases get the properties from the current tipo
 						$RecordObj_dd	= new RecordObj_dd($tipo);
 						$properties		= $RecordObj_dd->get_properties();
 					}
@@ -2378,55 +2378,20 @@ abstract class common {
 					break;
 			}
 
-		// pagination defaults. Note that limit defaults are set on element construction based on properties
+		// pagination defaults. Note that injected values may exist in element pagination.
 			$offset	= isset($this->pagination->offset)
 				? $this->pagination->offset
 				: 0;
-
 			$limit	= isset($this->pagination->limit)
 				? $this->pagination->limit
-				: ( ($mode ==='list') ? 1 : 10 );
-
+				: ( ($mode ==='list') ? 10 : 1 );
 
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
-			if(isset($properties->source->request_config) || $model==='component_autocomplete_hi') {
-				// V6, properties request_config is defined
+			if( isset($properties->source->request_config) ) { //  || $model==='component_autocomplete_hi'
 
-				// fallback component_autocomplete_hi
-					// if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi') {
-					// 	$properties->source->request_config = json_decode('[
-					//            {
-					//                "show": {
-					//                    "ddo_map": [
-					//                        "hierarchy25"
-					//                    ],
-					//                    "sqo_config": {
-					//                        "operator": "$or"
-					//                    }
-					//                },
-					//                "search": {
-					//                    "ddo_map": [
-					//                        "hierarchy25"
-					//                    ],
-					//                    "sqo_config": {
-					//                        "operator": "$or"
-					//                    }
-					//                },
-					//                "records_mode": "list",
-					//                "section_tipo": [
-					//                    {
-					//                        "value": [
-					//                            2
-					//                        ],
-					//                        "source": "hierarchy_types"
-					//                    }
-					//                ],
-					//                "search_engine": "search_dedalo"
-					//            }
-					//        ]');
-					//        debug_log(__METHOD__." Using default config for non defined source of component '$model' tipo: ".to_string($tipo), logger::ERROR);
-					// }//end if (!isset($properties->source->request_config) && $model==='component_autocomplete_hi')
+				// V6, properties request_config is defined case
+
 				foreach ($properties->source->request_config as $item_request_config) {
 
 					// if($external===false && $item_request_config->sqo->type==='external') continue; // ignore external
@@ -2470,12 +2435,13 @@ abstract class common {
 						// limit
 							// $parsed_item->sqo->limit = $limit;
 
-					// show (mandatory), in list mode is possible create specific ddo_map in a section_list term child of the portal or section.
+					// show (mandatory). In list mode it's possible to create specific ddo_map in a section_list term child of the portal or section.
 
-						// set show with the parse request_config
-						$parsed_item->show = $item_request_config->show;
+						// set show with the parsed request_config
+							$parsed_item->show = $item_request_config->show;
 
-						// get the ddo_map from ontology, defined by specific term, like "section_map"
+						// get_ddo_map. Get the ddo_map from ontology, defined by specific term, like "section_map"
+						// see sample at 'numisdata656' or 'dmm26'
 							$get_ddo_map		= $parsed_item->show->get_ddo_map ?? false;
 							$ar_ddo_calcutaled	= [];
 							if($get_ddo_map!==false) {
@@ -2534,7 +2500,7 @@ abstract class common {
 								}//end switch ($get_ddo_map->model)
 							}//end if($get_ddo_map!==false)
 
-						// get the all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
+						// get all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
 							$ar_ddo_map = $parsed_item->show->ddo_map ?? $ar_ddo_calcutaled;
 
 						// ddo_map
@@ -2549,36 +2515,39 @@ abstract class common {
 									}
 
 								// label. Add to all ddo_map items
-									$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+									if (!isset($current_ddo->label)) {
+										$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+									}
 
 								// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
-									$current_ddo->section_tipo = $current_ddo->section_tipo==='self'
-										? $ar_section_tipo
-										: $current_ddo->section_tipo;
+									if ($current_ddo->section_tipo==='self') {
+										$current_ddo->section_tipo = $ar_section_tipo;
+									}
 
 								// parent. Set the default "self" value to the current tipo (the parent)
-									$current_ddo->parent = $current_ddo->parent==='self'
-										? $tipo
-										: $current_ddo->parent;
+									if ($current_ddo->parent==='self') {
+										$current_ddo->parent = $tipo;
+									}
 
 								// when the mode is set in properties or is set by tool or user templates
 								// set the fixed_mode to true, to maintenance the mode across changes in render process
-									if(isset($current_ddo->mode)){
+									if( isset($current_ddo->mode) ) {
 										$current_ddo->fixed_mode = true;
 									}
 
 								// mode
-									$current_ddo->mode = isset($current_ddo->mode)
-										? $current_ddo->mode
-										: ($model !== 'section'
+									if (!isset($current_ddo->mode)) {
+										$current_ddo->mode = $model!=='section'
 											? 'list'
-											: $mode);
+											: $mode;
+									}
 
-								// model
+								// model. Calculated always to prevent errors
 									$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
 
 								// fields_map. Used by component external to map to different API format, defined in the component,
 								// when this property is present and true, get the component fields_map
+								// see 'zenon5' or 'isad30'
 									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
 										$RecordObj_dd				= new RecordObj_dd($current_ddo->tipo);
 										$properties					= $RecordObj_dd->get_properties();
@@ -2592,8 +2561,8 @@ abstract class common {
 										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);
 									}
 
-
-								$final_ddo_map[] = $current_ddo;
+								// add parsed ddo
+									$final_ddo_map[] = $current_ddo;
 							}//end foreach ($ar_ddo_map as $current_ddo)
 
 						$parsed_item->show->ddo_map = $final_ddo_map;
@@ -2603,14 +2572,14 @@ abstract class common {
 							if (!isset($parsed_item->show->sqo_config->operator)) {
 								$parsed_item->show->sqo_config->operator = '$or';
 							}
-							// limit
+							// limit. Overwrite config by session value if exists
 							if (isset($parsed_item->show->sqo_config->limit)) {
-								//get session limit if it was defined
+								// get session limit if it was defined
 								$sqo_id	= implode('_', [$model, $section_tipo]);
 								$parsed_item->show->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 									? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 									: $parsed_item->show->sqo_config->limit;
-								// set the limit in the instance
+								// fix the limit in the instance
 								$this->pagination->limit = $parsed_item->show->sqo_config->limit;
 							}
 
@@ -2626,7 +2595,7 @@ abstract class common {
 								$sqo_config->operator		= '$or';
 
 							$parsed_item->show->sqo_config = $sqo_config;
-							// set the limit in the instance
+							// fix the limit in the instance
 							$this->pagination->limit = $limit;
 						}
 
@@ -2678,14 +2647,14 @@ abstract class common {
 								if (!isset($parsed_item->search->sqo_config->operator)) {
 									$parsed_item->search->sqo_config->operator = '$or';
 								}
-								// limit
+								// limit. Overwrite config by session value if exists
 								if (isset($parsed_item->search->sqo_config->limit)) {
-									//get session limit if it was defined
+									// get session limit if it was defined
 									$sqo_id	= implode('_', [$model, $section_tipo]);
 									$parsed_item->search->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->search->sqo_config->limit;
-									// set the limit in the instance
+									// fix the limit in the instance
 									$this->pagination->limit = $parsed_item->search->sqo_config->limit;
 								}
 							}else{
@@ -2700,7 +2669,7 @@ abstract class common {
 									$sqo_config->operator		= '$or';
 
 								$parsed_item->search->sqo_config = $sqo_config;
-								// set the limit in the instance
+								// fix the limit in the instance
 								$this->pagination->limit = $limit;
 							}
 						}
@@ -2897,7 +2866,7 @@ abstract class common {
 						$sqo_config->mode			= $mode;
 						$sqo_config->operator		= '$or';
 
-				// set the limit in the instance
+				// fix the limit in the instance
 					$this->pagination->limit = $limit;
 
 				// mode
@@ -3021,16 +2990,17 @@ abstract class common {
 						$request_config_item->set_show($show);
 						$request_config_item->set_sqo($sqo);
 
-				// set item
+				// added parsed item
 					$ar_request_query_objects[] = $request_config_item;
 
 				// set var (TEMPORAL TO GIVE ACCESS FROM GET_SUB_DATA)
 					dd_core_api::$context_dd_objects = $ddo_map;
-
 			}//end if(isset($properties->source->request_config) || $model==='component_autocomplete_hi')
+
 
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+
 
 		return $ar_request_query_objects;
 	}//end get_ar_request_config

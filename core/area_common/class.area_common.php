@@ -14,7 +14,7 @@ class area_common extends common  {
 	protected $lang;
 
 	# STRUCTURE DATA
-	protected $RecordObj_dd ;
+	// protected $RecordObj_dd ;
 	#protected $modelo;
 	#protected $norden;
 	#protected $label;

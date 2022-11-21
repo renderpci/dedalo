@@ -15,7 +15,7 @@ class section_tab extends common {
 		protected $modo;
 		protected $lang;
 		# structure data
-		protected $RecordObj_dd;
+		// protected $RecordObj_dd;
 		protected $modelo;
 		protected $norden;
 		protected $label;
@@ -24,7 +24,6 @@ class section_tab extends common {
 
 	/**
 	* __CONSTRUCT
-	* @return array $tools
 	*/
 	function __construct($tipo, $section_tipo, $modo) {
 
@@ -34,8 +33,6 @@ class section_tab extends common {
 		$this->lang			= DEDALO_DATA_LANG;
 
 		$this->load_structure_data();
-
-		return true;
 	}//end __construct
 
 

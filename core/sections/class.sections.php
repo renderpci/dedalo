@@ -63,9 +63,6 @@ class sections extends common {
 			$this->caller_tipo			= $caller_tipo;
 			$this->modo					= $modo;
 			$this->lang					= $lang;
-
-
-		return true;
 	}//end __construct
 
 

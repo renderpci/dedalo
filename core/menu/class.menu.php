@@ -9,7 +9,7 @@ class menu extends common {
 
 
 	protected $tipo = 'dd85';
-	protected $RecordObj_dd;
+	// protected $RecordObj_dd;
 
 
 
@@ -27,9 +27,6 @@ class menu extends common {
 		$this->section_tipo	= 'dd1';
 
 		parent::load_structure_data();
-
-
-		return true;
 	}//end __construct
 
 

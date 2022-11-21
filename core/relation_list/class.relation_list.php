@@ -6,6 +6,8 @@
 */
 class relation_list extends common {
 
+
+
 	protected $tipo;
 	protected $section_id;
 	protected $section_tipo;
@@ -21,12 +23,10 @@ class relation_list extends common {
 	*/
 	public function __construct(string $tipo, $section_id, string $section_tipo, string $mode='list') {
 
-		$this->tipo 		= $tipo;
-		$this->section_id 	= $section_id;
-		$this->section_tipo = $section_tipo;
-		$this->mode 		= $mode;
-
-		return true;
+		$this->tipo			= $tipo;
+		$this->section_id	= $section_id;
+		$this->section_tipo	= $section_tipo;
+		$this->mode			= $mode;
 	}//end __construct
 
 

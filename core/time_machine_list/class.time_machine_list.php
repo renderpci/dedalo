@@ -21,6 +21,10 @@ class time_machine_list extends common {
 
 	/**
 	* CONSTRUCT
+	* @param string $tipo
+	* @param mixed $section_id
+	* @param string $section_tipo
+	* @param string $modo = 'edit'
 	*/
 	public function __construct(string $tipo, $section_id, string $section_tipo, string $modo='edit') {
 
@@ -28,9 +32,6 @@ class time_machine_list extends common {
 		$this->section_id	= $section_id;
 		$this->section_tipo	= $section_tipo;
 		$this->modo			= $modo;
-
-
-		return true;
 	}//end __construct
 
 

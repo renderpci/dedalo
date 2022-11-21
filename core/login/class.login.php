@@ -18,8 +18,8 @@ class login extends common {
 	protected $tipo_button_login	= 'dd259';
 
 	# STRUCTURE DATA
-	public $RecordObj_dd;	// obj ts
-	protected $model;		// fixed on common->load_structure_data
+	// public $RecordObj_dd;	// obj ts
+	protected $model;			// fixed on common->load_structure_data
 
 	protected static $login_matrix_table = 'matrix';
 
@@ -45,9 +45,7 @@ class login extends common {
 		$this->set_modo($modo);
 
 		// boolean $result
-		$result = parent::load_structure_data();
-
-		return $result;
+		parent::load_structure_data();
 	}//end __construct
 
 

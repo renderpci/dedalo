@@ -37,21 +37,7 @@ class dataframe extends common {
 		$this->caller_section_tipo		= $component_obj->get_section_tipo();
 		$this->caller_section_id		= $component_obj->get_parent();
 		$this->type						= $type;
-	}
-
-
-	/**
-	* HTML
-	* @return string $html (final html code)
-	*/
-	public function get_html() {
-
-		ob_start();
-		include ( DEDALO_CORE_PATH .'/'.get_called_class().'/'.get_called_class().'.php' );
-		$html = ob_get_clean();
-
-		return $html;
-	}//end get_html
+	}//end __construct
 
 
 
