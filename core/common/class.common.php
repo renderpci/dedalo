@@ -691,24 +691,6 @@ abstract class common {
 
 
 	/**
-	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
-	* @return string $html
-	*	Get standard path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
-	*	and return rendered html code
-	*/
-		// public function get_html_DES() {
-
-		// 		# Class name is called class (ex. component_input_text), not this class (common)
-		// 		ob_start();
-		// 		include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
-		// 		$html = ob_get_clean();
-
-		// 	return (string)$html;
-		// }//end get_html
-
-
-
-	/**
 	* GET_AR_ALL_LANGS : Return array of all langs of all projects in Dédalo
 	* @return array $ar_all_langs
 	*	like (lg-eng=>locator,lg-spa=>locator) or resolved (lg-eng => English, lg-spa => Spanish)
@@ -1836,9 +1818,9 @@ abstract class common {
 									$current_section_tipo
 								);
 								// get limit from component calculation or if it's defined from ddo
-								$related_element->pagination->limit = isset($dd_object->limit)
-									? $dd_object->limit
-									: $related_element->pagination->limit;
+								if(isset($dd_object->limit)){
+									$related_element->pagination->limit = $dd_object->limit;
+								}
 
 								// virtual request_config, create new request config to be injected to the current_ddo.
 								// the current component has the configuration to all children components,
@@ -2000,66 +1982,66 @@ abstract class common {
 	* BUILD_COMPONENT_SUBDATA
 	* @return object $element_json
 	*/
-	public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_dato='no_value') : object {
+		// public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_dato='no_value') : object {
 
-		// components
-			$current_component = component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				$mode,
-				$lang,
-				$section_tipo
-			);
-		// null component, when the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
-			if($current_component === null){
-				$value = false;
+		// 	// components
+		// 		$current_component = component_common::get_instance(
+		// 			$model,
+		// 			$tipo,
+		// 			$section_id,
+		// 			$mode,
+		// 			$lang,
+		// 			$section_tipo
+		// 		);
+		// 	// null component, when the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
+		// 		if($current_component === null){
+		// 			$value = false;
 
-				// data item
-				$item  = $this->get_data_item($value);
-					$item->parent_tipo			= $this->get_tipo();
-					$item->parent_section_id	= $this->get_section_id();
-					$data = [$item];
+		// 			// data item
+		// 			$item  = $this->get_data_item($value);
+		// 				$item->parent_tipo			= $this->get_tipo();
+		// 				$item->parent_section_id	= $this->get_section_id();
+		// 				$data = [$item];
 
-				$element_json = new stdClass();
-					$element_json->context 	= [];
-					$element_json->data 	= $data;
+		// 			$element_json = new stdClass();
+		// 				$element_json->context 	= [];
+		// 				$element_json->data 	= $data;
 
-				return $element_json;
-			}
+		// 			return $element_json;
+		// 		}
 
-		// properties
-			// if (isset($dd_object->properties)){
-			// 	$current_component->set_properties($dd_object->properties);
-			// }
-		// Inject this tipo as related component from_component_tipo
-			if (strpos($source_model, 'component_')===0){
-				$current_component->from_component_tipo = $this->tipo;
-				$current_component->from_section_tipo 	= $this->section_tipo;
-			}
+		// 	// properties
+		// 		// if (isset($dd_object->properties)){
+		// 		// 	$current_component->set_properties($dd_object->properties);
+		// 		// }
+		// 	// Inject this tipo as related component from_component_tipo
+		// 		if (strpos($source_model, 'component_')===0){
+		// 			$current_component->from_component_tipo = $this->tipo;
+		// 			$current_component->from_section_tipo 	= $this->section_tipo;
+		// 		}
 
-		// inject dato if is received
-			if ($custom_dato!=='no_value') {
-				$current_component->set_dato($custom_dato);
-			}
+		// 	// inject dato if is received
+		// 		if ($custom_dato!=='no_value') {
+		// 			$current_component->set_dato($custom_dato);
+		// 		}
 
-		// get component json
-			$get_json_options = new stdClass();
-				$get_json_options->get_context	= false;
-				$get_json_options->get_data		= true;
-			$element_json = $current_component->get_json($get_json_options);
+		// 	// get component json
+		// 		$get_json_options = new stdClass();
+		// 			$get_json_options->get_context	= false;
+		// 			$get_json_options->get_data		= true;
+		// 		$element_json = $current_component->get_json($get_json_options);
 
-		// dd_info, additional information to the component, like parents
-			// $value_with_parents = $dd_object->value_with_parents ?? false;
-			// if ($value_with_parents===true) {
-			// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
-			// 	$ar_subdata[] = $dd_info;
-			// }
+		// 	// dd_info, additional information to the component, like parents
+		// 		// $value_with_parents = $dd_object->value_with_parents ?? false;
+		// 		// if ($value_with_parents===true) {
+		// 		// 	$dd_info = common::get_ddinfo_parents($locator, $this->tipo);
+		// 		// 	$ar_subdata[] = $dd_info;
+		// 		// }
 
-		// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
+		// 	// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
 
-		return $element_json;
-	}//end build_component_subdata
+		// 	return $element_json;
+		// }//end build_component_subdata
 
 
 
@@ -2195,7 +2177,6 @@ abstract class common {
 			$section_tipo		= $this->get_section_tipo();
 			$section_id			= $this->get_section_id();
 			$user_id			= navigator::get_user_id();
-			$limit				= $this->pagination->limit;
 
 		// 1. From user preset
 			$user_preset = layout_map::search_user_preset_layout_map(
@@ -2220,15 +2201,15 @@ abstract class common {
 		// 2. From structure
 			if (empty($request_config)) {
 
-				$options = new stdClass();
-					$options->tipo			= $tipo;
-					$options->external		= false;
-					$options->section_tipo	= $section_tipo;
-					$options->mode			= $mode;
-					$options->section_id	= $section_id;
-					$options->limit			= $limit;
+				// $options = new stdClass();
+				// 	$options->tipo			= $tipo;
+				// 	$options->external		= false;
+				// 	$options->section_tipo	= $section_tipo;
+				// 	$options->mode			= $mode;
+				// 	$options->section_id	= $section_id;
+				// 	$options->limit			= $limit;
 
-				$request_config = common::get_ar_request_config($options);
+				$request_config = $this->get_ar_request_config();
 			}
 
 
@@ -2318,39 +2299,17 @@ abstract class common {
 	* Resolves the component config context with backward compatibility
 	* The proper config in v6 is on term properties config, NOT as related terms
 	* Note that section tipo 'self' will be replaced by argument '$section_tipo'
-	* @param object options
-	*	 @param string $tipo
-	*		component tipo
-	*	 @param bool $external
-	*		optional default false
-	*	 @param string $section_tipo
-	*		optional default null
-	* 	@param string $mode
-	*		optional default 'list'
-	* 	@param string $section_id
-	*		optional default null
 	*
 	* @return array $ar_request_config
 	*/
-	public static function get_ar_request_config( object $request_options ) : array {
-
-		// options
-			$options = new stdClass();
-				$options->tipo			= null; 	// string
-				$options->external		= false; 	// bool
-				$options->section_tipo	= null; 	// string
-				$options->mode			= 'list'; 	// string
-				$options->section_id	= null; 	// string|int|null
-				$options->limit			= null; 	// int|null
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	public function get_ar_request_config() : array {
 
 		// options fix
-			$tipo			= $options->tipo;
-			$external		= $options->external;
-			$section_tipo	= $options->section_tipo;
-			$mode			= $options->mode;
-			$section_id		= $options->section_id;
-			$limit			= $options->limit;
+			$tipo			= $this->get_tipo();
+			$external		= false;
+			$section_tipo	= $this->get_section_tipo();
+			$mode			= $this->get_modo();
+			$section_id		= $this->get_section_id();
 
 		// debug
 			// if (to_string($section_tipo)==='self') {
@@ -2394,35 +2353,15 @@ abstract class common {
 			}
 
 		// pagination defaults. Note that limit defaults are set on element construction based on properties
-			$offset	= 0;
-			$limit	= (function() use($limit, $model, $tipo, $section_tipo, $mode) {
+			$offset	= isset($this->pagination->offset)
+				? $this->pagination->offset
+				: 0;
 
-				$resolved_limit = 10; // default
-				switch (true) {
-					case $model==='section':
-						$section = section::get_instance(null, $tipo, $mode, true);
-						$resolved_limit = $section->pagination->limit;
-						break;
-					case strpos($model, 'component_')===0:
-						// $translatable	= RecordObj_dd::get_translatable($tipo);
-						// $current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						// $component		= component_common::get_instance(
-						// 	$model,
-						// 	$tipo,
-						// 	null,
-						// 	$mode,
-						// 	$current_lang,
-						// 	$section_tipo
-						// );
-						$resolved_limit =  $limit;
-						break;
-					default:
-						break;
-				}
+			$limit	= isset($this->pagination->limit)
+				? $this->pagination->limit
+				: ( ($mode ==='list') ? 1 : 10 );
 
-				return $resolved_limit;
-			})();
-
+			
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
 			if(isset($properties->source->request_config) || $model==='component_autocomplete_hi') {
@@ -2481,7 +2420,7 @@ abstract class common {
 
 						// section_tipo. get the ar_sections as ddo
 							$ar_section_tipo = isset($parsed_item->sqo->section_tipo)
-								? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo, $section_id)
+								? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo)
 								: [$section_tipo];
 
 						// parsed_item (section_tipo). normalized ddo with tipo and label
@@ -2505,12 +2444,10 @@ abstract class common {
 						// limit
 							// $parsed_item->sqo->limit = $limit;
 
-					// show (mandatory) it change when the mode is list, since it is possible to define a different show named show_list
-						$parsed_item->set_show(
-							($mode==='list' && isset($item_request_config->show_list))
-								? $item_request_config->show_list
-								: $item_request_config->show
-						);
+					// show (mandatory), in list mode is possible create specific ddo_map in a section_list term child of the portal or section.
+
+						// set show with the parse request_config
+						$parsed_item->show = $item_request_config->show;
 
 						// get the ddo_map from ontology, defined by specific term, like "section_map"
 							$get_ddo_map		= $parsed_item->show->get_ddo_map ?? false;
@@ -2640,6 +2577,17 @@ abstract class common {
 							if (!isset($parsed_item->show->sqo_config->operator)) {
 								$parsed_item->show->sqo_config->operator = '$or';
 							}
+							// limit
+							if (isset($parsed_item->show->sqo_config->limit)) {
+								//get session limit if it was defined
+								$sqo_id	= implode('_', [$model, $section_tipo]);
+								$parsed_item->show->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+									? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+									: $parsed_item->show->sqo_config->limit;
+								// set the limit in the instance
+								$this->pagination->limit = $parsed_item->show->sqo_config->limit;
+							}
+
 						}else{
 							// fallback non defined sqo_config
 							$sqo_config = new stdClass();
@@ -2652,6 +2600,8 @@ abstract class common {
 								$sqo_config->operator		= '$or';
 
 							$parsed_item->show->sqo_config = $sqo_config;
+							// set the limit in the instance
+							$this->pagination->limit = $limit;
 						}
 
 					// search
@@ -2702,6 +2652,16 @@ abstract class common {
 								if (!isset($parsed_item->search->sqo_config->operator)) {
 									$parsed_item->search->sqo_config->operator = '$or';
 								}
+								// limit
+								if (isset($parsed_item->search->sqo_config->limit)) {
+									//get session limit if it was defined
+									$sqo_id	= implode('_', [$model, $section_tipo]);
+									$parsed_item->search->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+										: $parsed_item->search->sqo_config->limit;
+									// set the limit in the instance
+									$this->pagination->limit = $parsed_item->search->sqo_config->limit;
+								}
 							}else{
 								// fallback non defined sqo_config
 								$sqo_config = new stdClass();
@@ -2714,6 +2674,8 @@ abstract class common {
 									$sqo_config->operator		= '$or';
 
 								$parsed_item->search->sqo_config = $sqo_config;
+								// set the limit in the instance
+								$this->pagination->limit = $limit;
 							}
 						}
 
@@ -2909,6 +2871,9 @@ abstract class common {
 						$sqo_config->mode			= $mode;
 						$sqo_config->operator		= '$or';
 
+				// set the limit in the instance
+					$this->pagination->limit = $limit;
+
 				// mode
 					$current_mode = ($model!=='section')
 						? 'list'
@@ -3040,7 +3005,6 @@ abstract class common {
 
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
-
 
 		return $ar_request_query_objects;
 	}//end get_ar_request_config
@@ -3359,21 +3323,21 @@ abstract class common {
 	public function get_request_config_object() : ?request_config_object {
 
 		// short vars
-			$mode			= $this->get_modo(); // records_mode;
-			$tipo			= $this->get_tipo();
-			$section_tipo	= $this->get_section_tipo();
-			$section_id		= $this->get_section_id();
-			$limit			= $this->pagination->limit;
+			// $mode			= $this->get_modo(); // records_mode;
+			// $tipo			= $this->get_tipo();
+			// $section_tipo	= $this->get_section_tipo();
+			// $section_id		= $this->get_section_id();
+			// $limit			= $this->pagination->limit;
 
 		// ar_request_config
-			$options = new stdClass();
-				$options->tipo			= $tipo;
-				$options->external		= false;
-				$options->section_tipo	= $section_tipo;
-				$options->mode			= $mode;
-				$options->section_id	= $section_id;
-				$options->limit			= $limit;
-			$ar_request_query_objects = common::get_ar_request_config($options);
+			// $options = new stdClass();
+			// 	$options->tipo			= $tipo;
+			// 	$options->external		= false;
+			// 	$options->section_tipo	= $section_tipo;
+			// 	$options->mode			= $mode;
+			// 	$options->section_id	= $section_id;
+			// 	$options->limit			= $limit;
+			$ar_request_query_objects = $this->get_ar_request_config();
 
 		// request_config_object
 			$request_config_object = reset($ar_request_query_objects) ?? null;

@@ -71,7 +71,7 @@
 
 					// set_dato_external: $save=false, $changed=false, $current_dato=false, $references_limit=0
 					$save				= true; // $modo==='edit' ? true : false;
-					$changed			= true; // $modo==='edit' ? true : false;
+					$changed			= false; // $modo==='edit' ? true : false;
 					$current_dato		= false; // $this->get_dato();
 					$references_limit	= 0; // (!) Set to zero to get all references to enable sort
 					$this->set_dato_external($save, $changed, $current_dato, $references_limit);	// Forces update dato with calculated external dato
