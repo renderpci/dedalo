@@ -17,6 +17,7 @@
 	import {render_search_component_portal} from '../../component_portal/js/render_search_component_portal.js'
 
 
+
 /**
 * COMPONENT_PORTAL
 */
@@ -97,9 +98,9 @@ export const component_portal = function() {
 
 /**
 * INIT
+* Fix instance main properties
 * @param object options
-* @return promise
-* 	resolve bool
+* @return bool
 */
 component_portal.prototype.init = async function(options) {
 
@@ -192,10 +193,9 @@ component_portal.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param object value
-* 	(locator)
-* @return promise
-* 	resolve bool
+* Load and parse necessary data to create a full ready instance
+* @param bool autoload = false
+* @return bool
 */
 component_portal.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()
@@ -217,22 +217,29 @@ component_portal.prototype.build = async function(autoload=false) {
 	// rqo
 		const generate_rqo = async function() {
 
-			if (self.context) {
-				// rqo_config. get the rqo_config from context
-				self.rqo_config	= self.context && self.context.request_config
-					? self.context.request_config.find(el => el.api_engine==='dedalo')
-					: {}
-			}else{
+			if (!self.context) {
 				// rqo_config. get the rqo_config from request_config
 				self.rqo_config = self.request_config
 					? self.request_config.find(el => el.api_engine==='dedalo')
+					: {}
+			}else{
+				// rqo_config. get the rqo_config from context
+				self.rqo_config	= self.context && self.context.request_config
+					? self.context.request_config.find(el => el.api_engine==='dedalo')
 					: {}
 			}
 
 			// rqo build
 			const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= false
-			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
+			// self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
+			// (!) Force to calculate always the instance rqo because values like 'pagination.limit' could
+			// be updated from server response
+			self.rqo = await self.build_rqo_show(
+				self.rqo_config, // object rqo_config
+				action,  // string action like 'get_data' or 'resolve_data'
+				add_show // bool add_show
+			)
 			if(self.mode==='search') {
 				self.rqo.source.value = self.data.value || []
 			}
