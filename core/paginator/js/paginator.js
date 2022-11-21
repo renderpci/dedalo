@@ -97,11 +97,10 @@ paginator.prototype.init = function(options) {
 
 /**
 * BUILD
-* @return promise
-* 	resolve bool true
+* @return bool
 */
 paginator.prototype.build = async function(){
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -109,9 +108,9 @@ paginator.prototype.build = async function(){
 		self.status = 'building'
 
 	// short vars
-		const total		= await self.get_total();
-		const limit		= self.caller.rqo.sqo.limit // self.get_limit()
-		const offset	= self.get_offset()
+		const total				= await self.get_total();
+		const limit				= self.caller.rqo.sqo.limit // self.get_limit()
+		const offset			= self.get_offset()
 
 	// pages fix vars
 		self.limit				= limit
@@ -129,7 +128,6 @@ paginator.prototype.build = async function(){
 		self.offset_next		= offset + limit
 		self.offset_last		= limit * (self.total_pages -1)
 
-
 	// debug
 		// if(SHOW_DEBUG===true) {
 		// 	// console.log("paginator [build] self:",self);
@@ -143,7 +141,6 @@ paginator.prototype.build = async function(){
 	// status update
 		self.status = 'built'
 
-
 	// event publish
 		event_manager.publish('built_'+self.id)
 
@@ -155,10 +152,9 @@ paginator.prototype.build = async function(){
 
 /**
 * DESTROY
-* @return promise
-* 	resolve object result
+* @return object result
 */
-paginator.prototype.destroy = async function(){
+paginator.prototype.destroy = async function() {
 
 	const self = this
 
@@ -172,6 +168,7 @@ paginator.prototype.destroy = async function(){
 
 	result.delete_self = delete_events
 
+
 	return result
 }//end destroy
 
@@ -179,9 +176,8 @@ paginator.prototype.destroy = async function(){
 
 /**
 * GET_TOTAL
-* Exec a API call to count the current sqo records
-* @return promise
-* 	resolve int total
+* Exec a async API call to count the current sqo records
+* @return int total
 */
 paginator.loading_total_status = null
 paginator.prototype.get_total = async function() {
@@ -206,7 +202,7 @@ paginator.prototype.get_total = async function() {
 
 	paginator.loading_total_status = 'resolved'
 
-	// console.warn(`++++++++++++++++++++++++++++++++ RESOLVED ${self.caller.tipo} total:`,total);
+
 	return total
 }//end get_total
 
