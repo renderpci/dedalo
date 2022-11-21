@@ -2434,7 +2434,7 @@ abstract class common {
 							}
 
 						// limit
-							// $parsed_item->sqo->limit = $limit;
+							$parsed_item->sqo->limit = $limit;
 
 					// show (mandatory). In list mode it's possible to create specific ddo_map in a section_list term child of the portal or section.
 
