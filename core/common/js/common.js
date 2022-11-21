@@ -1334,20 +1334,18 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 	// Get the limit, offset, full count, and filter by locators.
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
 	// and finally if the rqo_config don't has sqo or sqo_config, set the default parameter to each.
-		sqo.limit = (sqo.limit)
-			? sqo.limit
-			: (sqo_config && sqo_config.limit)
+		// sqo.limit
+		if (sqo.limit===undefined) {
+			sqo.limit = (sqo_config && sqo_config.limit!==undefined)
 				? sqo_config.limit
-				: null // force to generate default limit from server (!)
-				// : self.mode==='edit'
-				// 	? (self.model==='section' ? 1 : 10) // section in edit mode = 1 or component_portal in edit mode = 10
-				// 	: (self.model==='section' ? 10 : 1) // section in list mode = 10 or component_portal in list mode = 1
-
-		sqo.offset = (sqo.offset)
-			? sqo.offset
-			: (sqo_config && sqo_config.offset)
+				: null; // force to generate default limit from server (!)
+		}
+		// sqo.offset
+		if (sqo.offset===undefined) {
+			sqo.offset = (sqo_config && sqo_config.offset!==undefined)
 				? sqo_config.offset
-				: 0
+				: 0;
+		}
 
 		// (!) somebody use this ? (count don't need this anymore..)
 			// sqo.full_count = (sqo.full_count)

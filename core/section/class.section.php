@@ -172,7 +172,6 @@ class section extends common {
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
 
-
 		// active_section_section_id : Set global var
 			if(	   $modo==='edit'
 				&& (isset($this->section_id) && ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
@@ -182,30 +181,10 @@ class section extends common {
 						section::$active_section_id = $this->get_section_id();
 			}
 
-		// properties
-			$properties = $this->get_properties();
-
 		// pagination
 			$this->pagination = new stdClass();
-				$this->pagination->offset	= 0; // default
-				// limit
-				if ($modo==='edit') {
-					$this->pagination->limit = isset($properties->max_records)
-						? (int)$properties->max_records // old v5 definitions
-						: 1;
-				}else{
-					$this->pagination->limit = isset($properties->list_max_records)
-						? (int)$properties->list_max_records // old v5 definitions
-						: 10;
-				}
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.start_time()]=start_time();
-			}
-
-
-		return true;
+				$this->pagination->offset	= 0;
+				$this->pagination->limit	= null;
 	}//end __construct
 
 
