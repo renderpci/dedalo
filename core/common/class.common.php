@@ -7,6 +7,18 @@ abstract class common {
 
 
 
+	// tipo. string like 'dd4525'
+	public $tipo;
+
+	// model. string like 'component_date'
+	public $model;
+
+	// section_id. string like '1526'
+	public $section_id;
+
+	// lang. string like 'lg-eng'
+	public $lang;
+
 	// permissions. int value from 0 to 3
 	public $permissions;
 
@@ -18,6 +30,8 @@ abstract class common {
 	public $identificador_unico;
 	// variant. Modifier of identificador_unico
 	public $variant;
+
+	public $RecordObj_dd;
 
 	// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 	protected $bl_loaded_structure_data;
@@ -56,6 +70,9 @@ abstract class common {
 	// view. Specific element view combined with mode is used to render elements
 	public $view;
 
+	// children_view. Specific element children_view used to render child elements
+	public $children_view;
+
 	// required methods
 		// abstract protected function define_id($id);
 		// abstract protected function define_tipo();
@@ -64,11 +81,17 @@ abstract class common {
 
 
 	// temporal excluded/mapped models
+		// public static $ar_temp_map_models = [
+		// 	// map to => old model
+		// 	'component_portal'	=> 'component_autocomplete_hi',
+		// 	'component_portal'	=> 'component_autocomplete',
+		// 	'section_group'		=> 'section_group_div'
+		// ];
 		public static $ar_temp_map_models = [
-			// map to => old model
-			'component_portal'	=> 'component_autocomplete_hi',
-			'component_portal'	=> 'component_autocomplete',
-			'section_group'		=> 'section_group_div'
+			// map from old model => new model
+			'component_autocomplete_hi'	=> 'component_portal',
+			'component_autocomplete'	=> 'component_portal',
+			'section_group_div'			=> 'section_group'
 		];
 		public static $ar_temp_exclude_models = [
 			// v5
@@ -1774,11 +1797,14 @@ abstract class common {
 						// }
 
 					// common temporal excluded/mapped models *******
-						$match_key = array_search($model, common::$ar_temp_map_models);
-						if (false!==$match_key) {
+						// $match_key = array_search($model, common::$ar_temp_map_models);
+						$mapped_model = isset(common::$ar_temp_map_models[$model])
+							? common::$ar_temp_map_models[$model]
+							: false;
+						if (false!==$mapped_model) {
 							// mapped model
-							$model = $match_key;
-							debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
+							$model = $mapped_model;
+							debug_log(__METHOD__." +++ Mapped model $model to $mapped_model from layout map ".to_string(), logger::WARNING);
 						}else if (in_array($model, common::$ar_temp_exclude_models)) {
 							// excluded model
 							debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
@@ -2361,7 +2387,7 @@ abstract class common {
 				? $this->pagination->limit
 				: ( ($mode ==='list') ? 1 : 10 );
 
-			
+
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
 			if(isset($properties->source->request_config) || $model==='component_autocomplete_hi') {
@@ -3517,10 +3543,13 @@ abstract class common {
 					}
 
 				// common temporal excluded/mapped models *******
-					$match_key = array_search($model, common::$ar_temp_map_models);
-					if (false!==$match_key) {
-						debug_log(__METHOD__." +++ Mapped model $model to $match_key from layout map ".to_string(), logger::WARNING);
-						$model = $match_key;
+					// $match_key = array_search($model, common::$ar_temp_map_models);
+					$mapped_model = isset(common::$ar_temp_map_models[$model])
+						? common::$ar_temp_map_models[$model]
+						: false;
+					if (false!==$mapped_model) {
+						debug_log(__METHOD__." +++ Mapped model $model to $mapped_model from layout map ".to_string(), logger::WARNING);
+						$model = $mapped_model;
 					}else if (in_array($model, common::$ar_temp_exclude_models)) {
 						debug_log(__METHOD__." +++ Excluded model $model from layout map ".to_string(), logger::WARNING);
 						continue;
@@ -3808,58 +3837,59 @@ abstract class common {
 	* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc)
 	* get the path in inverse format, the last in the chain will be the first object [0]
 	* @return array ar_inverted_paths the the specific paths, with inverse path format.
+	* (!) Commented because nobody calls it (21-11-2022)
 	*/
-	public function get_ar_inverted_paths(array $full_ddo_map) : array {
+		// public function get_ar_inverted_paths(array $full_ddo_map) : array {
 
-		// get the parents for the column, creating the inverse path
-		// (from the last component to the main parent, the column will be with the data of the first item of the column)
-			if (!function_exists('get_parents')) {
-				function get_parents($ar_ddo, $dd_object) {
-					$ar_parents = [];
-					
-					$parent = array_find($ar_ddo, function($item) use($dd_object){
-						return $item->tipo===$dd_object->parent;
-					});
-					if (!empty($parent)) {
-						$ar_parents[]	= $parent;
-						$new_parents	= get_parents($ar_ddo, $parent);
-						$ar_parents[]	= array_merge($ar_parents, $new_parents);
-					}
-					
-					return $ar_parents;
-				}
-			}
+		// 	// get the parents for the column, creating the inverse path
+		// 	// (from the last component to the main parent, the column will be with the data of the first item of the column)
+		// 		if (!function_exists('get_parents')) {
+		// 			function get_parents($ar_ddo, $dd_object) {
+		// 				$ar_parents = [];
 
-		// every ddo will be checked if it is a component_portal or if is the last component in the chain
-		// set the valid_ddo array with only the valid ddo that will be used.
-			$ar_inverted_paths = [];
-			$ddo_length = count($full_ddo_map);
-			for ($i=0; $i < $ddo_length; $i++) {
+		// 				$parent = array_find($ar_ddo, function($item) use($dd_object){
+		// 					return $item->tipo===$dd_object->parent;
+		// 				});
+		// 				if (!empty($parent)) {
+		// 					$ar_parents[]	= $parent;
+		// 					$new_parents	= get_parents($ar_ddo, $parent);
+		// 					$ar_parents[]	= array_merge($ar_parents, $new_parents);
+		// 				}
 
-				$current_ddo = $full_ddo_map[$i];
-				// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo create the column
-				// all parents has the link and data to get the data of the last ddo.
-				// interview -> people to study -> name
-				// «name» will be the column, «interview» and «people under study» has the locator to get the data.
-				$current_ar_valid_ddo = array_find($full_ddo_map, function($item) use($current_ddo){
-					return $item->parent === $current_ddo->tipo;
-				});
-				if(!empty($current_ar_valid_ddo)) continue;
-				$column = [];
+		// 				return $ar_parents;
+		// 			}
+		// 		}
 
-				// get the path with inverse order
-				// people to study -> interview
-				$parents = get_parents($full_ddo_map, $current_ddo);
+		// 	// every ddo will be checked if it is a component_portal or if is the last component in the chain
+		// 	// set the valid_ddo array with only the valid ddo that will be used.
+		// 		$ar_inverted_paths = [];
+		// 		$ddo_length = count($full_ddo_map);
+		// 		for ($i=0; $i < $ddo_length; $i++) {
 
-				// join all with the inverse format
-				// name -> people to study -> interview
-				$column[]				= $current_ddo;
-				$column					= array_merge($column, $parents);
-				$ar_inverted_paths[]	= $column;
-			}
+		// 			$current_ddo = $full_ddo_map[$i];
+		// 			// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo create the column
+		// 			// all parents has the link and data to get the data of the last ddo.
+		// 			// interview -> people to study -> name
+		// 			// «name» will be the column, «interview» and «people under study» has the locator to get the data.
+		// 			$current_ar_valid_ddo = array_find($full_ddo_map, function($item) use($current_ddo){
+		// 				return $item->parent === $current_ddo->tipo;
+		// 			});
+		// 			if(!empty($current_ar_valid_ddo)) continue;
+		// 			$column = [];
 
-		return $ar_inverted_paths;
-	}//end get_ar_inverted_paths
+		// 			// get the path with inverse order
+		// 			// people to study -> interview
+		// 			$parents = get_parents($full_ddo_map, $current_ddo);
+
+		// 			// join all with the inverse format
+		// 			// name -> people to study -> interview
+		// 			$column[]				= $current_ddo;
+		// 			$column					= array_merge($column, $parents);
+		// 			$ar_inverted_paths[]	= $column;
+		// 		}
+
+		// 	return $ar_inverted_paths;
+		// }//end get_ar_inverted_paths
 
 
 
@@ -3957,7 +3987,7 @@ abstract class common {
 			}
 
 		// based on real_model
-			$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+			$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->get_tipo());
 			switch ($real_model) {
 				case 'component_autocomplete':
 				case 'component_autocomplete_hi':

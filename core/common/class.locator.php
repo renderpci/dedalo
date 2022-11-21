@@ -63,7 +63,7 @@ class locator extends stdClass {
 	*/
 	public function __construct( object $data=null ) {
 
-		if (is_null($data)) return false;
+		if (is_null($data)) return;
 
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
@@ -74,8 +74,6 @@ class locator extends stdClass {
 			$method = 'set_'.$key;
 			$this->$method($value);
 		}
-
-		return true;
 	}//end __construct
 
 

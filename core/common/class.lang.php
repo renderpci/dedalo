@@ -97,11 +97,12 @@ class lang {
 
 	/**
 	* GET_LANG_LOCATOR_FROM_CODE
-	* @return obejct $locator
+	* @param string $code
+	* @return locator $locator
 	*/
-	public static function get_lang_locator_from_code( string $code ) : object {
+	public static function get_lang_locator_from_code( string $code ) : locator {
 
-		$result 	 = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
+		$result = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
 		if (!isset($result->section_id)) {
 			# Temporal cath error for import v4.0.15 to v4.5.0
 			# When import hierarchy, langs are not imported yet (langs are insise hierarchies)
@@ -131,7 +132,7 @@ class lang {
 			$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);
 			$locator->set_section_id($section_id);
 
-		return (object)$locator;
+		return $locator;
 	}//end get_lang_locator_from_code
 
 

@@ -30,14 +30,13 @@ class dd_date {
 
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
-			#trigger_error("wrong data format. object expected. Given type: ".gettype($data));
-		#	throw new Exception("Error Processing Request", 1);
-
+			// trigger_error("wrong data format. object expected. Given type: ".gettype($data));
+			// throw new Exception("Error Processing Request", 1);
 			debug_log(__METHOD__." wrong data format. object expected. Given type: ".gettype($data).' - '.to_string($data), logger::ERROR);
 			if(SHOW_DEBUG===true) {
 				dump(debug_backtrace()[0], " wrong data format. object expected. Given type:".gettype($data).' - data:'.to_string($data)." from:");
 			}
-			return false;
+			return;
 		}
 
 		foreach ($data as $key => $value) {
@@ -51,8 +50,6 @@ class dd_date {
 				debug_log(__METHOD__." Ignored received property: $key not defined as set method. Data: ".to_string($data), logger::DEBUG);
 			}
 		}
-
-		return true;
 	}//end __construct
 
 
