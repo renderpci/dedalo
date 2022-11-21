@@ -2347,6 +2347,7 @@ abstract class common {
 			static $resolved_request_properties_parsed = [];
 			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
 			if (isset($resolved_request_properties_parsed[$resolved_key])) {
+				// debug_log(__METHOD__." Return ar_request_config from cached value. resolved_key: ".to_string($resolved_key), logger::ERROR);
 				return $resolved_request_properties_parsed[$resolved_key];
 			}
 
@@ -2866,8 +2867,11 @@ abstract class common {
 						$sqo_config->mode			= $mode;
 						$sqo_config->operator		= '$or';
 
-				// fix the limit in the instance
-					$this->pagination->limit = $limit;
+				// fix the limit in the instance.
+				// Note that some instances do not have pagination property, like areas
+					if (isset($this->pagination)) {
+						$this->pagination->limit = $limit;
+					}
 
 				// mode
 					$current_mode = ($model!=='section')
