@@ -101,7 +101,8 @@ $updates->$v = new stdClass();
 			'component_av',
 			'component_image',
 			'component_pdf',
-			'component_svg'
+			'component_svg',
+			'component_number'
 		];	// Force convert from string to array
 
 	// DATA INSIDE DATABASE UPDATES
