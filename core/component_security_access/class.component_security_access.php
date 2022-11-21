@@ -48,9 +48,10 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_DATALIST
+	* @param ?int $user_id = null
 	* @return array $datalist
 	*/
-	public function get_datalist($user_id=null) : array {
+	public function get_datalist( ?int $user_id=null ) : array {
 		$start_time = start_time();
 
 		// already resolved in current instance
@@ -170,15 +171,16 @@ class component_security_access extends component_common {
 
 	/**
 	* GET ARRAY TIPO ADMIN
-	* Devulve el área 'Admin' además de sus hijos
-	* (usado para excluirles las opciones admin en el arbol)
+	* Returns the 'Admin' area as well as its children (used to exclude the admin options in the tree)
 	* @return array $ar_tipo_admin
 	*/
 	public static function get_ar_tipo_admin() : array {
 
-		# STATIC CACHE
-		static $ar_tipo_admin;
-		if(isset($ar_tipo_admin)) return $ar_tipo_admin;
+		// static cache
+			static $ar_tipo_admin;
+			if(isset($ar_tipo_admin)) {
+				return $ar_tipo_admin;
+			}
 
 		$ar_result 	= RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='area_admin', $prefijo='dd');
 		$ar_tesauro = array();
@@ -189,12 +191,13 @@ class component_security_access extends component_common {
 			$ar_childrens_of_this	= $obj->get_ar_childrens_of_this();
 			$ar_tesauro				= $ar_childrens_of_this;
 		}
-		# Añadimos el propio termino como padre del arbol
-		#array_push($ar_tesauro, $tipo);
+		// We add the term itself as the father of the tree
+		// array_push($ar_tesauro, $tipo);
 		array_unshift($ar_tesauro, $tipo);
 
-		# STORE CACHE DATA
-		$ar_tipo_admin = $ar_tesauro ;
+		// store cache data
+			$ar_tipo_admin = $ar_tesauro ;
+
 
 		return $ar_tesauro ;
 	}//end get_ar_tipo_admin
@@ -285,7 +288,7 @@ class component_security_access extends component_common {
 
 	/**
 	* CALCULATE_TREE
-	* @return object $response
+	* @return array $datalist
 	*/
 	public static function calculate_tree( $user_id ) : array {
 

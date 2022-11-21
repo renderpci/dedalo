@@ -223,8 +223,7 @@ final class dd_core_api {
 
 							$current_context = $section->get_structure_context(
 								1, // permissions
-								true, // add_request_config
-								null // callback
+								true // add_request_config								
 							);
 							// section_tool config
 							// the config is used by section_tool to set the tool to open, if is set inject the config into the context.
@@ -1295,7 +1294,7 @@ final class dd_core_api {
 			$context_type		= $json_data->context_type;
 
 		// filtered_components
-			$filtered_components = common::get_section_elements_context((object)[
+			$filtered_components = common::get_section_elements_context([
 				'ar_section_tipo'	=> $ar_section_tipo,
 				'context_type'		=> $context_type
 			]);
@@ -1494,8 +1493,8 @@ final class dd_core_api {
 										$mode,
 										null // view
 									);
-									if (!empty($user_preset)) {
-										$user_preset_rqo = $user_preset->rqo;
+									if (!empty($user_preset[0])) {
+										$user_preset_rqo = $user_preset[0]->rqo;
 										if (isset($user_preset_rqo) && isset($user_preset_rqo->show->sqo_config->limit)) {
 											$limit = $user_preset_rqo->show->sqo_config->limit;
 										}

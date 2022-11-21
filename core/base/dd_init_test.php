@@ -1,7 +1,14 @@
 <?php
 # SYSTEM TEST
-# Verifica la integridad del sistema (habitualmente en la secuencia de arranque o login)
-# Comprueba la existencia de elementos / directorios / permisos necesarios para ejecutar Dédalo
+# Verify the integrity of the system (usually in the boot sequence or login)
+# Checks for the existence of items / directories / permissions needed to run Dédalo
+
+
+
+// user_id fix if not already defined
+	if (!isset($user_id)) {
+		$user_id = navigator::get_user_id() ?? null;
+	}
 
 
 
