@@ -9,7 +9,7 @@ class dd_error {
 
 
 	/**
-	* CATCHABLE ERRORS : captureError
+	* CATCH-ABLE ERRORS : captureError
 	*/
 	public static function captureError( $number, $message, $file, $line ) {
 

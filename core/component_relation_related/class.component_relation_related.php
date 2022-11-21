@@ -34,7 +34,6 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
-	* @return bool
 	*/
 	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
@@ -42,7 +41,7 @@ class component_relation_related extends component_relation_common {
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
 		# Build the component normally
-		$result = parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		// #
 		// # RELATION CONFIG . Set current component relation_type and relation_type_rel based on properties config
@@ -59,8 +58,6 @@ class component_relation_related extends component_relation_common {
 		// 		debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behavior".to_string(), logger::ERROR);
 		// 		break;
 		// }
-
-		return $result;
 	}//end __construct
 
 

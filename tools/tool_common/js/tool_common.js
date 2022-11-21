@@ -1,4 +1,4 @@
-/*global Promise, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL, DEDALO_CORE_URL */
+/*global Promise, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL, DEDALO_CORE_URL, lzstring */
 /*eslint no-undef: "error"*/
 
 

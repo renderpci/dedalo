@@ -315,13 +315,16 @@ final class dd_utils_api {
 			}
 
 		# IMPORT
-			$res_import_structure = backup::import_structure($db_name='dedalo4_development_str.custom', $check_server=true, $ar_dedalo_prefix_tipos);
-
-			if ($res_import_structure->result===false) {
-				$response->msg	.= $res_import_structure->msg;
+			$import_structure_response = backup::import_structure(
+				'dedalo4_development_str.custom', // string db_name 
+				true, // bool check_server
+				$ar_dedalo_prefix_tipos
+			);
+			if ($import_structure_response->result===false) {
+				$response->msg	.= $import_structure_response->msg;
 				return $response;
 			}else{
-				$response->msg	.= $res_import_structure->msg;
+				$response->msg	.= $import_structure_response->msg;
 				# Exec time
 				$import_exec_time = exec_time_unit($prev_time,'ms').' ms';
 			}

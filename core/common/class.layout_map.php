@@ -494,30 +494,30 @@ class layout_map {
 				$preset_value	= is_array($json_data) ? $json_data : [$json_data];
 
 				// check proper config of items
-				// $valid_items = [];
-				// foreach ($preset_value as $key => $item) {
-				//
-				// 	// typo
-				// 		if (!isset($item->typo) || $item->typo!=='ddo') {
-				// 			debug_log(__METHOD__." Ignored invalid user preset typo ! ".to_string($item), logger::DEBUG);
-				// 			continue;
-				// 		}
-				//
-				// 	// tipo
-				// 		if (!isset($item->tipo)) {
-				// 			debug_log(__METHOD__." Invalid user preset item ! ".to_string($item), logger::ERROR);
-				// 			continue;
-				// 		}
-				//
-				// 	// label
-				// 		if (!property_exists($item, 'label')) {
-				// 			$item->label = RecordObj_dd::get_termino_by_tipo($item->tipo, DEDALO_DATA_LANG, true, true);
-				// 		}
-				//
-				// 	$valid_items[] = $item;
-				// }
-				//
-				// $result = $valid_items;
+					// $valid_items = [];
+					// foreach ($preset_value as $key => $item) {
+					//
+					// 	// typo
+					// 		if (!isset($item->typo) || $item->typo!=='ddo') {
+					// 			debug_log(__METHOD__." Ignored invalid user preset typo ! ".to_string($item), logger::DEBUG);
+					// 			continue;
+					// 		}
+					//
+					// 	// tipo
+					// 		if (!isset($item->tipo)) {
+					// 			debug_log(__METHOD__." Invalid user preset item ! ".to_string($item), logger::ERROR);
+					// 			continue;
+					// 		}
+					//
+					// 	// label
+					// 		if (!property_exists($item, 'label')) {
+					// 			$item->label = RecordObj_dd::get_termino_by_tipo($item->tipo, DEDALO_DATA_LANG, true, true);
+					// 		}
+					//
+					// 	$valid_items[] = $item;
+					// }
+					//
+					// $result = $valid_items;
 
 				$result = $preset_value;
 

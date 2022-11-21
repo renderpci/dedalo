@@ -14,11 +14,9 @@ final class dd_manager {
 
 	/**
 	* __CONSTRUCT
-	* @return bool
 	*/
 	public function __construct() {
 
-		return true;
 	}//end __construct
 
 

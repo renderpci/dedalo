@@ -616,13 +616,16 @@ abstract class backup {
 	* Exec pg_restore of selected backup file
 	* @see trigger.db_utils
 	* @param string db_name default 'dedalo4_development_str.custom'
-	* @return string $res_html table of results
+	* @param bool $check_server = true
+	* @param array $dedalo_prefix_tipos = null
+
+	* @return object $response
 	*/
 	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, array $dedalo_prefix_tipos=null) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+			$response->result	= false;
+			$response->msg		= '';
 
 		#
 		# DB_SYSTEM_CONFIG_VERIFY
