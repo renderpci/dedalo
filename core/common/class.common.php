@@ -7,17 +7,17 @@ abstract class common {
 
 
 
-	// tipo. string like 'dd4525'
-	public $tipo;
+	// // tipo. string like 'dd4525'
+	// public $tipo;
 
-	// model. string like 'component_date'
-	public $model;
+	// // model. string like 'component_date'
+	// public $model;
 
-	// section_id. string like '1526'
-	public $section_id;
+	// // section_id. string like '1526'
+	// public $section_id;
 
-	// lang. string like 'lg-eng'
-	public $lang;
+	// // lang. string like 'lg-eng'
+	// public $lang;
 
 	// permissions. int value from 0 to 3
 	public $permissions;
