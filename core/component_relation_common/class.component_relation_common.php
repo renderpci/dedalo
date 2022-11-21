@@ -1477,7 +1477,6 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 			$new_dato[] = $locator;
-
 		// get the inverse references
 			//old way done in relations table
 				// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
@@ -1957,7 +1956,7 @@ class component_relation_common extends component_common {
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrived_section_tipo=null, $section_id=null) : array {
+	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrived_section_tipo=null) : array {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
