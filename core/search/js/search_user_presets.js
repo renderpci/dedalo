@@ -329,11 +329,11 @@
 
 				}//end if (response)
 
-				html_page.loading_content( wrap_div, 0 );
+				// html_page.loading_content( wrap_div, 0 );
 
 			}, function(error) {
 				console.log("[search2.delete_preset] Error.", error);
-				html_page.loading_content( wrap_div, 0 );
+				// html_page.loading_content( wrap_div, 0 );
 			})
 
 
@@ -448,7 +448,7 @@
 
 		}, function(error) {
 			console.log("[search2.edit_preset] Error.", error);
-			html_page.loading_content( wrap_div, 0 );
+			// html_page.loading_content( wrap_div, 0 );
 		})
 
 		return js_promise

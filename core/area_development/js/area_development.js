@@ -1,4 +1,4 @@
-/*global get_label, JSONEditor, SHOW_DEBUG, DEDALO_ROOT_WEB */
+/*global, JSONEditor, SHOW_DEBUG, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
@@ -6,7 +6,7 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_area_development, build_form} from './render_area_development.js'
@@ -170,7 +170,7 @@ area_development.prototype.render = async function(options={}) {
 */
 area_development.prototype.init_json_editor = async function(widget_object) {
 
-	const self = this
+	// const self = this
 
 	const editor_id			= widget_object.editor_id
 	const trigger			= widget_object.trigger
@@ -256,11 +256,11 @@ area_development.prototype.init_json_editor = async function(widget_object) {
 */
 area_development.prototype.init_json_editor_api = async function(widget_object) {
 
-	const self = this
+	// const self = this
 
 	// short vars
 		const editor_id			= widget_object.editor_id
-		const trigger			= widget_object.trigger
+		// const trigger		= widget_object.trigger
 		const body_response		= widget_object.body_response
 		const print_response	= widget_object.print_response
 
@@ -273,7 +273,8 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 
 		// button submit
 			const button_submit = widget_container.querySelector("#submit_api")
-			button_submit.addEventListener("click",async function(e){
+			button_submit.addEventListener("click", async function(e){
+				e.stopPropagation()
 
 				const editor_text = editor.getText()
 				if (editor_text.length<3) {
@@ -303,7 +304,7 @@ area_development.prototype.init_json_editor_api = async function(widget_object) 
 				  editor_text_area.style.display = "none"
 
 		// result container
-			const result_div = document.getElementById("convert_search_object_to_sql_query_response")
+			// const result_div = document.getElementById("convert_search_object_to_sql_query_response")
 
 		// json editor
 			const container	= document.getElementById(editor_id + '_container')

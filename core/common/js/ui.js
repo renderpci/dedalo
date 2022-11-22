@@ -1345,8 +1345,8 @@ export const ui = {
 					// 	"background-image"		: "url('" +tool_context.icon +"')"
 					// }
 				})
-				// icon inside
-				const tool_icon = ui.create_dom_element({
+				// tool_icon (icon inside)
+				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button white tool',
 					style			: {

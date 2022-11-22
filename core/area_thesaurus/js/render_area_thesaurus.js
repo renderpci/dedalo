@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -217,7 +217,7 @@ const render_content_data = function(self) {
 					parent 		 : ul,
 				})
 			// typology_header
-				const typology_header = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		:'typology_name',
 					dataset			: {
@@ -268,7 +268,7 @@ const render_content_data = function(self) {
 								parent			: elements_contanier
 							})
 					// hierarchy children_container
-							const children_container = ui.create_dom_element({
+							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		:'children_container',
 								dataset			: {

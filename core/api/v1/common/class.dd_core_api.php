@@ -223,7 +223,7 @@ final class dd_core_api {
 
 							$current_context = $section->get_structure_context(
 								1, // permissions
-								true // add_request_config								
+								true // add_request_config
 							);
 							// section_tool config
 							// the config is used by section_tool to set the tool to open, if is set inject the config into the context.
@@ -1294,7 +1294,7 @@ final class dd_core_api {
 			$context_type		= $json_data->context_type;
 
 		// filtered_components
-			$filtered_components = common::get_section_elements_context([
+			$filtered_components = common::get_section_elements_context((object)[
 				'ar_section_tipo'	=> $ar_section_tipo,
 				'context_type'		=> $context_type
 			]);
@@ -2235,7 +2235,7 @@ final class dd_core_api {
 				'page_globals'				=> $page_globals,
 				// plain global vars
 				'DEDALO_ENVIRONMENT'		=> true,
-				'DEDALO_API_URL'			=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
+				// 'DEDALO_API_URL'			=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
 				'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
 				'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
 				'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
@@ -2260,8 +2260,13 @@ final class dd_core_api {
 				'get_label' => json_decode($lang_file_content)
 			];
 
+		$response = new stdClass();
+			$response->result	= $environment;
+			$response->msg		= 'OK. Successful request';
+			$response->error	= null;
 
-		return $environment;
+
+		return $response;
 	}//end get_environment
 
 

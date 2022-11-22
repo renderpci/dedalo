@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 

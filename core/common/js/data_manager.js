@@ -246,7 +246,7 @@ data_manager.get_local_db = async function() {
 			};
 	})
 	.catch(err => {
-		// console.error(err)
+		console.error(err)
 	});
 }//end local_db
 

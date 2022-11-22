@@ -87,8 +87,8 @@ const get_content_data = async function(self) {
 
 	// build vars
 		const total				= self.caller.total
-		const limit				= self.get_limit()
-		const offset			= self.get_offset()
+		// const limit			= self.get_limit()
+		// const offset			= self.get_offset()
 
 		const total_pages		= self.total_pages
 		const page_number		= self.page_number

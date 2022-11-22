@@ -441,6 +441,9 @@ export const render_files_loader = function() {
 
 			// update loaded
 			loaded = rate + loaded
+			if (loaded>99) {
+				loaded = 100
+			}
 
 			// animate
 			animate_circle(loaded)
