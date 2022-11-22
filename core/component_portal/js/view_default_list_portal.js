@@ -89,7 +89,7 @@ view_default_list_portal.render = async function(self, options) {
 							'grid-template-columns': template_columns
 						}
 					}
-					const selector = `${self.section_tipo}_${self.tipo}.list`
+					const selector = `${self.section_tipo}_${self.tipo}.list.view_${self.view}`
 					set_element_css(selector, css_object)
 				}
 

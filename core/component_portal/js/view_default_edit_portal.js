@@ -99,7 +99,7 @@ view_default_edit_portal.render = async function(self, options) {
 					"grid-template-columns" : template_columns
 				}
 			}
-			const selector = `${self.section_tipo}_${self.tipo}.edit`
+			const selector = `${self.section_tipo}_${self.tipo}.edit.view_${self.view}`
 			set_element_css(selector, css_object)
 
 		list_body.appendChild(list_header_node)
