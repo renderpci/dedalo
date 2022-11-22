@@ -16,7 +16,7 @@ class DDModal extends HTMLElement {
 					font-size: inherit;
 					display: none;
 					position: fixed;
-					z-index: 3;
+					z-index: 4;
 					/* padding-top: 80px; */
 					left: 0;
 					top: 0;

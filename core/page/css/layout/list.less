@@ -80,8 +80,9 @@
 		// list_body columns inside list_body are always flex (!)
 		.list_body {
 			.column {
-				display: flex !important;
+				display: flex;
 				height: 100%;
+				flex: 1; // allow images center it
 				// height: fit-content;
 				// overflow: hidden;
 
@@ -280,6 +281,9 @@
 			box-shadow: 0px 1px 0px 0px #e5e5e5;
 			overflow: hidden;
 
+			color: #5c5b5b;
+			font-weight: 300;
+
 			// height: 2rem;
 			padding: 0px;
 			padding-left: 0.25rem;
@@ -324,8 +328,8 @@
 				// padding-top: 0.25em;
 				// padding-bottom: 0.25em;
 				// padding-left: 0.25em;
-				background-color: @color_grey_light;
-				color: @color_grey_dark;
+				// background-color: @color_grey_light;
+				// color: @color_grey_dark;
 			}
 
 			// header column sub-labels inside sub_header container
@@ -351,8 +355,10 @@
 				display: block;
 				padding: 0px;
 				margin: 0.33rem;
-				margin-top: 0.3rem;
-				margin-bottom: 0.4rem;
+				// margin-top: 0.3rem;
+				// margin-bottom: 0.4rem;
+				margin-top: 0.25rem;
+				margin-bottom: 0.25rem;
 			}
 
 			// name . label text of column
@@ -527,7 +533,8 @@
 			display: inline-block; // ?????
 			padding: 0px;
 			margin: 0px;
-			height: 100%;
+			// height: 100%;
+			height: inherit;
 
 			// &.list {
 			// 	background-color: #efe99b;
