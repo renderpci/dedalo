@@ -151,7 +151,7 @@
 
 		&.list {
 			>.list_body {
-				// display: block;
+				display: flex;
 				height: auto;
 			}
 		}
@@ -187,6 +187,21 @@
 			padding-right: 0.5rem;
 		}
 
+		&.edit {
+			>.list_body >.content_data >.section_record {
+				outline: 1px solid @color_grey_light;
+
+				.column {
+					outline: unset;
+				}
+
+				&.mosaic_over {
+					outline: 1px solid @color_orange_dedalo;
+					z-index: 2;
+				}
+			}
+		}
+
 		// change list_body from grid to flex
 		>.list_body {
 			// display: flex;
@@ -206,6 +221,8 @@
 				// overflow: hidden;
 				overflow-y: hidden;
 				// overflow: unset;
+
+				// background-color: #7ed0b0;
 
 				&.list {
 					// display: contents;
@@ -250,7 +267,7 @@
 					// grid-template-rows: 1fr 2fr 1fr;
 					grid-template-rows: minmax(3rem, auto) 2fr minmax(3rem, auto);
 					overflow: hidden;
-					@bg_color_buttons: rgb(255 255 255 / 70%);
+					@bg_color_buttons: rgb(255 255 255 / 80%);
 
 					>.column {
 						z-index: 2;
@@ -286,8 +303,13 @@
 
 						border-radius: unset;
 						border-bottom-right-radius: 0.5rem;
+						overflow: hidden;
 
 						.button_edit {
+							position: absolute;
+							left: 0;
+							top: 0;
+							height: inherit;
 							// color: white;
 							// background-color: @bg_color_buttons;
 						}
@@ -354,6 +376,8 @@
 				// display: contents;
 			}
 		}
+
+
 	}
 
 	// view_line
@@ -368,16 +392,16 @@
 
 		// content_data
 		>.content_data {
-			display: block;
+			// display: block;
+			display: flex;
 			padding: 0px;
-
 
 			// section_record list
 			.section_record {
 				// background-color: #b8ecfe;
 				display: flex;
-				flex-wrap: wrap;
-				align-items: center;
+				flex-wrap: nowrap;
+				align-items: flex-start;
 				// height: 100%;
 				// padding-left: 1rem; // don't remove this (!)
 				// @media screen and (max-width: @width_break_point_1) {
@@ -396,7 +420,10 @@
 				// view_text inside
 				&.view_text {
 					margin-left: 0.5rem;
-					line-height: 1.1rem;
+					// line-height: 1.1rem;
+					flex: 0 0 100%;
+					line-height: 1.2rem;
+					flex-wrap: wrap;
 
 					.column_section_id {
 						margin-right: 0.5rem;
@@ -412,7 +439,8 @@
 					// flex-basis: auto;
 					height: inherit;
 					width: auto;
-					display: inline;
+					// display: inline;
+					display: contents;
 					vertical-align: middle;
 					align-items: center;
 					word-break: break-word;
@@ -420,7 +448,7 @@
 					// *:not(.icon, button, .button, .wrapper_component.edit) {
 					*:not(.icon, button, .button, .wrapper_component) {
 						display: inline;
-						vertical-align: middle;
+						// vertical-align: middle;
 						word-break: break-word;
 						line-height: unset;
 					}
@@ -465,10 +493,17 @@
 					}
 
 					.ddinfo_value {
-						padding: 0.25rem;
+						// padding: 0.25rem;
+						padding: 0px;
 						display: inline-block;
+						display: contents;
 					}
 				}
+			}
+
+			>.section_record {
+				display: block;
+				margin-bottom: 0.25rem;
 			}
 		}
 
