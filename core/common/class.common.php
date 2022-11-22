@@ -375,10 +375,16 @@ abstract class common {
 
 		}else{
 
+			$matrix_table = null;
+
 			if(SHOW_DEBUG===true) {
-				dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
+				// dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
 			}
-			throw new Exception("Error Processing Request. Don't use non section tipo ($tipo - $modelo_name) to calculate matrix_table. Use always section_tipo", 1);
+			debug_log(
+				__METHOD__
+				." Error Processing Request. Don't use non section tipo ($tipo - $modelo_name) to calculate matrix_table. Use always section_tipo "
+				, logger::ERROR
+			);
 
 			// # COMPONENT CASE
 			// # Heredamos la tabla de la sección parent (si la hay)
