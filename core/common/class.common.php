@@ -2385,7 +2385,7 @@ abstract class common {
 				: 0;
 			$limit	= isset($this->pagination->limit)
 				? $this->pagination->limit
-				: ( ($mode ==='list') ? 10 : 1 );
+				: ( ($mode==='list' && $model==='section') ? 10 : 1 );
 
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
