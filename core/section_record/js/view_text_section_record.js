@@ -165,15 +165,14 @@ view_text_section_record.render = async function(self, options) {
 				}
 		}//end for (let i = 0; i < columns_map_length; i++)
 
-	// component_info add if exists
-		const component_info = self.get_component_info()
-		if (component_info){
-			const info_value	= '&nbsp;' + component_info.value.join('&nbsp;')
-			const info			= document.createElement('span')
-				  info.innerHTML= info_value
-
-			wrapper.append(...info.childNodes)
-		}
+	// component_info add if exists. (!) Removed 22-11-202 because is already added by the component (portal)
+		// const component_info = self.get_component_info()
+		// if (component_info){
+		// 	const info_value	= '&nbsp;' + component_info.value.join('&nbsp;')
+		// 	const info			= document.createElement('span')
+		// 		  info.innerHTML= info_value
+		// 	wrapper.append(...info.childNodes)
+		// }
 
 
 	return wrapper

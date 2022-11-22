@@ -129,22 +129,21 @@ view_mini_section_record.render = async function(self, options) {
 						}else{
 							console.error("current_instance column_id not found:",current_instance);
 						}
-				}//end for (let i = 0; i < ar_instances_length; i++)
+				}//end for (let j = 0; j < ar_instances_length; j++)
+		}//end for (let i = 0; i < columns_map_length; i++) {
 
-		}
 
-
-	// component_info
-		const component_info = self.get_component_info()
-		if (component_info){
-			const info_value = component_info.value.join(' ')
-			const info = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'column column_info',
-				text_node		: info_value // wrap into span the text
-			})
-			fragment.appendChild(info)
-		}
+	// component_info. (!) Removed 22-11-202 because is already added by the component (portal)
+		// const component_info = self.get_component_info()
+		// if (component_info){
+		// 	const info_value = component_info.value.join(' ')
+		// 	const info = ui.create_dom_element({
+		// 		element_type	: 'div',
+		// 		class_name		: 'column column_info',
+		// 		text_node		: info_value // wrap into span the text
+		// 	})
+		// 	fragment.appendChild(info)
+		// }
 
 
 	// wrapper filling
