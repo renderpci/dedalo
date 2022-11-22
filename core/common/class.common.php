@@ -2580,8 +2580,6 @@ abstract class common {
 								$parsed_item->show->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 									? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 									: $parsed_item->show->sqo_config->limit;
-								// fix the limit in the instance
-								$this->pagination->limit = $parsed_item->show->sqo_config->limit;
 							}
 
 						}else{
@@ -2596,9 +2594,9 @@ abstract class common {
 								$sqo_config->operator		= '$or';
 
 							$parsed_item->show->sqo_config = $sqo_config;
-							// fix the limit in the instance
-							$this->pagination->limit = $limit;
 						}
+						// fix the limit in the instance
+						$this->pagination->limit = $parsed_item->show->sqo_config->limit;
 
 					// search
 						if (isset($item_request_config->search)) {
@@ -2648,16 +2646,6 @@ abstract class common {
 								if (!isset($parsed_item->search->sqo_config->operator)) {
 									$parsed_item->search->sqo_config->operator = '$or';
 								}
-								// limit. Overwrite config by session value if exists
-								if (isset($parsed_item->search->sqo_config->limit)) {
-									// get session limit if it was defined
-									$sqo_id	= implode('_', [$model, $section_tipo]);
-									$parsed_item->search->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
-										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
-										: $parsed_item->search->sqo_config->limit;
-									// fix the limit in the instance
-									$this->pagination->limit = $parsed_item->search->sqo_config->limit;
-								}
 							}else{
 								// fallback non defined sqo_config
 								$sqo_config = new stdClass();
@@ -2670,8 +2658,6 @@ abstract class common {
 									$sqo_config->operator		= '$or';
 
 								$parsed_item->search->sqo_config = $sqo_config;
-								// fix the limit in the instance
-								$this->pagination->limit = $limit;
 							}
 						}
 
@@ -3004,6 +2990,13 @@ abstract class common {
 
 		// cache
 			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				// if ($this->tipo=='oh17') {
+				// 	dump($ar_request_query_objects, ' ar_request_query_objects ++ '.to_string($this->pagination));
+				// }
+			}
 
 
 		return $ar_request_query_objects;
