@@ -226,7 +226,8 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		if (self.is_inside_tool===true || self.context.properties.source?.mode==='external') {
 			// Avoid to active activate_autocomplete
 		}else{
-			wrapper.addEventListener('click', function() {
+			wrapper.addEventListener('click', function(e) {
+				e.stopPropagation()
 				activate_autocomplete(self, wrapper)
 			})
 		}

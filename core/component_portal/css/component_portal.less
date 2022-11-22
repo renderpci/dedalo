@@ -142,8 +142,18 @@
 	}
 
 	&.view_default, &.view_table {
-		>.list_body {
-			grid-template-rows: 1.8rem auto;
+
+		&.edit {
+			>.list_body {
+				grid-template-rows: 1.8rem auto;
+			}
+		}
+
+		&.list {
+			>.list_body {
+				// display: block;
+				height: auto;
+			}
 		}
 	}
 
