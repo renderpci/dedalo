@@ -9303,6 +9303,10 @@ dd-modal .footer.content {
   outline: 1px solid #f78a1c;
   z-index: 2;
 }
+.component_portal.view_mosaic.list > .list_body > .content_data .component_image,
+.portal.view_mosaic.list > .list_body > .content_data .component_image {
+  max-height: 8rem;
+}
 .component_portal.view_mosaic > .list_body,
 .portal.view_mosaic > .list_body {
   width: 100%;
@@ -9683,6 +9687,9 @@ dd-modal .footer.content {
 *
 * Included from main.less file
 */
+.component_publication.edit {
+  box-shadow: none;
+}
 .component_publication.edit > .content_data > .content_value > .switcher_publication {
   cursor: pointer;
   display: inline-block;
@@ -9853,6 +9860,7 @@ dd-modal .footer.content {
 * Included from main.less file
 */
 .component_section_id.edit {
+  box-shadow: none;
   background-color: #b9b9b9;
   color: white;
   border-bottom-right-radius: 1rem;
