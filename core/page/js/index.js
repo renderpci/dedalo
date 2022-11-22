@@ -10,15 +10,30 @@ const t0 = performance.now()
 	import {get_instance} from '../../common/js/instances.js'
 	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
 	import {render_page} from '../js/render_page.js'
+	// import {config_client} from '../../../config/config_client.js'
 
 
 	( async () => {
 
-		// dedalo_environment
-			// If environment file fails, set basic vars to allow create errors
-			if (typeof DEDALO_ENVIRONMENT==='undefined') {
-				window.DEDALO_CORE_URL = '../'
-			}
+		// environment from API
+			// // config_client. Set vars as global
+			// 	for (const [key, value] of Object.entries(config_client)) {
+			// 		window[key] = value
+			// 	}
+			// // dedalo_environment
+			// 	const rqo_environment = { // rqo (request query object)
+			// 		action			: 'get_environment',
+			// 		prevent_lock	: true
+			// 	}
+			// 	const api_response_environment = await data_manager.request({
+			// 		body : rqo_environment
+			// 	});
+			// 	console.log('api_response_environment:', api_response_environment);
+			// 	// set vars as global
+			// 	for (const [key, value] of Object.entries(api_response_environment.result)) {
+			// 		window[key] = value
+			// 	}
+
 
 		// main events init
 			events_init()

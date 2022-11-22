@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -66,7 +66,7 @@ const add_events = (wrapper, self) => {
 		wrapper.addEventListener("mousedown", function(e){
 			e.stopPropagation()
 			//e.preventDefault()
-			// prevent buble event to container element
+			// prevent bubble event to container element
 			return false
 		})
 
@@ -86,15 +86,15 @@ const get_content_data = async function(self) {
 
 	// build vars
 		const total				= self.caller.total
-		const limit				= self.get_limit()
-		const offset			= self.get_offset()
+		// const limit			= self.get_limit()
+		// const offset			= self.get_offset()
 
 		const total_pages		= self.total_pages
 		const page_number		= self.page_number
 		const prev_page_offset	= self.prev_page_offset
 		const next_page_offset	= self.next_page_offset
-		const page_row_begin	= self.page_row_begin
-		const page_row_end		= self.page_row_end
+		// const page_row_begin	= self.page_row_begin
+		// const page_row_end		= self.page_row_end
 		const offset_first		= self.offset_first
 		const offset_prev		= self.offset_prev
 		const offset_next		= self.offset_next

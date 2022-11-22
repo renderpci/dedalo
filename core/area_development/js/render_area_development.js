@@ -4,7 +4,7 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
@@ -79,8 +79,8 @@ const get_content_data = function(self) {
 	const fragment = new DocumentFragment()
 
 	// widgets
-		const widgets_lenght = self.widgets.length
-		for (let i = 0; i < widgets_lenght; i++) {
+		const widgets_length = self.widgets.length
+		for (let i = 0; i < widgets_length; i++) {
 
 			const widget = self.widgets[i]
 
@@ -363,7 +363,7 @@ const print_response = (container, api_response) => {
 */
 export const build_form = function(widget_object) {
 
-	const self = this
+	// const self = this
 
 	// widget_object
 		// const trigger		= widget_object.trigger
@@ -492,7 +492,6 @@ export const build_form = function(widget_object) {
 		button_submit.addEventListener('click', function(){
 
 			// if (confirm( (get_label["seguro"] || "Sure?") )) {
-
 			// 	for (let i = 0; i < input_nodes.length; i++) {
 			// 		if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
 			// 			input_nodes[i].focus()

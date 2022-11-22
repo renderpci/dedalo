@@ -212,6 +212,7 @@ login.prototype.action_dispatch = async function(api_response) {
 	// default behavior
 		if (api_response.result===true) {
 
+			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
 			const files_loader = render_files_loader({
 				on_load_finish : load_finish
 			})
@@ -223,7 +224,7 @@ login.prototype.action_dispatch = async function(api_response) {
 				});
 				current_worker.postMessage({
 					action	: 'clear_cache',
-					url		: DEDALO_API_URL
+					url		: '../../api/v1/json/' // DEDALO_API_URL
 				});
 				current_worker.onmessage = function(e) {
 
@@ -244,6 +245,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						load_finish()
 					}
 				}
+				// load_finish()
 
 			// triggered by render_files_loader when worker finish to load all files
 			function load_finish() {
