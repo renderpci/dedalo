@@ -1,4 +1,4 @@
-/* global get_label, Promise, SHOW_DEBUG */
+/* global, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -110,7 +110,7 @@ paginator.prototype.build = async function(){
 
 	// short vars
 		const total				= await self.get_total();
-		const limit				= self.caller.rqo.sqo.limit // self.get_limit()
+		const limit				= self.get_limit()
 		const offset			= self.get_offset()
 
 	// pages fix vars
@@ -216,6 +216,9 @@ paginator.prototype.get_total = async function() {
 paginator.prototype.get_limit = function() {
 
 	const limit = this.caller.rqo.sqo.limit
+	if (limit===undefined) {
+		console.warn('Paginator limit is empty!', limit, typeof limit);
+	}
 
 	return limit
 }//end get_limit
@@ -229,6 +232,9 @@ paginator.prototype.get_limit = function() {
 paginator.prototype.get_offset = function() {
 
 	const offset = this.caller.rqo.sqo.offset
+	if (offset===undefined) {
+		console.warn('Paginator offset is empty!', offset, typeof offset);
+	}
 
 	return offset
 }//end get_offset

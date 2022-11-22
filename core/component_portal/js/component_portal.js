@@ -232,10 +232,7 @@ component_portal.prototype.build = async function(autoload=false) {
 			// rqo build
 			const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= false
-			// self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
-			// (!) Force to calculate always the instance rqo because values like 'pagination.limit' could
-			// be updated from server response
-			self.rqo = await self.build_rqo_show(
+			self.rqo = self.rqo || await self.build_rqo_show(
 				self.rqo_config, // object rqo_config
 				action,  // string action like 'get_data' or 'resolve_data'
 				add_show // bool add_show
@@ -328,6 +325,18 @@ component_portal.prototype.build = async function(autoload=false) {
 				await generate_rqo()
 				// console.log("portal generate_rqo 2 self.rqo:",self.rqo);
 
+			// update rqo.sqo.limit. Note that it may have been updated from the API response
+			// Paginator takes limit from: self.rqo.sqo.limit
+				const request_config_item = self.context.request_config.find(el => el.api_engine==='dedalo')
+				if (request_config_item) {
+					// Updated self.rqo.sqo.limit. Try sqo and show.sqo_config
+					if (request_config_item.sqo && request_config_item.sqo.limit) {
+						self.rqo.sqo.limit = request_config_item.sqo.limit
+					}else
+					if(request_config_item.show && request_config_item.show.sqo_config && request_config_item.show.sqo_config.limit) {
+						self.rqo.sqo.limit = request_config_item.show.sqo_config.limit
+					}
+				}
 		}//end if (autoload===true)
 
 	// update instance properties from context

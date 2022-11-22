@@ -330,10 +330,7 @@ section.prototype.build = async function(autoload=false) {
 			// rqo build
 			const action	= 'search'
 			const add_show	= self.mode==='tm'
-			// self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
-			// (!) Force to calculate always the instance rqo because values like 'pagination.limit' could
-			// be updated from server response
-			self.rqo = await self.build_rqo_show(
+			self.rqo = self.rqo || await self.build_rqo_show(
 				self.rqo_config, // object rqo_config
 				action,  // string action like 'search'
 				add_show // bool add_show
@@ -417,6 +414,19 @@ section.prototype.build = async function(autoload=false) {
 			// rqo regenerate
 				await generate_rqo()
 				// console.log('SECTION self.rqo after load:", clone(self.rqo) );
+
+			// update rqo.sqo.limit. Note that it may have been updated from the API response
+			// Paginator takes limit from: self.rqo.sqo.limit
+				const request_config_item = self.context.request_config.find(el => el.api_engine==='dedalo')
+				if (request_config_item) {
+					// Updated self.rqo.sqo.limit. Try sqo and show.sqo_config
+					if (request_config_item.sqo && request_config_item.sqo.limit) {
+						self.rqo.sqo.limit = request_config_item.sqo.limit
+					}else
+					if(request_config_item.show && request_config_item.show.sqo_config && request_config_item.show.sqo_config.limit) {
+						self.rqo.sqo.limit = request_config_item.show.sqo_config.limit
+					}
+				}
 
 			// count rows
 				if (!self.total) {
