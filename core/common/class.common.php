@@ -2433,8 +2433,10 @@ abstract class common {
 								$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
 							}
 
-						// limit
-							$parsed_item->sqo->limit = $limit;
+						// limit. Add default if not already set
+							if (!isset($parsed_item->sqo->limit)) {
+								$parsed_item->sqo->limit = $limit;
+							}
 
 					// show (mandatory). In list mode it's possible to create specific ddo_map in a section_list term child of the portal or section.
 
@@ -2596,7 +2598,9 @@ abstract class common {
 							$parsed_item->show->sqo_config = $sqo_config;
 						}
 						// fix the limit in the instance
-						$this->pagination->limit = $parsed_item->show->sqo_config->limit;
+						$this->pagination->limit = isset($parsed_item->show->sqo->limit)
+							? $parsed_item->show->sqo->limit
+							: $parsed_item->show->sqo_config->limit;
 
 					// search
 						if (isset($item_request_config->search)) {
@@ -2696,108 +2700,108 @@ abstract class common {
 
 				// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
 
-				switch ($mode) {
-					case 'edit':
-						if ($model==='section') {
-							// section
-							$table						= common::get_matrix_table_from_tipo($tipo);
-							$ar_modelo_name_required	= [
-								'component_',
-								'section_group',
-								'section_group_div',
-								'section_tab',
-								'tab'
-								// 'section_group_relation',
-								// 'section_group_portal',
-							];
-							$ar_related					= section::get_ar_children_tipo_by_modelo_name_in_section(
-								$tipo,
-								$ar_modelo_name_required,
-								true, // bool from_cache
-								true, // bool resolve_virtual
-								true, // bool recursive
-								false // bool search_exact
-							);
-						}elseif (in_array($model, common::$groupers)) {
-							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-						}else{
-							// components
-							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
-							// semantic node
-							$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-								$tipo,
-								'component_semantic_node',
-								'children',
-								true
-							);
-							if(!empty($ds_component)){
-								$ar_related = array_merge($ds_component, $ar_related );
+				// ar_related
+					switch ($mode) {
+						case 'edit':
+							if ($model==='section') {
+								// section
+								$table						= common::get_matrix_table_from_tipo($tipo);
+								$ar_modelo_name_required	= [
+									'component_',
+									'section_group',
+									'section_group_div',
+									'section_tab',
+									'tab'
+									// 'section_group_relation',
+									// 'section_group_portal',
+								];
+								$ar_related					= section::get_ar_children_tipo_by_modelo_name_in_section(
+									$tipo,
+									$ar_modelo_name_required,
+									true, // bool from_cache
+									true, // bool resolve_virtual
+									true, // bool recursive
+									false // bool search_exact
+								);
+							}elseif (in_array($model, common::$groupers)) {
+								// groupers
+								$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+							}else{
+								// components
+								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+								// semantic node
+								$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+									$tipo,
+									'component_semantic_node',
+									'children',
+									true
+								);
+								if(!empty($ds_component)){
+									$ar_related = array_merge($ds_component, $ar_related );
+								}
 							}
-						}
-						break;
-					case 'related_list':
-						if ($model==='section') {
-							// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
-							$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
-								$tipo,
-								['relation_list'], // array ar_modelo_name_required
-								true, // bool from_cache
-								false, // bool resolve_virtual
-								false, // bool recursive
-								true // bool search_exact
-							);
-
-							// If not found children, try resolving real section
-							if (empty($ar_terms)) {
+							break;
+						case 'related_list':
+							if ($model==='section') {
+								// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
 								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
 									$tipo,
 									['relation_list'], // array ar_modelo_name_required
 									true, // bool from_cache
-									true, // bool resolve_virtual
+									false, // bool resolve_virtual
 									false, // bool recursive
 									true // bool search_exact
 								);
-							}// end if (empty($ar_terms))
 
-							if(isset($ar_terms[0])) {
-								# Use found related terms as new list
-								$current_term = $ar_terms[0];
-								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								// If not found children, try resolving real section
+								if (empty($ar_terms)) {
+									$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
+										$tipo,
+										['relation_list'], // array ar_modelo_name_required
+										true, // bool from_cache
+										true, // bool resolve_virtual
+										false, // bool recursive
+										true // bool search_exact
+									);
+								}// end if (empty($ar_terms))
+
+								if(isset($ar_terms[0])) {
+									# Use found related terms as new list
+									$current_term = $ar_terms[0];
+									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								}
 							}
-						}
-						break;
-					case 'list':
-					case 'search':
-					case 'portal_list':
-					default:
-						if ($model==='section') {
-							# case section list is defined
-							$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
-							if(isset($ar_terms[0])) {
-								# Use found related terms as new list
-								$current_term = $ar_terms[0];
-								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-							}
-						}elseif (in_array($model, common::$groupers)) {
-							// groupers
-							$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
-						}else{
-							# portal cases
-							# case section list is defined
-							$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
-							if(isset($ar_terms[0])) {
-								# Use found related terms as new list
-								$current_term = $ar_terms[0];
-								$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+							break;
+						case 'list':
+						case 'search':
+						case 'portal_list':
+						default:
+							if ($model==='section') {
+								# case section list is defined
+								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+								if(isset($ar_terms[0])) {
+									# Use found related terms as new list
+									$current_term = $ar_terms[0];
+									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								}
+							}elseif (in_array($model, common::$groupers)) {
+								// groupers
+								$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 							}else{
-								# Fallback related when section list is not defined; portal case.
-								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+								# portal cases
+								# case section list is defined
+								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+								if(isset($ar_terms[0])) {
+									# Use found related terms as new list
+									$current_term = $ar_terms[0];
+									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								}else{
+									# Fallback related when section list is not defined; portal case.
+									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+								}
 							}
-						}
-						break;
-				}//end switch ($mode)
-
+							break;
+					}//end switch ($mode)
 
 				// related_clean
 					$ar_related_clean 	 = [];
