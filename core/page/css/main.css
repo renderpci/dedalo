@@ -8987,6 +8987,18 @@ dd-modal .footer.content {
   z-index: 1;
 }
 /**
+* view_default_input_text
+*
+* Included from component_input_text.less file
+*/
+/**
+* view_mini_input_text
+*
+* (!) with suffix _mini like 'component_input_text_mini'
+*
+* Included from component_input_text.less file
+*/
+/**
 * component_inverse
 *
 * Included from main.less file
@@ -9176,56 +9188,6 @@ dd-modal .footer.content {
   width: auto;
   padding-right: 0.5rem;
 }
-.component_portal > .list_body,
-.portal > .list_body {
-  min-height: 2.66rem;
-}
-.component_portal > .list_body .drag.icon,
-.portal > .list_body .drag.icon {
-  display: flex;
-  width: 100%;
-  margin: 0px;
-  padding: 0.5em;
-  background-image: url('../../themes/default/icons/drag.svg');
-  background-position: 92%;
-  background-repeat: no-repeat;
-  background-size: 22px 22px;
-  height: auto;
-  min-height: 2rem;
-  min-width: 2rem;
-  opacity: 0.1;
-  cursor: move;
-  z-index: 2;
-}
-.component_portal > .list_body .drag.icon:hover,
-.portal > .list_body .drag.icon:hover {
-  opacity: 0.3;
-}
-.component_portal > .list_body .drop,
-.portal > .list_body .drop {
-  z-index: 1;
-  display: block;
-  position: absolute;
-}
-.component_portal > .list_body .drop.dragover,
-.portal > .list_body .drop.dragover {
-  background-color: #ffffff8c;
-  border-top: 2px dotted #ff8a00;
-}
-.component_portal > .list_body .drag_section_id,
-.portal > .list_body .drag_section_id {
-  width: 100%;
-  text-align: left;
-  color: black;
-  font-size: 1.3em;
-  padding-left: 2px;
-}
-.component_portal > .list_body .draggable.dragover,
-.portal > .list_body .draggable.dragover {
-  background-color: #ffffff;
-  border-top: 2px dotted #ff8a00;
-  opacity: 0.5;
-}
 .component_portal > .content_data,
 .portal > .content_data {
   min-height: 2.66rem;
@@ -9265,94 +9227,94 @@ dd-modal .footer.content {
 .portal:not(.active) > .autocomplete_search_container {
   display: none;
 }
+.button_sort_order {
+  margin-top: 1em;
+}
+.sort_order {
+  text-align: center;
+}
+/**
+* view_default_portal
+*
+* Included from component_portal.less file
+*/
 .component_portal.view_default.edit > .list_body,
 .portal.view_default.edit > .list_body {
   grid-template-rows: 1.8rem auto;
+  min-height: 2.66rem;
 }
-.component_portal.view_autocomplete,
-.portal.view_autocomplete {
-  background-color: #83e1ee;
+.component_portal.view_default.edit > .list_body .drag.icon,
+.portal.view_default.edit > .list_body .drag.icon {
+  display: flex;
+  width: 100%;
+  margin: 0px;
+  padding: 0.5em;
+  background-image: url('../../themes/default/icons/drag.svg');
+  background-position: 92%;
+  background-repeat: no-repeat;
+  background-size: 22px 22px;
+  height: auto;
+  min-height: 2rem;
+  min-width: 2rem;
+  opacity: 0.1;
+  cursor: move;
+  z-index: 2;
 }
-.component_portal.view_autocomplete .section_record,
-.portal.view_autocomplete .section_record {
-  background-color: #8bf451;
-  outline: unset;
-  margin-bottom: 1px;
-  line-height: 0.5em;
+.component_portal.view_default.edit > .list_body .drag.icon:hover,
+.portal.view_default.edit > .list_body .drag.icon:hover {
+  opacity: 0.3;
 }
-.component_portal.view_autocomplete .section_record > div,
-.portal.view_autocomplete .section_record > div {
-  padding-top: 0.25em;
-  padding-bottom: 0.25em;
-  outline: unset;
-  background-color: unset;
-  line-height: 0.5em;
+.component_portal.view_default.edit > .list_body .drop,
+.portal.view_default.edit > .list_body .drop {
+  z-index: 1;
+  display: block;
+  position: absolute;
 }
-.component_portal.view_mosaic > .paginator_container,
-.portal.view_mosaic > .paginator_container {
+.component_portal.view_default.edit > .list_body .drop.dragover,
+.portal.view_default.edit > .list_body .drop.dragover {
+  background-color: #ffffff8c;
+  border-top: 2px dotted #ff8a00;
+}
+.component_portal.view_default.edit > .list_body .drag_section_id,
+.portal.view_default.edit > .list_body .drag_section_id {
+  width: 100%;
+  text-align: left;
+  color: black;
+  font-size: 1.3em;
+  padding-left: 2px;
+}
+.component_portal.view_default.edit > .list_body .draggable.dragover,
+.portal.view_default.edit > .list_body .draggable.dragover {
+  background-color: #ffffff;
+  border-top: 2px dotted #ff8a00;
+  opacity: 0.5;
+}
+/**
+* view_mosaic_portal
+*
+* Included from component_portal.less file
+*/
+.component_portal.view_mosaic > .paginator_container {
   right: 0px;
   top: 0px;
   width: auto;
   position: absolute;
   padding-right: 0.5rem;
 }
-.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record,
-.portal.view_mosaic.edit > .list_body > .content_data > .section_record {
-  outline: 1px solid #f0f0f0;
-}
-.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .column,
-.portal.view_mosaic.edit > .list_body > .content_data > .section_record .column {
-  outline: unset;
-}
-.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record.mosaic_over,
-.portal.view_mosaic.edit > .list_body > .content_data > .section_record.mosaic_over {
-  outline: 1px solid #f78a1c;
-  z-index: 2;
-}
-.component_portal.view_mosaic.list > .list_body > .content_data .component_image,
-.portal.view_mosaic.list > .list_body > .content_data .component_image {
-  max-height: 6rem;
-}
-.component_portal.view_mosaic > .list_body,
-.portal.view_mosaic > .list_body {
+.component_portal.view_mosaic > .list_body {
   width: 100%;
   display: grid;
 }
-.component_portal.view_mosaic > .list_body > .content_data > .section_record,
-.portal.view_mosaic > .list_body > .content_data > .section_record {
-  display: flex;
-  flex: 0 0 auto;
-  height: 100%;
-  overflow-y: hidden;
-}
-.component_portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component,
-.portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component {
-  padding: 0px;
-  margin: 0px;
-}
-.component_portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component .content_value,
-.portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component .content_value {
-  margin: 0px;
-  padding: 0.25rem;
-}
-.component_portal.view_mosaic > .list_body > .content_data > .section_record .button_exit_edit,
-.portal.view_mosaic > .list_body > .content_data > .section_record .button_exit_edit {
-  display: none;
-}
-.component_portal.view_mosaic > .list_body > .content_data,
-.portal.view_mosaic > .list_body > .content_data {
+.component_portal.view_mosaic > .list_body > .content_data {
   cursor: pointer;
 }
-.component_portal.view_mosaic > .list_body > .content_data .section_record .column_section_id,
-.portal.view_mosaic > .list_body > .content_data .section_record .column_section_id {
+.component_portal.view_mosaic > .list_body > .content_data .section_record .column_section_id {
   position: absolute;
 }
-.component_portal.view_mosaic > .list_body > .content_data > .hover_body,
-.portal.view_mosaic > .list_body > .content_data > .hover_body {
+.component_portal.view_mosaic > .list_body > .content_data > .hover_body {
   position: relative;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -9361,8 +9323,7 @@ dd-modal .footer.content {
   grid-template-rows: minmax(3rem, auto) 2fr minmax(3rem, auto);
   overflow: hidden;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column {
   z-index: 2;
   outline: none;
   padding: 0px;
@@ -9378,12 +9339,10 @@ dd-modal .footer.content {
   grid-row-start: 1;
   border-bottom-left-radius: 0.5rem;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column > .wrapper_component.active,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column > .wrapper_component.active {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column > .wrapper_component.active {
   background-color: transparent;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id {
   grid-column-start: 1;
   grid-column-end: 2;
   grid-row-start: 1;
@@ -9392,19 +9351,16 @@ dd-modal .footer.content {
   border-bottom-right-radius: 0.5rem;
   overflow: hidden;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .button_edit,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .button_edit {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .button_edit {
   position: absolute;
   left: 0;
   top: 0;
   height: inherit;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .drag.icon,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .drag.icon {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .drag.icon {
   display: none;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_remove,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_remove {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_remove {
   grid-column-start: 1;
   grid-column-end: 2;
   grid-row-start: 3;
@@ -9413,13 +9369,11 @@ dd-modal .footer.content {
   border-top-right-radius: 0.5rem;
   overflow: hidden;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_remove > .button_remove,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_remove > .button_remove {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_remove > .button_remove {
   width: 100%;
   justify-content: center;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container {
   cursor: pointer;
   z-index: 2;
   grid-column-start: 3;
@@ -9436,18 +9390,50 @@ dd-modal .footer.content {
   border-radius: unset;
   border-top-left-radius: 0.5rem;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container:hover,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container:hover {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container:hover {
   background-color: #f78a1c;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container:hover > .button.info,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container:hover > .button.info {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container:hover > .button.info {
   background-color: white;
 }
-.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container > .button.info,
-.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container > .button.info {
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container > .button.info {
   pointer-events: none;
 }
+.component_portal.view_mosaic > .list_body > .content_data > .section_record {
+  display: flex;
+  flex: 0 0 auto;
+  height: 100%;
+  overflow-y: hidden;
+}
+.component_portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component {
+  padding: 0px;
+  margin: 0px;
+}
+.component_portal.view_mosaic > .list_body > .content_data > .section_record .wrapper_component .content_value {
+  margin: 0px;
+  padding: 0.25rem;
+}
+.component_portal.view_mosaic > .list_body > .content_data > .section_record .button_exit_edit {
+  display: none;
+}
+.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record {
+  outline: 1px solid #f0f0f0;
+}
+.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .column {
+  outline: unset;
+}
+.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record.mosaic_over {
+  outline: 1px solid #f78a1c;
+  z-index: 2;
+}
+.component_portal.view_mosaic.list > .list_body > .content_data .component_image {
+  max-height: 6rem;
+}
+/**
+* view_line_portal
+*
+* Included from component_portal.less file
+*/
 .column .component_portal.view_line .label,
 .column .portal.view_line .label {
   display: none;
@@ -9607,6 +9593,11 @@ dd-modal .footer.content {
   display: flex;
   align-items: baseline;
 }
+/**
+* view_indexation_portal
+*
+* Included from component_portal.less file
+*/
 .component_portal.view_indexation > .content_data,
 .portal.view_indexation > .content_data {
   display: grid;
@@ -9676,16 +9667,16 @@ dd-modal .footer.content {
 .component_portal.view_indexation > .content_data .section_record.list .column.column_tag > .tags,
 .portal.view_indexation > .content_data .section_record.list .column.column_tag > .tags {
   /*
-							background-image: radial-gradient(30% 50% ellipse at 109% 50%, #ffffff 22px, transparent 10px, #ffab01 23px);
-							color: #ffffff;
-							border-top-left-radius: 5px;
-							border-bottom-left-radius: 5px;
-							// padding: 1px;
-							padding-left: 5px;
-							padding-right: 23px;
-							font-size: 80%;
-							text-align: center;
-							*/
+						background-image: radial-gradient(30% 50% ellipse at 109% 50%, #ffffff 22px, transparent 10px, #ffab01 23px);
+						color: #ffffff;
+						border-top-left-radius: 5px;
+						border-bottom-left-radius: 5px;
+						// padding: 1px;
+						padding-left: 5px;
+						padding-right: 23px;
+						font-size: 80%;
+						text-align: center;
+						*/
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9699,16 +9690,17 @@ dd-modal .footer.content {
   padding-right: 8px;
   min-width: 20px;
 }
+/**
+* view_mini_portal
+*
+* (!) suffix '_mini' as 'component_portal_mini'
+*
+* Included from component_portal.less file
+*/
 .component_portal_mini .column,
 .portal_mini .column {
   outline: none;
   padding-right: 0.33rem;
-}
-.button_sort_order {
-  margin-top: 1em;
-}
-.sort_order {
-  text-align: center;
 }
 /**
 * component_publication
