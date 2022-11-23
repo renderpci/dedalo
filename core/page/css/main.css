@@ -9311,7 +9311,7 @@ dd-modal .footer.content {
 }
 .component_portal.view_mosaic.list > .list_body > .content_data .component_image,
 .portal.view_mosaic.list > .list_body > .content_data .component_image {
-  max-height: 7rem;
+  max-height: 6rem;
 }
 .component_portal.view_mosaic > .list_body,
 .portal.view_mosaic > .list_body {
@@ -9566,16 +9566,16 @@ dd-modal .footer.content {
   display: inline-block;
   display: contents;
 }
-.component_portal.view_line > .content_data > .section_record,
-.portal.view_line > .content_data > .section_record {
+.component_portal.view_line.list > .content_data > .section_record,
+.portal.view_line.list > .content_data > .section_record {
   display: flex;
   margin-left: 0.5rem;
   margin-bottom: 0.25rem;
   flex: 0 0 100%;
   padding-right: 1.25rem;
 }
-.component_portal.view_line > .content_data > .section_record.view_text,
-.portal.view_line > .content_data > .section_record.view_text {
+.component_portal.view_line.list > .content_data > .section_record.view_text,
+.portal.view_line.list > .content_data > .section_record.view_text {
   display: block;
   margin-left: 0rem;
   padding-right: 0.5rem;
@@ -9588,6 +9588,19 @@ dd-modal .footer.content {
 .component_portal.view_line.edit > .content_data .section_record,
 .portal.view_line.edit > .content_data .section_record {
   padding-left: 0.5rem;
+}
+.component_portal.view_line.edit > .content_data > .section_record,
+.portal.view_line.edit > .content_data > .section_record {
+  display: flex;
+  margin-left: 0.5rem;
+  margin-bottom: 0.25rem;
+  flex: 0 0 100%;
+  padding-right: 1.25rem;
+}
+.component_portal.view_line.edit > .content_data > .section_record.view_text,
+.portal.view_line.edit > .content_data > .section_record.view_text {
+  margin-left: 0rem;
+  padding-right: 0.5rem;
 }
 .component_portal.view_line.search > .content_data,
 .portal.view_line.search > .content_data {

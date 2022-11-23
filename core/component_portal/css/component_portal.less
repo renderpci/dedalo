@@ -204,7 +204,7 @@
 
 		&.list {
 			>.list_body >.content_data .component_image {
-				max-height: 7rem;
+				max-height: 6rem;
 			}
 		}
 
@@ -494,22 +494,7 @@
 					}
 				}
 			}//end .section_record
-
-			>.section_record {
-				display: flex;
-				margin-left: 0.5rem;
-				margin-bottom: 0.25rem;
-				flex: 0 0 100%;
-				padding-right: 1.25rem;
-
-
-				&.view_text {
-					display: block;
-					margin-left: 0rem;
-					padding-right: 0.5rem;
-				}
-			}
-		}
+		}//end >.content_data
 
 		&.list {
 			// section_record list
@@ -517,11 +502,22 @@
 
 			}
 
-			&.view_text {
-				>.content_data >.section_record {
+			>.content_data {
+				>.section_record {
+					display: flex;
+					margin-left: 0.5rem;
+					margin-bottom: 0.25rem;
+					flex: 0 0 100%;
+					padding-right: 1.25rem;
+
+					&.view_text {
+						display: block;
+						margin-left: 0rem;
+						padding-right: 0.5rem;
+					}
 				}
 			}
-		}
+		}//end &.list
 
 		// edit
 		&.edit {
@@ -531,6 +527,21 @@
 
 				.section_record {
 					padding-left: 0.5rem; // don't remove this (!)
+				}
+
+				>.section_record {
+					display: flex;
+					margin-left: 0.5rem;
+					margin-bottom: 0.25rem;
+					flex: 0 0 100%;
+					padding-right: 1.25rem;
+
+
+					&.view_text {
+						// display: block;
+						margin-left: 0rem;
+						padding-right: 0.5rem;
+					}
 				}
 			}
 		}//end &.edit
