@@ -3927,7 +3927,7 @@ abstract class common {
 		// view
 			switch ($real_model) {
 				case 'component_portal':
-					$view = 'table';
+					$view = 'default';
 					break;
 				case 'component_relation_children':
 				case 'component_relation_parent':

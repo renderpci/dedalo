@@ -54,7 +54,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view || 'table'
+		const view	= self.context.view
 
 	// wrapper
 		switch(view) {
@@ -79,7 +79,6 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				return view_indexation_edit_portal.render(self, options)
 				break;
 
-			case 'table':
 			default:
 				return view_default_edit_portal.render(self, options)
 				break;
