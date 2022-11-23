@@ -38,7 +38,7 @@ render_list_component_image.prototype.list = function(options) {
 		// const render_level = options.render_level
 
 	// view
-		const view	= self.context.view || 'table'
+		const view	= self.context.view
 
 	// wrapper
 		let wrapper
@@ -52,11 +52,9 @@ render_list_component_image.prototype.list = function(options) {
 				wrapper = view_mini_image.render(self, options)
 				break;
 
-
 			case 'mosaic':
 				wrapper = view_mosaic_list_image.render(self, options)
 				break;
-
 
 			case 'default':
 			default:
@@ -66,4 +64,3 @@ render_list_component_image.prototype.list = function(options) {
 
 	return wrapper
 }//end list
-

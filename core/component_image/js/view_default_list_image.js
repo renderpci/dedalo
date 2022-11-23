@@ -103,7 +103,7 @@ view_default_list_image.render = function(self, options) {
 						menu			: false
 					}
 					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-					const current_window	= window.open(url, 'image_viewer', 'width=10,height=10')
+					const current_window	= window.open(url, 'image_viewer', 'width=320,height=240')
 					current_window.focus()
 			}
 		})

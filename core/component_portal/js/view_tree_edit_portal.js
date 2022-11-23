@@ -1,6 +1,8 @@
 /*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
+
+
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
@@ -12,6 +14,7 @@
 	import {render_column_remove} from './render_edit_component_portal.js'
 
 
+
 /**
 * VIEW_TREE_EDIT_PORTAL
 * Manage the components logic and appearance in client side
@@ -19,13 +22,13 @@
 export const view_tree_edit_portal = function() {
 
 	return true
-}//end render_edit_view_table
+}//end view_tree_edit_portal
 
 
 
 
 /**
-* view_tree_edit_portal
+* RENDER
 * Manages the component's logic and appearance in client side
 */
 view_tree_edit_portal.render = async function(self, options) {
