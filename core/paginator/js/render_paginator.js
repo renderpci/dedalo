@@ -102,7 +102,7 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-		// btn first
+		// btn paginator_first
 			const paginator_first = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_first_icon',
@@ -118,7 +118,7 @@ const get_content_data = async function(self) {
 				paginator_first.classList.add('inactive')
 			}
 
-		// btn previous
+		// btn paginator_prev
 			const paginator_prev = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_prev_icon',
@@ -134,7 +134,7 @@ const get_content_data = async function(self) {
 				paginator_prev.classList.add('inactive')
 			}
 
-		// btn next
+		// btn paginator_next
 			const paginator_next = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_next_icon',
@@ -150,7 +150,7 @@ const get_content_data = async function(self) {
 				paginator_next.classList.add('inactive')
 			}
 
-		// btn last
+		// btn paginator_last
 			const paginator_last = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_last_icon',
@@ -187,9 +187,11 @@ const get_content_data = async function(self) {
 				inner_html		: (get_label.pagina || 'Page'),
 				parent			: paginator_info
 			})
+
 			// input_go_to_page
 				const input_go_to_page = ui.create_dom_element({
 					element_type	: 'input',
+					type			: 'number',
 					class_name		: 'input_go_to_page',
 					title			: get_label.go_to_page,
 					placeholder		: page_number,
@@ -214,7 +216,16 @@ const get_content_data = async function(self) {
 						input_go_to_page.classList.remove('invalid')
 					}
 					input_go_to_page.value = null
+					fit_input_go_to_page_to_value(input_go_to_page, page_number)
 				})
+				input_go_to_page.addEventListener('input', function(e) {
+					e.preventDefault()
+					if (e.key!=='Enter' ) {
+						fit_input_go_to_page_to_value(input_go_to_page, this.value)
+					}
+				})
+				fit_input_go_to_page_to_value(input_go_to_page, page_number)
+
 			// page_info label
 			ui.create_dom_element({
 				element_type	: 'span',
@@ -241,3 +252,21 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+/**
+* FIT_INPUT_GO_TO_PAGE_TO_VALUE
+* @param DOM node input_node
+* @param int page_number
+*/
+const fit_input_go_to_page_to_value = function(input_node, page_number) {
+
+	const chars = page_number.toString().length
+
+	input_node.style.width = (chars + 3) + "ch";
+
+
+
+
+	console.log('input_node.width:', input_node.width);
+}//end fit_input_go_to_page_to_value
