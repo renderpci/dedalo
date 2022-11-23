@@ -141,7 +141,7 @@
 		}
 	}
 
-	&.view_default, &.view_table {
+	&.view_default {
 
 		&.edit {
 			>.list_body {
@@ -151,11 +151,11 @@
 
 		&.list {
 			>.list_body {
-				display: flex;
-				height: auto;
+				// display: flex;
+				// height: auto;
 			}
 		}
-	}
+	}//end view_default
 
 	// view_autocomplete
 	&.view_autocomplete {
@@ -174,7 +174,7 @@
 				line-height: 0.5em;
 			}
 		}
-	}
+	}//end view_autocomplete
 
 	// view_mosaic
 	&.view_mosaic {
@@ -204,7 +204,7 @@
 
 		&.list {
 			>.list_body >.content_data .component_image {
-				max-height: 8rem;
+				max-height: 7rem;
 			}
 		}
 
@@ -382,9 +382,7 @@
 				// display: contents;
 			}
 		}
-
-
-	}
+	}//end view_mosaic
 
 	// view_line
 	&.view_line {
@@ -408,15 +406,6 @@
 				display: flex;
 				flex-wrap: nowrap;
 				align-items: flex-start;
-				// height: 100%;
-				// padding-left: 1rem; // don't remove this (!)
-				// @media screen and (max-width: @width_break_point_1) {
-				// 	flex-wrap: wrap;
-				// }
-
-				// v2
-				// display: block;
-				// word-break: break-all;
 
 				// section_record inside
 				.section_record {
@@ -426,9 +415,8 @@
 				// view_text inside
 				&.view_text {
 					margin-left: 0.5rem;
-					// line-height: 1.1rem;
-					flex: 0 0 100%;
 					line-height: 1.2rem;
+					flex: 0 0 100%;
 					flex-wrap: wrap;
 
 					.column_section_id {
@@ -505,11 +493,21 @@
 						display: contents;
 					}
 				}
-			}
+			}//end .section_record
 
 			>.section_record {
-				display: block;
+				display: flex;
+				margin-left: 0.5rem;
 				margin-bottom: 0.25rem;
+				flex: 0 0 100%;
+				padding-right: 1.25rem;
+
+
+				&.view_text {
+					display: block;
+					margin-left: 0rem;
+					padding-right: 0.5rem;
+				}
 			}
 		}
 
@@ -517,6 +515,11 @@
 			// section_record list
 			.section_record {
 
+			}
+
+			&.view_text {
+				>.content_data >.section_record {
+				}
 			}
 		}
 
@@ -538,7 +541,7 @@
 				align-items: baseline;
 			}
 		}
-	}//end &.view_line
+	}//end view_line
 
 	// view_indexation
 	&.view_indexation {
@@ -638,7 +641,7 @@
 				}
 			}
 		}
-	}
+	}//end view_indexation
 
 	// suffix '_mini' as 'component_portal_mini'
 	&_mini {

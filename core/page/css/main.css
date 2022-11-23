@@ -675,7 +675,7 @@ select,
   width: 100%;
   margin-right: 0.5em;
   border: none;
-  outline: 1px solid #e6e6e6;
+  outline: 1px solid #f0f0f0;
   transition: all 0.5s ease, padding 0s;
   opacity: 0.75;
   padding: 0px;
@@ -691,7 +691,7 @@ li textarea,
 li select,
 li .contenteditable {
   max-width: 100%;
-  outline: 1px solid #e6e6e6;
+  outline: 1px solid #f0f0f0;
   outline-offset: 0;
 }
 input[type='text']:focus,
@@ -4859,6 +4859,13 @@ dd-modal .footer.content {
     display: initial;
   }
 }
+.paginator > .content_data > .paginator_info input::-webkit-outer-spin-button,
+.paginator > .content_data > .paginator_info input::-webkit-inner-spin-button {
+  /* display: none; <- Crashes Chrome on hover */
+  -webkit-appearance: none;
+  margin: 0;
+  /* <-- Apparently some margin are still there even though it's hidden */
+}
 .paginator > .content_data > .paginator_info > input.input_go_to_page {
   text-align: center;
   padding: 0.25em;
@@ -4867,6 +4874,7 @@ dd-modal .footer.content {
   width: 4.5em;
   border-radius: 0.2em;
   border: 1px solid #ececec;
+  -moz-appearance: textfield;
 }
 .paginator > .content_data > .paginator_info > input.input_go_to_page.invalid {
   background-color: #dc3545;
@@ -8033,6 +8041,9 @@ dd-modal .footer.content {
 .fullscreen.component_av.view_player > .content_data .quality_selector {
   width: auto !important;
 }
+.component_av.list img {
+  cursor: zoom-in;
+}
 .component_av .av_control_buttons {
   display: flex;
   flex-wrap: wrap;
@@ -8083,6 +8094,7 @@ dd-modal .footer.content {
 }
 .component_av.viewer > .content_data video {
   width: 100%;
+  max-height: 82vh;
 }
 .component_av.viewer .download {
   bottom: 10px;
@@ -8661,6 +8673,9 @@ dd-modal .footer.content {
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
+}
+.component_image.list img {
+  cursor: zoom-in;
 }
 .component_image.viewer {
   position: fixed;
@@ -9251,17 +9266,8 @@ dd-modal .footer.content {
   display: none;
 }
 .component_portal.view_default.edit > .list_body,
-.portal.view_default.edit > .list_body,
-.component_portal.view_table.edit > .list_body,
-.portal.view_table.edit > .list_body {
+.portal.view_default.edit > .list_body {
   grid-template-rows: 1.8rem auto;
-}
-.component_portal.view_default.list > .list_body,
-.portal.view_default.list > .list_body,
-.component_portal.view_table.list > .list_body,
-.portal.view_table.list > .list_body {
-  display: flex;
-  height: auto;
 }
 .component_portal.view_autocomplete,
 .portal.view_autocomplete {
@@ -9305,7 +9311,7 @@ dd-modal .footer.content {
 }
 .component_portal.view_mosaic.list > .list_body > .content_data .component_image,
 .portal.view_mosaic.list > .list_body > .content_data .component_image {
-  max-height: 8rem;
+  max-height: 7rem;
 }
 .component_portal.view_mosaic > .list_body,
 .portal.view_mosaic > .list_body {
@@ -9464,8 +9470,8 @@ dd-modal .footer.content {
 .component_portal.view_line > .content_data .section_record.view_text,
 .portal.view_line > .content_data .section_record.view_text {
   margin-left: 0.5rem;
-  flex: 0 0 100%;
   line-height: 1.2rem;
+  flex: 0 0 100%;
   flex-wrap: wrap;
 }
 .component_portal.view_line > .content_data .section_record.view_text .column_section_id,
@@ -9562,8 +9568,17 @@ dd-modal .footer.content {
 }
 .component_portal.view_line > .content_data > .section_record,
 .portal.view_line > .content_data > .section_record {
-  display: block;
+  display: flex;
+  margin-left: 0.5rem;
   margin-bottom: 0.25rem;
+  flex: 0 0 100%;
+  padding-right: 1.25rem;
+}
+.component_portal.view_line > .content_data > .section_record.view_text,
+.portal.view_line > .content_data > .section_record.view_text {
+  display: block;
+  margin-left: 0rem;
+  padding-right: 0.5rem;
 }
 .component_portal.view_line.edit > .content_data,
 .portal.view_line.edit > .content_data {
