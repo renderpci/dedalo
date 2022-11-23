@@ -38,33 +38,46 @@ view_viewer_image.render = function(self, options) {
 
 	// url
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
-		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= (typeof url_object==='undefined')
-			? page_globals.fallback_image
-			: url_object.url
+		const url_object	= datalist.find(item => item.quality===quality)
+		const url			= url_object
+			? url_object.url
+			: page_globals.fallback_image
+
+	// thumb
+		// const thumb_url = datalist.find(item => item.quality==='thumb').url
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			// src			: url,
+			// src			: thumb_url,
 			class_name		: 'viewer_image hidden',
 			parent			: wrapper
 		})
 		// ui.component.add_image_fallback(image)
 
-	// image background color
-		image.addEventListener('load', set_bg_color, false)
-		function set_bg_color() {
-			resize_window_to_image_size(image)
-			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, wrapper)
-			image.classList.remove('hidden')
-			image.classList.add('fit')
-		}
+		// image background color
+			image.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				// if (image.src.indexOf(thumb_url)!==-1) {
+				// 	return
+				// }
+				resize_window_to_image_size(image)
+				this.removeEventListener('load', set_bg_color, false)
+				ui.set_background_image(this, wrapper)
+				image.classList.remove('hidden')
+				image.classList.add('fit')
+
+				// show download_image_button
+				download_image_button.classList.remove('hidden')
+			}
+
+		// set url
+			image.src = url
+
 	// button download
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary download',
+			class_name		: 'primary download hidden',
 			// value		: ' ok ',
 			parent			: wrapper
 		})
@@ -95,9 +108,6 @@ view_viewer_image.render = function(self, options) {
 			window.close()
 		})
 
-	// set url
-		image.src = url
-
 
 	return wrapper
 }//end render
@@ -110,7 +120,7 @@ view_viewer_image.render = function(self, options) {
 * set the node to be downloadable with the original filename uploaded by user
 * download the file
 * @param DOM node image
-* @return void
+* @return boo
 */
 const resize_window_to_image_size = function(image) {
 	// screen size
@@ -139,9 +149,13 @@ const resize_window_to_image_size = function(image) {
 		const width		= image.width;
 
 	const tool_bar_height = (window.outerHeight - window.innerHeight) || 50
-	console.log('width:', width, 'height:', height);
-	console.log('tool_bar_height:', tool_bar_height);
+		// console.log('width:', width, 'height:', height);
+		// console.log('tool_bar_height:', tool_bar_height);
+
 	window.resizeTo(width, height+tool_bar_height)
+
+
+	return true
 }//end resize_window_to_image_size
 
 

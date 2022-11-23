@@ -71,7 +71,8 @@ view_viewer_edit_av.render = async function(self, options) {
 			class_name		: 'primary download',
 			parent			: wrapper
 		})
-		download_image_button.addEventListener('click', function() {
+		download_image_button.addEventListener('click', function(e) {
+			e.stopPropagation()
 
 			// get the original quality for download
 			const original = datalist.find(item => item.quality==='original')
@@ -104,6 +105,7 @@ view_viewer_edit_av.render = async function(self, options) {
 * create a temp <a> node with the original quality or default quality if the original file is missing
 * set the node to be downloadable with the original filename uploaded by user
 * download the file
+* @param object options
 * @return bool
 */
 const download_original_av = function (options) {
