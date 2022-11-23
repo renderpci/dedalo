@@ -1,4 +1,4 @@
-/* global, Promise */
+/* global, Promise, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -100,7 +100,7 @@ paginator.prototype.init = function(options) {
 * BUILD
 * @return bool
 */
-paginator.prototype.build = async function(){
+paginator.prototype.build = async function() {
 	// const t0 = performance.now()
 
 	const self = this
@@ -288,6 +288,8 @@ paginator.prototype.paginate = async function(offset) {
 
 /**
 * GET_PAGE_NUMBER
+* @param int item_per_page
+* @param int offset
 * @return int page_number
 */
 paginator.prototype.get_page_number = function(item_per_page, offset) {
@@ -304,19 +306,22 @@ paginator.prototype.get_page_number = function(item_per_page, offset) {
 
 /**
 * GET_PAGE_ROW_END
+* @param int page_row_begin
+* @param int item_per_page
+* @param int total_records
 * @return int page_row_end
 */
 paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, total_records) {
 
-	if(SHOW_DEBUG===true) {
+	// if(SHOW_DEBUG===true) {
 		//console.log("page_row_begin:",page_row_begin);
 		//console.log("item_per_page:",item_per_page);
 		//console.log("total_records:",total_records);
-	}
+	// }
 
-	let page_row_end = page_row_begin + item_per_page -1;
+	const page_row_end = page_row_begin + item_per_page -1;
 	if (page_row_end > total_records) {
-		page_row_end = total_records;
+		return total_records
 	}
 
 	return page_row_end;
@@ -327,7 +332,7 @@ paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, t
 /**
 * GO_TO_PAGE_JSON
 * Receive page value from input text and calculate offset and exec search_paginated
-* @param int page_number
+* @param int page
 * @return bool
 */
 paginator.prototype.go_to_page_json = function(page) {

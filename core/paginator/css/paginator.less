@@ -108,6 +108,13 @@
 				}
 			}
 
+			input::-webkit-outer-spin-button,
+			input::-webkit-inner-spin-button {
+			    /* display: none; <- Crashes Chrome on hover */
+			    -webkit-appearance: none;
+			    margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+			}
+
 			>input.input_go_to_page {
 				text-align: center;
 				padding: 0.25em;
@@ -116,6 +123,9 @@
 				width: 4.5em;
 				border-radius: 0.2em;
 				border: 1px solid #ececec;
+
+				-moz-appearance: textfield;
+
 
 				&.invalid {
 					background-color: @color_danger;

@@ -124,7 +124,7 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-		// btn first
+		// btn paginator_first
 			const paginator_first = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_first_icon',
@@ -138,7 +138,7 @@ const get_content_data = async function(self) {
 				paginator_first.classList.add('inactive')
 			}
 
-		// btn previous
+		// btn paginator_prev
 			const paginator_prev = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_prev_icon',
@@ -152,7 +152,7 @@ const get_content_data = async function(self) {
 				paginator_prev.classList.add('inactive')
 			}
 
-		// btn next
+		// btn paginator_next
 			const paginator_next = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_next_icon',
@@ -166,7 +166,7 @@ const get_content_data = async function(self) {
 				paginator_next.classList.add('inactive')
 			}
 
-		// btn last
+		// btn paginator_last
 			const paginator_last = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'btn paginator_last_icon',
@@ -200,36 +200,6 @@ const get_content_data = async function(self) {
 			inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total}. `,
 			parent			: paginator_info
 		})
-
-		// const goto_page = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'goto_page',
-		// 	inner_html 	: get_label['go_to_page'],
-		// 	parent			: paginator_info
-		// })
-		// // input_go_to_page
-		// 	const input_go_to_page = ui.create_dom_element({
-		// 		element_type	: 'input',
-		// 		class_name		: 'input_go_to_page',
-		// 		parent			: goto_page
-		// 	})
-		// 	input_go_to_page.placeholder = page_number
-		// 	// add the Even onchage to the select, whe it change the section selected will be loaded
-		// 	input_go_to_page.addEventListener('keyup',function(event){
-		// 		self.go_to_page_json(this, event, total_pages, limit)
-		// 	})
-
-		// let text = ""
-		// 	text += get_label["pagina"] || "Page"
-		// 	text += " " + page_number + " "
-		// 	text += get_label["de"] || "of"
-		// 	text += " " + total_pages
-		// //if (modo==="edit") {
-		// //	text += '. ' + get_label['go_to_record']  + ' '
-		// //}else{
-		// 	text += '<span class="displayed_records">. Displayed records from ' + page_row_begin + ' to ' + page_row_end + ' of ' + total + '.</span> '
-		// 	text += '<span class="go_to_page_text">' + get_label["go_to_page"] + '</span> '
-		// //}
 
 	// content_data
 		const content_data = ui.create_dom_element({
