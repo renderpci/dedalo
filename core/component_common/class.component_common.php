@@ -1130,29 +1130,38 @@ abstract class component_common extends common {
 		});
 
 		if(isset($current_observer->filter) && $current_observer->filter!==false) {
-			// get the from_component_tipo of the filter to set at observable locator
+
+			// from_component_tipo. Get the from_component_tipo of the filter to set at observable locator
 			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
-			$elements	= reset($current_observer->filter);
-			$element	= reset($elements);
-			$from_component_tipo = end($element->path)->component_tipo;
+				// $elements	= reset($current_observer->filter);
+				// $element	= reset($elements);
+				// v8 compatible
+					$filter			= $current_observer->filter; // object as {"$and":[{"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}]}
+					$objIterator	= new ArrayIterator($filter);
+					$first_key		= $objIterator->key(); // string as '$and'
+					$elements		= $filter->{$first_key}; // array of objects
+					$element		= reset($element); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
 
-			$locator->set_from_component_tipo($from_component_tipo);
+				$from_component_tipo = end($element->path)->component_tipo;
 
-			// the sqo base is defined into properties of the observer component.
+			// locator set from_component_tipo
+				$locator->set_from_component_tipo($from_component_tipo);
+
+			// q . The sqo base is defined into properties of the observer component.
 			// and is update the q of the filter with the locator of the component that had changed
 			// update the q with the locator of the observable component
 			// the locator is the section_tipo and section_id of the own observable section.
-			$elements = reset($current_observer->filter);
-			foreach ($elements as $key => $item) {
-				$elements[$key]->q = $locator;
-			}
+				// $elements = reset($current_observer->filter);
+				foreach ($elements as $key => $item_value) {
+					$elements[$key]->q = $locator;
+				}
 
-			// build the search_query_object to use in the search.
-			$sqo = new stdClass();
-				$sqo->section_tipo	= $observer->section_tipo;
-				$sqo->full_count	= false;
-				$sqo->limit			= 0;
-				$sqo->filter		= $current_observer->filter;
+			// sqo. Build the search_query_object to use in the search.
+				$sqo = new stdClass();
+					$sqo->section_tipo	= $observer->section_tipo;
+					$sqo->full_count	= false;
+					$sqo->limit			= 0;
+					$sqo->filter		= $current_observer->filter;
 
 			// search the sections that has reference to the observable component, the component that had changed
 				$search		= search::get_instance($sqo);
