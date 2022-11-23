@@ -73,26 +73,36 @@ export const render_links_list = function(value) {
 		for (let i = 0; i < value_length; i++) {
 
 			// url. Create a new URL from the IRI value
-				const url = (value[i].iri)
-					? new URL(value[i].iri)
-					: {};
+				const url_object = value[i].iri
+					? (()=>{
+						try {
+							return new URL(value[i].iri)
+						} catch (error) {
+							console.error(error)
+							console.error('Unable to create a URL object from value[i]:', value[i]);
+						}
+						return null
+					  })()
+					: null
+
+			const hostname = url_object ? url_object.hostname : null
 
 			// link_node. Could be a|span
 				const link_node = ui.create_dom_element({
-					element_type	: url ? 'a' : 'span',
-					class_name 		: url ? 'link_iri' : 'text_iri',
-					text_content	: value[i].title || url.hostname || '',
+					element_type	: value[i].iri ? 'a' : 'span',
+					class_name 		: value[i].iri ? 'link_iri' : 'text_iri',
+					text_content	: value[i].title || hostname || '',
 					title 			: value[i].iri,
 					parent			: fragment
 				})
-				if (url) {
-					link_node.href		= value[i].iri || null,
+				if (value[i].iri) {
+					link_node.href		= value[i].iri,
 					link_node.target	= '_blank'
 					link_node.rel		= 'noreferrer'
 				}
 
 			// fields_separator_node. Add when more tan one URI exists
-				if(i < value_length-1){
+				if(i < value_length-1) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'fields_separator',
