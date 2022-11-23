@@ -1,0 +1,82 @@
+/**
+* view_default_portal
+*
+* Included from component_portal.less file
+*/
+.component_portal.view_default, .portal.view_default {
+	// background-color: #d97450;
+
+	&.edit {
+
+
+		>.list_body {
+			grid-template-rows: 1.8rem auto;
+			min-height: @content_data_min_height;
+			// grid-template-rows: 2rem;
+
+			// drag selectors
+				.drag.icon {
+					// @see list.less for generic style
+					display: flex;
+					width: 100%;
+					margin: 0px;
+					padding: 0.5em;
+					background-image: url('../../themes/default/icons/drag.svg');
+					background-position: 92%; // right 0.36rem top 0px;
+					background-repeat: no-repeat;
+					background-size: 22px 22px;
+					height: auto;
+					min-height: 2rem;
+					min-width: 2rem;
+					opacity: 0.1;
+					// width: 1.5rem;
+					cursor: move;
+					z-index: 2;
+
+					&:hover {
+						opacity: 0.3;
+					}
+
+					// &.draging {
+						// background-position: left;
+					// }
+				}
+
+				.drop {
+					z-index: 1;
+					display: block;
+					position: absolute;
+					&.dragover {
+						background-color: #ffffff8c;
+						border-top: 2px dotted #ff8a00;
+					}
+				}
+
+				.drag_section_id {
+					// position: absolute;
+					// height: 25px;
+					width: 100%;
+					text-align: left;
+					color: black;
+					font-size: 1.3em;
+					padding-left: 2px;
+					// margin-left: 1.2em;
+				}
+
+				.draggable {
+					&.dragover {
+						background-color: #ffffff;
+						border-top: 2px dotted #ff8a00;
+						opacity: 0.5;
+					}
+				}
+		}//end >.list_bod
+	}
+
+	&.list {
+		>.list_body {
+			// display: flex;
+			// height: auto;
+		}
+	}
+}//end .component_portal.view_default, .portal.view_default

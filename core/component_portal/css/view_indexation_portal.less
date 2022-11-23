@@ -1,0 +1,105 @@
+/**
+* view_indexation_portal
+*
+* Included from component_portal.less file
+*/
+.component_portal.view_indexation, .portal.view_indexation {
+	// background-color: #13c0cf;
+
+	>.content_data {
+		// background-color: #ffeccd !important;
+		display: grid;
+		grid-column-gap: 1rem;
+		grid-template-columns: 1fr 1fr;
+
+		.section_record.list {
+			display: flex;
+			align-items: stretch;
+			border-bottom: 1px solid #eeeeee;
+			width: 100%;
+			margin-bottom: 1px;
+			overflow: hidden;
+			// @media screen and (max-width: @width_break_point_1) {
+			// 	flex-wrap: wrap;
+			// }
+
+			&:hover {
+				background-color: @color_grey_untralight;
+			}
+
+			.column {
+				display: flex;
+				flex: 0 0 auto;
+				outline: none;
+				width: auto;
+				align-items: center;
+
+				&.column_remove, &.column_section_id {
+					background-color: unset;
+					// padding-right: 0.25rem;
+					>.icon {
+						height: 1.25rem;
+					}
+				}
+
+				&.column_section_id {
+				    padding-right: 0.25rem;
+				}
+
+				&.column_info {
+					color: #8c8c8c;
+					text-align: right;
+					flex: 2 1 auto;
+					display: block;
+				}
+
+				>button {
+					padding: 0px;
+					width: 1.25rem;
+					height: 1.25rem;
+					border-radius: 2px;
+					justify-content: center;
+
+					&.edit_button {
+						>.icon {
+							// height: 1.25rem;
+							margin-right: 1px;
+						}
+					}
+
+					&.button_remove {
+						>.icon {
+							// height: 1.25rem;
+						}
+					}
+				}
+
+				&.column_tag {
+					padding: 1px;
+
+					>.tags {
+						// padding-left: 0.5rem;
+						// padding-right: 0.75rem;
+						// opacity: 0.6;
+						// background-color: @color_orange_dedalo;
+
+						/*
+						background-image: radial-gradient(30% 50% ellipse at 109% 50%, #ffffff 22px, transparent 10px, #ffab01 23px);
+						color: #ffffff;
+						border-top-left-radius: 5px;
+						border-bottom-left-radius: 5px;
+						// padding: 1px;
+						padding-left: 5px;
+						padding-right: 23px;
+						font-size: 80%;
+						text-align: center;
+						*/
+						.fn_build_tag_indexation(@color_tag_indexation_normal, #ffffff);
+						// padding-right: 8px;
+					}
+				}
+			}
+		}
+	}
+
+}//end .component_portal.view_indexation, .portal.view_indexation
