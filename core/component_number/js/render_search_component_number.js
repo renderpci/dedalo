@@ -10,7 +10,7 @@
 
 
 /**
-* render_search_component_number
+* RENDER_SEARCH_COMPONENT_NUMBER
 * Manage the components logic and appearance in client side
 */
 export const render_search_component_number = function() {
@@ -93,14 +93,17 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element input
+* @param int i
+* @param number current_value
+* @param object self
+* @return DOM node input
 */
 const get_input_element = (i, current_value, self) => {
 
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'number',
+			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value
 		})
