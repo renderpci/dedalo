@@ -222,7 +222,10 @@ common.prototype.render = async function (options={}) {
 				// if render mode is equal than current already rendered node, return node
 				if (self.render_level===render_level) {
 					if (self.node) {
-						console.warn(`Render unexpected status. Returning already rendered node (${self.model}). Expected status is 'built' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
+						if (self.model!=='component_filter') {
+							console.warn(`Render unexpected status. Returning already rendered node (${self.model}).
+							Expected status is 'built' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
+						}
 						return self.node
 					}else{
 						console.warn(`Render unexpected status. Rendered node not found but status is rendered:`, self.node, self.id);
