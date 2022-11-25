@@ -254,19 +254,17 @@ const get_content_data = async function(self) {
 }//end get_content_data
 
 
+
 /**
 * FIT_INPUT_GO_TO_PAGE_TO_VALUE
+* Set input element style width based on number length of chars
 * @param DOM node input_node
 * @param int page_number
+* @return void
 */
 const fit_input_go_to_page_to_value = function(input_node, page_number) {
 
 	const chars = page_number.toString().length
 
-	input_node.style.width = (chars + 3) + "ch";
-
-
-
-
-	console.log('input_node.width:', input_node.width);
+	input_node.style.width = (chars + 3) + 'ch';
 }//end fit_input_go_to_page_to_value
