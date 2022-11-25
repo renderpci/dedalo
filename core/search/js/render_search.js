@@ -8,6 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 	import {create_cookie, read_cookie} from '../../common/js/utils/cookie.js'
 
 
@@ -144,7 +145,8 @@ render_search.prototype.render_base = function() {
 			inner_html		: get_label.campos,
 			parent			: search_global_container
 		})
-		.addEventListener('click',function(){
+		.addEventListener('click',function(e){
+			e.stopPropagation()
 			toggle_fields(self)
 		})
 
@@ -163,6 +165,19 @@ render_search.prototype.render_base = function() {
 			class_name		: 'search_container_selection',
 			parent			: search_global_container
 		})
+		// fix top based on menu(sticky)
+		when_in_viewport(
+			search_container_selection,
+			() => {
+				// get menu height to optimize sticky position top
+				const menu_wrapper = document.querySelector('.menu_wrapper')
+				if (menu_wrapper) {
+					const menu_height = menu_wrapper.offsetHeight
+					console.log('menu_height:', menu_height);
+					search_container_selection.style.top = (menu_height + 1) + 'px'
+				}
+			}
+		)
 		const search_group_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'search_group_container',
@@ -236,11 +251,11 @@ render_search.prototype.render_base = function() {
 
 /**
 * RENDER_COMPONENTS_LIST
-* Create dom elements to generate list of components and section groups of current section
+* Create DOM elements to generate list of components and section groups of current section
 * @see this.get_section_elements_context
 * @param object options
 *	string options.section_tipo (section to load components and render)
-*	dom element options.target_div (Target dom element on new data will be added)
+*	DOM element options.target_div (Target DOM element on new data will be added)
 *	array path (Cumulative array of component path objects)
 *
 * @return promise
@@ -590,7 +605,8 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			data_set		: { value : operator },
 			class_name		: "operator search_group_operator" + (operator==="$and" ? " and" : " or")
 		})
-		search_group_operator.addEventListener("click",function(e){
+		search_group_operator.addEventListener('click',function(e){
+			e.stopPropagation()
 			//console.log("Clicked search_group_operator:",search_group_operator );
 			toggle_operator_value(this)
 			// Set initial state as unchanged
@@ -604,7 +620,8 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			parent			: search_group,
 			class_name		: "button close"
 		})
-		search_group_button_close.addEventListener("click",function(e){
+		search_group_button_close.addEventListener('click',function(e){
+			e.stopPropagation()
 			// remove from dom
 			search_group.parentNode.removeChild(search_group);
 			// Set as changed
@@ -619,7 +636,8 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			//inner_html	: "X",
 			class_name		: "button add"
 		})
-		search_group_button_plus.addEventListener("click", function(e){
+		search_group_button_plus.addEventListener('click', function(e){
+			e.stopPropagation()
 			//self.add_search_group_to_dom(this, search_group)
 			self.render_search_group( search_group )
 			// Set as changed
@@ -1043,7 +1061,6 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			)
 		}
 
-
 		return true;
 	}//end toggle_search_panel
 
@@ -1152,6 +1169,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			element.classList.add("and")
 		}
 
+
 		return true
 	}//end toggle_operator_value
 
@@ -1166,11 +1184,12 @@ const localize_operator = (operator) => {
 	// Remove '$' (first char)
 	const clean_operator = operator.slice(1)
 
-	const name = (clean_operator==="and") ? "y" :
-				 (clean_operator==="or") ? "o" :
+	const name = (clean_operator==='and') ? 'y' :
+				 (clean_operator==='or') ? 'o' :
 				 clean_operator
 
 	const localized = get_label[name] || ''
+
 
 	return localized
 }//end localize_operator
