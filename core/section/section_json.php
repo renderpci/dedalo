@@ -114,7 +114,10 @@
 					// $data[] = $item;
 
 				// subdata add
-					$subdatum = $this->get_subdatum($tipo, $value);
+					$subdatum_options = (object)[
+						'skip_subdatum' => ['component_portal']
+					];
+					$subdatum = $this->get_subdatum($tipo, $value, $subdatum_options);
 
 					$ar_subcontext = $subdatum->context;
 					foreach ($ar_subcontext as $current_context) {
