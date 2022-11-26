@@ -1526,12 +1526,16 @@ abstract class common {
 				? ($this->get_columns_map() ?? [])
 				: null;
 
+		// real model
+			$legacy_model	= RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'				=> $label, // *
 				'tipo'				=> $tipo,
 				'section_tipo'		=> $section_tipo, // *
 				'model'				=> $model, // *
+				'legacy_model'		=> $legacy_model,
 				'parent'			=> $parent, // *
 				'parent_grouper'	=> $parent_grouper,
 				'lang'				=> $lang,
@@ -1601,7 +1605,6 @@ abstract class common {
 
 				$debug = new stdClass();
 					$debug->exec_time	= $time.' ms';
-					$debug->real_model	= RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
 
 				$dd_object->debug = $debug;
 
