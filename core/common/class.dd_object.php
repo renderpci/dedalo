@@ -246,6 +246,16 @@ class dd_object {
 
 
 	/**
+	* SET_LEGACY_MODEL
+	*/
+	public function set_legacy_model(string $value) : void {
+
+		$this->legacy_model = $value;
+	}//end set_legacy_model
+
+
+
+	/**
 	* SET_PROPERTIES
 	* Note hint parameter 'object' is not supported bellow php 7.2
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
