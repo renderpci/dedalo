@@ -1527,7 +1527,7 @@ abstract class common {
 				: null;
 
 		// real model
-			$legacy_model	= RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+			$legacy_model	= RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -3923,12 +3923,12 @@ abstract class common {
 			];
 
 		// relation components like 'component_portal'
-			$real_model = (in_array($this->get_model(), $components_to_change))
-				? RecordObj_dd::get_real_model_name_by_tipo($this->tipo)
+			$legacy_model = (in_array($this->get_model(), $components_to_change))
+				? RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo)
 				: $this->get_model();
 
 		// view
-			switch ($real_model) {
+			switch ($legacy_model) {
 				case 'component_portal':
 					$view = 'default';
 					break;
@@ -3972,9 +3972,9 @@ abstract class common {
 				return $properties->children_view;
 			}
 
-		// based on real_model
-			$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->get_tipo());
-			switch ($real_model) {
+		// based on legacy_model
+			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->get_tipo());
+			switch ($legacy_model) {
 				case 'component_autocomplete':
 				case 'component_autocomplete_hi':
 					$children_view = 'text';

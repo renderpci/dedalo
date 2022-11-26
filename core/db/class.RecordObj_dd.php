@@ -493,29 +493,29 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* GET_REAL_MODEL_NAME_BY_TIPO
+	* GET_LEGACY_MODEL_NAME_BY_TIPO
 	* Temporal function to manage transitional models
 	*/
-	public static function get_real_model_name_by_tipo(string $tipo) : string {
+	public static function get_legacy_model_name_by_tipo(string $tipo) : string {
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
-		$model_name		= $RecordObj_dd->get_real_model_name();
+		$model_name		= $RecordObj_dd->get_legacy_model_name();
 
 		return $model_name;
-	}//end get_real_model_name_by_tipo
+	}//end get_legacy_model_name_by_tipo
 
 
 
 	/**
-	* GET_REAL_MODEL_NAME_BY_TIPO
+	* GET_legacy_MODEL_NAME_BY_TIPO
 	* Temporal function to manage transitional models
 	*/
-	public function get_real_model_name() : string {
+	public function get_legacy_model_name() : string {
 
 		$model_name = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
 
 		return $model_name;
-	}//end get_real_model_name
+	}//end get_legacy_model_name
 
 
 
