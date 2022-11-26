@@ -255,7 +255,7 @@ class ts_object {
 				$element_obj->tipo	= $element_tipo;
 
 				$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-				// $real_modelo_name	= RecordObj_dd::get_real_model_name_by_tipo($element_tipo);
+				// $legacy_model_name	= RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
 				$lang					= common::get_element_lang($element_tipo, $data_lang=DEDALO_DATA_LANG);
 				$component				= component_common::get_instance($modelo_name,
 																		 $element_tipo,
