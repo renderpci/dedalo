@@ -37,8 +37,8 @@ class component_portal extends component_relation_common {
 		// 		#dump($properties, ' properties ++ '.to_string($this->tipo));
 
 		// 	// component_portal_hi compatibility
-		// 	$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
-		// 	if ($real_model==='component_autocomplete_hi') {
+		// 	$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+		// 	if ($legacy_model==='component_autocomplete_hi') {
 		// 		// convert from
 		// 		// {
 		// 		//   "source": {
@@ -100,7 +100,7 @@ class component_portal extends component_relation_common {
 		// 			$new_properties->css  				= isset($properties->css) ? $properties->css : null;
 
 		// 		$properties = $new_properties;
-		// 	}//end if ($real_model==='component_portal_hi')
+		// 	}//end if ($legacy_model==='component_portal_hi')
 
 
 		// 	return $properties;
@@ -418,14 +418,14 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
-		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
 
-		// if ($real_model==='component_portal') {
+		// if ($legacy_model==='component_portal') {
 		// 	return 'unavailable';
 		// }
 
-		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $real_model .'.php';
+		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;
 
 		// $_get_valor = Closure::bind($_get_valor, $this);
@@ -444,13 +444,13 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
-		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
+		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
-		if ($real_model==='component_portal') {
+		if ($legacy_model==='component_portal') {
 			return 'unavailable';
 		}
 
-		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $real_model .'.php';
+		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;
 
 		// $_get_valor_export = Closure::bind($_get_valor_export, $this);
@@ -468,12 +468,12 @@ class component_portal extends component_relation_common {
 	// public function get_diffusion_value( $lang=DEDALO_DATA_LANG, $option_obj=null ) {
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$real_model = RecordObj_dd::get_real_model_name_by_tipo($this->tipo);
-		if ($real_model==='component_portal') {
+		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+		if ($legacy_model==='component_portal') {
 			return 'unavailable';
 		}
 
-		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $real_model .'.php';
+		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;
 
 		// $_get_diffusion_value = Closure::bind($_get_diffusion_value, $this);

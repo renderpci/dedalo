@@ -17,10 +17,10 @@
 				$current_context = $this->get_structure_context($permissions);
 
 			// tab / section_tab specific
-			// Note that 'tab' ontology items are mapped as 'section_tab' to reduce polution
+			// Note that 'tab' ontology items are mapped as 'section_tab' to reduce pollution
 			// Now, set context specific params to each one
-			$real_model	= RecordObj_dd::get_real_model_name_by_tipo($tipo);
-			if ($real_model==='tab') {
+			$legacy_model	= RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
+			if ($legacy_model==='tab') {
 
 				// view (tab)
 					$current_context->view = 'tab';
