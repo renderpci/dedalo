@@ -1670,7 +1670,7 @@ abstract class common {
 	* @return object $subdatum
 	* 	Object with two properties: context, data
 	*/
-	public function get_subdatum(string $from_parent=null, array $ar_locators=[]) : object {
+	public function get_subdatum(string $from_parent=null, array $ar_locators=[], object $subdatum_options=null) : object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1943,10 +1943,21 @@ abstract class common {
 									$related_element->parent_grouper = $parent_grouper;
 								}
 
+							// skip_subdatum subdatum_options
+								$bool_get_data = true;
+								if (isset($subdatum_options->skip_subdatum)) {
+									$real_model = RecordObj_dd::get_real_model_name_by_tipo($current_tipo);
+									if(in_array($real_model, $subdatum_options->skip_subdatum)) {
+										$bool_get_data = false;
+										dump($bool_get_data, ' bool_get_data ++ '.$current_tipo.' -  '.to_string($model));
+									}
+								}
+
+
 							// get the JSON context of the related component
 								$item_options = new stdClass();
 									$item_options->get_context	= true;
-									$item_options->get_data		= true;
+									$item_options->get_data		= $bool_get_data;
 								$element_json = $related_element->get_json($item_options);
 
 							// ar_subcontext

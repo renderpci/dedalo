@@ -366,6 +366,7 @@ section.prototype.build = async function(autoload=false) {
 					// const response	= clone(api_response)
 					// const exec_time	= (performance.now()-t0).toFixed(3)
 					// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
+					console.log('api_response:', api_response);
 				}
 				if (!api_response || !api_response.result) {
 					self.running_with_errors = [

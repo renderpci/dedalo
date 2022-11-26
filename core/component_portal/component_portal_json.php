@@ -56,7 +56,8 @@
 
 		$context[] = $this->context;
 
-	if($permissions>0) {
+	// if($permissions>0) {
+	if($options->get_data===true && $permissions>0){
 
 		// short vars
 			$section_id	= $this->get_section_id();
