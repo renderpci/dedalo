@@ -2624,9 +2624,11 @@ abstract class common {
 							$parsed_item->show->sqo_config = $sqo_config;
 						}
 						// fix the limit in the instance
-						$this->pagination->limit = isset($parsed_item->show->sqo->limit)
-							? $parsed_item->show->sqo->limit
-							: $parsed_item->show->sqo_config->limit;
+						$this->pagination->limit = isset($parsed_item->sqo->limit)
+							? $parsed_item->sqo->limit
+							: (isset($parsed_item->show->sqo_config->limit)
+								? $parsed_item->show->sqo_config->limit
+								: $this->pagination->limit);
 
 					// search
 						if (isset($item_request_config->search)) {
