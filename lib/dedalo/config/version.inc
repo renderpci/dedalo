@@ -2767,6 +2767,8 @@
 		Add check if the install are finished to remove the change for root
 		Add latin lang
 		Add default language selector to tool_import_rdf
+		Released version 5.9.1
+	Queue build
 		Remove dataframe in search_autocomplete
 		Add dataframe_search mode in component_check_box
 		Add dataframe_search mode in component_common
@@ -2788,8 +2790,9 @@
 		Added component_autocomplete_hi json controller file (added 15-11-2022 to Numismatic tool sort)
 		Valencia 19-11-2022
 		Fixed PHP v8 issues with bad json data in web_data class
-
-
+		Valencia 28-11-2022T10:45:00
+		Fixed component_number to search with < operator, now it avoid the empty values, empty !== 0 when search < than any value
+	Released version 5.9.2
 
 	[/HISTORY]
 
@@ -2814,13 +2817,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.1';
+	$DEDALO_VERSION = '5.9.2';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-11-2022T09:19:00');
+	define('DEDALO_BUILD'	, '28-11-2022T10:45:00');
 
 
 

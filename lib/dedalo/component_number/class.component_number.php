@@ -46,8 +46,10 @@ class component_number extends component_common {
 	public function get_valor() {
 
 		$valor = $this->get_dato();
-		$valor = component_number::number_to_string($valor);
-		
+
+		if($this->modo!=='search'){
+			$valor = component_number::number_to_string($valor);
+		}
 
 		return (string)$valor;
 	}//end get_valor
@@ -60,6 +62,9 @@ class component_number extends component_common {
 	*/
 	public function set_format_form_type( $dato ) {
 
+		if($this->modo === 'search'){
+			return $dato;
+		}
 		$propiedades = $this->get_propiedades();
 
 		if($dato === null || empty($dato)){
@@ -295,11 +300,26 @@ class component_number extends component_common {
 				break;
 			# SMALLER OR EQUAL THAN
 			case (substr($q, 0, 2)==='<='):
-				$operator = '<=';
-				$q_clean  = str_replace($operator, '', $q);
-				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';
+    			$query_object_one = clone $query_object;
+					$operator = '<=';
+					$q_clean  = str_replace($operator, '', $q);
+					$q_clean  = str_replace(',', '.', $q_clean);
+					$query_object_one->operator = $operator;
+					$query_object_one->q_parsed	= '\''.$q_clean.'\'';
+
+				$query_object_two = clone $query_object;
+					$operator = 'IS NOT NULL';
+					$q_clean_two  = '';
+					$query_object_two->operator = $operator;
+					$query_object_two->q_parsed	= $q_clean_two;
+					$query_object_two->type = 'string';
+
+				// Group in a new "AND"
+				$current_op = '$and';
+				$new_query_object = new stdClass();
+					$new_query_object->{$current_op} = [$query_object_one,$query_object_two];
+
+				$query_object = $new_query_object;
 				break;		
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
@@ -311,11 +331,26 @@ class component_number extends component_common {
 				break;
 			# SMALLER THAN
 			case (substr($q, 0, 1)==='<'):
-				$operator = '<';
-				$q_clean  = str_replace($operator, '', $q);
-				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';
+				$query_object_one = clone $query_object;
+					$operator = '<';
+					$q_clean  = str_replace($operator, '', $q);
+					$q_clean  = str_replace(',', '.', $q_clean);
+					$query_object_one->operator = $operator;
+					$query_object_one->q_parsed	= '\''.$q_clean.'\'';
+
+				$query_object_two = clone $query_object;
+					$operator = 'IS NOT NULL';
+					$q_clean_two  = '';
+					$query_object_two->operator = $operator;
+					$query_object_two->q_parsed	= $q_clean_two;
+					$query_object_two->type = 'string';
+
+				// Group in a new "AND"
+				$current_op = '$and';
+				$new_query_object = new stdClass();
+					$new_query_object->{$current_op} = [$query_object_one,$query_object_two];
+
+				$query_object = $new_query_object;
 				break;
 			// EQUAL DEFAULT
 			default:

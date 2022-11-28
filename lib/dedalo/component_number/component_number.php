@@ -108,10 +108,9 @@
 				break;
 		
 		case 'search':
-				# dato is injected by trigger search wen is needed
+				# dato is injected by trigger search when it's needed
 				$dato 	= $this->get_dato();
-				$valor	= $this->get_valor();			
-	
+				$valor	= $this->get_valor();
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
