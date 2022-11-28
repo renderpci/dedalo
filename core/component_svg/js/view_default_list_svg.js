@@ -68,7 +68,7 @@ export const get_value_fragment = function(self) {
 				// 	continue
 				// }
 
-			const url	= item_value.url
+			const url	= item_value.file_url
 			const image	= ui.create_dom_element({
 				element_type	: 'img',
 				src				: url,

@@ -66,7 +66,7 @@
 					$value = $this->get_dato();
 
 					// datalist
-						$datalist = $this->get_files_info();
+						$datalist = $this->get_datalist();
 					break;
 			}
 
