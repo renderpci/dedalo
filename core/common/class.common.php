@@ -2604,10 +2604,14 @@ abstract class common {
 							// limit. Overwrite config by session value if exists
 							if (isset($parsed_item->show->sqo_config->limit)) {
 								// get session limit if it was defined
-								$sqo_id	= implode('_', [$model, $tipo]);
-								$parsed_item->show->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
-									? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
-									: $parsed_item->show->sqo_config->limit;
+								if ($model==='section') {
+									$sqo_id	= implode('_', [$model, $tipo]);
+										$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+											? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+											: $parsed_item->show->sqo_config->limit;
+								}else{
+									$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
+								}
 							}
 
 						}else{
