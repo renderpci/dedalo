@@ -2,9 +2,10 @@
 
 class xml implements Iterator, ArrayAccess
 {
+
 	public	$xml				= '',
 			$data				= [];
-	
+
 	private	$stack				= [],
 			$declaration		= '',
 			$index				= 0,
@@ -15,7 +16,7 @@ class xml implements Iterator, ArrayAccess
 			$attribute_value	= '',
 			$attributes			= [],
 			$syntax				= 'syntax_tag_value';
-	
+
 	public function __construct($data = [])
 	{
 		switch(gettype($data))
@@ -31,14 +32,14 @@ class xml implements Iterator, ArrayAccess
 					$this->parse();
 				}
 				break;
-			
+
 			case 'array':
 				$this->data = $data;
 				break;
 		}
 		// var_dump($data[0]);
 	}
-	
+
 	public function __toString()
 	{
 		return (
@@ -49,7 +50,7 @@ class xml implements Iterator, ArrayAccess
 			'<?xml version="1.0" encoding="UTF-8"?>'
 		) . $this->traverse($this->data);
 	}
-	
+
 		private function traverse($node)
 		{
 			$xml = '';
@@ -80,11 +81,11 @@ class xml implements Iterator, ArrayAccess
 							}
 						$xml .= "</{$tag}>";
 						break;
-					
+
 					case 'NULL':
 						$xml .= "<{$tag}{$attributes} />";
 						break;
-					
+
 					default:
 						$xml .= "<{$tag}{$attributes}>{$data}</{$tag}>";
 						break;
@@ -92,7 +93,7 @@ class xml implements Iterator, ArrayAccess
 			}
 			return $xml;
 		}
-	
+
 	private function is_assoc($array)
 	{
 		return (
@@ -104,7 +105,7 @@ class xml implements Iterator, ArrayAccess
 			) > 0
 		);
 	}
-	
+
 	private function parse()
 	{
 		$this->xml = str_replace(
@@ -112,9 +113,9 @@ class xml implements Iterator, ArrayAccess
 			'    ',
 			$this->xml
 		);
-		
+
 		$this->stack[] =& $this->data;
-		
+
 		for(
 			$length = strlen($this->xml);
 			$this->index < $length;
@@ -130,13 +131,13 @@ class xml implements Iterator, ArrayAccess
 							$this->index		+= 2;
 							$this->syntax		= 'syntax_declaration';
 							break;
-						
+
 						case '/':
 							$this->index		+= 2;
 							$this->tag_name		= '';
 							$this->syntax		= 'syntax_tag_back_start';
 							break;
-						
+
 						default:
 							$this->index		+= 1;
 							$this->tag_name		= $this->tag_value = '';
@@ -145,7 +146,7 @@ class xml implements Iterator, ArrayAccess
 							break;
 					}
 					break;
-				
+
 				case '/':
 					switch($this->xml[$this->index + 1])
 					{
@@ -165,7 +166,7 @@ class xml implements Iterator, ArrayAccess
 							break;
 					}
 					break;
-	
+
 				case '>':
 					switch($this->syntax)
 					{
@@ -173,7 +174,7 @@ class xml implements Iterator, ArrayAccess
 						case 'syntax_attribute_name':
 							$this->syntax = 'syntax_tag_front_end';
 							break;
-						
+
 						default:
 							$this->xml		= substr($this->xml, $this->index);
 							$this->index	= 0;
@@ -182,48 +183,48 @@ class xml implements Iterator, ArrayAccess
 							break;
 					}
 					break;
-	
+
 				case "\n":
 					$this->line++;
 					break;
 			}
-			
+
 			$this->{$this->syntax}();
 		}
-	
+
 		unset($this->xml);
 	}
-	
+
 	// ### Iterator: foreach access ###
-	
+	#[\ReturnTypeWillChange]
 	public function rewind()
 	{
 		reset($this->data);
 	}
-	
+	#[\ReturnTypeWillChange]
 	public function current()
 	{
 		return current($this->data);
 	}
-	
-	public function key() 
+	#[\ReturnTypeWillChange]
+	public function key()
 	{
 		return key($this->data);
 	}
-	
-	public function next() 
+	#[\ReturnTypeWillChange]
+	public function next()
 	{
 		return next($this->data);
 	}
-	
+	#[\ReturnTypeWillChange]
 	public function valid()
 	{
 		$key = key($this->data);
 		return ($key !== null && $key !== false);
 	}
-	
+
 	// ### ArrayAccess: key/value access ###
-	
+	#[\ReturnTypeWillChange]
 	public function offsetSet($offset, $value)
 	{
 		if(is_null($offset))
@@ -235,17 +236,17 @@ class xml implements Iterator, ArrayAccess
 			$this->data[$offset] = $value;
 		}
 	}
-	
+	#[\ReturnTypeWillChange]
 	public function offsetExists($offset)
 	{
 		return isset($this->data[$offset]);
 	}
-	
+	#[\ReturnTypeWillChange]
 	public function offsetUnset($offset)
 	{
 		unset($this->data[$offset]);
 	}
-	
+	#[\ReturnTypeWillChange]
 	public function offsetGet($offset)
 	{
 		return (
@@ -256,9 +257,9 @@ class xml implements Iterator, ArrayAccess
 			null
 		);
 	}
-	
+
 	// ### START ### Declaration ###
-	
+
 	public function version()
 	{
 		return (
@@ -269,7 +270,7 @@ class xml implements Iterator, ArrayAccess
 			'1.0'
 		);
 	}
-	
+
 	public function encoding()
 	{
 		return (
@@ -280,7 +281,7 @@ class xml implements Iterator, ArrayAccess
 			'utf-8'
 		);
 	}
-	
+
 	private function syntax_declaration()
 	{
 		if(
@@ -297,14 +298,14 @@ class xml implements Iterator, ArrayAccess
 			$this->declaration .= $this->xml[$this->index];
 		}
 	}
-	
+
 	// ### END ### Declaration ###
-	
+
 	private function syntax_error()
 	{
 		error_log("Syntax error in XML data. Please check line # {$this->line}.");
 	}
-	
+
 	private function syntax_tag_front_start()
 	{
 		switch($this->xml[$this->index])
@@ -313,13 +314,13 @@ class xml implements Iterator, ArrayAccess
 				$this->syntax = 'syntax_attribute_name';
 				$this->attribute_name = $this->attribute_value = '';
 				break;
-			
+
 			default:
 				$this->tag_name .= $this->xml[$this->index];
 				break;
-		}			
+		}
 	}
-	
+
 	private function syntax_tag_front_end()
 	{
 		$node = [];
@@ -331,7 +332,7 @@ class xml implements Iterator, ArrayAccess
 				$node["@{$key}"] = $value;
 			}
 		}
-		
+
 		$current =& $this->stack[count($this->stack) - 1];
 		if(empty($current))
 		{
@@ -350,26 +351,26 @@ class xml implements Iterator, ArrayAccess
 			}
 			$this->stack[] =& $current[count($current) - 1][$this->tag_name];
 		}
-		
+
 		$this->syntax = 'syntax_tag_value';
 	}
-	
+
 	private function syntax_tag_short()
 	{
 		$this->syntax_tag_front_end();
 		$this->syntax_tag_back_end();
 	}
-	
+
 	private function syntax_tag_back_start()
 	{
 		$this->tag_name .= $this->xml[$this->index];
 	}
-	
+
 	private function syntax_tag_back_end()
 	{
 		$child =& $this->stack[count($this->stack) - 1];
 		array_pop($this->stack);
-		
+
 		$last = count($this->stack) - 1;
 		if(
 			isset($this->stack[$last][$this->tag_name])
@@ -399,12 +400,12 @@ class xml implements Iterator, ArrayAccess
 			$this->syntax_error();
 		}
 	}
-	
+
 	private function syntax_tag_value()
 	{
 		$this->tag_value .= $this->xml[$this->index];
 	}
-	
+
 	private function syntax_attribute_name()
 	{
 		switch($this->xml[$this->index])
@@ -412,17 +413,17 @@ class xml implements Iterator, ArrayAccess
 			case '=':
 			case ' ':
 				break;
-			
+
 			case '"':
 				$this->syntax = 'syntax_attribute_value';
 				break;
-			
+
 			default:
 				$this->attribute_name .= $this->xml[$this->index];
 				break;
 		}
 	}
-	
+
 	private function syntax_attribute_value()
 	{
 		switch($this->xml[$this->index])
@@ -431,13 +432,13 @@ class xml implements Iterator, ArrayAccess
 				$this->syntax = 'syntax_attribute_end';
 				$this->index--;
 				break;
-			
+
 			default:
 				$this->attribute_value .= $this->xml[$this->index];
 				break;
 		}
 	}
-	
+
 	private function syntax_attribute_end()
 	{
 		$this->attributes[$this->attribute_name] = $this->attribute_value;
