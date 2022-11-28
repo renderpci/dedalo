@@ -2088,43 +2088,4 @@ class component_image extends component_media_common {
 
 
 
-	/**
-	* REGENERATE_COMPONENT
-	* Force the current component to re-save its data
-	* @see class.tool_update_cache.php
-	* @return bool
-	*/
-	public function regenerate_component() : bool {
-
-		// get files info
-			$files_info	= [];
-			$ar_quality = DEDALO_IMAGE_AR_QUALITY;
-			foreach ($ar_quality as $current_quality) {
-				if ($current_quality==='thumb') continue;
-				// read file if exists to get file_info
-				$file_info = $this->get_quality_file_info($current_quality);
-				// add non empty quality files data
-				if (!empty($file_info)) {
-					$files_info[] = $file_info;
-				}
-			}
-
-		// create a new dato from scratch
-			$dato_item = (object)[
-				'files_info' => $files_info
-			];
-			$dato = [$dato_item];
-
-		// replace existing dato
-			$this->set_dato($dato);
-
-		// save
-			$this->Save();
-
-
-		return true;
-	}//end regenerate_component
-
-
-
 }//end class component_image

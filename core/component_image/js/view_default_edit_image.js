@@ -104,15 +104,15 @@ const get_content_value = function(i, value, self) {
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 
 	// url
-		let url = file_info && file_info.url
-			? file_info.url
+		let url = file_info && file_info.file_url
+			? file_info.file_url
 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
 
 		// fallback to default (when not already in default)
 		if (!url && quality!==self.context.default_quality) {
 			const file_info_dq	= datalist.find(el => el.quality===self.context.default_quality && el.file_exist===true)
 			url = file_info_dq
-				? file_info_dq.url
+				? file_info_dq.file_url
 				: null
 			if (url) {
 				// change the quality
@@ -327,9 +327,9 @@ const get_quality_selector = (self) => {
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
 			// create the node with the all qualities sended by server
-			const value = (typeof quality_list[i].url==='undefined')
+			const value = (typeof quality_list[i].file_url==='undefined')
 				? DEDALO_CORE_URL + '/themes/default/0.jpg'
-				: quality_list[i].url
+				: quality_list[i].file_url
 
 			const select_option = ui.create_dom_element({
 				element_type	: 'option',

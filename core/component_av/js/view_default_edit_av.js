@@ -90,6 +90,14 @@ const get_content_data_edit = function(self) {
 */
 const get_content_value = (i, current_value, self) => {
 
+	// media url from data.datalist based on selected context quality
+		const quality	= self.quality || self.context.quality
+		const datalist	= self.data.datalist
+		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+		const video_url	= file_info && file_info.file_exist===true
+			? file_info.file_url
+			: null
+
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
@@ -109,17 +117,9 @@ const get_content_value = (i, current_value, self) => {
 		function set_bg_color() {
 			this.removeEventListener('load', set_bg_color, false)
 			ui.set_background_image(this, content_value)
-			posterframe.remove()
 		}
 
 	// video
-		// media url from data.datalist based on selected context quality
-		const quality	= self.quality || self.context.quality
-		const datalist	= self.data.datalist
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
-		const video_url	= file_info
-			? file_info.url
-			: null
 		if (video_url) {
 
 			const video = build_video_node(
@@ -241,10 +241,10 @@ const get_quality_selector = (content_value, self) => {
 		const quality_list		= data.datalist.filter(el => el.file_exist===true)
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
-			// create the node with the all qualities sended by server
-			const value = (typeof quality_list[i].url==='undefined')
+			// create the node with the all qualities sent by server
+			const value = (typeof quality_list[i].file_url==='undefined')
 				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
-				: quality_list[i].url
+				: quality_list[i].file_url
 
 			const select_option = ui.create_dom_element({
 				element_type	: 'option',

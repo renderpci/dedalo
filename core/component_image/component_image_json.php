@@ -50,12 +50,12 @@
 					// datalist
 						// files_info. For fast list we add directly the default image
 						$thumb_data_item = new stdClass();
-							$thumb_data_item->url		= $this->get_url(DEDALO_IMAGE_THUMB_DEFAULT, false, false, false);
-							$thumb_data_item->quality	= DEDALO_IMAGE_THUMB_DEFAULT;
+							$thumb_data_item->file_url		= $this->get_url(DEDALO_IMAGE_THUMB_DEFAULT);
+							$thumb_data_item->quality		= DEDALO_IMAGE_THUMB_DEFAULT;
 
 						$default_data_item = new stdClass();
-							$default_data_item->url		= $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT, false, false, false);
-							$default_data_item->quality	= DEDALO_IMAGE_QUALITY_DEFAULT;
+							$default_data_item->file_url	= $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT);
+							$default_data_item->quality		= DEDALO_IMAGE_QUALITY_DEFAULT;
 
 						$datalist = [$thumb_data_item, $default_data_item ];
 					break;
@@ -64,8 +64,8 @@
 				default:
 					$value = $this->get_dato();
 
-					// datalist. get the quality url of the available image files
-						$datalist = $this->get_files_info();
+					// datalist. Get the url of all defined quality
+						$datalist = $this->get_datalist();
 					break;
 			}
 

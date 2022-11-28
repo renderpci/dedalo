@@ -86,9 +86,9 @@ export const get_content_data_player = function(options) {
 			// const video_url = self.data.video_url
 			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 			const video_url	= file_info
-				? file_info.url
+				? file_info.file_url
 				: null
-console.log('quality:', self);
+
 	// player
 		if (video_url) {
 
