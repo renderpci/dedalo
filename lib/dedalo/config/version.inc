@@ -2767,6 +2767,8 @@
 		Add check if the install are finished to remove the change for root
 		Add latin lang
 		Add default language selector to tool_import_rdf
+		Released version 5.9.1
+	Queue build
 		Remove dataframe in search_autocomplete
 		Add dataframe_search mode in component_check_box
 		Add dataframe_search mode in component_common
@@ -2790,7 +2792,7 @@
 		Fixed PHP v8 issues with bad json data in web_data class
 		Valencia 28-11-2022T10:45:00
 		Fixed component_number to search with < operator, now it avoid the empty values, empty !== 0 when search < than any value
-
+	Released version 5.9.2
 
 	[/HISTORY]
 
