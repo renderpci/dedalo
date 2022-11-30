@@ -128,6 +128,8 @@ const get_content_data_edit = async function(self, ar_instances) {
 					continue;
 				}
 
+
+
 			const current_instance_node	= current_instance.node || await current_instance.render()
 
 
@@ -173,6 +175,15 @@ const get_content_data_edit = async function(self, ar_instances) {
 					// direct attach (safe fallback)
 					fragment.appendChild(current_instance_node)
 				}
+			}
+
+
+			// portals case
+			if (current_instance.context.legacy_model==='component_portal') {
+				// setTimeout(async function(){
+					// current_instance.standalone = true
+				 	 current_instance.refresh()
+				 // }, 1000)
 			}
 		}//end for (let i = 0; i < ar_instances_length; i++)
 

@@ -57,8 +57,7 @@
 		$context[] = $this->context;
 
 	// if($permissions>0) {
-	if($options->get_data===true && $permissions>0){
-
+	if($options->get_data===true ){
 		// short vars
 			$section_id	= $this->get_section_id();
 			$limit		= $this->pagination->limit;
@@ -66,7 +65,7 @@
 
 		// custom properties external dato
 		// Only is recalculated in edit mode and when is not a pagination request (section request rqo is action=search)
-			if ($modo==='edit' && isset(dd_core_api::$rqo) && dd_core_api::$rqo->source->action==='search') {
+			if ($modo==='edit' && isset(dd_core_api::$rqo) && dd_core_api::$rqo->source->action==='search') { //|| dd_core_api::$rqo->source->action==='get_data')
 				if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
 					(isset($properties->source->mode) && $properties->source->mode==='external')) {
 
@@ -120,19 +119,21 @@
 					$data[] = $item;
 
 				// subdatum
-					$subdatum = $this->get_subdatum($tipo, $value);
-						// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
 
-					$ar_subcontext = $subdatum->context;
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
+						$subdatum = $this->get_subdatum($tipo, $value);
+							// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
 
-					$ar_subdata = $subdatum->data;
-					foreach ($ar_subdata as $sub_value) {
-						$data[] = $sub_value;
-					}
 
+						$ar_subcontext = $subdatum->context;
+						foreach ($ar_subcontext as $current_context) {
+							$context[] = $current_context;
+						}
+
+						$ar_subdata = $subdatum->data;
+						foreach ($ar_subdata as $sub_value) {
+							$data[] = $sub_value;
+						}
+					// }
 
 				// subdata from subcontext items
 					// 	$ar_subdata = $this->get_ar_subdata($value);
