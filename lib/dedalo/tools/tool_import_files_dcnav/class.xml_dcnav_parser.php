@@ -79,18 +79,41 @@ class xml_dcnav_parser {
 					$item->value[] = $c_element;				
 					break;			
 				case 'rdf:Description':				
-					foreach ($value as $key => $ar_cvalue) {				
+					foreach ($value as $key => $ar_cvalue) {
+						// sample:
+						// {
+						// 	"dc:format": "Iragankorra",
+						// 	"@xml:lang": "eu"
+						// }
 						foreach ($ar_cvalue as $ckey => $cvalue) {
-							$parts = explode(':', $ckey);
+
+							// lang case. As "@xml:lang" => "eu"
+								if ($ckey==='@xml:lang' && isset($c_element)) {
+									// note that $c_element is previously declared
+									$current_lang = lang::get_lang_code_from_alpha2($cvalue);
+									if (!empty($current_lang)) {
+										$c_element->lang = $current_lang;
+										$c_element->lang_xml = $cvalue; // default
+									}
+									continue;
+								}
+
+							// Sample: from "dc:format" to ['dc','format']
+							$key_parts = explode(':', $ckey);
+
 							$c_element = new stdClass();
-								$c_element->prefix	= $parts[0];
-								$c_element->local	= $parts[1];
+								$c_element->prefix	= $key_parts[0];
+								$c_element->local	= $key_parts[1];
 								$c_element->cmp		= null;
 								$c_element->tip		= null;
 								$c_element->value	= $cvalue;
+								$c_element->lang 	= 'lg-spa'; // default
 
 							$item->value[] = $c_element;
 						}
+
+						// reset $c_element
+						$c_element = null;
 					}
 					break;
 			}

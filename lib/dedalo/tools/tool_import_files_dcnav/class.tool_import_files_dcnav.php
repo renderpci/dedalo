@@ -819,6 +819,24 @@ class tool_import_files_dcnav extends tool_common {
 									})('navarra40', $section_xml_data_tipo, $section_xml_data_id, $item_value->value);
 								}
 
+							// lang (component_input_text)
+								if (isset($item_value->lang_xml) && !empty($item_value->lang_xml)) {
+									$save_lang = (function($tipo, $section_tipo, $section_id, $value) {
+
+										$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+										$component		= component_common::get_instance($modelo_name,
+																						 $tipo,
+																						 $section_id,
+																						 'list',
+																						 DEDALO_DATA_NOLAN,
+																						 $section_tipo);
+										$component->set_dato( [$value] );
+										$result = $component->Save();
+
+										return $result;
+									})('navarra200', $section_xml_data_tipo, $section_xml_data_id, $item_value->lang_xml);
+								}
+
 							// images
 								if (isset($item_value->local) && $item_value->local==='hasFormat' && !empty($item_value->value)) {
 
@@ -1024,16 +1042,54 @@ class tool_import_files_dcnav extends tool_common {
 
 							// format. (component_select) navarra7
 								$format = array_reduce($parsed_item->value, function($carry, $item){
-									if ($item->local==='format' && !empty($item->value)) $carry[] = $item->value;
+									if ($item->local==='format' && !empty($item->value)) {
+
+										$el = new stdClass();
+											$el->value = $item->value;
+											$el->lang = !empty($item->lang) ? $item->lang : DEDALO_DATA_LANG;
+
+										$carry[] = $el;
+									}
 									return $carry;
 								});
+
+
+
 								if (!empty($format)) {
 									$save_format = (function($tipo, $section_tipo, $section_id, $value) {
 
 										$dato = [];
-										foreach ((array)$value as $current_value) {
-											$locator	= self::get_solved_select_value('rsc312', 'rsc315', $current_value);
-											$dato[]		= $locator;
+										$locator = null;
+										foreach ((array)$value as $current_value_object) {
+
+											if(isset($current_value_object->lang) && $current_value_object->lang !== 'lg-spa'){
+
+												$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo('rsc315',true);
+												$component_translated = component_common::get_instance(
+													$modelo_name,
+													'rsc315',
+													$locator->section_id,
+													'list',
+													$current_value_object->lang ,
+													'rsc312',
+													false);
+
+												$lang_dato = is_array($current_value_object->value) ? $current_value_object->value : [$current_value_object->value];
+												$component_translated->set_dato( $lang_dato );
+												$component_translated->Save();
+
+											}else{
+
+												$locator	= self::get_solved_select_value(
+													'rsc312', // string section_tipo
+													'rsc315', // string component_tipo
+													$current_value_object->value, // mixed value
+													null, // mixed filter
+													$current_value_object->lang // string lang
+												);
+
+												$dato[]		= $locator;
+											}
 										}
 
 										$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -1216,7 +1272,7 @@ class tool_import_files_dcnav extends tool_common {
 	* and returns the resultant locator 
 	* @return object $locator
 	*/
-	public static function get_solved_select_value($section_tipo, $component_tipo, $value, $filter=null) {
+	public static function get_solved_select_value($section_tipo, $component_tipo, $value, $filter=null, $lang=DEDALO_DATA_LANG) {
 
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$name			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
@@ -1270,11 +1326,10 @@ class tool_import_files_dcnav extends tool_common {
 			// }
 
 		if($count>1) {
-
 			// more than one exists with same value
-				dump('', ' SQO +++++++++++++++++ '.to_string($sqo));
-				throw new Exception("Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)", 1);						
-		
+			dump($sqo,  "Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)" .to_string());
+			$section_id = reset($ar_records)->section_id;
+
 		}elseif ($count===1) {
 			
 			// founded. Already created record
@@ -1289,13 +1344,15 @@ class tool_import_files_dcnav extends tool_common {
 
 			// save new value
 				$RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-				$code_component	= component_common::get_instance($modelo_name,
-																 $component_tipo,
-																 $section_id,
-																 'list',
-																 $lang,
-																 $section_tipo);
+				$component_lang	= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
+				$code_component	= component_common::get_instance(
+					$modelo_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					$lang,
+					$section_tipo
+				);
 				$dato = is_array($value) ? $value : [$value];
 				$code_component->set_dato( $dato );
 				$code_component->Save();
@@ -1303,10 +1360,12 @@ class tool_import_files_dcnav extends tool_common {
 			debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
 		}
 
-		$locator = new locator();
-			$locator->set_section_tipo($section_tipo);
-			$locator->set_section_id($section_id);
-			$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+		// locator
+			$locator = new locator();
+				$locator->set_section_tipo($section_tipo);
+				$locator->set_section_id($section_id);
+				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+
 		
 		return $locator;
 	}//end get_solved_select_value
