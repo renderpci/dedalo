@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.24",
-    "title" : "Dédalo Publication Server REST API 1.0.24",
+    "version" : "1.0.25",
+    "title" : "Dédalo Publication Server REST API 1.0.25",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -306,7 +306,7 @@
           "description" : "Activates automatic resolution of portals option. Default is false",
           "required" : false,
           "type" : "boolean",
-          "format" : "bool"
+          "default" : false
         }, {
           "name" : "resolve_portals_custom",
           "in" : "query",
@@ -314,6 +314,13 @@
           "required" : false,
           "type" : "string",
           "format" : "string"
+        }, {
+          "name" : "resolve_dd_relations",
+          "in" : "query",
+          "description" : "Activates automatic resolution of column \"dd_relations\". This column stores all calls to current record formatted as locators array. Note that resolution map is stored in \"publication_schema\" (from Ontology definition). <br> Sample: <br> { \"diffusion\": { \"class_name\": \"diffusion_mysql\" }, \"publication_schema\": { \"dd_relations\": { \"rsc170\": \"images\", \"oh1\": \"interview\" } }, \"publication_schema_info\": \"Use format {table_name.field_name:target_table} or {field_name:target_table} for multiple map\" }",
+          "required" : false,
+          "type" : "boolean",
+          "default" : false
         }, {
           "name" : "map",
           "in" : "query",

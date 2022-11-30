@@ -146,7 +146,8 @@ class web_data {
 				$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 			}catch(PDOException $pe){
-				trigger_error($pe->getMessage());
+				// trigger_error($pe->getMessage());
+				debug_log(__METHOD__." PDOException:  ".$pe->getMessage(), logger::ERROR);
 			}
 
 
@@ -389,6 +390,7 @@ class web_data {
 					$sql_options->offset					= false;
 					$sql_options->count						= false;
 					$sql_options->resolve_portal			= false; // bool
+					$sql_options->resolve_dd_relations 		= false; // bool
 					$sql_options->resolve_portals_custom	= false; // array | bool
 					$sql_options->apply_postprocess			= false; //  bool default true
 					$sql_options->map						= false; //  object | bool (default false). Apply map function to value like [{"field":birthplace_id","function":"resolve_geolocation","otuput_field":"birthplace_obj"}]
@@ -415,7 +417,7 @@ class web_data {
 				}else{
 					if (!self::check_safe_value('table', $sql_options->table)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal table (1)";
+						$response->msg    = "Error on sql request. Illegal table (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->table";
 						}
@@ -642,21 +644,22 @@ class web_data {
 
 			// exec query
 				$query_options = new stdClass();
-					$query_options->strQuery 				= $strQuery;
-					$query_options->caller 					= $sql_options->caller;
-					$query_options->count 					= $sql_options->count;
-					$query_options->ar_fields 				= $sql_options->ar_fields;
-					$query_options->resolve_portal 			= $sql_options->resolve_portal;
-					$query_options->resolve_portals_custom 	= $sql_options->resolve_portals_custom;
-					$query_options->portal_filter 			= $sql_options->portal_filter ?? false;
-					$query_options->table 					= $sql_options->table;
-					$query_options->apply_postprocess 		= $sql_options->apply_postprocess;
-					$query_options->map 					= $sql_options->map;
-					$query_options->process_result		 	= $sql_options->process_result;
-					$query_options->lang 					= $sql_options->lang;
-					$query_options->db_name 				= $sql_options->db_name;
-					$query_options->conn 					= $sql_options->conn;
-					$query_options->sql_options 			= $sql_options; // full used options here
+					$query_options->strQuery				= $strQuery;
+					$query_options->caller					= $sql_options->caller;
+					$query_options->count					= $sql_options->count;
+					$query_options->ar_fields				= $sql_options->ar_fields;
+					$query_options->resolve_portal			= $sql_options->resolve_portal;
+					$query_options->resolve_dd_relations	= $sql_options->resolve_dd_relations;
+					$query_options->resolve_portals_custom	= $sql_options->resolve_portals_custom;
+					$query_options->portal_filter			= $sql_options->portal_filter ?? false;
+					$query_options->table					= $sql_options->table;
+					$query_options->apply_postprocess		= $sql_options->apply_postprocess;
+					$query_options->map						= $sql_options->map;
+					$query_options->process_result			= $sql_options->process_result;
+					$query_options->lang					= $sql_options->lang;
+					$query_options->db_name					= $sql_options->db_name;
+					$query_options->conn					= $sql_options->conn;
+					$query_options->sql_options				= $sql_options; // full used options here
 
 				$exec_query_response = self::exec_query($query_options);
 					#dump($exec_query_response, ' exec_query_response ++ '.to_string());
@@ -1059,13 +1062,14 @@ class web_data {
 				$count					= $options->count;
 				$ar_fields				= $options->ar_fields;
 				$resolve_portal			= $options->resolve_portal;
-				$resolve_portals_custom = $options->resolve_portals_custom ?? false;
+				$resolve_portals_custom	= $options->resolve_portals_custom ?? false;
+				$resolve_dd_relations	= $options->resolve_dd_relations ?? false;
 				$portal_filter			= $options->portal_filter ?? false;
 				$table					= $options->table;
 				$apply_postprocess		= $options->apply_postprocess ?? false;
 				$map					= $options->map ?? false;
 				$process_result			= $options->process_result ?? false;
-				$sql_options 			= $options->sql_options ?? false; // full used sql_options to build exec_query
+				$sql_options			= $options->sql_options ?? false; // full used sql_options to build exec_query
 				$lang					= $options->lang;
 				$db_name				= !empty($options->db_name) ? $options->db_name : null;
 
@@ -1182,33 +1186,56 @@ class web_data {
 						}
 
 						# field_data. postprocess_field if need
-						$field_data = ($apply_postprocess===true)
-							? self::postprocess_field($current_field, $row[$current_field])
-							: $row[$current_field] ?? null;
+							$field_data = ($apply_postprocess===true)
+								? self::postprocess_field($current_field, $row[$current_field])
+								: $row[$current_field] ?? null;
 
-						# Default behaviour
-						$ar_data[$i][$current_field] = $field_data;
+						# Default behavior
+							$ar_data[$i][$current_field] = $field_data;
 
-						#  Portal resolve cases
-						if ($resolve_portals_custom!==false) {
+						// Portal resolve cases
+							if($resolve_portals_custom!==false) {
 
-							if ( (property_exists($resolve_portals_custom, $current_field) )
-							  && $current_field!==$table // case field image into table image, por example
-							) {
+								if ( (property_exists($resolve_portals_custom, $current_field) )
+								  && $current_field!==$table // case field image into table image, for example
+								) {
+									// request options
+									$request_options = new stdClass();
+										$request_options->lang				= $lang;
+										$request_options->resolve_portal	= $resolve_portal;
+										$request_options->portal_filter		= $portal_filter;
+										$request_options->map				= $map;
+
+									$ar_data[$i][$current_field] = self::portal_resolve(
+										$row, // array rows
+										$current_field, // string field (column name)
+										$request_options, // object options
+										$resolve_portals_custom, // bool|string resolve_portals_custom
+										false // bool resolve_dd_relations
+									);
+								}
+							}//end if ($resolve_portals_custom!==false)
+
+						// resolve_dd_relations
+							if($resolve_dd_relations===true) {
+
 								// request options
-								$request_options = new stdClass();
-									$request_options->lang 			 = $lang;
-									$request_options->resolve_portal = $resolve_portal;
-									$request_options->portal_filter  = $portal_filter;
-									$request_options->map  			 = $map;
+									$request_options = new stdClass();
+										$request_options->lang				= $lang;
+										$request_options->resolve_portal	= false;
+										$request_options->portal_filter		= $portal_filter;
+										$request_options->map				= $map;
 
-								$ar_data[$i][$current_field] = self::portal_resolve($row,
-																					$current_field,
-																					$request_options,
-																					$resolve_portals_custom);
-							}
-						}//end if ($resolve_portals_custom!==false)
-					}
+									$current_field = 'dd_relations';
+									$ar_data[$i][$current_field] = self::portal_resolve(
+										$row, // array rows
+										$current_field, // string field (column name)
+										$request_options, // object options
+										false, // bool|string resolve_portals_custom
+										true // bool resolve_dd_relations
+									);
+							}//end if($resolve_dd_relations===true)
+					}//end foreach($ar_fields as $current_field)
 
 				$i++;};
 
@@ -1476,26 +1503,41 @@ class web_data {
 		* PORTAL_RESOLVE
 		* @return array $ar_portal
 		*/
-		private static function portal_resolve($rows, $current_field, $options, $resolve_portals_custom) {
+		private static function portal_resolve($rows, $current_field, $options, $resolve_portals_custom, bool $resolve_dd_relations) {
 			$ar_portal=array();
 
-			if ($resolve_portals_custom!==false) {
-				# resolve_portals_custom is received
-				$current_field_ar_id	= $current_field;	//in_array($current_field, (array)$resolve_portals_custom);
-				$table					= $resolve_portals_custom->{$current_field};
+			// resolve cases
+			switch (true) {
+				case ($resolve_dd_relations===true):
+					// resolve_dd_relations is received
+					$current_field_ar_id	= 'dd_relations'; // column name 'dd_relations' expected
+					$table					= ''; // will be resolved later
+					// publication_schema
+					$publication_schema	= self::get_publication_schema(); // Like: {"image": "image","dd_relations":{"rsc170":"images"}
+					$dd_relations		= isset($publication_schema->dd_relations)
+						? $publication_schema->dd_relations
+						: null;
+					break;
 
-			}else{
-				# default case
-				$current_field_ar_id	= str_replace('_table', '_id', $current_field); // los datos apunta al nombre de esta columna (XX_table) pero están en XX_id
-				$table					= $rows[$current_field];
+				case ($resolve_portals_custom!==false):
+					// resolve_portals_custom is received
+					$current_field_ar_id	= $current_field;	//in_array($current_field, (array)$resolve_portals_custom);
+					$table					= $resolve_portals_custom->{$current_field};
+					break;
+
+				default:
+					// default case
+					$current_field_ar_id	= str_replace('_table', '_id', $current_field); // los datos apuntan al nombre de esta columna (XX_table) pero están en XX_id
+					$table					= $rows[$current_field];
+					break;
 			}
 
-			// table with additional column name whe match values, like 'hoard.term_id'
+			// table with additional column name when match values, like 'hoard.term_id'
 				$match_column = 'section_id';  // default
 				if (strpos($table, '.')!==false) {
 					$ar_bits		= explode('.', $table);
-					$table			= $ar_bits[0]; // overwite table var name (!)
-					$match_column	= $ar_bits[1]; // overwite var match_column (!)
+					$table			= $ar_bits[0]; // overwrite table var name (!)
+					$match_column	= $ar_bits[1]; // overwrite var match_column (!)
 				}
 
 			$current_ar_value = !empty($rows[$current_field_ar_id])
@@ -1503,7 +1545,19 @@ class web_data {
 				: null;
 			if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
 
-				// check is is locator
+				// dd_relations case
+					if (isset($dd_relations) && isset($p_value->section_tipo)) {
+						// table map
+						if (isset($dd_relations->{$p_value->section_tipo})) {
+							$table = $dd_relations->{$p_value->section_tipo};
+						}else{
+							// skip unable to resolve values
+							debug_log(__METHOD__." Skipped locator. Unable to resolve value from ".to_string($p_value), logger::ERROR);
+							continue;
+						}
+					}
+
+				// parse value on locator case
 					if (is_object($p_value)) {
 						$p_value = $p_value->section_id ?? null;
 					}
