@@ -196,14 +196,15 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		}
 
 		// portals case
-			if (current_context.real_model==='component_portal') {
-				autoload = true
-			}
-		console.log('autoload:', autoload, current_instance);
+			// if (current_context.legacy_model==='component_portal') {
+			// 	autoload = true
+			// }
 
 	// build. instance build await
 		await current_instance.build(autoload)
-
+		// if (current_context.legacy_model==='component_portal') {
+		// 	console.log('autoload:', autoload, current_instance);
+		// }
 	// add
 		// ar_instances.push(current_instance)
 		// dd_console(`__Time to build_instance section_record: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [current_context.tipo,current_context.model])
@@ -263,7 +264,14 @@ section_record.prototype.get_ar_instances_edit = async function() {
 					const current_context	= items[i]
 					const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)
 
-					build_instance(self, current_context, section_id, current_data)
+					build_instance(
+						self,
+						current_context,
+						section_id,
+						current_data,
+						null, // column_id
+						false // autoload
+					)
 					.then(function(current_instance){
 						// current_instance.instance_order_key = i
 						resolve(current_instance)
