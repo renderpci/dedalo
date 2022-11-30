@@ -70,7 +70,7 @@
 					$value = $this->get_dato();
 
 					// datalist. get the quality url of the available image files
-						$datalist = $this->get_files_info();
+						$datalist = $this->get_datalist();
 					break;
 			}
 

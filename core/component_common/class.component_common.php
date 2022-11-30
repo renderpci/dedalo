@@ -1140,7 +1140,14 @@ abstract class component_common extends common {
 					$objIterator	= new ArrayIterator($filter);
 					$first_key		= $objIterator->key(); // string as '$and'
 					$elements		= $filter->{$first_key}; // array of objects
-					$element		= reset($elements); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
+					if (empty($elements) || empty($elements[0])) {
+						debug_log(
+							__METHOD__." ERROR: No elements are defined for current_observer filter ".to_string($current_observer),
+							logger::ERROR
+						);
+						return [];
+					}
+					$element = reset($elements); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
 
 				$from_component_tipo = end($element->path)->component_tipo;
 

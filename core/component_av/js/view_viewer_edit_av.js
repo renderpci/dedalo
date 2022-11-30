@@ -44,7 +44,7 @@ view_viewer_edit_av.render = async function(self, options) {
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
 		const url			= (typeof url_object==='undefined')
 			? DEDALO_CORE_URL + '/themes/default/0.jpg'
-			: url_object.url
+			: url_object.file_url
 
 	// wrapper background color from posterframe image
 		const posterframe_url = self.data.posterframe_url || page_globals.fallback_image
@@ -79,7 +79,7 @@ view_viewer_edit_av.render = async function(self, options) {
 
 			// check if the original file exist else get the url of the default image
 			const download_url	= (original.file_exist)
-				? original.url // original image
+				? original.file_url // original image
 				: url // default image
 
 			// get the name of the original file uploaded (user filename)

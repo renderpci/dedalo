@@ -280,7 +280,7 @@ const get_line_file_exists = function(ar_quality, self) {
 			})
 
 			if (file_info.file_exist===true) {
-				if (file_info.url) {
+				if (file_info.file_url) {
 					const button_file_av = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button media',
@@ -294,7 +294,7 @@ const get_line_file_exists = function(ar_quality, self) {
 						self.node.classList.remove('loading')
 					})
 				}else{
-					// const extension = file_info.url.split(".").pop();
+					// const extension = file_info.file_url.split(".").pop();
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: '',
@@ -302,7 +302,7 @@ const get_line_file_exists = function(ar_quality, self) {
 						parent			: file_info_node
 					})
 				}
-			}//end if (file_info.url) {
+			}//end if (file_info.file_url) {
 		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
@@ -654,7 +654,7 @@ const get_line_build_version = function(ar_quality, self) {
 							setTimeout(async function(){
 								const files_info = await self.get_files_info()
 								const found = files_info.find(el => el.quality===quality)
-								if (found && found.url) {
+								if (found && found.file_url) {
 									// processing_label.remove()
 									// button_build_version.classList.remove('hide')
 									self.main_element_quality = quality

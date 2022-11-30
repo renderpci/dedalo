@@ -2604,10 +2604,14 @@ abstract class common {
 							// limit. Overwrite config by session value if exists
 							if (isset($parsed_item->show->sqo_config->limit)) {
 								// get session limit if it was defined
-								$sqo_id	= implode('_', [$model, $tipo]);
-								$parsed_item->show->sqo_config->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
-									? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
-									: $parsed_item->show->sqo_config->limit;
+								if ($model==='section') {
+									$sqo_id	= implode('_', [$model, $tipo]);
+										$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+											? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+											: $parsed_item->show->sqo_config->limit;
+								}else{
+									$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
+								}
 							}
 
 						}else{
@@ -2624,9 +2628,11 @@ abstract class common {
 							$parsed_item->show->sqo_config = $sqo_config;
 						}
 						// fix the limit in the instance
-						$this->pagination->limit = isset($parsed_item->show->sqo->limit)
-							? $parsed_item->show->sqo->limit
-							: $parsed_item->show->sqo_config->limit;
+						$this->pagination->limit = isset($parsed_item->sqo->limit)
+							? $parsed_item->sqo->limit
+							: (isset($parsed_item->show->sqo_config->limit)
+								? $parsed_item->show->sqo_config->limit
+								: $this->pagination->limit);
 
 					// search
 						if (isset($item_request_config->search)) {

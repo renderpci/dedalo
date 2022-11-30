@@ -129,7 +129,7 @@ const get_content_value = function(i, current_value, self) {
 	// pdf_url
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		const pdf_url	= file_info
-			? file_info.url
+			? file_info.file_url
 			: null
 
 	if (pdf_url) {

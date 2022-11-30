@@ -54,11 +54,11 @@ class component_media_common extends component_common {
 	public static function get_media_components() : array {
 
 		return [
+			'component_3d',
 			'component_av',
 			'component_image',
 			'component_pdf',
-			'component_svg',
-			'component_3d'
+			'component_svg'
 		];
 	}//end get_media_components
 
@@ -316,9 +316,10 @@ class component_media_common extends component_common {
 	* GET_FILES_INFO
 	* Get file info for every quality
 	* Used as 'datalist' in component data API response
+	* @param bool $include_empty = true
 	* @return array $files_info
 	*/
-	public function get_files_info() : array {
+	public function get_files_info( bool $include_empty = true ) : array {
 
 		$ar_quality = $this->get_ar_quality();
 
@@ -326,99 +327,136 @@ class component_media_common extends component_common {
 			$files_info = [];
 			foreach ($ar_quality as $quality) {
 
-				$path = $this->get_path($quality);
+				$quality_file_info = $this->get_quality_file_info($quality);
+				if ($include_empty===false && $quality_file_info->file_exist===false) {
+					// skip quality without file
+					continue;
+				}
 
-				// file_exist
-					$file_exist	= !empty($path)
-						? file_exists($path)
-						: false;
-						// $this->file_exist($quality);
+				// add
+				$files_info[] = $quality_file_info;
 
-				// file_size
-					$file_size	= ($file_exist===true)
-						? (function() use($path) {
-							try {
-								$size = @filesize($path);
-							} catch (Exception $e) {
-								trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
-							}
-							return $size ?? null; // in bytes
-						  })()
-						: null;
+				// OLD
+					// // path file
+					// 	$path = $this->get_path($quality);
 
-				// file_url
-					$file_url = ($file_exist===true) //  && $quality!=='original'
-						? $this->get_url($quality)
-						: null;
+					// // file_exist
+					// 	$file_exist	= !empty($path)
+					// 		? file_exists($path)
+					// 		: false;
+					// 		// $this->file_exist($quality);
 
-				// original case
-					$quality_name = $quality;
-					if ($quality==='original') {
-						$raw_path = $this->get_original_file_path($quality);
-						if ($raw_path!==$path) {
-							$quality_name = 'original_viewable';
-						}
-					}
+					// // file_size
+					// 	$file_size	= ($file_exist===true)
+					// 		? (function() use($path) {
+					// 			try {
+					// 				$size = @filesize($path);
+					// 			} catch (Exception $e) {
+					// 				trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
+					// 			}
+					// 			return $size ?? null; // in bytes
+					// 		  })()
+					// 		: null;
 
-				// item
-					$files_info[] = (object)[
-						'quality'		=> $quality_name,
-						'file_exist'	=> $file_exist,
-						'file_size'		=> $file_size,
-						'url'			=> $file_url
-					];
+					// // file_url
+					// 	$file_url = ($file_exist===true) //  && $quality!=='original'
+					// 		? $this->get_url($quality)
+					// 		: null;
 
-				// original case
-					if ($quality==='original' && $raw_path!==$path) {
+					// // original case
+					// 	$quality_name = $quality;
+					// 	if ($quality==='original') {
+					// 		$raw_path = $this->get_original_file_path($quality);
+					// 		if ($raw_path!==$path) {
+					// 			$quality_name = 'original_viewable';
+					// 		}
+					// 	}
 
-						$path = $raw_path;
+					// // item
+					// 	$files_info[] = (object)[
+					// 		'quality'		=> $quality_name,
+					// 		'file_exist'	=> $file_exist,
+					// 		'file_size'		=> $file_size,
+					// 		'url'			=> $file_url
+					// 	];
 
-						// file_exist
-							$file_exist	= !empty($path)
-								? file_exists($path)
-								: false;
-								// $this->file_exist($quality);
+					// // original case
+					// 	if ($quality==='original' && $raw_path!==$path) {
 
-						// file_size
-							$file_size	= ($file_exist===true)
-								? (function() use($path) {
-									try {
-										$size = @filesize($path);
-									} catch (Exception $e) {
-										trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
-									}
-									return $size ?? null; // in bytes
-								  })()
-								: null;
+					// 		$path = $raw_path;
 
-						// inject extension temporally
-							$default_extension		= $this->get_extension();
+					// 		// file_exist
+					// 			$file_exist	= !empty($path)
+					// 				? file_exists($path)
+					// 				: false;
+					// 				// $this->file_exist($quality);
 
-							$raw_original_extension	= ($file_exist===true)
-								? pathinfo($path)['extension']
-								: null;
-							$this->extension		= $raw_original_extension;
+					// 		// file_size
+					// 			$file_size	= ($file_exist===true)
+					// 				? (function() use($path) {
+					// 					try {
+					// 						$size = @filesize($path);
+					// 					} catch (Exception $e) {
+					// 						trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
+					// 					}
+					// 					return $size ?? null; // in bytes
+					// 				  })()
+					// 				: null;
 
-						// file_url
-							$file_url = ($file_exist===true)
-								? $this->get_url($quality)
-								: null;
+					// 		// inject extension temporally
+					// 			$default_extension		= $this->get_extension();
 
-						// restore default extension
-							$this->extension = $default_extension;
+					// 			$raw_original_extension	= ($file_exist===true)
+					// 				? pathinfo($path)['extension']
+					// 				: null;
+					// 			$this->extension		= $raw_original_extension;
 
-						$files_info[] = (object)[
-							'quality'		=> $quality,
-							'file_exist'	=> $file_exist,
-							'file_size'		=> $file_size,
-							'url'			=> $file_url
-						];
-					}
+					// 		// file_url
+					// 			$file_url = ($file_exist===true)
+					// 				? $this->get_url($quality)
+					// 				: null;
+
+					// 		// restore default extension
+					// 			$this->extension = $default_extension;
+
+					// 		$files_info[] = (object)[
+					// 			'quality'		=> $quality,
+					// 			'file_exist'	=> $file_exist,
+					// 			'file_size'		=> $file_size,
+					// 			'url'			=> $file_url
+					// 		];
+					// 	}
 			}//end foreach ($ar_quality as $quality)
 
 
 		return $files_info;
 	}//end get_files_info
+
+
+
+	/**
+	* GET_DATALIST
+	* @return array $datalist
+	*/
+	public function get_datalist() {
+
+		$files_info = $this->get_files_info(
+			true // bool include_empty
+		);
+
+		$datalist = array_map(function($el){
+			$item = (object)[
+				'quality'		=> $el->quality,
+				'file_exist'	=> $el->file_exist,
+				'file_url'		=> $el->file_url,
+				'file_size'		=> $el->file_size
+			];
+
+			return $item;
+		}, $files_info);
+
+		return $datalist;
+	}//end get_datalist
 
 
 
@@ -599,10 +637,28 @@ class component_media_common extends component_common {
 	/**
 	* GET_QUALITY_FILE_INFO
 	* Read the given quality file data, in media common dato item format
+	* Result sample:
+	* {
+	* 	"quality": "50MB",
+	*	"file_url": "/v6/master_dedalo/media/image/50MB/0/rsc29_rsc170_1.jpg",
+	*	"file_name": "rsc29_rsc170_1.jpg",
+	*	"file_path": "/Users/pepe/v6/master_dedalo/media/image/50MB/0/rsc29_rsc170_1.jpg",
+	*	"file_size": 11270469,
+	*	"file_time": {
+	*		"day": 29,
+	*		"hour": 18,
+	*		"time": 65001897875,
+	*		"year": 2022,
+	*		"month": 5,
+	*		"minute": 44,
+	*		"second": 35,
+	*		"timestamp": "2022-05-29 18:44:35"
+	*	}
+	* }
 	* @param string $quality
-	* @return object|null $quality_dato
+	* @return object $dato_item
 	*/
-	public function get_quality_file_info( string $quality ) : ?object {
+	public function get_quality_file_info( string $quality ) : object {
 
 		// file path
 			$file_path = $this->get_path($quality);
@@ -621,7 +677,17 @@ class component_media_common extends component_common {
 
 		// no file case
 			if ($file_exist===false) {
-				return null;
+
+				$dato_item = (object)[
+					'quality'		=> $quality,
+					'file_exist'	=> false,
+					'file_name'		=> null,
+					'file_path'		=> null,
+					'file_url'		=> null,
+					'file_size'		=> null,
+					'file_time'		=> null
+				];
+				return $dato_item;
 			}
 
 		// file_name
@@ -661,12 +727,13 @@ class component_media_common extends component_common {
 
 		// add quality file info
 			$dato_item = (object)[
-				'quality'			=> $quality,
-				'file_name'			=> $file_name,
-				'file_path'			=> $file_path,
-				'file_url'			=> $file_url,
-				'file_size'			=> $file_size,
-				'file_time'			=> $file_time_dd,
+				'quality'				=> $quality,
+				'file_exist'			=> true,
+				'file_name'				=> $file_name,
+				'file_path'				=> $file_path,
+				'file_url'				=> $file_url,
+				'file_size'				=> $file_size,
+				'file_time'				=> $file_time_dd
 				// 'media_attributes'	=> $media_attributes
 			];
 
@@ -798,6 +865,37 @@ class component_media_common extends component_common {
 
 		return $result;
 	}//end get_original_file_path
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-build and save its data
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() : bool {
+
+		// get files info
+			$files_info	= $this->get_files_info(
+				false // bool include_empty. Prevent to store empty quality files
+			);
+
+		// create a new dato from scratch
+			$dato_item = (object)[
+				'files_info' => $files_info
+			];
+			$dato = [$dato_item];
+
+		// replace existing dato
+			$this->set_dato($dato);
+
+		// save
+			$this->Save();
+
+
+		return true;
+	}//end regenerate_component
 
 
 

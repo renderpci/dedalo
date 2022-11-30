@@ -104,7 +104,7 @@ const get_content_value = (i, current_value, self) => {
 			const datalist	= self.data.datalist
 			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 			const video_url	= file_info
-				? file_info.url
+				? file_info.file_url
 				: null
 
 		// background content_value. Load the posterframe image only to get the bg color, not for show it
@@ -252,10 +252,10 @@ const get_quality_selector = (content_value, self) => {
 		const quality_list		= data.datalist.filter(el => el.file_exist===true)
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
-			// create the node with the all qualities sended by server
-			const value = (typeof quality_list[i].url==='undefined')
+			// create the node with the all qualities sent by server
+			const value = (typeof quality_list[i].file_url==='undefined')
 				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
-				: quality_list[i].url
+				: quality_list[i].file_url
 
 			const select_option = ui.create_dom_element({
 				element_type	: 'option',
@@ -329,8 +329,8 @@ const get_buttons = (self) => {
 
 		// 	const node = await player_3d.render()
 
-		// 	// cotainer, for every ipo will create a li node
-		// 		const cotainer = ui.create_dom_element({
+		// 	// container, for every ipo will create a li node
+		// 		const container = ui.create_dom_element({
 		// 			element_type	: 'div'
 		// 		})
 
