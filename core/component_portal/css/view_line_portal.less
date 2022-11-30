@@ -11,7 +11,7 @@
 		.label {
 			display: none;
 		}
-	}
+	}//end .column
 
 	// content_data
 	>.content_data {
@@ -160,6 +160,19 @@
 					// display: block;
 					margin-left: 0rem;
 					padding-right: 0.5rem;
+					flex-wrap: nowrap;
+					justify-content: flex-start;
+
+					.column, button {
+						display: contents;
+					}
+
+					.button.delete_bold {
+						margin-right: 0.25rem;
+					}
+					.button.pen {
+						margin-left: 0.25rem;
+					}
 				}
 			}
 		}
@@ -170,6 +183,6 @@
 			display: flex;
 			align-items: baseline;
 		}
-	}
+	}//end .search
 
 }//end .component_portal.view_line, .portal.view_line
