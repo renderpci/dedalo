@@ -1270,6 +1270,12 @@ class tool_import_files_dcnav extends tool_common {
 	* GET_SOLVED_SELECT_VALUE
 	* Search for received value in section. If it found, returns locator, else create the new value
 	* and returns the resultant locator
+	* @param string $section_tipo
+	* @param string $component_tipo
+	* @param string $value
+	* @param string|null $filter = null
+	* @param string $lang = DEDALO_DATA_LANG
+	*
 	* @return object $locator
 	*/
 	public static function get_solved_select_value($section_tipo, $component_tipo, $value, $filter=null, $lang=DEDALO_DATA_LANG) {
@@ -1299,66 +1305,62 @@ class tool_import_files_dcnav extends tool_common {
 					]
 				}';
 
-		$sqo = json_decode('{
-			"parsed": false,
-			"section_tipo": "'.$section_tipo.'",
-			"limit": 2,
-			"offset": 0,
-			"type": "search_json_object",
-			"full_count": false,
-			"order": false,
-			"filter": '.$filter_string.',
-			"skip_projects_filter": true,
-			"select": []
-		}');
+		// sqo
+			$sqo = json_decode('{
+				"parsed": false,
+				"section_tipo": "'.$section_tipo.'",
+				"limit": 2,
+				"offset": 0,
+				"type": "search_json_object",
+				"full_count": false,
+				"order": false,
+				"filter": '.$filter_string.',
+				"skip_projects_filter": true,
+				"select": []
+			}');
 
-		// debug
-			// if ($value=='INM') {
-			// 	dump($sqo, ' sqo ++ '.to_string());
-			// }
-		$search_development2	= new search_development2($sqo);
-		$search_result			= $search_development2->search();
-		$ar_records				= $search_result->ar_records;
-		$count					= count($ar_records);
-		// debug
-			// if ($value=='INM') {
-			// 	dump($count, ' count ++ search_result: '.to_string($search_result));
-			// }
+		// search exec
+			$search_development2	= new search_development2($sqo);
+			$search_result			= $search_development2->search();
+			$ar_records				= $search_result->ar_records;
+			$count					= count($ar_records);
 
-		if($count>1) {
-			// more than one exists with same value
-			dump($sqo,  "Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)" .to_string());
-			$section_id = reset($ar_records)->section_id;
+		// use or add record based on search results
+			if($count>1) {
 
-		}elseif ($count===1) {
+				// more than one exists with same value
+					debug_log(__METHOD__." More than one result found ($count)! Used the first one and ignored others. Section tipo: $section_tipo ", logger::ERROR);
+					$section_id = reset($ar_records)->section_id;
 
-			// founded. Already created record
-				$section_id = reset($ar_records)->section_id;
+			}elseif ($count===1) {
 
-		}elseif ($count===0) {
+				// founded. Already created record
+					$section_id = reset($ar_records)->section_id;
 
-			// no found. Create a new empty record
-				$section	= section::get_instance(null, $section_tipo);
-				$section->Save();
-				$section_id	= $section->get_section_id();
+			}elseif ($count===0) {
 
-			// save new value
-				$RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$component_lang	= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
-				$code_component	= component_common::get_instance(
-					$modelo_name,
-					$component_tipo,
-					$section_id,
-					'list',
-					$lang,
-					$section_tipo
-				);
-				$dato = is_array($value) ? $value : [$value];
-				$code_component->set_dato( $dato );
-				$code_component->Save();
+				// no found. Create a new empty record
+					$section	= section::get_instance(null, $section_tipo);
+					$section->Save();
+					$section_id	= $section->get_section_id();
 
-			debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
-		}
+				// save new value
+					$RecordObj_dd	= new RecordObj_dd($component_tipo);
+					$component_lang	= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
+					$code_component	= component_common::get_instance(
+						$modelo_name,
+						$component_tipo,
+						$section_id,
+						'list',
+						$lang,
+						$section_tipo
+					);
+					$dato = is_array($value) ? $value : [$value];
+					$code_component->set_dato( $dato );
+					$code_component->Save();
+
+				debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
+			}
 
 		// locator
 			$locator = new locator();
@@ -1366,7 +1368,7 @@ class tool_import_files_dcnav extends tool_common {
 				$locator->set_section_id($section_id);
 				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
-		
+
 		return $locator;
 	}//end get_solved_select_value
 

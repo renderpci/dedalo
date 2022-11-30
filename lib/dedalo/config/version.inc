@@ -2793,6 +2793,14 @@
 		Valencia 28-11-2022T10:45:00
 		Fixed component_number to search with < operator, now it avoid the empty values, empty !== 0 when search < than any value
 	Released version 5.9.2
+		Valencia 30-11-2022T10:45:00
+		Added ReturnTypeWillChange to allow php>=8.1 mismatching tentative return type should not emit a deprecation notice.
+		Fixed delete button dialog error where current_section_label it's not available when menu is disabled causing a DOM selection error
+		Added Publication Server API new feature: 'resolve_dd_relations'. Updated swagger.json file to v1.0.24
+		Fixed issue in class diffusion_sql where empty values were treated as strings generating a server error
+		Fix lang import for tool_import_files_dcnav
+
+
 
 	[/HISTORY]
 
@@ -2823,7 +2831,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '28-11-2022T10:45:00');
+	define('DEDALO_BUILD'	, '30-11-2022T11:43:00');
 
 
 
