@@ -1872,9 +1872,11 @@ class diffusion_sql extends diffusion  {
 										if (is_array($column['field_value'])) {
 											$column['field_value'] = json_encode($column['field_value']);
 										}
-										$full_value = trim( strip_tags($column['field_value']) );
-										if (!empty($full_value)) {
-											$full_data[$lang][] = $full_value;
+										if (!empty($column['field_value'])) {
+											$full_value = trim( strip_tags($column['field_value']) );
+											if (!empty($full_value)) {
+												$full_data[$lang][] = $full_value;
+											}
 										}
 									}
 

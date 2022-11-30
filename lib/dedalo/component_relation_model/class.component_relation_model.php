@@ -5,8 +5,8 @@
 *
 */
 class component_relation_model extends component_relation_common {
-	
-	
+
+
 	protected $relation_type = DEDALO_RELATION_TYPE_MODEL_TIPO;
 
 	# test_equal_properties is used to verify duplicates when add locators
@@ -21,10 +21,10 @@ class component_relation_model extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $separator=', ') {
 
-		$valor  = null;		
+		$valor  = null;
 		$dato   = $this->get_dato();
 		if (!empty($dato)) {
-			
+
 			# Test dato format (b4 changed to object)
 			if(SHOW_DEBUG) {
 				foreach ($dato as $key => $current_value) {
@@ -39,10 +39,10 @@ class component_relation_model extends component_relation_common {
 			}
 
 			/*
-			# Always run list of values			
+			# Always run list of values
 			$ar_list_of_values	= $this->get_ar_list_of_values2($lang);
 			foreach ($ar_list_of_values->result as $key => $item) {
-				
+
 				$locator = $item->value;
 				$label 	 = $item->label;
 
@@ -59,8 +59,8 @@ class component_relation_model extends component_relation_common {
 				$ar_values[] = $current_label;
 			}
 			$valor = implode($separator, $ar_values);
-		}//end if (!empty($dato)) 
-		
+		}//end if (!empty($dato))
+
 
 		return $valor;
 	}//end get_valor
@@ -75,7 +75,7 @@ class component_relation_model extends component_relation_common {
 	public function get_valor_lang(){
 
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
+
 		#dump($relacionados,'$relacionados');
 		if(empty($relacionados)){
 			return $this->lang;
@@ -105,10 +105,12 @@ class component_relation_model extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null, $type=false ) {
-	
+
 		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = strip_tags($diffusion_value);
-	
+		if( !empty($diffusion_value) ) {
+			$diffusion_value = strip_tags($diffusion_value);
+		}
+
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
 
@@ -120,7 +122,7 @@ class component_relation_model extends component_relation_common {
 	* Overrides component common method
 	*/
 	public function get_ar_target_section_tipo() {
-		
+
 		if (!$this->tipo) return null;
 
 		if(isset($this->ar_target_section_tipo)) {
@@ -133,15 +135,15 @@ class component_relation_model extends component_relation_common {
 				# Defined in structure
 				$ar_target_section_tipo = (array)$this->propiedades->target_values;
 				break;
-			
-			default:				
+
+			default:
 				// try to calculate from hierarchy section looking in target model value of hierarchy
 					$section_tipo 				= $this->section_tipo;
 					$hierarchy_component_tipo 	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 					$section_id = hierarchy::get_hierarchy_section($section_tipo, $hierarchy_component_tipo);
 
 					if (!empty($section_id)) {
-						// get target section model component value 
+						// get target section model component value
 							$model 			= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
 							$component 		= component_common::get_instance($model,
 																			 DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,
@@ -151,8 +153,8 @@ class component_relation_model extends component_relation_common {
 																			 DEDALO_HIERARCHY_SECTION_TIPO);
 
 							$target_section_tipo 	= $component->get_valor();
-							
-					
+
+
 					}
 
 				// final fallback (calculated from current prefix)
@@ -160,16 +162,16 @@ class component_relation_model extends component_relation_common {
 						$prefix = RecordObj_dd::get_prefix_from_tipo($section_tipo);
 						$target_section_tipo = $prefix.'2';
 					}
-					
-				// set into array 
+
+				// set into array
 					$ar_target_section_tipo = [$target_section_tipo];
 				break;
 		}
-		
-		
+
+
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
-		
+
 		return (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo
 
@@ -189,16 +191,16 @@ class component_relation_model extends component_relation_common {
 
 		# For future compatibility, we use get_ar_target_section_tipo to obtain section target tipo
 		$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-		
+
 		$this->referenced_tipo = reset($ar_target_section_tipo);
-		
+
 		return (string)$this->referenced_tipo;
 	}//end get_referenced_tipo
 
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
@@ -211,7 +213,7 @@ class component_relation_model extends component_relation_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
+	* Build search query for current component . Overwrite for different needs in other components
 	* (is static to enable direct call from section_records without construct component)
 	* Params
 	* @param string $json_field . JSON container column Like 'dato'
@@ -230,7 +232,7 @@ class component_relation_model extends component_relation_common {
 			return $search_query;
 		}
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-		
+
 		switch (true) {
 			case $comparison_operator==='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
@@ -239,7 +241,7 @@ class component_relation_model extends component_relation_common {
 				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
-		
+
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
@@ -268,8 +270,7 @@ class component_relation_model extends component_relation_common {
 		return $result;
 	}//end get_valor_list_html_to_save
 	*/
-	
-	
+
+
 
 }//end component_relation_model
-?>
