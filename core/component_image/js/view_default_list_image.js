@@ -45,7 +45,7 @@ view_default_list_image.render = function(self, options) {
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= (typeof url_object==='undefined')
 			? DEDALO_CORE_URL + '/themes/default/0.jpg'
-			: url_object.url
+			: url_object.file_url
 
 	// image
 		const image = ui.create_dom_element({

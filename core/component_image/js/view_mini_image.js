@@ -37,7 +37,7 @@ view_mini_image.render = function(self, options) {
 		const quality		= 'thumb'
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= url_object
-			? url_object.url
+			? url_object.file_url
 			: DEDALO_CORE_URL + '/themes/default/0.jpg'
 
 	// image

@@ -98,7 +98,7 @@ const get_content_value = function(i, value, self) {
 	// media url from data.datalist based on selected context quality
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		const url		= file_info
-			? file_info.url
+			? file_info.file_url
 			: null
 
 	// svg item
@@ -162,13 +162,13 @@ export const get_buttons = (self) => {
 
 	// 	const url = (typeof item_value==="undefined")
 	// 		? DEDALO_CORE_URL + "/themes/icons/dedalo_icon_grey.svg"
-	// 		: item_value.url
+	// 		: item_value.file_url
 
 	// 	// media url from data.datalist based on selected context quality
 	// 		// const quality	= self.quality || self.context.quality
 	// 		// const file_info	= self.data.datalist.find(el => el.quality===quality)
 	// 		// const url		= file_info
-	// 		// 	? file_info.url
+	// 		// 	? file_info.file_url
 	// 		// 	: null
 
 	// 	// li

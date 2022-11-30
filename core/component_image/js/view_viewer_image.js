@@ -39,12 +39,12 @@ view_viewer_image.render = function(self, options) {
 	// url
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
 		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= url_object
-			? url_object.url
+		const url			= url_object && url_object.file_url
+			? url_object.file_url
 			: page_globals.fallback_image
 
 	// thumb
-		// const thumb_url = datalist.find(item => item.quality==='thumb').url
+		// const thumb_url = datalist.find(item => item.quality==='thumb').file_url
 
 	// image
 		const image = ui.create_dom_element({
@@ -88,7 +88,7 @@ view_viewer_image.render = function(self, options) {
 			const original = self.data.datalist.find(item => item.quality==='original')
 			// check if the original file exist else get the url of the default image
 			const download_url	= (original.file_exist)
-				? original.url // original image
+				? original.file_url // original image
 				: url // default image
 
 			// get the name of the original file uploaded (user filename)
