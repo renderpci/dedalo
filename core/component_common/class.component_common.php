@@ -1140,7 +1140,7 @@ abstract class component_common extends common {
 					$objIterator	= new ArrayIterator($filter);
 					$first_key		= $objIterator->key(); // string as '$and'
 					$elements		= $filter->{$first_key}; // array of objects
-					$element		= reset($element); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
+					$element		= reset($elements); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
 
 				$from_component_tipo = end($element->path)->component_tipo;
 
