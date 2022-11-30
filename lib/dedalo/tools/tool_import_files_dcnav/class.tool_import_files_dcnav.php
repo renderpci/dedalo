@@ -10,9 +10,9 @@ require_once 'class.xml_dcnav_parser.php';
 *
 */
 class tool_import_files_dcnav extends tool_common {
-	
-	
-	protected $section_obj;	# received section	
+
+
+	protected $section_obj;	# received section
 	protected $valid_extensions;
 
 	// alias sections of 'navarra1'
@@ -24,18 +24,18 @@ class tool_import_files_dcnav extends tool_common {
 
 	public static $xml_files_path		= DEDALO_MEDIA_BASE_PATH . '/xml/original';
 	public static $xml_files_base_url	= DEDALO_MEDIA_BASE_URL . '/xml/original';
-	
+
 
 	/**
 	* __CONSTRUCT
 	*/
 	public function __construct($section_obj, $modo='button') {
-		
+
 		# Fix modo
 		$this->modo = $modo;
 
 		# Fix current component/section
-		$this->section_obj = $section_obj;	
+		$this->section_obj = $section_obj;
 
 		$this->set_up();
 	}//end __construct
@@ -49,25 +49,25 @@ class tool_import_files_dcnav extends tool_common {
 
 		# VERIFY USER IS LOGGED
 		if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-		
+
 		# Usuario logeado actualmente
-		$user_id		= navigator::get_user_id();	
+		$user_id		= navigator::get_user_id();
 		$media_folder 	= DEDALO_IMAGE_FOLDER;
 		// tipo
 		$tipo = null;
 		if (isset($this->section_obj)) {
-			
+
 			$tipo = $this->section_obj->get_tipo();
 
 		}else{
 
-			$var_requested_t = common::get_request_var('t');			
+			$var_requested_t = common::get_request_var('t');
 			$tipo			 = !empty($var_requested_t) ? $var_requested_t : '';	// When varname is t (default page call)
-			
+
 			$var_requested 	 = common::get_request_var('tipo');
-			$tipo			 = !empty($var_requested) ? $var_requested : $tipo;	// When varname is tipo fallback	
+			$tipo			 = !empty($var_requested) ? $var_requested : $tipo;	// When varname is tipo fallback
 		}
-		
+
 
 		# UPLOAD_DIR_CUSTOM is section_tipo
 		$upload_dir_custom = isset($tipo) ? '/'.$tipo : null;
@@ -103,7 +103,7 @@ class tool_import_files_dcnav extends tool_common {
 	}//end set_up
 
 
-	
+
 	/**
 	* FIND_ALL_FILES
 	* Read dir (can be accessible)
@@ -111,7 +111,7 @@ class tool_import_files_dcnav extends tool_common {
 	public function find_all_files($dir, $recursive=false) {
 
 		#$dir = str_replace('//', '/', $dir);
-		
+
 		$ar_data = array();
 		try {
 			if (!file_exists($dir)) {
@@ -125,7 +125,7 @@ class tool_import_files_dcnav extends tool_common {
 		if (!$root) {
 			return array();
 		}
-		
+
 		natsort($root);
 		foreach($root as $value) {
 
@@ -150,11 +150,11 @@ class tool_import_files_dcnav extends tool_common {
 
 		# SORT ARRAY (By custom core function build_sorter)
 		#usort($ar_data, build_sorter('numero_recurso'));
-		
+
 		return $ar_data;
 	}//end find_all_files
 
-	
+
 
 	/**
 	* SET_COMPONENT
@@ -165,28 +165,28 @@ class tool_import_files_dcnav extends tool_common {
 		// 	$this->component_obj = $component_obj;
 
 		// 	return true;
-		// }//end set_component	
+		// }//end set_component
 
 
 
 	/**
-	* GET_FILE_DATA
+	* GET_FILE_DATA
 	* Extrae información de la imágen recibida usando una expresión regular para interpretar un patrón dado
 	* Devuelve un array con los datos extraidos
 	*/
-	public static function get_file_data($dir, $file) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/" 
+	public static function get_file_data($dir, $file) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/"
 
 		$ar_data = array();
-	
+
 		$file_name  = pathinfo($file,PATHINFO_FILENAME);
 		$extension 	= pathinfo($file,PATHINFO_EXTENSION);
-		
+
 		# AR_DATA
 		$ar_data['dir_path']					= $dir; 				# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/
 		$ar_data['file_path']					= $dir.$file; 			# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
 		$ar_data['file_name']					= $file_name; 			# 04582_01_EsCuieram_Terracota_AD_ORIG
-		$ar_data['file_name_full']				= $file; 				# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG		
-		$ar_data['extension']					= $extension;			# JPG (respetamos mayúsculas/minúsculas)		
+		$ar_data['file_name_full']				= $file; 				# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG
+		$ar_data['extension']					= $extension;			# JPG (respetamos mayúsculas/minúsculas)
 		$ar_data['file_size']					= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB
 
 		if ($ar_data['extension']==='jpg') {
@@ -212,7 +212,7 @@ class tool_import_files_dcnav extends tool_common {
 		// 	trigger_error('Error on regex. Invalid file name: '.$file);
 		// 	dump($file, ' file ++ '.to_string());
 		// 	dump($ar_match, ' ar_match ++ '.to_string());
-		// }			
+		// }
 		// $regex_data = new stdClass();
 		// 	$regex_data->full_name	= $ar_match[0]; // like 0001-0002.xml
 		// 	$regex_data->name		= $ar_match[1]; // like 0001-0001-0002
@@ -223,7 +223,7 @@ class tool_import_files_dcnav extends tool_common {
 		// 	$regex_data->extension	= $ar_match[6];
 
 		// $ar_data['regex'] = $regex_data;
-		
+
 
 		return $ar_data;
 	}//end get_file_data
@@ -236,17 +236,17 @@ class tool_import_files_dcnav extends tool_common {
 	* @param array $current_file
 	* @param string tipo $target_section_tipo
 	* @param int section_id $current_section_id
-	* @param string tipo $target_component 
+	* @param string tipo $target_component
 	* @return (bool)
 	*/
 	public static function set_media_file($current_file, $target_component_tipo, $target_section_tipo, $current_section_id) {
-		
+
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
 
 		switch ($modelo_name) {
 			case 'component_image':
-				
-				# COMPONENT IMAGE 
+
+				# COMPONENT IMAGE
 				# (Is autosaved with defaults on create)
 				$component 		= component_common::get_instance($modelo_name,
 																 $target_component_tipo,
@@ -256,10 +256,10 @@ class tool_import_files_dcnav extends tool_common {
 																 $target_section_tipo);
 				#
 				# get_image_id
-				$image_id 		= $component->get_image_id();		
+				$image_id 		= $component->get_image_id();
 				$image_path 	= $component->get_image_path();
 				$aditional_path = $component->get_aditional_path();
-				
+
 				#
 				# FILE VARS
 				# Path of file like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/'
@@ -274,16 +274,16 @@ class tool_import_files_dcnav extends tool_common {
 				$file_name 			= $current_file['file_name'];
 
 				# Safe paths
-				if (strpos($source_path, '../')!==false || 
+				if (strpos($source_path, '../')!==false ||
 					strpos($source_full_path, '../')!==false ||
-					strpos($extension, '../')!==false || 
+					strpos($extension, '../')!==false ||
 					strpos($file_name_full, '../')!==false ||
 					strpos($file_name, '../')!==false
 					) {
 					throw new Exception("Error Processing Request. Unauthorized path", 1);
 					return false;
 				}
-				
+
 				// TARGET_FILENAME . Save original file name in a component_input_text
 					// if (isset($tool_propiedades->target_filename)) {
 					// 	$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($tool_propiedades->target_filename,true);
@@ -291,7 +291,7 @@ class tool_import_files_dcnav extends tool_common {
 					// 	$component_target_filename->set_dato( $file_name_full );
 					// 	$component_target_filename->Save();
 					// }
-				
+
 				// TARGET_DATE (From exif). Save original file date in a component_date if actual component date is empty
 					// if (isset($tool_propiedades->target_date)) {
 					// 	$modelo_name_target_date= RecordObj_dd::get_modelo_name_by_tipo($tool_propiedades->target_date,true);
@@ -300,22 +300,22 @@ class tool_import_files_dcnav extends tool_common {
 					// 	if (empty($dato)) {
 					// 		# exif try to get date from file
 					// 		$DateTimeOriginal=false;
-					// 		try {							
+					// 		try {
 					// 			$command 		 = MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .$source_full_path;
-					// 			$DateTimeOriginal= shell_exec($command);								
+					// 			$DateTimeOriginal= shell_exec($command);
 					// 		} catch (Exception $e) {
 					// 			if(SHOW_DEBUG) {
 					// 				error_log("Error on get DateTimeOriginal from image metadata");
-					// 			}							
-					// 		}					
+					// 			}
+					// 		}
 					// 		if ($DateTimeOriginal && !empty($DateTimeOriginal)) {
-								
-					// 			$dd_date 			= new dd_date();							
+
+					// 			$dd_date 			= new dd_date();
 					// 			$original_dato 		= (string)$DateTimeOriginal;
 
 					// 			$regex   = "/^(-?[0-9]+)-?:?\/?.?([0-9]+)?-?:?\/?.?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
-					// 			preg_match($regex, $original_dato, $matches);    
-					// 			if(isset($matches[1])) $dd_date->set_year((int)$matches[1]); 
+					// 			preg_match($regex, $original_dato, $matches);
+					// 			if(isset($matches[1])) $dd_date->set_year((int)$matches[1]);
 					// 			if(isset($matches[2])) $dd_date->set_month((int)$matches[2]);
 					// 			if(isset($matches[3])) $dd_date->set_day((int)$matches[3]);
 					// 			if(isset($matches[4])) $dd_date->set_hour((int)$matches[4]);
@@ -327,16 +327,16 @@ class tool_import_files_dcnav extends tool_common {
 					// 		}
 					// 	}
 					// }//end if (isset($tool_propiedades->target_date)) {
-				
+
 				// ORIGINAL IMAGE DESIRED STORE
 					$original_path 		= DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $aditional_path;
-					$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension); 
+					$original_file_path = $original_path .'/'. $image_id . '.'.strtolower($extension);
 					if( !is_dir($original_path) ) {
 						if(!mkdir($original_path, 0777,true)) {
 							throw new Exception(" Error on read or create directory. Permission denied $original_path");
 						}
 					}
-				
+
 				// Copy the original
 					if (!copy($source_full_path, $original_file_path)) {
 						throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
@@ -349,7 +349,7 @@ class tool_import_files_dcnav extends tool_common {
 					}
 
 				// DEFAULT QUALITY. Generate dedalo default quality version (usually 1.5MB) and thumb image
-					# $default_quality_image = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT .'/'. $image_id  .'.'. DEDALO_IMAGE_EXTENSION;				
+					# $default_quality_image = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT .'/'. $image_id  .'.'. DEDALO_IMAGE_EXTENSION;
 					$source_image 	= $original_file_path;
 					$source_quality = DEDALO_IMAGE_QUALITY_ORIGINAL;
 					$target_quality = DEDALO_IMAGE_QUALITY_DEFAULT;
@@ -373,7 +373,7 @@ class tool_import_files_dcnav extends tool_common {
 
 	/**
 	* FILE_PROCESSOR
-	* @return 
+	* @return
 	*/
 	public static function file_processor($request_options) {
 
@@ -397,7 +397,7 @@ class tool_import_files_dcnav extends tool_common {
 		# Global var button propiedades json data array
 		# Optional aditional file script processor defined in button import propiedaes
 		# Note that var $file_processor_properties is the button propiedades json data, NOT current element processor selection
-		
+
 		# Iterate each processor
 		foreach ((array)$options->file_processor_properties as $key => $file_processor_obj) {
 
@@ -448,7 +448,7 @@ class tool_import_files_dcnav extends tool_common {
 	* @return object $response
 	*/
 	public function import_files($json_data) {
-		
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= __METHOD__ . ' Error. Request failed';
@@ -490,7 +490,7 @@ class tool_import_files_dcnav extends tool_common {
 			}
 			usort($ar_xml, function($a, $b) {return strcmp($a->file_name, $b->file_name);});
 			usort($ar_image, function($a, $b) {return strcmp($a->file_name, $b->file_name);});
-		
+
 		// ar_data_sorted. merge all
 			// $ar_data_sorted = array_merge($ar_xml, $ar_image);
 			// dump($ar_xml, ' ar_xml ++ '.to_string());
@@ -502,7 +502,7 @@ class tool_import_files_dcnav extends tool_common {
 
 				$current_file_name	= $value_obj->file_name;
 				$current_file_type	= $value_obj->file_type;
-				
+
 				// file.  Check file exists
 					$file_full_path = $files_dir . $current_file_name;
 					if (!file_exists($file_full_path)) {
@@ -533,20 +533,20 @@ class tool_import_files_dcnav extends tool_common {
 					// }
 					$file_data = tool_import_files_dcnav::get_file_data($files_dir, $current_file_name);
 					// dump($file_data, ' file_data ++ import_file_name_mode - '.to_string()); die(); // continue;
-					
+
 					// $file_name	= $file_data['regex']->base_code1; // code value from filename used in Catalog grouper like '1001'
 					// $code		= $file_data['regex']->code; // code value from filename like '1001-0001'
 					// $name		= $file_data['regex']->name; // fulname of file without extension
 					// $code		= $name; // CODE PASA A SER IGUAL A NAME (!) 30-10-2020. Problema con variabilidad de nombres
 
 				// file_name. Used a s document code
-					$file_name = $file_data['file_name']; // Like '0002-0001'					
+					$file_name = $file_data['file_name']; // Like '0002-0001'
 
 				// catalog_code. Used as grouper code (catalog)
 					$catalog_code = explode('-', $file_name)[0];
 					if (empty($catalog_code)) {
-						throw new Exception("Error Processing Request. catalog_code is invalid: $catalog_code - file_name: $file_name", 1);						
-					}				
+						throw new Exception("Error Processing Request. catalog_code is invalid: $catalog_code - file_name: $file_name", 1);
+					}
 
 				// parse XML file
 					$parsed_data = xml_dcnav_parser::parse_file($file_full_path);
@@ -554,7 +554,7 @@ class tool_import_files_dcnav extends tool_common {
 					// 	// dump($parsed_data, ' parsed_data from file ++++++++++++++++++++++ '.to_string($current_file_name));
 					// }
 
-				// check filename match the about info	
+				// check filename match the about info
 					$about = array_find($parsed_data[0]->value, function($el){
 						return $el->prefix==='rdf' && $el->local==='about';
 					});
@@ -567,7 +567,7 @@ class tool_import_files_dcnav extends tool_common {
 						$response->msg		= $msg;
 						return $response;
 						break; // stop current loop and file
-					}					
+					}
 
 				// find existing document section or create a new one
 					$code_tipo	= 'navarra19'; // tipo of the component_input_text where is stored code value (non translatable)
@@ -604,7 +604,7 @@ class tool_import_files_dcnav extends tool_common {
 					$search_result			= $search_development2->search();
 					$ar_records				= $search_result->ar_records;
 					if (count($ar_records)>1) {
-						throw new Exception("Error Processing Request. Search in 'navarra19' get more than one result. Only one is expected ! Total: ".count($ar_records), 1);						
+						throw new Exception("Error Processing Request. Search in 'navarra19' get more than one result. Only one is expected ! Total: ".count($ar_records), 1);
 					}
 					if(!empty($ar_records)) {
 						// founded. Already created record
@@ -626,7 +626,7 @@ class tool_import_files_dcnav extends tool_common {
 																				 $section_tipo);
 							$code_component->set_dato([$file_name]);
 							$code_component->Save();
-					}				
+					}
 
 				// clean portal old data if exists (portal 'xml data')
 					$portal_xml_data_tipo			= 'navarra48';
@@ -648,11 +648,11 @@ class tool_import_files_dcnav extends tool_common {
 					}
 
 				// iterate parsed_data as items. Each item is a rdf node with data. First node is 'description', the others are 'access_point'
-					foreach ($parsed_data as $parsed_key => $parsed_item) {						
+					foreach ($parsed_data as $parsed_key => $parsed_item) {
 
-						$parsed_item_type	= $parsed_item->type; // like description / access_point						
+						$parsed_item_type	= $parsed_item->type; // like description / access_point
 						$image_key			= 0; // reset on each parsed_item iteratoin
-						
+
 						foreach ($parsed_item->value as $item_value) {
 
 							// create new section on each item (section 'xml data')
@@ -664,7 +664,7 @@ class tool_import_files_dcnav extends tool_common {
 							// attach section locator to document xml data portal
 								$locator = new locator();
 									$locator->set_section_tipo($section_xml_data_tipo);
-									$locator->set_section_id($section_xml_data_id);								
+									$locator->set_section_id($section_xml_data_id);
 								$portal_xml_data_component->add_locator($locator);
 								$portal_xml_data_component->Save();
 
@@ -684,7 +684,7 @@ class tool_import_files_dcnav extends tool_common {
 									return $result;
 								})('navarra52', $section_xml_data_tipo, $section_xml_data_id, $parsed_key);
 
-							// catalog code. like '0008' 
+							// catalog code. like '0008'
 								$save_parsed_key = (function($tipo, $section_tipo, $section_id, $value) {
 
 									$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -717,7 +717,7 @@ class tool_import_files_dcnav extends tool_common {
 
 									return $result;
 								})('navarra74', $section_xml_data_tipo, $section_xml_data_id, $file_name);
-							
+
 							// prefix (component_select)
 								if (isset($item_value->prefix)) {
 									$save_prefix = (function($tipo, $section_tipo, $section_id, $value) {
@@ -827,7 +827,7 @@ class tool_import_files_dcnav extends tool_common {
 									if (file_exists($image_file_full_path)) {
 
 										$image_file_data = tool_import_files_dcnav::get_file_data($files_dir, $image_file_name);
-										
+
 										// add to images section
 											$add_image_section = (function($images_component_tipo, $images_section_tipo, $image_file_data, $catalog_section_tipo, $catalog_section_id, &$image_key) {
 
@@ -839,7 +839,7 @@ class tool_import_files_dcnav extends tool_common {
 
 												// check already exists image. If not found record, auto create section
 													$locator			= self::get_solved_select_value($images_section_tipo, $images_code_tipo, $code);
-													$images_section_id	= $locator->section_id;											
+													$images_section_id	= $locator->section_id;
 
 												// save component image
 													$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($images_component_tipo,true);
@@ -861,7 +861,7 @@ class tool_import_files_dcnav extends tool_common {
 																										 'list',
 																										 DEDALO_DATA_NOLAN,
 																										 $images_section_tipo);
-													
+
 													$code_component->set_dato( $code );
 													$code_component->Save();
 
@@ -885,7 +885,7 @@ class tool_import_files_dcnav extends tool_common {
 														$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
 													$component_portal->add_locator($locator);
-													$component_portal->Save();												
+													$component_portal->Save();
 
 												// up $image_key
 													$image_key++;
@@ -893,7 +893,7 @@ class tool_import_files_dcnav extends tool_common {
 												return true;
 											})('rsc29', 'rsc170', $image_file_data, $section_tipo, $section_id, $image_key);
 
-									}//end if (file_exists($image_file_full_path))									
+									}//end if (file_exists($image_file_full_path))
 								}//end if (isset($item_value->local) && $item_value->local==='hasFormat')
 
 						}//end foreach ($parsed_item->value as $item_value)
@@ -901,7 +901,7 @@ class tool_import_files_dcnav extends tool_common {
 
 						// description only (ignore access point). Send colected data to Catalog record when container is available
 						if ($parsed_item_type==='description') {
-						
+
 							// titles. save catalog usefull data
 								$titles = array_reduce($parsed_item->value, function($carry, $item){
 									if ($item->local==='title' && !empty($item->value)) $carry[] = $item->value;
@@ -926,7 +926,7 @@ class tool_import_files_dcnav extends tool_common {
 
 							// creador. (component_autocomplete) navarra6
 								$creators = array_reduce($parsed_item->value, function($carry, $item){
-									if ($item->local==='creator' && !empty($item->value)) $carry[] = $item->value;							
+									if ($item->local==='creator' && !empty($item->value)) $carry[] = $item->value;
 									return $carry;
 								});
 								if (!empty($creators)) {
@@ -1014,7 +1014,7 @@ class tool_import_files_dcnav extends tool_common {
 																						 $section_tipo);
 										$dato = new stdClass();
 											$dato->start = $dd_date;
-	                       
+
 										$component->set_dato( [$dato] );
 										$result = $component->Save();
 
@@ -1128,7 +1128,7 @@ class tool_import_files_dcnav extends tool_common {
 					$target_path = $xml_files_path .'/'. $current_file_name;
 					rename($file_full_path, $target_path);
 
-				// link (component_iri) navarra54 
+				// link (component_iri) navarra54
 					$save_link = (function($tipo, $section_tipo, $section_id, $value) {
 
 						$url 	= self::$xml_files_base_url . '/' . $value; // DEDALO_MEDIA_BASE_URL .'/xml/original/'. $value;
@@ -1158,7 +1158,7 @@ class tool_import_files_dcnav extends tool_common {
 					})('navarra54', $section_tipo, $section_id, $current_file_name);
 
 
-				// attach to 'Catálogo Documental' documents portal 
+				// attach to 'Catálogo Documental' documents portal
 					$attach_document = (function($tipo, $section_tipo, $section_id, $code_tipo, $catalog_code) {
 
 						// find existing or creates new setion ($section_tipo, $component_tipo, $value, $filter=null)
@@ -1176,7 +1176,7 @@ class tool_import_files_dcnav extends tool_common {
 							$to_add_locator->set_section_tipo($section_tipo);
 							$to_add_locator->set_section_id($section_id);
 							$to_add_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-						
+
 						$component->add_locator($to_add_locator);
 
 						$result = $component->Save();
@@ -1196,8 +1196,8 @@ class tool_import_files_dcnav extends tool_common {
 
 				$total++;
 			}//end foreach ((array)$ar_data as $key => $value_obj)
-		
-		
+
+
 		// response
 			$response->result		= true;
 			$response->msg			= 'Ok. Request done';
@@ -1213,7 +1213,7 @@ class tool_import_files_dcnav extends tool_common {
 	/**
 	* GET_SOLVED_SELECT_VALUE
 	* Search for received value in section. If it found, returns locator, else create the new value
-	* and returns the resultant locator 
+	* and returns the resultant locator
 	* @return object $locator
 	*/
 	public static function get_solved_select_value($section_tipo, $component_tipo, $value, $filter=null) {
@@ -1242,7 +1242,7 @@ class tool_import_files_dcnav extends tool_common {
 						}
 					]
 				}';
-		
+
 		$sqo = json_decode('{
 			"parsed": false,
 			"section_tipo": "'.$section_tipo.'",
@@ -1273,15 +1273,15 @@ class tool_import_files_dcnav extends tool_common {
 
 			// more than one exists with same value
 				dump('', ' SQO +++++++++++++++++ '.to_string($sqo));
-				throw new Exception("Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)", 1);						
-		
+				throw new Exception("Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)", 1);
+
 		}elseif ($count===1) {
-			
+
 			// founded. Already created record
 				$section_id = reset($ar_records)->section_id;
 
 		}elseif ($count===0) {
-			
+
 			// no found. Create a new empty record
 				$section	= section::get_instance(null, $section_tipo);
 				$section->Save();
@@ -1307,10 +1307,10 @@ class tool_import_files_dcnav extends tool_common {
 			$locator->set_section_tipo($section_tipo);
 			$locator->set_section_id($section_id);
 			$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-		
+
 		return $locator;
 	}//end get_solved_select_value
 
 
-	
+
 }//end class

@@ -1513,6 +1513,7 @@ class web_data {
 						continue;
 					}
 
+
 		 		$portal_options = new stdClass();
 		 			$portal_options->table = $table;
 		 			$portal_options->lang  = $options->lang;

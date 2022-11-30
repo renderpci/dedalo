@@ -334,6 +334,7 @@ class relation_list extends common {
 		switch ($data_to_be_used) {
 
 			case 'custom':
+				// see sample at: qdp341, mdcat4338
 				$ar_values = [];
 
 				$custom_map = $diffusion_properties->process_dato_arguments->custom_map;
@@ -491,6 +492,7 @@ class relation_list extends common {
 				break;
 
 			case 'filtered_values': // inject each relation value (locator) to target component and request the processed value
+				// see sample at: numisdata1302
 
 				// get relations filtered dato (by section_tipo and component_tipo)
 					$diffusion_value = $this->get_diffusion_dato();
