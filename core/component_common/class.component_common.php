@@ -1065,6 +1065,7 @@ abstract class component_common extends common {
 
 	/**
 	* PROPAGATE_TO_OBSERVERS
+	* Note: This property is only use in the server context, the client doesn't listen in this way.
 	* is used by calculations or compoment_info (with widgets) that show sums, or other calculations dependents of others components
 	* the observers of the component are defined by the own component in properties that say: This component in this section is watching me:
 	* {
@@ -1103,7 +1104,12 @@ abstract class component_common extends common {
 		// observers_data
 			$observers_data = [];
 			foreach ($ar_observers as $current_observer) {
-				$current_observer_data = component_common::update_observer_dato($current_observer, $current_locator, $observable_dato, $this->tipo);
+				$current_observer_data = component_common::update_observer_dato(
+					$current_observer,
+					$current_locator,
+					$observable_dato,
+					$this->tipo
+				);
 				$observers_data = array_merge($observers_data, $current_observer_data);
 			}
 
@@ -1133,25 +1139,30 @@ abstract class component_common extends common {
 		$properties		= $RecordObj_dd->get_properties();
 
 		$ar_observe = $properties->observe;
+
 		// get the current observe preference in ontology to be processed
 		$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
 			return $item->component_tipo === $observable_tipo;
 		});
 
-		if(isset($current_observer->filter) && $current_observer->filter!==false) {
+		if(!isset($current_observer->server)){
+			return []; // nothing to do
+		}
+
+		if(isset($current_observer->server->filter) && $current_observer->server->filter!==false) {
 
 			// from_component_tipo. Get the from_component_tipo of the filter to set at observable locator
 			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
 				// $elements	= reset($current_observer->filter);
 				// $element	= reset($elements);
 				// php v8 compatible
-					$filter			= $current_observer->filter; // object as {"$and":[{"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}]}
+					$filter			= $current_observer->server->filter; // object as {"$and":[{"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}]}
 					$objIterator	= new ArrayIterator($filter);
 					$first_key		= $objIterator->key(); // string as '$and'
 					$elements		= $filter->{$first_key}; // array of objects
 					if (empty($elements) || empty($elements[0])) {
 						debug_log(
-							__METHOD__." ERROR: No elements are defined for current_observer filter ".to_string($current_observer),
+							__METHOD__." ERROR: No elements are defined for current_observer filter ".to_string($current_observer->server),
 							logger::ERROR
 						);
 						return [];
@@ -1177,7 +1188,7 @@ abstract class component_common extends common {
 					$sqo->section_tipo	= $observer->section_tipo;
 					$sqo->full_count	= false;
 					$sqo->limit			= 0;
-					$sqo->filter		= $current_observer->filter;
+					$sqo->filter		= $current_observer->server->filter;
 
 			// search the sections that has reference to the observable component, the component that had changed
 				$search		= search::get_instance($sqo);
@@ -1191,7 +1202,7 @@ abstract class component_common extends common {
 
 		// get the dato of the observable component to be used to create the observer component
 		// in case of any relation component will be used to find "the component that I call" or "use my relations"
-		if(isset($current_observer->mode) && $current_observer->mode==='use_observable_dato') {
+		if(isset($current_observer->server->mode) && $current_observer->server->mode==='use_observable_dato') {
 			$ar_section = array_merge($ar_section, $observable_dato);
 		}
 
@@ -1212,10 +1223,10 @@ abstract class component_common extends common {
 					$current_section->section_tipo
 				);
 				// get the specific event function in preferences to be fired (instead the default get_dato)
-				if(isset($current_observer->server_event)){
+				if(isset($current_observer->server->perform)){
 
-					$function	= $current_observer->server_event->function;
-					$params		= $current_observer->server_event->params;
+					$function	= $current_observer->server->perform->function;
+					$params		= $current_observer->server->perform->params;
 					call_user_func_array(array($component, $function), $params);
 
 				}else{
