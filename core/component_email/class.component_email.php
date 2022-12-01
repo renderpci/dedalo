@@ -13,6 +13,7 @@ class component_email extends component_common {
 	*/
 	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
+		// fix lang (email always is DEDALO_DATA_NOLAN)
 		$lang = DEDALO_DATA_NOLAN;
 
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
