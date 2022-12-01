@@ -1088,7 +1088,7 @@ abstract class component_common extends common {
 
 		// $observable_dato is defined by the type of the event fired by the user,
 		// if event fired is update we will use the final dato with all changes, the data that will stored in BBDD
-		// but if the event is delete, we will use the previous data, before delete the info, because we need know the sections referenced that need delete and update your own state
+		// but if the event is delete, we will use the previous data, before delete the info, because we need know the sections referenced that need delete and update your own data / state
 			$observable_dato = $this->get_observable_dato();
 
 		// observers_data
@@ -1135,7 +1135,7 @@ abstract class component_common extends common {
 			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
 				// $elements	= reset($current_observer->filter);
 				// $element	= reset($elements);
-				// v8 compatible
+				// php v8 compatible
 					$filter			= $current_observer->filter; // object as {"$and":[{"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}]}
 					$objIterator	= new ArrayIterator($filter);
 					$first_key		= $objIterator->key(); // string as '$and'

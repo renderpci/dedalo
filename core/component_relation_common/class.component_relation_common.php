@@ -1445,7 +1445,7 @@ class component_relation_common extends component_common {
 			}
 
 		// new dato
-			$new_dato = [];
+			$new_relation_locators = [];
 
 		// data_from_field. get if the search need add fields data:
 			if( isset($properties->source->data_from_field) ) {
@@ -1470,16 +1470,16 @@ class component_relation_common extends component_common {
 							$locator_dato->set_section_tipo($current_locator->section_tipo);
 							// from_component_tipo
 							$locator_dato->set_from_component_tipo($component_to_search);
-						$new_dato[] = $locator_dato;
+						$new_relation_locators[] = $locator_dato;
 					}
 				}
 			}
 
 		// Add locator at end
-			$new_dato[] = $locator;
+			$new_relation_locators[] = $locator;
 		// get the inverse references
 			//old way done in relations table
-				// $ar_result 	= $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
+				// $ar_result 	= $this->get_external_result_from_relations_table($new_relation_locators, $ar_component_to_search);
 			//old way done with direct calculation
 				// $result = search::calculate_inverse_locators( $locator );
 
@@ -1490,7 +1490,7 @@ class component_relation_common extends component_common {
 					$sqo->set_section_tipo($target_section_to_search);
 					$sqo->set_mode('related'); // force use of class.search_related.php
 					$sqo->set_full_count(false);
-					$sqo->set_filter_by_locators($new_dato);
+					$sqo->set_filter_by_locators($new_relation_locators);
 					$sqo->set_limit($references_limit); // default 0 ('ALL')
 
 				$search		= search::get_instance($sqo);
@@ -1533,6 +1533,7 @@ class component_relation_common extends component_common {
 				}
 			}else{
 				// preserve order
+				$final_dato = [];
 					foreach ((array)$dato as $key => $current_locator) {
 
 						// Array filter is faster in this case for big arrays
@@ -1544,37 +1545,40 @@ class component_relation_common extends component_common {
 						$res = array_find($ar_result, function($el) use($current_locator){
 							return ($el->section_id===$current_locator->section_id && $el->section_tipo===$current_locator->section_tipo);
 						});
-						if (empty($res)) {
-							unset($dato[$key]);
+						// if (empty($res)) {
+						// 	unset($dato[$key]);
+						// 	$changed = true;
+						// 	break;
+						// }
+						if(!empty($res)){
+							$final_dato[] = $current_locator;
 							$changed = true;
-							break;
 						}
 					}
 
-				// dato update on change
-					if ($total_ar_dato!==$total_ar_result) {
-						foreach ($ar_result as $current_locator) {
-							if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=['section_id','section_tipo'])===false ){
-								array_push($dato, $current_locator);
-								$changed = true;
-							}
+				// add new locators than was not saved in dato.
+					foreach ($ar_result as $current_locator) {
+						if(	locator::in_array_locator( $current_locator, $final_dato, $ar_properties=['section_id','section_tipo'])===false ){
+							array_push($final_dato, $current_locator);
+							$changed = true;
 						}
 					}
+
 			}//end if ($total_ar_result>2000)
 
 
 		// changed true
 			if ($changed===true) {
-				$dato = array_values($dato);
-				foreach ($new_dato as $current_section) {
+				$dato = array_values($final_dato);
+				foreach ($new_relation_locators as $current_locator) {
 
 					$component_to_update = component_common::get_instance(
 						get_called_class(),
 						$this->tipo,
-						$current_section->section_id,
+						$current_locator->section_id,
 						'list',
 						DEDALO_DATA_NOLAN,
-						$current_section->section_tipo,
+						$current_locator->section_tipo,
 						false
 					);
 
@@ -1587,10 +1591,10 @@ class component_relation_common extends component_common {
 
 					// if the current section_id is the same of the current instance update the dato of the current
 					// else update the dato of the other instances (references with the same dato)
-					if($current_section->section_id==$this->section_id){
+					if($current_locator->section_id==$this->section_id){
 						$this->set_dato($dato);
 					}
-				}//end foreach ($new_dato as $current_section)
+				}//end foreach ($new_relation_locators as $current_locator)
 			}//end if ($changed===true)
 
 		// debug
