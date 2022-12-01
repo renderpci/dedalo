@@ -179,12 +179,12 @@ const get_content_data_edit = async function(self, ar_instances) {
 
 
 			// portals case
-			if (current_instance.context.legacy_model==='component_portal') {
+			// if (current_instance.context.legacy_model==='component_portal') {
 				// setTimeout(async function(){
 					// current_instance.standalone = true
-				 	 current_instance.refresh()
+				 	  // current_instance.refresh()
 				 // }, 1000)
-			}
+			// }
 		}//end for (let i = 0; i < ar_instances_length; i++)
 
 
