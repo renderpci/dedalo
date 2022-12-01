@@ -474,6 +474,8 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 	const self		= this
 	const result	= {}
+		// console.warn(">>>>>> destroy :", self.tipo, self.caller.tipo, self.model, `delete_self: ${delete_self}, delete_dependencies: ${delete_dependencies}, remove_dom: ${remove_dom}` );
+
 
 	// destroy all associated instances
 		if(delete_dependencies===true) {
@@ -513,7 +515,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 						// destroy instance
 							if (typeof destroyed_elements[0].destroy==='function') {
-								destroyed_elements[0].destroy(
+								await destroyed_elements[0].destroy(
 									true, // delete_self
 									true, // delete_dependencies
 									false // remove_dom
@@ -545,7 +547,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 				// delete paginator
 					if(self.paginator){
-						self.paginator.destroy(
+						await self.paginator.destroy(
 							true, // delete_self
 							true, // delete_dependencies
 							false // remove_dom
@@ -632,7 +634,6 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 	// remove_dom optional
 		if (remove_dom===true) {
-
 			if(self.node){
 				// remove DOM node if exists (wrapper)
 				self.node.remove()
