@@ -1972,7 +1972,18 @@ class component_relation_common extends component_common {
 					}
 
 				$ar_section_tipo[] = $source_item;
-				debug_log(__METHOD__." ++++++++++++++++++++++++++++++++++++ Received string source item ".to_string($source_item), logger::ERROR);
+				debug_log(__METHOD__.
+					" ++++++++++++++++++++++++++++++++++++ Ignored string source item (expected object) ".to_string($source_item),
+					logger::ERROR
+				);
+				continue;
+			}
+			if (empty($source_item->source)) {
+				debug_log(__METHOD__.
+					" ++++++++++++++++++++++++++++++++++++ Ignored item with empty source ".to_string($source_item),
+					logger::ERROR
+				);
+				dump($source_item, '$source_item ////////////////+++++++++++++++++++++++++++++++++++++ '.to_string());
 				continue;
 			}
 

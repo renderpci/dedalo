@@ -316,7 +316,7 @@ final class dd_utils_api {
 
 		# IMPORT
 			$import_structure_response = backup::import_structure(
-				'dedalo4_development_str.custom', // string db_name 
+				'dedalo4_development_str.custom', // string db_name
 				true, // bool check_server
 				$ar_dedalo_prefix_tipos
 			);

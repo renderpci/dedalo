@@ -100,6 +100,15 @@ abstract class component_common extends common {
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
+	* Creates a component instance
+	* @param string $component_name = null
+	* @param string $tipo = null
+	* @param mixed $section_id = null
+	* @param string $modo = 'edit'
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param string $section_tipo = null
+	* @param bool $cache = true
+	*
 	* @return object|null
 	*/
 	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) : ?object {
@@ -815,31 +824,31 @@ abstract class component_common extends common {
 	* @param string $tipo Component tipo
 	* @return string $section_tipo
 	*/
-	public static function resolve_section_tipo(string $tipo) : string {
+		// public static function resolve_section_tipo(string $tipo) : string {
 
-		if (defined('SECTION_TIPO')) {
-			# 1 get from page globals
-			$section_tipo = SECTION_TIPO;
-		}else{
-			# 2 calculate from structure -only useful for real sections-
-			$section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." WARNING: calculate_section_tipo:$section_tipo from structure for component $tipo Called by:".debug_backtrace()[0]['function']);
-				if ($section_tipo===DEDALO_SECTION_USERS_TIPO || $section_tipo===DEDALO_SECTION_PROJECTS_TIPO) {
-					debug_log(__METHOD__." WARNING SECTION BÁSICA!! Called by:".debug_backtrace()[0]['function'], 1);
-				}
-			}
-		}
+		// 	if (defined('SECTION_TIPO')) {
+		// 		# 1 get from page globals
+		// 		$section_tipo = SECTION_TIPO;
+		// 	}else{
+		// 		# 2 calculate from structure -only useful for real sections-
+		// 		$section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
+		// 		if(SHOW_DEBUG===true) {
+		// 			debug_log(__METHOD__." WARNING: calculate_section_tipo:$section_tipo from structure for component $tipo Called by:".debug_backtrace()[0]['function']);
+		// 			if ($section_tipo===DEDALO_SECTION_USERS_TIPO || $section_tipo===DEDALO_SECTION_PROJECTS_TIPO) {
+		// 				debug_log(__METHOD__." WARNING SECTION BÁSICA!! Called by:".debug_backtrace()[0]['function'], 1);
+		// 			}
+		// 		}
+		// 	}
 
-		return $section_tipo;
-	}//end resolve_section_tipo
+		// 	return $section_tipo;
+		// }//end resolve_section_tipo
 
 
 
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
 	* @return $html
-	*	Get standar path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
+	*	Get standard path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
 		// public function get_html() {
@@ -1472,12 +1481,13 @@ abstract class component_common extends common {
 	/**
 	* PARSE_SEARCH_DYNAMIC
 	* Check existence of $source in properties and resolve filter if yes
+	* @param object $ar_filtered_by_search_dynamic
 	* @return object $filter
 	*/
-	public function parse_search_dynamic(array $ar_filtered_by_search_dynamic) : object {
+	public function parse_search_dynamic(object $ar_filtered_by_search_dynamic) : object {
 
-		// resolve_section_id
-			$resolve_section_id = function ($source_section_id){
+		// custom_resolve_section_id
+			$custom_resolve_section_id = function ($source_section_id){
 				switch ($source_section_id) {
 					case 'current':
 						$result = $this->get_section_id();
@@ -1487,8 +1497,9 @@ abstract class component_common extends common {
 				}
 				return $result;
 			};
-		// resolve_section_tipo
-			$resolve_section_tipo = function ($source_section_tipo){
+
+		// custom resolve_section_tipo
+			$custom_resolve_section_tipo = function ($source_section_tipo){
 				switch ($source_section_tipo) {
 					case 'current':
 						$result = $this->get_section_tipo();
@@ -1507,8 +1518,8 @@ abstract class component_common extends common {
 				$q				= $current_element->q;
 				$source			= $q->source;
 				$component_tipo	= $source->component_tipo;
-				$section_id		= $resolve_section_id($source->section_id);
-				$section_tipo	= $resolve_section_tipo($source->section_tipo);
+				$section_id		= $custom_resolve_section_id($source->section_id);
+				$section_tipo	= $custom_resolve_section_tipo($source->section_tipo);
 
 				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				$component		= component_common::get_instance(
@@ -1555,9 +1566,11 @@ abstract class component_common extends common {
 
 	/**
 	* GET_AR_LIST_OF_VALUES
+	* Calculate all values list for component_select, component_check_box, component_radio_button ..
 	* @param string|null $lang = DEDALO_DATA_LANG
 	* @param bool $include_negative = false
-	* @return array $ar_list_of_values
+	*
+	* @return object $response
 	*/
 	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
 

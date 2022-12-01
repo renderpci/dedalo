@@ -2099,7 +2099,7 @@ abstract class common {
 	* one ddo for the searched section (source ddo)
 	* one ddo for the component searched.
 	* 	It is possible to create more than one ddo for different components.
-	* @return array $request_config
+	* @return array $this->request_config
 	*/
 	public function build_request_config() : array {
 
@@ -2190,7 +2190,7 @@ abstract class common {
 						}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
 						$request_config->search		= $requested_search;
-					}
+					}//end if (!empty($requested_search))
 
 					// sqo add
 						if (isset(dd_core_api::$rqo->sqo)) {
@@ -2203,6 +2203,7 @@ abstract class common {
 							$request_config->sqo = $sqo;
 						}
 
+				// fix request_config
 					$this->request_config = [$request_config];
 
 				// merge ddo elements
@@ -2212,8 +2213,6 @@ abstract class common {
 
 				return $this->request_config; // we have finished ! Note we stop here (!)
 			}//end if (!empty($requested_show))
-
-
 		}//end if(!empty($requested_show))
 
 		// short vars
@@ -2261,6 +2260,7 @@ abstract class common {
 
 		// request_config value
 			// $request_config = array_merge([$source], $request_config);
+
 			// fix request_config value
 				$this->request_config = $request_config;
 
@@ -2335,7 +2335,7 @@ abstract class common {
 			// 		}
 
 
-		return $request_config;
+		return $this->request_config;
 	}//end build_request_config
 
 
@@ -3412,9 +3412,17 @@ abstract class common {
 	/**
 	* GET_ELEMENT_LANG
 	* Used to resolve component lang before construct it
-	* @return lang code like 'lg-spa'
+	* @param string $tipo
+	* @param string|null $data_lang
+	*
+	* @return string lang
+	* 	code like 'lg-spa'
 	*/
-	public static function get_element_lang(string $tipo, string $data_lang=DEDALO_DATA_LANG) : string {
+	public static function get_element_lang(string $tipo, string $data_lang=null) : string {
+
+		if (empty($data_lang)) {
+			$data_lang = DEDALO_DATA_LANG;
+		}
 
 		$translatable	= RecordObj_dd::get_translatable($tipo);
 		$lang			= ($translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
