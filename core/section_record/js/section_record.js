@@ -390,10 +390,11 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 								// check is valid context
 									if (!current_context) {
-										console.group(`[get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
-										console.warn("self.datum.context:", self.datum.context);
+										console.group(`+ [get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}`);
+										console.log('ddo:', current_ddo);
+										console.log("self.datum.context:", self.datum.context);
 										console.log('current_data:', current_data);
-										console.warn("self:", self);
+										console.log("self:", self);
 										console.groupEnd()
 										continue;
 									}
