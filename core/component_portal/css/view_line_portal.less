@@ -15,44 +15,32 @@
 
 	// content_data
 	>.content_data {
-		// display: block;
-		display: flex;
-		padding: 0px;
 
 		// section_record list
 		.section_record {
 			// background-color: #b8ecfe;
-			display: flex;
-			flex-wrap: nowrap;
-			align-items: flex-start;
 
 			// section_record inside
-			.section_record {
-				flex-wrap: wrap;
-			}
+			// .section_record {
+			// 	flex-wrap: wrap;
+			// }
 
 			// view_text inside
-			&.view_text {
-				margin-left: 0.5rem;
-				line-height: 1.2rem;
-				flex: 0 0 100%;
-				flex-wrap: wrap;
+			// &.view_text {
+			// 	margin-left: 0.5rem;
+			// 	line-height: 1.2rem;
+			// 	flex: 0 0 100%;
+			// 	flex-wrap: wrap;
 
-				.column_section_id {
-					margin-right: 0.5rem;
-				}
-			}
+			// 	.column_section_id {
+			// 		margin-right: 0.5rem;
+			// 	}
+			// }
 
 			// column
 			.column {
-				// background-color: #f8ffc5;
-				// display: flex;
-				// flex-grow: 0;
-				// flex-shrink: 1;
-				// flex-basis: auto;
 				height: inherit;
 				width: auto;
-				// display: inline;
 				display: contents;
 				vertical-align: middle;
 				align-items: center;
@@ -97,7 +85,7 @@
 					}
 
 					>.button_edit {
-						margin-left: 0.33rem;
+						margin-left: 0.5rem;
 					}
 
 					>.button_remove {
@@ -116,20 +104,23 @@
 	}//end >.content_data
 
 	&.list {
-		// section_record list
-		.section_record {
-
-		}
 
 		>.content_data {
+			display: flex;
+			padding: 0px;
+
 			>.section_record {
 				display: flex;
+				flex-wrap: nowrap;
+				align-items: flex-start;
+				flex: 0 0 100%;
 				margin-left: 0.5rem;
 				margin-bottom: 0.25rem;
-				flex: 0 0 100%;
 				padding-right: 1.25rem;
 
 				&.view_text {
+					line-height: 1.2rem;
+					flex: 0 0 100%;
 					display: block;
 					margin-left: 0rem;
 					padding-right: 0.5rem;
@@ -141,8 +132,11 @@
 	// edit
 	&.edit {
 		>.content_data {
+			display: flex;
+			padding: 0px;
 			padding-top: 0.5rem;
 			padding-bottom: 0.5rem;
+			padding-left: 0.33rem;
 
 			.section_record {
 				padding-left: 0.5rem; // don't remove this (!)
@@ -150,29 +144,44 @@
 
 			>.section_record {
 				display: flex;
+				flex-wrap: nowrap;
+				align-items: flex-start;
+				flex: 0 0 100%;
 				margin-left: 0.5rem;
 				margin-bottom: 0.25rem;
-				flex: 0 0 100%;
 				padding-right: 1.25rem;
 
 
 				&.view_text {
-					// display: block;
 					margin-left: 0rem;
 					padding-right: 0.5rem;
+					line-height: 1.2rem;
+					flex: 0 0 100%;
 					flex-wrap: nowrap;
 					justify-content: flex-start;
 
-					.column, button {
+					.column { // , button
 						display: contents;
 					}
 
-					.button.delete_bold {
-						margin-right: 0.25rem;
+					.button_edit {
+						width: 0.75rem;
+						margin-left: 0.66rem;
 					}
-					.button.pen {
-						margin-left: 0.25rem;
-					}
+
+					// .button.delete_bold {
+					// 	margin-right: 0.25rem;
+					// }
+					// .button.pen {
+					// 	margin-left: 0.25rem;
+					// }
+				}
+			}
+
+			// ul references
+			.references {
+				>li {
+					padding-left: 0rem;
 				}
 			}
 		}
@@ -182,6 +191,7 @@
 		>.content_data {
 			display: flex;
 			align-items: baseline;
+
 		}
 	}//end .search
 
