@@ -71,7 +71,6 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DATO
-	* @return
 	*/
 	public function set_dato( $dato ) {
 
@@ -86,7 +85,7 @@ class component_filter extends component_relation_common {
 	/**
 	* GET DATO : Old Format {"7":2,"269":2,"298":2}
 	* @return array $dato
-	* @see component_filter_master->get_dato() for maintain unyfied format of projetcs
+	* @see component_filter_master->get_dato() for maintain unified format of projects
 	*/
 	public function get_dato() {
 
@@ -290,7 +289,7 @@ class component_filter extends component_relation_common {
 	* Devuelve los valores del array 'dato' separados por '<br>'
 	* @return string $html | array $ar_final
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='html' ) {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='html') {
 
 		# User loged now
 		$user_id 	 = navigator::get_user_id();
@@ -452,6 +451,10 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_PROJECT_GROUPERS
 	*	Recursive
+	* @param string $section_tipo
+	* @param mixed $section_id
+	* @param mixed $datos
+	*
 	* @return array $ar_groupers
 	*/
 	public function get_project_groupers(string $section_tipo, $section_id, $datos) : array {
@@ -763,11 +766,11 @@ class component_filter extends component_relation_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string | null $diffusion_value
-	*
 	* @see class.diffusion_mysql.php
+	*
+	* @return string|null $diffusion_value
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 

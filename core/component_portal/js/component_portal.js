@@ -1,4 +1,4 @@
-/* global get_label, page_globals, SHOW_DEBUG, Promise */
+/* global get_label, page_globals, SHOW_DEBUG */
 /* eslint no-undef: "error" */
 
 
@@ -339,6 +339,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				}
 		}//end if (autoload===true)
 
+
 	// update instance properties from context
 		set_context_vars(self, self.context)
 
@@ -393,7 +394,6 @@ component_portal.prototype.build = async function(autoload=false) {
 					// await self.paginator.build()
 					// self.paginator.render()
 				}
-				// console.log("//////////\\ PORTAL "+self.tipo+" self.paginator:",self.paginator);
 
 			// autocomplete destroy. change the autocomplete service to false and deactivates it
 				if(self.autocomplete && self.autocomplete_active===true){
@@ -683,7 +683,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 		self.events_tokens.push(
 			event_manager.subscribe('render_'+self.id, fn_refresh_paginator)
 		)
-		function fn_refresh_paginator(node) {
+		function fn_refresh_paginator() {
 			// remove the event to prevent multiple equal events
 				event_manager.unsubscribe('render_'+self.id)
 			// refresh paginator if already exists
