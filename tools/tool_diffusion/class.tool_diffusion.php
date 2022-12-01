@@ -41,7 +41,7 @@ class tool_diffusion extends tool_common {
 			RecordObj_time_machine::$save_time_machine_version = false;
 
 		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= implode('_', ['section', $section_tipo]);
+			$sqo_id	= implode('_', ['section', $section_tipo, 'list']); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 				$response->msg .= ' section session sqo is not found!';
 				return $response;
@@ -83,7 +83,7 @@ class tool_diffusion extends tool_common {
 						$current_component->get_dato(); # !! Important get dato before regenerate
 						$result = $current_component->regenerate_component();
 						if ($result!==true) {
-							debug_log(__METHOD__." Error on regenerate componet $model - $current_component_tipo - $section_tipo - $section_id ".to_string(), logger::ERROR);
+							debug_log(__METHOD__." Error on regenerate component $model - $current_component_tipo - $section_tipo - $section_id ".to_string(), logger::ERROR);
 						}
 
 				}//end foreach ($related_terms as $current_component_tipo)

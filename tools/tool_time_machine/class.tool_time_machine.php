@@ -23,17 +23,11 @@ class tool_time_machine extends tool_common {
 
 		// options get and set
 			$options = new stdClass();
-				$options->section_tipo	= null;
-				$options->section_id	= null;
-				$options->tipo			= null;
-				$options->lang			= null;
-				$options->matrix_id		= null;
-
-				foreach ($request_options as $key => $value) {
-					if (property_exists($options, $key)) {
-						$options->$key = $value;
-					}
-				}
+				$options->section_tipo	= $request_options->section_tipo ?? null;
+				$options->section_id	= $request_options->section_id ?? null;
+				$options->tipo			= $request_options->tipo ?? null;
+				$options->lang			= $request_options->lang ?? null;
+				$options->matrix_id		= $request_options->matrix_id ?? null;
 
 		// short vars
 			$section_tipo	= $options->section_tipo;
@@ -44,8 +38,8 @@ class tool_time_machine extends tool_common {
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// data. extract data from matrix_time_machine table
-			$RecordObj_time_machine = new RecordObj_time_machine($matrix_id);
-			$dato_time_machine 		= $RecordObj_time_machine->get_dato();
+			$RecordObj_time_machine	= new RecordObj_time_machine($matrix_id);
+			$dato_time_machine		= $RecordObj_time_machine->get_dato();
 
 		// apply time machine data to element and save
 			switch (true) {
@@ -80,7 +74,7 @@ class tool_time_machine extends tool_common {
 								$tm_result = $RecordObj_time_machine->Save();
 
 							// reset section session sqo
-								$sqo_id	= implode('_', [$model, $section_tipo]);
+								$sqo_id	= implode('_', ['section', $section_tipo, 'list']); // cache key sqo_id
 								if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 									unset($_SESSION['dedalo']['config']['sqo'][$sqo_id]);
 								}

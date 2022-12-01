@@ -59,7 +59,7 @@ class tool_propagate_component_data extends tool_common {
 			// RecordObj_time_machine::$save_time_machine_version = false;
 
 		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= implode('_', ['section', $section_tipo]);
+			$sqo_id	= implode('_', ['section', $section_tipo, 'list']); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 				$response->msg .= ' section session sqo is not found!';
 				return $response;
