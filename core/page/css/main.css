@@ -9422,7 +9422,7 @@ dd-modal .footer.content {
   outline: 1px solid #f78a1c;
   z-index: 2;
 }
-.component_portal.view_mosaic.list > .list_body > .content_data .component_image {
+.component_portal.view_mosaic.list > .list_body > .content_data > .component_image {
   max-height: 5rem;
 }
 /**
