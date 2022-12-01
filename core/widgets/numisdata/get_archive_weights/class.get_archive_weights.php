@@ -148,7 +148,7 @@ class get_archive_weights extends widget_common {
 				}else{
 					debug_log(__METHOD__." Empty weights. Sum ignored in widget get_archive_weights ".to_string(), logger::DEBUG);
 				}
-
+	
 				if (!empty($diameter)) {
 					$media_diameter				= round((array_sum($diameter) / count($diameter)),2);
 					$total_elements_diameter 	= count($diameter);
@@ -177,7 +177,7 @@ class get_archive_weights extends widget_common {
 			// 	$dato->max_diameter 			= $max_diameter 			?? null;
 			// 	$dato->min_diameter 			= $min_diameter 			?? null;
 			// 	$dato->total_elements_diameter 	= $total_elements_diameter 	?? null;
-		}//foreach ($ipo
+		}//foreach ipo
 
 		return $dato;
 	}//end get_dato
