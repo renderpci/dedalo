@@ -303,11 +303,16 @@ export const init_events_subscription = function(self) {
 			const observe_length = observe.length
 			for (let i = observe_length - 1; i >= 0; i--) {
 
+				if(!observe[i].client){
+					continue;
+				}
 				const component_tipo	= observe[i].component_tipo // string target event component tipo
-				const event_name		= observe[i].event // string event name as 'update_data'
-				const perform			= observe[i].perform || null // string action to exec like 'update_data'
-
-				if(perform && typeof self[perform]==='function'){
+				const event_name		= observe[i].client.event || null // string event name as 'update_data'
+				const perform			= observe[i].client.perform || null // string action to exec like 'update_data'
+				const perform_function 	= perform
+					? perform.function
+					: null
+				if(perform && perform_function && typeof self[perform_function]==='function'){
 					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
 					// the id_base is built when the component is instantiated
 					// this event can be fired by:
@@ -315,7 +320,6 @@ export const init_events_subscription = function(self) {
 					// or the sort format with the id_base of the observable component:
 					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
 					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
-
 					// debug
 						// console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
 						// console.log("SUBSCRIBE info ",
@@ -325,7 +329,7 @@ export const init_events_subscription = function(self) {
 						// );
 
 					self.events_tokens.push(
-						event_manager.subscribe(event_name +'_'+ id_base, self[perform].bind(self))
+						event_manager.subscribe(event_name +'_'+ id_base, self[perform_function].bind(self))
 					)
 
 				}else{
@@ -333,7 +337,7 @@ export const init_events_subscription = function(self) {
 					// event_name is defined but not perform case
 					if (event_name) {
 						console.group(`Invalid observe ${self.tipo} - ${self.model}`);
-						console.warn(`Invalid observe perform. Target function '${perform}' does not exists in ${self.model}:`, observe[i], typeof self[perform]);
+						console.warn(`Invalid observe perform. Target function '${perform_function}' does not exists in ${self.model}:`, observe[i], typeof self[perform_function]);
 						console.warn(`self.context.properties.observe of ${self.model} - ${self.tipo} :`, observe);
 						console.groupEnd();
 					}
