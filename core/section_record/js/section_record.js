@@ -195,12 +195,6 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			return
 		}
 
-		// portals case
-			if (current_context.real_model==='component_portal') {
-				autoload = true
-			}
-		console.log('autoload:', autoload, current_instance);
-
 	// build. instance build await
 		await current_instance.build(autoload)
 
