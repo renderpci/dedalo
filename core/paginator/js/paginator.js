@@ -26,6 +26,7 @@ export const paginator = function() {
 
 	this.caller				= null
 
+	this.total				= null
 	this.total_pages		= null
 	this.page_number		= null
 	this.prev_page_offset	= null
@@ -114,6 +115,7 @@ paginator.prototype.build = async function() {
 		const offset			= self.get_offset()
 
 	// pages fix vars
+		self.total				= total
 		self.limit				= limit
 		self.total_pages		= limit>0 ? Math.ceil(total / limit) : 0
 		self.page_number		= self.get_page_number(limit, offset)

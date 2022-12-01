@@ -160,9 +160,9 @@ class component_portal extends component_relation_common {
 				return $response;
 			}
 
-		#
-		# 1 PROJECTS GET. Obtenemos los datos del filtro (proyectos) de la sección actual para heredarlos en el registro del portal
-		# We get current portal filter data (projects) to heritage in the new portal record
+
+		// 1 PROJECTS GET
+			// We get current portal filter data (projects) to heritage in the new portal record
 			$section_id				= $this->get_section_id();
 			$component_filter_dato	= (strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false)
 				? null
@@ -179,9 +179,8 @@ class component_portal extends component_relation_common {
 				$component_filter_dato = [$locator];
 			}
 
-		#
-		# 2 SECTION . Creamos un nuevo registro vacío en la sección a que apunta el portal
-		# Section record . create new empty section in target section tipo
+		// 2 SECTION
+			// Section record . create new empty section in target section tipo
 			$target_section_tipo	= $options->target_section_tipo;
 			$section_new			= section::get_instance(null, $target_section_tipo);
 
@@ -196,10 +195,9 @@ class component_portal extends component_relation_common {
 				return $response;
 			}
 
-		#
-		# 3 PORTAL . Insertamos en dato (el array de 'id_madrix' del component_portal actual) el nuevo registro creado
-		# Portal dato. add current section id to component portal dato array
-			# Basic locator
+		// 3 PORTAL
+			// Portal dato. add current section id to component portal dato array
+			// Basic locator
 			$locator = new locator();
 				$locator->set_section_id($new_section_id);
 				$locator->set_section_tipo($target_section_tipo);
@@ -214,15 +212,14 @@ class component_portal extends component_relation_common {
 				return $response;
 			}
 
-
 		// Save current component updated data
 			// $this->Save();
 
-		// response ok
+		// response OK
 			$response->result			= true;
 			$response->section_id		= $new_section_id;
 			$response->added_locator	= $locator;
-			$response->msg				= 'Ok. Request done '.__METHOD__;
+			$response->msg				= 'OK. Request done '.__METHOD__;
 
 
 		return $response;
@@ -232,49 +229,61 @@ class component_portal extends component_relation_common {
 
 	/**
 	* REMOVE_ELEMENT
+	*
+	* @param object $request_options
 	* @return object $response
 	*/
 	public function remove_element( object $request_options ) : object {
 
-		$options = new stdClass();
-			$options->locator 		= null;
-			$options->remove_mode	= 'delete_link';	// delete_link | delete_all (deletes link and resource)
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$options = (object)[
+				'locator'		=> $request_options->locator ?? null,
+				'remove_mode'	=> $request_options->remove_mode ?? 'delete_link' // delete_link | delete_all (deletes link and resource)
+			];
 
-		$locator = $options->locator;
+		// short vars
+			$locator = $options->locator;
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
 
-		# Remove locator from data
-		$result = $this->remove_locator( $locator );
-		if ($result!==true) {
-			$response->msg .= " Error on remove locator. Skipped action ";
-			return $response;
-		}
-
-		# Remove target record
-		if ($options->remove_mode==='delete_all') {
-
-			$section = section::get_instance($locator->section_id, $locator->section_tipo);
-			$delete  = $section->Delete($delete_mode='delete_record');
-			if ($delete!==true) {
-				$response->msg .= " Error on remove target section ($locator->section_tipo - $locator->section_id). Skipped action ";
+		// Remove locator from data
+			$result = $this->remove_locator( $locator );
+			if ($result!==true) {
+				$response->msg .= " Error on remove locator. Skipped action ";
 				return $response;
 			}
-		}
 
-		# Update state
-		# DELETE AND UPDATE the component state of this section and his parents
-		$state = $this->remove_state_from_locator( $locator );
+		// Remove target record
+			if ($options->remove_mode==='delete_all') {
 
-		# Save current component updated data
-		$this->Save();
+				$section = section::get_instance(
+					$locator->section_id, // string section_id
+					$locator->section_tipo // string section_tipo
+				);
+				$delete  = $section->Delete(
+					'delete_record' // string delete_mode
+				);
+				if ($delete!==true) {
+					$response->msg .= " Error on remove target section ($locator->section_tipo - $locator->section_id). Skipped action ";
+					return $response;
+				}
+			}
 
-		$response->result 		= true;
-		$response->remove_mode 	= $options->remove_mode;
-		$response->msg 			= 'Ok. Request done '.__METHOD__;
+		// Update state
+		// DELETE AND UPDATE the component state of this section and his parents
+			$state = $this->remove_state_from_locator( $locator );
+
+		// Save current component updated data
+			$this->Save();
+
+		// response
+			$response->result		= true;
+			$response->remove_mode	= $options->remove_mode;
+			$response->msg			= 'OK. Request done '.__METHOD__;
+
 
 		return $response;
 	}//end remove_element
@@ -311,13 +320,14 @@ class component_portal extends component_relation_common {
 				$component_filter_tipo	= $ar_children_tipo[0];
 				$model					= RecordObj_dd::get_modelo_name_by_tipo($component_filter_tipo, true);
 
-				$component_filter = component_common::get_instance($model,
-																$component_filter_tipo,
-																$section_id,
-																'edit',
-																DEDALO_DATA_LANG,
-																$section_tipo
-																);
+				$component_filter = component_common::get_instance(
+					$model,
+					$component_filter_tipo,
+					$section_id,
+					'edit',
+					DEDALO_DATA_LANG,
+					$section_tipo
+				);
 
 				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
 			}
@@ -363,10 +373,14 @@ class component_portal extends component_relation_common {
 					# We need recover here the old dato from section->components->tipo->dato
 					# This context is different to time machine update dato
 					$section		= section::get_instance($options->section_id, $options->section_tipo);
-					$dato_unchanged	= $section->get_component_dato($options->tipo, DEDALO_DATA_NOLAN, $lang_fallback=false);
+					$dato_unchanged	= $section->get_component_dato(
+						$options->tipo, // string $component_tipo
+						DEDALO_DATA_NOLAN, // string $lang
+						false // bool lang_fallback = false
+					);
 				}
 
-				# Compatibility old dedalo instalations
+				# Compatibility old dedalo installations
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
 
 					$ar_locators = array();
@@ -534,7 +548,10 @@ class component_portal extends component_relation_common {
 			$show = $request_config_item->show ?? null;
 			if (empty($show)) {
 
-				debug_log(__METHOD__." Ignored empty request_config_item->show (mode:$this->modo) [$this->section_tipo - $this->tipo]", logger::ERROR);
+				debug_log(__METHOD__.
+					" Ignored empty request_config_item->show (mode:$this->modo) [$this->section_tipo - $this->tipo]",
+					logger::ERROR
+				);
 
 			}else{
 
