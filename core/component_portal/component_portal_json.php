@@ -119,21 +119,18 @@
 					$data[] = $item;
 
 				// subdatum
+					$subdatum = $this->get_subdatum($tipo, $value);
+						// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
 
-						$subdatum = $this->get_subdatum($tipo, $value);
-							// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
 
-
-						$ar_subcontext = $subdatum->context;
-						foreach ($ar_subcontext as $current_context) {
-							$context[] = $current_context;
-						}
-
-						$ar_subdata = $subdatum->data;
-						foreach ($ar_subdata as $sub_value) {
-							$data[] = $sub_value;
-						}
-					// }
+					$ar_subdata = $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$data[] = $sub_value;
+					}
 
 				// subdata from subcontext items
 					// 	$ar_subdata = $this->get_ar_subdata($value);
