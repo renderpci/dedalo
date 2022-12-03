@@ -108,35 +108,43 @@ render_list_section.prototype.list = async function(options) {
 		// fix last list_body (for pagination selection)
 		self.node_body = list_body
 
-		// flat columns create a sequence of grid widths taking care of sub-column space
-		// like 1fr 1fr 1fr 3fr 1fr
-		const items				= ui.flat_column_items(columns_map)
-		const template_columns	= items.join(' ')
-		// Object.assign(
-		// 	list_body.style,
-		// 	{
-		// 		"grid-template-columns": template_columns
-		// 	}
-		// )
+		// list_body css
+			const selector = `${self.section_tipo}_${self.tipo}.list`
+			if (self.context.css) {
+				// use defined section css
+				set_element_css(selector, self.context.css)
+			}else{
+				// flat columns create a sequence of grid widths taking care of sub-column space
+				// like 1fr 1fr 1fr 3fr 1fr
+				const items				= ui.flat_column_items(columns_map)
+				const template_columns	= items.join(' ')
 
-		// re-parse template_columns as percent
-			// const items_lenght = items.length
-			// const percent_template_columns = items.map(el => {
-			// 	if (el==='1fr') {
-			// 		return Math.ceil(90 / (items_lenght -1)) + '%'
-			// 	}
-			// 	return el
-			// }).join(' ')
-			// console.log("percent_template_columns:",percent_template_columns);
+				// direct assign DES
+					// Object.assign(
+					// 	list_body.style,
+					// 	{
+					// 		"grid-template-columns": template_columns
+					// 	}
+					// )
 
-		const css_object = {
-			'.list_body' : {
-				'grid-template-columns' : template_columns
+				// re-parse template_columns as percent
+					// const items_lenght = items.length
+					// const percent_template_columns = items.map(el => {
+					// 	if (el==='1fr') {
+					// 		return Math.ceil(90 / (items_lenght -1)) + '%'
+					// 	}
+					// 	return el
+					// }).join(' ')
+					// console.log("percent_template_columns:",percent_template_columns);
+
+				const css_object = {
+					'.list_body' : {
+						'grid-template-columns' : template_columns
+					}
+				}
+				// use calculated css
+				set_element_css(selector, css_object)
 			}
-		}
-		const selector = `${self.section_tipo}_${self.tipo}.list`
-		set_element_css(selector, css_object)
-
 
 	// list_header_node. Create and append if ar_instances is not empty
 		// if (self.ar_instances.length>0) {
