@@ -7,7 +7,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {when_in_dom} from '../../common/js/events.js'
+	import {when_in_dom,when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
@@ -35,6 +35,114 @@ view_default_list_section_record.render = async function(self, options) {
 
 	// options
 		// const render_level = options.render_level || 'full'
+
+	// wrapper.  section_record wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			id				: self.id,
+			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
+		})
+
+		// click event
+			// wrapper.addEventListener("click", (e) => {
+			// 	e.stopPropagation()
+			// 	if (!e.target.classList.contains("row_active")) {
+			// 		e.target.classList.add("row_active")
+			// 	}
+			// })
+
+		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
+		// Note that only is activated when self.caller is a section to prevent deep portals issues
+			if (self.caller.model==='section' || self.caller.model==='time_machine' || self.caller.model==='service_time_machine') {
+				when_in_dom(wrapper, function(){
+
+					let hilite_row
+
+					// fn_remove_hilite (if is set)
+						const fn_remove_hilite = () => {
+							if (hilite_row) {
+								hilite_row.remove()
+								hilite_row = null
+							}
+						}
+						wrapper.addEventListener('mouseleave', fn_remove_hilite);
+						wrapper.addEventListener('mousedown', fn_remove_hilite);
+
+					// fn_hilite. Add hilite
+						const fn_hilite = (e) => {
+							// remove previous hilite if exist
+								fn_remove_hilite(e)
+
+							// small screen case. Do not add hilite
+								const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+								if (width<960) {
+									return
+								}
+
+							// row_style
+								const wrapper_first_column	= wrapper.firstChild
+								const wrapper_last_column	= wrapper.lastChild
+								const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
+								const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
+								const row_style = {
+									left	: parseFloat(firstChild_el_rect.x) + 'px',
+									top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
+									height	: parseFloat(firstChild_el_rect.height) + 'px',
+									width	: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
+								}
+
+							// hilite_row. create and append
+								hilite_row = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'hilite_row',
+									style			: row_style
+								})
+								wrapper.prepend(hilite_row)
+						}
+						wrapper.addEventListener('mouseenter', fn_hilite);
+				})
+			}//end if (self.caller.model==='section' || self.caller.model==='time_machine')
+
+	// wrapper css
+		const css = self.caller.context.css && self.caller.context.css.section_record
+			? self.caller.context.css.section_record
+			: null
+		if (css) {
+			for(const key in css) {
+				wrapper.style[key] = css[key]
+			}
+		}
+
+	// content_data render_columns
+		const fragment = await get_content_data(self)
+		wrapper.appendChild(fragment)
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			wrapper.addEventListener('click', function(e){
+				if (e.altKey) {
+					e.stopPropagation()
+					e.preventDefault()
+					// common.render_tree_data(instance, document.getElementById('debug'))
+					console.log('/// selected instance:', self);
+				}
+			})
+			// wrapper.classList.add('_'+self.id)
+		}
+
+
+	return wrapper
+}//end render
+
+
+
+/**
+* GET_CONTENT_DATA
+* Render all the columns into a Document Fragment
+* @param object self
+* @return DocumentFragment
+*/
+const get_content_data = async function(self) {
 
 	// ar_columns_instances
 		// const ar_instances = await self.get_ar_instances()
@@ -182,100 +290,8 @@ view_default_list_section_record.render = async function(self, options) {
 		// 	}
 
 
-	// wrapper.  section_record wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			id				: self.id,
-			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
-		})
-		wrapper.appendChild(fragment)
-
-		// click event
-			// wrapper.addEventListener("click", (e) => {
-			// 	e.stopPropagation()
-			// 	if (!e.target.classList.contains("row_active")) {
-			// 		e.target.classList.add("row_active")
-			// 	}
-			// })
-
-		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
-		// Note that only is activated when self.caller is a section to prevent deep portals issues
-			if (self.caller.model==='section' || self.caller.model==='time_machine' || self.caller.model==='service_time_machine') {
-				when_in_dom(wrapper, function(){
-
-					let hilite_row
-
-					// fn_remove_hilite (if is set)
-						const fn_remove_hilite = () => {
-							if (hilite_row) {
-								hilite_row.remove()
-								hilite_row = null
-							}
-						}
-						wrapper.addEventListener('mouseleave', fn_remove_hilite);
-						wrapper.addEventListener('mousedown', fn_remove_hilite);
-
-					// fn_hilite. Add hilite
-						const fn_hilite = (e) => {
-							// remove previous hilite if exist
-								fn_remove_hilite(e)
-
-							// small screen case. Do not add hilite
-								const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-								if (width<960) {
-									return
-								}
-
-							// row_style
-								const wrapper_first_column	= wrapper.firstChild
-								const wrapper_last_column	= wrapper.lastChild
-								const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
-								const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
-								const row_style = {
-									left	: parseFloat(firstChild_el_rect.x) + 'px',
-									top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
-									height	: parseFloat(firstChild_el_rect.height) + 'px',
-									width	: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
-								}
-
-							// hilite_row. create and append
-								hilite_row = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'hilite_row',
-									style			: row_style
-								})
-								wrapper.prepend(hilite_row)
-						}
-						wrapper.addEventListener('mouseenter', fn_hilite);
-				})
-			}//end if (self.caller.model==='section' || self.caller.model==='time_machine')
-
-	// wrapper css
-		const css = self.caller.context.css && self.caller.context.css.section_record
-			? self.caller.context.css.section_record
-			: null
-		if (css) {
-			for(const key in css) {
-				wrapper.style[key] = css[key]
-			}
-		}
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			wrapper.addEventListener('click', function(e){
-				if (e.altKey) {
-					e.stopPropagation()
-					e.preventDefault()
-					// common.render_tree_data(instance, document.getElementById('debug'))
-					console.log('/// selected instance:', self);
-				}
-			})
-			// wrapper.classList.add('_'+self.id)
-		}
-
-
-	return wrapper
-}//end render
+	return fragment
+}//end get_content_data
 
 
 

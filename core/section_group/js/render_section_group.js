@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global   */
 /*eslint no-undef: "error"*/
 
 
@@ -67,7 +67,7 @@ render_section_group.prototype.edit = async function(options) {
 			const component_label = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'icon_arrow' + (!ui_status ? ' up' : ''),
-				inner_html		: self.label + ' ' + self.tipo + ' ' + (self.model) + ' [' + self.permissions + ']'
+				inner_html		: self.label // + ' [' + self.tipo + ' - ' + self.permissions + ']'
 			})
 			// CSS
 				const element_css = self.context.css || {}
@@ -144,7 +144,7 @@ const get_wrapper = function(self) {
 const get_content_data = function(self) {
 
 	// content_data
-		const content_data = document.createElement("div")
+		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.type, 'hide')
 
 

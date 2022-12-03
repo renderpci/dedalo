@@ -3841,6 +3841,12 @@ dd-modal .footer.content {
 .page > .page_error_container > .icon_dedalo {
   height: 7rem;
 }
+/**
+* list_body
+*
+* Included from component_portal.less file
+* Shared by section and portal.
+*/
 .list_body {
   display: grid;
   height: 100%;
@@ -3880,9 +3886,6 @@ dd-modal .footer.content {
 .wrapper_component.edit > .list_body {
   padding: 1rem;
   padding-top: 0.5rem;
-}
-.section_record.mini {
-  display: contents;
 }
 .hilite_row {
   background-color: #dedede42;
@@ -4092,8 +4095,8 @@ dd-modal .footer.content {
   margin: 0px;
 }
 .column .wrapper_component {
-  flex: 1 1;
   display: inline-block;
+  flex: 1 1;
   padding: 0px;
   margin: 0px;
   height: inherit;
@@ -7390,7 +7393,7 @@ dd-modal .footer.content {
   margin: 20px;
 }
 .section.list > .paginator_container {
-  min-height: 2.8rem;
+  min-height: 2.96rem;
 }
 .section.list > .list_body > .content_data {
   width: 100%;
@@ -7401,73 +7404,21 @@ dd-modal .footer.content {
 * Included from main.less file
 */
 .section_record.edit {
-  align-content: stretch;
-  align-items: stretch;
   display: flex;
   flex-flow: column;
   flex-wrap: wrap;
   justify-content: flex-start;
+  align-content: stretch;
+  align-items: stretch;
   margin: 0px;
   padding: 0px;
   width: 100%;
 }
 .section_record.list {
-  position: relative;
   display: contents;
-  height: inherit;
-  align-items: baseline;
 }
-.view_mosaic .section_record.list > .column {
-  width: 100%;
-}
-.view_mosaic .section_record.list > .column > .wrapper_component {
-  height: inherit;
-}
-.view_mosaic .section_record.list .button.info {
-  height: 1.5rem;
-  width: 1.5rem;
-  background-color: black;
-  margin: 0.33rem;
-  z-index: 1;
-  opacity: 1;
-  /* smartphones, touchscreens */
-}
-@media (hover: none) and (pointer: coarse) {
-  .view_mosaic .section_record.list .button.info {
-    opacity: 1;
-  }
-}
-.view_mosaic .section_record.list:hover .button {
-  opacity: 1;
-}
-@media screen and (min-width: 1024px) {
-  .wrapper_section > .list_body > .content_data > .section_record.list:hover > .column99:first-of-type {
-    box-shadow: inset 1px 0px 0px 0px #acacac;
-  }
-  .wrapper_section > .list_body > .content_data > .section_record.list:hover > .column99:first-of-type:before {
-    content: " ";
-    width: calc(100vw - 2rem);
-    position: absolute;
-    left: 0px;
-    top: -1px;
-    z-index: 2;
-    height: 2px;
-    box-shadow: inset 0px 1px 0px 0px #acacac;
-  }
-  .wrapper_section > .list_body > .content_data > .section_record.list:hover > .column99:first-of-type:after {
-    content: " ";
-    width: calc(100vw - 2rem);
-    background-color: #7d7d7d;
-    position: absolute;
-    left: 0px;
-    bottom: -1px;
-    z-index: 2;
-    height: 1px;
-    box-shadow: 0px 2px 5px 0px #000000;
-  }
-  .wrapper_section > .list_body > .content_data > .section_record.list:hover > .column99:last-of-type {
-    box-shadow: inset -1px 0px 0 0px #acacac;
-  }
+.section_record.mini {
+  display: contents;
 }
 .inline_common {
   display: inline-table;
@@ -9393,6 +9344,7 @@ dd-modal .footer.content {
   pointer-events: none;
 }
 .component_portal.view_mosaic > .list_body > .content_data > .section_record {
+  position: relative;
   display: flex;
   flex: 0 0 auto;
   height: 100%;
@@ -9412,11 +9364,32 @@ dd-modal .footer.content {
 .component_portal.view_mosaic.edit > .list_body > .content_data > .section_record {
   outline: 1px solid #f0f0f0;
 }
+.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .button.info {
+  height: 1.5rem;
+  width: 1.5rem;
+  background-color: black;
+  margin: 0.33rem;
+  z-index: 1;
+  opacity: 1;
+  /* smartphones, touchscreens */
+}
+@media (hover: none) and (pointer: coarse) {
+  .component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .button.info {
+    opacity: 1;
+  }
+}
+.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record:hover .button {
+  opacity: 1;
+}
 .component_portal.view_mosaic.edit > .list_body > .content_data > .section_record > .column {
   height: inherit;
 }
 .component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .column {
   outline: unset;
+  width: 100%;
+}
+.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .column > .wrapper_component {
+  height: inherit;
 }
 .component_portal.view_mosaic.edit > .list_body > .content_data > .section_record.mosaic_over {
   outline: 1px solid #f78a1c;
@@ -9424,6 +9397,15 @@ dd-modal .footer.content {
 }
 .component_portal.view_mosaic.list > .list_body > .content_data > .component_image {
   max-height: 5rem;
+}
+.component_portal.view_mosaic.list > .list_body > .section_record {
+  background-color: #31ff1d;
+}
+.component_portal.view_mosaic.list > .list_body > .section_record > .column > .wrapper_component {
+  height: 80px;
+}
+.column .component_portal.view_mosaic.list {
+  height: 6rem;
 }
 /**
 * view_line_portal

@@ -177,7 +177,7 @@ export const set_context_vars = function(self) {
 *	node first DOM node stored in instance 'node' array
 */
 common.prototype.render = async function (options={}) {
-	const t0 = performance.now()
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -312,18 +312,19 @@ common.prototype.render = async function (options={}) {
 						// ex: when it's called by event that need change data in component (update_data event)
 						// and the component need to be rendered in full as in list mode
 						if(self.node) {
-							// const parent = self.node.parentNode
-							// if (!parent) {
-							// 	console.warn('++++++++++++++ NO parent found for self.node:', self.node, ' render_level:', render_level);
-							// 	console.warn('++++++++++++++ NO parent found for self:', self);
-							// }else{
-							// 	// replace
-							// 	// parent.replaceChild(
-							// 	// 	node, // new node
-							// 	// 	self.node // old node
-							// 	// )
-							// 	self.node.replaceWith(node);
-							// }
+							// DES
+								// const parent = self.node.parentNode
+								// if (!parent) {
+								// 	console.warn('++++++++++++++ NO parent found for self.node:', self.node, ' render_level:', render_level);
+								// 	console.warn('++++++++++++++ NO parent found for self:', self);
+								// }else{
+								// 	// replace
+								// 	// parent.replaceChild(
+								// 	// 	node, // new node
+								// 	// 	self.node // old node
+								// 	// )
+								// 	self.node.replaceWith(node);
+								// }
 							self.node.replaceWith(node);
 						}
 						// set pointers. Update instance node pointer

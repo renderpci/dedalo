@@ -76,19 +76,17 @@
 
 				$data[] = $item;
 
-			// subcontext data from layout_map items
-				// $ar_subdata = $this->get_ar_subdata($value);
+			// subdatum
+				$subdatum = $this->get_subdatum($tipo, $value);
 
-			$subdatum = $this->get_subdatum($tipo, $value);
+				// add subcontext
+				$ar_subcontext	= $subdatum->context;
+				foreach ($ar_subcontext as $current_context) {
+					$context[] = $current_context;
+				}
 
-			$ar_subcontext	= $subdatum->context;
-			foreach ($ar_subcontext as $current_context) {
-				$context[] = $current_context;
-			}
-
-			$ar_subdata		= $subdatum->data;
-
-			// subdata add
+				// add subdata
+				$ar_subdata = $subdatum->data;
 				if ($modo==='list') {
 					foreach ($ar_subdata as $current_data) {
 
