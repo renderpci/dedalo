@@ -5,7 +5,7 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {set_before_unload} from '../../common/js/events.js'
+	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
