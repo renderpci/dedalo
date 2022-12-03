@@ -7393,7 +7393,7 @@ dd-modal .footer.content {
   margin: 20px;
 }
 .section.list > .paginator_container {
-  min-height: 2.8rem;
+  min-height: 2.96rem;
 }
 .section.list > .list_body > .content_data {
   width: 100%;
@@ -9344,6 +9344,7 @@ dd-modal .footer.content {
   pointer-events: none;
 }
 .component_portal.view_mosaic > .list_body > .content_data > .section_record {
+  position: relative;
   display: flex;
   flex: 0 0 auto;
   height: 100%;
