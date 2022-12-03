@@ -72,9 +72,10 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_content_value(i, inputs_value[i], self)
-			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
+			// add node to content_data
+			content_data.appendChild(input_element_node)
 		}
 
 	return content_data
@@ -89,7 +90,6 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const mode					= self.mode
 		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
@@ -184,7 +184,6 @@ const get_content_value = (i, current_value, self) => {
 			// 		})
 			// })
 
-
 	// button remove. Triggered by wrapper delegated events
 		if(!is_inside_tool) {
 			// button_remove
@@ -245,9 +244,11 @@ const get_buttons = (self) => {
 			button_add.addEventListener('click', function(e) {
 				e.stopPropagation()
 
+				const key = self.data.value.length
+
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: self.data.value.length,
+					key		: key,
 					value	: null
 				})]
 				self.change_value({
@@ -256,9 +257,13 @@ const get_buttons = (self) => {
 				})
 				.then(()=>{
 					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
-					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					const input_node = self.node.content_data[key]
+						? self.node.content_data[key].querySelector('input')
+						: null
 					if (input_node) {
 						input_node.focus()
+					}else{
+						console.warn('Empty input_node:', self.node.content_data, key);
 					}
 				})
 			})//end event click
