@@ -1977,7 +1977,7 @@ class component_relation_common extends component_common {
 
 				$ar_section_tipo[] = $source_item;
 				debug_log(__METHOD__.
-					" ++++++++++++++++++++++++++++++++++++ Ignored string source item (expected object) ".to_string($source_item),
+					" ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ".to_string($source_item),
 					logger::ERROR
 				);
 				continue;
@@ -1992,13 +1992,13 @@ class component_relation_common extends component_common {
 			}
 
 			switch ($source_item->source) {
-				case 'hierarchy_types':
-					$hierarchy_types = component_relation_common::get_hierarchy_sections_from_types($source_item->value);
-					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
-					break;
 				case 'self':
 					// $ar_section_tipo = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
 					$ar_section_tipo = is_array($retrived_section_tipo) ? $retrived_section_tipo : [$retrived_section_tipo];
+					break;
+				case 'hierarchy_types':
+					$hierarchy_types = component_relation_common::get_hierarchy_sections_from_types($source_item->value);
+					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
 					break;
 				case 'field_value':
 						// this case is used in component_relation_children in the hierarchy section

@@ -1697,6 +1697,7 @@ abstract class common {
 		// request_config. On empty return empty context and data object
 			$request_config = $this->context->request_config ?? null;
 			if(empty($request_config)) {
+				debug_log(__METHOD__." Empty request config. Ignored subdatum  ".to_string($this->tipo), logger::ERROR);
 				// no request config case. Return empty here
 				return (object)[
 					'context'	=> [],
@@ -1734,7 +1735,7 @@ abstract class common {
 
 				// skip empty ddo_map
 				if(empty($request_config_item->show->ddo_map)) {
-					debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
+					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo) in request_config_item:".to_string($request_config_item), logger::ERROR);
 					continue;
 				}
 				// merge all ddo of all request_config
@@ -1742,7 +1743,6 @@ abstract class common {
 			}//end foreach ($request_config_dedalo as $request_config_item)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
-
 
 		// get the context and data for every locator
 			foreach($ar_locators as $current_locator) {

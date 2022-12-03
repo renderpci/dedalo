@@ -77,28 +77,29 @@
 			// subcontext data from layout_map items
 				// $ar_subdata = $this->get_ar_subdata($value);
 
-			$subdatum = $this->get_subdatum($tipo, $value);
+			// subdatum
+				$subdatum = $this->get_subdatum($tipo, $value);
 
-			$ar_subcontext	= $subdatum->context;
-			foreach ($ar_subcontext as $current_context) {
-				$context[] = $current_context;
-			}
-
-
-			$ar_subdata = $subdatum->data;
-			// subdata add
-			if ($modo==='list') {
-				foreach ($ar_subdata as $current_data) {
-					$current_data->parent_tipo			= $tipo;
-					$current_data->parent_section_id	= $section_id;
-
-					$data[] = $current_data;
+				// add subcontext
+				$ar_subcontext	= $subdatum->context;
+				foreach ($ar_subcontext as $current_context) {
+					$context[] = $current_context;
 				}
-			}else{
-				foreach ($ar_subdata as $current_data) {
-					$data[] =$current_data;
+
+				// add subdata
+				$ar_subdata = $subdatum->data;
+				if ($modo==='list') {
+					foreach ($ar_subdata as $current_data) {
+						$current_data->parent_tipo			= $tipo;
+						$current_data->parent_section_id	= $section_id;
+
+						$data[] = $current_data;
+					}
+				}else{
+					foreach ($ar_subdata as $current_data) {
+						$data[] = $current_data;
+					}
 				}
-			}
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 
