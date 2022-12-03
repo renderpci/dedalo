@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -478,6 +478,81 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 
 /**
+* GET_COMPONENT_DATA
+* Compares received section_tipo, section_id, matrix_id with elements inside datum.data for try to match.
+* If no elements matches, a empty object is created to prevent gaps
+* @return object component_data
+*/
+section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
+
+	const self = this
+
+	// prevent no data elements find
+		if (ddo.model==='section_group') {
+			return null;
+		}
+
+	// component_data
+		const component_data = self.datum.data.find(function(el) {
+			if (el.tipo===ddo.tipo && parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo) {
+
+				if (el.matrix_id) {
+					// console.error("match matrix_id:", el.matrix_id);
+					return parseInt(el.matrix_id)===parseInt(matrix_id)
+				}
+				return true
+			}
+			return false
+		})
+
+	// debug
+		// if (self.mode==='tm' || self.caller.mode==='tm') {
+			// if (!component_data) {
+			// 	console.warn("not found component_data ddo, section_tipo, section_id, matrix_id:", ddo, section_tipo, section_id, matrix_id);
+			// }else{
+			// 	if (component_data.debug_model==='component_portal') {
+			// 		// console.log("component_data.debug_model:", component_data.debug_model);
+			// 		console.log("--- get_component_data section_tipo, section_id, matrix_id, component_data:", component_data, section_tipo, section_id, matrix_id);
+			// 	}
+			// }
+		// }
+
+	// undefined case. If the current item don't has data will be instantiated with the current section_id
+		if(!component_data) {
+			// empty component data build
+			return {
+				tipo			: ddo.tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				info			: 'No data found for this component',
+				value			: [],
+				fallback_value	: ['']
+			}
+		}
+
+	return component_data
+}//end get_component_data
+
+
+
+/**
+* GET_COMPONENT_INFO
+* @return object component_data
+*/
+section_record.prototype.get_component_info = function(){
+
+	const self = this
+
+	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
+										&& item.section_id===self.section_id
+										&& item.section_tipo===self.section_tipo)
+
+	return component_info
+}//end get_component_info
+
+
+
+/**
 * GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE. TIME MACHINE TOO)
 * @return array ar_instances
 */
@@ -630,83 +705,6 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 
 /**
-* GET_COMPONENT_DATA
-* Compares received section_tipo, section_id, matrix_id with elements inside datum.data for try to match.
-* If no elements matches, a empty object is created to prevent gaps
-* @return object component_data
-*/
-section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
-
-	const self = this
-
-	// prevent no data elements find
-		if (ddo.model==='section_group') {
-			return null;
-		}
-
-	// component_data
-		const component_data = self.datum.data.find(function(el) {
-			if (el.tipo===ddo.tipo && parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo) {
-
-				if (el.matrix_id) {
-					// console.error("match matrix_id:", el.matrix_id);
-					return parseInt(el.matrix_id)===parseInt(matrix_id)
-				}
-				return true
-			}
-			return false
-		})
-
-
-	// debug
-		// if (self.mode==='tm' || self.caller.mode==='tm') {
-			// if (!component_data) {
-			// 	console.warn("not found component_data ddo, section_tipo, section_id, matrix_id:", ddo, section_tipo, section_id, matrix_id);
-			// }else{
-			// 	if (component_data.debug_model==='component_portal') {
-			// 		// console.log("component_data.debug_model:", component_data.debug_model);
-			// 		console.log("--- get_component_data section_tipo, section_id, matrix_id, component_data:", component_data, section_tipo, section_id, matrix_id);
-			// 	}
-			// }
-		// }
-
-
-	// undefined case. If the current item don't has data will be instantiated with the current section_id
-		if(!component_data) {
-			// empty component data build
-			return {
-				tipo			: ddo.tipo,
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				info			: 'No data found for this component',
-				value			: [],
-				fallback_value	: ['']
-			}
-		}
-
-	return component_data
-}//end get_component_data
-
-
-
-/**
-* GET_COMPONENT_INFO
-* @return object component_data
-*/
-section_record.prototype.get_component_info = function(){
-
-	const self = this
-
-	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
-										&& item.section_id===self.section_id
-										&& item.section_tipo===self.section_tipo)
-
-	return component_info
-}//end get_component_info
-
-
-
-/**
 * GET_COMPONENT_RELATION_DATA
 * Don't used now (!)
 * @return object component_data
@@ -795,9 +793,8 @@ section_record.prototype.get_component_info = function(){
 
 
 
-
 /**
-* LOAD_items
+* LOAD_ITEMS
 * @return promise load_items_promise
 */
 	// section_record.prototype.load_items = function() {
@@ -860,5 +857,3 @@ section_record.prototype.get_component_info = function(){
 
 	// 	return load_items_promise
 	// }//end load_items
-
-

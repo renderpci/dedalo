@@ -1697,6 +1697,7 @@ abstract class common {
 		// request_config. On empty return empty context and data object
 			$request_config = $this->context->request_config ?? null;
 			if(empty($request_config)) {
+				debug_log(__METHOD__." Empty request config. Ignored subdatum  ".to_string($this->tipo), logger::ERROR);
 				// no request config case. Return empty here
 				return (object)[
 					'context'	=> [],
@@ -1734,7 +1735,7 @@ abstract class common {
 
 				// skip empty ddo_map
 				if(empty($request_config_item->show->ddo_map)) {
-					debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
+					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo) in request_config_item:".to_string($request_config_item), logger::ERROR);
 					continue;
 				}
 				// merge all ddo of all request_config
@@ -1742,7 +1743,6 @@ abstract class common {
 			}//end foreach ($request_config_dedalo as $request_config_item)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
-
 
 		// get the context and data for every locator
 			foreach($ar_locators as $current_locator) {
@@ -1945,13 +1945,14 @@ abstract class common {
 
 							// skip_subdatum subdatum_options
 								$bool_get_data = true;
-								if (isset($subdatum_options->skip_subdatum) && $mode === 'edit') {
-									$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo);
-									if(in_array($legacy_model, $subdatum_options->skip_subdatum)) {
-										$bool_get_data = false;
-										dump($bool_get_data, ' bool_get_data ++ '.$current_tipo.' -  '.to_string($model));
-									}
-								}
+								// (!) Commented because currently all portals are direct (included set dato external cases). To consider to use in the future
+								// if (isset($subdatum_options->skip_subdatum) && $mode === 'edit') {
+								// 	$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo);
+								// 	if(in_array($legacy_model, $subdatum_options->skip_subdatum)) {
+								// 		$bool_get_data = false;
+								// 		dump($bool_get_data, ' bool_get_data ++ '.$current_tipo.' -  '.to_string($model));
+								// 	}
+								// }
 
 							// get the JSON context of the related component
 								$item_options = new stdClass();
