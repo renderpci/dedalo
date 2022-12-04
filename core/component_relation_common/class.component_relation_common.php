@@ -1669,11 +1669,48 @@ class component_relation_common extends component_common {
 	/**
 	* GET_RELATIONS_SEARCH_VALUE
 	* @return bool false
-	* Default response for calls to this method. Overwritten in component_autocomplete_hi
+	* Default response for calls to this method. Overwritten for component_autocomplete_hi
+	* @return array $relations_search_value
+	* Array of locators calculated with thesaurus parents of current section and used only for search
 	*/
 	public function get_relations_search_value() {
 
-		return false;
+		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+
+		if ($legacy_model!=='component_autocomplete_hi'){
+			return false;
+		}
+
+		$relations_search_value = false;
+
+		$dato = $this->get_dato();
+		if (!empty($dato)) {
+
+			$relations_search_value = [];
+
+			foreach ((array)$dato as $key => $current_locator) {
+
+				$section_id 	= $current_locator->section_id;
+				$section_tipo 	= $current_locator->section_tipo;
+
+				$parents_recursive = component_relation_parent::get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false);
+					#dump($parents_recursive, ' parents_recursive ++ '."$section_id, $section_tipo");
+				foreach ($parents_recursive as $key => $parent_locator) {
+
+					$locator = new locator();
+						$locator->set_section_tipo($parent_locator->section_tipo);
+						$locator->set_section_id($parent_locator->section_id);
+						$locator->set_from_component_tipo($this->tipo);
+						$locator->set_type($this->relation_type); // mandatory and equal as component dato relation_type
+
+					if (!in_array($locator, $relations_search_value)) {
+						$relations_search_value[] = $locator;
+					}
+				}
+			}
+		}
+
+		return $relations_search_value;
 	}//end get_relations_search_value
 
 
