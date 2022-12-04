@@ -2,8 +2,6 @@
 /*
 * CLASS SECTION
 */
-// include_once(DEDALO_CORE_PATH . '/search/records_search/class.records_search.php');
-// include_once(DEDALO_CORE_PATH . '/search/records_navigator/class.records_navigator.php');
 
 
 
@@ -56,9 +54,6 @@ class section extends common {
 		public $save_modified = true; # Default is true
 
 		public $layout_map;
-
-		// injected 'dd_request'
-		// public $dd_request;
 
 		// injected whole database record, with all columns
 		public $record;
@@ -243,13 +238,6 @@ class section extends common {
 				// fix dato (force object)
 					$this->dato = (object)$dato;
 
-				// modificar esta verificación. con secciones virtuales no funciona..
-					// if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
-					// 	if(SHOW_DEBUG===true) {
-					// 		dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
-					// 	}
-					// 	throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);
-					// }
 
 				// set as loaded
 					$this->bl_loaded_matrix_data = true;
@@ -360,14 +348,6 @@ class section extends common {
 				}
 			}
 
-		// des
-			// $this->get_dato();
-			// dump($this, ' this ++ '.to_string()); return;
-			// SECTION GLOBAL DATO : Dato objeto global de la sección
-			// #$dato = $this->get_dato();
-			// #	if (!is_object($dato)) {
-			// #		throw new Exception("Error Processing Request. Section Dato is not object", 1);
-			// #	}
 
 		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
 		// current section conflicts (and for speed)
@@ -429,7 +409,7 @@ class section extends common {
 		// save section result
 			$result = $this->Save( $save_options );
 
-		// stopped diffusion_info_propagate_changes
+
 			// #
 			// # DIFFUSION_INFO
 			// # Note that this process can be very long if there are many inverse locators in this section
@@ -437,10 +417,10 @@ class section extends common {
 			// #
 			// #$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
 			// #register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
-			// if ($component_obj->update_diffusion_info_propagate_changes===true) {
-			// 	$this->diffusion_info_propagate_changes();
-			// 	# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
-			// }
+			if ($component_obj->update_diffusion_info_propagate_changes===true) {
+				$this->diffusion_info_propagate_changes();
+				# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
+			}
 
 		// post_save_component_processes
 			$this->post_save_component_processes((object)[
@@ -513,65 +493,11 @@ class section extends common {
 				$component_global_dato->dato->{$component_lang} = new stdClass();
 			}
 
-		# VALOR OBJ
-			// if (!isset($component_global_dato->valor)) {
-			// 	$component_global_dato->valor = new stdClass();
-			// }
-			// if (!isset($component_global_dato->valor->$component_lang)) {
-			// 	$component_global_dato->valor->$component_lang = new stdClass();
-			// }
-
-		# VALOR LIST OBJ
-			// if (!isset($component_global_dato->valor_list)) {
-			// 	$component_global_dato->valor_list = new stdClass();
-			// }
-			// if (!isset($component_global_dato->valor_list->$component_lang)) {
-			// 	$component_global_dato->valor_list->$component_lang = new stdClass();
-			// }
-
-		# DATAFRAME  OBJ
-			// if (!isset($component_global_dato->dataframe)) {
-			// 	$component_global_dato->dataframe = new stdClass();
-			// }
-
 		#
 		# DATO : We update the data in the current language
 			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 				$component_global_dato->dato->{$component_lang} = $component_dato;
 
-		#
-		# VALOR : We update the data in the current language
-			// switch ($component_modelo_name) {
-			// 	case 'component_security_access':
-			// 	case 'component_filter_records':
-			// 	case 'component_security_tools':
-			// 		$component_global_dato->valor->$component_lang = ''; // Don't save valor'
-			// 		break;
-
-			// 	default:
-			// 		if($component_lang===$component_valor_lang && $component_traducible==='si') {
-			// 			$component_global_dato->valor->$component_lang = $component_obj->get_valor();
-			// 		}else{
-			// 			$component_global_dato->valor->$component_lang = $component_obj->get_dato_unchanged();
-			// 		}
-			// 		break;
-			// }
-
-		#
-		# DATO_SEARCH
-			/*
-			switch ($component_modelo_name) {
-				case 'component_autocomplete_ts':
-					if (!isset($component_global_dato->dato_search)) {
-						$component_global_dato->dato_search = new stdClass();
-						}
-						if (!isset($component_global_dato->dato_search->$component_lang)) {
-							$component_global_dato->dato_search->$component_lang = new stdClass();
-						}
-					$component_global_dato->dato_search->$component_lang = $component_obj->get_dato_search();
-					break;
-				default: // Nothing to do
-			}*/
 
 
 		# DATAFRAME
@@ -664,44 +590,6 @@ class section extends common {
 
 
 	/**
-	* BUILD_AR_SECTION_CREATOR
-	* Builds the array with the section creation data
-	* It will be used to filter the virtual sections in recovery, which will be 'linked' to the portal from where they were created
-	* Mainly, it is proposed to efficiently manage shared resources (images, documents, etc.) and to be able to filter them by 'creator'
-	* when accessing the listings from them.
-	* For example, the photos of informants created from the portal of informants, should access ('+ Existing' button) to the lists of the images created
-	* from that portal so as not to mix them with the images of researchers or other sections that access the same type of image
-	*
-	* @var top_tipo
-	*		Tipo de la sección principal en la que estamos trabajando 'top'. Se guarda por html_page en TOP_TIPO
-	*		Será el mismo que el de la propia sección, salvo que se cree desde un portal
-	*
-	* @var portal_section_tipo
-	*		Tipo de la sección del portal desde donde se crea esta sección (si se crea desde un portal)
-	*
-	* @var portal_tipo
-	*		Tipo del portal desde donde se crea esta sección (si se crea desde un portal)
-	*/
-	public static function build_ar_section_creator(string $top_tipo=null, string $portal_section_tipo=null, string $portal_tipo=null) : array {
-
-		# top_tipo
-		if (is_null($top_tipo) || empty($top_tipo) || !$top_tipo) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." empty received top_tipo. Fallback made to top_tipo = $top_tipo - ".TOP_TIPO." - tipe: ".gettype($top_tipo) , logger::DEBUG);
-			}
-			$top_tipo = TOP_TIPO;
-		}
-
-		return array(
-			'top_tipo'				=> $top_tipo,
-			'portal_section_tipo'	=> $portal_section_tipo,
-			'portal_tipo'			=> $portal_tipo
-		);
-	}//end build_section_locator
-
-
-
-	/**
 	* SAVE
 	* Create or update a section record in matrix
 	* @param object $save_options
@@ -748,8 +636,8 @@ class section extends common {
 			if( !(bool)verify_dedalo_prefix_tipos($tipo) ) throw new Exception("Current tipo is not valid: $tipo", 1);
 
 			# SECTION VIRTUAL . Correct tipo
-			# Si estamos en una sección virtual, despejaremos el tipo real (la sección de destino) y
-			# trabajaremos con el tipo real a partir de ahora
+			# If we are in a virtual section, we will clear the real type (the destination section) and
+			# we will work with the real type from now on
 			$section_real_tipo = ($tipo===DEDALO_ACTIVITY_SECTION_TIPO)
 				? $tipo
 				: $this->get_section_real_tipo();
@@ -828,9 +716,9 @@ class section extends common {
 
 			##
 			# COUNTER : Counter table. Default is ¡matrix_counter¡
-			# Preparamos el id del contador en función de la tabla sobre la que estamos trabajando (matrix, matrix_dd, etc.)
-			# Por defecto será 'matrix_counter', peri si nuestra tabla de sección es distinta de 'matrix' usaremos una tabla de
-			# contador distinta formateada como 'matrix_counter' + substr($matrix_table, 6). Por ejemplo 'matrix_counter_dd' para matrix_dd
+			# Prepare the id of the counter based on the table we are working on (matrix, matrix_dd, etc.)
+			# By default it will be 'matrix_counter', but if our section table is different from 'matrix' we will use a counter table distinct
+			# formatted as 'matrix_counter' + substr($matrix_table, 6). For example 'matrix_counter_dd' for matrix_dd
 				if ($options->forced_create_record===false) {
 
 					// Use normal incremental counter
@@ -1019,8 +907,8 @@ class section extends common {
 
 					##
 					# AUTO AUTHORIZE THIS PROYECT FOR CURRENT USER
-					# Si esta sección recien creada es un proyecto, se agrega este proyecto como autorizado al usuario que lo creó
-					# Usuario logeado actualmente
+					# If this newly created section is a project, this project is added as authorized to the user who created it
+					# User currently logged in
 						$component_filter_master = component_common::get_instance(
 							'component_filter_master',
 							DEDALO_FILTER_MASTER_TIPO,
@@ -1050,8 +938,8 @@ class section extends common {
 
 					##
 					# DEFAULT PROJECT FOR CREATE STANDAR SECTIONS
-					# Cuando se crea un registro de sección, se auto asigna el proyecto por defecto (definido en config DEDALO_DEFAULT_PROJECT)
-					# cuando la sección tiene definido un 'component_filter'
+					# When a section record is created, it is auto assigned the default project (defined in config DEDALO_DEFAULT_PROJECT)
+					# when the section has a 'component_filter' defined
 					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section(
 						$section_real_tipo,
 						['component_filter'],
@@ -1375,20 +1263,6 @@ class section extends common {
 
 
 
-	/**
-	* GET_SECTION_CACHE_KEY_NAME
-	* @return string
-	*/
-	public function get_section_cache_key_name() : string {
-		$pageNum='';
-
-		$var_requested = common::get_request_var('m');
-		if(!empty($var_requested)) $pageNum = $var_requested;
-
-		return DEDALO_DATABASE_CONN.'_section_get_html_'.$this->get_identificador_unico().'_'.$pageNum;
-	}//end get_section_cache_key_name
-
-
 
 	/**
 	* GET_SECTION_REAL_TIPO
@@ -1669,19 +1543,6 @@ class section extends common {
 			}
 		}
 
-		/*
-			if($ar_modelo_name_required[0]=='section_list') {
-				# En los casos en que buscamos modelos 'section_list' no buscaremos recusivamente para posibilitar el anidamiento de secciones
-				# como el caso de 'Elementos y procesos' en PCI
-				$RecordObj_dd			= new RecordObj_dd($tipo);
-				$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this();
-			}else{
-				#$RecordObj_dd			= new RecordObj_dd($tipo);
-				#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
-				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
-			}
-			*/
-
 		if( empty($ar_recursive_childrens) ) {
 			#throw new Exception(__METHOD__." ar_recursive_childrens is empty! This section don't have: '$modelo_name_required' ");
 			#debug_log(__METHOD__." ar_recursive_childrens is empty! This section id=$parent don't have: '$modelo_name_required' ". __METHOD__ );
@@ -1753,146 +1614,6 @@ class section extends common {
 		return (array)$ar_recursive_children;
 	}//end get_ar_recursive_children
 
-
-
-	/**
-	* GET_PORTAL_TIPO_FROM_COMPONENT
-	* Return portal tipo from section and portal inside component
-	* @param string $section_tipo
-	* @param string $component_tipo_inside_portal
-	* @return string|null $portal_tipo
-	*/
-	public static function get_portal_tipo_from_component(string $section_tipo, string $component_tipo_inside_portal) : ?string {
-
-		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section(
-			$section_tipo,
-			['component_portal'],
-			$from_cache=true,
-			$resolve_virtual=true,
-			$recursive=true,
-			$search_exact=true
-		);
-
-		// empty case
-			if (empty($ar_portals)) {
-				return false;
-			}
-
-		foreach ($ar_portals as $current_portal_tipo) {
-			# portal related terms
-			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($current_portal_tipo, true, true);
-			if (in_array($component_tipo_inside_portal, $ar_related)) {
-				// break and return tipo
-				return $current_portal_tipo;
-			}
-		}
-
-		return null;
-	}//end get_portal_tipo_from_component
-
-
-
-	/**
-	* get_portal_tipo_from_component_in_search_list
-	* Return portal tipo from section and portal inside component
-	* @param string $section_tipo
-	* @param string $component_tipo_inside_portal
-	* @return string $portal_tipo / bool false
-	*/
-	public static function get_portal_tipo_from_component_in_search_list(string $section_tipo, string $component_tipo_inside_portal) : ?string {
-
-		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_portal'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-
-		// empty case
-			if (empty($ar_portals)) {
-				return null;
-			}
-
-		foreach ($ar_portals as $current_portal_tipo) {
-
-			# $portal search list =
-			$portal_search_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_portal_tipo, 'search_list', 'children', true);
-
-			if (empty($portal_search_list[0])) {
-				continue;
-			}
-
-			# portal related terms
-			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($portal_search_list[0], true, true);
-			if (in_array($component_tipo_inside_portal, $ar_related)) {
-				return $current_portal_tipo;
-			}
-		}
-
-		return null;
-	}//end get_portal_tipo_from_component_in_search_list
-
-
-
-	/**
-	* GET_AR_BUTTONS DES
-	* resolve the buttons of this section and load it in : $this->ar_buttons
-	* Calcula los bonones de esta sección y los deja disponibles como : $this->ar_buttons
-	* @see section_records.php modo:list
-	*/
-		// public function get_ar_buttons() {
-
-		// 	if (isset($this->ar_buttons)) return $this->ar_buttons;
-
-		// 	if(SHOW_DEBUG===true) {
-		// 		global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
-		// 	}
-
-		// 	# SECTION_REAL_TIPO
-		// 	$section_real_tipo  = $this->get_section_real_tipo();	# Fija $this->section_real_tipo que es necesario luego
-
-		// 	#
-		// 	# VIRTUAL SECTION
-		// 	#
-		// 	# SECTION VIRTUAL CASE
-		// 	if ($this->section_virtual===true ) {
-		// 		# Exclude elements of layout edit.
-		// 		# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
-		// 		# $exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements')[0];
-		// 		$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements');
-		// 		$ar_excluded_tipo 		  = array();
-		// 		if (!isset($ar_exclude_elements_tipo[0])) {
-		// 			#throw new Exception("Error Processing Request. exclude_elements of section $this->tipo not found. Exclude elements is mandatory (2)", 1);
-		// 			error_log("Warning. exclude_elements of section $this->tipo not found (2)");
-		// 		}else{
-		// 			# Localizamos los elementos a excluir que son los términos relacionados con este elemento ('exclude_elements')
-		// 			$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);
-		// 		}
-
-		// 		$ar_obj_button_all = $this->get_ar_children_objects_by_modelo_name_in_section('button_',true);
-		// 		$ar_secton_real_buttons = array();
-		// 		foreach ($ar_obj_button_all as $current_obj_button) {
-		// 			if(!in_array($current_obj_button->get_tipo(), $ar_excluded_tipo)){
-		// 				$ar_secton_real_buttons[] = $current_obj_button;
-		// 			}
-		// 		}
-		// 		#add the specific buttons of the virtual section, if the virtual have buttons add to the list.
-		// 		$ar_section_virtual_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
-		// 		$ar_buttons = array_merge($ar_section_virtual_buttons,$ar_secton_real_buttons);
-
-		// 	}else{
-		// 		#if the section is a real section see the buttons directly
-		// 		#$ar_buttons = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_');
-		// 		$ar_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
-		// 	}//end if ($this->section_virtual==true )
-
-		// 	# Group result by modelo name
-		// 	if($ar_buttons) foreach ($ar_buttons as $current_obj_button) {
-		// 		$current_modelo_name = get_class($current_obj_button);
-		// 		$this->ar_buttons[$current_modelo_name][] = $current_obj_button;
-		// 	}
-
-		// 	if(SHOW_DEBUG===true) {
-		// 		global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
-		// 	}
-
-		// 	return $this->ar_buttons;
-		// }//end get_ar_buttons
 
 
 
@@ -1998,64 +1719,6 @@ class section extends common {
 
 		return (array)$ar_all_project_langs;
 	}//end get_ar_all_project_langs
-
-
-
-	/**
-	* GET_AR_PROJECTS_BY_SECTION DES
-	*/
-		// private function get_ar_projects_by_section() {
-
-		// 	# "NO ESTA ACABADO.. !";
-		// 	die("Stopped secuence get_ar_projects_by_section");
-
-		// 	# Obtenemos los hijos de esta seccion
-		// 	$section	 	= self::get_tipo();
-		// 	$modelo_name	= 'filter_';
-
-		// 	# Obtenemos el filtro (terminoID)
-		// 	$filtroID		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$section , $modelo_name, $relation_type='children');
-
-		// 	# Obtenemos su filtro relacionado
-		// 	$filtroID_rel	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID, $modelo_name, $relation_type='termino_relacionado');
-
-		// 	# Buscamos el termino relacionado con el filtro encontrado
-		// 	$filtroID_rel2	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID_rel, $modelo_name, $relation_type='termino_relacionado');
-
-		// 	/*
-		// 	# los recorremos para filtrar por modelo
-		// 	if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
-
-		// 		$RecordObj_dd	= new RecordObj_dd($terminoID);
-		// 		$modelo			= $RecordObj_dd->get_modelo();
-		// 		$modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
-
-		// 		if(strpos($modelo_name,'filter_') !== false) {
-		// 			$filter_tipo = $terminoID;
-		// 			break;
-		// 		}
-		// 	}
-		// 	if(empty($filter_tipo)) return false;
-		// 	*/
-
-		// 	# del filtro, sacamos los términos relacionados
-		// 	#$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($filter_tipo, $cache=true, $simple=true);
-
-		// 	return false;
-		// }//end get_ar_projects_by_section
-
-
-
-	/**
-	* GET_AR_SECTION_CREATOR DES
-	*/
-		// public function get_ar_section_creator() {
-		// 	die("REHACER");
-		// 	$dato = $this->get_dato();
-		// 	if( isset($dato->created_date->ar_section_creator) )  return $dato->created_date->ar_section_creator;
-
-		// 	return false;
-		// }//end get_ar_section_creator
 
 
 
@@ -2636,90 +2299,6 @@ class section extends common {
 				$this->Save($save_options);
 		}
 
-		/* REMOVED 27-12-2018
-		// datos for new section
-			$datos = new stdClass();
-				$datos->section_id 			= (int)$this->section_id;
-				$datos->section_tipo 		= (string)$this->tipo;
-				$datos->label 				= (string)RecordObj_dd::get_termino_by_tipo($this->tipo,null,true);
-				$datos->created_by_userID 	= (int)navigator::get_user_id();
-				$datos->created_date 		= (string)component_date::get_timestamp_now_for_db();	# Format 2012-11-05 19:50:44
-
-			// Creation section info
-				// Update modified section data . Resolve and add creation date and user to current section dato
-					$this->update_modified_section_data(array(
-						'mode' => 'new_record'
-					));
-
-				// Components container
-					// components container (empty when insert)
-					$datos->components = isset($this->dato->components) ? $this->dato->components : new stdClass();
-
-
-				// Relations container
-					// relations container
-					$datos->relations  = isset($this->dato->relations) ? (array)$this->dato->relations : [];
-
-				// update section dato with final object. Important
-					$this->dato = $datos;
-
-		// database manual insert
-			$strQuery = "INSERT INTO \"$matrix_table\" (section_id, section_tipo, datos) VALUES ($1, $2, $3)";
-			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $this->section_id, $this->tipo, json_encode($datos) ));
-			if(!$result) {
-				debug_log(__METHOD__."Error Processing Save Insert Request: strQuery section_id:$section_id, section_tipo:$this->tipo ".to_string($strQuery), logger::DEBUG);
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Save Insert Request ". pg_last_error(DBi::_getConnection()), 1);;
-				}
-				return "!!! Error: sorry an error ocurred on INSERT record. Data is not saved";
-			}
-
-			// Store in cached sections . Important
-				# key for CACHE
-				$key = $this->section_id .'_'. $this->tipo;
-				self::$ar_section_instances[$key] = $this;
-
-		// Save current section
-		#$this->Save();
-
-
-		#
-		# FILTER always save default project
-			// $section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false
-			$ar_filter_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, ['component_filter'], true, true, true, true);
-			if (!isset($ar_filter_tipo[0])) {
-
-				debug_log(__METHOD__." Error Processing Request. component_filter not found in this section ($this->tipo - $this->section_id) ".to_string(), logger::DEBUG);
-
-			}else{
-
-				$filter_tipo 	  = $ar_filter_tipo[0];
-
-				# Filter can be component_filter or component_filter_master in user section case
-				# When you are in import users context, you need use 'component_filter_master' as projects data
-				$filter_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($filter_tipo,true);
-				$component_filter 	= component_common::get_instance($filter_modelo_name,
-																	 $filter_tipo,
-																	 $this->section_id,
-																	 'edit', # mode 'edit' already autosave default dato
-																	 DEDALO_DATA_NOLAN,
-																	 $this->tipo);
-				#
-				# FILTER always save default project
-				# Get current user projects
-				#$user_id 				= navigator::get_user_id();
-				#$default_dato_for_user = $this->get_default_dato_for_user($user_id);
-				#$component_filter->set_dato($default_dato_for_user);
-				#$component_filter->Save();
-			}
-
-		#
-		# COUNTER
-		# CONSOLIDATE COUNTER VALUE
-		# Search last section_id for current section and set counter to this value (when user later create a new record manually, counter will be ok)
-		counter::consolidate_counter( $this->tipo, $matrix_table );
-		*/
-
 		return true;
 	}//end forced_create_record
 
@@ -3050,40 +2629,27 @@ class section extends common {
 
 	/**
 	* REMOVE_RELATION
-	* @param object $locator
-	* @param string $relations_container = 'relations'
-	* @return bool
+	* @param object locator $locator
 	*/
-	public function remove_relation( object $locator, string $relations_container='relations' ) : bool {
-
-		$removed = false;
+	public function remove_relation( $locator, $relations_container='relations' ) {
 
 		$relations = $this->get_relations( $relations_container );
 
+
 		$ar_properties=array('section_id','section_tipo','type');
-		if (isset($locator->from_component_tipo))	$ar_properties[] = 'from_component_tipo';
-		if (isset($locator->tag_id))				$ar_properties[] = 'tag_id';
-		if (isset($locator->component_tipo))		$ar_properties[] = 'component_tipo';
+		if (isset($locator->from_component_tipo)) 	$ar_properties[] = 'from_component_tipo';
+		if (isset($locator->tag_id)) 		 		$ar_properties[] = 'tag_id';
+		if (isset($locator->component_tipo)) 		$ar_properties[] = 'component_tipo';
 		if (isset($locator->section_top_tipo))		$ar_properties[] = 'section_top_tipo';
-		if (isset($locator->section_top_id))		$ar_properties[] = 'section_top_id';
+		if (isset($locator->section_top_id)) 		$ar_properties[] = 'section_top_id';
 
-
-		$new_relations = [];
+		$removed 		= false;
+		$new_relations 	= [];
 		foreach ($relations as $key => $current_locator_obj) {
 
 			# Test if already exists
 			$equal = locator::compare_locators( $current_locator_obj, $locator, $ar_properties );
 			if ( $equal===true ) {
-
-				#unset($relations[$key]);
-				#debug_log(__METHOD__." Removed key $key ".to_string($locator), logger::DEBUG);
-
-				# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
-				#$relations = array_values($relations);
-				#$this->dato->relations = $relations;
-
-				#return true;
-				#break;
 				$removed = true;
 
 			}else{
@@ -3095,7 +2661,6 @@ class section extends common {
 		# Updates current dato relations with clean array of locators
 		if ($removed===true) {
 
-			#$this->dato->relations = $new_relations;
 			$this->dato->{$relations_container} = $new_relations;
 		}
 
@@ -3210,201 +2775,6 @@ class section extends common {
 		return $section_map;
 	}//end get_section_map
 
-
-
-	/**
-	* PROPAGATE_TEMP_SECTION_DATA
-	* @param object $temp_section_data
-	* @param object $current_section
-	*/
-		// public static function propagate_temp_section_data($temp_section_data, $section_tipo, $section_id) {
-
-		// 	# COMPONENTS
-		// 	if (isset($temp_section_data->components)) {
-		// 		foreach ($temp_section_data->components as $current_tipo => $current_component) {
-
-		// 			if ($current_tipo==='relations') {
-		// 				trigger_error("BAD SECTION DATA IN temp_section_data !! ".json_encode($temp_section_data));
-		// 				continue;
-		// 			}
-
-		// 			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-		// 			$traducible  	= $RecordObj_dd->get_traducible();
-		// 			$current_lang   = $traducible!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-
-		// 			$component_dato_current_lang = $current_component->dato->$current_lang;
-
-		// 			if (!isset($component_dato_current_lang)) {
-		// 				if(SHOW_DEBUG===true) {
-		// 					dump($current_component, ' $current_component ++ '.to_string());
-		// 					trigger_error("Error: element $current_tipo without dato");
-		// 				}
-		// 				continue;
-		// 			}
-
-		// 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-		// 			$component 	 = component_common::get_instance(	$modelo_name,
-		// 															$current_tipo,
-		// 															$section_id,
-		// 															'edit',
-		// 															$current_lang,
-		// 															$section_tipo);
-		// 			$component->set_dato( $component_dato_current_lang );
-		// 			$component->Save();
-
-		// 		}//end foreach ($temp_section_data as $key => $value) {
-		// 	}//end if (isset($temp_section_data->components))
-
-
-		// 	# RELATION COMPONENTS
-		// 	if (isset($temp_section_data->relations)) {
-		// 		$ar_locators = [];
-		// 		# Group locator by from_component_tipo
-		// 		foreach ($temp_section_data->relations as $current_locator) {
-		// 			$current_tipo = $current_locator->from_component_tipo;
-		// 			$ar_locators[$current_tipo][] = $current_locator;
-		// 		}
-		// 		# iterate relation components and set dato/save
-		// 		foreach ($ar_locators as $current_tipo => $ar_current_locator) {
-		// 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-		// 			$component 	 = component_common::get_instance(	$modelo_name,
-		// 															$current_tipo,
-		// 															$section_id,
-		// 															'edit',
-		// 															DEDALO_DATA_NOLAN,
-		// 															$section_tipo,
-		// 															false);
-		// 			$component->get_dato();
-		// 			$component->set_dato( $ar_current_locator );
-		// 			$component->Save();
-
-		// 			#debug_log(__METHOD__." Saved $modelo_name $current_tipo ($section_tipo - $section_id) dato: ".json_encode($ar_current_locator), logger::DEBUG);
-		// 		}
-		// 	}//end if (isset($temp_section_data->relations))
-
-
-		// 	return true;
-		// }//nd propagate_temp_section_data
-
-
-
-	/**
-	* BUILD_SEARCH_QUERY_OBJECT DES
-	* @return object $query_object
-	*/
-		// public function build_search_query_object_DES( $request_options=array() ) {
-		// 		$start_time=start_time();
-		// 		$options = new stdClass();
-		// 		$options->q 	 			= null;
-		// 		$options->limit  			= 10;
-		// 		$options->order  			= null;
-		// 		$options->offset 			= 0;
-		// 		$options->lang 				= DEDALO_DATA_LANG;
-		// 		$options->id 				= $this->tipo . '_' .$this->modo;
-		// 		$options->section_tipo		= $this->tipo;
-		// 		$options->select_fields		= 'default';
-		// 		$options->filter_by_id		= false;
-		// 		$options->full_count		= true;
-		// 		$options->remove_distinct	= false;
-		// 			#$options->forced_matrix_table = false;
-		// 		if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-		// 				#$order_obj = new stdClass();
-		// 			#	$order_obj->direction 	= "DESC";
-		// 			#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');
-		// 			# Defaults for activity
-		// 			$options->limit  		= 30;
-		// 			#$options->order  		= [$order_obj];
-		// 		}
-		// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		// 		# SELECT
-		// 		$select_group = [];
-		// 		if ($options->select_fields===false) {
-		// 			# No fields are required
-		// 		}else{
-		// 			# Default case
-		// 			$layout_map = component_layout::get_layout_map_from_section( $this );
-		// 				if (!empty($layout_map)) {
-		// 				$ar_component_tipo = reset($layout_map);
-		// 				foreach ($ar_component_tipo as $key => $component_tipo) {
-		// 					if (empty($component_tipo)) {
-		// 						debug_log(__METHOD__." Ignored empty component tipo (key:$key) received from layout map: ".json_encode($layout_map, JSON_PRETTY_PRINT), logger::ERROR);
-		// 						continue;
-		// 					}
-		// 					$select_element = new stdClass();
-		// 						$select_element->path = search::get_query_path($component_tipo, $options->section_tipo, false);
-		// 					# Add to group
-		// 					$select_group[] = $select_element;
-		// 				}
-		// 			}
-		// 		}
-		// 		# FILTER
-		// 		$filter_group = null;
-		// 		if ($options->filter_by_id!==false) {
-		// 				// Is an array of objects
-		// 			$ar_section_id = [];
-		// 			foreach ((array)$options->filter_by_id as $locator) {
-		// 				$ar_section_id[] = (int)$locator->section_id;
-		// 			}
-		// 				$filter_element = new stdClass();
-		// 				$filter_element->q 		= json_encode($ar_section_id);
-		// 				$filter_element->path 	= json_decode('[
-		// 					{
-		// 						"section_tipo": "'.$options->section_tipo.'",
-		// 						"component_tipo": "section_id",
-		// 						"modelo": "component_section_id",
-		// 						"name": "section_id"
-		// 					}
-		// 				]');
-		// 				$op = '$and';
-		// 			$filter_group = new stdClass();
-		// 				$filter_group->$op = [$filter_element];
-		// 		}//end if ($options->filter_by_id!==false)
-		// 			# QUERY OBJECT
-		// 	$query_object = new stdClass();
-		// 		$query_object->id  	   		= $options->id;
-		// 		$query_object->section_tipo = [$options->section_tipo];
-		// 		$query_object->limit   		= $options->limit;
-		// 		$query_object->order   		= $options->order;
-		// 		$query_object->offset  		= $options->offset;
-		// 		$query_object->full_count  	= $options->full_count;
-		// 		# Used only for time machine list
-		// 		#if ($options->forced_matrix_table!==false) {
-		// 			# add forced_matrix_table (time machine case)
-		// 		#	$query_object->forced_matrix_table = $options->forced_matrix_table;
-		// 		#}
-		// 		$query_object->filter  		= $filter_group;
-		// 		$query_object->select  		= $select_group;
-		// 			return (object)$query_object;
-		// }
-
-
-
-	/**
-	* GET_DATO_IN_PATH
-	* (!) Not used
-	* @param array $ar_path
-	*/
-		// public function get_dato_in_path( array $ar_path ) {
-
-		// 	$dato_in_path = null;
-
-		// 	$path_exists = true;
-		// 	$raw_path 	 = clone $this->get_dato();
-		// 	foreach ($ar_path as $value) {
-		// 		if (!property_exists($raw_path, $value)) {
-		// 			$path_exists = false;
-		// 			break;
-		// 		}
-		// 		$raw_path = $raw_path->{$value};
-		// 	}
-
-		// 	if ($path_exists===true) {
-		// 		$dato_in_path = $raw_path;
-		// 	}
-
-
-		// 	return $dato_in_path;
-		// }//end get_dato_in_path
 
 
 
