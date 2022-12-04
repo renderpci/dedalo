@@ -2999,19 +2999,25 @@ class section extends common {
 		// section relations data
 			$relations	= $this->get_relations( $relations_container );
 
-		# DATA INTEGRITY: Clean possible bad format locators (old and beta errors)
-		foreach ((array)$relations as $key => $current_relation) {
-			if (!is_object($current_relation) || !isset($current_relation->section_id) || !isset($current_relation->section_tipo) || !isset($current_relation->type)) {
-				//unset($relations[$key]);
-				throw new Exception("Error Processing Request. !! FOUNDED BAD FORMAT RELATION LOCATOR IN SECTION_RELATION DATA: (type:".gettype($current_relation).") ".to_string($current_relation), 1);
+		// data integrity check: Clean possible bad formed locators (old and beta errors)
+			foreach ((array)$relations as $key => $current_relation) {
+				if (!is_object($current_relation) ||
+					!isset($current_relation->section_id) ||
+					!isset($current_relation->section_tipo) ||
+					!isset($current_relation->type)
+					) {
+
+					debug_log(__METHOD__." Invalid relations locator is received. ".to_string($current_relation), logger::ERROR);
+
+					throw new Exception("Error Processing Request. !! FOUNDED BAD FORMAT RELATION LOCATOR IN SECTION_RELATION DATA: (type:".gettype($current_relation).") ".to_string($current_relation), 1);
+				}
+				#if ($remove_previous_of_current_type && $current_relation->type===$current_type) {
+				#	debug_log(__METHOD__." Removing locator of type $current_type from relation locator: ".to_string($current_relation), logger::DEBUG);
+				#	unset($relations[$key]);
+				#}
 			}
-			#if ($remove_previous_of_current_type && $current_relation->type===$current_type) {
-			#	debug_log(__METHOD__." Removing locator of type $current_type from relation locator: ".to_string($current_relation), logger::DEBUG);
-			#	unset($relations[$key]);
-			#}
-		}
-		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, undesired object is created)
-		$relations = array_values($relations);
+			# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, undesired object is created)
+			$relations = array_values($relations);
 
 		# Test if already exists
 		/*$ar_properties=array('section_id','section_tipo','type');
