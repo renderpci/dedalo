@@ -2949,8 +2949,8 @@ class section extends common {
 
 	/**
 	* GET_RELATIONS
-	* Consider the variable in the section when constructing the object ......
-	*
+	* Get section container 'relations' array of locators values
+	* Consider the variable in the section when constructing the object ......	*
 	* @param string $relations_container = 'relations'
 	* @return array $relations
 	*/
@@ -2996,8 +2996,8 @@ class section extends common {
 			return false;
 		}
 
-		$current_type	= $locator->type;
-		$relations		= $this->get_relations( $relations_container );
+		// section relations data
+			$relations	= $this->get_relations( $relations_container );
 
 		# DATA INTEGRITY: Clean possible bad format locators (old and beta errors)
 		foreach ((array)$relations as $key => $current_relation) {

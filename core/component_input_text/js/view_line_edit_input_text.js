@@ -120,7 +120,7 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
-			
+
 		// keyup event
 			input.addEventListener('keyup', function(e) {
 
