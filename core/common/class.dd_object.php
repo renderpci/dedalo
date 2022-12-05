@@ -147,7 +147,7 @@ class dd_object {
 
 	/**
 	* SET_TYPE
-	* Only allow 'section','component','groupper','button'
+	* Only allow 'section','component','grouper','button'
 	*/
 	public function set_type(string $value) : void  {
 		$ar_type_allowed = self::$ar_type_allowed;
