@@ -63,6 +63,9 @@ class section extends common {
 		// tm_context. Array
 		public $tm_context;
 
+		// Source. Define if the section get data from his record in DDBB or the section get data from component in other section (section doesn't has record in DDBB get parts of other section)
+		public $source = 'ddbb';
+
 
 
 	# DIFFUSION INFO
