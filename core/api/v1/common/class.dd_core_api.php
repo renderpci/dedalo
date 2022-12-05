@@ -2039,11 +2039,11 @@ final class dd_core_api {
 			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo ?? null;
-			$modo			= $ddo_source->modo ?? 'edit'; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+			$mode			= $ddo_source->mode ?? 'edit'; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 			$sqo			= !empty($rqo->sqo) ? $rqo->sqo : null;
 
 		// relation_list
-			$relation_list 	= new relation_list($tipo, $section_id, $section_tipo, $modo);
+			$relation_list 	= new relation_list($tipo, $section_id, $section_tipo, $mode);
 			$relation_list->set_sqo($sqo);
 
 			$relation_list_json = $relation_list->get_json();
