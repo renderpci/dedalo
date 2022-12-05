@@ -1812,7 +1812,7 @@ export const ts_object = new function() {
 			const section_id	= wrap.dataset.section_id
 			const tipo			= button_obj.dataset.tipo
 			const type			= button_obj.dataset.type
-			const modo			= 'edit'
+			const mode			= 'edit'
 			const lang			= page_globals.dedalo_data_lang
 			const html_data		= '...';	//" show_component_in_ts_object here! "
 			const role			= section_tipo + '_' + section_id + '_' + tipo
@@ -1830,7 +1830,7 @@ export const ts_object = new function() {
 					section_tipo	: section_tipo,
 					section_id		: section_id,
 					tipo			: tipo,
-					mode			: modo
+					mode			: mode
 				})
 
 				// term edit case
@@ -2083,7 +2083,7 @@ export const ts_object = new function() {
 				        {
 				            "section_tipo": "hierarchy1",
 				            "section_id": "1",
-				            "modo": "edit",
+				            "mode": "edit",
 				            "lang": "lg-spa",
 				            "ar_elements": [
 				                {
@@ -2101,7 +2101,7 @@ export const ts_object = new function() {
 				        {
 				            "section_tipo": "ts1",
 				            "section_id": "65",
-				            "modo": "edit",
+				            "mode": "edit",
 				            "lang": "lg-spa",
 				            "ar_elements": [
 				                {
@@ -2129,7 +2129,7 @@ export const ts_object = new function() {
 				        {
 				            "section_tipo": "ts1",
 				            "section_id": "73",
-				            "modo": "edit",
+				            "mode": "edit",
 				            "lang": "lg-spa",
 				            "ar_elements": [
 				                {
@@ -2157,7 +2157,7 @@ export const ts_object = new function() {
 				        {
 				            "section_tipo": "ts1",
 				            "section_id": "74",
-				            "modo": "edit",
+				            "mode": "edit",
 				            "lang": "lg-spa",
 				            "ar_elements": [
 				                {
