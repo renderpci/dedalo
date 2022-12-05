@@ -1269,8 +1269,8 @@ component_common.prototype.change_mode_DES = async function(new_mode, autoload) 
 
 /**
 * SET_CHANGED_DATA
-* Unified way to set changed_data
-* @param object options
+* Unified way to set changed_data item
+* @param object changed_data_item
 * @return bool
 */
 component_common.prototype.set_changed_data = function(changed_data_item) {
