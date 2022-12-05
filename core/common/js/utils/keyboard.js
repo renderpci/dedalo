@@ -181,9 +181,9 @@ export const activate_window_keydown_DES = function() {
 			// SEARCH SUBMIT (SEARCH2) : CONTROL + RETURN (ctrlKey+13)
 			//case (e.ctrlKey==1 && e.keyCode==13):
 			case (e.keyCode===13):
-				if (page_globals.modo.indexOf('list')!==-1 || page_globals.modo.indexOf('tool_')!==-1) {
+				if (page_globals.mode.indexOf('list')!==-1 || page_globals.mode.indexOf('tool_')!==-1) {
 
-					if (page_globals.tipo==='dd100' || page_globals.modo==='tool_cataloging' || page_globals.modo==='tool_sort') {
+					if (page_globals.tipo==='dd100' || page_globals.mode==='tool_cataloging' || page_globals.mode==='tool_sort') {
 						// if no activeElement children, we are in input order or editing a term
 						if (!document.activeElement.firstChild) {
 							return false;
@@ -212,11 +212,11 @@ export const activate_window_keydown_DES = function() {
 			case (e.keyCode===27):
 				// Toggle filter tab in list
 				/*
-				if (page_globals.modo.indexOf('list')!==-1 || page_globals.modo.indexOf('tool_')!==-1) {
+				if (page_globals.mode.indexOf('list')!==-1 || page_globals.mode.indexOf('tool_')!==-1) {
 					search.toggle_filter_search_tap()
 				}*/
 				// Deselect components
-				if (page_globals.modo && page_globals.modo.indexOf('edit')!==-1) {
+				if (page_globals.mode && page_globals.mode.indexOf('edit')!==-1) {
 					component_common.reset_all_selected_wraps(false)
 				}
 				// Deselect menu
