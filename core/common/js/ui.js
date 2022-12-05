@@ -128,7 +128,7 @@ export const ui = {
 				const tipo			= instance.tipo 	// like 'rsc26'
 				const section_tipo	= instance.section_tipo 	// like 'rsc26'
 				const mode			= instance.mode 	// like 'edit'
-				const view			= instance.view || instance.context.view || null
+				const view			= instance.view || instance.context.view || 'default'
 				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
 
@@ -459,6 +459,16 @@ export const ui = {
 					]
 					if (view) {ar_css.push('view_'+view)}
 					wrapper.classList.add(...ar_css)
+
+				// properties CSS of view
+					// const element_css	= instance.context.css || {}
+					// console.log('element_css:', element_css, view);
+					// if (element_css && element_css['view_'+view]
+					// 	) {
+					// 	// const selector = `${section_tipo}_${tipo}.${tipo}.list`
+					// 	const selector = `${section_tipo}_${tipo}.${tipo}.view_${view}`
+					// 	set_element_css(selector, element_css['view_'+view])
+					// }
 
 			// value_string. span value. Add span if value_string is received
 				if (value_string) {
@@ -1508,6 +1518,8 @@ export const ui = {
 	/**
 	* CREATE_DOM_ELEMENT
 	* Builds a DOM node based on received options
+	* @param object options
+	* @return DOM node element
 	*/
 	create_dom_element : function(options){
 
