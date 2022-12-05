@@ -592,7 +592,7 @@ class diffusion_sql extends diffusion  {
 			#
 			# SECTION DIFFUSION INFO - CHECK
 			# On finish record update, update current section diffusion_info
-			$section 		= section::get_instance($current_section_id, $section_tipo, $modo='list', false);
+			$section 		= section::get_instance($current_section_id, $section_tipo, $mode='list', false);
 			$diffusion_info = $section->get_diffusion_info();
 			if ( isset($diffusion_info->$diffusion_element_tipo) ) {
 
@@ -875,7 +875,7 @@ class diffusion_sql extends diffusion  {
 			#
 			# SECTION DIFFUSION INFO - ADD
 			# On finish record update, uppdate current section diffusion_info
-			#$section = section::get_instance($current_section_id, $section_tipo, $modo='list');
+			#$section = section::get_instance($current_section_id, $section_tipo, $mode='list');
 			#$diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
 			if ($build_mode==='default') {
 				$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
@@ -986,7 +986,7 @@ class diffusion_sql extends diffusion  {
 					}
 			}
 
-			$section = section::get_instance($options->section_id, $options->section_tipo, $modo='list', false);
+			$section = section::get_instance($options->section_id, $options->section_tipo, $mode='list', false);
 			$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 			$section->diffusion_info_add($options->diffusion_element_tipo);
 			$section->save_modified = false;
@@ -3410,7 +3410,7 @@ class diffusion_sql extends diffusion  {
 		$component 		= component_common::get_instance($modelo_name,
 														 $component_tipo,
 														 $section_id,
-														 $modo='list',
+														 $mode='list',
 														 $lang,
 														 $section_tipo);
 
