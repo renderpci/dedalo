@@ -3946,23 +3946,6 @@ dd-modal .footer.content {
     margin-right: 0.5rem;
   }
 }
-.header_wrapper_list {
-  position: -webkit-sticky;
-  position: relative;
-  top: 2em;
-  color: #353535;
-  width: 100%;
-  display: grid;
-  line-height: 1.1em;
-  z-index: 1;
-  font-size: 13px;
-}
-.header_wrapper_list.with_debug_info_bar {
-  top: 3.9em;
-}
-.header_wrapper_list.with_initiator {
-  top: 0px;
-}
 .header_wrapper_list .head_column {
   display: flex;
   background-color: #f0f0f0;
@@ -8919,6 +8902,7 @@ dd-modal .footer.content {
   width: 100%;
 }
 .component_input_text.edit > .content_data > .content_value .input_value {
+  position: relative;
   text-overflow: ellipsis;
 }
 .component_input_text.edit > .content_data > .content_value .input_value:focus {
@@ -9184,8 +9168,10 @@ dd-modal .footer.content {
 */
 .component_portal.view_default.edit > .list_body,
 .portal.view_default.edit > .list_body {
+  display: grid;
   grid-template-rows: 1.8rem auto;
   min-height: 2.66rem;
+  position: relative;
 }
 .component_portal.view_default.edit > .list_body .drag.icon,
 .portal.view_default.edit > .list_body .drag.icon {
@@ -9213,11 +9199,13 @@ dd-modal .footer.content {
   z-index: 1;
   display: block;
   position: absolute;
+  left: 0px;
 }
 .component_portal.view_default.edit > .list_body .drop.dragover,
 .portal.view_default.edit > .list_body .drop.dragover {
   background-color: #ffffff8c;
   border-top: 2px dotted #ff8a00;
+  width: 100%;
 }
 .component_portal.view_default.edit > .list_body .drag_section_id,
 .portal.view_default.edit > .list_body .drag_section_id {
