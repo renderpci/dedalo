@@ -7,6 +7,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {keyup_handler, remove_handler} from './render_edit_component_input_text.js'
 
 
 
@@ -85,19 +86,23 @@ const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* Creates the current input text node
+* @param int i
+* @param string current_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
+		const multi_line	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
-		const element_type			= (multi_line===true) ? 'textarea' : 'input'
-		const is_inside_tool		= self.is_inside_tool
+		const element_type	= (multi_line===true) ? 'textarea' : 'input'
+		const is_inside_tool= self.is_inside_tool
 		// const with_lang_versions	= self.context.properties.with_lang_versions || false
 
-	// content_value
+	// content_value node
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value'
@@ -119,6 +124,10 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
+		// keyup event
+			input.addEventListener('keyup', function(e) {
+				keyup_handler(e, i, self)
+			})
 		// blur event
 			// input.addEventListener('blur', function() {
 			// 	// force to save current input if changed (prevents override changed_data
@@ -131,34 +140,6 @@ const get_content_value = (i, current_value, self) => {
 			// 		})
 			// 	}
 			// })
-		// keyup event
-			input.addEventListener('keyup', function(e) {
-
-				// Enter key force to save changes
-					if (e.key==='Enter') {
-						e.preventDefault()
-
-						// force to save current input if changed
-						if (self.data.changed_data && self.data.changed_data.length>0) {
-							// change_value (save data)
-							self.change_value({
-								changed_data	: self.data.changed_data,
-								refresh			: false
-							})
-						}
-						return false
-					}
-
-				// change data
-					const changed_data_item = Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: (this.value.length>0) ? this.value : null
-					})
-
-				// fix instance changed_data
-					self.set_changed_data(changed_data_item)
-			})
 		// change event
 			// input.addEventListener('change', async function() {
 			// 	// is_unique check
@@ -185,7 +166,7 @@ const get_content_value = (i, current_value, self) => {
 			// })
 
 	// button remove. Triggered by wrapper delegated events
-		if(!is_inside_tool) {
+		if(!is_inside_tool && i>0) {
 			// button_remove
 			const remove_node = ui.create_dom_element({
 				element_type	: 'span',
@@ -193,21 +174,7 @@ const get_content_value = (i, current_value, self) => {
 				parent			: content_value
 			})
 			remove_node.addEventListener('mouseup', function() {
-				// force possible input change before remove
-				document.activeElement.blur()
-
-				const current_value = input.value ? input.value : null
-
-				const changed_data = [Object.freeze({
-					action	: 'remove',
-					key		: i,
-					value	: null
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					label			: current_value,
-					refresh			: true
-				})
+				remove_handler(input, i, self)
 			})
 		}// end if(mode)
 

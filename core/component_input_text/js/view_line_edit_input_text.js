@@ -7,6 +7,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {keyup_handler} from './render_edit_component_input_text.js'
 
 
 
@@ -85,17 +86,19 @@ const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* Creates the current input text node
+* @param int i
+* @param string current_value
+* @param object self
 * @return DOM node content_value
 */
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const mode					= self.mode
-		const multi_line			= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
+		const multi_line	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
-		const element_type			= (multi_line===true) ? 'textarea' : 'input'
-		const is_inside_tool		= self.is_inside_tool
+		const element_type	= (multi_line===true) ? 'textarea' : 'input'
 		// const with_lang_versions	= self.context.properties.with_lang_versions || false
 
 	// content_value
@@ -120,35 +123,11 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
-			
 		// keyup event
 			input.addEventListener('keyup', function(e) {
-
-				// Enter key force to save changes
-					if (e.key==='Enter') {
-						e.preventDefault()
-
-						// force to save current input if changed
-						if (self.data.changed_data && self.data.changed_data.length>0) {
-							// change_value (save data)
-							self.change_value({
-								changed_data	: self.data.changed_data,
-								refresh			: false
-							})
-						}
-						return false
-					}
-
-				// change data
-					const changed_data_item = Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: (this.value.length>0) ? this.value : null
-					})
-
-				// fix instance changed_data
-					self.set_changed_data(changed_data_item)
+				keyup_handler(e, i, self)
 			})
+
+
 	return content_value
 }//end get_content_value
-

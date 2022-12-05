@@ -28,7 +28,7 @@ export const render_edit_component_input_text = function() {
 render_edit_component_input_text.prototype.edit = async function(options) {
 
 	const self = this
-	
+
 	// view
 		const view	= self.context.view || 'default'
 
@@ -50,3 +50,79 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 
 	return null
 }//end edit
+
+
+
+/**
+* KEYUP_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+export const keyup_handler = function(e, key, self) {
+	e.preventDefault()
+
+	// Enter key force to save changes
+		if (e.key==='Enter') {
+
+			// force to save current input if changed
+				const changed_data = self.data.changed_data || []
+				// change_value (save data)
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+		}else{
+			// change data
+				const changed_data_item = Object.freeze({
+					action	: 'update',
+					key		: key,
+					value	: e.target.value || ''
+				})
+
+			// fix instance changed_data
+				self.set_changed_data(changed_data_item)
+		}
+
+
+	return true
+}//end keyup_handler
+
+
+
+/**
+* REMOVE_HANDLER
+* Handle button remove actions
+* @param DOM  node input
+* @param int key
+* @param object self
+* @return promise response
+*/
+export const remove_handler = function(input, key, self) {
+
+	// force possible input change before remove
+		document.activeElement.blur()
+
+	// value
+		const current_value = input.value ? input.value : null
+
+	// changed_data
+		const changed_data = [Object.freeze({
+			action	: 'remove',
+			key		: key,
+			value	: null
+		})]
+
+	// change_value. Returns a promise that is resolved on api response is done
+		const response = self.change_value({
+			changed_data	: changed_data,
+			label			: current_value,
+			refresh			: true
+		})
+
+
+	return response
+}//end remove_handler

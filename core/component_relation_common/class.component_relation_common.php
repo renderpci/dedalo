@@ -42,6 +42,12 @@ class component_relation_common extends component_common {
 
 	/**
 	* __CONSTRUCT
+	* @param string $tipo = null
+	* @param string|null $parent = null
+	* @param string $modo = 'list'
+	* @param string $lang = null
+	* @param string $section_tipo = null
+	*
 	* @return bool
 	*/
 	public function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null) {
@@ -83,21 +89,8 @@ class component_relation_common extends component_common {
 					? $properties->config_relation->relation_type_rel
 					: $this->default_relation_type_rel;
 
-		# relation_type
-		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-		# Build the componente normally
-		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
-
-		// if(SHOW_DEBUG) {
-		// 	$traducible = $this->RecordObj_dd->get_traducible();
-		// 	if ($traducible==='si') {
-		// 		#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-		// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
-		// 	}
-		// }
-
-
-		return true;
+		// Build the component normally
+			parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 	}//end __construct
 
 
@@ -150,7 +143,7 @@ class component_relation_common extends component_common {
 
 				if (empty($this->matrix_id)) {
 					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
-					return false;
+					return [];
 				}
 
 				// tm dato. Note that no lang or section_id is needed, only matrix_id
@@ -163,8 +156,9 @@ class component_relation_common extends component_common {
 		// load. Load matrix data and set this->dato
 			$this->load_component_dato();
 
-		$dato = $this->dato ?? [];
-			// dump($dato, ' dato ++ '.to_string($this->tipo));
+		// read value
+			$dato = $this->dato ?? [];
+
 
 		return $dato;
 	}//end get_dato
@@ -280,15 +274,15 @@ class component_relation_common extends component_common {
 				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 		}
 
-		// children_resursive function, get all ddo chain that depends of this component
-			if (!function_exists('get_children_resursive')) {
-				function get_children_resursive($ar_ddo, $dd_object) {
+		// children_recursive function, get all ddo chain that depends of this component
+			if (!function_exists('get_children_recursive')) {
+				function get_children_recursive($ar_ddo, $dd_object) {
 					$ar_children = [];
 
 					foreach ($ar_ddo as $ddo) {
 						if($ddo->parent===$dd_object->tipo) {
 							$ar_children[] = $ddo;
-							$result = get_children_resursive($ar_ddo, $ddo);
+							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
 								$ar_children = array_merge($ar_children, $result);
 							}
@@ -299,14 +293,14 @@ class component_relation_common extends component_common {
 			}
 
 		// get last column
-			// 	if (!function_exists('get_last_column_resursive')) {
-			// 		function get_last_column_resursive($ar_column) {
+			// 	if (!function_exists('get_last_column_recursive')) {
+			// 		function get_last_column_recursive($ar_column) {
 			// 			$ar_last_children = [];
 			// 			foreach ($ar_column as $column) {
 			// 				if(isset($column->cell_type)) {
 			// 					$ar_last_children[] = $column;
 			// 				}else{
-			// 					$result				=  get_last_column_resursive($column->value);
+			// 					$result				=  get_last_column_recursive($column->value);
 			// 					$ar_last_children	= array_merge($ar_last_children, $result);
 			// 				}
 			// 			}
@@ -354,7 +348,7 @@ class component_relation_common extends component_common {
 				$current_component->set_locator($this->locator);
 
 				// get the ddo path for inject to the next component level resolution.
-				$sub_ddo_map = get_children_resursive($ddo_map, $ddo);
+				$sub_ddo_map = get_children_recursive($ddo_map, $ddo);
 
 				// if the component has sub_ddo, create the request_config to be injected to component
 				// the request_config will be used instead the default request_config.
@@ -390,7 +384,7 @@ class component_relation_common extends component_common {
 				$current_column		= $current_component->get_value($lang, $ddo);
 				$sub_row_count		= $current_column->row_count ?? 0;
 				// if (in_array($component_model, $components_with_relations)) {
-				// 	$current_column = get_last_column_resursive([$current_column]);
+				// 	$current_column = get_last_column_recursive([$current_column]);
 				// }
 				// get the value and fallback_value of the component and stored to be joined
 				$locator_column_obj	= array_merge($locator_column_obj, $current_column->ar_columns_obj);
@@ -495,7 +489,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_DATO_FULL
 	* Returns dato from container 'relations', not for component dato container
-	* @return array $dato
+	* @return array $all_data
 	*	$dato is always an array of locators or an empty array
 	*/
 	public function get_all_data() : array {
@@ -649,7 +643,7 @@ class component_relation_common extends component_common {
 					}// end if ($translatable==='si')
 
 				// normalized locator
-					$nomalized_locator = new locator($current_locator);
+					$normalized_locator = new locator($current_locator);
 
 				// Add. Check if locator already exists
 					$ar_properties = ($translatable==='si')
@@ -657,7 +651,7 @@ class component_relation_common extends component_common {
 						: ['section_id','section_tipo','type','tag_id'];
 					$found = locator::in_array_locator( $current_locator, $safe_dato, $ar_properties);
 					if ($found===false) {
-						$safe_dato[] = $nomalized_locator;
+						$safe_dato[] = $normalized_locator;
 					}else{
 						debug_log(__METHOD__.' Ignored set_dato of already existing locator '.to_string($current_locator), logger::ERROR);
 					}
@@ -1668,20 +1662,18 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_RELATIONS_SEARCH_VALUE
-	* @return bool false
-	* Default response for calls to this method. Overwritten for component_autocomplete_hi
-	* @return array $relations_search_value
+	* Resolve component search values (parent recursive) to easy search
+	* @return array|null $relations_search_value
+	* Null is default response for calls to this method. Overwritten for component_autocomplete_hi
 	* Array of locators calculated with thesaurus parents of current section and used only for search
 	*/
-	public function get_relations_search_value() {
+	public function get_relations_search_value() : ?array {
 
-		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
-
-		if ($legacy_model!=='component_autocomplete_hi'){
-			return false;
-		}
-
-		$relations_search_value = false;
+		// only for component_autocomplete_hi
+			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+			if ($legacy_model!=='component_autocomplete_hi'){
+				return null;
+			}
 
 		$dato = $this->get_dato();
 		if (!empty($dato)) {
@@ -1693,8 +1685,13 @@ class component_relation_common extends component_common {
 				$section_id 	= $current_locator->section_id;
 				$section_tipo 	= $current_locator->section_tipo;
 
-				$parents_recursive = component_relation_parent::get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false);
-					#dump($parents_recursive, ' parents_recursive ++ '."$section_id, $section_tipo");
+				$parents_recursive = component_relation_parent::get_parents_recursive(
+					$section_id, // string section_id
+					$section_tipo, // string section_tipo
+					true, // bool skip_root
+					false // bool is_recursion
+				);
+
 				foreach ($parents_recursive as $key => $parent_locator) {
 
 					$locator = new locator();
@@ -1708,6 +1705,8 @@ class component_relation_common extends component_common {
 					}
 				}
 			}
+		}else{
+			$relations_search_value = false;
 		}
 
 		return $relations_search_value;
@@ -1729,14 +1728,17 @@ class component_relation_common extends component_common {
 			$f_section_tipo   	= $current_obj_value->section_tipo;
 			$f_component_tipo 	= $current_obj_value->component_tipo;
 
-			# Calculate list values of each element
-			$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
-			$current_component  = component_common::get_instance($c_modelo_name,
-																 $f_component_tipo,
-																 null,
-																 'edit',
-																 DEDALO_DATA_LANG,
-																 $f_section_tipo);
+			// Calculate list values of each element
+				$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+				$current_component  = component_common::get_instance(
+					$c_modelo_name,
+					$f_component_tipo,
+					null,
+					'edit',
+					DEDALO_DATA_LANG,
+					$f_section_tipo
+				);
+
 			// get section json
 				$get_json_options = new stdClass();
 					$get_json_options->get_context 	= true;
@@ -1750,6 +1752,7 @@ class component_relation_common extends component_common {
 					$filter_list->datalist	= $json_data->data[0]->datalist ?? [];
 				$filter_list_data[] = $filter_list;
 		}
+
 
 		return $filter_list_data;
 	}//end get_filter_list_data
@@ -1769,7 +1772,7 @@ class component_relation_common extends component_common {
 					$selector = 'dato';
 				}
 			}else{
-				$related_tipo = false; //$current_column_tipo;
+				$related_tipo = false;
 			}
 			$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
 			$end_path 	= end($path);
@@ -1849,7 +1852,6 @@ class component_relation_common extends component_common {
 					$ar_clean[$uid]->value = $label;
 				}
 			}//end foreach
-			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
 
 
 		return $ar_clean;
@@ -1868,10 +1870,18 @@ class component_relation_common extends component_common {
 		$filter = [];
 
 		foreach ($ar_terms as $current_item) {
-			$resursive = (bool)$current_item->recursive;
+			$recursive = (bool)$current_item->recursive;
 			# Get children
-			$ar_children = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $resursive);
-			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_item->section_tipo, ['component_section_id'], true, true, true, true, false);
+			$ar_children = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $recursive);
+			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$current_item->section_tipo,
+				['component_section_id'],
+				true, // bool resolve virtual
+				true, // bool recursive
+				true,
+				true,
+				false
+			);
 
 			$path = new stdClass();
 				$path->section_tipo		= $current_item->section_tipo;
@@ -1906,8 +1916,7 @@ class component_relation_common extends component_common {
 		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
 		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
 
-
-		# Active
+		// Active
 		$active_locator = new locator();
 			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
 			$active_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
@@ -1925,7 +1934,8 @@ class component_relation_common extends component_common {
 					}
 				]
 			}';
-		# Typology
+
+		// Typology
 		$typology_filter = [];
 		foreach ((array)$hierarchy_types as $key => $value) {
 
@@ -1968,7 +1978,6 @@ class component_relation_common extends component_common {
 			}
 		');
 
-
 		$search	= search::get_instance($search_query_object);
 		$result	= $search->search();
 
@@ -1995,9 +2004,11 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
+	* @param array $ar_section_tipo_sources
+	* @param string|null $retrieved_section_tipo=null
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrived_section_tipo=null) : array {
+	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrieved_section_tipo=null) : array {
 
 		$ar_section_tipo = [];
 		foreach ((array)$ar_section_tipo_sources as $source_item) {
@@ -2006,7 +2017,7 @@ class component_relation_common extends component_common {
 
 				// old self section tipo properties definitions
 					// if ($source_item==='self') {
-					// 	$source_item = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
+					// 	$source_item = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
 					// }
 					if ($source_item==='self') {
 						throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
@@ -2030,31 +2041,35 @@ class component_relation_common extends component_common {
 
 			switch ($source_item->source) {
 				case 'self':
-					// $ar_section_tipo = is_array($retrived_section_tipo) ? reset($retrived_section_tipo) : $retrived_section_tipo;
-					$ar_section_tipo = is_array($retrived_section_tipo) ? $retrived_section_tipo : [$retrived_section_tipo];
+					// $ar_section_tipo = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
+					$ar_section_tipo = is_array($retrieved_section_tipo) ? $retrieved_section_tipo : [$retrieved_section_tipo];
 					break;
 				case 'hierarchy_types':
 					$hierarchy_types = component_relation_common::get_hierarchy_sections_from_types($source_item->value);
 					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
 					break;
 				case 'field_value':
-						// this case is used in component_relation_children in the hierarchy section
-						// in these case the array of sections will get from the value of specific field
-						$target_values = $source_item->value;
-						foreach ((array)$target_values as $key => $current_component_tipo) {
+					// this case is used in component_relation_children in the hierarchy section
+					// in these case the array of sections will get from the value of specific field
+					$target_values = $source_item->value;
+					foreach ((array)$target_values as $key => $current_component_tipo) {
 
 						$sqo = new stdClass();
-							$sqo->section_tipo			= $retrived_section_tipo;
+							$sqo->section_tipo			= $retrieved_section_tipo;
 							$sqo->limit					= 0;
 							$sqo->offset				= 0;
 							$sqo->order					= false;
 							$sqo->skip_projects_filter	= true;
 
 						// sections
-							$sections = sections::get_instance(null, $sqo, $retrived_section_tipo, 'list', DEDALO_DATA_LANG);
-
+							$sections = sections::get_instance(
+								null,
+								$sqo,
+								$retrieved_section_tipo,
+								'list',
+								DEDALO_DATA_LANG
+							);
 							$dato = $sections->get_dato();
-
 							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
@@ -2090,16 +2105,17 @@ class component_relation_common extends component_common {
 									}
 								}
 							}//end foreach ($dato as $current_record)
-						}
-						break;
+					}
 					break;
 				case 'section':
 				default:
 					$ar_section_tipo = array_merge($ar_section_tipo, (array)$source_item->value);
 					break;
 			}
-		}
+		}//end foreach ((array)$ar_section_tipo_sources as $source_item)
+
 		$ar_section_tipo = array_unique($ar_section_tipo);
+
 
 		return $ar_section_tipo;
 	}//end get_request_config_section_tipo

@@ -31,7 +31,7 @@ render_search_component_input_text.prototype.search = async function(options) {
 	const self = this
 
 	// options
-		const render_level = options.render_level || 'full'
+		// const render_level = options.render_level || 'full'
 
 	// content data
 		const content_data = get_content_data(self)

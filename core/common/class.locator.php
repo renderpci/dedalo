@@ -8,14 +8,14 @@
 *		$locator->section_top_id		= (string)$section_top_id;
 *		$locator->section_id			= (string)$section_id;
 *		$locator->section_tipo			= (string)$section_tipo;
-*		$locator->component_tipo		= (string)$component_tipo; //destination component tipo
+*		$locator->component_tipo		= (string)$component_tipo; // destination component tipo
 *		$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
 *		$locator->tag_id				= (string)$tag_id;
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
 *		$locator->state					= (object)$state;
 * 		$locator->type					= (string)$type;
 *		$locator->ds					= (array)$ds;
-*		$locator->from_key				= (int)$from_key; //dataframe index array number of the data that reference
+*		$locator->from_key				= (int)$from_key; // dataframe index array number of the data that reference
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -69,7 +69,7 @@ class locator extends stdClass {
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
 			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return false;
+			return;
 		}
 		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
@@ -80,7 +80,7 @@ class locator extends stdClass {
 
 
 	/**
-	* SET  METHODDS
+	* SET  METHODS
 	* Verify values and set property to current object
 	*/
 	/**
@@ -340,14 +340,15 @@ class locator extends stdClass {
 
 		$locator = json_encode($locator);
 		$locator = json_decode($locator);
+		
 		return $locator;
 
-		$std_object = new stdClass();
-		foreach ($locator as $key => $value) {
-			$std_object->$key = $value;
-		}
+		// $std_object = new stdClass();
+		// foreach ($locator as $key => $value) {
+		// 	$std_object->$key = $value;
+		// }
 
-		return $std_object;
+		// return $std_object;
 	}//end get_std_class
 
 

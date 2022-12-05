@@ -216,7 +216,7 @@ abstract class tools extends common {
 
 
 	/**
-	* ECHO MEMORY USAGE FORMATED
+	* ECHO MEMORY USAGE FORMATTED
 	*/
 	public static function get_memory_usage(string $mode='pid') : string {
 
