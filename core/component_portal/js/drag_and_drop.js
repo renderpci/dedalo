@@ -1,56 +1,75 @@
 /*global get_label, page_globals, SHOW_DEBUG, ddEditor */
 /*eslint no-undef: "error"*/
 
-	import {ui} from '../../common/js/ui.js'
+
+
+	// import {ui} from '../../common/js/ui.js'
+
+
 
 	/**
 	* ON_DRAGSTART
 	* Get element dataset path as event.dataTransfer from selected component
 	* @return bool true
 	*/
-	export const on_dragstart = function(options, node, event) {
-
+	export const on_dragstart = function(node, event, options) {
 		event.stopPropagation();
-		// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
-		const transfer_data = {
-			locator			: options.locator,
-			paginated_key	: options.paginated_key
-		}
-		// the data will be transfer to drop in text format
-		const data = JSON.stringify(transfer_data)
 
-		event.dataTransfer.effectAllowed = 'move';
-		event.dataTransfer.setData('text/plain', data);
+
+		// transfer_data. Will be necessary the original locator of the section_record and
+		// the paginated_key (the position in the array of data)
+			const transfer_data = {
+				locator			: options.locator,
+				paginated_key	: options.paginated_key
+			}
+			console.log('>> on_dragstart transfer_data:', transfer_data);
+
+		// data. The data will be transfer to drop in text format
+			const data = JSON.stringify(transfer_data)
+			event.dataTransfer.effectAllowed = 'move';
+			event.dataTransfer.setData('text/plain', data);
+
 		// style the drag element to be showed in drag mode
-		node.classList.add('draging')
-		node.firstChild.classList.remove('hide')
+			node.classList.add('dragging')
+			node.firstChild.classList.remove('hide')
+
 		// get the content_data of the component_portal, it has the all section records nodes
-		const content_data		= node.parentNode.parentNode.parentNode
-		const ar_section_record	= content_data.childNodes
-		// get the list_body boundaries, it has the grid definition of the rows
-		const list_body_rect	= content_data.parentNode.getBoundingClientRect()
+			const content_data		= node.parentNode.parentNode.parentNode
+			const ar_section_record	= content_data.childNodes
+
 		// it's necessary set every drop node with the view boundaries of the grid
 		// drop nodes will resize to cover the section_record
-		for (let i = ar_section_record.length - 1; i >= 0; i--) {
+			for (let i = ar_section_record.length - 1; i >= 0; i--) {
 
-			const section_record_node	= ar_section_record[i]
-			const current_drop			= section_record_node.querySelector('.drop')
-			// get the boundaries of the last node of the section_record
-			// drop nodes will be resize with the height of this last_node
-			const last_node				= section_record_node.lastChild
-			const rect_last_node		= last_node.getBoundingClientRect();
-			// set height and width, width remove the padding of the grid
-			const height = parseFloat(rect_last_node.height) + 'px'
-			const width	 = parseFloat(list_body_rect.width - list_body_rect.x - list_body_rect.x ) + 'px'
+				const section_record_node	= ar_section_record[i]
+				const current_drop			= section_record_node.querySelector('.drop')
 
-			current_drop.style.height = height
-			current_drop.style.width = width
-			// show the drop in dom
-			current_drop.classList.remove('hide')
-		}
+				// first node . Get the boundaries of the last node of the section_record
+				// drop nodes will be resize with the height of this last_node
+					const first_node			= section_record_node.firstChild // usually column 'id'
+					const rect_first_node		= first_node.getBoundingClientRect();
+
+				// last_node. Get the boundaries of the last node of the section_record
+				// drop nodes will be resize with the height of this last_node
+					const last_node				= section_record_node.lastChild // usually column 'remove'
+					const rect_last_node		= last_node.getBoundingClientRect();
+
+				// set height and width, width remove the padding of the grid
+					const height = Math.round( rect_last_node.height )
+					const width	 = Math.round( (rect_last_node.x + rect_last_node.width) - rect_first_node.x )
+
+					current_drop.style.height	= height + 'px'
+					current_drop.style.width	= width + 'px'
+
+				// show the drop in DOM
+					current_drop.classList.remove('hide')
+			}
+
 
 		return true
 	}//end ondrag_start
+
+
 
 	/**
 	* ON_DRAGSTART
@@ -71,9 +90,10 @@
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', data);
 		// style the drag element to be showed in drag mode
-		// node.classList.add('draging')
+		// node.classList.add('dragging')
 		return true
 	}//end ondrag_start
+
 
 
 	/**
@@ -81,12 +101,10 @@
 	* active the drop node action when the drag over it
 	*/
 	export const on_dragover = function(node, event) {
-
 		event.preventDefault();
 		event.stopPropagation();
 
 		node.classList.add('dragover')
-
 	}//end on_dragover
 
 
@@ -95,9 +113,9 @@
 	* ON_DRAGLEAVE
 	*/
 	export const on_dragleave = function(node, event) {
+		event.preventDefault()
 
 		node.classList.remove('dragover')
-
 	}//end on_dragleave
 
 
@@ -127,12 +145,13 @@
 	}//end on_dragend
 
 
+
 	/**
 	* ON_DROP
 	* Get data path from event.dataTransfer and call to build required component html
 	* @return bool true
 	*/
-	export const on_drop = function(options, node, event) {
+	export const on_drop = function(node, event, options) {
 
 		event.preventDefault() // Necessary. Allows us to drop.
 		event.stopPropagation()

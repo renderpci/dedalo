@@ -10,9 +10,11 @@
 
 
 		>.list_body {
+			display: grid;
 			grid-template-rows: 1.8rem auto;
 			min-height: @content_data_min_height;
 			// grid-template-rows: 2rem;
+			position: relative;
 
 			// drag selectors
 				.drag.icon {
@@ -37,7 +39,7 @@
 						opacity: 0.3;
 					}
 
-					// &.draging {
+					// &.dragging {
 						// background-position: left;
 					// }
 				}
@@ -46,9 +48,12 @@
 					z-index: 1;
 					display: block;
 					position: absolute;
+					left: 0px;
+
 					&.dragover {
 						background-color: #ffffff8c;
 						border-top: 2px dotted #ff8a00;
+						width: 100%;
 					}
 				}
 
