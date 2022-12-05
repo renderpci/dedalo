@@ -1322,7 +1322,7 @@ function get_request_var(string $var_name) {
 		$var_value = $_REQUEST[$var_name];
 
 	}else{
-		// get from php://input . Ex. the change modo from portal list to edit
+		// get from php://input . Ex. the change mode from portal list to edit
 		$str_json = file_get_contents('php://input');
 		if (!empty($str_json )) {
 			$get_submit_vars = json_decode($str_json);
