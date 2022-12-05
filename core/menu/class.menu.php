@@ -16,14 +16,14 @@ class menu extends common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $modo='edit') {
+	public function __construct(string $mode='edit') {
 
 		$id					= null;
 		$tipo				= $this->tipo;
 		$this->id			= $id;
 		$this->tipo			= $tipo;
 		$this->lang			= DEDALO_DATA_LANG;
-		$this->modo			= $modo;
+		$this->mode			= $mode;
 		$this->section_tipo	= 'dd1';
 
 		parent::load_structure_data();
@@ -193,7 +193,7 @@ class menu extends common {
 
 		// short vars
 			$tipo	= $this->get_tipo();
-			$mode	= $this->get_modo();
+			$mode	= $this->get_mode();
 			$label	= $this->get_label();
 			$lang	= $this->get_lang();
 			$model	= get_class($this);
