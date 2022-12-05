@@ -11,14 +11,14 @@ class component_geolocation extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo, $section_id=null, string $modo='list', string $lang=null, string $section_tipo=null) {
+	function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null) {
 
 
 		# Force always DEDALO_DATA_NOLAN
 		$lang = DEDALO_DATA_NOLAN;
 
 		# Build the component
-		parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
 
 		# Dato verification, if the dato is empty, build the standard view of the map
 		$dato = $this->get_dato();
@@ -107,7 +107,7 @@ class component_geolocation extends component_common {
 		$valor = (array)self::get_dato();
 
 		$separator = ' ,  ';
-		if($this->modo==='list') $separator = '<br>';
+		if($this->mode==='list') $separator = '<br>';
 
 		if (is_object($valor)) {
 			$valor = array($valor); # Convert json obj to array
