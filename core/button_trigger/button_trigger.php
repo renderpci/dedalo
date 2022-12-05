@@ -5,15 +5,15 @@
 	$tipo 					= $this->get_tipo();
 	$target_tipo			= $this->get_target();
 	$id						= NULL;
-	$modo					= $this->get_modo();
+	$mode					= $this->get_mode();
 	$label 					= $this->get_label();
 	$section_tipo 			= $this->get_section_tipo();
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$html_title				= "Info about $tipo";
-	$file_name 				= $modo;
+	$file_name 				= $mode;
 	
-	switch($modo) {
+	switch($mode) {
 		
 		case 'list':
 		case 'edit':		
@@ -29,11 +29,11 @@
 				break;
 		
 		default:
-				throw new Exception("Error Processing Request. Modo '$modo' not supported by $label", 1);
+				throw new Exception("Error Processing Request. Mode '$mode' not supported by $label", 1);
 	}
 	
 
 	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
-		echo "<div class=\"error\">Invalid mode $this->modo</div>";
+		echo "<div class=\"error\">Invalid mode $this->mode</div>";
 	}

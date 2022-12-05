@@ -7,16 +7,16 @@
 	$target_tipo			= $section_tipo ; //$this->get_target();
 	$context_tipo 			= $this->get_context_tipo(); // section tipo
 	$id						= NULL;
-	$modo					= $this->get_modo();	
+	$mode					= $this->get_mode();
 	$label 					= $this->get_label();
 
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo, $tipo); 	
 	$html_title				= label::get_label('nuevo');	
-	$file_name 				= $modo;
+	$file_name 				= $mode;
 
 
-	switch($modo) {
+	switch($mode) {
 		
 		case 'list':
 				#$label = strip_tags($label);
@@ -46,6 +46,6 @@
 
 	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
-		echo "<div class=\"error\">Invalid mode $this->modo</div>";
+		echo "<div class=\"error\">Invalid mode $this->mode</div>";
 	}
 ?>

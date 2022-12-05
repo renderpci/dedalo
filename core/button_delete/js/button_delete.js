@@ -29,7 +29,7 @@ var button_delete = new function() {
 	*/
 	this.create_delete_dialog_div = function() {
 
-		if (page_globals.modo!=='list') return false;
+		if (page_globals.mode!=='list') return false;
 
 		const delete_dialog = this.build_delete_dialog()
 		document.body.appendChild(delete_dialog);
@@ -82,7 +82,7 @@ var button_delete = new function() {
 
 				// relation_list_button
 				const dataset = {
-					modo			: 'edit',
+					mode			: 'edit',
 					tipo			: '',
 					section_tipo	: '',
 					section_id 		: '',
@@ -216,9 +216,9 @@ var button_delete = new function() {
 
 	/**
 	* DEL
-	* Delete record with options (modo)
+	* Delete record with options (mode)
 	*/
-	this.Del = function (modo) {
+	this.Del = function (mode) {
 
 		// Test fixed button
 		if(button_delete.delete_obj==null || button_delete.delete_obj.length==0) {
@@ -231,7 +231,7 @@ var button_delete = new function() {
 		// DATA COMMON
 			const data	= {
 				mode 	 		: 'Del',
-				modo 			: modo,
+				mode 			: mode,
 				section_tipo	: button_delete.delete_obj.dataset.section_tipo,
 				section_id 	 	: parseInt(button_delete.delete_obj.dataset.section_id),
 				top_tipo 		: page_globals.top_tipo

@@ -6,13 +6,13 @@
 	$context_tipo			= $this->get_context_tipo();
 	$section_tipo			= $this->get_section_tipo();
 	$id						= NULL;
-	$modo					= $this->get_modo();	
+	$mode					= $this->get_mode();
 	$label 					= $this->get_label();
 
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$html_title				= "Info about $tipo";	
-	$file_name 				= $modo;
+	$file_name 				= $mode;
 
 	# CSS / JS MAIN FILES
 	css::$ar_url[] = NVD3_URL_CSS;
@@ -22,7 +22,7 @@
 	js::$ar_url[]  = NVD3_URL_JS;
 	js::$ar_url[]  = DEDALO_CORE_URL."/diffusion/diffusion_section_stats/js/diffusion_section_stats.js";
 
-	switch($modo) {		
+	switch($mode) {
 						
 		case 'list'	:	
 				break;
@@ -37,6 +37,6 @@
 		
 	$page_html	= DEDALO_CORE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
-		echo "<div class=\"error\">Invalid mode $this->modo</div>";
+		echo "<div class=\"error\">Invalid mode $this->mode</div>";
 	}
 ?>
