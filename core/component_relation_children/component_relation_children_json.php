@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$section_tipo	= $this->section_tipo;
 	$lang			= $this->lang;
 	$tipo			= $this->get_tipo();
@@ -88,7 +88,7 @@
 
 				// add subdata
 				$ar_subdata = $subdatum->data;
-				if ($modo==='list') {
+				if ($mode==='list') {
 					foreach ($ar_subdata as $current_data) {
 						$current_data->parent_tipo			= $tipo;
 						$current_data->parent_section_id	= $section_id;
