@@ -53,13 +53,13 @@ final class dd_ts_api {
 
 				// Calculate children from parent
 				$modelo_name					= 'component_relation_children';
-				$modo							= 'list_thesaurus';
+				$mode							= 'list_thesaurus';
 				$lang							= DEDALO_DATA_NOLAN;
 				$component_relation_children	= component_common::get_instance(
 					$modelo_name,
 					$tipo,
 					$section_id,
-					$modo,
+					$mode,
 					$lang,
 					$section_tipo
 				);
@@ -214,13 +214,13 @@ final class dd_ts_api {
 				debug_log(__METHOD__." $response->msg ", logger::ERROR);
 				return $response;
 			}
-			$modo							= 'edit';
+			$mode							= 'edit';
 			$lang							= DEDALO_DATA_NOLAN;
 			$component_relation_children	= component_common::get_instance(
 				$modelo_name,
 				$tipo,
 				$section_id,
-				$modo,
+				$mode,
 				$lang,
 				$section_tipo
 			);
@@ -320,12 +320,12 @@ final class dd_ts_api {
 
 		// 	// component_relation_children
 		// 		$modelo_name	= 'component_relation_children';
-		// 		$modo			= 'edit';
+		// 		$mode			= 'edit';
 		// 		$lang			= DEDALO_DATA_NOLAN;
 		// 		$component_relation_children = component_common::get_instance($modelo_name,
 		// 																	  $tipo,
 		// 																	  $section_id,
-		// 																	  $modo,
+		// 																	  $mode,
 		// 																	  $lang,
 		// 																	  $section_tipo);
 
@@ -387,7 +387,7 @@ final class dd_ts_api {
 
 		// children . Verify that current term don't have children. If yes, stop process.
 			$modelo_name		= 'component_relation_children';
-			$modo				= 'edit';
+			$mode				= 'edit';
 			$lang				= DEDALO_DATA_NOLAN;
 			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 			foreach ($ar_children_tipo as $current_tipo) {
@@ -396,7 +396,7 @@ final class dd_ts_api {
 					$modelo_name,
 					$current_tipo,
 					$section_id,
-					$modo,
+					$mode,
 					$lang,
 					$section_tipo
 				);
@@ -489,13 +489,13 @@ final class dd_ts_api {
 
 		// Add me as children of new parent
 			$modelo_name					= 'component_relation_children';
-			$modo							= 'edit';
+			$mode							= 'edit';
 			$lang							= DEDALO_DATA_NOLAN;
 			$component_relation_children	= component_common::get_instance(
 				$modelo_name,
 				$tipo,
 				$parent_section_id,
-				$modo,
+				$mode,
 				$lang,
 				$parent_section_tipo
 			);
