@@ -319,7 +319,7 @@ class component_security_access extends component_common {
 				$model, // string model
 				$tipo, // string tipo
 				$section_id, // string|null section_id
-				'list', // string modo
+				'list', // string mode
 				DEDALO_DATA_LANG, // string lang
 				$section_tipo // string section_tipo
 			);
