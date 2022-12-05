@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 
 
 
@@ -46,7 +46,7 @@
 	if($options->get_data===true && $permissions>0) {
 
 		// value
-			switch ($modo) {
+			switch ($mode) {
 				case 'list':
 					$value = $this->get_list_value();
 					break;
@@ -74,7 +74,7 @@
 				$item->datalist = $this->get_datalist();
 
 		// player mode case. Send the media header when the component are working as player
-			if($modo==='edit') {
+			if($mode==='edit') {
 
 				// media info
 					$item->media_info = $this->get_media_streams();

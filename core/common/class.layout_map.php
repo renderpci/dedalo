@@ -12,11 +12,11 @@ class layout_map {
 	* GET_LAYOUT_MAP
 	* Calculate display items to generate portal html
 	* Cases:
-	*	1. Modo 'list' : Uses children to build layout map
-	* 	2. Modo 'edit' : Uses related terms to build layout map (default)
+	*	1. Mode 'list' : Uses children to build layout map
+	* 	2. Mode 'edit' : Uses related terms to build layout map (default)
 	* @return array $layout_map
 	*/
-		// public static function get_layout_map($request_options, $request_config) { // $section_tipo, $tipo, $modo, $user_id, $view='full'
+		// public static function get_layout_map($request_options, $request_config) { // $section_tipo, $tipo, $mode, $user_id, $view='full'
 
 		// 	// debug
 		// 		// $bt = debug_backtrace();
@@ -372,10 +372,10 @@ class layout_map {
 	* Get user layout map preset
 	* @return array $result
 	*/
-	public static function search_user_preset_layout_map(string $tipo, string $section_tipo, int $user_id, string $modo, string $view=null) : array {
+	public static function search_user_preset_layout_map(string $tipo, string $section_tipo, int $user_id, string $mode, string $view=null) : array {
 
 		// cache
-			$key_cache = implode('_', [$tipo, $section_tipo, $user_id, $modo, $view]);
+			$key_cache = implode('_', [$tipo, $section_tipo, $user_id, $mode, $view]);
 			if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache])) {
 				return $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache];
 			}
@@ -420,12 +420,12 @@ class layout_map {
 				// 	]]
 				// ],
 				(object)[
-					'q'		=> '\''.$modo.'\'',
+					'q'		=> '\''.$mode.'\'',
 					'path'	=> [(object)[
 						'section_tipo'		=> $preset_section_tipo,
 						'component_tipo'	=> 'dd1246',
 						'modelo'			=> 'component_input_text',
-						'name'				=> 'Modo'
+						'name'				=> 'Mode'
 					]]
 				]
 			];
@@ -448,7 +448,7 @@ class layout_map {
 		// search query object
 			$search_query_object = (object)[
 				'id'			=> 'search_user_preset_layout_map',
-				'modo'			=> 'list',
+				'mode'			=> 'list',
 				'section_tipo'	=> 'dd1244',
 				'limit'			=> 1,
 				'full_count'	=> false,

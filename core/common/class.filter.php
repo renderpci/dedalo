@@ -200,7 +200,7 @@ abstract class filter {
 					$model, // string model
 					$projects_name_tipo, // string tipo
 					$current_locator->section_id, // string section_id
-					'list', // string modo
+					'list', // string mode
 					DEDALO_DATA_LANG, // string lang
 					$current_locator->section_tipo // string section_tipo
 				);

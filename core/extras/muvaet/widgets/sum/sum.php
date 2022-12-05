@@ -4,16 +4,16 @@
 	
 
 		$widget_name 				 	= $this->widget_name;
-		$modo 						 	= $this->component_info->get_modo();
+		$mode 						 	= $this->component_info->get_mode();
 		$parent 					 	= $this->component_info->get_parent();		
 		$section_tipo 				 	= $this->component_info->get_section_tipo();
 		$data_source 				 	= $this->data_source;
 		$component_target_section_tipo  = key($data_source);
 		$component_target_tipo 		 	= reset($data_source);
-		$filename 					 	= $modo;
+		$filename 					 	= $mode;
 
 
-		switch ($modo) {
+		switch ($mode) {
 
 			case 'list':
 				$filename = 'edit';
@@ -43,7 +43,7 @@
 					[section_tipo] => muvaet2
 					[section_real_tipo] => muvaet2
 					[json_field] => datos
-					[modo] => edit
+					[mode] => edit
 					[context] => default
 					[matrix_table] => matrix
 					[layout_map] => Array
@@ -78,7 +78,7 @@
 						$options->section_tipo 		= $current_options->section_tipo;
 						$options->section_real_tipo = $current_options->section_real_tipo;
 						$options->json_field 		= $current_options->json_field;
-						$options->modo 				= 'list';
+						$options->mode 				= 'list';
 						$options->matrix_table 		= $current_options->matrix_table;
 						$options->limit 			= 0;	//$current_options->limit_list;
 						$options->full_count 		= false; //$current_options->full_count;
@@ -118,13 +118,13 @@
 				$widget_base_url = $this->get_widget_base_url();
 				css::$ar_url[] 	 = $widget_base_url ."/css/".$widget_name.".css";
 
-				if($modo==='edit') {
+				if($mode==='edit') {
 					js::$ar_url[]    = $widget_base_url ."/js/".$widget_name.".js";	
 				}
 				break;				
 
 			default:
-				return "Sorry. Mode: $modo is not supported";
+				return "Sorry. Mode: $mode is not supported";
 		}
 
 
@@ -132,7 +132,7 @@
 		
 		$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';	
 		if( !include($page_html) ) {
-			echo "<div class=\"error\">Invalid widget mode $modo</div>";
+			echo "<div class=\"error\">Invalid widget mode $mode</div>";
 		}
 
 ?>

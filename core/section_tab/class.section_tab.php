@@ -12,7 +12,7 @@ class section_tab extends common {
 	*/
 		protected $tipo;
 		protected $section_tipo;
-		protected $modo;
+		protected $mode;
 		protected $lang;
 		# structure data
 		// protected $RecordObj_dd;
@@ -25,11 +25,11 @@ class section_tab extends common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct($tipo, $section_tipo, $modo) {
+	function __construct($tipo, $section_tipo, $mode) {
 
 		$this->tipo			= $tipo;
 		$this->section_tipo	= $section_tipo;
-		$this->modo			= $modo;
+		$this->mode			= $mode;
 		$this->lang			= DEDALO_DATA_LANG;
 
 		$this->load_structure_data();

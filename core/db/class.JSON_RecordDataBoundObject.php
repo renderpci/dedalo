@@ -674,13 +674,13 @@ abstract class JSON_RecordDataBoundObject {
 	* BUILD_PG_FILTER
 	* (!) Not used
 	*/
-		// public static function build_pg_filter(string $modo, string $datos, string $tipo, string $lang, $value) : string {
+		// public static function build_pg_filter(string $mode, string $datos, string $tipo, string $lang, $value) : string {
 
 		// 	if (empty($datos)) {
 		// 		$datos = 'datos';
 		// 	}
 
-		// 	switch ($modo) {
+		// 	switch ($mode) {
 		// 		case 'gin':
 		// 			# ref: datos @>'{"components":{"rsc24":{"dato":{"lg-nolan":"114"}}}}'
 		// 			$value = pg_escape_string(DBi::_getConnection(), stripslashes($value));
@@ -743,13 +743,13 @@ abstract class JSON_RecordDataBoundObject {
 	* BUILD_PG_SELECT
 	* (!) Not used
 	*/
-		// public static function build_pg_select($modo, $datos='datos', $tipo=null, $key='dato', $lang=DEDALO_DATA_LANG) {
+		// public static function build_pg_select($mode, $datos='datos', $tipo=null, $key='dato', $lang=DEDALO_DATA_LANG) {
 
 		// 	if (empty($tipo)) {
 		// 		throw new Exception("Error Processing Request. tipo is mandatory !", 1);
 		// 	}
 
-		// 	switch ($modo) {
+		// 	switch ($mode) {
 		// 		case 'gin':
 		// 			throw new Exception("Error Processing Request. Sorry not implemented...", 1);
 		// 			break;

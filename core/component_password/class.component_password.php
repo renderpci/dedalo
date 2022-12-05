@@ -11,11 +11,11 @@ class component_password extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		$lang = DEDALO_DATA_NOLAN;
 
-		return parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		return parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 	}//end __construct
 
 

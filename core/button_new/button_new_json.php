@@ -7,7 +7,7 @@
 	$tipo 				= $this->get_tipo();
 	$section_tipo 		= $this->get_section_tipo();
 	$permissions		= common::get_permissions($section_tipo, $tipo);
-	$modo				= $this->get_modo();
+	$mode				= $this->get_mode();
 
 
 

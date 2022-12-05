@@ -21,7 +21,7 @@ class section extends common {
 		protected $dato;
 
 		# STATE
-		protected $modo;
+		protected $mode;
 
 		# STRUCTURE DATA
 		protected $modelo;
@@ -63,6 +63,9 @@ class section extends common {
 		// tm_context. Array
 		public $tm_context;
 
+		// Source. Define if the section get data from his record in DDBB or the section get data from component in other section (section doesn't has record in DDBB get parts of other section)
+		public $source = 'ddbb';
+
 
 
 	# DIFFUSION INFO
@@ -84,34 +87,34 @@ class section extends common {
 	* Cache section instances (singleton pattern)
 	* @param string|int|null $section_id = null
 	* @param string $tipo = null
-	* @param string|null $modo = 'list'
+	* @param string|null $mode = 'list'
 	* @param bool $cache = true
 	*
 	* @return instance section
 	*/
-	public static function get_instance($section_id=null, string $tipo=null, string $modo='list', bool $cache=true) : section {
+	public static function get_instance($section_id=null, string $tipo=null, string $mode='list', bool $cache=true) : section {
 
 		// check valid tipo
 			if (empty($tipo)) {
-				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
+				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 			}
 
 		// Not cache new sections (without section_id)
 			if (empty($section_id)) {
-				return new section(null, $tipo, $modo);
+				return new section(null, $tipo, $mode);
 			}
 
-		return new section($section_id, $tipo, $modo);
+		return new section($section_id, $tipo, $mode);
 
 		// removed cache features temporally (!) Verify real speed benefits
 			// // Direct construct without cache instance
 			// // Use this config in imports
 			// 	if ($cache===false) {
-			// 		return new section($section_id, $tipo, $modo);
+			// 		return new section($section_id, $tipo, $mode);
 			// 	}
 
 			// # key for cache
-			// $key = $section_id .'_'. $tipo.'_'.$modo;
+			// $key = $section_id .'_'. $tipo.'_'.$mode;
 
 			// $max_cache_instances = 300*3; // Default 300
 			// $cache_slice_on 	 = 100*3; // Default 100
@@ -131,7 +134,7 @@ class section extends common {
 
 			// # FIND CURRENT INSTANCE IN CACHE
 			// if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
-			// 	self::$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
+			// 	self::$ar_section_instances[$key] = new section($section_id, $tipo, $mode);
 			// }
 
 			// return self::$ar_section_instances[$key];
@@ -142,33 +145,30 @@ class section extends common {
 	/**
 	* CONSTRUCT
 	* Extends parent abstract class common
-	* La sección, a diferencia de los componentes, se comporta de un modo particular:
-	* Si se le pasa sólo el tipo, se espera un listado (modo list)
-	* Si se le pasa sólo el section_id, se espera una ficha (modo edit)
 	*/
-	private function __construct($section_id=null, ?string $tipo=null, ?string $modo='edit') {
+	private function __construct($section_id=null, ?string $tipo=null, ?string $mode='edit') {
 
 		if (empty($tipo)) {
-			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
+			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 		}
 
 		if(SHOW_DEBUG===true) {
 			#$section_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
-			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$modo.'_'.$section_id.'_'.start_time()]=start_time();
+			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$mode.'_'.$section_id.'_'.start_time()]=start_time();
 		}
 
 		// Set general vars
 			$this->lang			= DEDALO_DATA_NOLAN;
 			$this->section_id	= $section_id;
 			$this->tipo			= $tipo;
-			$this->modo			= $modo ?? 'edit';
+			$this->mode			= $mode ?? 'edit';
 			$this->parent		= 0;
 
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
 
 		// active_section_section_id : Set global var
-			if(	   $modo==='edit'
+			if(		$mode==='edit'
 				&& (isset($this->section_id) && ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
 				&& !isset(section::$active_section_id) ) {
 
@@ -246,7 +246,7 @@ class section extends common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				#$start_time = start_time();
-				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 			}
 
 
@@ -604,10 +604,6 @@ class section extends common {
 				$options->new_record				= false;
 				$options->forced_create_record		= false;
 				$options->component_filter_dato		= false;
-				// $options->is_portal				= false;
-				// $options->portal_tipo			= false;
-				// $options->top_tipo				= TOP_TIPO;
-				// $options->top_id					= TOP_ID;
 
 				# Time machine options (overwrite when save component)
 				$options->time_machine_data			= false;
@@ -770,32 +766,6 @@ class section extends common {
 
 					// diffusion_info
 						$section_dato->diffusion_info 	 = array(); // Empty array by default
-
-					// Section creator info
-						// switch (true) {
-						// 	# ACTIVITY CASE
-						// 	case ($tipo===DEDALO_ACTIVITY_SECTION_TIPO):
-						// 		# Nothing to do
-						// 		break;
-
-						// 	# PORTAL CASE
-						// 	case ($options->is_portal===true):
-						// 		$ar_section_creator	= section::build_ar_section_creator($options->top_tipo, $tipo, $options->portal_tipo);
-						// 		# Section creator
-						// 		$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
-						// 		$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
-						// 		$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
-						// 		break;
-
-						// 	# DEFAULT CASE (Normal sections)
-						// 	default:
-						// 		$ar_section_creator	= section::build_ar_section_creator($options->top_tipo);
-						// 		# Section creator
-						// 		$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
-						// 		$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
-						// 		$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
-						// 		break;
-						// }
 
 					// Update modified section data . Resolve and add creation date and user to current section dato
 						$this->update_modified_section_data((object)[
@@ -1015,7 +985,7 @@ class section extends common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 			}
 
 
@@ -1323,7 +1293,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 		}
 
 		$parent  = intval($this->get_section_id());
@@ -1352,7 +1322,7 @@ class section extends common {
 		if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
 
 			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 				#debug_log(__METHOD__." Returned '$modelo_name_required' for tipo:$this->tipo FROM STATIC CACHE");
 			}
 			return $ar_children_objects_by_modelo_name_in_section[$uid];
@@ -1398,7 +1368,7 @@ class section extends common {
 				# Build component obj
 				case (strpos($modelo_name, 'component_')!==false) :
 
-					$current_obj = component_common::get_instance($modelo_name, $terminoID, $parent,'edit', DEDALO_DATA_LANG, $this->tipo ); #$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
+					$current_obj = component_common::get_instance($modelo_name, $terminoID, $parent,'edit', DEDALO_DATA_LANG, $this->tipo ); #$id=NULL, $tipo=NULL, $mode='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
 					break;
 
 				# Build button obj
@@ -2368,7 +2338,7 @@ class section extends common {
 			$current_section_tipo = $locator->from_section_tipo;
 			$current_section_id   = $locator->from_section_id;
 
-			$section = section::get_instance($current_section_id, $current_section_tipo, $modo='list');
+			$section = section::get_instance($current_section_id, $current_section_tipo, $mode='list');
 			$dato 	 = $section->get_dato();
 
 			if (!empty($dato->diffusion_info)) {

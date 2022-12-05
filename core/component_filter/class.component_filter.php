@@ -34,17 +34,17 @@ class component_filter extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	function __construct(string $tipo=null, $section_id=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		// force lang value always
 			$lang = DEDALO_DATA_NOLAN;
 
 		// Build the component normally
-			parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
 
 		// dedalo_default_project
 		// If component is in edit mode and don't have data, we assign the default data defined in config
-			if ($modo==='edit' &&
+			if ($mode==='edit' &&
 				get_called_class()==='component_filter' && // Remember that component_filter_master extends this class
 				!is_null($this->section_id) &&
 				$section_tipo!=='test3' // exclude unit_test 'test3' section to create default dato

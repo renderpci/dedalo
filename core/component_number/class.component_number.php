@@ -11,11 +11,11 @@ class component_number extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		$lang = DEDALO_DATA_NOLAN;
 
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
 		return true;
 	}//end __construct

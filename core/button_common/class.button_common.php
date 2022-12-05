@@ -9,7 +9,7 @@ class button_common extends common {
 	protected $tipo ;
 	protected $modelo ;
 	protected $label ;
-	protected $modo ;
+	protected $mode ;
 	protected $lang ;
 	protected $target ;
 	protected $section_tipo ;
@@ -24,7 +24,7 @@ class button_common extends common {
 
 		$this->define_id(NULL);
 		$this->define_lang(DEDALO_APPLICATION_LANG);
-		$this->define_modo(navigator::get_selected('modo'));
+		$this->define_mode(navigator::get_selected('mode'));
 
 		parent::load_structure_data();
 
@@ -38,8 +38,8 @@ class button_common extends common {
 	protected function define_tipo($tipo) {	$this->tipo = $tipo ; }
 	# define lang
 	protected function define_lang($lang) {	$this->lang = $lang ; }
-	# define modo
-	protected function define_modo($modo) {	$this->modo = $modo ; }
+	# define mode
+	protected function define_mode($mode) {	$this->mode = $mode ; }
 
 
 

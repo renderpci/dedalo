@@ -31,7 +31,7 @@ $(function() {
 
 	try{
 
-		switch(get_modo()) {
+		switch(get_mode()) {
 
 			// QUICKTIME PLUG-IN
 			case "qt"		: 	load_video_controls();
@@ -86,7 +86,7 @@ window.addEventListener("load", function (event) {
 
 	try{
 
-		switch(get_modo()) {
+		switch(get_mode()) {
 
 			// QUICKTIME PLUG-IN
 			case "qt"		:	start_tc_generator();
@@ -328,7 +328,7 @@ function load_video_controls() {
 
 
 // GET CURRENT MODO (html5,qt,flash)
-function get_modo() {
+function get_mode() {
 
 	var modo_default = 'html5';
 

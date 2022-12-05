@@ -194,7 +194,7 @@ class diffusion_index_ts extends diffusion {
 			# SECTION_TOP_ID recalculate
 			# Como un recurso puede cambiar de 'bien', el locator 'section_top_id' de la indexación NO ES FIABLE !!
 			# Hacemos un cálculo inverso para evitar inconsistencias
-			#$section = section::get_instance($section_id=null, $tipo=false, $modo='edit') {;
+			#$section = section::get_instance($section_id=null, $tipo=false, $mode='edit') {;
 
 
 			# AR_SECTION_TOP_TIPO MAP
