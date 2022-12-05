@@ -21,7 +21,7 @@ class section extends common {
 		protected $dato;
 
 		# STATE
-		protected $modo;
+		protected $mode;
 
 		# STRUCTURE DATA
 		protected $modelo;
@@ -146,29 +146,29 @@ class section extends common {
 	* CONSTRUCT
 	* Extends parent abstract class common
 	*/
-	private function __construct($section_id=null, ?string $tipo=null, ?string $modo='edit') {
+	private function __construct($section_id=null, ?string $tipo=null, ?string $mode='edit') {
 
 		if (empty($tipo)) {
-			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
+			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 		}
 
 		if(SHOW_DEBUG===true) {
 			#$section_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
-			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$modo.'_'.$section_id.'_'.start_time()]=start_time();
+			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$mode.'_'.$section_id.'_'.start_time()]=start_time();
 		}
 
 		// Set general vars
 			$this->lang			= DEDALO_DATA_NOLAN;
 			$this->section_id	= $section_id;
 			$this->tipo			= $tipo;
-			$this->modo			= $modo ?? 'edit';
+			$this->mode			= $mode ?? 'edit';
 			$this->parent		= 0;
 
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
 
 		// active_section_section_id : Set global var
-			if(	   $modo==='edit'
+			if(		$mode==='edit'
 				&& (isset($this->section_id) && ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
 				&& !isset(section::$active_section_id) ) {
 
@@ -246,7 +246,7 @@ class section extends common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				#$start_time = start_time();
-				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 			}
 
 
@@ -985,7 +985,7 @@ class section extends common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 			}
 
 
@@ -1293,7 +1293,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 		}
 
 		$parent  = intval($this->get_section_id());
@@ -1322,7 +1322,7 @@ class section extends common {
 		if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
 
 			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->modo.'_'.start_time()]=start_time();
+				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
 				#debug_log(__METHOD__." Returned '$modelo_name_required' for tipo:$this->tipo FROM STATIC CACHE");
 			}
 			return $ar_children_objects_by_modelo_name_in_section[$uid];
@@ -1368,7 +1368,7 @@ class section extends common {
 				# Build component obj
 				case (strpos($modelo_name, 'component_')!==false) :
 
-					$current_obj = component_common::get_instance($modelo_name, $terminoID, $parent,'edit', DEDALO_DATA_LANG, $this->tipo ); #$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
+					$current_obj = component_common::get_instance($modelo_name, $terminoID, $parent,'edit', DEDALO_DATA_LANG, $this->tipo ); #$id=NULL, $tipo=NULL, $mode='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
 					break;
 
 				# Build button obj
@@ -2338,7 +2338,7 @@ class section extends common {
 			$current_section_tipo = $locator->from_section_tipo;
 			$current_section_id   = $locator->from_section_id;
 
-			$section = section::get_instance($current_section_id, $current_section_tipo, $modo='list');
+			$section = section::get_instance($current_section_id, $current_section_tipo, $mode='list');
 			$dato 	 = $section->get_dato();
 
 			if (!empty($dato->diffusion_info)) {

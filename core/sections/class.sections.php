@@ -17,8 +17,8 @@ class sections extends common {
 		protected $ar_section_tipo;
 		protected $dato;
 
-		# modo
-		protected $modo;
+		# mode
+		protected $mode;
 
 		# dd_request. Full dd_request
 		public $dd_request;
@@ -34,14 +34,14 @@ class sections extends common {
     * @param array|null $ar_locators
     * @param object $search_query_object = null
     * @param string $caller_tipo = null
-    * @param string $modo = list
+    * @param string $mode = list
     * @param string $lang = DEDALO_DATA_NOLAN
     * @return object $instance
     * 	Instance of sections class
     */
-    public static function get_instance(?array $ar_locators, object $search_query_object=null, string $caller_tipo=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN) {
+    public static function get_instance(?array $ar_locators, object $search_query_object=null, string $caller_tipo=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN) {
 
-		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $modo, $lang);
+		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $mode, $lang);
 
         return $instance;
     }//end get_instance
@@ -51,17 +51,17 @@ class sections extends common {
 	/**
 	* CONSTRUCT
 	* Extends parent abstract class common
-	* La sección, a diferencia de los componentes, se comporta de un modo particular:
-	* Si se le pasa sólo el tipo, se espera un listado (modo list)
-	* Si se le pasa sólo el section_id, se espera una ficha (modo edit)
+	* La sección, a diferencia de los componentes, se comporta de un mode particular:
+	* Si se le pasa sólo el tipo, se espera un listado (mode list)
+	* Si se le pasa sólo el section_id, se espera una ficha (mode edit)
 	*/
-	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $modo, string $lang) {
+	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $mode, string $lang) {
 
 		// Set general vars
 			$this->ar_locators			= $ar_locators;
 			$this->search_query_object	= $search_query_object;
 			$this->caller_tipo			= $caller_tipo;
-			$this->modo					= $modo;
+			$this->mode					= $mode;
 			$this->lang					= $lang;
 	}//end __construct
 

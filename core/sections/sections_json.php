@@ -5,7 +5,7 @@
 
 // element configuration vars
 	// $ar_section_tipo	= $this->get_ar_section_tipo();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$section_class	= 'section';
 
 
@@ -23,7 +23,7 @@
 		// 		default:
 		// 			foreach ((array)$ar_section_tipo as $current_section_tipo) {
 
-		// 				$section = $section_class::get_instance(null, $current_section_tipo, $modo);
+		// 				$section = $section_class::get_instance(null, $current_section_tipo, $mode);
 
 		// 				// set dd_request always to allow components know request context
 		// 					// $section->set_dd_request( $this->get_dd_request() ); // inject dd_request
@@ -73,7 +73,7 @@
 
 		foreach ((array)$ar_section_tipo as $current_section_tipo) {
 
-			$section = $section_class::get_instance(null, $current_section_tipo, $modo);
+			$section = $section_class::get_instance(null, $current_section_tipo, $mode);
 
 			// pagination. fix pagination vars (defined in class component_common)
 				$limit	= $this->search_query_object->limit;
@@ -115,7 +115,7 @@
 					$section = $section_class::get_instance(
 						$section_id,
 						$section_tipo,
-						$modo,
+						$mode,
 						true // bool cache
 					);
 
@@ -128,7 +128,7 @@
 					$section->pagination = $pagination;
 
 				// set dato
-					if ($modo==='tm') {
+					if ($mode==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
 					}else{
 						// inject dato to section when the dato come from db and set as loaded
@@ -174,7 +174,7 @@
 						$current_value->created_by_user_name	= $section->get_created_by_user_name();
 						$current_value->modified_by_user_name	= $section->get_modified_by_user_name();
 					// tm case
-						if($modo==='tm'){
+						if($mode==='tm'){
 							$current_value->matrix_id	= $current_record->id;
 							$current_value->timestamp	= $current_record->timestamp;
 							$current_value->state		= $current_record->state;
