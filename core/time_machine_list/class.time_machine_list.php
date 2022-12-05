@@ -11,7 +11,7 @@ class time_machine_list extends common {
 	protected $tipo;
 	protected $section_id;
 	protected $section_tipo;
-	protected $modo;
+	protected $mode;
 	protected $value_resolved;
 	protected $limit;
 	protected $offset;
@@ -24,14 +24,14 @@ class time_machine_list extends common {
 	* @param string $tipo
 	* @param mixed $section_id
 	* @param string $section_tipo
-	* @param string $modo = 'edit'
+	* @param string $mode = 'edit'
 	*/
-	public function __construct(string $tipo, $section_id, string $section_tipo, string $modo='edit') {
+	public function __construct(string $tipo, $section_id, string $section_tipo, string $mode='edit') {
 
 		$this->tipo			= $tipo;
 		$this->section_id	= $section_id;
 		$this->section_tipo	= $section_tipo;
-		$this->modo			= $modo;
+		$this->mode			= $mode;
 	}//end __construct
 
 
