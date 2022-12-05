@@ -26,8 +26,8 @@ session_write_close();
 	// 	# top
 	// 	$page_globals->top_tipo 	= TOP_TIPO;
 	// 	$page_globals->top_id 		= TOP_ID;
-	// 	# modo
-	// 	$page_globals->modo 		= $modo;
+	// 	# mode
+	// 	$page_globals->mode 		= $mode;
 	// 	# caller_tipo
 	// 	$page_globals->caller_tipo 	= $caller_tipo;
 	// 	# context_name
