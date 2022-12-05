@@ -16,7 +16,7 @@ class ts_object {
 	# mixed object|null (default null)
 	protected $options;
 	# string (default 'edit')
-	protected $modo;
+	protected $mode;
 	# int
 	public $order;
 
@@ -30,10 +30,10 @@ class ts_object {
 	* @param string $section_tipo
 	* @param object $options
 	*	Default null
-	* @param string $modo
+	* @param string $mode
 	*	Default 'edit'
 	*/
-	public function __construct( int $section_id, string $section_tipo, object $options=null, string $modo='edit' ) {
+	public function __construct( int $section_id, string $section_tipo, object $options=null, string $mode='edit' ) {
 
 		$this->section_id   = $section_id;
 		$this->section_tipo = $section_tipo;
@@ -44,8 +44,8 @@ class ts_object {
 		# Fix options
 		$this->options = $options;
 
-		# Fix modo
-		$this->modo = $modo;
+		# Fix mode
+		$this->mode = $mode;
 
 		# Set default order
 		$this->order = 1000; // Default is 1000. When get_html is called, this var is updated with component value if exits and have data
@@ -216,7 +216,7 @@ class ts_object {
 		$children_data = new stdClass();
 			$children_data->section_tipo				= $this->section_tipo;
 			$children_data->section_id					= $this->section_id;
-			$children_data->modo						= 'edit';	//'list_thesaurus';
+			$children_data->mode						= 'edit';	//'list_thesaurus';
 			$children_data->lang						= DEDALO_DATA_LANG;
 			$children_data->is_descriptor				= true;
 			$children_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
@@ -311,7 +311,7 @@ class ts_object {
 				switch (true) {
 					case ($element_obj->type==='term'):
 						# term Is traducible and uses lang fallback here
-						// $value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null
+						// $value, $tipo, $parent, $mode, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null
 						if (empty($dato)) {
 							$modelo_name_term 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 							$element_value 		= component_common::extract_component_value_fallback($component);
