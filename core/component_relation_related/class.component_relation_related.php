@@ -35,13 +35,13 @@ class component_relation_related extends component_relation_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		# relation_type
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
 		# Build the component normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
 		// #
 		// # RELATION CONFIG . Set current component relation_type and relation_type_rel based on properties config

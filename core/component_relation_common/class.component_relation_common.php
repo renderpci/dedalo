@@ -44,7 +44,7 @@ class component_relation_common extends component_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	public function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=null, string $section_tipo=null) {
+	public function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
@@ -86,7 +86,7 @@ class component_relation_common extends component_common {
 		# relation_type
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
 		// if(SHOW_DEBUG) {
 		// 	$traducible = $this->RecordObj_dd->get_traducible();
@@ -146,7 +146,7 @@ class component_relation_common extends component_common {
 		}
 
 		// time machine mode case
-			if ($this->modo==='tm') {
+			if ($this->mode==='tm') {
 
 				if (empty($this->matrix_id)) {
 					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
@@ -196,7 +196,7 @@ class component_relation_common extends component_common {
 	*/
 	protected function load_component_dato() : bool {
 
-		if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+		if( empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
 			// return null;
 			return false;
 		}
@@ -346,7 +346,7 @@ class component_relation_common extends component_common {
 					$component_model,
 					$ddo->tipo,
 					$locator->section_id,
-					$this->modo,
+					$this->mode,
 					$current_lang,
 					$locator->section_tipo
 				);
@@ -747,7 +747,7 @@ class component_relation_common extends component_common {
 	public function load_component_dataframe() : bool {
 
 		// check vars
-			if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+			if( empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
 				return false;
 			}
 
@@ -894,11 +894,11 @@ class component_relation_common extends component_common {
 			$section_tipo	= $this->get_section_tipo();
 			$section_id		= $this->get_section_id();
 			$tipo			= $this->get_tipo();
-			$modo			= $this->get_modo();
+			$mode			= $this->get_mode();
 			$lang			= DEDALO_DATA_LANG;
 
 		// dataframe mode. Save caller and stop
-			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
+			if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset)) {
 
 				// new_component
 					$new_tipo			= $this->caller_dataset->component_tipo;
@@ -934,7 +934,7 @@ class component_relation_common extends component_common {
 					}
 
 				return $new_component->Save(); // type int|null
-			}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
+			}//end if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset))
 
 		// Verify component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
@@ -1149,13 +1149,13 @@ class component_relation_common extends component_common {
 
 			# Target section data
 			$modelo_name					= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
-			$modo							= 'edit';
+			$mode							= 'edit';
 			$lang							= DEDALO_DATA_NOLAN;
 			$component_relation_children	= component_common::get_instance(
 				$modelo_name,
 				$current_component_tipo,
 				$current_section_id,
-				$modo,
+				$mode,
 				$lang,
 				$current_section_tipo
 			);
@@ -2073,7 +2073,7 @@ class component_relation_common extends component_common {
 									$model_name,
 									$current_component_tipo,
 									$current_record->section_id,
-									$modo='list',
+									$mode='list',
 									$current_lang,// $lang=DEDALO_DATA_LANG,
 									$current_record->section_tipo
 								);
@@ -2276,14 +2276,14 @@ class component_relation_common extends component_common {
 		// 		// $show = $request_config_item->show ?? null;
 		// 		// if (empty($show)) {
 
-		// 		// 	debug_log(__METHOD__." Ignored empty request_config_item->show (mode:$this->modo) [$this->section_tipo - $this->tipo]", logger::ERROR);
+		// 		// 	debug_log(__METHOD__." Ignored empty request_config_item->show (mode:$this->mode) [$this->section_tipo - $this->tipo]", logger::ERROR);
 
 		// 		// }else{
 
 		// 		// 	$first_item	= $show->ddo_map[0] ?? null;
 
 		// 		// 	if (empty($first_item)) {
-		// 		// 		debug_log(__METHOD__." Ignored show empty first_item (mode:$this->modo) [$this->section_tipo - $this->tipo]", logger::ERROR);
+		// 		// 		debug_log(__METHOD__." Ignored show empty first_item (mode:$this->mode) [$this->section_tipo - $this->tipo]", logger::ERROR);
 		// 		// 		dump($show, ' show empty first_item ++++++++ '.to_string($this->tipo));
 		// 		// 	}else{
 		// 		// 		// target component
