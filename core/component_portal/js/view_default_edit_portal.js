@@ -136,13 +136,16 @@ view_default_edit_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* @param object self
+* @param array ar_section_record
+* @return HTMLelement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
-	// build_values
+	// DocumentFragment
 		const fragment = new DocumentFragment()
-	// content_data
+
+	// content_data node
 		const content_data = ui.component.build_content_data(self)
 
 		// section_record. Add all section_record rendered nodes
@@ -208,7 +211,8 @@ const get_content_data = async function(self, ar_section_record) {
 				fragment.appendChild(references_node)
 			}
 
-			  content_data.appendChild(fragment)
+		// add fragment
+			content_data.appendChild(fragment)
 
 
 	// set node only when it is in DOM (to save browser resources)
