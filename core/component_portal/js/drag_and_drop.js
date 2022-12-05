@@ -46,13 +46,13 @@
 
 				// first node . Get the boundaries of the last node of the section_record
 				// drop nodes will be resize with the height of this last_node
-					const first_node			= section_record_node.firstChild // usually column 'id'
-					const rect_first_node		= first_node.getBoundingClientRect();
+					const first_node		= section_record_node.firstChild // usually column 'id'
+					const rect_first_node	= first_node.getBoundingClientRect();
 
 				// last_node. Get the boundaries of the last node of the section_record
 				// drop nodes will be resize with the height of this last_node
-					const last_node				= section_record_node.lastChild // usually column 'remove'
-					const rect_last_node		= last_node.getBoundingClientRect();
+					const last_node			= section_record_node.lastChild // usually column 'remove'
+					const rect_last_node	= last_node.getBoundingClientRect();
 
 				// set height and width, width remove the padding of the grid
 					const height = Math.round( rect_last_node.height )
@@ -122,12 +122,15 @@
 
 	/**
 	* ON_DRAGEND
-	* reset drop nodes to the original size and hide them
+	* Reset drop nodes to the original size and hide them
+	* @param DOM node node
+	* @param Event event
+	* @return void
 	*/
 	export const on_dragend = function(node, event) {
-
 		event.preventDefault();
 		event.stopPropagation();
+
 		// get content data, it has the section_records nodes with the drop nodes.
 		const content_data		= node.parentNode.parentNode.parentNode
 		const ar_section_record	= content_data.childNodes
@@ -141,7 +144,6 @@
 			current_drop.style.width = 0
 			current_drop.classList.add('hide')
 		}
-
 	}//end on_dragend
 
 
@@ -152,14 +154,15 @@
 	* @return bool true
 	*/
 	export const on_drop = function(node, event, options) {
-
 		event.preventDefault() // Necessary. Allows us to drop.
 		event.stopPropagation()
+
 		// self is the component_portat that call and it has the sort_order function
 		const self	= options.caller
 		const data	= event.dataTransfer.getData('text/plain');// element that's move
 
 		node.classList.remove('dragover')
+
 		// the drag element will sent the data of the original position, the source_key
 		const data_parse = JSON.parse(data)
 
@@ -167,16 +170,25 @@
 		if(options.paginated_key === data_parse.paginated_key){
 			return false
 		}
+
+		// set wrapper as loading
+			self.node.classList.add('loading')
+
 		// sort data with the old and new position
 		// the locator will be checked in server to be sure that the source position
 		// is the same that the data in the server, if not the server will send a error
-		const sort_data = {
+		const sort_data_options = {
 			value		: data_parse.locator,
 			source_key	: data_parse.paginated_key,
 			target_key	: options.paginated_key
 		}
 
-		self.sort_data(sort_data)
+		// exec async sort_data (call to API)
+			self.sort_data(sort_data_options)
+			.then(function(){
+				// remove wrapper loading
+				self.node.classList.remove('loading')
+			})
 
 
 		return true

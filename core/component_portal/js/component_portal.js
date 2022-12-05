@@ -893,13 +893,14 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 * ORDER_DATA
 * @return
 */
-component_portal.prototype.sort_data = function(options) {
+component_portal.prototype.sort_data = async function(options) {
 
 	const self = this
 
-	const value			= options.value
-	const source_key	= options.source_key
-	const target_key	= options.target_key
+	// options
+		const value			= options.value
+		const source_key	= options.source_key
+		const target_key	= options.target_key
 
 	// sort_data
 		const changed_data = [Object.freeze({
@@ -909,19 +910,14 @@ component_portal.prototype.sort_data = function(options) {
 			value		: value
 		})]
 
-		self.change_value({
+	// exec async change_value
+		const result = self.change_value({
 			changed_data	: changed_data,
 			refresh			: true
 		})
-		.then(async (response)=>{
 
-			// the user has selected cancel from delete dialog
-				if (response===false) {
-					return
-				}
-		})
 
-	return true
+	return result
 };//end order_data
 
 
