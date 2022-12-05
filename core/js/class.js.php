@@ -18,7 +18,7 @@ class js {
 
 	# JS LINK CODE . RETURN COMBINATED JS LINKS FOR INSERT IN HEADER
 	public static function get_js_link_code() {
-		global $modo;
+		global $mode;
 
 		$html 	= '';
 
@@ -79,7 +79,7 @@ class js {
 			js::$ar_url_basic[] = DEDALO_CORE_URL . '/relation_list/js/relation_list.js';
 
 
-			switch ($modo) {
+			switch ($mode) {
 				case 'edit':
 					js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_indexation/js/tool_indexation.js';
 					#js::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_lang_multi/js/tool_lang_multi.js'; // Not used for now
@@ -119,7 +119,7 @@ class js {
 			if( strpos($url,'component_')!==false && !isset($added_component_commons) ) {
 
 				# inspector functions
-				#if($modo=='edit')
+				#if($mode=='edit')
 				$html .= self::build_tag( DEDALO_CORE_URL . '/inspector/js/inspector.js' );
 
 				# component relation .En algunos contextos es necesario el js de component_relation aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre
