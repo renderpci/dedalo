@@ -3,7 +3,7 @@
 	# CONTROLLER
 
 		$widget_name 				 	= $this->widget_name;
-		$modo 						 	= $this->component_info->get_modo();
+		$mode 						 	= $this->component_info->get_mode();
 		$parent 					 	= $this->component_info->get_parent();		
 		$section_tipo 				 	= $this->component_info->get_section_tipo();
 		$data_source 				 	= $this->data_source;
@@ -13,7 +13,7 @@
 		#$portal_target_component_tipo 	= $data_source->$current_section_tipo->$current_component_tipo->$portal_target_section_tipo;
 		$date_in_component_tipo 		= $data_source->$current_section_tipo->$current_component_tipo->$portal_target_section_tipo->date_in;
 		$date_out_component_tipo 		= $data_source->$current_section_tipo->$current_component_tipo->$portal_target_section_tipo->date_out;
-		$filename 					 	= $modo;
+		$filename 					 	= $mode;
 
 		$lang = isset($lang) ? $lang : DEDALO_DATA_LANG;
 
@@ -99,7 +99,7 @@
 
 
 
-		switch ($modo) {
+		switch ($mode) {
 
 			case 'list':
 				$filename = 'edit';
@@ -108,7 +108,7 @@
 				$widget_base_url = $this->get_widget_base_url();
 				css::$ar_url[] 	 = $widget_base_url ."/css/".$widget_name.".css";
 
-				if($modo==='edit') {
+				if($mode==='edit') {
 					js::$ar_url[]    = $widget_base_url ."/js/".$widget_name.".js";	
 				}
 
@@ -121,7 +121,7 @@
 					$component_portal = component_common::get_instance($modelo_name,
 																	   $current_component_tipo,
 																	   $parent,
-																	   $modo,
+																	   $mode,
 																	   DEDALO_DATA_NOLAN,
 																	   $current_section_tipo);
 					$dato = $component_portal->get_dato();
@@ -143,7 +143,7 @@
 					$component_date_in= component_common::get_instance($modelo_name,
 																	   $date_in_component_tipo,
 																	   $locator_section_id,
-																	   $modo,
+																	   $mode,
 																	   DEDALO_DATA_NOLAN,
 																	   $locator_section_tipo);
 					$date_in = (array)$component_date_in->get_dato();
@@ -171,7 +171,7 @@
 					$component_date_out = component_common::get_instance($modelo_name,
 																	     $date_out_component_tipo,
 																	     $locator_section_id,
-																	     $modo,
+																	     $mode,
 																	     DEDALO_DATA_NOLAN,
 																	     $locator_section_tipo);
 					$date_out = (array)$component_date_out->get_dato();
@@ -214,7 +214,7 @@
 					$component_date_in= component_common::get_instance($modelo_name,
 																	   $date_in_component_tipo,
 																	   $locator_section_id,
-																	   $modo,
+																	   $mode,
 																	   DEDALO_DATA_NOLAN,
 																	   $locator_section_tipo);
 					$date_in = (array)$component_date_in->get_dato();	
@@ -232,7 +232,7 @@
 					$component_date_out= component_common::get_instance($modelo_name,
 																	   $date_out_component_tipo,
 																	   $locator_section_id,
-																	   $modo,
+																	   $mode,
 																	   DEDALO_DATA_NOLAN,
 																	   $locator_section_tipo);
 					$date_out = (array)$component_date_out->get_dato();
@@ -332,15 +332,15 @@
 				break;
 
 			default:
-				return "Sorry. Mode: $modo is not supported";
-		}//end switch ($modo)
+				return "Sorry. Mode: $mode is not supported";
+		}//end switch ($mode)
 
 
 
 
 	$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';	
 	if( !include($page_html) ) {
-		echo "<div class=\"error\">Invalid widget mode $modo</div>";
+		echo "<div class=\"error\">Invalid widget mode $mode</div>";
 	}
 
 
