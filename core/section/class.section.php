@@ -134,7 +134,7 @@ class section extends common {
 
 			// # FIND CURRENT INSTANCE IN CACHE
 			// if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
-			// 	self::$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
+			// 	self::$ar_section_instances[$key] = new section($section_id, $tipo, $mode);
 			// }
 
 			// return self::$ar_section_instances[$key];
