@@ -9,7 +9,7 @@ var pisuerga	= 'valladolid';
 //if( (navigator.userAgent.indexOf('Chrome') != -1 || navigator.userAgent.indexOf('AppleWebKit') != -1) && pisuerga == 'valladolid' ) {
 if( (navigator.userAgent.indexOf('iPad') != -1 || navigator.userAgent.indexOf('iPhone') != -1) ) {
 	
-	modo = 'html5' ;	
+	mode = 'html5' ;
 	
 	videoCode = videoCode_html5;	//alert(videoCode)
 	
@@ -31,7 +31,7 @@ if( (navigator.userAgent.indexOf('iPad') != -1 || navigator.userAgent.indexOf('i
 	
 }else{
 	
-	modo = 'jwplayer' ;
+	mode = 'jwplayer' ;
 	
 	videoCode = videoCode_html5;
 	
