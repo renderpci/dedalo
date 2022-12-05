@@ -8,8 +8,8 @@ class dataframe extends common {
 
 	public $tipo;
 
-	# dataframe modo
-	public $modo;
+	# dataframe mode
+	public $mode;
 
 	# Component
 	public $component_obj;
@@ -23,14 +23,14 @@ class dataframe extends common {
 	/**
 	* __CONSTRUCT
 	* @param object $component_obj (can be 'component')
-	* @param string $modo (default is 'page' when is called from main page)
+	* @param string $mode (default is 'page' when is called from main page)
 	*/
-	public function __construct($dataframe_tipo, $type, $component_obj, $modo, $caller_key){
+	public function __construct($dataframe_tipo, $type, $component_obj, $mode, $caller_key){
 
 		$this->tipo						= $dataframe_tipo;
 		$this->component_obj			= $component_obj;
 
-		$this->modo						= $modo;
+		$this->mode						= $mode;
 
 		$this->caller_key				= $caller_key;
 		$this->caller_component_tipo	= $component_obj->get_tipo();
@@ -68,14 +68,14 @@ class dataframe extends common {
 
 		$ar_component_tipo 	= $this->get_ar_childrens();
 		$ar_component_obj 	= array();
-		$modo 				= $this->modo;
+		$mode 				= $this->mode;
 		foreach ($ar_component_tipo as $current_component_tipo) {
 
 			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 			$component_obj  = component_common::get_instance($modelo_name,
 															 $current_component_tipo,
 															 $this->caller_section_id,
-															 $modo,
+															 $mode,
 															 DEDALO_DATA_LANG,
 															 $this->caller_section_tipo,
 															 false); // Cache false
@@ -100,7 +100,7 @@ class dataframe extends common {
 			}
 
 			# Notify
-			#common::notify_load_lib_element_tipo($modelo_name, $this->modo);
+			#common::notify_load_lib_element_tipo($modelo_name, $this->mode);
 
 
 			$ar_component_obj[] = $component_obj;
