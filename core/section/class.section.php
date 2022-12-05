@@ -84,34 +84,34 @@ class section extends common {
 	* Cache section instances (singleton pattern)
 	* @param string|int|null $section_id = null
 	* @param string $tipo = null
-	* @param string|null $modo = 'list'
+	* @param string|null $mode = 'list'
 	* @param bool $cache = true
 	*
 	* @return instance section
 	*/
-	public static function get_instance($section_id=null, string $tipo=null, string $modo='list', bool $cache=true) : section {
+	public static function get_instance($section_id=null, string $tipo=null, string $mode='list', bool $cache=true) : section {
 
 		// check valid tipo
 			if (empty($tipo)) {
-				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, modo:$modo", 1);
+				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 			}
 
 		// Not cache new sections (without section_id)
 			if (empty($section_id)) {
-				return new section(null, $tipo, $modo);
+				return new section(null, $tipo, $mode);
 			}
 
-		return new section($section_id, $tipo, $modo);
+		return new section($section_id, $tipo, $mode);
 
 		// removed cache features temporally (!) Verify real speed benefits
 			// // Direct construct without cache instance
 			// // Use this config in imports
 			// 	if ($cache===false) {
-			// 		return new section($section_id, $tipo, $modo);
+			// 		return new section($section_id, $tipo, $mode);
 			// 	}
 
 			// # key for cache
-			// $key = $section_id .'_'. $tipo.'_'.$modo;
+			// $key = $section_id .'_'. $tipo.'_'.$mode;
 
 			// $max_cache_instances = 300*3; // Default 300
 			// $cache_slice_on 	 = 100*3; // Default 100
