@@ -142,9 +142,6 @@ class section extends common {
 	/**
 	* CONSTRUCT
 	* Extends parent abstract class common
-	* La sección, a diferencia de los componentes, se comporta de un modo particular:
-	* Si se le pasa sólo el tipo, se espera un listado (modo list)
-	* Si se le pasa sólo el section_id, se espera una ficha (modo edit)
 	*/
 	private function __construct($section_id=null, ?string $tipo=null, ?string $modo='edit') {
 
@@ -604,10 +601,6 @@ class section extends common {
 				$options->new_record				= false;
 				$options->forced_create_record		= false;
 				$options->component_filter_dato		= false;
-				// $options->is_portal				= false;
-				// $options->portal_tipo			= false;
-				// $options->top_tipo				= TOP_TIPO;
-				// $options->top_id					= TOP_ID;
 
 				# Time machine options (overwrite when save component)
 				$options->time_machine_data			= false;
@@ -770,32 +763,6 @@ class section extends common {
 
 					// diffusion_info
 						$section_dato->diffusion_info 	 = array(); // Empty array by default
-
-					// Section creator info
-						// switch (true) {
-						// 	# ACTIVITY CASE
-						// 	case ($tipo===DEDALO_ACTIVITY_SECTION_TIPO):
-						// 		# Nothing to do
-						// 		break;
-
-						// 	# PORTAL CASE
-						// 	case ($options->is_portal===true):
-						// 		$ar_section_creator	= section::build_ar_section_creator($options->top_tipo, $tipo, $options->portal_tipo);
-						// 		# Section creator
-						// 		$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
-						// 		$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
-						// 		$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
-						// 		break;
-
-						// 	# DEFAULT CASE (Normal sections)
-						// 	default:
-						// 		$ar_section_creator	= section::build_ar_section_creator($options->top_tipo);
-						// 		# Section creator
-						// 		$section_dato->section_creator_top_tipo 			= (string)$ar_section_creator['top_tipo'];
-						// 		$section_dato->section_creator_portal_section_tipo 	= (string)$ar_section_creator['portal_section_tipo'];
-						// 		$section_dato->section_creator_portal_tipo 			= (string)$ar_section_creator['portal_tipo'];
-						// 		break;
-						// }
 
 					// Update modified section data . Resolve and add creation date and user to current section dato
 						$this->update_modified_section_data((object)[
