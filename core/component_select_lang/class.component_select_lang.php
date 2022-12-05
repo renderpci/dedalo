@@ -21,13 +21,13 @@ class component_select_lang extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-		// function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+		// function __construct($tipo=null, $parent=null, $mode='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
 		// 	# Force always DEDALO_DATA_NOLAN
 		// 	$lang = DEDALO_DATA_NOLAN;
 
 		// 	# Build the component normally
-		// 	$result = parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		// 	$result = parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
 		// 	if(SHOW_DEBUG) {
 		// 		// check lang is properly configured
