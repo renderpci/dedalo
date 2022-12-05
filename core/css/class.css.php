@@ -19,7 +19,7 @@ class css {
 	# css link code . return combined css links for insert in header
 	*/
 		// public static function get_css_link_code() {
-		// 	global $modo;
+		// 	global $mode;
 
 		// 	$html	= '';
 
@@ -71,7 +71,7 @@ class css {
 		// 		# COMPONENTS common css
 		// 		css::$ar_url_basic[] = DEDALO_CORE_URL . '/component_common/css/component_common.css';
 
-		// 		switch ($modo) {
+		// 		switch ($mode) {
 		// 			case 'edit':
 		// 				css::$ar_url_basic[] = DEDALO_CORE_URL . '/tools/tool_lang_multi/css/tool_lang_multi.css';
 		// 				css::$ar_url_basic[] = DEDALO_CORE_URL . '/time_machine_list/css/time_machine_list.css';
@@ -120,11 +120,11 @@ class css {
 		// 			$html .= self::build_tag( DEDALO_CORE_URL . '/inspector/css/inspector.css' );
 
 		// 			# TOOLS TOOL_TIME_MACHINE css
-		// 			#if(navigator::get_selected('modo')==='tool_time_machine')
+		// 			#if(navigator::get_selected('mode')==='tool_time_machine')
 		// 			#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_time_machine/css/tool_time_machine.css' );
 
 		// 			# TOOLS LANG css
-		// 			#if(navigator::get_selected('modo')==='tool_lang') {
+		// 			#if(navigator::get_selected('mode')==='tool_lang') {
 		// 			#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_lang/css/tool_lang.css' );
 		// 			#$html .= self::build_tag( DEDALO_CORE_URL . '/component_state/css/component_state.css' );
 		// 			#}
