@@ -11,7 +11,7 @@ class login extends common {
 	protected $id;
 	protected $tipo;
 	protected $lang;
-	protected $modo;
+	protected $mode;
 
 	protected $modelo;
 	protected $tipo_active_account	= 'dd131';
@@ -29,9 +29,9 @@ class login extends common {
 
 	/**
 	* __CONSTRUCT
-	* @param string $modo = 'edit'
+	* @param string $mode = 'edit'
 	*/
-	public function __construct(string $modo='edit') {
+	public function __construct(string $mode='edit') {
 
 		// removed is_logged verification because it's necessary to get the context of login
 		// in test environments like unit_test
@@ -42,7 +42,7 @@ class login extends common {
 		$this->set_id($id);
 		$this->set_tipo($tipo);
 		$this->set_lang(DEDALO_DATA_LANG);
-		$this->set_modo($modo);
+		$this->set_mode($mode);
 
 		// boolean $result
 		parent::load_structure_data();
@@ -1154,7 +1154,7 @@ class login extends common {
 		// short vars
 			$model	= 'login';
 			$tipo	= $this->get_tipo();
-			$mode	= $this->get_modo();
+			$mode	= $this->get_mode();
 			$label	= $this->get_label();
 			$lang	= $this->get_lang();
 

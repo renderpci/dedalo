@@ -3,7 +3,7 @@
 class area_root extends area_common {
 	
 	/*
-	function __construct($id=NULL, $tipo=NULL, $modo=NULL) {	# section reference ($id=NULL, $tipo=NULL, $modo=NULL)
+	function __construct($id=NULL, $tipo=NULL, $mode=NULL) {	# section reference ($id=NULL, $tipo=NULL, $mode=NULL)
 
 		# id and tipo are ignored ! (Only por section construct compatibility)
 		# id is not aplicable (area have not matrix record)
@@ -15,7 +15,7 @@ class area_root extends area_common {
 		if(empty($ar_tipo[0])) throw new Exception(" ar_tipo is empty . tipo is mandatory to create this component $modelo_name ", 1);
 		$tipo = $ar_tipo[0];
 
-		parent::__construct($tipo, $modo); 
+		parent::__construct($tipo, $mode);
 	}
 	*/
 

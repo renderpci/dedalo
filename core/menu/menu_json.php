@@ -4,7 +4,7 @@
 
 
 // component configuration vars
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$permissions	= 2;
 
 // context
@@ -30,7 +30,7 @@
 	if($options->get_data===true ){
 
 		// Value
-		switch ($modo) {
+		switch ($mode) {
 			case 'edit':
 			default:
 				$tree_datalist 	= $this->get_tree_datalist();

@@ -47,13 +47,13 @@ class component_date extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		// Force always DEDALO_DATA_NOLAN
 		$lang = DEDALO_DATA_NOLAN;
 
 		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
 		if(SHOW_DEBUG===true) {
 			if ($this->RecordObj_dd->get_traducible()==='si') {

@@ -303,13 +303,13 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 
 	// TAG WAY
 		// MODE : Only allow mode 'tool_transcription'
-		//if(page_globals.modo!=='tool_transcription') return null;
+		//if(page_globals.mode!=='tool_transcription') return null;
 
 		// ATENTION THE NAME OF THE TAG (1) CHANGE INTO (1_LAYER) FOR COMPATIBILITY WITH PAPER LAYER NAME
 		// WHEN SAVE THE LAYER TAG IT IS REMOVE TO ORIGINAL TAG NAME OF DÉDALO. "draw-n-1-data"
 		// BUT THE LAYER NAME ALWAYS ARE "1_layer"
 
-		// call the generic commom tool init with the tag
+		// call the generic common tool init with the tag
 			// self.ar_tag_loaded.push(tag)
 			// const data 	 	= tag.data.replace(/'/g, '"')
 			// const layer_id 	= tag.tag_id +'_layer';

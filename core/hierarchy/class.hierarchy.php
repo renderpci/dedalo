@@ -702,12 +702,12 @@ class hierarchy {
 					Please review your structure data before continue working to avoid critical errors.<br>", 1);
 		}
 
-		$modo ='edit';
+		$mode ='edit';
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component		= component_common::get_instance( $modelo_name,
 														  $tipo,
 														  $parent,
-														  $modo,
+														  $mode,
 														  $lang,
 														  $section_tipo);
 

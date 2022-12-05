@@ -22,8 +22,8 @@ var lock_components = new function() {
 	// ON UNLOAD window
 	/* Moved to html_page.js
 	window.addEventListener("beforeunload", function (event) {
-		// MODO SWITCH
-		switch(page_globals.modo) {
+		// MODE SWITCH
+		switch(page_globals.mode) {
 			case 'edit' :
 				event.preventDefault();
 				// DELETE_USER_SECTION_EVENTS

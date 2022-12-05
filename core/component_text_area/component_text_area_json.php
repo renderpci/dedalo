@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$lang			= $this->get_lang();
 	$properties		= $this->get_properties();
 
@@ -33,7 +33,7 @@
 				break;
 		}
 
-		switch ($modo) {
+		switch ($mode) {
 
 			case 'edit':
 				// toolbar_buttons base
@@ -90,7 +90,7 @@
 	if($options->get_data===true && $permissions>0){
 
 		// value
-			switch ($modo) {
+			switch ($mode) {
 
 				case 'list':
 					$value			= $this->get_list_value();
@@ -161,14 +161,14 @@
 				$item->parent_section_id	= $this->get_section_id();
 				$item->fallback_value		= $fallback_value;
 				// optional data to add
-				if(isset($properties->tags_persons) && $modo==='edit') {
+				if(isset($properties->tags_persons) && $mode==='edit') {
 					$item->related_sections	= $related_sections;
 					$item->tags_persons		= $tags_persons;
 				}
-				if(isset($properties->tags_index) && $modo==='edit') {
+				if(isset($properties->tags_index) && $mode==='edit') {
 					$item->tags_index = $tags_index;
 				}
-				if(isset($properties->tags_notes) && $modo==='edit') {
+				if(isset($properties->tags_notes) && $mode==='edit') {
 					$item->tags_notes = $tags_notes;
 				}
 

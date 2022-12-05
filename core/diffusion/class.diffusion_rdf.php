@@ -959,7 +959,7 @@ class diffusion_rdf extends diffusion {
 					$query = '
 					{
 					  "id": "base_uri",
-					  "modo": "list",
+					  "mode": "list",
 					  "section_tipo": "'.$section_tipo.'",
 					  "limit": 1,
 					  "filter": {

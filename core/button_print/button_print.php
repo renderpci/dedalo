@@ -5,14 +5,14 @@
 	$section_tipo 			= $this->get_section_tipo();
 	$target_section_tipo	= $this->RecordObj_dd->get_parent();
 	$id						= NULL;
-	$modo					= $this->get_modo();
+	$mode					= $this->get_mode();
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$html_title				= "Info about $tipo";		
 	
 
-	switch($modo) {
+	switch($mode) {
 		
 		case 'edit'	:
 				break;
@@ -25,8 +25,8 @@
 	}
 		
 	
-	$page_html = 'html/' . get_class($this) . '_' . $modo . '.phtml';
+	$page_html = 'html/' . get_class($this) . '_' . $mode . '.phtml';
 	if( !include($page_html) ) {
-		echo "<div class=\"error\">Invalid mode $this->modo</div>";
+		echo "<div class=\"error\">Invalid mode $this->mode</div>";
 	}
 ?>

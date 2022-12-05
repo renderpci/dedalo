@@ -4,7 +4,7 @@
 
 // component configuration vars
 	$permissions		= $this->get_component_permissions();
-	$modo				= $this->get_modo();
+	$mode				= $this->get_mode();
 
 
 // context
@@ -31,7 +31,7 @@
 	if($options->get_data===true && $permissions>0){
 
 		// Value
-		switch ($modo) {
+		switch ($mode) {
 
 			case 'list':
 				$value 	= $this->get_valor();

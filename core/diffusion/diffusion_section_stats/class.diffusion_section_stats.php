@@ -212,7 +212,7 @@ class diffusion_section_stats extends diffusion {
 			$options_search_from_user = clone($options_search_sesion); // Important: clone session object
 
 			$options_search_from_user->search_options_session_key 	= 'current_edit';
-			$options_search_from_user->modo 						= 'edit';
+			$options_search_from_user->mode 						= 'edit';
 			$options_search_from_user->offset 						= false;
 			$options_search_from_user->layout_map					= array();
 
@@ -224,7 +224,7 @@ class diffusion_section_stats extends diffusion {
 			$options_search_from_user->section_tipo 				= $options->section_tipo;
 			$options_search_from_user->search_options_session_key 	= 'current_edit';
 			$options_search_from_user->layout_map					= array();
-			$options_search_from_user->modo 						= 'edit';
+			$options_search_from_user->mode 						= 'edit';
 
 		# ITERATE ALL SECTIONS (included activity)
 		foreach ($ar_diffusion_map as $stats_tipo => $current_obj) {
@@ -299,7 +299,7 @@ class diffusion_section_stats extends diffusion {
 								$options_search_portal->limit						= false;
 								$options_search_portal->offset						= false;
 								$options_search_portal->search_options_session_key 	= 'current_edit';
-								$options_search_portal->modo 						= 'edit';
+								$options_search_portal->mode 						= 'edit';
 
 								$section_rows = search::get_records_data($options_search_portal);
 									#dump($section_rows->result, ' section_rows->result ++ '.to_string()); #dump( reset(array_values($section_rows->result)), 'array_values() ++ '.to_string());

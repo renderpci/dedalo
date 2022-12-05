@@ -15,22 +15,22 @@ class component_text_area extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// Overwrite lang when component_select_lang is present
-		if ( ($modo==='edit') && (!empty($parent) && !empty($section_tipo)) ) {
+		if ( ($mode==='edit') && (!empty($parent) && !empty($section_tipo)) ) {
 
 			$var_requested 		= common::get_request_var('m');
 			$var_requested_mode = common::get_request_var('mode');
 
 			if ( (!empty($var_requested) && $var_requested==='edit') || (!empty($var_requested_mode) && $var_requested_mode==='load_rows') ) {
 				# Only when component is loaded on page edit mode (avoid tool_lang changes of lang)
-				$lang = self::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);
+				$lang = self::force_change_lang($tipo, $parent, $mode, $lang, $section_tipo);
 			}
 		}
 
 		# We build the component normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
 		return true;
 	}//end __construct
@@ -43,7 +43,7 @@ class component_text_area extends component_common {
 	* gets from component_select_lang value. Else, received lag is used normally
 	* @return string $lang
 	*/
-	public static function force_change_lang(string $tipo, $parent, string $modo, string $lang, string$section_tipo) : string {
+	public static function force_change_lang(string $tipo, $parent, string $mode, string $lang, string$section_tipo) : string {
 		if(SHOW_DEBUG===true) {
 			$start_time=start_time();
 		}
@@ -202,7 +202,7 @@ class component_text_area extends component_common {
 
 			$cell_type = 'text';
 
-			if($this->modo === 'indexation_list'){
+			if($this->mode === 'indexation_list'){
 
 				// process data for build the columns
 					$procesed_data = include 'component_text_area_value.php';
@@ -824,7 +824,7 @@ class component_text_area extends component_common {
 			'component_text_area',
 			$component_tipo,
 			$section_id,
-			'edit', // string modo
+			'edit', // string mode
 			DEDALO_DATA_LANG, // string lang
 			$section_tipo
 		);

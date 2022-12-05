@@ -420,7 +420,7 @@ class calculation extends widget_common {
 
 		$search_query_object = json_decode('{
 		    "id": "sum_from_component_tipo",
-		    "modo": "list",
+		    "mode": "list",
 		    "section_tipo": ["'.$current_section_tipo.'"],
 		    "limit": 0,
 		    "parsed" : false,

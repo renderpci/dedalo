@@ -976,7 +976,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	#    (
 	#       [dd9] => dd296
 	#   )
-	public function get_relaciones($modo=false) : ?array {
+	public function get_relaciones($mode=false) : ?array {
 
 		$dato = parent::get_relaciones();
 

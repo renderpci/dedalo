@@ -5,7 +5,7 @@
 
 // configuration vars
 	$tipo			= $this->get_tipo();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$permissions	= common::get_permissions($tipo, $tipo);
 	if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO && $permissions>1) {
 		$permissions = 1;
@@ -28,7 +28,7 @@
 
 	// 		default:
 
-	// 			// if ($modo==='tm99') {
+	// 			// if ($mode==='tm99') {
 	// 			// 	// Component structure context (tipo, relations, properties, etc.)
 	// 			// 		$context = $this->get_tm_context($permissions);
 	// 			// }else{
@@ -50,7 +50,7 @@
 
 	if($permissions>0){
 
-		if ($modo==='tm') {
+		if ($mode==='tm') {
 
 			// context. Section context is a normal context like in any other mode
 				$this->context = $this->get_structure_context(

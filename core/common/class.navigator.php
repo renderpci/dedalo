@@ -10,7 +10,7 @@ class navigator {
 	static $selected_area;		# by tipo like 'dd12'
 	static $selected_module;	# by tipo like 'dd12'
 	static $selected_section;	# by tipo like 'dd12'
-	static $selected_modo;		# edit | list | search
+	static $selected_mode;		# edit | list | search
 	static $selected_context;
 	static $selected_id;		# matrix id like 56
 	static $selected_caller_id;	# matrix id like 56
@@ -25,7 +25,7 @@ class navigator {
 
 	public function __construct() {
 
-		self::$ar_vars = array('root','area','module','section','modo','id','caller_id','caller_tipo'); // ,'context'
+		self::$ar_vars = array('root','area','module','section','mode','id','caller_id','caller_tipo'); // ,'context'
 
 		# LOAD AND SET SESSION VARS
 		self::get_session_vars();
@@ -124,8 +124,8 @@ class navigator {
 
 		if(isset(self::$$var_name))	return self::$$var_name;
 
-		# default for modo
-		if($name==='modo') return 'list';
+		# default for mode
+		if($name==='mode') return 'list';
 
 		return NULL;
 	}

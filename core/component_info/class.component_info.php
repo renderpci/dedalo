@@ -81,7 +81,7 @@ class component_info extends component_common {
 
 		#if (empty($valor)) {
 
-			#$this->set_modo('export');
+			#$this->set_mode('export');
 
 			$this->widget_lang = $lang;
 			$this->widget_mode = 'export';

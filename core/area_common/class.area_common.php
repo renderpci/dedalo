@@ -10,7 +10,7 @@ class area_common extends common  {
 
 // VARS
 	protected $tipo;
-	protected $modo;
+	protected $mode;
 	protected $lang;
 
 	# STRUCTURE DATA
@@ -26,10 +26,10 @@ class area_common extends common  {
 	* Singleton pattern
 	* @param string|null $model = null
 	* @param string|null $tipo = null
-	* @param string $modo = 'list'
+	* @param string $mode = 'list'
 	* @return object $area_instance
 	*/
-	public static function get_instance(string $model=null, string $tipo=null, string $modo='list') : object {
+	public static function get_instance(string $model=null, string $tipo=null, string $mode='list') : object {
 
 		if (empty($model)) {
 			throw new Exception("Error: on construct area : model is mandatory", 1);
@@ -39,7 +39,7 @@ class area_common extends common  {
 			throw new Exception("Error: on construct area : tipo is mandatory", 1);
 		}
 
-		$area_instance = new $model($tipo, $modo);
+		$area_instance = new $model($tipo, $mode);
 
 		return $area_instance;
 	}//end get_instance
@@ -49,13 +49,13 @@ class area_common extends common  {
 	/**
 	* __CONSTRUCT
 	* @param string $tipo
-	* @param string $modo
+	* @param string $mode
 	*/
-	private function __construct(string $tipo, string $modo) {
+	private function __construct(string $tipo, string $mode) {
 
 		// fix main vars
 		$this->set_tipo($tipo);
-		$this->set_modo($modo);
+		$this->set_mode($mode);
 		$this->set_lang(DEDALO_DATA_LANG);
 
 		// common load thesaurus data of current obj

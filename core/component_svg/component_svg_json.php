@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$properties		= $this->get_properties();
 
 
@@ -53,7 +53,7 @@
 		// 	$svg_item->url = $this->get_url(false, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
 		// 	$svg_item->quality = DEDALO_SVG_QUALITY_DEFAULT;
 		// value
-			switch ($modo) {
+			switch ($mode) {
 				case 'list':
 					$value = $this->get_list_value();
 

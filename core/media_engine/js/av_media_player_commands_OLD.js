@@ -10,7 +10,7 @@ function videoObj_selector() {
 	
 	var videoObj = null;
 	
-	switch( get_modo() ) {
+	switch( get_mode() ) {
 				
 		// QUICKTIME PLUG-IN
 		case "qt"		: 	videoObj	= document.getElementById(playerID);
@@ -36,7 +36,7 @@ function videoObj_selector() {
 	}
 	
 	if( videoObj=='undefined' || videoObj==-1 || videoObj==null ) {
-		$('#debugMovie').append("DEBUG: ERROR videoObj not found: " + videoObj + ' - modo:' + get_modo() +'<br>' );
+		$('#debugMovie').append("DEBUG: ERROR videoObj not found: " + videoObj + ' - modo:' + get_mode() +'<br>' );
 		return null;
 	}
 	
@@ -46,9 +46,9 @@ function videoObj_selector() {
 // PLAY
 function player_play(videoObj) {
 	
-	if(videoObj==null) videoObj = videoObj_selector();		//alert("modo: "+ get_modo() );
+	if(videoObj==null) videoObj = videoObj_selector();		//alert("modo: "+ get_mode() );
 	
-	switch( get_modo() ) {
+	switch( get_mode() ) {
 				
 		// QUICKTIME PLUG-IN
 		case "qt"		: 	videoObj.Play();
@@ -78,7 +78,7 @@ function player_pause(videoObj) {
 	
 	if(videoObj==null) videoObj = videoObj_selector();
 	
-	switch( get_modo() ) {
+	switch( get_mode() ) {
 				
 		// QUICKTIME PLUG-IN
 		case "qt"		:	videoObj.Stop();	
@@ -118,7 +118,7 @@ function player_goto_timecode(videoObj, timecode, timecode_in_seconds) {
 	//console.log("player_goto_timecode: timecode: "+ timecode + " - seconds: " + seconds);	
 	
 	try {
-		switch( get_modo() ) {
+		switch( get_mode() ) {
 				
 			// QUICKTIME PLUG-IN
 			case "qt"		: 	var tics = seconds * videoObj.GetTimeScale();	
@@ -147,7 +147,7 @@ function player_goto_timecode(videoObj, timecode, timecode_in_seconds) {
 			
 	}catch(err){
 		
-		switch( get_modo() ) {
+		switch( get_mode() ) {
 			
 			// QUICKTIME PLUG-IN					
 			case "qt"		:	window.setTimeout(function(e){
@@ -192,7 +192,7 @@ function player_seek_seconds(videoObj,seconds) {
 	var seconds 	= parseFloat(seconds);
 	
 	try {		
-		switch( get_modo() ) {	
+		switch( get_mode() ) {
 			
 			// QUICKTIME PLUG-IN										
 			case "qt"		: 	var tics = seconds * videoObj.GetTimeScale();
@@ -233,7 +233,7 @@ function player_get_current_time_in_seconds(videoObj) {
 	var current_time_in_seconds = null;
 	
 	try {
-		switch( get_modo() ) {
+		switch( get_mode() ) {
 					
 			// QUICKTIME PLUG-IN
 			case "qt"		:	var time_units			= videoObj.GetTime();		//alert(time_units)// get time in tics	
@@ -271,7 +271,7 @@ function start_tc_generator() {
 	try{
 		$('#debugMovie').append('DEBUG: start_tc_generator: started <br>');
 					
-		switch( get_modo() ) {
+		switch( get_mode() ) {
 				
 			// QUICKTIME PLUG-IN
 			case "qt"		:	if(t!=null) window.clearInterval(t);	// eliminamos el intervalo si estuviera activo			
@@ -329,7 +329,7 @@ function get_movie_duration() {
 	
 	try {
 		
-		switch( get_modo() ) {	
+		switch( get_mode() ) {
 				
 			// QUICKTIME PLUG-IN		
 			case "qt"		:	if( videoObj.GetDuration() ) {
@@ -445,7 +445,7 @@ function skip_restricted_timecode_ranges() {	//seconds_in, seconds_out
 		$('#debugMovie').append('DEBUG: Fired skip_restricted_timecode_ranges: started in modo ['+modo+']<br>');	
 		console.log("-> Fired skip_restricted_timecode_ranges");	
 					
-		switch( get_modo() ) {
+		switch( get_mode() ) {
 			
 			// HTML5 STANDAR				
 			case "html5"	:	RegisterListener('timeupdate', validate_current_time_in_seconds	);								
@@ -524,7 +524,7 @@ function validate_current_time_in_seconds() {
 			var time_to_jump_secs = seconds_out + 1 ;
 			
 			// CorrecciÓn necesaria para JWPLAYER (IMPORTANTE)
-			if(get_modo()=='jwplayer') time_to_jump_secs = time_to_jump_secs + 2;
+			if(get_mode()=='jwplayer') time_to_jump_secs = time_to_jump_secs + 2;
 				
 				console.log('-> Jumping from: ' + current_time_in_seconds_absolute + ' to ' + time_to_jump_secs + ' [validate_current_time_in_seconds]')	//alert("Jumping to:" +seconds_out_relative )	
 			

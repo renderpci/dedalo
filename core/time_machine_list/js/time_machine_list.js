@@ -207,7 +207,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 
 //       //cretate the object to request the information
 //        const options = {
-//         modo                : time_machine_wrap.dataset.modo,
+//         mode                : time_machine_wrap.dataset.mode,
 //         tipo                : time_machine_wrap.dataset.tipo,
 //         section_tipo        : time_machine_wrap.dataset.section_tipo,
 //         section_id          : time_machine_wrap.dataset.section_id,

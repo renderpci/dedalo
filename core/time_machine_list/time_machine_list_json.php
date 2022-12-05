@@ -5,7 +5,7 @@
 $tipo			= $this->tipo;
 $section_tipo 	= $this->section_tipo;
 $section_id 	= $this->section_id;
-$modo 			= $this->modo;
+$mode 			= $this->mode;
 $value_resolved	= $this->value_resolved;
 $limit			= $this->limit;
 $offset			= $this->offset;
@@ -15,9 +15,9 @@ $json 			= null;
 
 if($permissions===0) return false;
 
-$file_name = $modo;
+$file_name = $mode;
 
-	switch($modo) {
+	switch($mode) {
 		
 		case 'edit':
 			$ar_time_machine_list 	= $this->get_time_machine_list_obj((int)$limit, (int)$offset, $count);
