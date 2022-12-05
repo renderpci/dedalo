@@ -26,7 +26,7 @@ abstract class common {
 	// the css and css files to load
 	static $ar_loaded_modelos_name = array();
 
-	// identificador_unico. UID used to set DOM elements id unique based on section_tipo, section_id, lang, modo, etc.
+	// identificador_unico. UID used to set DOM elements id unique based on section_tipo, section_id, lang, mode, etc.
 	public $identificador_unico;
 	// variant. Modifier of identificador_unico
 	public $variant;
@@ -254,7 +254,7 @@ abstract class common {
 
 	/**
 	* LOAD STRUCTURE DATA
-	* Get data once from Ontology (tipo, modelo, norden, estraducible, etc.)
+	* Get data once from Ontology (tipo, model, norden, estraducible, etc.)
 	* @return bool
 	*/
 	protected function load_structure_data() : bool {
@@ -293,7 +293,7 @@ abstract class common {
 
 			// notify : We notify the loading of the element to common
 				$modelo_name = get_called_class();
-				common::notify_load_lib_element_tipo($modelo_name, $this->modo);
+				common::notify_load_lib_element_tipo($modelo_name, $this->mode);
 
 			// bl_loaded_structure_data
 				$this->bl_loaded_structure_data = true;
@@ -599,9 +599,9 @@ abstract class common {
 	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
 	*/
-	public static function notify_load_lib_element_tipo(string $modelo_name, string $modo) : bool {
+	public static function notify_load_lib_element_tipo(string $modelo_name, string $mode) : bool {
 
-		#if ($modo!=='edit') {
+		#if ($mode!=='edit') {
 		#	return false;
 		#}
 
@@ -1280,7 +1280,7 @@ abstract class common {
 					$called_tipo,
 					$this->section_id ?? '',
 					($this->section_tipo ?? ''),
-					$this->modo,
+					$this->mode,
 					$options->context_type,
 					(int)$options->get_request_config,
 					(int)$options->get_context,
@@ -1326,7 +1326,7 @@ abstract class common {
 							// $current->debug_time_json	= $exec_time;
 							$current->debug_model			= $called_model;
 							$current->debug_label			= $this->get_label();
-							$current->debug_mode			= $this->get_modo();
+							$current->debug_mode			= $this->get_mode();
 						// $bt = debug_backtrace()[0];
 						// dump($json->data, ' json->data ++ '.to_string($bt));
 					}
@@ -1365,7 +1365,7 @@ abstract class common {
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
 			$translatable	= $this->RecordObj_dd->get_traducible()==='si';
-			$mode			= $this->get_modo();
+			$mode			= $this->get_mode();
 			$label			= $this->get_label();
 			$lang			= $this->get_lang();
 			$sortable		= $this->get_sortable() ?? false; // Used by section columns to sort list
@@ -1714,7 +1714,6 @@ abstract class common {
 			if (!function_exists('get_children_recursive')) {
 				function get_children_recursive(array $ar_ddo, object $dd_object) : array {
 					$ar_children = [];
-
 					foreach ($ar_ddo as $ddo) {
 						if($ddo->parent===$dd_object->tipo) {
 							$ar_children[] = $ddo;
@@ -1790,7 +1789,7 @@ abstract class common {
 					// short vars
 						$current_tipo			= $dd_object->tipo;
 						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
-						$mode					= $dd_object->mode ?? $this->get_modo();
+						$mode					= $dd_object->mode ?? $this->get_mode();
 						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$label					= $dd_object->label ?? '';
 						// $view				= $dd_object->view ?? null;
@@ -2111,7 +2110,7 @@ abstract class common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				// $idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
-				// dump($idd, ' idd ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->modo));
+				// dump($idd, ' idd ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->mode));
 			}
 
 		// requested_source is fixed from RQO calls to API when they exists like
@@ -2154,7 +2153,7 @@ abstract class common {
 							$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 						}
 						if(!isset($current_ddo->mode)) {
-							$current_ddo->mode = $this->modo;
+							$current_ddo->mode = $this->mode;
 						}
 					}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
@@ -2185,7 +2184,7 @@ abstract class common {
 								$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 							}
 							if(!isset($current_ddo->mode)) {
-								$current_ddo->mode = $this->modo;
+								$current_ddo->mode = $this->mode;
 							}
 						}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
@@ -2217,7 +2216,7 @@ abstract class common {
 
 		// short vars
 			// $records_mode	= $this->get_records_mode();
-			$mode				= $this->get_modo();
+			$mode				= $this->get_mode();
 			$tipo				= $this->get_tipo();
 			$section_tipo		= $this->get_section_tipo();
 			$section_id			= $this->get_section_id();
@@ -2354,7 +2353,7 @@ abstract class common {
 			$tipo			= $this->get_tipo();
 			$external		= false;
 			$section_tipo	= $this->get_section_tipo();
-			$mode			= $this->get_modo();
+			$mode			= $this->get_mode();
 			$section_id		= $this->get_section_id();
 			$model			= get_called_class();
 
@@ -3052,7 +3051,7 @@ abstract class common {
 							? $properties->source->records_mode
 							: (in_array($model, component_relation_common::get_components_with_relations())
 								? 'list'
-								: $this->get_modo()
+								: $this->get_mode()
 							);
 
 		return $records_mode;
@@ -3071,7 +3070,7 @@ abstract class common {
 			$source->set_tipo($this->get_tipo());
 			$source->set_section_tipo($this->get_section_tipo());
 			$source->set_lang($this->get_lang());
-			$source->set_mode($this->get_modo());
+			$source->set_mode($this->get_mode());
 			$source->set_section_id($this->get_section_id());
 			$source->set_model(get_class($this));
 
@@ -3352,7 +3351,7 @@ abstract class common {
 	public function get_request_config_object() : ?request_config_object {
 
 		// short vars
-			// $mode			= $this->get_modo(); // records_mode;
+			// $mode			= $this->get_mode(); // records_mode;
 			// $tipo			= $this->get_tipo();
 			// $section_tipo	= $this->get_section_tipo();
 			// $section_id		= $this->get_section_id();
@@ -3513,7 +3512,7 @@ abstract class common {
 
 			// $section_tipo = $section_real_tipo;
 			//create the section instance and get the context_simple
-				$dd_section = section::get_instance(null, $section_tipo, $modo='list', $cache=true);
+				$dd_section = section::get_instance(null, $section_tipo, $mode='list', $cache=true);
 
 			// element json
 				// 	$get_json_options = new stdClass();
@@ -3805,7 +3804,7 @@ abstract class common {
 	*/
 	public function get_columns_map() : ?array {
 
-		$mode = $this->get_modo();
+		$mode = $this->get_mode();
 		$tipo = $this->get_tipo();
 
 		// get the properties, if the mode is list, get the child term 'section_list' that had has the configuration of the list (for sections and portals)
@@ -3916,7 +3915,7 @@ abstract class common {
 			}
 
 		// list mode
-			if ($this->modo==='list' && strpos(get_called_class(), 'component_')===0) {
+			if ($this->mode==='list' && strpos(get_called_class(), 'component_')===0) {
 				// section list
 				$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 					$this->tipo,
