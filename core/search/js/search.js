@@ -828,8 +828,8 @@ search.prototype.get_search_group_operator = function(search_group) {
 	// 		//const select_path 			= decodeURIComponent(search2_global_container.dataset.select_path)
 	// 		//const select 					= JSON.parse(select_path)
 
-	// 	// modo default
-	// 		const modo = "list"
+	// 	// mode default
+	// 		const mode = "list"
 
 	// 	// table_rows_list base search options
 	// 		// Changed 21-03-2018
@@ -842,7 +842,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	// 		let section_tipo 	  			= base_search_query_object.section_tipo
 
 	// 	// Thesaurus mode
-	// 		if (self.modo==="thesaurus") {
+	// 		if (self.mode==="thesaurus") {
 	// 			// Selected sections to search. From checkboxes
 	// 			const wrapper_sections_selector_ul = document.getElementById("wrapper_sections_selector_ul")
 	// 			const ar_checkboxes = wrapper_sections_selector_ul.querySelectorAll("input")
@@ -864,15 +864,15 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 	// 	// Final search_json_object
 	// 	const search_json_object = {
-	// 			id 			 : base_search_query_object.id, //section_tipo + "_" + modo,
-	// 			modo 		 : modo,
+	// 			id 			 : base_search_query_object.id, //section_tipo + "_" + mode,
+	// 			mode 		 : mode,
 	// 			parsed 		 : false,
 	// 			section_tipo : section_tipo,
 	// 			limit 		 : parseInt(max_input.value) || 10,
 	// 			offset 		 : 0,
 	// 			type 		 : "search_json_object",
 	// 			//context 	 : {context_name:false},
-	// 			full_count   : (self.modo==="thesaurus") ? false : true,
+	// 			full_count   : (self.mode==="thesaurus") ? false : true,
 	// 			order 	 	 : false,
 	// 			filter 		 : json_filter.filter,
 	// 			select 		 : select
