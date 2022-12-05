@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$properties		= $this->get_properties();
 
 
@@ -49,7 +49,7 @@
 	if($options->get_data===true && $permissions>0) {
 
 		// value
-		switch ($modo) {
+		switch ($mode) {
 
 			case 'list':
 				$value			= $this->get_list_value();
@@ -83,7 +83,7 @@
 						$first_value = reset($value);
 						if (is_array($first_value)) {
 							$first_value = reset($first_value);
-							// dump($value, ' value ++ '.$this->section_id.' - '.to_string($modo));
+							// dump($value, ' value ++ '.$this->section_id.' - '.to_string($mode));
 							debug_log(__METHOD__." Fixed bad data (array of arrays) in $this->tipo - $this->section_id ".to_string(), logger::DEBUG);
 						}
 						$term = RecordObj_dd::get_termino_by_tipo($first_value, DEDALO_DATA_LANG, true, true);
