@@ -40,7 +40,7 @@ class component_radio_button extends component_relation_common {
 				}
 			}
 
-		switch ($this->modo) {
+		switch ($this->mode) {
 
 			case 'diffusion':
 				// dd64 case
