@@ -51,7 +51,7 @@ function load_terms($json_data) {
 	$component_info  = component_common::get_instance($modelo_name='component_info',
 													  $component_tipo,
 													  $section_id,
-													  $modo='edit',
+													  $mode='edit',
 													  $lang=DEDALO_DATA_NOLAN,
 													  $section_tipo);
 
@@ -60,7 +60,7 @@ function load_terms($json_data) {
 
 	$widget = widget::getInstance();
 	$widget->configure($widget_str_object);
-	$widget->modo = 'edit99';
+	$widget->mode = 'edit99';
 
 	$html = $widget->get_html();
 

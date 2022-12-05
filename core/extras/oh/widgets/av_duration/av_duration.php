@@ -54,16 +54,16 @@
 	
 
 		$widget_name 			= $this->widget_name;
-		$modo 					= $this->component_info->get_modo();
+		$mode 					= $this->component_info->get_mode();
 		$parent 				= $this->component_info->get_parent();		
 		$section_tipo 			= $this->component_info->get_section_tipo();
 		$data_source 			= $this->data_source;
 		$component_portal_tipo 	= key($data_source);
 		$component_av_tipo 		= reset($data_source);
-		$filename 				= $modo;
+		$filename 				= $mode;
 
 
-		switch ($modo) {
+		switch ($mode) {
 
 			case 'list':
 				$filename = 'edit';
@@ -177,7 +177,7 @@
 				break;				
 
 			default:
-				return "Sorry. Mode: $modo is not supported";
+				return "Sorry. Mode: $mode is not supported";
 		}
 
 
@@ -185,7 +185,7 @@
 		
 		$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';	
 		if( !include($page_html) ) {
-			echo "<div class=\"error\">Invalid widget mode $modo</div>";
+			echo "<div class=\"error\">Invalid widget mode $mode</div>";
 		}
 
 ?>
