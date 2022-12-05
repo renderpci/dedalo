@@ -22,7 +22,7 @@ abstract class component_common extends common {
 
 		protected $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
 		protected $traducible;				// string defined in thesaurus (si/no)
-		protected $modo;					// string default edit
+		protected $mode;					// string default edit
 		protected $dato;					// object dato (JSON encoded in db)
 		protected $valor;					// string usually dato
 		protected $dataframe;				// object dataframe
@@ -104,19 +104,19 @@ abstract class component_common extends common {
 	* @param string $component_name = null
 	* @param string $tipo = null
 	* @param mixed $section_id = null
-	* @param string $modo = 'edit'
+	* @param string $mode = 'edit'
 	* @param string $lang = DEDALO_DATA_LANG
 	* @param string $section_tipo = null
 	* @param bool $cache = true
 	*
 	* @return object|null
 	*/
-	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) : ?object {
+	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) : ?object {
 		$start_time = start_time();
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
-				throw new Exception("Error: on construct component (1): tipo is mandatory. tipo:'$tipo', section_id:'$section_id', modo:'$modo', lang:'$lang'", 1);
+				throw new Exception("Error: on construct component (1): tipo is mandatory. tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'", 1);
 			}
 
 		// model check. Verify 'component_name' and 'tipo' are correct
@@ -127,7 +127,7 @@ abstract class component_common extends common {
 					$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 
 			}else if (!empty($component_name) && $model_name!==$component_name) {
-				// throw new Exception("Error: on construct component (2): model not match. model_name:'$model_name', component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', modo:'$modo', lang:'$lang'", 1);
+				// throw new Exception("Error: on construct component (2): model not match. model_name:'$model_name', component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'", 1);
 
 				// warn to admin
 					$msg = "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'";
@@ -187,8 +187,8 @@ abstract class component_common extends common {
 						}
 					}
 
-				// modo (mode) validation
-					$ar_valid_modo = array(
+				// mode (mode) validation
+					$ar_valid_mode = array(
 						'edit',
 						'list',
 						'search',
@@ -218,11 +218,11 @@ abstract class component_common extends common {
 						'view_tool_description',
 						'player',
 						'json');
-					if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
+					if ( empty($mode) || !in_array($mode, $ar_valid_mode) ) {
 						if(SHOW_DEBUG===true) {
-							throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);	;
+							throw new Exception("Error Processing Request. trying to use wrong var: '$mode' as mode to load as component", 1);	;
 						}
-						debug_log(__METHOD__." trying to use empty or invalid modo: '$modo' as modo to load component $tipo. modo: ".to_string($modo), logger::DEBUG);
+						debug_log(__METHOD__." trying to use empty or invalid mode: '$mode' as mode to load component $tipo. mode: ".to_string($mode), logger::DEBUG);
 					}
 				// lang format check
 					if ( empty($lang) || strpos($lang, 'lg-')===false ) {
@@ -248,7 +248,7 @@ abstract class component_common extends common {
 							// debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
 							// trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");
 							#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
-						}else if(strpos($modo, 'dataframe')===false){
+						}else if(strpos($mode, 'dataframe')===false){
 							$ar_modified_section_tipos = array_map(function($item){
 								return $item['tipo'];
 							}, section::get_modified_section_tipos());
@@ -269,7 +269,7 @@ abstract class component_common extends common {
 								$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
 								$real_section 			 = section::get_section_real_tipo_static($section_tipo);
 								$is_real 				 = $real_section===$section_tipo ? true : false;
-								if ( $is_real && $section_tipo!==$calculated_section_tipo && $modo!=='search' && SHOW_DEBUG===true) {
+								if ( $is_real && $section_tipo!==$calculated_section_tipo && $mode!=='search' && SHOW_DEBUG===true) {
 									#dump(debug_backtrace(), ' debug_backtrace '.to_string());
 									#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
 								}
@@ -280,15 +280,15 @@ abstract class component_common extends common {
 
 		// no cache. Direct construct without cache instance. Use this config in imports
 			if ($cache===false) {
-				return new $component_name($tipo, $section_id, $modo, $lang, $section_tipo);
+				return new $component_name($tipo, $section_id, $mode, $lang, $section_tipo);
 			}
 
 		// cache. Get cache instance if it exists. Otherwise, create a new one
 			static $ar_component_instances;
 
 			// cache key
-				// $cache_key	= $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang .'_'. $modo;
-				$cache_key		= implode('_', [$tipo, $section_tipo, $section_id, $lang, $modo]);
+				// $cache_key	= $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang .'_'. $mode;
+				$cache_key		= implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
 			// cache params
 				$max_cache_instances	= 160; // 500
 				$cache_slice_on			= 40;  // 200 // $max_cache_instances/2;
@@ -308,7 +308,7 @@ abstract class component_common extends common {
 						$ar_component_instances[$cache_key] = new $component_name(
 							$tipo,
 							$section_id,
-							$modo,
+							$mode,
 							$lang,
 							$section_tipo
 						);
@@ -316,9 +316,9 @@ abstract class component_common extends common {
 				}
 				// else{
 
-					// Change modo if is needed
-						// if ($ar_component_instances[$cache_key]->get_modo()!==$modo) {
-						// 	$ar_component_instances[$cache_key]->set_modo($modo);
+					// Change mode if is needed
+						// if ($ar_component_instances[$cache_key]->get_mode()!==$mode) {
+						// 	$ar_component_instances[$cache_key]->set_mode($mode);
 						// }
 				// }
 
@@ -343,7 +343,7 @@ abstract class component_common extends common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo=null, $section_id=null, string $modo='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 
 		// tipo
@@ -360,14 +360,14 @@ abstract class component_common extends common {
 			$this->parent		= $section_id;
 			$this->section_id	= $section_id;
 
-		// modo
-			if ( empty($modo) ) {
-				$modo = 'edit';
+		// mode
+			if ( empty($mode) ) {
+				$mode = 'edit';
 			}
-			$this->modo = $modo;
-			if ($this->modo==='edit') {
+			$this->mode = $mode;
+			if ($this->mode==='edit') {
 				$this->update_diffusion_info_propagate_changes = true;
-			}elseif ($this->modo==='print') {
+			}elseif ($this->mode==='print') {
 				$this->print_options = new stdClass();
 			}
 
@@ -415,10 +415,10 @@ abstract class component_common extends common {
 			$this->ar_tools_obj = false;
 
 		// debug set base info
-			// $this->debugger = "tipo:$this->tipo - norden:$this->norden - modo:$this->modo - section_id:$this->section_id";
+			// $this->debugger = "tipo:$this->tipo - norden:$this->norden - mode:$this->mode - section_id:$this->section_id";
 
 		// set_dato_default (new way 28-10-2016)
-			if ( $this->modo==='edit' && !is_null($this->section_id) ) {
+			if ( $this->mode==='edit' && !is_null($this->section_id) ) {
 				$this->set_dato_default();
 			}
 
@@ -446,7 +446,7 @@ abstract class component_common extends common {
 			// 		// 	? (int)$properties->max_records
 			// 		// 	: 5;
 
-			// 		$this->pagination->limit = $this->modo==='edit'
+			// 		$this->pagination->limit = $this->mode==='edit'
 			// 			? 10
 			// 			: 1;
 
@@ -465,7 +465,7 @@ abstract class component_common extends common {
 			// 				? (int)$rqo->show->sqo_config->limit
 			// 				: 1);
 
-			// 		if($this->modo==='list'){
+			// 		if($this->mode==='list'){
 			// 			$this->pagination->limit = 1;
 			// 		}
 
@@ -513,7 +513,7 @@ abstract class component_common extends common {
 
 				# INFO LOG
 				if(SHOW_DEBUG===true) {
-					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'properties': ".json_encode($properties->dato_default);
+					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode with default data from 'properties': ".json_encode($properties->dato_default);
 					debug_log(__METHOD__.$msg);
 				}
 
@@ -537,10 +537,10 @@ abstract class component_common extends common {
 
 		$this->lang = $lang;
 	}
-	# define modo
-	protected function define_modo($modo) : void {
+	# define mode
+	protected function define_mode($mode) : void {
 
-		$this->modo = $modo;
+		$this->mode = $mode;
 	}
 
 
@@ -586,7 +586,7 @@ abstract class component_common extends common {
 			}
 
 		// time machine mode case
-			if ($this->modo==='tm') {
+			if ($this->mode==='tm') {
 
 				if (empty($this->matrix_id)) {
 					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
@@ -637,7 +637,7 @@ abstract class component_common extends common {
 			);
 		}
 
-		return $dato; # <- Se aplicará directamente el fallback de idioma para el modo list
+		return $dato; # <- Se aplicará directamente el fallback de idioma para el mode list
 	}//end get_dato
 
 
@@ -682,7 +682,7 @@ abstract class component_common extends common {
 	protected function load_component_dato() : bool {
 
 		// check vars
-			if(empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
 				return false;
 			}
 			if (empty($this->section_tipo)) {
@@ -865,13 +865,13 @@ abstract class component_common extends common {
 		// 	#
 		// 	# HTML BUFFER
 		// 	ob_start();
-		// 	switch ($this->modo) {
+		// 	switch ($this->mode) {
 		// 		case 'edit':
 		// 			# Now all components call init in edit mode, therefore, is not necessary this snippet
-		// 			#include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
+		// 			#include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->mode .'.phtml' );
 		// 			break;
 		// 		case 'search':
-		// 			include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
+		// 			include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->mode .'.phtml' );
 		// 			break;
 		// 		default:
 		// 			# code...
@@ -891,8 +891,8 @@ abstract class component_common extends common {
 		// 		if ($total>0.080) {
 		// 			#dump($total, ' total ++ '.$this->tipo .' '. $component_name );
 		// 		}
-		// 		if($this->modo==='edit') {
-		// 			$html = str_lreplace('</div>', "<span class=\"debug_info debug_component_total_time\">$total ms $this->modo</span></div>", $html);
+		// 		if($this->mode==='edit') {
+		// 			$html = str_lreplace('</div>', "<span class=\"debug_info debug_component_total_time\">$total ms $this->mode</span></div>", $html);
 		// 		}
 		// 	}
 
@@ -914,7 +914,7 @@ abstract class component_common extends common {
 			$section_tipo	= $this->get_section_tipo();
 			$section_id		= $this->get_section_id();
 			$tipo			= $this->get_tipo();
-			$modo			= $this->get_modo();
+			$mode			= $this->get_mode();
 			$lang			= $this->get_lang() ?? DEDALO_DATA_LANG;
 
 			// Innecesario ???
@@ -924,7 +924,7 @@ abstract class component_common extends common {
 				// }
 
 		// dataframe mode. Save caller and stop
-			if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
+			if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset)) {
 
 				// debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
 
@@ -957,7 +957,7 @@ abstract class component_common extends common {
 				}
 
 				return $new_component->Save();
-			}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
+			}//end if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset))
 
 		// check component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
@@ -1273,7 +1273,7 @@ abstract class component_common extends common {
 	public function load_tools( bool $check_lang_tools=true ) : array {
 
 		// other modes than 'edit' do not need tools
-			if(	strpos($this->modo, 'edit')===false
+			if(	strpos($this->mode, 'edit')===false
 				|| login::is_logged()!==true
 				) {
 				return [];
@@ -2056,12 +2056,12 @@ abstract class component_common extends common {
 			// }
 
 		// get_config_context normalized
-			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->modo);
+			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->mode);
 			// $options = new stdClass();
 			// 	$options->tipo			= $this->tipo;
 			// 	$options->external		= false;
 			// 	$options->section_tipo	= $this->section_tipo;
-			// 	$options->mode			= $this->modo;
+			// 	$options->mode			= $this->mode;
 			// 	$options->section_id	= null;
 			// 	$options->limit			= $this->pagination->limit;
 			$config_context = $this->get_ar_request_config();
@@ -2600,7 +2600,7 @@ abstract class component_common extends common {
 	public function load_component_dataframe() : bool {
 
 		// check vars
-			if( empty($this->section_id) || $this->modo==='dummy' || $this->modo==='search') {
+			if( empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
 				return false;
 			}
 
@@ -2628,7 +2628,7 @@ abstract class component_common extends common {
 			return $this->permissions;
 		}
 
-		if ($this->modo==='search') {
+		if ($this->mode==='search') {
 
 			if ( $this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO ) {
 
@@ -2980,7 +2980,7 @@ abstract class component_common extends common {
 			return $this->section_obj;
 		}
 
-		$this->section_obj = section::get_instance($this->section_id, $this->section_tipo, $this->modo, true);
+		$this->section_obj = section::get_instance($this->section_id, $this->section_tipo, $this->mode, true);
 
 
 		return $this->section_obj;
@@ -3105,7 +3105,7 @@ abstract class component_common extends common {
 			if(SHOW_DEBUG===true) {
 				$item->debug_model = $this->get_model();
 				$item->debug_label = $this->get_label();
-				$item->debug_mode = $this->get_modo();
+				$item->debug_mode = $this->get_mode();
 			}
 
 		return $item;
