@@ -235,7 +235,7 @@ class area_thesaurus extends area_common {
 		$tipo			= DEDALO_HIERARCHY_TYPES_NAME_TIPO;
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$parent			= $typology_section_id;
-		$modo			= 'list';
+		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 		$section_tipo	= area_thesaurus::$typologies_section_tipo;
 
@@ -243,7 +243,7 @@ class area_thesaurus extends area_common {
 			$modelo_name,
 			$tipo,
 			$parent,
-			$modo,
+			$mode,
 			$lang,
 			$section_tipo
 		);
@@ -281,14 +281,14 @@ class area_thesaurus extends area_common {
 		$tipo 			 = DEDALO_HIERARCHY_TYPES_ORDER;
 		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$parent 		 = $typology_section_id;
-		$modo 			 = 'list';
+		$mode 			 = 'list';
 		$lang 			 = DEDALO_DATA_LANG;
 		$section_tipo 	 = area_thesaurus::$typologies_section_tipo;
 		$component 		 = component_common::get_instance(
 			$modelo_name,
 			$tipo,
 			$parent,
-			$modo,
+			$mode,
 			$lang,
 			$section_tipo
 		);
@@ -320,14 +320,14 @@ class area_thesaurus extends area_common {
 		$tipo 			 = DEDALO_HIERARCHY_TERM_TIPO;
 		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$parent 		 = $hierarchy_section_id;
-		$modo 			 = 'list';
+		$mode 			 = 'list';
 		$lang 			 = DEDALO_DATA_LANG;
 		$section_tipo 	 = DEDALO_HIERARCHY_SECTION_TIPO;
 
 		$component 		 = component_common::get_instance($modelo_name,
 														  $tipo,
 														  $parent,
-														  $modo,
+														  $mode,
 														  $lang,
 														  $section_tipo);
 		$value = $component->get_valor($lang);
@@ -408,7 +408,7 @@ class area_thesaurus extends area_common {
 			$options->limit							= null; // Not limit amount of results (use null)
 			$options->filter_by_search				= $filter_by_search;
 			#$options->filter_custom				= $filter_custom;
-			$options->modo							= 'list_thesaurus';
+			$options->mode							= 'list_thesaurus';
 			$options->context						= null;
 			$options->tipo_de_dato					= 'dato';
 			#$options->order_by						= "a.datos#>'{components, ".DEDALO_HIERARCHY_ORDER_TIPO.", dato, lg-nolan}' ASC";
@@ -607,11 +607,11 @@ class area_thesaurus extends area_common {
 
 		$modelo_name 	= 'component_relation_children';
 		$tipo 			= DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
-		$modo 			= 'list';
+		$mode 			= 'list';
 		$component_relation_children = component_common::get_instance($modelo_name,
 																	  $tipo,
 																	  $section_id,
-																	  $modo,
+																	  $mode,
 																	  DEDALO_DATA_NOLAN,
 																	  $section_tipo);
 		$dato = $component_relation_children->get_dato();
