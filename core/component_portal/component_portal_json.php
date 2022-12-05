@@ -5,7 +5,7 @@
 
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
-	$modo			= $this->get_modo();
+	$mode			= $this->get_mode();
 	$section_tipo	= $this->section_tipo;
 	$lang			= $this->lang;
 	$tipo			= $this->get_tipo();
@@ -65,13 +65,13 @@
 
 		// custom properties external dato
 		// Only is recalculated in edit mode and when is not a pagination request (section request rqo is action=search)
-			// if ($modo==='edit' && isset(dd_core_api::$rqo) && dd_core_api::$rqo->source->action==='search') { //|| dd_core_api::$rqo->source->action==='get_data')
+			// if ($mode==='edit' && isset(dd_core_api::$rqo) && dd_core_api::$rqo->source->action==='search') { //|| dd_core_api::$rqo->source->action==='get_data')
 			// 	if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
 			// 		(isset($properties->source->mode) && $properties->source->mode==='external')) {
 
 			// 		// set_dato_external: $save=false, $changed=false, $current_dato=false, $references_limit=0
-			// 		$save				= true; // $modo==='edit' ? true : false;
-			// 		$changed			= false; // $modo==='edit' ? true : false;
+			// 		$save				= true; // $mode==='edit' ? true : false;
+			// 		$changed			= false; // $mode==='edit' ? true : false;
 			// 		$current_dato		= false; // $this->get_dato();
 			// 		$references_limit	= 0; // (!) Set to zero to get all references to enable sort
 			// 		$this->set_dato_external($save, $changed, $current_dato, $references_limit);	// Forces update dato with calculated external dato
@@ -81,7 +81,7 @@
 		$dato = $this->get_dato();
 
 		// value
-			switch ($modo) {
+			switch ($mode) {
 				case 'list':
 					// data item (list mode result don't include self data, only subdata)
 					$limit	= $limit; // (!) note than in list mode, limit is always 2
@@ -96,7 +96,7 @@
 				default:
 					$value	= $this->get_dato_paginated();
 					break;
-			}//end switch ($modo)
+			}//end switch ($mode)
 
 		// data
 			if (!empty($dato)) {
@@ -134,7 +134,7 @@
 
 				// subdata from subcontext items
 					// 	$ar_subdata = $this->get_ar_subdata($value);
-					// 	// if ($modo==='list') {
+					// 	// if ($mode==='list') {
 					// 		foreach ($ar_subdata as $current_data) {
 					// 			// add subdata items parent_tipo/parent_section_id to identify indirect data
 					// 				// $current_data->parent_tipo			= $tipo;
