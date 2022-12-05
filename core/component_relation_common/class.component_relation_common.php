@@ -90,7 +90,7 @@ class component_relation_common extends component_common {
 					: $this->default_relation_type_rel;
 
 		// Build the component normally
-			parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+			parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 	}//end __construct
 
 
