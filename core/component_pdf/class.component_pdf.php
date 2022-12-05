@@ -24,10 +24,10 @@ class component_pdf extends component_media_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $section_id=null, string $modo='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// common constructor. Creates the component as normally do with parent class
-			parent::__construct($tipo, $section_id, $modo, $lang, $section_tipo);
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
 
 		// fix component main properties
 			if (!empty($this->section_id)) {
