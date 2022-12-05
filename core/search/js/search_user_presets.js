@@ -103,28 +103,28 @@
 					component_tipo 	: "dd624", // Name
 					section_tipo 	: section_tipo,
 					section_id 		: section_id,
-					modo 			: 'edit',// modo: search | edit
+					mode 			: 'edit',// mode: search | edit
 					clean 			: true // clean posible dato in temp sections
 				},
 				{
 					component_tipo 	: "dd640", // Public
 					section_tipo 	: section_tipo,
 					section_id 		: section_id,
-					modo 			: 'edit',// modo: search | edit
+					mode 			: 'edit',// mode: search | edit
 					clean 			: true // clean posible dato in temp sections
 				},
 				{
 					component_tipo 	: "dd641", // Default
 					section_tipo 	: section_tipo,
 					section_id 		: section_id,
-					modo 			: 'edit',// modo: search | edit
+					mode 			: 'edit',// mode: search | edit
 					clean 			: true // clean posible dato in temp sections
 				},
 				{
 					component_tipo 	: "dd648", // Save arguments
 					section_tipo 	: section_tipo,
 					section_id 		: section_id,
-					modo 			: 'edit',// modo: search | edit
+					mode 			: 'edit',// mode: search | edit
 					clean 			: true // clean posible dato in temp sections
 				}
 				]
@@ -385,25 +385,25 @@
 					component_tipo 	: "dd624", // Name
 					section_tipo 	: section_tipo,
 					section_id 		: li.dataset.section_id,
-					modo 			: 'edit'// modo: search | edit
+					mode 			: 'edit'// mode: search | edit
 				},
 				{
 					component_tipo 	: "dd640", // Public
 					section_tipo 	: section_tipo,
 					section_id 		: li.dataset.section_id,
-					modo 			: 'edit'// modo: search | edit
+					mode 			: 'edit'// mode: search | edit
 				},
 				{
 					component_tipo 	: "dd641", // Default
 					section_tipo 	: section_tipo,
 					section_id 		: li.dataset.section_id,
-					modo 			: 'edit'// modo: search | edit
+					mode 			: 'edit'// mode: search | edit
 				},
 				{
 					component_tipo 	: "dd648", // Save arguments
 					section_tipo 	: section_tipo,
 					section_id 		: li.dataset.section_id,
-					modo 			: 'edit'// modo: search | edit
+					mode 			: 'edit'// mode: search | edit
 				}
 				]
 		}
