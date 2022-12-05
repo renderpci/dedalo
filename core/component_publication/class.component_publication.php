@@ -21,13 +21,13 @@ class component_publication extends component_relation_common {
 	* __CONSTRUCT
 	* @return bool
 	*/
-	function __construct(string $tipo=null, $parent=null, string $modo='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
 		$lang = DEDALO_DATA_NOLAN;
 
 		# construct the component normally
-		return parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		return parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 	}//end __construct
 
 
@@ -53,8 +53,8 @@ class component_publication extends component_relation_common {
 				}
 			}
 
-		// modo changes value result
-		switch ($this->modo) {
+		// mode changes value result
+		switch ($this->mode) {
 			case 'diffusion':
 				$valor = 'no';
 				if (!empty($dato)) {
