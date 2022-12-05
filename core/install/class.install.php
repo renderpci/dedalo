@@ -8,7 +8,7 @@ class install extends common {
 	protected $id;
 	protected $tipo;
 	protected $lang;
-	protected $modo;
+	protected $mode;
 	protected $model;
 
 	/**
@@ -23,7 +23,7 @@ class install extends common {
 		$this->set_id($id);
 		$this->set_tipo($tipo);
 		$this->set_lang(DEDALO_DATA_LANG);
-		$this->set_modo($mode);
+		$this->set_mode($mode);
 		$this->set_model('install');
 	}//end __construct
 
@@ -40,7 +40,7 @@ class install extends common {
 				$dd_object->set_tipo($this->tipo);
 				$dd_object->set_model($this->model);
 				$dd_object->set_lang($this->lang);
-				$dd_object->set_mode($this->modo);
+				$dd_object->set_mode($this->mode);
 
 		// properties base
 			$properties = new stdClass();
