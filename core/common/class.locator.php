@@ -13,6 +13,7 @@
 *		$locator->tag_id				= (string)$tag_id;
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
 *		$locator->state					= (object)$state;
+* 		$locator->type					= (string)$type;
 *		$locator->ds					= (array)$ds;
 *		$locator->from_key				= (int)$from_key; //dataframe index array number of the data that reference
 *
