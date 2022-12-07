@@ -891,44 +891,44 @@ class component_relation_common extends component_common {
 			$mode			= $this->get_mode();
 			$lang			= DEDALO_DATA_LANG;
 
-		// dataframe mode. Save caller and stop
-			if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset)) {
+		// // dataframe mode. Save caller and stop
+		// 	if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset)) {
 
-				// new_component
-					$new_tipo			= $this->caller_dataset->component_tipo;
-					$new_section_tipo	= $this->caller_dataset->section_tipo;
-					$new_parent			= $this->caller_dataset->section_id;
-					$new_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
-					$new_component		= component_common::get_instance(
-						$new_modelo_name,
-						$new_tipo,
-						$new_parent,
-						'edit',
-						$lang,
-						$new_section_tipo
-					);
+		// 		// new_component
+		// 			$new_tipo			= $this->caller_dataset->component_tipo;
+		// 			$new_section_tipo	= $this->caller_dataset->section_tipo;
+		// 			$new_parent			= $this->caller_dataset->section_id;
+		// 			$new_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+		// 			$new_component		= component_common::get_instance(
+		// 				$new_modelo_name,
+		// 				$new_tipo,
+		// 				$new_parent,
+		// 				'edit',
+		// 				$lang,
+		// 				$new_section_tipo
+		// 			);
 
-				// Force load current db dato to avoid loose it
-				// component that will be marked with dataframe (the original component)
-					$component_dato = $new_component->get_dato();
+		// 		// Force load current db dato to avoid loose it
+		// 		// component that will be marked with dataframe (the original component)
+		// 			$component_dato = $new_component->get_dato();
 
-				// Set dataframe data
-					$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
+		// 		// Set dataframe data
+		// 			$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
 
-				// debug
-					if (isset($this->save_to_database) && $this->save_to_database===false) {
-						debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
-						#$new_component->save_to_database = false;
-					}
+		// 		// debug
+		// 			if (isset($this->save_to_database) && $this->save_to_database===false) {
+		// 				debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
+		// 				#$new_component->save_to_database = false;
+		// 			}
 
-				// set_dato
-					if(isset($component_dato[$this->caller_dataset->caller_key])){
-						$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
-						$new_component->set_dato($component_dato);
-					}
+		// 		// set_dato
+		// 			if(isset($component_dato[$this->caller_dataset->caller_key])){
+		// 				$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
+		// 				$new_component->set_dato($component_dato);
+		// 			}
 
-				return $new_component->Save(); // type int|null
-			}//end if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset))
+		// 		return $new_component->Save(); // type int|null
+		// 	}//end if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset))
 
 		// Verify component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
