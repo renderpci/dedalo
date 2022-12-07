@@ -313,7 +313,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 	// short vars
 		// const mode		= self.mode
 		// const tipo		= self.tipo
-		const section_tipo	= self.section_tipo
+		// const section_tipo	= self.section_tipo
 		const section_id	= self.section_id
 		const matrix_id		= self.matrix_id // time machine case only
 		const columns_map	= await self.columns_map || []
@@ -354,7 +354,14 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 					for (let k = 0; k < ar_first_level_ddo_len; k++) {
 
 						const current_ddo = ar_first_level_ddo[k]
-
+						// By default section_tipo will be the section_tipo of the locator
+						// but when ddo define is_dataframe (subsection to use as data_frame or semantic_node)
+						// the section_tipo need to be the section_tipo of the ddo
+						// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
+						// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of the locator that conform the section_record
+						const section_tipo	= (current_ddo.is_dataframe)
+							? current_ddo.section_tipo
+							: self.section_tipo
 						// if the ddo has column_id (normally all component has it, you can see it in common.js get_columns() method)
 						if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
