@@ -23,19 +23,21 @@ class tool_time_machine extends tool_common {
 
 		// options get and set
 			$options = new stdClass();
-				$options->section_tipo	= $request_options->section_tipo ?? null;
-				$options->section_id	= $request_options->section_id ?? null;
-				$options->tipo			= $request_options->tipo ?? null;
-				$options->lang			= $request_options->lang ?? null;
-				$options->matrix_id		= $request_options->matrix_id ?? null;
+				$options->section_tipo		= $request_options->section_tipo ?? null;
+				$options->section_id		= $request_options->section_id ?? null;
+				$options->tipo				= $request_options->tipo ?? null;
+				$options->lang				= $request_options->lang ?? null;
+				$options->matrix_id			= $request_options->matrix_id ?? null;
+				$options->caller_dataframe	= $request_options->caller_dataframe ?? null;
 
 		// short vars
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
-			$tipo			= $options->tipo;
-			$lang			= $options->lang;
-			$matrix_id		= $options->matrix_id;
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$section_tipo		= $options->section_tipo;
+			$section_id			= $options->section_id;
+			$tipo				= $options->tipo;
+			$lang				= $options->lang;
+			$matrix_id			= $options->matrix_id;
+			$model				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$caller_dataframe	= $options->caller_dataframe;
 
 		// data. extract data from matrix_time_machine table
 			$RecordObj_time_machine	= new RecordObj_time_machine($matrix_id);
@@ -120,6 +122,11 @@ class tool_time_machine extends tool_common {
 							$section_tipo,
 							false
 						);
+
+					// dataframe caller
+						if (!empty($caller_dataframe)) {
+							$element->set_caller_dataframe($caller_dataframe);
+						}
 
 					// Set data overwrites the data of the current element
 						$element->set_dato($dato_time_machine);
