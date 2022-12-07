@@ -2799,7 +2799,8 @@
 		Added Publication Server API new feature: 'resolve_dd_relations'. Updated swagger.json file to v1.0.24
 		Fixed issue in class diffusion_sql where empty values were treated as strings generating a server error
 		Fix lang import for tool_import_files_dcnav
-
+		Valencia 07-12-2022T17:54:00
+		Added component_autocomplete breakdown option to export values (as component_portal do). Implemented in tool_export
 
 
 	[/HISTORY]
@@ -2831,7 +2832,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '30-11-2022T11:43:00');
+	define('DEDALO_BUILD'	, '07-12-2022T17:54:00');
 
 
 
