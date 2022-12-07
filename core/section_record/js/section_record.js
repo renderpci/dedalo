@@ -456,6 +456,10 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 										new_context.mode = current_ddo.with_value.mode
 									}
 								}
+								// set is_dataframe property to be used by tools or other components
+								if(current_ddo.is_dataframe){
+									new_context.is_dataframe	= current_ddo.is_dataframe
+								}
 
 							// instance create and set
 								const instance_data = current_ddo.model==='dd_grid'
