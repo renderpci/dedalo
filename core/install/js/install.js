@@ -45,6 +45,8 @@ export const install = function() {
 // prototypes assign
 	install.prototype.install	= render_install.prototype.install
 	install.prototype.render	= common.prototype.render
+	install.prototype.list		= render_install.prototype.render
+	install.prototype.edit		= render_install.prototype.render
 	install.prototype.destroy	= common.prototype.destroy
 	install.prototype.refresh	= common.prototype.refresh
 

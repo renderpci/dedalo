@@ -25,12 +25,12 @@ export const render_install = function() {
 
 
 /**
-* INSTALL
+* RENDER
 * Render node for use in install mode
 * @param object options
 * @return DOM node wrapper
 */
-render_install.prototype.install = async function(options) {
+render_install.prototype.render = async function(options) {
 
 	const self = this
 
@@ -53,7 +53,7 @@ render_install.prototype.install = async function(options) {
 		wrapper.content_data = content_data
 
 	return wrapper
-}//end install
+}//end render
 
 
 
