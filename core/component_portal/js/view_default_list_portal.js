@@ -50,77 +50,77 @@ view_default_list_portal.render = async function(self, options) {
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-		// content_data
-			const content_data = await get_content_data(self, ar_section_record)
-			if (render_level==='content') {
-				return content_data
+	// content_data
+		const content_data = await get_content_data(self, ar_section_record)
+		if (render_level==='content') {
+			return content_data
+		}
+
+	// columns_map
+		const columns_map = await self.columns_map
+
+	// fragment container
+		const fragment = new DocumentFragment()
+
+	// list_body
+		const list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
+			parent			: fragment
+		})
+		// const items				= flat_column_items(columns_map)
+		// const template_columns	= `auto ${items.join(' ')}`
+		// const template_columns = `repeat(${columns_map.length}, 1fr)`
+		// flat columns create a sequence of grid widths taking care of sub-column space
+		// like 1fr 1fr 1fr 3fr 1fr
+		const items				= ui.flat_column_items(columns_map)
+		const template_columns	= `${items.join(' ')}`
+		// old way inline
+			// Object.assign(
+			// 	list_body.style,
+			// 	{
+			// 		"grid-template-columns": template_columns
+			// 	}
+			// )
+		// new way to on-the fly js
+			if (self.view!=='mosaic') {
+				const css_object = {
+					'.list_body' : {
+						'grid-template-columns': template_columns
+					}
+				}
+				const selector = `${self.section_tipo}_${self.tipo}.list.view_${self.view}`
+				set_element_css(selector, css_object)
 			}
 
-		// columns_map
-			const columns_map = await self.columns_map
+	// header
+		// const list_header_node = build_header(columns_map, ar_section_record, self)
+		// const list_header_node = ui.render_list_header(columns_map, self, false)
+		// list_body.appendChild(list_header_node)
 
-		// fragment container
-			const fragment = new DocumentFragment()
+	// content_data append
+		list_body.appendChild(content_data)
 
-		// list_body
-			const list_body = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
-				parent			: fragment
-			})
-			// const items				= flat_column_items(columns_map)
-			// const template_columns	= `auto ${items.join(' ')}`
-			// const template_columns = `repeat(${columns_map.length}, 1fr)`
-			// flat columns create a sequence of grid widths taking care of sub-column space
-			// like 1fr 1fr 1fr 3fr 1fr
-			const items				= ui.flat_column_items(columns_map)
-			const template_columns	= `${items.join(' ')}`
-			// old way inline
-				// Object.assign(
-				// 	list_body.style,
-				// 	{
-				// 		"grid-template-columns": template_columns
-				// 	}
-				// )
-			// new way to on-the fly js
-				if (self.view!=='mosaic') {
-					const css_object = {
-						'.list_body' : {
-							'grid-template-columns': template_columns
-						}
-					}
-					const selector = `${self.section_tipo}_${self.tipo}.list.view_${self.view}`
-					set_element_css(selector, css_object)
-				}
-
-		// header
-			// const list_header_node = build_header(columns_map, ar_section_record, self)
-			// const list_header_node = ui.render_list_header(columns_map, self, false)
-			// list_body.appendChild(list_header_node)
-
-		// content_data append
-			list_body.appendChild(content_data)
-
-		// wrapper
-			// const wrapper = ui.create_dom_element({
-			// 	element_type	: 'div',
-			// 	id				: self.id,
-			// 	//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			// 	class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' portal ' + self.mode
-			// })
-			const wrapper = ui.component.build_wrapper_list(self, {
-				autoload : true // bool set build autoload param on mode change (close button)
-			})
-			wrapper.classList.add('portal')
-			wrapper.appendChild(fragment)
-			// set pointers
-			wrapper.content_data	= content_data
-			wrapper.list_body		= list_body
-			// click event capture
-			wrapper.addEventListener('click', function(e) {
-				e.stopPropagation()
-				// nothing to do in list mode, only catch click event
-			})
+	// wrapper
+		// const wrapper = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	id				: self.id,
+		// 	//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
+		// 	class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' portal ' + self.mode
+		// })
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : true // bool set build autoload param on mode change (close button)
+		})
+		wrapper.classList.add('portal')
+		wrapper.appendChild(fragment)
+		// set pointers
+		wrapper.content_data	= content_data
+		wrapper.list_body		= list_body
+		// click event capture
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
+			// nothing to do in list mode, only catch click event
+		})
 
 
 	return wrapper
