@@ -80,7 +80,7 @@ import {data_manager} from '../../common/js/data_manager.js'
 
 
 
-describe("OTHERS LIFE-CYCLE", function() {
+describe("OTHERS LIFE-CYCLE", async function() {
 
 	const elements =  get_elelemnts()
 
@@ -103,8 +103,20 @@ describe("OTHERS LIFE-CYCLE", function() {
 						element.context = await element.context()
 					}
 
+					const options = {
+						id_variant		: Math.random() + '-' + Math.random(),
+						lang			: element.lang,
+						mode			: 'edit',
+						model			: element.model,
+						section_id		: element.section_id,
+						section_tipo	: element.section_tipo,
+						tipo			: element.tipo,
+						view			: element.view,
+						context			: element.context || null
+					}
+
 				// init instance
-					new_instance = await get_instance(element)
+					new_instance = await get_instance(options)
 					// console.log('init new_instance:', new_instance);
 
 				assert.equal(new_instance.status, expected);
