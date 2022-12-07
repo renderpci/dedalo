@@ -324,8 +324,6 @@ class component_security_access extends component_common {
 				$section_tipo // string section_tipo
 			);
 			$datalist = $component_security_access->get_datalist( $user_id );
-				// dump($datalist, ' datalist +++++++++++++++99999+++++88888+++++ '.to_string($tipo));
-
 
 			// Fiber::suspend();
 			debug_log(__METHOD__." (2) count: " . count($datalist) . " launching datalist ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ".to_string(), logger::ERROR);

@@ -52,12 +52,14 @@
 
 					$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
 					// dump($component_modelo,'$component_modelo');
-					$current_component 	= component_common::get_instance($component_modelo,
-																		 $related_component_tipo,
-																		 $current_section_id,
-																		 'list',
-																		 $current_lang,
-																		 $current_section_tipo);
+					$current_component 	= component_common::get_instance(
+						$component_modelo,
+						$related_component_tipo,
+						$current_section_id,
+						'list',
+						$current_lang,
+						$current_section_tipo
+					);
 					#dump($current_component,'$current_component');
 
 					$ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $properties );

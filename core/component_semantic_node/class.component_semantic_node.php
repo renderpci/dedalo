@@ -139,12 +139,14 @@ class component_semantic_node extends component_relation_common {
 
 		// portal update
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo,true);
-			$component = component_common::get_instance( $modelo_name,
-														 $portal_tipo,
-														 $portal_section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $portal_section_tipo);
+			$component = component_common::get_instance( 
+				$modelo_name,
+				$portal_tipo,
+				$portal_section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$portal_section_tipo
+			);
 			$current_dato = $component->get_dato();
 
 			foreach ($current_dato as $key => $current_locator) {

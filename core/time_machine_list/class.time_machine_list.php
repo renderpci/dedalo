@@ -118,12 +118,14 @@ class time_machine_list extends common {
 					break;
 				default:
 					if (!is_string($dato)) {
-						$current_component = component_common::get_instance($modelo_name,
-																			$component_tipo,
-																			$this->section_id,
-																			'list',
-																			$lang,
-																			$this->section_tipo);
+						$current_component = component_common::get_instance(
+							$modelo_name,
+							$component_tipo,
+							$this->section_id,
+							'list',
+							$lang,
+							$this->section_tipo
+						);
 						$current_component->set_dato($dato);
 						$value = $current_component->get_valor();
 						#$value = json_encode($dato, JSON_UNESCAPED_UNICODE);
@@ -210,12 +212,14 @@ class time_machine_list extends common {
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
 					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
-					$current_component	= component_common::get_instance($modelo_name,
-																		 $tipo,
-																		 $section_id,
-																		 'list',
-																		 DEDALO_DATA_LANG,
-																		 $section_tipo);
+					$current_component	= component_common::get_instance(
+						$modelo_name,
+						$tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$section_tipo
+					);
 					$value = $current_component->get_valor();
 
 					$component_object = new stdClass;

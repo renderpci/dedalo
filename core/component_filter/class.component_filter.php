@@ -544,7 +544,12 @@ class component_filter extends component_relation_common {
 	public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
 
 		$caller_component	= get_called_class();
-		$current_component	= component_common::get_instance($caller_component,$tipo,NULL,'stats');
+		$current_component	= component_common::get_instance(
+			$caller_component,
+			$tipo,
+			null,
+			'stats'
+		);
 
 		$ar_values = [];
 
@@ -842,12 +847,14 @@ class component_filter extends component_relation_common {
 					if (isset($properties->stats_look_at)) {
 						$c_tipo 		= reset($properties->stats_look_at);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
-						$component 		= component_common::get_instance( $modelo_name,
-																		  $c_tipo,
-																		  $locator->section_id,
-																		  'list',
-																		  $lang,
-																		  $locator->section_tipo);
+						$component 		= component_common::get_instance( 
+							$modelo_name,
+							$c_tipo,
+							$locator->section_id,
+							'list',
+							$lang,
+							$locator->section_tipo
+						);
 						$label = $component->get_valor($lang);
 					}else{
 						$label = ts_object::get_term_by_locator($locator, $lang, true) ?? '';

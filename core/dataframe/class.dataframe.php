@@ -72,13 +72,15 @@ class dataframe extends common {
 		foreach ($ar_component_tipo as $current_component_tipo) {
 
 			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-			$component_obj  = component_common::get_instance($modelo_name,
-															 $current_component_tipo,
-															 $this->caller_section_id,
-															 $mode,
-															 DEDALO_DATA_LANG,
-															 $this->caller_section_tipo,
-															 false); // Cache false
+			$component_obj  = component_common::get_instance(
+				$modelo_name,
+				$current_component_tipo,
+				$this->caller_section_id,
+				$mode,
+				DEDALO_DATA_LANG,
+				$this->caller_section_tipo,
+				false
+			); // Cache false
 			# Configure component
 			$component_obj->caller_dataset = new stdClass();
 				$component_obj->caller_dataset->component_tipo  = $this->component_obj->get_tipo();
@@ -87,7 +89,7 @@ class dataframe extends common {
 				$component_obj->caller_dataset->section_tipo  	= $this->caller_section_tipo;
 				$component_obj->caller_dataset->section_id  	= $this->caller_section_id;
 
-			# Heritage permisions from caller component
+			# Heritage permissions from caller component
 			$permissions = common::get_permissions($this->component_obj->get_section_tipo(), $this->component_obj->get_tipo());
 			$component_obj->set_permissions($permissions);
 

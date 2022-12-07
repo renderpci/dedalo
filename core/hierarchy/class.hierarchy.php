@@ -68,12 +68,14 @@ class hierarchy {
 		// active
 			$active_tipo 	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
-			$component 		= component_common::get_instance( $modelo_name,
-															  $active_tipo,
-															  $options->section_id,
-															  'edit',
-															  DEDALO_DATA_NOLAN,
-															  $options->section_tipo);
+			$component 		= component_common::get_instance( 
+				$modelo_name,
+				$active_tipo,
+				$options->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$options->section_tipo
+			);
 			$dato 	 = (array)$component->get_dato();
 			$locator = reset($dato);
 					if( !isset($locator->section_tipo) || $locator->section_tipo!=DEDALO_SECTION_SI_NO_TIPO
@@ -88,12 +90,14 @@ class hierarchy {
 		// tld
 			$tld2_tipo 		= DEDALO_HIERARCHY_TLD2_TIPO;	//'hierarchy6';
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tld2_tipo, true);
-			$component 		= component_common::get_instance( $modelo_name,
-															  $tld2_tipo,
-															  $options->section_id,
-															  'edit',
-															  DEDALO_DATA_NOLAN,
-															  $options->section_tipo);
+			$component 		= component_common::get_instance( 
+				$modelo_name,
+				$tld2_tipo,
+				$options->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$options->section_tipo
+			);
 			$tld2 = strtolower($component->get_valor());
 			if (empty($tld2)) {
 				$response->result 	= false;
@@ -104,12 +108,14 @@ class hierarchy {
 
 		// source_real_section_tipo
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,true);
-			$component 		= component_common::get_instance( $modelo_name,
-															  DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
-															  $options->section_id,
-															  'list',
-															  DEDALO_DATA_NOLAN,
-															  $options->section_tipo);
+			$component 		= component_common::get_instance( 
+				$modelo_name,
+				DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
+				$options->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$options->section_tipo
+			);
 			$dato = $component->get_dato();
 			// check value
 			$real_section_tipo = isset($dato[0]) ? $dato[0] : false;
@@ -130,12 +136,14 @@ class hierarchy {
 
 			$hierarchy_type	= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type, true);
-			$component 		= component_common::get_instance( $modelo_name,
-															  $hierarchy_type,
-															  $options->section_id,
-															  'edit',
-															  DEDALO_DATA_NOLAN,
-															  $options->section_tipo);
+			$component 		= component_common::get_instance( 
+				$modelo_name,
+				$hierarchy_type,
+				$options->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$options->section_tipo
+			);
 			$hierarchy_type_dato = $component->get_dato();
 			if (isset($hierarchy_type_dato[0]) && isset($hierarchy_type_dato[0]->section_id) && $hierarchy_type_dato[0]->section_id=="2") {
 				$is_toponymy = true;
@@ -154,12 +162,14 @@ class hierarchy {
 		// name
 			$name_tipo 		= DEDALO_HIERARCHY_TERM_TIPO;	//'hierarchy5';
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
-			$component 		= component_common::get_instance( $modelo_name,
-															  $name_tipo,
-															  $options->section_id,
-															  'edit',
-															  DEDALO_DATA_LANG,
-															  $options->section_tipo);
+			$component 		= component_common::get_instance( 
+				$modelo_name,
+				$name_tipo,
+				$options->section_id,
+				'edit',
+				DEDALO_DATA_LANG,
+				$options->section_tipo
+			);
 			$name = $component->get_valor();
 
 
@@ -499,12 +509,14 @@ class hierarchy {
 			$section = section::get_instance($section_id,$current_section_tipo);
 			$section->forced_create_record();
 
-			$component 		= component_common::get_instance($modelo_name,
-															 $tipo,
-															 $section_id,
-															 'edit',
-															 DEDALO_DATA_LANG,
-															 $current_section_tipo);
+			$component 		= component_common::get_instance(
+				$modelo_name,
+				$tipo,
+				$section_id,
+				'edit',
+				DEDALO_DATA_LANG,
+				$current_section_tipo
+			);
 			$name = ($key===0) ? "Sample term" : "Sample model";
 			$component->set_dato("$name [{$current_section_tipo}-{$section_id}]");
 			$component->Save();
@@ -513,12 +525,14 @@ class hierarchy {
 
 			# Attach as children of current hierarchy
 			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHILDREN_TIPO : DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
-			$component_relation_children = component_common::get_instance('component_relation_children',
-															 			  $component_relation_children_tipo,
-															 			  $options->section_id,
-															 			  'edit',
-															 			  DEDALO_DATA_NOLAN,
-															 			  $options->section_tipo);
+			$component_relation_children = component_common::get_instance(
+				'component_relation_children',
+				$component_relation_children_tipo,
+				$options->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$options->section_tipo
+			);
 			$component_relation_children->make_me_your_children( $current_section_tipo, $section_id );
 			$component_relation_children->Save();
 
@@ -557,23 +571,27 @@ class hierarchy {
 
 		#
 		# Security areas
-		$component_security_areas	= component_common::get_instance('component_security_areas',
-																	 DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
-																	 $section_id,
-																	 'edit',
-																	 DEDALO_DATA_NOLAN,
-																	 DEDALO_SECTION_PROFILES_TIPO);
-			$dato_security_areas 	= (object)$component_security_areas->get_dato();
+		$component_security_areas = component_common::get_instance(
+			'component_security_areas',
+			DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+			$section_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_PROFILES_TIPO
+		);
+			$dato_security_areas = (object)$component_security_areas->get_dato();
 
 		#
 		# Security access
-		$component_security_access	= component_common::get_instance('component_security_access',
-																	 DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
-																	 $section_id,
-																	 'edit',
-																	 DEDALO_DATA_NOLAN,
-																	 DEDALO_SECTION_PROFILES_TIPO);
-			$dato_security_access 	= (object)$component_security_access->get_dato();
+		$component_security_access = component_common::get_instance(
+			'component_security_access',
+			DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
+			$section_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_PROFILES_TIPO
+		);
+		$dato_security_access 	= (object)$component_security_access->get_dato();
 
 
 		# Iterate sections (normally like ts1,ts2)
@@ -586,12 +604,14 @@ class hierarchy {
 			# Security access
 			# Components inside section
 			$real_section = section::get_section_real_tipo_static( $current_section_tipo );
-			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($real_section,
-																					$ar_modelo_name_required=array('component','button','section_group'),
-																					$from_cache=true,
-																					$resolve_virtual=false,
-																					$recursive=true,
-																					$search_exact=false);
+			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$real_section,
+				$ar_modelo_name_required=array('component','button','section_group'),
+				$from_cache=true,
+				$resolve_virtual=false,
+				$recursive=true,
+				$search_exact=false
+			);
 			$dato_security_access->$current_section_tipo = new stdClass();
 			foreach ($ar_children as $children_tipo) {
 				$dato_security_access->$current_section_tipo->$children_tipo = $permissions;
@@ -704,12 +724,14 @@ class hierarchy {
 
 		$mode ='edit';
 		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$component		= component_common::get_instance( $modelo_name,
-														  $tipo,
-														  $parent,
-														  $mode,
-														  $lang,
-														  $section_tipo);
+		$component		= component_common::get_instance( 
+			$modelo_name,
+			$tipo,
+			$parent,
+			$mode,
+			$lang,
+			$section_tipo
+		);
 
 		$component->set_dato($dato);
 		$component->Save();
