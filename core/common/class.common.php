@@ -73,6 +73,10 @@ abstract class common {
 	// children_view. Specific element children_view used to render child elements
 	public $children_view;
 
+	// caller_dataframe the element that call to other element (component, section, area, etc)
+	public $caller_dataframe;
+
+
 	// required methods
 		// abstract protected function define_id($id);
 		// abstract protected function define_tipo();
@@ -1764,14 +1768,31 @@ abstract class common {
 				$section_tipo	= $current_locator->section_tipo;
 
 				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
+				// but when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator) get include it.
 				$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
 					return 	$ddo->section_tipo===$section_tipo ||
 							(is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) ||
-							(isset($ddo->model) && $ddo->model==='component_semantic_node');
+							(isset($ddo->model) && $ddo->model==='component_semantic_node') ||
+							(isset($ddo->is_dataframe) && $ddo->is_dataframe===true);
 				});
+
 
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
+					// use the locator section_tipo.
+					// when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator)
+					// use his own section_tipo, it's totally dependent of the section_id of the locator and it's compatible.
+					// Note: it's different of the multiple section_tipo as es1, fr1, etc that every locator define his own ddo compatibles.
+					// reference: oh24 -> old semantic_node
+					// reference: numisdata161 -> old dataframe
+
+					if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
+						$section_tipo	= is_array($dd_object->section_tipo)
+							? reset($dd_object->section_tipo)
+							: $dd_object->section_tipo;
+					}else{
+						$section_tipo	= $current_locator->section_tipo;
+					}
 
 					// prevent resolve non children from path ddo, remove the non direct child, it will be calculated by his parent (in recursive loop)
 						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
@@ -1903,6 +1924,12 @@ abstract class common {
 									if (strpos($source_model, 'component_')===0){
 										$related_element->from_component_tipo	= $this->tipo;
 										$related_element->from_section_tipo		= $this->section_tipo;
+
+										//caller obj, inject the caller section_tipo and section_id
+											$caller_dataframe = new stdClass();
+												$caller_dataframe->section_tipo	= $this->section_tipo;
+												$caller_dataframe->section_id		= $this->section_id;
+											$related_element->set_caller_dataframe($caller_dataframe);
 									}
 
 								// Inject data for component_semantic_node
@@ -1913,6 +1940,7 @@ abstract class common {
 									}
 
 								// inject view
+
 									// if(isset($view)){
 									// 	$related_element->view = $view;
 									// }
