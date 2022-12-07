@@ -295,12 +295,14 @@ class component_relation_related extends component_relation_common {
 		# References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
 			#$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true); // get_class();
-			$ref_component 	= component_common::get_instance('component_relation_related',
-															 $locator->from_component_tipo,
-															 $locator->section_id,
-															 'edit',
-															 DEDALO_DATA_NOLAN,
-															 $locator->section_tipo);
+			$ref_component 	= component_common::get_instance(
+				'component_relation_related',
+				$locator->from_component_tipo,
+				$locator->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
 			$ar_result = $ref_component->get_references();
 
 			foreach ($ar_result as $key => $result_locator) {

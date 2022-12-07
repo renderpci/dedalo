@@ -32,12 +32,14 @@ class get_archive_weights extends widget_common {
 		# PORTAL ROWS
 
 			$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
-			$component_portal = component_common::get_instance($modelo_name,
-															   $current_component_tipo,
-															   $section_id,
-															   'list',
-															   DEDALO_DATA_NOLAN,
-															   $current_section_tipo);
+			$component_portal = component_common::get_instance(
+				$modelo_name,
+				$current_component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$current_section_tipo
+			);
 
 			$dato = $component_portal->get_dato();
 

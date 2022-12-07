@@ -64,12 +64,14 @@ class component_text_area extends component_common {
 					break;
 			}
 			if (isset($related_component_select_lang)) {
-				$component_select_lang = component_common::get_instance('component_select_lang',
-																		$related_component_select_lang,
-																		$parent,
-																		'list',
-																		DEDALO_DATA_NOLAN,
-																		$section_tipo);
+				$component_select_lang = component_common::get_instance(
+					'component_select_lang',
+					$related_component_select_lang,
+					$parent,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$component_select_lang_dato = (array)$component_select_lang->get_dato();
 
 				#
@@ -401,13 +403,15 @@ class component_text_area extends component_common {
 			}
 		}
 		// create the component relation for save the locators
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$alt_save_component = component_common::get_instance($modelo_name,
-															 $component_tipo,
-															 $section_id,
-															 'edit',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+		$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$alt_save_component = component_common::get_instance(
+			$modelo_name,
+			$component_tipo,
+			$section_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
 		if(SHOW_DEBUG===true) {
 			#debug_log(__METHOD__." $component_tipo - $modelo_name - $section_tipo - $section_id ".to_string(), logger::DEBUG);
 			#debug_log(__METHOD__." ar_current_locator ".to_string($ar_current_locator), logger::DEBUG);
@@ -1434,12 +1438,14 @@ class component_text_area extends component_common {
 					$diffusion_obj->columns['tcout_secs']	= $tcout_secs;
 
 					#$component_av   = new component_av($current_related_tipo, $this->get_parent(), 'edit');
-					$component_av   = component_common::get_instance($related_modelo_name,
-																	 $current_related_tipo,
-																	 $this->get_parent(),
-																	 'list',
-																	 DEDALO_DATA_LANG,
-																	 $section_tipo);
+					$component_av   = component_common::get_instance(
+						$related_modelo_name,
+						$current_related_tipo,
+						$this->get_parent(),
+						'list',
+						DEDALO_DATA_LANG,
+						$section_tipo
+					);
 					$video_id 		= $component_av->get_video_id();
 
 					$diffusion_obj->columns['video_id']	= $video_id;
@@ -1774,12 +1780,14 @@ class component_text_area extends component_common {
 		foreach ($ar_tipos as $key => $tipo) {
 
 			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance($modelo_name,
-															 $tipo,
-															 $locator->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $locator->section_tipo);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$tipo,
+				$locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
 			$dato = $component->get_valor();
 
 			switch ($key) {

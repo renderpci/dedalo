@@ -261,12 +261,14 @@ class lang {
 		$tipo 			 = DEDALO_THESAURUS_CODE_TIPO;
 		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 		$parent 		 = $locator->section_id;
-		$component 		 = component_common::get_instance($modelo_name,
-														  $tipo,
-														  $parent,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $section_tipo);
+		$component 		 = component_common::get_instance(
+			$modelo_name,
+			$tipo,
+			$parent,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
 		$code = $component->get_valor();
 
 		if ($add_prefix===true) {

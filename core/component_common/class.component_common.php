@@ -1452,8 +1452,14 @@ abstract class component_common extends common {
 			$section_tipo 	= $this->get_section_tipo();
 
 			$current_component_name	= get_class($this);
-			$component_obj			= component_common::get_instance($current_component_name, $tipo, $section_id, 'edit', DEDALO_DATA_LANG_DEFAULT, $section_tipo);
-			$dato					= $component_obj->get_dato();
+			$component_obj			= component_common::get_instance(
+				$current_component_name, 
+				$tipo, $section_id, 
+				'edit', 
+				DEDALO_DATA_LANG_DEFAULT, 
+				$section_tipo
+			);
+			$dato = $component_obj->get_dato();
 		}
 
 		return $dato;
@@ -1954,7 +1960,12 @@ abstract class component_common extends common {
 
 			}else{
 
-				$current_component = component_common::get_instance($caller_component, $tipo, NULL, 'stats');
+				$current_component = component_common::get_instance(
+					$caller_component, 
+					$tipo, 
+					null, 
+					'stats'
+				);
 				$current_component->set_dato($current_dato);
 
 				$valor = $current_component->get_valor();

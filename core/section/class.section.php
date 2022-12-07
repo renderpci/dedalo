@@ -982,7 +982,7 @@ class section extends common {
 				if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO) {
 
 					##
-					# AUTO AUTHORIZE THIS PROYECT FOR CURRENT USER
+					# AUTO AUTHORIZE THIS PROJECT FOR CURRENT USER
 					# If this newly created section is a project, this project is added as authorized to the user who created it
 					# User currently logged in
 						$component_filter_master = component_common::get_instance(
@@ -1013,7 +1013,7 @@ class section extends common {
 
 
 					##
-					# DEFAULT PROJECT FOR CREATE STANDAR SECTIONS
+					# DEFAULT PROJECT FOR CREATE STANDARD SECTIONS
 					# When a section record is created, it is auto assigned the default project (defined in config DEDALO_DEFAULT_PROJECT)
 					# when the section has a 'component_filter' defined
 					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section(

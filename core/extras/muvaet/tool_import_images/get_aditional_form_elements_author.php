@@ -20,12 +20,16 @@ require_once( DEDALO_CONFIG_PATH.'/config.php');
 
 
 
-	$modelo_name 		  	= 'component_autocomplete';
-	$component 			  	= component_common::get_instance($modelo_name,$author_tipo,null,'list',DEDALO_DATA_NOLAN, $referenced_section_tipo);
-	$all_component_values 	= $component->get_ar_list_of_values(DEDALO_DATA_LANG);
-		#dump($all_component_values," all_component_values");
-	#dump($component," component");
-	#$html .= $component->get_html();
+	$modelo_name	= 'component_autocomplete';
+	$component		= component_common::get_instance(
+		$modelo_name,
+		$author_tipo,
+		null,
+		'list',
+		DEDALO_DATA_NOLAN, 
+		$referenced_section_tipo
+	);
+	$all_component_values = $component->get_ar_list_of_values(DEDALO_DATA_LANG);
 
 	$html .=" Autor: ";
 	$html .= '<div id="wrap_author_select" style="display:inline-block;padding-left:5px;padding-right:5px;">';

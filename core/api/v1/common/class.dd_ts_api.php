@@ -52,11 +52,11 @@ final class dd_ts_api {
 			}else{
 
 				// Calculate children from parent
-				$modelo_name					= 'component_relation_children';
+				$model							= 'component_relation_children';
 				$mode							= 'list_thesaurus';
 				$lang							= DEDALO_DATA_NOLAN;
 				$component_relation_children	= component_common::get_instance(
-					$modelo_name,
+					$model,
 					$tipo,
 					$section_id,
 					$mode,
@@ -173,9 +173,9 @@ final class dd_ts_api {
 			}else{
 				if ($section_map->thesaurus->is_descriptor!==false) {
 					$component_tipo	= $section_map->thesaurus->is_descriptor;
-					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$component		= component_common::get_instance(
-						$modelo_name,
+						$model,
 						$component_tipo,
 						$new_section_id,
 						'edit', // note mode edit autosave default value

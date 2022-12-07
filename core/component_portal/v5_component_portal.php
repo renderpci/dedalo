@@ -225,12 +225,14 @@
 			foreach ($fields as $current_tipo) {
 
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $current_tipo,
-																 $section_id,
-																 'list',
-																 $lang,
-																 $section_tipo);
+				$component 		= component_common::get_instance(
+					$modelo_name,
+					$current_tipo,
+					$section_id,
+					'list',
+					$lang,
+					$section_tipo
+				);
 				$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
 
 				$item = new stdClass();
@@ -318,12 +320,14 @@
 						foreach ($fields as $current_tipo) {
 
 							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-							$component		= component_common::get_instance($modelo_name,
-																			 $current_tipo,
-																			 $section_id,
-																			 'list',
-																			 $lang,
-																			 $section_tipo);
+							$component		= component_common::get_instance(
+								$modelo_name,
+								$current_tipo,
+								$section_id,
+								'list',
+								$lang,
+								$section_tipo
+							);
 							$current_value_export = $component->get_diffusion_value( $lang );
 
 							$ar_resolved[] = $current_value_export;

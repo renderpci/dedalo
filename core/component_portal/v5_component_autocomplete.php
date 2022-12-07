@@ -81,12 +81,14 @@
 			foreach ($ar_componets_related as $component_tipo) {
 
 				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$current_component = component_common::get_instance($modelo_name,
-																	$component_tipo,
-																	$current_locator->section_id,
-																	'list',
-																	$lang,
-																	$current_locator->section_tipo);
+				$current_component = component_common::get_instance(
+					$modelo_name,
+					$component_tipo,
+					$current_locator->section_id,
+					'list',
+					$lang,
+					$current_locator->section_tipo
+				);
 
 				$current_value = component_common::extract_component_value_fallback($current_component,$lang,true);
 
@@ -115,12 +117,14 @@
 					$ar_dd_value = [];
 					foreach ($search_list_add as $add_tipo) {
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
-						$component 		= component_common::get_instance($modelo_name,
-																		 $add_tipo,
-																		 $current_locator->section_id,
-																		 'list',
-																		 $lang,
-																		 $current_locator->section_tipo);
+						$component 		= component_common::get_instance(
+							$modelo_name,
+							$add_tipo,
+							$current_locator->section_id,
+							'list',
+							$lang,
+							$current_locator->section_tipo
+						);
 						$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
 						if (!empty($current_value)) {
 							$ar_dd_value[] = $current_value;
