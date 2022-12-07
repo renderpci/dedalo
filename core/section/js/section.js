@@ -634,8 +634,8 @@ section.prototype.build = async function(autoload=false) {
 													item.section_tipo===element.section_tipo &&
 													item.section_id==element.section_id &&
 													item.from_component_tipo===element.from_component_tipo &&
-													item.parent_section_id==element.parent_section_id &&
-													item.row_section_id==element.row_section_id
+													item.parent_section_id==element.parent_section_id
+													// && item.row_section_id==element.row_section_id
 													// && (item.matrix_id && item.matrix_id==element.matrix_id)
 													&& (item.tag_id && item.tag_id==element.tag_id)
 													)
@@ -829,16 +829,18 @@ section.prototype.delete_section = async function (options) {
 	const self = this
 
 	// options
-		const sqo			= clone(options.sqo)
-		const delete_mode	= options.delete_mode
+		const sqo				= clone(options.sqo)
+		const delete_mode		= options.delete_mode
+		const caller_dataframe	= options.caller_dataframe || null
 
 	// sqo
 		// sqo.limit = null
 
 	// source
-		const source		= create_source(self, 'delete')
-		source.section_id	= self.section_id
-		source.delete_mode	= delete_mode
+		const source			= create_source(self, 'delete')
+		source.section_id		= self.section_id
+		source.delete_mode		= delete_mode
+		source.caller_dataframe	= caller_dataframe
 
 	// data_manager. delete
 		const rqo = {
