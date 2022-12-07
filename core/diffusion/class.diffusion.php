@@ -1125,9 +1125,19 @@ abstract class diffusion  {
 					$table_name = false;
 
 					// table real
-						$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', true);
+						$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$diffusion_element_tipo,
+							'table',
+							'children_recursive',
+							true
+						);
 						foreach ($ar_tables_tipo as $table_tipo) {
-							$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado', true);
+							$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+								$table_tipo,
+								'section',
+								'termino_relacionado',
+								true
+							);
 							if (!isset($ar_section_tipo[0])) {
 								debug_log(__METHOD__." Error. Diffusion section without section relation (1). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
 								continue;
@@ -1144,15 +1154,38 @@ abstract class diffusion  {
 					// table alias
 						if ($table_name===false) {
 
-							$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table_alias', 'children_recursive', true);
+							$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+								$diffusion_element_tipo,
+								'table_alias',
+								'children_recursive',
+								true
+							);
 							foreach ($ar_tables_tipo as $table_tipo) {
 
 								// direct relation case (used mainly in thesaurus tables)
-									$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado', true);
+									$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+										$table_tipo,
+										'section',
+										'termino_relacionado',
+										true
+									);
 									if (empty($ar_section_tipo)) {
 										// try to search section in target table
-											$real_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'table', 'termino_relacionado', true)[0];
-											$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($real_table_tipo, 'section', 'termino_relacionado', true);
+											$real_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+												$table_tipo,
+												'table',
+												'termino_relacionado',
+												true
+											);
+											if (!empty($real_table_tipo)) {
+												$real_table_tipo = reset($real_table_tipo);
+												$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+													$real_table_tipo,
+													'section',
+													'termino_relacionado',
+													true
+												);
+											}
 									}
 									if (!isset($ar_section_tipo[0])) {
 										debug_log(__METHOD__." Error. Diffusion section without section relation (2). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
