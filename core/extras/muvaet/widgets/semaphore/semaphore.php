@@ -41,12 +41,14 @@
 					#
 					# COMPONENT PORTAL (calculate when in edit normally)	
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_referenced_tipo,true);
-					$component 	 = component_common::get_instance($modelo_name,
-																  $component_referenced_tipo,
-																  $parent,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $component_referenced_section_tipo);
+					$component 	 = component_common::get_instance(
+						$modelo_name,
+						$component_referenced_tipo,
+						$parent,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$component_referenced_section_tipo
+					);
 					$component_referenced_dato = (array)$component->get_dato();			
 				}
 				#dump($component_referenced_dato, ' component_referenced_dato ++ '.to_string());

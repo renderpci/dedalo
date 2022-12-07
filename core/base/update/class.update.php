@@ -314,13 +314,15 @@ class update {
 
 						#
 						# COMPONENT . Update component dato
-						$component = component_common::get_instance($modelo_name,
-																	$current_component_tipo,
-																	$section_id,
-																	'update',
-																	$current_lang,
-																	$current_section_tipo,
-																	false);
+						$component = component_common::get_instance(
+							$modelo_name,
+							$current_component_tipo,
+							$section_id,
+							'update',
+							$current_lang,
+							$current_section_tipo,
+							false
+						);
 						$component->get_dato();
 						$dato_unchanged = $component->get_dato_unchanged();
 						$reference_id 	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;

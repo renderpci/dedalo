@@ -96,12 +96,14 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 
 					$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
 
-					$target_component = component_common::get_instance($model,
-																	   $target_component_tipo,
-																	   $locator->section_id,
-																	   'list',
-																	   DEDALO_DATA_NOLAN,
-																	   $locator->section_tipo);
+					$target_component = component_common::get_instance(
+						$model,
+						$target_component_tipo,
+						$locator->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$locator->section_tipo
+					);
 
 					$target_component->add_locator_to_dato($new_locator);
 					$saved = $target_component->Save();

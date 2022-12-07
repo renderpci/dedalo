@@ -563,13 +563,14 @@ class component_image extends component_media_common {
 			$component_tipo 	= $properties->external_source;
 			$component_model 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
-			$component 	= component_common::get_instance($component_model,
-														 $component_tipo,
-														 $this->get_parent(),
-														 'edit',
-														 DEDALO_DATA_NOLAN,
-														 $this->get_section_tipo());
-
+			$component 	= component_common::get_instance(
+				$component_model,
+				$component_tipo,
+				$this->get_parent(),
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$this->get_section_tipo()
+			);
 
 			$dato = $component->get_dato();
 			if(!empty($dato) && is_array($dato)){

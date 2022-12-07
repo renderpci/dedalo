@@ -78,12 +78,14 @@ class area_thesaurus extends area_common {
 
 			//hierarchy target section tipo
 			$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_target_section_tipo,true);
-			$target_section = component_common::get_instance($model,
-															 $hierarchy_target_section_tipo,
-															 $row->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $row->section_tipo);
+			$target_section = component_common::get_instance(
+				$model,
+				$hierarchy_target_section_tipo,
+				$row->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$row->section_tipo
+			);
 			$target_section_tipo_dato = $target_section->get_dato();
 			$target_section_tipo = reset($target_section_tipo_dato);
 
@@ -99,12 +101,14 @@ class area_thesaurus extends area_common {
 
 			//hierarchy target section name
 			$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO,true);
-			$hierarchy_section_name = component_common::get_instance($model,
-															 DEDALO_HIERARCHY_TERM_TIPO,
-															 $row->section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $row->section_tipo);
+			$hierarchy_section_name = component_common::get_instance(
+				$model,
+				DEDALO_HIERARCHY_TERM_TIPO,
+				$row->section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$row->section_tipo
+			);
 			$target_section_name = $hierarchy_section_name->get_valor();
 
 			if (empty($target_section_name)) {
@@ -324,12 +328,14 @@ class area_thesaurus extends area_common {
 		$lang 			 = DEDALO_DATA_LANG;
 		$section_tipo 	 = DEDALO_HIERARCHY_SECTION_TIPO;
 
-		$component 		 = component_common::get_instance($modelo_name,
-														  $tipo,
-														  $parent,
-														  $mode,
-														  $lang,
-														  $section_tipo);
+		$component 		 = component_common::get_instance(
+			$modelo_name,
+			$tipo,
+			$parent,
+			$mode,
+			$lang,
+			$section_tipo
+		);
 		$value = $component->get_valor($lang);
 
 		if (empty($value)) {
@@ -595,6 +601,7 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_SIBLINGS
+	* @param string $ckey
 	* @return array $ar_siblings
 	*/
 	public static function get_siblings(string $ckey) : array {
@@ -608,12 +615,14 @@ class area_thesaurus extends area_common {
 		$modelo_name 	= 'component_relation_children';
 		$tipo 			= DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
 		$mode 			= 'list';
-		$component_relation_children = component_common::get_instance($modelo_name,
-																	  $tipo,
-																	  $section_id,
-																	  $mode,
-																	  DEDALO_DATA_NOLAN,
-																	  $section_tipo);
+		$component_relation_children = component_common::get_instance(
+			$modelo_name,
+			$tipo,
+			$section_id,
+			$mode,
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
 		$dato = $component_relation_children->get_dato();
 			#dump($dato, ' dato ++ '.to_string($ckey));
 
