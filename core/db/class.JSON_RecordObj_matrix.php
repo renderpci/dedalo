@@ -243,8 +243,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$time_machine_date			= $save_options->time_machine_date ?? component_date::get_timestamp_now_for_db();
 
 		// short vars
-			$section_tipo = $this->get_section_tipo();
-
+			// $section_tipo = $this->get_section_tipo();
+			$section_tipo = $this->section_tipo;
 
 		// RecordObj_time_machine instance
 			$RecordObj_time_machine = new RecordObj_time_machine(null);
@@ -313,9 +313,11 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		// configure time machine object
 
 			// section_id
-				$RecordObj_time_machine->set_section_id( $this->get_section_id() );	// $save_options->time_machine_section_id
+				// $RecordObj_time_machine->set_section_id( $this->get_section_id() );	// $save_options->time_machine_section_id
+			$RecordObj_time_machine->set_section_id( $this->section_id );
 			// section_tipo
-				$RecordObj_time_machine->set_section_tipo( $this->get_section_tipo() );
+				// $RecordObj_time_machine->set_section_tipo( $this->get_section_tipo() );
+				$RecordObj_time_machine->set_section_tipo( $this->section_tipo );
 			// tipo
 				if (!empty($tipo)) {
 					$RecordObj_time_machine->set_tipo( $tipo );
