@@ -86,12 +86,14 @@
 
 					#
 					# COMPONENT PORTAL (calculate when in edit normally)				
-					$component 	 = component_common::get_instance('component_portal',
-																  $component_portal_tipo,
-																  $parent,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo);
+					$component = component_common::get_instance(
+						'component_portal',
+						$component_portal_tipo,
+						$parent,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 					$ar_locators = $component->get_dato();						
 				}
 				#dump($ar_locators, ' ar_locators ++ '.to_string());
@@ -136,16 +138,18 @@
 							
 							$duration_secs = $dato;
 							if($use_cache) $_SESSION['dedalo']['config']['av_duration'][$cache_key] = $duration_secs;
-							#debug_log(__METHOD__." GET DUTARION FROM DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
+							#debug_log(__METHOD__." GET DURATION FROM DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
 						
 						}else{													
 
-							$component_av = component_common::get_instance('component_av',
-																		   $component_av_tipo,
-																		   $current_locator->section_id,
-																		   'list',
-																		   DEDALO_DATA_NOLAN,
-																		   $current_locator->section_tipo);					
+							$component_av = component_common::get_instance(
+								'component_av',
+								$component_av_tipo,
+								$current_locator->section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$current_locator->section_tipo
+							);					
 							$video_path   = $component_av->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
 							if ( file_exists( $video_path) ) {
 
@@ -157,7 +161,7 @@
 									if($use_cache) $_SESSION['dedalo']['config']['av_duration'][$cache_key] = $duration_secs;
 								}							
 							}//end if (file_exists
-							#debug_log(__METHOD__." GET DUTARION FROM FILE MEDIA_ATTRIBUTES $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
+							#debug_log(__METHOD__." GET DURATION FROM FILE MEDIA_ATTRIBUTES $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
 						}//end if (empty($dato)) {
 					}					
 					

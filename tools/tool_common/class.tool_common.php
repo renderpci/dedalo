@@ -574,12 +574,14 @@ class tool_common {
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			if (method_exists($component, $method)) {
 
 				// call component

@@ -115,15 +115,16 @@
 				#
 				# PORTAL ROWS
 				$component_target_tipo = $current_component_tipo;
-						#dump($component_target_tipo, ' $component_target_tipo ++ '.to_string());		
 
 					$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
-					$component_portal = component_common::get_instance($modelo_name,
-																	   $current_component_tipo,
-																	   $parent,
-																	   $mode,
-																	   DEDALO_DATA_NOLAN,
-																	   $current_section_tipo);
+					$component_portal = component_common::get_instance(
+						$modelo_name,
+						$current_component_tipo,
+						$parent,
+						$mode,
+						DEDALO_DATA_NOLAN,
+						$current_section_tipo
+					);
 					$dato = $component_portal->get_dato();
 					# dump($dato, ' dato ++ '.to_string());
 					if (empty($dato)) {
@@ -140,12 +141,14 @@
 					$locator_section_id   = $first_locator->section_id;
 
 					$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($date_in_component_tipo,true); // Expected component date
-					$component_date_in= component_common::get_instance($modelo_name,
-																	   $date_in_component_tipo,
-																	   $locator_section_id,
-																	   $mode,
-																	   DEDALO_DATA_NOLAN,
-																	   $locator_section_tipo);
+					$component_date_in= component_common::get_instance(
+						$modelo_name,
+						$date_in_component_tipo,
+						$locator_section_id,
+						$mode,
+						DEDALO_DATA_NOLAN,
+						$locator_section_tipo
+					);
 					$date_in = (array)$component_date_in->get_dato();
 						#dump($date_in, ' date_in ++ in 1 - '.$date_in_component_tipo.' - '.to_string($locator_section_id));
 					$date_in = reset($date_in); # Now date is an array
@@ -168,12 +171,14 @@
 					$locator_section_id   = $last_locator->section_id;
 
 					$modelo_name 	    = RecordObj_dd::get_modelo_name_by_tipo($date_out_component_tipo,true); // Expected component date
-					$component_date_out = component_common::get_instance($modelo_name,
-																	     $date_out_component_tipo,
-																	     $locator_section_id,
-																	     $mode,
-																	     DEDALO_DATA_NOLAN,
-																	     $locator_section_tipo);
+					$component_date_out = component_common::get_instance(
+						$modelo_name,
+						$date_out_component_tipo,
+						$locator_section_id,
+						$mode,
+						DEDALO_DATA_NOLAN,
+						$locator_section_tipo
+					);
 					$date_out = (array)$component_date_out->get_dato();
 						#dump($date_out, ' date_out ++ out 2- '.$date_out_component_tipo.' - '.to_string($locator_section_id));
 					$date_out = reset($date_out); # Now date is an array
@@ -211,12 +216,14 @@
 
 					# Date in
 					$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($date_in_component_tipo,true); // Expected component date
-					$component_date_in= component_common::get_instance($modelo_name,
-																	   $date_in_component_tipo,
-																	   $locator_section_id,
-																	   $mode,
-																	   DEDALO_DATA_NOLAN,
-																	   $locator_section_tipo);
+					$component_date_in= component_common::get_instance(
+						$modelo_name,
+						$date_in_component_tipo,
+						$locator_section_id,
+						$mode,
+						DEDALO_DATA_NOLAN,
+						$locator_section_tipo
+					);
 					$date_in = (array)$component_date_in->get_dato();	
 					$date_in = reset($date_in);
 					# Compatible new date format 01-10-2018
@@ -229,12 +236,14 @@
 
 					# Date out
 					$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($date_out_component_tipo,true); // Expected component date
-					$component_date_out= component_common::get_instance($modelo_name,
-																	   $date_out_component_tipo,
-																	   $locator_section_id,
-																	   $mode,
-																	   DEDALO_DATA_NOLAN,
-																	   $locator_section_tipo);
+					$component_date_out= component_common::get_instance(
+						$modelo_name,
+						$date_out_component_tipo,
+						$locator_section_id,
+						$mode,
+						DEDALO_DATA_NOLAN,
+						$locator_section_tipo
+					);
 					$date_out = (array)$component_date_out->get_dato();
 					$date_out = reset($date_out);
 					# Compatible new date format 01-10-2018

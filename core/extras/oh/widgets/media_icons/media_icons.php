@@ -43,12 +43,14 @@
 
 					#
 					# COMPONENT PORTAL (calculate when in edit normally)				
-					$component 	 = component_common::get_instance('component_portal',
-																  $component_portal_tipo,
-																  $parent,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo);
+					$component 	 = component_common::get_instance(
+						'component_portal',
+						$component_portal_tipo,
+						$parent,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 					$ar_locators = $component->get_dato();						
 				}
 				#dump($ar_locators, ' ar_locators ++ '.to_string());
