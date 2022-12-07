@@ -34,7 +34,18 @@ describe("COMPONENTS ACTIVATE", async function() {
 			// TEST activation
 				it(`${element.model}. Activation`, async function() {
 
-					const instance = await get_instance_rendered(element)
+					const options = {
+						id_variant		: Math.random() + '-' + Math.random(),
+						lang			: element.lang,
+						model			: element.model,
+						section_id		: element.section_id,
+						section_tipo	: element.section_tipo,
+						tipo			: element.tipo,
+						mode			: 'edit',
+						view			: 'default'
+					}
+
+					const instance = await get_instance_rendered(options)
 
 					// pointer content_data
 					assert( instance.node, `wrapper DOES NOT exists`)
@@ -97,9 +108,9 @@ describe("COMPONENTS ACTIVATE", async function() {
 });
 
 
-async function get_instance_rendered(element) {
+async function get_instance_rendered(options) {
 
-	const component_instance =  await get_instance(element)
+	const component_instance =  await get_instance(options)
 	await component_instance.build(true)
 	await component_instance.render()
 	// console.log('node:', node);

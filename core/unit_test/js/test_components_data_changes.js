@@ -8,7 +8,7 @@ import {get_instance} from '../../common/js/instances.js'
 
 
 
-describe("COMPONENTS DATA CHANGES", function() {
+describe("COMPONENTS DATA CHANGES", async function() {
 
 	for (let i = 0; i < elements.length; i++) {
 
@@ -23,7 +23,7 @@ describe("COMPONENTS DATA CHANGES", function() {
 		const element = elements[i]
 			  element.mode = 'edit' // force edit mode
 
-		describe(element.model, function() {
+		describe(element.model, async function() {
 
 			let old_instance = null
 			let new_instance = null
@@ -34,9 +34,20 @@ describe("COMPONENTS DATA CHANGES", function() {
 			// TEST data save
 				it(`${element.model}. Data save using API`, async function() {
 
+					const options = {
+						id_variant		: Math.random() + '-' + Math.random(),
+						lang			: element.lang,
+						mode			: 'edit',
+						model			: element.model,
+						section_id		: element.section_id,
+						section_tipo	: element.section_tipo,
+						tipo			: element.tipo,
+						view			: element.view
+					}
+
 					// old_instance
 						// init and build instance
-							old_instance = await get_instance(element)
+							old_instance = await get_instance(options)
 							await old_instance.build(true)
 
 						// save
@@ -62,6 +73,8 @@ describe("COMPONENTS DATA CHANGES", function() {
 								if (api_returned_value && api_returned_value.hasOwnProperty('paginated_key')) {
 									delete api_returned_value.paginated_key
 								}
+								// console.log('new_value:', new_value);
+								// console.log('api_returned_value:', api_returned_value);
 
 							assert.deepEqual( new_value, api_returned_value,
 								`api_returned_value: Not equal values (new_value, api_returned_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(api_returned_value)}\n`
@@ -77,7 +90,7 @@ describe("COMPONENTS DATA CHANGES", function() {
 							)
 
 						// destroy instances
-							old_instance.destroy()
+							await old_instance.destroy()
 							old_instance = null
 							// console.log('--- old_instance:', old_instance);
 				});
@@ -87,8 +100,19 @@ describe("COMPONENTS DATA CHANGES", function() {
 				it(`${element.model}. Data read from API and compares with saved data`, data_read);
 				async function data_read() {
 					// new instance
+
+						const options = {
+							id_variant		: Math.random() + '-' + Math.random(),
+							lang			: element.lang,
+							mode			: 'edit',
+							model			: element.model,
+							section_id		: element.section_id,
+							section_tipo	: element.section_tipo,
+							tipo			: element.tipo,
+							view			: element.view
+						}
 						// init and build instance
-							new_instance = await get_instance(element)
+							new_instance = await get_instance(options)
 							await new_instance.build(true)
 						// read value from saved DDBB
 							const data			= new_instance.data || {}
@@ -103,9 +127,8 @@ describe("COMPONENTS DATA CHANGES", function() {
 							// console.log('+++ read_value:', read_value);
 							console.log('--- new_instance:', new_instance);
 
-
 						// destroy instances
-							new_instance.destroy()
+							await new_instance.destroy()
 
 					// datum check
 					assert.isOk( Array.isArray(new_instance.datum.context), `new_instance.datum.context is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.context)}, \n ${typeof new_instance.datum.context}\n` )
