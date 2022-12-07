@@ -231,7 +231,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* }
 	* @return int $time_machine_id
 	*/
-	protected function save_time_machine( object $save_options ) : int {
+	public function save_time_machine( object $save_options ) : int {
 
 		// options
 			$tipo						= $save_options->time_machine_tipo ?? null;
