@@ -94,6 +94,9 @@ tool_common.prototype.init = async function(options) {
 						// set and build caller
 							self.caller = await get_instance( caller_ddo )
 
+						// dataframe
+							self.caller_dataframe = caller_ddo.caller_dataframe ?? null
+
 						// set current tool as caller
 							self.caller.caller = self
 
@@ -792,6 +795,19 @@ const view_window = async function(options) {
 			mode				: caller.mode,
 			model				: caller.model,
 			lang				: caller.lang
+		}
+
+	// caller_dataframe . Used for dataframe
+
+		if (caller.context.is_dataframe ) {
+			if(caller.caller && caller.caller.model==='section_record'){
+				if(caller.caller.caller){
+					caller_ddo.caller_dataframe = {
+						section_tipo	: caller.caller.caller.section_tipo,
+						section_id		: caller.caller.caller.section_id
+					}
+				}
+			}
 		}
 
 	// URL
