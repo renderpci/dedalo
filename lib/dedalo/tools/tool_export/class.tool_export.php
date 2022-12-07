@@ -526,8 +526,8 @@ class tool_export extends tool_common {
 																	 false);
 
 					// section_list_custom
-						if ($modelo_name==='component_portal' && !empty($this->section_list_custom)) {
-							#dump($this->section_list_custom, ' section_list_custom ++ '.to_string());
+						if ( ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete') && !empty($this->section_list_custom)) {
+							// dump($this->section_list_custom, ' section_list_custom ++ '.to_string());
 							// like
 							//	{
 							//	   "oh24" : [

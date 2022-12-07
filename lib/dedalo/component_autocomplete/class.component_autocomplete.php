@@ -231,7 +231,7 @@ class component_autocomplete extends component_relation_common {
 			}, $ar_values);
 			$valor = implode($divisor, $ar_labels);
 		}
-		
+
 
 		return $valor;
 	}//end get valor
@@ -245,27 +245,28 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
+		// if (empty($valor)) {
+		// 	$dato = $this->get_dato();				// Get dato from DB
+		// }else{
+		// 	$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		// }
+
+		// $valor_export = $this->get_valor($lang);
+		// $valor_export = br2nl($valor_export);
+
+		// return $valor_export;
+
+
+		// REMOVED 14-10-2019 (Unified with component_relation_common using 'get_valor') (!)
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$valor_export = $this->get_valor($lang);
-		$valor_export = br2nl($valor_export);
+		$dato = $this->get_dato();
 
-		return $valor_export;
-
-
-		/* REMOVED 14-10-2019 (Unified with component_relation_common using 'get_valor') (!)
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-			$dato = $this->get_dato();
-		}
-
-		$propiedades = $this->get_propiedades();
+		// $propiedades = $this->get_propiedades();
 
 
 		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
@@ -290,13 +291,13 @@ class component_autocomplete extends component_relation_common {
 			$section_tipo 	= $value->section_tipo;
 			$section_id 	= $value->section_id;
 
-			if(isset($propiedades->source->search)){
-				foreach ($propiedades->source->search as $current_search) {
-					if($current_search->section_tipo === $section_tipo){
-						$ar_componets_related =  $current_search->components;
-					}
-				}
-			}
+			// if(isset($propiedades->source->search)){
+			// 	foreach ($propiedades->source->search as $current_search) {
+			// 		if($current_search->section_tipo === $section_tipo){
+			// 			$ar_componets_related =  $current_search->components;
+			// 		}
+			// 	}
+			// }
 
 			foreach ($fields as $current_tipo) {
 
@@ -327,7 +328,7 @@ class component_autocomplete extends component_relation_common {
 		$valor_export = $ar_resolved;
 
 
-		return $valor_export; */
+		return $valor_export;
 	}//end get_valor_export
 
 
@@ -945,10 +946,10 @@ class component_autocomplete extends component_relation_common {
 		// is_publicable from propiedades. case Bibliography 'rsc368'
 			$propiedades	= $this->get_propiedades();
 			$is_publicable	= (bool)(isset($propiedades->is_publicable) && $propiedades->is_publicable===true);
-		
+
 		$diffusion_value_clean = [];
 		foreach ($value as $item) {
-			
+
 			$locator_section_tipo	= $item->value->section_tipo;
 			$section_table			= common::get_matrix_table_from_tipo($locator_section_tipo);
 			$current_is_publicable	= ($section_table==='matrix_list' || $section_table==='matrix_hierarchy' || $section_table==='matrix_dd' || $is_publicable===true)
@@ -958,7 +959,7 @@ class component_autocomplete extends component_relation_common {
 			if (true===$current_is_publicable) {
 				$diffusion_value_clean[] = strip_tags($item->label,'<img>');
 				// $diffusion_value_clean[] = $item->label;
-			}			
+			}
 		}
 
 		$diffusion_value = implode(' | ', $diffusion_value_clean);
