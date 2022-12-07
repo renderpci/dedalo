@@ -21,7 +21,7 @@ export const view_default_list_filter_records = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
 * @return DOM node wrapper
 */
@@ -34,9 +34,9 @@ view_default_list_filter_records.render = async function(self, options) {
 		const value_string	= value.join(' | ')
 
 	// wrapper
-		// const wrapper = ui.component.build_wrapper_list(self, {
-		// 	value_string : value_string
-		// })
+		const wrapper = ui.component.build_wrapper_list(self, {
+			value_string : value_string
+		})
 		// wrapper.addEventListener('click', function(e){
 		// 	e.stopPropagation()
 
@@ -48,4 +48,4 @@ view_default_list_filter_records.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render

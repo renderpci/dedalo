@@ -156,7 +156,7 @@ class component_av extends component_media_common {
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
+			$this->get_dato();				// Get dato from DB
 		}else{
 			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
