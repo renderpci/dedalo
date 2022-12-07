@@ -629,6 +629,7 @@ final class dd_core_api {
 				$response->msg 	.= 'Model is not expected section: '.$model;
 				return $response;
 			}
+			$caller_dataframe 		= $ddo_source->caller_dataframe ?? null;
 
 		// permissions
 			$permissions = common::get_permissions($section_tipo, $section_tipo);
@@ -636,6 +637,29 @@ final class dd_core_api {
 			if ($permissions<2) {
 				$response->error = 2;
 				$response->msg 	.= 'Insufficient permissions: '.$permissions;
+				return $response;
+			}
+
+		// dataframe section case
+			if ($delete_mode==='delete_dataframe' && !empty($section_id)) {
+				$section 	= section::get_instance($section_id, $section_tipo);
+				$section->caller_dataframe = $caller_dataframe;
+				$deleted 	= $section->Delete($delete_mode);
+
+				if ($deleted!==true) {
+					$errors[] = (object)[
+						'section_tipo'	=> $section_tipo,
+						'section_id'	=> $section_id
+					];
+				}
+
+				$response->result		= [$section_id];
+				$response->error		= !empty($errors) ? $errors : null;
+				$response->delete_mode	= $delete_mode;
+				$response->msg			= !empty($errors)
+					? 'Some errors occurred when delete sections.'
+					: 'OK. Request done successfully.';
+
 				return $response;
 			}
 
@@ -669,7 +693,7 @@ final class dd_core_api {
 			// check empty records
 			if (empty($ar_records)) {
 				$response->result = [];
-				$response->msg 	.= 'no records found to delete ';
+				$response->msg 	.= 'No records found to delete ';
 				return $response;
 			}
 
@@ -801,6 +825,7 @@ final class dd_core_api {
 			$lang			= $source->lang;
 			$type			= $source->type; // the type of the dd_object that is calling to update like 'component'
 			$changed_data	= $data->changed_data ?? null;
+			$caller_dataframe			= $source->caller_dataframe ?? null;
 
 		// switch by the element context type (component, section)
 		switch ($type) {
@@ -825,6 +850,10 @@ final class dd_core_api {
 							$component->set_row_locator($data->row_locator);
 							$component->set_parent_section_tipo($data->parent_section_tipo);
 							$component->set_parent_section_id($data->parent_section_id);
+						}
+
+						if(isset($caller_dataframe)){
+							$component->set_caller_dataframe($caller_dataframe);
 						}
 
 				// permissions. Get the component permissions and check if the user can update the component
@@ -1472,6 +1501,7 @@ final class dd_core_api {
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo ?? null;
 			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
+			$caller_dataframe			= $ddo_source->caller_dataframe ?? null;
 
 		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values
 			$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo, $mode]) : 'undefined'; // cache key sqo_id
@@ -1736,6 +1766,10 @@ final class dd_core_api {
 											$pagination->offset	= $rqo->sqo->offset;
 
 										$element->pagination = $pagination;
+									}
+								// set caller_dataframe information
+									if(isset($caller_dataframe)){
+										$element->set_caller_dataframe($caller_dataframe);
 									}
 							}//end if ($section_id>=1)
 
