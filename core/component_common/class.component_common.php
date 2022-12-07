@@ -1137,7 +1137,7 @@ abstract class component_common extends common {
 	*
 	* @return array $ar_data
 	*/
-	public static function update_observer_dato(object $observer, object $locator, $observable_dato, string $observable_tipo) : array {
+	public static function update_observer_dato(object $observer, object $locator, ?array $observable_dato, string $observable_tipo) : array {
 
 		// create the observer component
 		$RecordObj_dd	= new RecordObj_dd($observer->component_tipo);
@@ -1208,7 +1208,9 @@ abstract class component_common extends common {
 		// get the dato of the observable component to be used to create the observer component
 		// in case of any relation component will be used to find "the component that I call" or "use my relations"
 		if(isset($current_observer->server->mode) && $current_observer->server->mode==='use_observable_dato') {
-			$ar_section = array_merge($ar_section, $observable_dato);
+			if (!empty($observable_dato)) {
+				$ar_section = array_merge($ar_section, $observable_dato);
+			}
 		}
 
 		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
