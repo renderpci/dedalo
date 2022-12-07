@@ -494,7 +494,6 @@ abstract class component_common extends common {
 
 		# properties is object or null
 		$properties = $this->get_properties();
-
 		if(isset($properties->dato_default)) {
 
 			# MATRIX DATA : Load matrix data
@@ -508,7 +507,13 @@ abstract class component_common extends common {
 				$this->set_dato($dato_default);
 
 				if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-					$this->id 	= $this->Save();
+					try{
+						$this->id = $this->Save();
+					} catch (Exception $e) {
+    					// echo 'Caught exception: ',  $e->getMessage(), "\n";
+    					debug_log(__METHOD__.PHP_EOL." ERROR on set_dato_default. Unable to save data. ".$e->getMessage().to_string(), logger::ERROR);
+    					return false;
+					}
 				}
 
 				# INFO LOG
@@ -2981,6 +2986,10 @@ abstract class component_common extends common {
 		}
 
 		$this->section_obj = section::get_instance($this->section_id, $this->section_tipo, $this->mode, true);
+		// caller_dataframe
+			if (isset($this->caller_dataframe)) {
+				$this->section_obj->caller_dataframe	= $this->caller_dataframe;
+			}
 
 
 		return $this->section_obj;
