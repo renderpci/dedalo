@@ -377,51 +377,100 @@ class component_portal extends component_relation_common {
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
-			case '4.8.0':
+			case '6.0.0':
 
-				if ($options->context==='update_component_dato') {
-					# Current component is already get and set dato with component_relation_common (in "relations")
-					# We need recover here the old dato from section->components->tipo->dato
-					# This context is different to time machine update dato
-					$section		= section::get_instance($options->section_id, $options->section_tipo);
-					$dato_unchanged	= $section->get_component_dato(
-						$options->tipo, // string $component_tipo
-						DEDALO_DATA_NOLAN, // string $lang
-						false // bool lang_fallback = false
-					);
-				}
-
-				# Compatibility old dedalo installations
+				# Update the locator to move old ds and dataframe to v6 dataframe model.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+					$recordObjdd	= new RecordObj_dd($options->tipo);
+					$properties		= $recordObjdd->get_properties();
+					$v6_update_dataframe = $properties->v6_update_dataframe ?? null;
 
-					$ar_locators = array();
+					$clean_locators		= [];
+					$new_dataframe		= [];
+					$need_to_be_updated	= false;
 					foreach ((array)$dato_unchanged as $key => $current_locator) {
-						$locator = new locator();
-							$locator->set_section_tipo($current_locator->section_tipo);
-							$locator->set_section_id($current_locator->section_id);
-							$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-							$locator->set_from_component_tipo($options->tipo);
-						$ar_locators[] = $locator;
+
+						if(isset($current_locator->ds) || isset($current_locator->dataframe)){
+							$need_to_be_updated = true;
+							if(empty($v6_update_dataframe)){
+								throw new Exception("The current component doesn't has defined v6_update_dataframe in preferences. tipo:".$options->tipo, 1);
+							}
+
+							// ds case
+							if(isset($current_locator->ds)){
+
+								$old_ds = $current_locator->ds;
+								foreach ($old_ds as $current_ds) {
+									// check if the ds has the correct from_component_tipo
+									if($current_ds->from_component_tipo === $v6_update_dataframe->v5->from_component_tipo){
+										// change to new from_component_tipo
+										$current_ds->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
+									}
+									$current_ds->section_id_key = (int)$current_locator->section_id;
+									$new_dataframe[] = $current_ds;
+								}
+								// delete old ds
+								unset($current_locator->ds);
+
+							}
+							// dataframe case
+							if(isset($current_locator->dataframe)){
+								$old_dataframe = $current_locator->dataframe;
+								foreach ($old_dataframe as $current_dataframe) {
+									// check if the ds has the correct from_component_tipo
+									if($current_dataframe->from_component_tipo === $v6_update_dataframe->v5->from_component_tipo){
+										// change to new from_component_tipo
+										$current_dataframe->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
+									}
+									if($current_dataframe->type === $v6_update_dataframe->v5->type){
+										$current_dataframe->type = $v6_update_dataframe->v6->type;
+									}
+									$current_dataframe->section_id_key = (int)$current_locator->section_id;
+									unset($current_dataframe->from_key);
+									$new_dataframe[] = $current_dataframe;
+								}
+								// delete old ds
+								unset($current_locator->dataframe);
+							}
+						}
+
+						$clean_locators[] = $current_locator;
 					}//end foreach ((array)$dato_unchanged as $key => $clocator)
 
-					$new_dato = (array)$ar_locators;
+					if($need_to_be_updated === true){
 
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$ar_locators = array_merge($clean_locators, $new_dataframe);
+						$new_dato = (array)$ar_locators;
+
+						$section_to_save = section::get_instance(
+							$options->section_id, // string|null section_id
+							$options->section_tipo, // string section_tipo
+							false
+						);
+						$section_to_save->remove_relations_from_component_tipo( $options->tipo , 'relations' );
+						foreach ($ar_locators as $dataframe_locator) {
+							$section_to_save->add_relation($dataframe_locator);
+						}
+
+						$section_to_save->Save();
+
+						$response = new stdClass();
+							$response->result	= 0;
+							$response->new_dato	= $new_dato;
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					}else{
+
+						$response = new stdClass();
+							$response->result	= 2;
+							$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					}// end if($need_to_be_updated === true)
 				}else{
 
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
-				break;
-
-			case '4.9.0':
-				# Remember DELETE ALL OLD COMPONENT DATO (inside section->components->tipo) !!!!!!!!!!!!!!!!
-				throw new Exception("Error Processing Request. Remember DELETE ALL OLD COMPONENT DATO (inside section->components->tipo)", 1);
-				# PENDING TO DO !!
+						$response = new stdClass();
+							$response->result	= 2;
+							$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}// end (!empty($dato_unchanged))
 				break;
 
 			default:

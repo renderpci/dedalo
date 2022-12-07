@@ -96,6 +96,7 @@ $updates->$v = new stdClass();
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
+			'component_portal',
 			'component_text_area',
 			'component_json',
 			'component_av',
