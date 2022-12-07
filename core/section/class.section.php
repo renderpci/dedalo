@@ -954,12 +954,8 @@ class section extends common {
 
 				// Store in cached sections . (!) Important
 					# key for cache
-					$key = $this->section_id .'_'. $tipo;
-					self::$ar_section_instances[$key] = $this;
-
-
-				// TOP_ID : Si se crea desde un portal, el top_id está fijado en sesion "TOP_ID". Si no, es el propio section_id de la sección creada
-					// $top_id = ($options->is_portal===true) ? TOP_ID : $this->section_id;
+					// $key = $this->section_id .'_'. $tipo;
+					// self::$ar_section_instances[$key] = $this;
 
 				// Logger activity
 					logger::$obj['activity']->log_message(
