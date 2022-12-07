@@ -185,7 +185,9 @@ class component_portal extends component_relation_common {
 			$section_new			= section::get_instance(null, $target_section_tipo);
 
 			$save_options = new stdClass();
-				$save_options->component_filter_dato = $component_filter_dato;
+				$save_options->caller_dato				= $this->get_dato();
+				$save_options->component_filter_dato	= $component_filter_dato;
+
 			$new_section_id = $section_new->Save( $save_options );
 
 			if($new_section_id<1) {
@@ -312,7 +314,15 @@ class component_portal extends component_relation_common {
 		}else{
 			// $section		= section::get_instance($section_id, $section_tipo);
 			$ar_search_model	= ['component_filter'];
-			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_search_model, true, true);
+			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section(
+				$section_tipo, // section_tipo
+				$ar_search_model,
+				true, // bool from_cache
+				true, // bool resolve_virtual
+				true, // bool recursive
+				true, // bool search_exact
+				false // array|bool ar_tipo_exclude_elements
+			);
 
 			if (empty($ar_children_tipo[0])) {
 				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
@@ -332,6 +342,7 @@ class component_portal extends component_relation_common {
 				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
 			}
 		}
+
 
 		return $component_filter_dato;
 	}//end get_current_section_filter_data

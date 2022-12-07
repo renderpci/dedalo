@@ -419,6 +419,7 @@ export const render_column_remove = function(options) {
 					}
 					delete_linked_record()
 					unlink_record()
+					delete_dataframe_record()
 				})
 
 			// button_unlink_record
@@ -434,6 +435,7 @@ export const render_column_remove = function(options) {
 						return
 					}
 					unlink_record()
+					delete_dataframe_record()
 				})
 
 			const unlink_record = function() {
@@ -479,7 +481,7 @@ export const render_column_remove = function(options) {
 					// event to update the DOM elements of the instance
 						event_manager.publish('remove_element_'+self.id, row_key)
 
-					// modal. Close modal if isset
+					// modal. Close modal if it's set
 						modal.on_close()
 				})
 			}
@@ -519,6 +521,46 @@ export const render_column_remove = function(options) {
 				.then(function(){
 					modal.on_close()
 				})
+			}
+
+			const delete_dataframe_record = async function() {
+				// check if the show has any ddo that call to any dataframe section.
+				const ddo_dataframe = self.rqo_config.show.ddo_map.find(el => el.is_dataframe === true)
+
+				if(!ddo_dataframe){
+					return
+				}
+				// create the instance of the section called by the row of the portal,
+				// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+					const instance_options = {
+						model			: 'section',
+						tipo			: ddo_dataframe.section_tipo,
+						section_tipo	: ddo_dataframe.section_tipo,
+						section_id		: section_id,
+						mode			: 'list',
+						lang			: self.lang,
+						caller			: self,
+						inspector		: false,
+						filter			: false
+					}
+				// get the instance
+					const section =	await get_instance(instance_options)
+
+				// caller_dataframe
+					const caller_dataframe = (self.caller && self.caller.model==='section_record' && self.caller.caller)
+						? {
+							section_tipo	: self.caller.caller.section_tipo,
+							section_id		: self.caller.caller.section_id
+						  }
+						: null
+
+				// call to the section and delete it
+					section.delete_section({
+						delete_mode			: 'delete_dataframe',
+						caller_dataframe	: caller_dataframe
+					})
+
+
 			}
 
 			// modal
