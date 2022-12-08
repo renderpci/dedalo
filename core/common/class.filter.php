@@ -70,52 +70,61 @@ abstract class filter {
 	* GET_USER_PROJECTS
 	* Return all user active projects from user section data (component_filter_master)
 	* @param int $user_id
-	* @return array|null $dato
+	* @return array $user_projects
 	*/
-	public static function get_user_projects(int $user_id) : ?array {
+	public static function get_user_projects(int $user_id) : array {
 
-		// cache
-			if (isset(filter::$user_projects_cache[$user_id])) {
-				return filter::$user_projects_cache[$user_id];
+		// check user_id
+			if (empty($user_id)) {
+				debug_log(__METHOD__." Invalid user id ".to_string(), logger::ERROR);
+				throw new Exception("Error Processing Request. Invalid user id", 1);
 			}
 
-		$final_data = null;
-		if ( !empty($user_id) || abs($user_id)>0 ) {
-			$component_filter_master = component_common::get_instance(
-				'component_filter_master',
-				DEDALO_FILTER_MASTER_TIPO,
-				$user_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				DEDALO_SECTION_USERS_TIPO
-			);
-			$final_data = (array)$component_filter_master->get_dato();
+		$user_projects = [];
+		if ( abs($user_id)>0 ) {
 
-			foreach ($final_data as $current_locator) {
+			// cache
+				if (isset(filter::$user_projects_cache[$user_id])) {
+					return filter::$user_projects_cache[$user_id];
+				}
 
-				$children_data = component_relation_children::get_children(
-					$current_locator->section_id,
-					$current_locator->section_tipo,
-					DEDALO_PROJECTS_CHILDREN_TIPO,
-					$recursive=true,
-					$is_recursion=false
+			// filter_master
+				$component_filter_master = component_common::get_instance(
+					'component_filter_master',
+					DEDALO_FILTER_MASTER_TIPO,
+					$user_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					DEDALO_SECTION_USERS_TIPO
 				);
+				$user_projects = $component_filter_master->get_dato();
 
-				foreach ($children_data as $child_locator) {
-					$found = locator::in_array_locator($child_locator, $final_data, ['section_tipo','section_id']);
+			// children
+				foreach ($user_projects as $current_locator) {
 
-					if(!$found){
-						$final_data[] = $child_locator;
+					$children_data = component_relation_children::get_children(
+						$current_locator->section_id,
+						$current_locator->section_tipo,
+						DEDALO_PROJECTS_CHILDREN_TIPO,
+						true, // bool recursive
+						false // bool is_recursion
+					);
+
+					foreach ($children_data as $child_locator) {
+						// add if not already added
+						$found = locator::in_array_locator($child_locator, $user_projects, ['section_tipo','section_id']);
+						if(!$found){
+							$user_projects[] = $child_locator;
+						}
 					}
 				}
 
-			}
+			// cache
+				filter::$user_projects_cache[$user_id] = $user_projects;
 		}
-		// cache
-			filter::$user_projects_cache[$user_id] = $final_data;
 
 
-		return $final_data;
+		return $user_projects;
 	}//end get_user_projects
 
 
@@ -132,10 +141,13 @@ abstract class filter {
 		$start_time = start_time();
 
 		// cache
-			$cache_key = $user_id .'_'. $from_component_tipo;
-			if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
-				// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
-				return filter::$user_authorized_projects_cache[$cache_key];
+			$cache_key = 'user_authorized_projects_'.$user_id .'_'. $from_component_tipo;
+			// if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+			// 	// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
+			// 	return filter::$user_authorized_projects_cache[$cache_key];
+			// }
+			if (isset($_SESSION['dedalo']['config'][$cache_key])) {
+				return $_SESSION['dedalo']['config'][$cache_key];
 			}
 
 		// projects_section_tipo
@@ -231,14 +243,16 @@ abstract class filter {
 
 				$element = new stdClass();
 					$element->label		= reset($label);
-					$element->locator	= $current_locator;
+					$element->locator	= json_decode( json_encode($current_locator) ); // converted to std class to allow session cache
 					$element->parent	= $parent;
 
 				$ar_projects[] = $element;
 			}//end foreach ($dato as $current_locator)
 
 		// cache
-			filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+			// filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+			$_SESSION['dedalo']['config'][$cache_key]			= $ar_projects;
+
 
 		// debug
 			if(SHOW_DEBUG===true) {
