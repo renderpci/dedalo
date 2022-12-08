@@ -847,7 +847,7 @@ class component_filter extends component_relation_common {
 					if (isset($properties->stats_look_at)) {
 						$c_tipo 		= reset($properties->stats_look_at);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
-						$component 		= component_common::get_instance( 
+						$component 		= component_common::get_instance(
 							$modelo_name,
 							$c_tipo,
 							$locator->section_id,

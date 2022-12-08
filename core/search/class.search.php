@@ -1295,7 +1295,7 @@ class search {
 						$component_filter_tipo = $ar_component_filter[0];
 					}
 
-					$ar_projects = (array)filter::get_user_projects($user_id);
+					$ar_projects = filter::get_user_projects($user_id); // return array of locators
 					if (empty($ar_projects)) {
 						$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.'#>>\'{components}\' = \'VALOR_IMPOSIBLE (User without projects)\' ';
 					}else{
@@ -1304,7 +1304,7 @@ class search {
 						# Filter by any of user projects
 						$ar_query 		= [];
 						$ar_filter_join = [];
-						foreach ($ar_projects as $key => $current_project_locator) {
+						foreach ($ar_projects as $current_project_locator) {
 							$search_locator = new locator();
 								$search_locator->set_section_tipo($current_project_locator->section_tipo);
 								$search_locator->set_section_id($current_project_locator->section_id);

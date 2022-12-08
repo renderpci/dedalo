@@ -219,6 +219,7 @@ const get_content_data = function(self) {
 				parent			: buttons_bottom_container
 			})
 			data_link.addEventListener('click', (e)=>{
+				e.stopPropagation()
 				e.preventDefault()
 
 				// read from Dédalo API
@@ -238,7 +239,7 @@ const get_content_data = function(self) {
 						}
 
 					// open window
-						const target_window	= window.open('', 'raw_data', '');
+						const target_window	= window.open('', '_blank', '');
 
 					// raw_data_node
 						const data_string = JSON.stringify(api_response.result, null, 2)
@@ -251,6 +252,7 @@ const get_content_data = function(self) {
 						const body = target_window.document.body
 						if (body) {
 							body.appendChild(raw_data_node)
+							target_window.document.title = 'View record data ' + self.caller.section_id
 						}
 				})
 			})//end data_link.addEventListener("click"
