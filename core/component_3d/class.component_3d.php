@@ -143,7 +143,7 @@ class component_3d extends component_media_common {
 	*/
 	public function get_valor() : ?string {
 
-		return $this->get_id();
+		return $this->get_name();
 	}//end get_valor
 
 
@@ -177,13 +177,13 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* GET_ID
+	* GET_NAME
 	* Alias of get_video_id
 	*/
-	public function get_id() : ?string {
+	public function get_name() : ?string {
 
 		return $this->get_video_id();
-	}//end get_id
+	}//end get_name
 
 
 
@@ -335,7 +335,7 @@ class component_3d extends component_media_common {
 	*/
 	public function get_posterframe_file_name() : string {
 
-		$posterframe_file_name = $this->get_id() .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		$posterframe_file_name = $this->get_name() .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
 
 		return $posterframe_file_name;
 	}//end get_posterframe_file_name
@@ -912,7 +912,7 @@ class component_3d extends component_media_common {
 	* Used to move zip files like compressed dvd
 	* @return object $response
 	*/
-	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_id) : object {
+	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -926,15 +926,15 @@ class component_3d extends component_media_common {
 		}
 
 		// Create the directories
-		if( !is_dir($folder_path.'/'.$file_id) ) {
+		if( !is_dir($folder_path.'/'.$file_name) ) {
 			$ar_folders = [
-				$folder_path .'/'. $file_id,
-				$folder_path .'/'. $file_id . '/VIDEO_TS/',
-				$folder_path .'/'. $file_id . '/AUDIO_TS/'
+				$folder_path .'/'. $file_name,
+				$folder_path .'/'. $file_name . '/VIDEO_TS/',
+				$folder_path .'/'. $file_name . '/AUDIO_TS/'
 			];
 			foreach ($ar_folders as $current_folder) {
 				if(!mkdir($current_folder, 0777)) {
-					$response->msg .= "Error on read or create directory for \"$file_id\" folder. Permission denied ! ($current_folder)";
+					$response->msg .= "Error on read or create directory for \"$file_name\" folder. Permission denied ! ($current_folder)";
 					return $response;
 				}
 			}
@@ -954,7 +954,7 @@ class component_3d extends component_media_common {
 				}
 				# Copy al files of the VIDEO_TS zip file into the VIDEO_TS destination file
 				$src 	= $tmp_name.'#'.$current_filename;
-				$target = $folder_path.'/'.$file_id.'/VIDEO_TS/'.$current_fileinfo['basename'];
+				$target = $folder_path.'/'.$file_name.'/VIDEO_TS/'.$current_fileinfo['basename'];
 				if(!copy('zip://'.$src, $target)) {
 					$response->msg .= "Error on copy zip file: $src";
 					return $response;
@@ -968,7 +968,7 @@ class component_3d extends component_media_common {
 				}
 				// Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file
 				$src 	= $tmp_name.'#'.$current_filename;
-				$target = $folder_path.'/'.$file_id.'/AUDIO_TS/'.$current_fileinfo['basename'];
+				$target = $folder_path.'/'.$file_name.'/AUDIO_TS/'.$current_fileinfo['basename'];
 				if(!copy('zip://'.$src, $target)) {
 					$response->msg .= "Error on copy zip file: $src";
 					return $response;
@@ -1386,7 +1386,7 @@ class component_3d extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// short vars
-			$video_id		= $this->get_id();
+			$video_id		= $this->get_name();
 			$source_quality	= $this->get_source_quality_to_build($quality);
 
 		// AVObj
@@ -1490,7 +1490,7 @@ class component_3d extends component_media_common {
 	*/
 	public function create_posterframe($current_time, $target_quality=null, $ar_target=null) {
 
-		$reelID		= $this->get_id();
+		$reelID		= $this->get_name();
 		$quality	= $target_quality ?? $this->get_quality_default();
 
 		# AVObj
@@ -1512,7 +1512,7 @@ class component_3d extends component_media_common {
 	*/
 	public function delete_posterframe() : bool {
 
-		$name	= $this->get_id();
+		$name	= $this->get_name();
 		$file	= DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER . '/posterframe/' . $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 
 		// check file already exists
@@ -1603,7 +1603,7 @@ class component_3d extends component_media_common {
 						);
 
 					// get existing files data
-						$file_id			= $component->get_id();
+						$file_name			= $component->get_name();
 						$source_quality		= $component->get_original_quality();
 						$additional_path	= $component->get_additional_path();
 						$initial_media_path	= $component->get_initial_media_path();
@@ -1612,14 +1612,14 @@ class component_3d extends component_media_common {
 						) ?? $component->get_extension();
 
 						$base_path	= DEDALO_3D_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
-						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_id . '.' . $original_extension;
+						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
 
 						// no original file found. Use default quality file
 							if(!file_exists($file)) {
 								// use default quality as original
 								$source_quality	= $component->get_default_quality();
 								$base_path		= DEDALO_3D_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
-								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_id . '.' . $component->get_extension();
+								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $component->get_extension();
 							}
 							// try again
 							if(!file_exists($file)) {
