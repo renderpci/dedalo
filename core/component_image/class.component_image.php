@@ -200,7 +200,7 @@ class component_image extends component_media_common {
 		// current_url. get from dato
 			$dato = $this->get_dato();
 			if(isset($dato)){
-				$image_quality = ($this->modo==='edit')
+				$image_quality = ($this->mode==='edit')
 					? DEDALO_IMAGE_QUALITY_DEFAULT
 					: DEDALO_IMAGE_THUMB_DEFAULT;
 
