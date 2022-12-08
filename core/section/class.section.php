@@ -762,7 +762,7 @@ class section extends common {
 					$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix(
 						'dataframe', // fake table
 						(int)$this->section_id,
-						$tipo
+						$tipo // string section_tipo
 					);
 					$JSON_RecordObj_matrix->save_time_machine($options);
 
@@ -770,7 +770,7 @@ class section extends common {
 			}
 
 		// matrix table
-			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtal section don't have table defined
+			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtual section don't have table defined
 
 
 		if (!empty($this->section_id) && (int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
