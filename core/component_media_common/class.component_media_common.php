@@ -450,7 +450,8 @@ class component_media_common extends component_common {
 				'quality'		=> $el->quality,
 				'file_exist'	=> $el->file_exist,
 				'file_url'		=> $el->file_url,
-				'file_size'		=> $el->file_size
+				'file_size'		=> $el->file_size,
+				'external'		=> $el->external ?? false
 			];
 
 			return $item;
@@ -660,6 +661,25 @@ class component_media_common extends component_common {
 	* @return object $dato_item
 	*/
 	public function get_quality_file_info( string $quality ) : object {
+
+		// external source (link to image outside Dédalo media)
+			$external_source = $this->get_external_source();
+			if(!empty($external_source)){
+
+				$dato_item = (object)[
+					'quality'		=> $quality,
+					'file_exist'	=> true,
+					'file_name'		=> null,
+					'file_path'		=> null,
+					'file_url'		=> $external_source,
+					'file_size'		=> null,
+					'file_time'		=> null,
+					'external'		=> true
+				];
+				return $dato_item;
+
+			}
+
 
 		// file path
 			$file_path = $this->get_path($quality);
