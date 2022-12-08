@@ -1964,4 +1964,171 @@ class component_image extends component_media_common {
 
 
 
+	/**
+	* get_media_path
+	*
+	* @param string $quality
+	* @return string $media_path
+	*/
+	public function get_media_path(string $quality) : string {
+
+		if($this->external_source){
+			$external_parts = pathinfo($this->external_source);
+			$media_path		= $external_parts['dirname'];
+
+		}else{
+
+			$media_path = DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $quality . $this->additional_path;
+		}
+
+		return $media_path;
+	}//end get_media_path
+
+
+
+
+	public function get_media_path_abs(string $quality) : string {
+		if($this->external_source){
+			$external_parts = pathinfo($this->external_source);
+			$media_path = $external_parts['dirname'];
+			return $media_path;
+		}else{
+			return DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path . '/' . $quality . $this->additional_path;
+		}
+	}//end get_media_path_abs
+
+
+
+
+	/**
+	* GET_IMAGE_DIMENSIONS
+	* @return array|false
+	*/
+	public function get_image_dimensions(string $quality) : array|false {
+
+		if($this->external_source){
+
+			$filename 		= $this->external_source;
+
+		}else{
+
+			$image_id 		= $this->image_id;
+			$media_path_abs = $this->get_media_path_abs($quality);
+			$filename 		= $media_path_abs .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+		}
+
+		if ( !file_exists( $filename )) {
+			debug_log(__METHOD__." Error. Image file not found ".to_string($filename), logger::ERROR);
+			return false ;
+		}
+
+		try {
+			$ar_info = @getimagesize($filename);
+			if(!$ar_info) {
+				debug_log(__METHOD__." Error. Image getimagesize error 1 ".to_string($filename), logger::ERROR);
+				throw new Exception('Unknown image width!');
+			}
+
+			$width	= $ar_info[0];
+			$height = $ar_info[1];
+			$type	= $ar_info[2];
+
+			return $ar_info;
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__." Error. Image getimagesize error 2 ".to_string($filename), logger::ERROR);
+		}
+
+		return false;
+	}//end get_image_dimensions
+
+
+
+
+	/**
+	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
+	* @return array|null $result
+	*/
+	public static function get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality) : ?array {
+
+		// check valid pixels
+			if((int)$source_pixels_width===0 || (int)$source_pixels_height===0) {
+				debug_log(__METHOD__." Invalid pixes received. source_pixels_width: '$source_pixels_width' , source_pixels_height: '$source_pixels_height' , target_quality: '$target_quality'  ".to_string(), logger::ERROR);
+				return null;
+			}
+
+		// thumbs. To generate thumbs, the measurements are fixed
+			if($target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
+				# Default 102x57
+				$result = [
+					DEDALO_IMAGE_THUMB_WIDTH,
+					DEDALO_IMAGE_THUMB_HEIGHT
+				];
+
+		// others. Calculated
+			}else{
+
+				// ratio
+					$source_ratio = (int)$source_pixels_width / (int)$source_pixels_height;
+				// target megabytes
+					$target_megabytes = component_image::convert_quality_to_megabytes($target_quality) * 350000;
+				// height
+					$height = $target_megabytes / $source_ratio;
+					$height = intval(sqrt($height));
+				// width
+					$width = round($height * $source_ratio);
+
+				$result = [
+					$width,
+					$height
+				];
+			}
+
+
+		return $result;
+	}//end get_target_pixels_to_quality_conversion
+
+
+
+
+	/**
+	* PIXEL_TO_CENTIMETERS
+	* @param $quality - dir source of image
+	* @param $dpi - resolution to convert E.g.: 72dpi or 300dpi
+	* Use:
+	*	$image = "/User/Dedalo/images/0.jpg";
+	*	$dpi = 300;
+	*	$result = px2cm($image, $dpi);
+	*/
+	public function pixel_to_centimeters(string $quality, int $dpi=DEDALO_IMAGE_PRINT_DPI) : array {
+
+		$image_path = $this->get_local_full_path($quality);
+
+		$size = getimagesize($image_path);
+		$x = $size[0];
+		$y = $size[1];
+
+		#Convert to centimeter
+		$h = $x * 2.54 / $dpi;
+		$l = $y * 2.54 / $dpi;
+
+		#Format a number with grouped thousands
+		$h = number_format($h, 2, ',', ' ');
+		$l = number_format($l, 2, ',', ' ');
+
+		$px2cm = [];
+
+		#add size unit
+		$px2cm[] = $h."cm";
+		$px2cm[] = $l."cm";
+
+		#return array w values
+		#$px2cm[0] = X
+		#$px2cm[1] = Y
+
+		return $px2cm;
+	}//end pixel_to_centimeters
+
+
+
 }//end class component_image
