@@ -269,14 +269,13 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_ID
+	* GET_NAME
 	* Alias of get_image_id
 	*/
-	public function get_id() : ?string {
+	public function get_name() : ?string {
 
 		return $this->get_image_id();
-	}//end get_id
-
+	}//end get_name
 
 
 	/**
@@ -759,7 +758,7 @@ class component_image extends component_media_common {
 	public function generate_default_quality_file(bool $overwrite=true) : bool {
 
 		// short vars
-			$image_id			= $this->get_id();
+			$image_id			= $this->get_name();
 			$additional_path	= $this->get_additional_path();
 			$initial_media_path	= $this->get_initial_media_path();
 
@@ -1136,7 +1135,7 @@ class component_image extends component_media_common {
 					}
 
 				// move/rename file
-					$image_name			= $this->get_id();
+					$image_name			= $this->get_name();
 					$media_path_moved	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . $this->get_extension();
 					if( !rename($media_path, $media_path_moved) ) {
 						trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
@@ -1792,7 +1791,7 @@ class component_image extends component_media_common {
 						);
 
 					// get existing files data
-						$file_id			= $component->get_id();
+						$file_id			= $component->get_name();
 						$source_quality		= $component->get_original_quality();
 						$additional_path	= $component->get_additional_path();
 						$initial_media_path	= $component->get_initial_media_path();
@@ -2024,7 +2023,7 @@ class component_image extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// short vars
-			$image_id		= $this->get_id();
+			$image_id		= $this->get_name();
 			$source_quality	= $this->get_source_quality_to_build($quality);
 			$target_quality = $quality;
 
