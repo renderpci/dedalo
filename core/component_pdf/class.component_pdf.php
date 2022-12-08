@@ -196,15 +196,14 @@ class component_pdf extends component_media_common {
 	}//end get_valor
 
 
-
 	/**
-	* GET_ID
+	* GET_NAME
 	* Alias of get_pdf_id
 	*/
-	public function get_id() : ?string {
+	public function get_name() : ?string {
 
 		return $this->get_pdf_id();
-	}//end get_id
+	}//end get_name
 
 
 
@@ -1113,7 +1112,7 @@ class component_pdf extends component_media_common {
 						);
 
 					// get existing files data
-						$file_id			= $component->get_id();
+						$file_name			= $component->get_name();
 						$source_quality		= $component->get_original_quality();
 						$additional_path	= $component->get_additional_path();
 						$initial_media_path	= $component->get_initial_media_path();
@@ -1122,14 +1121,14 @@ class component_pdf extends component_media_common {
 						) ?? $component->get_extension(); // 'pdf' fallback is expected
 
 						$base_path	= DEDALO_PDF_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
-						$file		= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_id . '.' . $original_extension;
+						$file		= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_name . '.' . $original_extension;
 
 						// no original file found. Use default quality file
 							if(!file_exists($file)) {
 								// use default quality as original
 								$source_quality	= $component->get_default_quality();
 								$base_path		= DEDALO_PDF_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
-								$file			= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_id . '.' . $component->get_extension();
+								$file			= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_name . '.' . $component->get_extension();
 							}
 							// try again
 							if(!file_exists($file)) {
