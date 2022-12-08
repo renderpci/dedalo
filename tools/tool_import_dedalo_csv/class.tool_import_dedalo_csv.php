@@ -501,14 +501,14 @@ class tool_import_dedalo_csv extends tool_common {
 
 				// component
 					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-					$modo			= 'list';
+					$mode			= 'list';
 					$RecordObj_dd	= new RecordObj_dd($component_tipo);
 					$traducible		= $RecordObj_dd->get_traducible()==='si' ? true : false;
 					$lang			= $traducible===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 					$component		= component_common::get_instance( $modelo_name,
 																	  $component_tipo,
 																	  $section_id,
-																	  $modo,
+																	  $mode,
 																	  $lang,
 																	  $section_tipo,
 																	  false);

@@ -18,10 +18,10 @@ class tool_import_rdf extends tool_common {
 	/**
 	* __CONSTRUCT
 	*/
-		// public function __construct(string $section_tipo, string $modo='button') {
+		// public function __construct(string $section_tipo, string $mode='button') {
 
-		// 	# Fix modo
-		// 	$this->modo = $modo;
+		// 	# Fix mode
+		// 	$this->mode = $mode;
 
 		// 	// fix section tipo. (!) To unify tools vars, param section_tipo could be a full section object in some cases
 		// 	$this->section_tipo = (is_object($section_tipo))

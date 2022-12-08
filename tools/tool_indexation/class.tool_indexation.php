@@ -20,15 +20,15 @@ class tool_indexation extends tool_common {
 	/**
 	* __CONSTRUCT
 	*/
-		// public function __construct($component_obj, $modo='button') {
+		// public function __construct($component_obj, $mode='button') {
 
-		// 	// Fix modo
-		// 	$this->modo = $modo;
+		// 	// Fix mode
+		// 	$this->mode = $mode;
 
 		// 	// To unify the access, the component will be copied to $this->component_obj
 		// 	$this->component_obj 	= $component_obj;
 
-		// 	// Fix component and set modo
+		// 	// Fix component and set mode
 		// 	$this->source_component = $component_obj;
 		// 	$this->source_component->set_modo('tool_indexation');
 		// 	#$this->source_component->set_variant( tool_indexation::$source_variant );

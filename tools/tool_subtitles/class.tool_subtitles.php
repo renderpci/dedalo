@@ -19,10 +19,10 @@ class tool_subtitles extends tool_common {
 	/**
 	* __CONSTRUCT
 	*/
-		// public function __construct($component_obj, $modo='button') {
+		// public function __construct($component_obj, $mode='button') {
 
-		// 	# Fix modo
-		// 	$this->modo = $modo;
+		// 	# Fix mode
+		// 	$this->mode = $mode;
 
 		// 	# Fix current media component
 		// 	$this->component_obj = $component_obj;
