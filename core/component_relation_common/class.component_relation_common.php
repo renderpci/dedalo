@@ -44,7 +44,7 @@ class component_relation_common extends component_common {
 	* __CONSTRUCT
 	* @param string $tipo = null
 	* @param string|null $parent = null
-	* @param string $modo = 'list'
+	* @param string $mode = 'list'
 	* @param string $lang = null
 	* @param string $section_tipo = null
 	*
