@@ -31,7 +31,7 @@ abstract class component_common extends common {
 
 		// structure data
 		// public $RecordObj_dd;			// obj ts
-		protected $model;					// fixed on common->load_structure_data
+		// protected $model;					// fixed on common->load_structure_data
 		protected $norden;
 		protected $label;					// component label in current lang like 'Transcription'
 
@@ -1455,10 +1455,10 @@ abstract class component_common extends common {
 
 			$current_component_name	= get_class($this);
 			$component_obj			= component_common::get_instance(
-				$current_component_name, 
-				$tipo, $section_id, 
-				'edit', 
-				DEDALO_DATA_LANG_DEFAULT, 
+				$current_component_name,
+				$tipo, $section_id,
+				'edit',
+				DEDALO_DATA_LANG_DEFAULT,
 				$section_tipo
 			);
 			$dato = $component_obj->get_dato();
@@ -1963,9 +1963,9 @@ abstract class component_common extends common {
 			}else{
 
 				$current_component = component_common::get_instance(
-					$caller_component, 
-					$tipo, 
-					null, 
+					$caller_component,
+					$tipo,
+					null,
 					'stats'
 				);
 				$current_component->set_dato($current_dato);

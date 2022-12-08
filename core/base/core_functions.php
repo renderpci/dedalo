@@ -2086,3 +2086,20 @@ function beautify_filename(string $filename) : string {
 
 
 
+/**
+* CALLBACK
+* Execute a function as callback
+* Sample of use:
+* 	$obj = new stdClass();
+*	$obj->callback = function() {
+*	    print "Hello World!";
+*	};
+*	$obj->callback->__invoke() ||  ($obj->callback)();
+* @param callable $fn
+* @return mixed
+*/
+function callback( callable $fn ) {
+
+	// $fn->__invoke();
+	return ($fn)();
+}//end callback

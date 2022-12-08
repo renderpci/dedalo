@@ -7,9 +7,16 @@
 class menu extends common {
 
 
-
-	protected $tipo = 'dd85';
-	// protected $RecordObj_dd;
+	// id
+	protected $id;
+	// tipo. Default : 'dd85'
+	protected $tipo;
+	// lang
+	protected $lang;
+	// mode
+	protected $mode;
+	// section_tipo
+	protected $section_tipo;
 
 
 
@@ -18,10 +25,8 @@ class menu extends common {
 	*/
 	public function __construct(string $mode='edit') {
 
-		$id					= null;
-		$tipo				= $this->tipo;
-		$this->id			= $id;
-		$this->tipo			= $tipo;
+		$this->id			= null;
+		$this->tipo			= 'dd85'; // string class menu (dd85)
 		$this->lang			= DEDALO_DATA_LANG;
 		$this->mode			= $mode;
 		$this->section_tipo	= 'dd1';
@@ -71,27 +76,6 @@ class menu extends common {
 					$ar_areas[] = $area_item;
 				}
 			}
-
-			// DES
-				// foreach ($ar_permisions_areas as $item) {
-				// $ar_permisions_areas_length = sizeof($ar_permisions_areas);
-				// for ($i=0; $i < $ar_permisions_areas_length ; $i++) {
-				// 	$item		= $ar_permisions_areas[$i];
-				// 	$ar_areas[]	= ontology::tipo_to_json_item($item->tipo, [
-				// 		'tipo'			=> true,
-				// 		'tld'			=> false,
-				// 		'is_model'		=> false,
-				// 		'model'			=> true,
-				// 		'model_tipo'	=> false,
-				// 		'parent'		=> true,
-				// 		'order'			=> false,
-				// 		'translatable'	=> false,
-				// 		'properties'	=> true,
-				// 		'relations'		=> false,
-				// 		'descriptors'	=> false,
-				// 		'label'			=> true
-				// 	]);
-				// }
 		}
 
 		// section_tool case
@@ -153,6 +137,7 @@ class menu extends common {
 				__METHOD__.' Resolved get_tree_datalist (total: '.count($tree_datalist).') in  '.exec_time_unit($start_time,'ms').' ms',
 				logger::DEBUG
 			);
+
 
 		return $tree_datalist;
 	}//end get_tree_datalist

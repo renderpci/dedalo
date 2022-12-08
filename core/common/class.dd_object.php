@@ -8,59 +8,94 @@ class dd_object {
 
 
 
-	// Format
-		# typo				: "ddo"  (ddo | sqo)
-		# type				: "component"  (section | component | grouper | button | tool ..)
-		# tipo				: 'oh14',
-		# section_tipo		: 'oh1',
-		# parent			: 'oh2', // caller section / portal  tipo
-		# parent_grouper	: 'oh7', // structure parent
-		# lang				: 'lg-eng',
-		# mode				: "list",
-		# model				: 'component_input_text',
-		# properties		: {}
-		# permissions		: 1
-		# label				: 'Title'
-		# labels			: ['Title']
-		# translatable		: true
-		# tools				: [] // array of tools dd_objects (context)
-		# buttons			: [] // array of buttons dd_objects (context)
-		# css				: {}
-		# target_sections	: [{'tipo':'dd125','label':'Projects']
-		# request_config	: [],
-		# ar_sections_tipo	: ['oh1']
-		# columns_map		: array
-		# view				: string|null like 'table'
-		# children_view		: string like "text"
-		# fixed_mode		: string like 'edit'
-		# section_id		: int like 1 // Used by tools
-		# name				: string like 'tool_lang' // Used by tools
-		# description		: string like 'Description of tool x' // Used by tools
-		# icon				: string like '/tools/tool_lang/img/icon.svg' // Used by tools
-		# show_in_inspector	: bool // Used by tools
-		# show_in_component	: bool // Used by tools
-		# config			: object // Used by tools
-		# sortable			: bool // Used by components (columns)
-		# fields_separator	: string like ", " // used by portal to join different fields
-		# records_separator	: string like " | " // used by portal to join different records (rows)
+	// properties
+		// typo					: "ddo"  (ddo | sqo)
+		public $typo;
+		// type					: "component"  (section | component | grouper | button | tool ..)
+		public $type;
+		// tipo					: 'oh14',
+		public $tipo;
+		// section_tipo			: 'oh1',
+		public $section_tipo;
+		// parent				: 'oh2', // caller section / portal  tipo
+		public $parent;
+		// parent_grouper		: 'oh7', // structure parent
+		public $parent_grouper;
+		// lang					: 'lg-eng',
+		public $lang;
+		// mode					: "list",
+		public $mode;
+		// model				: 'component_input_text',
+		public $model;
+		// properties			: {}
+		public $properties;
+		// permissions			: 1
+		public $permissions;
+		// label				: 'Title'
+		public $label;
+		// labels				: ['Title']
+		public $labels;
+		// translatable			: true
+		public $translatable;
+		// tools				: [] // array of tools dd_objects (context)
+		public $tools;
+		// buttons				: [] // array of buttons dd_objects (context)
+		public $buttons;
+		// css					: {}
+		public $css;
+		// target_sections		: [{'tipo':'dd125','label':'Projects']
+		public $target_sections;
+		// request_config		: [],
+		public $request_config;
+		// ar_sections_tipo		: ['oh1']
+		public $ar_sections_tipo;
+		// columns_map			: array
+		public $columns_map;
+		// view					: string|null like 'table'
+		public $view;
+		// children_view		: string like "text"
+		public $children_view;
+		// fixed_mode			: string like 'edit'
+		public $fixed_mode;
+		// section_id			: int like 1 // Used by tools
+		public $section_id;
+		// name					: string like 'tool_lang' // Used by tools
+		public $name;
+		// description			: string like 'Description of tool x' // Used by tools
+		public $description;
+		// icon					: string like '/tools/tool_lang/img/icon.svg' // Used by tools
+		public $icon;
+		// show_in_inspector	: bool // Used by tools
+		public $set_show_in_inspector;
+		// show_in_component	: bool // Used by tools
+		public $show_in_component;
+		// config				: object // Used by tools
+		public $config;
+		// sortable				: bool // Used by components (columns)
+		public $sortable;
+		// fields_separator		: string like ", " // used by portal to join different fields
+		public $fields_separator;
+		// records_separator	: string like " | " // used by portal to join different records (rows)
+		public $records_separator;
 
 
 
-	static $ar_type_allowed = [
-		'section',
-		'component',
-		'grouper',
-		'button',
-		'area',
-		'tm',
-		'widget',
-		'install',
-		'login',
-		'menu',
-		'tool',
-		'detail', // used by time_machine_list, relation_list, component_history_list
-		'dd_grid'
-	];
+		// ar_type_allowed
+		static $ar_type_allowed = [
+			'section',
+			'component',
+			'grouper',
+			'button',
+			'area',
+			'tm',
+			'widget',
+			'install',
+			'login',
+			'menu',
+			'tool',
+			'detail', // used by time_machine_list, relation_list, component_history_list
+			'dd_grid'
+		];
 
 
 
