@@ -396,7 +396,7 @@ class component_image extends component_media_common {
 							$component->set_dato( $final_dato );
 
 						// save if mode is edit
-							if ($this->modo==='edit') {
+							if ($this->mode==='edit') {
 								$component->Save();
 							}
 					}else{
@@ -899,25 +899,25 @@ class component_image extends component_media_common {
 	*/
 	public static function convert_quality_to_megabytes(string $quality) : float {
 
-		# patern : '1MB' | '1.5MB' | <1MB | >100MB
+		// patern : '1MB' | '1.5MB' | <1MB | >100MB
 
-		# Eliminamos el texto de megabytes ('MB') en el nopmbre de la calidad
+		// We removed the megabytes ('MB') text in the quality name
 		$string = substr($quality, 0,-2);
 
 		switch (true) {
 
 			case ( strpos($string, '>')===0 ):
-				# Ejemplo >100 será 100
+				# Sample: >100 will be 100
 				$number = intval(substr($string,1)) + 1;
 				break;
 
 			case ( strpos($string, '<')===0 ):
-				# Ejemplo <1 será 1
+				# Sample: <1 will be 1
 				$number = floatval( substr($string,1) - 0.1 );
 				break;
 
 			default:
-				# Default 1.5 será 1.5
+				# Default 1.5 will be 1.5
 				$number = $string;
 				break;
 		}
