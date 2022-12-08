@@ -106,6 +106,7 @@ class component_media_common extends component_common {
 			$resource_type	= $file_data->resource_type; // string upload caller name like 'tool_upload'
 			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
 			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
+			$quality 		= $file_data->quality ?? $this->get_quality();
 
 		// source_file
 			if (!defined($tmp_dir)) {
@@ -125,7 +126,7 @@ class component_media_common extends component_common {
 		// target file info
 			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_name		= $this->get_name();
-			$folder_path	= $this->get_target_dir();
+			$folder_path	= $this->get_target_dir($quality);
 			$full_file_name	= $file_name . '.' . $file_extension;
 			$full_file_path	= $folder_path .'/'. $full_file_name;
 
@@ -530,7 +531,7 @@ class component_media_common extends component_common {
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete directory
-					$folder_path_del = $this->get_target_dir() . 'deleted';
+					$folder_path_del = $this->get_target_dir($current_quality) . 'deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0777,true) ) {
 							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
@@ -585,7 +586,7 @@ class component_media_common extends component_common {
 			$this->set_quality($original_quality);
 
 		// target_dir
-			$target_dir = $this->get_target_dir();
+			$target_dir = $this->get_target_dir($original_quality);
 			if(!file_exists($target_dir)) {
 				return $original_files; // empty array
 			}
