@@ -124,9 +124,9 @@ class component_media_common extends component_common {
 
 		// target file info
 			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
-			$file_id		= $this->get_id();
+			$file_name		= $this->get_name();
 			$folder_path	= $this->get_target_dir();
-			$full_file_name	= $file_id . '.' . $file_extension;
+			$full_file_name	= $file_name . '.' . $file_extension;
 			$full_file_path	= $folder_path .'/'. $full_file_name;
 
 		// validate extension
@@ -138,7 +138,7 @@ class component_media_common extends component_common {
 			}
 
 		// rename old files when they exists to store a copy before move current an overwrite it
-			$renamed = $this->rename_old_files($file_id, $folder_path);
+			$renamed = $this->rename_old_files($file_name, $folder_path);
 			if ($renamed->result===false) {
 				$response->msg .= $renamed->msg;
 				return $response;
@@ -149,7 +149,7 @@ class component_media_common extends component_common {
 				// zip case. If the file is a .zip like in DVD case, create the folder and copy the VIDEO_TS and AUDIO_TS to the destination folder.
 
 				// unzip file and move elements to final destinations
-				$move_zip = self::move_zip_file($source_file, $folder_path, $file_id);
+				$move_zip = self::move_zip_file($source_file, $folder_path, $file_name);
 				if (false===$move_zip->result) {
 					$response->msg .= $move_zip->msg;
 					return $response;
@@ -188,7 +188,7 @@ class component_media_common extends component_common {
 	* Overwrite this method on each component that's needed it, for example 'component_av'
 	* @return object $response
 	*/
-	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_id) : object {
+	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -202,11 +202,11 @@ class component_media_common extends component_common {
 
 	/**
 	* RENAME_OLD_FILES
-	* @param $file_id string as 'test175_test65_3'
+	* @param $file_name string as 'test175_test65_3'
 	* @param $folder_path string
 	* @return object $response
 	*/
-	protected function rename_old_files(string $file_id, string $folder_path) : object {
+	protected function rename_old_files(string $file_name, string $folder_path) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -227,17 +227,17 @@ class component_media_common extends component_common {
 		$dateMovement 		= date("Y-m-d_Gis"); # like 2011-02-08_182033
 		foreach ($allowed_extensions as $current_extension) {
 
-			$current_possible_file = $folder_path .'/'. $file_id .'.'. $current_extension;
+			$current_possible_file = $folder_path .'/'. $file_name .'.'. $current_extension;
 			if(file_exists($current_possible_file)) {
 					//dump($current_possible_file, ' current_possible_file'.to_string());
-				$file_to_move_renamed = $folder_path . '/deleted/'. $file_id . '_deleted_'. $dateMovement . '.' . $current_extension ;
+				$file_to_move_renamed = $folder_path . '/deleted/'. $file_name . '_deleted_'. $dateMovement . '.' . $current_extension ;
 				rename($current_possible_file, $file_to_move_renamed);
 			}
 		}
 		// remove old versions by dirname (dvd for example). Check if dirname with file_id exists and move it if yes
-		if(is_dir($folder_path.'/'.$file_id)) {
-			$file_to_move_renamed = $folder_path . '/deleted/'. $file_id . '_deleted_'. $dateMovement ;
-			rename($folder_path.'/'.$file_id , $file_to_move_renamed);
+		if(is_dir($folder_path.'/'.$file_name)) {
+			$file_to_move_renamed = $folder_path . '/deleted/'. $file_name . '_deleted_'. $dateMovement ;
+			rename($folder_path.'/'.$file_name , $file_to_move_renamed);
 		}
 
 		$response->result	= true;
@@ -539,7 +539,7 @@ class component_media_common extends component_common {
 					}
 
 				// move/rename file
-					$file_name			= $this->get_id();
+					$file_name			= $this->get_name();
 					$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $this->get_extension();
 					if( !rename($media_path, $media_path_moved) ) {
 						trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
@@ -592,7 +592,7 @@ class component_media_common extends component_common {
 
 		// ar_originals. list of original found files
 			$ar_originals	= [];
-			$findme			= $this->get_id() . '.';
+			$findme			= $this->get_name() . '.';
 			if ($handle = opendir($target_dir)) {
 
 				while( false!==($file = readdir($handle)) ) {
