@@ -275,17 +275,25 @@ class component_image extends component_media_common {
 				return $this->image_id;
 			}
 
-		$properties = $this->get_properties();
+		// case 1 external source
+			$external_source = $this->get_external_source();
+			$image_id = !empty($external_source)
+				? pathinfo($external_source)['filename']
+				: null;
+			if(!empty($image_id)){
+				$this->image_id = $image_id;
+				return $image_id;
+			}
 
-		switch (true) {
-			// case 1 referenced name : If isset properties "image_id" overwrite name with field ddx content
-			case isset($properties->image_id):
-				$component_tipo		= $properties->image_id;
-				$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component			= component_common::get_instance(
-					$component_modelo,
+		// case 2 referenced name : If is set properties "image_id" overwrite name with field ddx content
+			if(isset($properties->image_id)){
+				$properties 	= $this->get_properties();
+				$component_tipo	= $properties->image_id;
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$component		= component_common::get_instance(
+					$model,
 					$component_tipo,
-					$this->parent,
+					$this->section_id,
 					'edit',
 					DEDALO_DATA_NOLAN,
 					$this->section_tipo
@@ -294,16 +302,11 @@ class component_image extends component_media_common {
 				$image_id	= (!empty($valor) && strlen($valor)>0)
 					? $valor
 					: null;
-				break;
-
-			// case 2 external source
-			case isset($properties->external_source):
-				$external_source = $this->get_external_source();
-				$image_id = !empty($external_source)
-					? pathinfo($external_source)['filename']
-					: null;
-				break;
-		}
+				if(!empty($image_id)){
+					$this->image_id = $image_id;
+					return $image_id;
+				}
+			}
 
 		// fallback default
 			if (empty($image_id)) {
@@ -585,10 +588,12 @@ class component_image extends component_media_common {
 	*/
 	public function get_target_filename() : string {
 
-		return true;
-	}//end set_quality
+		if($this->external_source) {
 
+			$external_parts		= pathinfo($this->external_source);
+			$target_filename	= $external_parts['basename'];
 
+		}else{
 
 			$target_filename = $this->image_id .'.'. $this->get_extension();
 		}
