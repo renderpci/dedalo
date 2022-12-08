@@ -401,11 +401,9 @@ class component_portal extends component_relation_common {
 
 								$old_ds = $current_locator->ds;
 								foreach ($old_ds as $current_ds) {
-									// check if the ds has the correct from_component_tipo
-									if($current_ds->from_component_tipo === $v6_update_dataframe->v5->from_component_tipo){
-										// change to new from_component_tipo
-										$current_ds->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
-									}
+									// change to new from_component_tipo
+									$current_ds->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
+
 									$current_ds->section_id_key = (int)$current_locator->section_id;
 									$new_dataframe[] = $current_ds;
 								}
@@ -417,11 +415,10 @@ class component_portal extends component_relation_common {
 							if(isset($current_locator->dataframe)){
 								$old_dataframe = $current_locator->dataframe;
 								foreach ($old_dataframe as $current_dataframe) {
-									// check if the ds has the correct from_component_tipo
-									if($current_dataframe->from_component_tipo === $v6_update_dataframe->v5->from_component_tipo){
-										// change to new from_component_tipo
-										$current_dataframe->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
-									}
+
+									// change to new from_component_tipo
+									$current_dataframe->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
+
 									if($current_dataframe->type === $v6_update_dataframe->v5->type){
 										$current_dataframe->type = $v6_update_dataframe->v6->type;
 									}
