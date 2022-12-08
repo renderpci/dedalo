@@ -358,10 +358,10 @@ class component_image extends component_media_common {
 
 				case (is_string($additional_path_tipo)):
 
-					$component_tipo		= $additional_path_tipo;
-					$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component			= component_common::get_instance(
-						$component_modelo,
+					$component_tipo	= $additional_path_tipo;
+					$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$component		= component_common::get_instance(
+						$model,
 						$component_tipo,
 						$section_id,
 						'edit',
