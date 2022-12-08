@@ -71,7 +71,7 @@ function download_file($json_data) {
 		})();
 
 	// saved file name
-		$download_name = 'dedalo_download_' . $component_av->get_id() .'_'. $quality .'.'. $extension;
+		$download_name = 'dedalo_download_' . $component_av->get_name() .'_'. $quality .'.'. $extension;
 
 	// file size in bytes
 		$file_bytes_size = filesize($file_path);
