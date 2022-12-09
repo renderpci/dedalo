@@ -287,7 +287,14 @@ class update {
 			#
 			# SECTION COMPONENTS
 			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
-			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, [$modelo_name], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$current_section_tipo,
+				[$modelo_name],
+				$from_cache=true,
+				$resolve_virtual=true,
+				$recursive=true,
+				$search_exact=true
+			);
 			if (empty($ar_component_tipo)) {
 				# Skip empty components sections
 				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $modelo_name) ".to_string(), logger::WARNING);
@@ -337,29 +344,34 @@ class update {
 							$update_options->context		= 'update_component_dato';
 
 						$response = $modelo_name::update_dato_version($update_options);
-						#debug_log(__METHOD__." UPDATE_DATO_VERSION COMPONENT RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
-
-						if($response->result===1) {
-							$component->updating_dato = true;
-							$component->set_dato($response->new_dato);
-							$component->update_diffusion_info_propagate_changes = false;
-							$component->set_dato_resolved($response->new_dato); // Fix as resolved
-
-							// section set as not save_modified
-								$component_section = $component->get_my_section();
-								$component_section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
-
-							// save component
-								$component->Save();
-							#debug_log(__METHOD__." UPDATED dato from component [$modelo_name][{$current_section_tipo}-{$section_id}] ".to_string(), logger::DEBUG);
-							$i++;
-							#$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['i']=$i;
-							#echo $response->msg;
-						}else{
-							#echo $response->msg;
-							if($response->result === 0){
+						switch ((int)$response->result) {
+							case 0:
+								// skip all updates of current component because don't have update to this version
 								continue 4;
-							}
+								break;
+
+							case 1:
+								// component data is modified. Set and save
+									$component->updating_dato = true;
+									$component->set_dato($response->new_dato);
+									$component->update_diffusion_info_propagate_changes = false;
+									$component->set_dato_resolved($response->new_dato); // Fix as resolved
+
+								// section set as not save_modified
+									$component_section = $component->get_my_section();
+									$component_section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+
+								// save component
+									$component->Save();
+								break;
+
+							case 2:
+								// Current dato don't need update or is already managed by component itself
+								break;
+
+							default:
+								// nothing to do here...
+								break;
 						}
 
 						#
