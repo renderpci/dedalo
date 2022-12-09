@@ -328,10 +328,10 @@ const drag_and_drop = function(options) {
 
 	drag_node.draggable = true
 	drag_node.classList.add('draggable')
-	drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(options, this, e)})
+	drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
 	drag_node.addEventListener('dragover',function(e){on_dragover(this, e)})
 	drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
-	drag_node.addEventListener('drop',function(e){on_drop(options, this, e)})
+	drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})
 
 	return true
 };//end drag_and_drop
