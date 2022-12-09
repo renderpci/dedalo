@@ -17,6 +17,24 @@ class dd_date {
 	// Virtual month days
 	static $virtual_month_days = 31;
 
+	// int year
+	public $year;
+	// int month
+	public $month;
+	// int day
+	public $day;
+	// int hour
+	public $hour;
+	// int minute
+	public $minute;
+	// int second
+	public $second;
+	// time
+	public $time;
+	// timestamp
+	public $timestamp;
+
+
 
 	/**
 	* __CONSTRUCT
