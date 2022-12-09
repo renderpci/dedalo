@@ -216,7 +216,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 
 	// Add layer to map
-		switch(self.context.geo_provider) {
+		switch(self.context.features.geo_provider) {
 
 			case 'OSM':
 				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -324,7 +324,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 
 				break;
-		}//end switch(self.context.geo_provider)
+		}//end switch(self.context.features.geo_provider)
 
 	// set active layer
 		self.map.on('overlayadd', function(e) {
