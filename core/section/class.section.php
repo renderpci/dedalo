@@ -1549,7 +1549,8 @@ class section extends common {
 			bool $resolve_virtual=false, // (!) keep default resolve_virtual=false
 			bool $recursive=true,
 			bool $search_exact=false,
-			$ar_tipo_exclude_elements=false
+			array|bool $ar_tipo_exclude_elements=false,
+			?array $ar_exclude_models=null
 		) : array {
 
 		# AR_MODELO_NAME_REQUIRED cast 'ar_modelo_name_required' to array
@@ -1605,7 +1606,7 @@ class section extends common {
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 						if($modelo_name==='section_group') {
-							$ar_recursive_childrens 			 = (array)section::get_ar_recursive_children($component_tipo);
+							$ar_recursive_childrens 			 = (array)section::get_ar_recursive_children($component_tipo, $ar_exclude_models);
 							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
 						}
 
@@ -1623,7 +1624,7 @@ class section extends common {
 		if (count($ar_modelo_name_required)>1) {
 
 			if (true===$recursive) { // Default is recursive
-				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
+				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
 			}else{
 				$RecordObj_dd			= new RecordObj_dd($tipo);
 				$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this();
@@ -1634,7 +1635,7 @@ class section extends common {
 			switch (true) {
 				// Components are searched recursively
 				case (strpos($ar_modelo_name_required[0], 'component')!==false && $recursive!==false):
-					$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
+					$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
@@ -1694,26 +1695,33 @@ class section extends common {
 	* GET_AR_RECURSIVE_CHILDREN : private alias of RecordObj_dd::get_ar_recursive_childrens
 	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary sections in ich
 	* @param string $tipo
+	* @param array|null $ar_exclude_models = null
 	* @return array $ar_recursive_children
 	*/
-	public static function get_ar_recursive_children(string $tipo) : array {
+	public static function get_ar_recursive_children(string $tipo, ?array $ar_exclude_models=null) : array {
 
 		# AR_EXCLUDE_MODELS
-		# Current elements and children are not considerate part of section and must be excluded in children results
-		$ar_exclude_models = [
+		$default_ar_exclude_models = [
 			'box elements',
 			'area',
-			'dataframe'
+			'component_semantic_node' // used in v5 but unused in v6
+			// 'dataframe'
 		];
+
+		# Current elements and children are not considerate part of section and must be excluded in children results
+		$exclude_models = !empty($ar_exclude_models)
+			? array_merge($default_ar_exclude_models, $ar_exclude_models)
+			: $default_ar_exclude_models;
+
 
 		$ar_recursive_children = RecordObj_dd::get_ar_recursive_childrens(
 			$tipo, // string tipo
 			false, // bool is recursion
-			$ar_exclude_models, // array ar_exclude_models
+			$exclude_models, // array ar_exclude_models
 			'norden' // string order
 		);
 
-		return (array)$ar_recursive_children;
+		return $ar_recursive_children;
 	}//end get_ar_recursive_children
 
 
