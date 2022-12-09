@@ -23,9 +23,10 @@
 			default:
 				$structure_context = $this->get_structure_context($permissions);
 
-				// geo_provider add
-					$geo_provider = (isset($properties->geo_provider)) ? $properties->geo_provider : DEDALO_GEO_PROVIDER;
-					$structure_context->geo_provider = $geo_provider;
+				// features. geo_provider add
+					$structure_context->features = (object)[
+						'geo_provider' => $properties->geo_provider ?? DEDALO_GEO_PROVIDER
+					];
 
 				$context[] = $structure_context;
 				break;
