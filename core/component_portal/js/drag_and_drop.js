@@ -76,7 +76,7 @@
 	* Get element dataset path as event.dataTransfer from selected component
 	* @return bool true
 	*/
-	export const on_dragstart_mosaic = function(options, node, event) {
+	export const on_dragstart_mosaic = function(node, event, options) {
 		// event.preventDefault();
 		event.stopPropagation();
 		// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
