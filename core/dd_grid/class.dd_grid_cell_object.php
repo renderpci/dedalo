@@ -106,40 +106,49 @@
 */
 class dd_grid_cell_object {
 
+	// string id. As "oh1_id" - the unique id of the column to identify data inside the same column
+	public $id;
+	// string class_list. As "caption bold"
+	public $class_list;
+	// string type. row column - type of the element
+	public $type;
+	// string label. As "name" - one column of the grid (every column is a object)
+	public $label;
+	// int row_count. Total rows of the component, used by portals to define the rows that could be separated individually.
+	public $row_count;
+	// int column_count. Total columns of the component, used by portals to define the columns that could be separated individually.
+	public $column_count;
+	// array column_labels. Names of the columns that will use the portal to define sub columns names
+	public $column_labels;
+	// string $fields_separator. AS ", " with the glue of the fields
+	public $fields_separator;
+	// string records_separator. As "<br>" - with the glue of the rows
+	public $records_separator;
+	// string cell_type. Type of the element to represent in the cell
+	public $cell_type;
+	// object action . Used but buttons to define the action will done by the user
+	//		method 	: string - name of the method will be used by the element
+	//		options : object - parameters to configure the method
+	// 		event 	: string - name of the user event
+	public $action;
+	// array value. array of strings || array of objects - every object define one column of data and action - [{"type": "button","action": "hello","data": []}] - every item inside the array will be a row of the column of his position inside the array
+	public $value;
+	// array fallback_value. array of strings - when a component doesn't has value in the current lang, use the fallback_value with one value in other languages
+	public $fallback_value;
 
-	// Format
-	//    	id  				: string - "oh1_id" - the unique id of the column to identify data inside the same column
-	//    	class_list  		: string - "caption bold"
-	//    	type      			: string | row column - type of the element
-	//    	label      			: strings - "name" - one column of the grid (every column is a object)
-	// 		row_count 			: number - total rows of the component, used by portals to define the rows that could be separated individually.
-	//		column_count 		: number - total columns of the component, used by portals to define the columns that could be separated individually.
-	// 		column_labels 		: array of strings - name of the columns that will use the portal to define sub columns names
-	// 		fields_separator 	: string -  ", " - with the glue of the fields
-	//		records_separator 		: string -  "<br>" - with the glue of the rows
-	//    	cell_type   		: string - type of the element to represent in the cell
-	//    	action				: object - used but buttons to define the action will done by the user
-	//			method 			: string - name of the method will be used by the element
-	//			options 		: object - parameters to configure the method
-	// 			event 			: string - name of the user event
-	//		value		 		: array of strings || array of objects - every object define one column of data and action - [{"type": "button","action": "hello","data": []}] - every item inside the array will be a row of the column of his position inside the array
-	// 		fallback_value 		: array of strings - when a component doesn't has value in the current lang, use the fallback_value with one value in other languages
-	// 		render_label		: bool - default: false - define if the label of the columns will be rendered.
+	// render_label
+	public $render_label;
+	// column.
+	public $column;
+	// array ar_columns_obj
+	public $ar_columns_obj;
 
-	// public $class_list;
-	// public $column;
-	// public $fields_separator;
-	// public $records_separator;
-	// public $type;
-	// public $action;
-	// public $value;
-	// public $fallback_value;
-
-	private static $ar_value_type_allowed = [
-		'text',
-		'link',
-		'button'
-	];
+	// ar_value_type_allowed
+		// private static $ar_value_type_allowed = [
+		// 	'text',
+		// 	'link',
+		// 	'button'
+		// ];
 
 	// ar_cell_type_allowed. (!) Consider to implement this limitation (not used now)
 		// private static $ar_cell_type_allowed = [
@@ -153,6 +162,7 @@ class dd_grid_cell_object {
 		// ];
 
 
+
 	/**
 	* __CONSTRUCT
 	* @param object $data
@@ -160,30 +170,31 @@ class dd_grid_cell_object {
 	*/
 	public function __construct( $data=null ) {
 
-		if (is_null($data)) return;
+		if (is_null($data)) {
+			return;
+		}
 
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
 			// trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			debug_log("ERROR: wrong data format. Object expected. Given: ".gettype($data), logger::ERROR);		
+			debug_log("ERROR: wrong data format. Object expected. Given: ".gettype($data), logger::ERROR);
 		}else{
 			// set all properties
 			foreach ($data as $key => $value) {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-		}		
+		}
 	}//end __construct
 
 
 
 	/**
-	* SET_id
+	* SET_ID
 	*/
 	// public function set_id(string $value) {
 	// 	$this->id = $value;
 	// }
-
 
 	/**
 	* SET_CLASS_LIST
@@ -283,6 +294,28 @@ class dd_grid_cell_object {
 	public function set_render_label(bool $value) {
 		$this->render_label = $value;
 	}
+
+
+
+	/**
+	* GET METHODS
+	* By accessors. When property exits, return property value, else return null
+	*/
+	final public function __get($name) {
+
+		if (isset($this->$name)) {
+			return $this->$name;
+		}
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
+	}//end __get
 
 
 
