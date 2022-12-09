@@ -103,7 +103,19 @@ const get_content_value = function(i, value, self) {
 	// file_info
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 
-	// url
+
+	// render the image when the source is external, image from URI
+		if(file_info && file_info.external){
+			const img_node = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'image',
+				parent			: content_value,
+				src 			: file_info.file_url
+			})
+			return content_value
+		}
+
+	// render de image in Dédalo media
 		let url = file_info && file_info.file_url
 			? file_info.file_url
 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'

@@ -22,11 +22,22 @@
 					}
 				}
 
+				>.input_iri_active {
+					display: block;
+					width: auto;
+					background-color: #FEA7F2
+				}
+
 				// buttons
 				>.button {
 					position: absolute;
 					right: 0.7rem;
 					z-index: 1;
+
+					&.active_check {
+						margin-right: 1.5rem;
+					}
+
 					&:hover {
 						background-color: darken(@color_orange_dedalo, 15%);
 					}

@@ -108,65 +108,114 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value'
 		})
 
-	// placeholder. Strip label HTML tags
-		const placeholder_label = mode.indexOf('edit')!==-1
-			? (get_label.title || 'Tilte')
-			: null
-		const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
+	const use_title = typeof(self.context.properties.use_title) !== 'undefined'
+		? self.context.properties.use_title
+		: true
 
-	// input title field
-		const input_title = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_value',
-			placeholder		: placeholder_text,
-			value			: title,
-			parent			: content_value
-		})
-		input_title.addEventListener('change', function() {
-			update_value(self, i)
-		})
-		//end change
-		input_title.addEventListener('keyup', function(e) {
-			// page unload event
-			if (e.key!=='Enter') set_unload_state(self, i);
-		})//end keyup
+	if(use_title){
+		// placeholder. Strip label HTML tags
+			const placeholder_label = mode.indexOf('edit')!==-1
+				? (get_label.title || 'Tilte')
+				: null
+			const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
 
-	if(mode==='edit') {
-
-		// input iri field
-		//    const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
-
-			const input_iri = ui.create_dom_element({
+		// input title field
+			const input_title = ui.create_dom_element({
 				element_type	: 'input',
-				type			: 'url',
-				class_name		: 'input_value url',
-				placeholder		: 'http://',
-				value			: iri,
+				type			: 'text',
+				class_name		: 'input_value',
+				placeholder		: placeholder_text,
+				value			: title,
 				parent			: content_value
 			})
-			input_iri.addEventListener('change', function() {
-
-				const regex = /(https?)?:\/\/.*\..+/;
-				const value = input_iri.value
-
-				if(value && !value.match(regex)){
-					input_iri.classList.add('error')
-					return false
-				}
-				input_iri.classList.remove('error')
-				update_value(self, i)
-			})
 			//end change
-			input_iri.addEventListener('keyup', function(e) {
-				// page unload event
-				if (e.key!=='Enter') set_unload_state(self, i);
+			input_title.addEventListener('keyup', function(e) {
+				current_value.title = input_title.value
+				update_value(self, i, current_value)
 			})//end keyup
+	} // end if(use_title)
+
+
+	// input iri field
+	// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
+
+		const input_iri = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'url',
+			class_name		: 'input_value url',
+			placeholder		: 'http://',
+			value			: iri,
+			parent			: content_value
+		})
+		input_iri.addEventListener('keyup', function() {
+
+			const regex = /(https?)?:\/\/.*\..+/;
+			const value = input_iri.value
+
+			if(value && !value.match(regex)){
+				input_iri.classList.add('error')
+				return false
+			}
+			input_iri.classList.remove('error')
+
+			current_value.iri = input_iri.value
+			update_value(self, i, current_value)
+		})//end keyup
+
+	// active
+		const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
+			? self.context.properties.use_active_check
+			: false
+		if(use_active_check){
+
+			const dataframe_data = current_value.dataframe
+				? true
+				: false
+
+			const input_iri_active = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name		: 'input_iri_active',
+				parent			: content_value
+			})
+
+			input_iri_active.checked = dataframe_data
+
+			input_iri_active.addEventListener('change', async function(e){
+
+				// add style modified to wrapper node
+					if (!self.node.classList.contains('modified')) {
+						self.node.classList.add('modified')
+					}
+
+				current_value.dataframe = input_iri_active.checked
+
+				// set_changed_data
+					const changed_data_item = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: current_value
+					})
+						console.log("--> fixed changed_data_item:", changed_data_item);
+					// fix instance changed_data
+					await self.set_changed_data(changed_data_item)
+
+				// force to save on every change
+					const changed_data = self.data.changed_data || []
+						console.log("--> self.data.changed_data:",self.data.changed_data);
+					self.change_value({
+						changed_data	: changed_data,
+						refresh			: false
+					})
+		})//end change event
+		}
+
+		const active_check_class = (use_active_check) ? 'active_check' : ''
 
 	// button remove
 		const button_remove = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button remove hidden_button',
+			class_name		: 'button remove hidden_button '+ active_check_class,
 			parent			: content_value
 		})
 		button_remove.addEventListener('click', function(e) {
@@ -190,7 +239,7 @@ const get_content_value = (i, current_value, self) => {
 	// button link
 		const button_link = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button link hidden_button',
+			class_name		: 'button link hidden_button '+ active_check_class,
 			parent			: content_value
 		})
 		button_link.addEventListener('click', function(e) {
@@ -201,7 +250,7 @@ const get_content_value = (i, current_value, self) => {
 				const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
 				current_window.focus()
 		})
-	}//end if(mode==='edit')
+
 
 
 	return content_value
@@ -213,31 +262,26 @@ const get_content_value = (i, current_value, self) => {
 * UPDATE_VALUE
 * @return promise
 */
-const update_value = function(self, i) {
+const update_value = function(self, i, current_value) {
 
 	// full object value built as:
 	// {
 	//		iri	  : iri_value,
 	//		title : title_value
+	// 		dataframe : [] || true || false
 	// }
-	const full_value = self.build_value(i)
 
-	return new Promise(function(resolve){
 
-		// change_value
-		const changed_data = [Object.freeze({
-			action	: 'update',
-			key		: i,
-			value	: full_value
-		})]
-		self.change_value({
-			changed_data	: changed_data,
-			refresh			: false
-		})
-		.then(()=>{
-			resolve()
-		})
+
+	// change_value
+	const changed_data_item = Object.freeze({
+		action	: 'update',
+		key		: i,
+		value	: current_value
 	})
+	// fix instance changed_data
+	self.set_changed_data(changed_data_item)
+
 }//end update_value
 
 
@@ -250,17 +294,17 @@ const update_value = function(self, i) {
 *
 * @return bool
 */
-const set_unload_state = function(self, i) {
+const set_unload_state = function(self, i, current_value) {
 
 	// values
 		const original_value	= self.db_data.value[i] || null
-		const new_value			= self.build_value(i)
+		// const current_value			= self.build_value(i)
 
 	// compares new and old full values by property
 		let equal = true
 		if (original_value) {
-			for(const prop in new_value) {
-				if (!original_value[prop] || original_value[prop]!==new_value[prop]) {
+			for(const prop in current_value) {
+				if (!original_value[prop] || original_value[prop]!==current_value[prop]) {
 					equal = false
 					break
 				}
