@@ -72,6 +72,15 @@ class search {
 		# negative section_id used in profiles for the root user, root record could be avoid or include
 		public $include_negative;
 
+		// ar_section_tipo : array
+		public $ar_section_tipo;
+
+		// main_section_tipo : string
+		public $main_section_tipo;
+
+		// main_section_tipo_alias : string
+		public $main_section_tipo_alias;
+
 
 
 	/**

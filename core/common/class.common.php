@@ -10,8 +10,14 @@ abstract class common {
 	// // tipo. string like 'dd4525'
 	// public $tipo;
 
-	// // model. string like 'component_date'
-	// public $model;
+	// model. string like 'component_date'
+	protected $model;
+	// norden
+	protected $norden;
+	// label
+	protected $label;
+	// traducible
+	protected $traducible;
 
 	// // section_id. string like '1526'
 	// public $section_id;

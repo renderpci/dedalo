@@ -26,6 +26,9 @@ class sections extends common {
 		# search_query_object
 		public $search_query_object;
 
+		// string
+		public $caller_tipo;
+
 
 
 	/**
@@ -58,11 +61,11 @@ class sections extends common {
 	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $mode, string $lang) {
 
 		// Set general vars
-			$this->ar_locators			= $ar_locators;
-			$this->search_query_object	= $search_query_object;
-			$this->caller_tipo			= $caller_tipo;
-			$this->mode					= $mode;
-			$this->lang					= $lang;
+		$this->ar_locators			= $ar_locators;
+		$this->search_query_object	= $search_query_object;
+		$this->caller_tipo			= $caller_tipo;
+		$this->mode					= $mode;
+		$this->lang					= $lang;
 	}//end __construct
 
 
