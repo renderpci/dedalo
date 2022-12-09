@@ -58,21 +58,38 @@
 						$this->context->toolbar_buttons[] = 'button_note';
 					}
 
-				// Notes. Add the section_tipo for the annotations
-					$this->context->notes_section_tipo		= DEDALO_NOTES_SECTION_TIPO;
-					$this->context->notes_publication_tipo	= DEDALO_NOTES_PUBLICATION_TIPO;
-
-				// References. Add the section_tipo for the virtual references
-					$this->context->references_section_tipo		= DEDALO_TS_REFERENCES_SECTION_TIPO;
-					$this->context->references_component_tipo	= DEDALO_TS_REFERENCES_COMPONENT_TIPO;
-					$this->context->references_component_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_TS_REFERENCES_COMPONENT_TIPO,true);;
-
-				// av_player
-					$this->context->av_player = (object)[
-						'av_play_pause_code'	=> 'Escape', // ESC
-						'av_insert_tc_code'		=> 'F2', // F2
-						'av_rewind_seconds'		=> 3
+				// features
+					$this->context->features = (object)[
+						// Notes. Add the section_tipo for the annotations
+						'notes_section_tipo'			=> DEDALO_NOTES_SECTION_TIPO,
+						'notes_publication_tipo'		=> DEDALO_NOTES_PUBLICATION_TIPO,
+						// References. Add the section_tipo for the virtual references
+						'references_section_tipo'		=> DEDALO_TS_REFERENCES_SECTION_TIPO,
+						'references_component_tipo'		=> DEDALO_TS_REFERENCES_COMPONENT_TIPO,
+						'references_component_model'	=> RecordObj_dd::get_modelo_name_by_tipo(DEDALO_TS_REFERENCES_COMPONENT_TIPO,true),
+						// av_player
+						'av_player'						=> (object)[
+							'av_play_pause_code'	=> 'Escape', // ESC
+							'av_insert_tc_code'		=> 'F2', // F2
+							'av_rewind_seconds'		=> 3
+						]
 					];
+
+				// // Notes. Add the section_tipo for the annotations
+				// 	$this->context->notes_section_tipo		= DEDALO_NOTES_SECTION_TIPO;
+				// 	$this->context->notes_publication_tipo	= DEDALO_NOTES_PUBLICATION_TIPO;
+
+				// // References. Add the section_tipo for the virtual references
+				// 	$this->context->references_section_tipo		= DEDALO_TS_REFERENCES_SECTION_TIPO;
+				// 	$this->context->references_component_tipo	= DEDALO_TS_REFERENCES_COMPONENT_TIPO;
+				// 	$this->context->references_component_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_TS_REFERENCES_COMPONENT_TIPO,true);
+
+				// // av_player
+				// 	$this->context->av_player = (object)[
+				// 		'av_play_pause_code'	=> 'Escape', // ESC
+				// 		'av_insert_tc_code'		=> 'F2', // F2
+				// 		'av_rewind_seconds'		=> 3
+				// 	];
 				break;
 
 			default:

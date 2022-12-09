@@ -25,12 +25,13 @@
 				$current_context = $this->get_structure_context($permissions);
 
 				// append additional info
-					$current_context->allowed_extensions		= $this->get_allowed_extensions();
-					$current_context->default_target_quality	= $this->get_original_quality();
-					$current_context->ar_quality				= $this->get_ar_quality(); // defined in config
-					$current_context->default_quality			= $this->get_default_quality();
-					$current_context->quality					= $this->get_quality(); // current instance quality
-					$current_context->resource_type				= 'svg';
+				$current_context->features = new stdClass();
+					$current_context->features->allowed_extensions		= $this->get_allowed_extensions();
+					$current_context->features->default_target_quality	= $this->get_original_quality();
+					$current_context->features->ar_quality				= $this->get_ar_quality(); // defined in config
+					$current_context->features->default_quality			= $this->get_default_quality();
+					$current_context->features->quality					= $this->get_quality(); // current instance quality
+					$current_context->features->resource_type			= 'svg';
 
 				$context[] = $current_context;
 				break;

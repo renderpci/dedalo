@@ -77,7 +77,7 @@ export const get_content_data_player = function(options) {
 		const context	= self.context || {}
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
-		const quality	= self.quality || context.quality
+		const quality	= self.quality || context.features.quality
 
 	// url
 		// posterframe

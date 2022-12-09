@@ -40,9 +40,9 @@ export const render_reference = async function(options) {
 			? JSON.parse(data)
 			: null
 
-		const references_section_tipo		= self.context.references_section_tipo
-		const references_component_tipo		= self.context.references_component_tipo
-		const references_component_model	= self.context.references_component_model
+		const references_section_tipo		= self.context.features.references_section_tipo
+		const references_component_tipo		= self.context.features.references_component_tipo
+		const references_component_model	= self.context.features.references_component_model
 
 
 	// reference_component

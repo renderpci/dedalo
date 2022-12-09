@@ -987,7 +987,7 @@ component_text_area.prototype.updated_layer_data= function(options) {
 			const text_editor = options.text_editor // get the text_editor sent by the event (button_note event)
 
 		// short vars
-			const notes_section_tipo = self.context.notes_section_tipo
+			const notes_section_tipo = self.context.features.notes_section_tipo
 
 		// Create the new note in the server, it will send the section_id created in the database
 			const rqo = {
@@ -1065,8 +1065,8 @@ component_text_area.prototype.updated_layer_data= function(options) {
 			const text_editor = options.text_editor // get the text_editor sent by the event (button_note event)
 
 		// short vars
-			const references_section_tipo	= self.context.references_section_tipo
-			const references_component_tipo	= self.context.references_component_tipo
+			const references_section_tipo	= self.context.features.references_section_tipo
+			const references_component_tipo	= self.context.features.references_component_tipo
 
 		// Create the new note in the server, it will send the section_id created in the database
 			const rqo = {
