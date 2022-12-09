@@ -95,6 +95,13 @@ abstract class component_common extends common {
 		// context
 		// public $context;
 
+		// string from_section_tipo
+		public $from_section_tipo;
+		// string from_component_tipo
+		public $from_component_tipo;
+		// array data_list
+		public $data_list;
+
 
 
 	/**

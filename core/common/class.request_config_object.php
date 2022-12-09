@@ -3,7 +3,7 @@
 * REQUEST_CONFIG_OBJECT
 * Defines an object with normalized properties and checks
 
- 	// STRUCTURE
+	// STRUCTURE
 		api_engine	: engine for manage the request. Default is 'dedalo' but could be external like 'zenon'
 		sqo		: search query object active width DDBB
 		show	: layout_map and sqo_config
@@ -75,14 +75,14 @@
 				},
 				"show":{
 					"get_ddo_map": {
-		                "model": "section_map",
+						"model": "section_map",
 						"columns": [
 							[
 								"thesaurus",
 								"term"
 							]
 						]
-		            },
+					},
 					"ddo_map":[
 						{"section_tipo":"self","tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": false},
 						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3","fields_separator" : " | "}, {"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"},
@@ -132,10 +132,15 @@ class request_config_object {
 	* VARS
 	*/
 		// $api_engine; // string like 'dedalo'. Default 'dedalo'
+		public $api_engine;
 		// $sqo; // object search_query_object
+		public $sqo;
 		// $show; // object. config of elements to show (ddo_map, sqo_config..)
+		public $show;
 		// $search; // object. config of elements to show in search mode
+		public $search;
 		// $choose; // object. config of elements to show in choose mode
+		public $choose;
 
 
 
@@ -143,23 +148,17 @@ class request_config_object {
 	* __CONSTRUCT
 	* @param object $data = null
 	*/
-	public function __construct( object $data=null ) {
+	public function __construct( ?object $data=null ) {
 
-		if (is_null($data)) return;
+		if (is_null($data)) {
+			return;
+		}
 
-		# Nothing to do on construct (for now)
-			// if (!is_object($data)) {
-			// 	trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			// 	return false;
-			// }
-
-		// set all properties
+		// set all data properties
 			foreach ($data as $key => $value) {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-
-		return true;
 	}//end __construct
 
 
@@ -218,27 +217,42 @@ class request_config_object {
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/
-	final public function __call(string $strFunction, $arArguments) {
+	// final public function __call(string $strFunction, $arArguments) {
 
-		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
-		$strMethodMember	= substr($strFunction, 4);
-		switch($strMethodType) {
-			#case 'set_' :
-			#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
-			#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
-			#	break;
-			case 'get_' :
-				return($this->GetAccessor($strMethodMember));
-				break;
+	// 	$strMethodType		= substr($strFunction, 0, 4); # like set or get_
+	// 	$strMethodMember	= substr($strFunction, 4);
+	// 	switch($strMethodType) {
+	// 		#case 'set_' :
+	// 		#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
+	// 		#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
+	// 		#	break;
+	// 		case 'get_' :
+	// 			return($this->GetAccessor($strMethodMember));
+	// 			break;
+	// 	}
+	// 	return(false);
+	// }
+	// private function GetAccessor(string $variable) {
+	// 	if(property_exists($this, $variable)) {
+	// 		return (string)$this->$variable;
+	// 	}else{
+	// 		return false;
+	// 	}
+	// }
+	final public function __get($name) {
+
+		if (isset($this->$name)) {
+			return $this->$name;
 		}
-		return(false);
-	}
-	private function GetAccessor(string $variable) {
-		if(property_exists($this, $variable)) {
-			return (string)$this->$variable;
-		}else{
-			return false;
-		}
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
 	}
 
 
