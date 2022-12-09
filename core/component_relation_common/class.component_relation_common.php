@@ -38,6 +38,9 @@ class component_relation_common extends component_common {
 		# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
 		protected $relation_type_rel ; // Set on construct from properties
 
+		// array|null ar_target_section_tipo
+		protected $ar_target_section_tipo;
+
 
 
 	/**

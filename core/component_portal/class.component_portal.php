@@ -381,9 +381,9 @@ class component_portal extends component_relation_common {
 
 				# Update the locator to move old ds and dataframe to v6 dataframe model.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
-					$recordObjdd	= new RecordObj_dd($options->tipo);
-					$properties		= $recordObjdd->get_properties();
-					$v6_update_dataframe = $properties->v6_update_dataframe ?? null;
+					$RecordObj_dd			= new RecordObj_dd($options->tipo);
+					$properties				= $RecordObj_dd->get_properties();
+					$v6_update_dataframe	= $properties->v6_update_dataframe ?? null;
 
 					$clean_locators		= [];
 					$new_dataframe		= [];
@@ -397,33 +397,33 @@ class component_portal extends component_relation_common {
 							}
 
 							// ds case
-							if(isset($current_locator->ds)){
+							if(!empty($current_locator->ds)){
+								debug_log(__METHOD__." ----> Located locator->ds  ($options->section_tipo - $options->section_id) ".to_string($current_locator->ds), logger::WARNING);
 
-								$old_ds = $current_locator->ds;
-								foreach ($old_ds as $current_ds) {
+								foreach((array)$current_locator->ds as $current_ds) {
 									// change to new from_component_tipo
-									$current_ds->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
+									$current_ds->from_component_tipo	= $v6_update_dataframe->v6->from_component_tipo;
+									$current_ds->section_id_key			= (int)$current_locator->section_id;
 
-									$current_ds->section_id_key = (int)$current_locator->section_id;
 									$new_dataframe[] = $current_ds;
+									// debug_log(__METHOD__." ----> Changed ds locator ($options->section_tipo - $options->section_id) ".to_string($current_ds), logger::WARNING);
 								}
 								// delete old ds
 								unset($current_locator->ds);
-
 							}
+
 							// dataframe case
 							if(isset($current_locator->dataframe)){
 								$old_dataframe = $current_locator->dataframe;
 								foreach ($old_dataframe as $current_dataframe) {
 
 									// change to new from_component_tipo
-									$current_dataframe->from_component_tipo = $v6_update_dataframe->v6->from_component_tipo;
+									$current_dataframe->from_component_tipo	= $v6_update_dataframe->v6->from_component_tipo;
+									$current_dataframe->type				= $v6_update_dataframe->v6->type;
+									$current_dataframe->section_id_key		= (int)$current_locator->section_id;
 
-									if($current_dataframe->type === $v6_update_dataframe->v5->type){
-										$current_dataframe->type = $v6_update_dataframe->v6->type;
-									}
-									$current_dataframe->section_id_key = (int)$current_locator->section_id;
 									unset($current_dataframe->from_key);
+
 									$new_dataframe[] = $current_dataframe;
 								}
 								// delete old ds
@@ -436,23 +436,25 @@ class component_portal extends component_relation_common {
 
 					if($need_to_be_updated === true){
 
-						$ar_locators = array_merge($clean_locators, $new_dataframe);
-						$new_dato = (array)$ar_locators;
+						$ar_locators	= array_merge($clean_locators, $new_dataframe);
+						$new_dato		= (array)$ar_locators;
 
-						$section_to_save = section::get_instance(
-							$options->section_id, // string|null section_id
-							$options->section_tipo, // string section_tipo
-							false
-						);
-						$section_to_save->remove_relations_from_component_tipo( $options->tipo , 'relations' );
-						foreach ($ar_locators as $dataframe_locator) {
-							$section_to_save->add_relation($dataframe_locator);
-						}
-
-						$section_to_save->Save();
+						// section update and save locators
+							$section_to_save = section::get_instance(
+								$options->section_id, // string|null section_id
+								$options->section_tipo, // string section_tipo
+								'list', // string mode
+								false // bool bool
+							);
+							$section_to_save->remove_relations_from_component_tipo( $options->tipo , 'relations' );
+							foreach ($ar_locators as $current_locator) {
+								$section_to_save->add_relation($current_locator);
+							}
+							$section_to_save->Save();
+							debug_log(__METHOD__." ----> Saved ($options->section_tipo - $options->section_id) ".to_string($ar_locators), logger::WARNING);
 
 						$response = new stdClass();
-							$response->result	= 0;
+							$response->result	= 3;
 							$response->new_dato	= $new_dato;
 							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 

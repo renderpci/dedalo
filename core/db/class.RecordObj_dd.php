@@ -188,6 +188,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_PROPERTIES
 	* Return the value of property 'properties', stored as JSONB in table column 'properties'
 	* Values expected in 'properties' are always JSON.
+	
 	* @return object|array|null $properties_parsed
 	*/
 	public function get_properties() {
