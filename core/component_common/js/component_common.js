@@ -538,10 +538,7 @@ component_common.prototype.save = async function(changed_data) {
 						: [null]
 
 					// self.db_data.value[changed_data.key] = clone(changed_data.value)
-					self.db_data.value = response.result.data
-					for (var i = 0; i < response.result.data.length; i++) {
-						response.result.data[i]
-					}
+					self.db_data = clone(response.result.data)
 					// console.log('response:.result', response.result);
 
 				}
@@ -1296,6 +1293,19 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 			self.data.changed_data.push(changed_data_item)
 		}
 
+	// Check if changed_data was really changed.
+	// Test if the changed_data is not the original data (the data in server database)
+		const original_value	= self.db_data.value && self.db_data.value[key]
+			? self.db_data.value[key]
+			: null
+		const new_value			= changed_data_item.value
+
+		if (is_equal(new_value, original_value)) {
+			set_before_unload(false)
+			self.node.classList.remove('modified')
+			return false
+		}
+
 	// prevents user navigate loosing changes without warning
 		set_before_unload(true)
 
@@ -1305,7 +1315,7 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 		}
 
 	// debug
-		console.log('+++++++++++++++++++++++++++++ self.data.changed_data:', clone(self.data.changed_data));
+		// console.log('+++++++++++++++++++++++++++++ self.data.changed_data:', clone(self.data.changed_data));
 
 
 	return true
