@@ -866,7 +866,7 @@ class component_text_area extends component_common {
 				$modelo_name, // component_text_area
 				$this->tipo,
 				$this->parent,
-				$this->modo,
+				$this->mode,
 				$current_lang,
 				$this->section_tipo,
 				false // bool cache
@@ -1092,7 +1092,7 @@ class component_text_area extends component_common {
 		// 		$component 		= component_common::get_instance(get_class($this),
 		// 														 $this->tipo,
 		// 														 $this->parent,
-		// 														 $this->modo,
+		// 														 $this->mode,
 		// 														 $source_lang,
 		// 														 $this->section_tipo);
 		// 		$source_raw_text = $component->get_dato();

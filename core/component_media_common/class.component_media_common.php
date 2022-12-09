@@ -108,6 +108,7 @@ class component_media_common extends component_common {
 			$resource_type	= $file_data->resource_type; // string upload caller name like 'tool_upload'
 			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
 			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
+			$quality 		= $file_data->quality ?? $this->get_quality();
 
 		// source_file
 			if (!defined($tmp_dir)) {
@@ -127,7 +128,7 @@ class component_media_common extends component_common {
 		// target file info
 			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_name		= $this->get_name();
-			$folder_path	= $this->get_target_dir();
+			$folder_path	= $this->get_target_dir($quality);
 			$full_file_name	= $file_name . '.' . $file_extension;
 			$full_file_path	= $folder_path .'/'. $full_file_name;
 
@@ -451,7 +452,8 @@ class component_media_common extends component_common {
 				'quality'		=> $el->quality,
 				'file_exist'	=> $el->file_exist,
 				'file_url'		=> $el->file_url,
-				'file_size'		=> $el->file_size
+				'file_size'		=> $el->file_size,
+				'external'		=> $el->external ?? false
 			];
 
 			return $item;
@@ -532,7 +534,7 @@ class component_media_common extends component_common {
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete directory
-					$folder_path_del = $this->get_target_dir() . 'deleted';
+					$folder_path_del = $this->get_target_dir($current_quality) . 'deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0777,true) ) {
 							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
@@ -587,7 +589,7 @@ class component_media_common extends component_common {
 			$this->set_quality($original_quality);
 
 		// target_dir
-			$target_dir = $this->get_target_dir();
+			$target_dir = $this->get_target_dir($original_quality);
 			if(!file_exists($target_dir)) {
 				return $original_files; // empty array
 			}
@@ -661,6 +663,25 @@ class component_media_common extends component_common {
 	* @return object $dato_item
 	*/
 	public function get_quality_file_info( string $quality ) : object {
+
+		// external source (link to image outside Dédalo media)
+			$external_source = $this->get_external_source();
+			if(!empty($external_source)){
+
+				$dato_item = (object)[
+					'quality'		=> $quality,
+					'file_exist'	=> true,
+					'file_name'		=> null,
+					'file_path'		=> null,
+					'file_url'		=> $external_source,
+					'file_size'		=> null,
+					'file_time'		=> null,
+					'external'		=> true
+				];
+				return $dato_item;
+
+			}
+
 
 		// file path
 			$file_path = $this->get_path($quality);
@@ -900,5 +921,71 @@ class component_media_common extends component_common {
 	}//end regenerate_component
 
 
+
+	/**
+	* LOCAL PATH
+	* @return complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
+	*/
+	public function get_local_full_path(string $quality) : string {
+
+		$path = $this->get_media_path_abs($quality) .'/'. $this->get_name() . '.' . $this->get_extension();
+
+		return	$path;
+	}//end get_local_full_path
+
+
+
+	/**
+	* SET_QUALITY
+	* Sync this quality value
+	*/
+	public function set_quality(string $quality) :bool {
+
+		$ar_valid 	= $this->get_ar_quality();
+
+		if(!in_array($quality,$ar_valid)) {
+			#$quality = $default ;		#dump($ar_valid, "$quality NO IS IN ARRAY !!!!!");
+			debug_log(__METHOD__." $quality is not accepted value as quality. Please configure media options in config.php".to_string(), logger::ERROR);
+			return false;
+		}
+
+		$this->quality = $quality;
+
+		return true;
+	}//end set_quality
+
+
+	/**
+	* FILE SIZE
+	* Get file physical size in bytes (or KB/MB)
+	* @return string|null $size
+	* 	(round to KB or MB with label like '256 KB')
+	*/
+	public function get_size(string $quality) : ?string {
+
+		$filename = $this->get_media_path_abs($quality) . $this->get_name() . '.' . $this->get_extension() ;
+
+		try {
+
+			if(!file_exists($filename)) {
+				return null;
+			}
+
+			$size		= @filesize($filename);
+			if(!$size)	throw new Exception('Unknow size!');
+		} catch (Exception $e) {
+			#echo '',  $e->getMessage(), "\n";
+			#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
+			return null;
+		}
+
+		$size_kb = round($size / 1024);
+
+		if($size_kb <= 1024) {
+			return $size_kb . ' KB';
+		}
+
+		return round($size_kb / 1024) . ' MB';
+	}//end get_size
 
 }//end component_media_common

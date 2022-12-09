@@ -34,7 +34,7 @@ abstract class MediaObj {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $name) {
+	function __construct(?string $name) {
 
 		# MEDIA OBJ SETUP
 		$this->name					= $this->define_name();

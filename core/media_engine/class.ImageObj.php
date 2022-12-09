@@ -17,7 +17,7 @@ class ImageObj extends MediaObj {
 
 
 
-	function __construct(string $image_id, ?string $quality=null, ?string $additional_path=null, string $initial_media_path='', ?string $external_source=null) {
+	function __construct(?string $image_id, ?string $quality=null, ?string $additional_path=null, string $initial_media_path='', ?string $external_source=null) {
 
 		# SPECIFIC VARS
 		$this->set_image_id($image_id);
