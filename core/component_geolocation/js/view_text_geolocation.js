@@ -2,6 +2,7 @@
 /*eslint no-undef: "error"*/
 
 
+
 /**
 * VIEW_TEXT_GEOLOCATION
 * Manages the component's logic and appearance in client side
@@ -12,8 +13,9 @@ export const view_text_geolocation = function() {
 }//end view_text_geolocation
 
 
+
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
@@ -30,5 +32,5 @@ view_text_geolocation.render = async function(self, options) {
 		const text_node = document.createTextNode(value_string)
 
 
-	return wrapper
+	return text_node
 }//end mini

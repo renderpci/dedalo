@@ -6,6 +6,8 @@
 */
 abstract class JSON_RecordDataBoundObject {
 
+
+
 	protected $ID;		# id matrix of current table
 	protected $datos;	# Field 'datos' in table matrix
 	protected $strTableName;
@@ -14,6 +16,7 @@ abstract class JSON_RecordDataBoundObject {
 	protected $blForDeletion;
 	protected $blIsLoaded;
 	public $arModifiedRelations;
+	protected $dato;
 
 	public $use_cache = false;
 	public $use_cache_manager = false;

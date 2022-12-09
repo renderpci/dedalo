@@ -61,7 +61,7 @@ class search_query_object {
 		public $filter;
 		// public $select;
 		public $limit;
-		 public $offset;
+		public $offset;
 		public $full_count;
 		public $order;
 		public $order_custom;
@@ -70,14 +70,17 @@ class search_query_object {
 		public $remove_distinc;
 		public $skip_projects_filter;
 		public $parsed;
+		public $select;
+		// generated_time
+		public $generated_time;
 
 
 
 	/**
 	* __CONSTRUCT
-	* @param object $data = null
+	* @param object|null $data = null
 	*/
-	public function __construct( object $data=null ) {
+	public function __construct( ?object $data=null ) {
 
 		if (is_null($data)) return;
 
