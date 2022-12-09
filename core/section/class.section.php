@@ -1702,7 +1702,8 @@ class section extends common {
 		# Current elements and children are not considerate part of section and must be excluded in children results
 		$ar_exclude_models = [
 			'box elements',
-			'area'
+			'area',
+			'dataframe'
 		];
 
 		$ar_recursive_children = RecordObj_dd::get_ar_recursive_childrens(
