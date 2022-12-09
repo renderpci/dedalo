@@ -2789,7 +2789,9 @@ abstract class common {
 									true, // bool from_cache
 									true, // bool resolve_virtual
 									true, // bool recursive
-									false // bool search_exact
+									false, // bool search_exact
+									false, // array|bool $ar_tipo_exclude_elements
+									['dataframe'] // ?array $ar_exclude_models
 								);
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
@@ -3499,6 +3501,7 @@ abstract class common {
 				'component_geolocation',
 				// 'component_info',
 				'component_state',
+				'component_semantic_node',
 				'section_tab'
 			];
 			$options->ar_include_elements		= [
