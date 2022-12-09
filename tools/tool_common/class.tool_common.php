@@ -515,7 +515,10 @@ class tool_common {
 					$sample = is_array($line) ? implode(', ', $line) : (string)$line;
 					if ($convert_to_utf8===true || !mb_check_encoding($sample, 'UTF-8')) {
 						foreach ($line as $key => $current_value) {
-							$line[$key] = utf8_encode($current_value);
+							// $line[$key] = utf8_encode($current_value);
+							// replacement for PHP8.2 (https://php.watch/versions/8.2/utf8_encode-utf8_decode-deprecated)
+							// $line[$key] = mb_convert_encoding($current_value, 'UTF-8', 'ISO-8859-1'); // ISO-8859-1 to UTF-8
+							$line[$key] = mb_convert_encoding($current_value, 'UTF-8', mb_list_encodings()); // Any encoding to UTF-8
 						}
 						$convert_to_utf8 = true; // prevent to check more than once
 					}
