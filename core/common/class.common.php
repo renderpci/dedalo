@@ -83,6 +83,7 @@ abstract class common {
 	public $caller_dataframe;
 
 
+
 	// required methods
 		// abstract protected function define_id($id);
 		// abstract protected function define_tipo();
@@ -1268,7 +1269,7 @@ abstract class common {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				$start_time = start_time();
+				$get_json_start_time = start_time();
 			}
 
 		// options parse
@@ -1321,8 +1322,8 @@ abstract class common {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				// $exec_time = exec_time_unit($start_time,'ms').' ms';
-				$exec_time = exec_time_unit($start_time).' ms';
+				// $exec_time = exec_time_unit($get_json_start_time,'ms').' ms';
+				$exec_time = exec_time_unit($get_json_start_time).' ms';
 				#$element = json_decode($json);
 				#	$element->debug = new stdClass();
 				#	$element->debug->exec_time = $exec_time;
@@ -1330,7 +1331,7 @@ abstract class common {
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
 
-					if (strpos($called_model, 'component_')!==false && $options->get_data===true && !empty($json->data)) { //
+					if (strpos($called_model, 'component_')!==false && $options->get_data===true && !empty($json->data)) {
 
 						$current = reset($json->data);
 							// $current->debug_time_json	= $exec_time;
@@ -1753,6 +1754,7 @@ abstract class common {
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
+
 		// get the context and data for every locator
 			foreach($ar_locators as $current_locator) {
 
@@ -1782,7 +1784,6 @@ abstract class common {
 							(isset($ddo->is_dataframe) && $ddo->is_dataframe===true);
 				});
 
-
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
 					// use the locator section_tipo.
@@ -1791,6 +1792,8 @@ abstract class common {
 					// Note: it's different of the multiple section_tipo as es1, fr1, etc that every locator define his own ddo compatibles.
 					// reference: oh24 -> old semantic_node
 					// reference: numisdata161 -> old dataframe
+
+					$ddo_start_time = start_time();
 
 					if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
 						$section_tipo	= is_array($dd_object->section_tipo)
@@ -1946,7 +1949,6 @@ abstract class common {
 									}
 
 								// inject view
-
 									// if(isset($view)){
 									// 	$related_element->view = $view;
 									// }
@@ -2021,10 +2023,11 @@ abstract class common {
 								$ar_subdata = array_merge($ar_subdata, $ar_final_subdata);
 						}//end if (isset($related_element))
 
-
 					// add calculated subcontext
 						// $ar_subcontext_calculated[] = $cid;
 
+					$log = "------------------- resolve ddo ------------------ $dd_object->tipo ---------- ".exec_time_unit($ddo_start_time,'ms')." ms ";
+					error_log($log);
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 			}//end foreach($ar_locators as $current_locator)
 

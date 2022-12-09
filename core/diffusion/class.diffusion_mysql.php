@@ -252,7 +252,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 		}//end foreach ($ar_chunk as $key => $current_ar_fields) {
 
-		# Revisar que la tabla de destino es ut-8 para evitar esto
+		# Revisar que la tabla de destino es utf-8 para evitar esto
 		#$sql_query = utf8_decode($sql_query);
 		#dump( stripslashes($sql_query), ' sql_query');
 

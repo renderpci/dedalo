@@ -183,7 +183,7 @@ class section extends common {
 			$this->section_id	= $section_id;
 			$this->tipo			= $tipo;
 			$this->mode			= $mode ?? 'edit';
-			$this->parent		= 0;
+			// $this->parent		= 0;
 
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
@@ -1211,10 +1211,14 @@ class section extends common {
 
 				case 'delete_record' :
 
-					#
 					# TIME MACHINE : prepare matrix_time_machine data for recover this section later
 					# Get time machine id based on section tipo and section_id
-					$ar_id_time_machine = (array)RecordObj_time_machine::get_ar_time_machine_of_this($section_tipo, $this->section_id, 'lg-nolan', $section_tipo); // $tipo, $parent, $lang=NULL, $section_tipo
+					$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
+						$section_tipo,
+						$this->section_id,
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 					if (empty($ar_id_time_machine[0])) {
 						#return "Error on delete record. Time machine version of this record not exists. Please contact with your admin to delete this record";
 						$RecordObj_time_machine_new = new RecordObj_time_machine(null);
@@ -1253,44 +1257,31 @@ class section extends common {
 						// $dato_time_machine_compare	= json_decode( json_encode($dato_time_machine) );
 						// $dato_section_compare		= json_decode( json_encode($dato_section) );
 
-					if ($dato_time_machine != $dato_section) {
-						if(SHOW_DEBUG===true) {
-							dump($dato_time_machine,"SHOW_DEBUG COMPARE ERROR dato_time_machine");
-							dump($dato_section,"SHOW_DEBUG COMPARE ERROR dato_section");
+					// check time machine dato
+						if ($dato_time_machine != $dato_section) {
+							if(SHOW_DEBUG===true) {
+								dump($dato_time_machine,"SHOW_DEBUG COMPARE ERROR dato_time_machine");
+								dump($dato_section,"SHOW_DEBUG COMPARE ERROR dato_section");
+							}
+							throw new Exception("ERROR: Failed compare data of time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (3)", 1);
+							return false;
 						}
-						#trigger_error("ERROR: Failed compare data of time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (3)");
-						throw new Exception("ERROR: Failed compare data of time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (3)", 1);
 
-						return false;
-					}
+					// section delete. Delete matrix record
+						$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $section_tipo);
+						$JSON_RecordObj_matrix->MarkForDeletion();
 
+					// inverse references. Remove all inverse references to this section
+						$this->remove_all_inverse_references();
 
-					#
-					# SECTION DELETE
-					# Delete matrix record
-					$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $section_tipo);
-					$JSON_RecordObj_matrix->MarkForDeletion();
+					// relation references. Remove all relation references (children, model, etc.)
+						// $this->remove_all_relation_references();
 
+					// media. Remove media files associated to this section
+						$this->remove_section_media_files();
 
-					#
-					# INVERSE REFERENCES
-					# Remove all inverse references to this section
-					$this->remove_all_inverse_references();
-
-
-					#
-					# RELATION REFERENCES
-					# Remove all relation references (children, model, etc.)
-					# $this->remove_all_relation_references();
-
-
-					#
-					# MEDIA
-					# Remove media files associated to this section
-					$this->remove_section_media_files();
-
-
-					$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and children records. delete_mode $delete_mode";
+					// logger
+						$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and children records. delete_mode $delete_mode";
 					break;
 
 				// delete the section with dataframe data.
@@ -1382,14 +1373,15 @@ class section extends common {
 
 
 
-
 	/**
 	* GET_SECTION_REAL_TIPO
 	* @return string $section_real_tipo
 	*/
 	public function get_section_real_tipo() : string {
 
-		if(isset($this->section_real_tipo)) return $this->section_real_tipo;
+		if(isset($this->section_real_tipo)) {
+			return $this->section_real_tipo;
+		}
 
 		$section_real_tipo = section::get_section_real_tipo_static( $this->tipo );
 		if ($section_real_tipo!==$this->tipo) {
@@ -1438,110 +1430,100 @@ class section extends common {
 	*/
 	public function get_ar_children_objects_by_modelo_name_in_section(string $modelo_name_required, bool $resolve_virtual=true) : array {
 
-		$ar_section_obj = array();
+		$ar_section_obj = [];
 
-		if(SHOW_DEBUG===true) {
-			$start_time = start_time();
-			// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time = start_time();
+				// global$TIMER;$TIMER[__METHOD__.'_IN_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
+			}
 
-		$parent  = intval($this->get_section_id());
-		$tipo	 = $this->get_tipo();
+		// short vars
+			$tipo		= $this->get_tipo();
+			$section_id	= $this->section_id;
 
-
-			# RESOLVE_VIRTUAL : Resolve virtual section to real
+		// resolve_virtual : Resolve virtual section to real
 			if($resolve_virtual) {
-
 				# ORIGINAL TIPO : always keeps the original type (current)
 				$original_tipo = $tipo;
-
 				# SECTION VIRTUAL
 				$section_real_tipo = $this->get_section_real_tipo();
 				if($section_real_tipo!=$original_tipo) {
-
-					# OVERWRITE CURRENT SECTION TIPO WITH REAL SECTION TIPO
+					// overwrite current section tipo with real section tipo
 					$tipo = $section_real_tipo;
 				}
 			}
 
-
-		# STATIC CACHE
-		$uid = $parent .'_'. $tipo .'_'. $modelo_name_required;
-		static $ar_children_objects_by_modelo_name_in_section;
-		if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
-
-			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_STATIC_'.$modelo_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
-				#debug_log(__METHOD__." Returned '$modelo_name_required' for tipo:$this->tipo FROM STATIC CACHE");
+		// static cache
+			$uid = $this->section_id .'_'. $tipo .'_'. $modelo_name_required;
+			static $ar_children_objects_by_modelo_name_in_section;
+			if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
+				return $ar_children_objects_by_modelo_name_in_section[$uid];
 			}
-			return $ar_children_objects_by_modelo_name_in_section[$uid];
-		}
 
+		// ar_recursive_childrens. Get section element children
+			$ar_recursive_childrens = strpos($modelo_name_required, 'button_')!==false
+				? (array)RecordObj_dd::get_ar_childrens($tipo) // for buttons only need one level
+				: (array)section::get_ar_recursive_children($tipo);
+			if( empty($ar_recursive_childrens) ) {
+				return null;
+			}
 
-		# GET SECTION ELEMENT CHILDRENS - OBTENEMOS LOS ELEMENTOS HIJOS DE ESTA SECCIÓN
-		switch (true) {
-			# For buttons only need one level
-			case (strpos($modelo_name_required, 'button_')!==false):
-				$ar_recursive_childrens = (array)RecordObj_dd::get_ar_childrens($tipo);
-				break;
-			default:
-				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo);
-		}
-		if(SHOW_DEBUG===true) {
-			#dump($ar_recursive_childrens, 'ar_recursive_childrens tipo:'.$tipo." - modelo_name_required:$modelo_name_required", array()); dump($this," ");
-			#debug_log( __METHOD__." get_ar_children_objects_by_modelo_name_in_section: ".json_encode($modelo_name_required) );
-		}
+		// Loop through the child elements of the current section in the Ontology
+		foreach($ar_recursive_childrens as $child_tipo) {
 
+			// Clear obj on every iteration
+				$current_obj	= null;
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($child_tipo, true);
 
-		if( empty($ar_recursive_childrens) ) {
-			#throw new Exception(__METHOD__." ar_recursive_childrens is empty! This section don't have: '$modelo_name_required' ");
-			#debug_log(__METHOD__." ar_recursive_childrens is empty! This section id=$parent don't have: '$modelo_name_required' (tipo:$tipo) 384 ". __METHOD__ );
-			return NULL	;
-		}
+			// We filter to load only those of the desired model
+				if( strpos($modelo_name, $modelo_name_required)===false ) {
+					continue; # Skip
+				}
 
-		# Recorremos los elementos hijos de la sección actual en el tesauro
-		foreach($ar_recursive_childrens as $terminoID) {
-
-			# Clear obj on every iteration
-			$current_obj 		= null;
-			$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($terminoID, true);
-
-
-			# Filtramos para cargar sólo los del modelo deseado
-			if( strpos($modelo_name, $modelo_name_required)===false ) continue; # Skip
-
-
-			# Construimos el objeto (en función del tipo deseado se construye de forma distinta: component, button, etc..)
+			// We build the object (depending on the desired type it is built differently: component, button, etc..)
 			switch(true) {
 
-				# Build component obj
+				// Build component obj
 				case (strpos($modelo_name, 'component_')!==false) :
 
-					$current_obj = component_common::get_instance($modelo_name, $terminoID, $parent,'edit', DEDALO_DATA_LANG, $this->tipo ); #$id=NULL, $tipo=NULL, $mode='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
+					$current_obj = component_common::get_instance(
+						$modelo_name,
+						$child_tipo,
+						$this->section_id,
+						'edit',
+						DEDALO_DATA_LANG,
+						$this->tipo
+					);
 					break;
 
-				# Build button obj
+				// Build button obj
 				case (strpos($modelo_name, 'button_')!==false) :
 
-					if ($modelo_name==='button_delete') break; # Skip Delete buttons
+					if ($modelo_name==='button_delete') {
+						break; # Skip Delete buttons
+					}
 
-					$current_obj = new $modelo_name($terminoID, $target=$parent, $this->tipo);
+					$current_obj = new $modelo_name(
+						$child_tipo,
+						$this->section_id,
+						$this->tipo
+					);
 					$current_obj->set_context_tipo($tipo);
 					break;
 
 				default :
-					trigger_error("Sorry, element $modelo_name is not defined for build object");
+					debug_log(__METHOD__." Error: element MODEL: '$modelo_name' is not defined for build object ".to_string(), logger::ERROR);
 			}
 
-
-			# Add well formed object to array
+			// Add well formed object to array
 				if(is_object($current_obj)) {
 					$ar_section_obj[] = $current_obj;
 				}
 		}
 
-		// STORE CACHE DATA
-		$ar_children_objects_by_modelo_name_in_section[$uid] = $ar_section_obj ;
+		// store cache data
+			$ar_children_objects_by_modelo_name_in_section[$uid] = $ar_section_obj ;
 
 
 		return $ar_section_obj;
