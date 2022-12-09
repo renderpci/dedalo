@@ -114,7 +114,7 @@ export const get_content_data_edit = function(self) {
 const get_content_value = function(i, current_value, self) {
 
 	// short vars
-		const quality		= self.quality || self.context.quality
+		const quality		= self.quality || self.context.features.quality
 		const datalist		= self.data.datalist || []
 		const offset_value	= current_value && current_value.lib_data && current_value.lib_data.offset!=='undefined' && current_value.lib_data.offset!==null
 			? current_value.lib_data.offset

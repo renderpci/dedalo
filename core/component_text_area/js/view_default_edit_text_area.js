@@ -424,7 +424,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 						if (note_section_id){
 							// create the new locator of the new note section
 							const locator = {
-								section_tipo	: self.context.notes_section_tipo,
+								section_tipo	: self.context.features.notes_section_tipo,
 								section_id		: note_section_id
 							};
 							// create the new tag for the note
@@ -692,12 +692,12 @@ const get_custom_events = (self, i, text_editor) => {
 			switch(true) {
 
 				// 'Escape'
-				case self.context.av_player && evt.code===self.context.av_player.av_play_pause_code:
-					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.av_player.av_rewind_seconds)
+				case self.context.features.av_player && evt.code===self.context.features.av_player.av_play_pause_code:
+					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.features.av_player.av_rewind_seconds)
 					break;
 
 				// 'F2'
-				case self.context.av_player && evt.code===self.context.av_player.av_insert_tc_code:
+				case self.context.features.av_player && evt.code===self.context.features.av_player.av_insert_tc_code:
 					// publish event and receive susbscriptors responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -1102,7 +1102,7 @@ const render_note = async function(options) {
 
 		// subscribe to the change publication of the component_publication of the section node
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
-		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.notes_publication_tipo
+		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.features.notes_publication_tipo
 		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
 
 		function fn_change_publication_state(changed_value) {

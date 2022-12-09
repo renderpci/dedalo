@@ -106,7 +106,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 			self.service_upload = await get_instance({
 				model				: 'service_upload',
 				mode				: 'edit',
-				allowed_extensions	: self.caller.context.allowed_extensions, // like ['csv','jpg']
+				allowed_extensions	: self.caller.context.features.allowed_extensions, // like ['csv','jpg']
 				caller				: self
 			})
 			// console.log("self.service_upload:",self.service_upload);
@@ -162,9 +162,9 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// 		const component_tipo		= self.caller.tipo || null
 	// 		const section_tipo			= self.caller.section_tipo || null
 	// 		const section_id			= self.caller.section_id || null
-	// 		const quality				= self.caller.context.target_quality || self.caller.context.default_target_quality || null
+	// 		const quality				= self.caller.context.target_quality || self.caller.context.features.default_target_quality || null
 	// 		const target_dir			= self.caller.context.target_dir || null
-	// 		const allowed_extensions	= self.caller.context.allowed_extensions
+	// 		const allowed_extensions	= self.caller.context.features.allowed_extensions
 	// 		const caller_type			= self.caller.context.type
 	// 		console.log("self.caller.context:",self.caller.context);
 
@@ -275,7 +275,6 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// 				// refresh caller (usually a component)
 	// 					self.caller.refresh()
 
-
 	// 				return true
 	// 			}//end xhr_load
 
@@ -312,9 +311,6 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// 			// send data
 	// 				xhr.send(fd);
 
-
-
-
 	// 	return true
 	// }//end upload_file
 
@@ -334,8 +330,8 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// 		const file = options.file
 
 	// 	// short vars
-	// 		const resource_type			= self.caller.context.resource_type || null // like 'image'
-	// 		const allowed_extensions	= self.caller.context.allowed_extensions
+	// 		const resource_type			= self.caller.context.features.resource_type || null // like 'image'
+	// 		const allowed_extensions	= self.caller.context.features.allowed_extensions
 
 	// 	// upload (using service upload)
 	// 		const api_response = await upload({
@@ -388,7 +384,7 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
 			caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on tool_upload class
-			quality			: self.caller.context.target_quality || self.caller.context.default_target_quality || null, // only for components
+			quality			: self.caller.context.target_quality || self.caller.context.features.default_target_quality || null, // only for components
 			target_dir		: self.caller.context.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
 		}
 

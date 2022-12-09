@@ -23,8 +23,9 @@
 				$current_context = $this->get_structure_context($permissions);
 
 				// append additional info
-					$current_context->allowed_extensions 	 = $this->get_allowed_extensions();
-					$current_context->default_target_quality = null;
+				$current_context->features = new stdClass();
+					$current_context->features->allowed_extensions		= $this->get_allowed_extensions();
+					$current_context->features->default_target_quality	= null;
 				break;
 		}
 		$context[] = $current_context;

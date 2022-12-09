@@ -77,7 +77,32 @@ class dd_object {
 		public $fields_separator;
 		// records_separator	: string like " | " // used by portal to join different records (rows)
 		public $records_separator;
-
+		// legacy_model			: string like "component_autocomplet_hi"
+		public $legacy_model;
+		// relation_list		: string
+		public $relation_list;
+		// path		: array
+		public $path;
+		// debug				: object
+		public $debug;
+		// add_label : bool
+		public $add_label;
+		// string|null time_machine_list . Get the time machine list tipo for the section
+		public $time_machine_list;
+		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
+		public $features;
+		// array toolbar_buttons
+		public $toolbar_buttons;
+		// bool value_with_parents
+		public $value_with_parents;
+		// object tool_config
+		public $tool_config;
+		// array search_operators_info
+		public $search_operators_info;
+		// string search_options_title
+		public $search_options_title;
+		// string target_section_tipo
+		public $target_section_tipo;
 
 
 		// ar_type_allowed
@@ -670,6 +695,31 @@ class dd_object {
 
 		return $found;
 	}//end in_array_ddo
+
+
+
+	/**
+	* GET METHODS
+	* By accessors. When property exits, return property value, else return null
+	*/
+	final public function __get($name) {
+
+		if (isset($this->$name)) {
+			return $this->$name;
+		}
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
+	}//end __get
+	// final public function __set($name, $value) {
+	// 	$this->$name = $value;
+	// }
 
 
 

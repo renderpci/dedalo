@@ -87,7 +87,7 @@ const get_content_value = function(i, value, self) {
 
 	// short vars
 		const datalist	= self.data.datalist || []
-		const quality	= self.quality || self.context.quality
+		const quality	= self.quality || self.context.features.quality
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -165,7 +165,7 @@ export const get_buttons = (self) => {
 	// 		: item_value.file_url
 
 	// 	// media url from data.datalist based on selected context quality
-	// 		// const quality	= self.quality || self.context.quality
+	// 		// const quality	= self.quality || self.context.features.quality
 	// 		// const file_info	= self.data.datalist.find(el => el.quality===quality)
 	// 		// const url		= file_info
 	// 		// 	? file_info.file_url

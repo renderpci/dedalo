@@ -163,7 +163,7 @@ export const render_info = function(self) {
 		})
 
 	// target quality
-		const target_quality = self.caller.context.target_quality || self.caller.context.default_target_quality
+		const target_quality = self.caller.context.target_quality || self.caller.context.features.default_target_quality
 		if (target_quality) {
 			ui.create_dom_element({
 				element_type	: 'div',

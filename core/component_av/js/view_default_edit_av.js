@@ -91,7 +91,7 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// media url from data.datalist based on selected context quality
-		const quality	= self.quality || self.context.quality
+		const quality	= self.quality || self.context.features.quality
 		const datalist	= self.data.datalist
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		const video_url	= file_info && file_info.file_exist===true
@@ -219,7 +219,7 @@ const get_quality_selector = (content_value, self) => {
 
 	// short vars
 		const data		= self.data
-		const quality	= self.quality || self.context.quality
+		const quality	= self.quality || self.context.features.quality
 		const video		= content_value.video
 
 		const fragment = new DocumentFragment()

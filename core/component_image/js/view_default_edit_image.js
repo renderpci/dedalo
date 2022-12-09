@@ -90,7 +90,7 @@ const get_content_data_edit = function(self) {
 const get_content_value = function(i, value, self) {
 
 	// short vars
-		const quality	= self.quality || self.context.quality
+		const quality	= self.quality || self.context.features.quality
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
 
@@ -109,14 +109,14 @@ const get_content_value = function(i, value, self) {
 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
 
 		// fallback to default (when not already in default)
-		if (!url && quality!==self.context.default_quality) {
-			const file_info_dq	= datalist.find(el => el.quality===self.context.default_quality && el.file_exist===true)
+		if (!url && quality!==self.context.features.default_quality) {
+			const file_info_dq	= datalist.find(el => el.quality===self.context.features.default_quality && el.file_exist===true)
 			url = file_info_dq
 				? file_info_dq.file_url
 				: null
 			if (url) {
 				// change the quality
-				self.quality = self.context.default_quality
+				self.quality = self.context.features.default_quality
 			}
 		}
 
@@ -172,7 +172,7 @@ const get_content_value = function(i, value, self) {
 
 		// auto-change url the first time
 		object_node.onload = async function() {
-			if (quality!==self.context.default_quality) {
+			if (quality!==self.context.features.default_quality) {
 				await fn_img_quality_change(url)
 			}
 			content_value.classList.remove('hide')
@@ -308,7 +308,7 @@ const get_quality_selector = (self) => {
 	// short vars
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
-		const quality	= self.quality || self.context.quality
+		const quality	= self.quality || self.context.features.quality
 
 	const fragment = new DocumentFragment()
 

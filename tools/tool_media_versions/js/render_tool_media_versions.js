@@ -226,7 +226,7 @@ const get_line_labels = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -275,7 +275,7 @@ const get_line_file_exists = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -342,7 +342,7 @@ const get_line_file_size = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -398,7 +398,7 @@ const get_line_file_upload = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -477,7 +477,7 @@ const get_line_file_download = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -555,7 +555,7 @@ const get_line_file_delete = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -618,7 +618,7 @@ const get_line_build_version = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -716,7 +716,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -778,7 +778,7 @@ const get_line_rotate = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 

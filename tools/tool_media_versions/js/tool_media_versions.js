@@ -101,11 +101,11 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 			// self.main_element_quality.
 			// (!) It's used to force a specific main_element quality before render the component
 				if (self.main_element_quality) {
-					self.main_element.context.quality = self.main_element_quality
+					self.main_element.context.features.quality = self.main_element_quality
 				}
 
 		// fix important vars
-			self.ar_quality	= self.caller.context.ar_quality
+			self.ar_quality	= self.caller.context.features.ar_quality
 			self.files_info	= self.caller.data.datalist
 
 	} catch (error) {

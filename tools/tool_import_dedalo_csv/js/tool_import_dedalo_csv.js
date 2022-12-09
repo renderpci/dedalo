@@ -105,8 +105,8 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 	try {
 
 		// set allowed_extensions
-			// self.context.allowed_extensions	= ['csv']
-			// self.context.target_dir			= {
+			// self.context.features.allowed_extensions	= ['csv']
+			// self.context.features.target_dir			= {
 			// 	type	: 'dedalo_config',
 			// 	value	: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config
 			// }

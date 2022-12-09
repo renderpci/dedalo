@@ -80,8 +80,8 @@ component_pdf.prototype.build = async function(autoload=false) {
 		self.pdf_viewer	= null
 
 	// fix useful vars
-		self.allowed_extensions		= self.context.allowed_extensions
-		self.default_target_quality	= self.context.default_target_quality
+		self.allowed_extensions		= self.context.features.allowed_extensions
+		self.default_target_quality	= self.context.features.default_target_quality
 
 
 	return common_build
