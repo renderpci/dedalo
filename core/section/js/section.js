@@ -318,12 +318,12 @@ section.prototype.build = async function(autoload=false) {
 			if (!self.context) {
 				// rqo_config. get the rqo_config from request_config
 				self.rqo_config = self.request_config
-					? self.request_config.find(el => el.api_engine==='dedalo')
+					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}else{
 				// rqo_config. get the rqo_config from context
 				self.rqo_config	= self.context && self.context.request_config
-					? self.context.request_config.find(el => el.api_engine==='dedalo')
+					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}
 
@@ -418,7 +418,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// update rqo.sqo.limit. Note that it may have been updated from the API response
 			// Paginator takes limit from: self.rqo.sqo.limit
-				const request_config_item = self.context.request_config.find(el => el.api_engine==='dedalo')
+				const request_config_item = self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 				if (request_config_item) {
 					// Updated self.rqo.sqo.limit. Try sqo and show.sqo_config
 					if (request_config_item.sqo && request_config_item.sqo.limit) {

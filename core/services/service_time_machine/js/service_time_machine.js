@@ -124,12 +124,12 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			if (self.context) {
 				// rqo_config. get the rqo_config from context
 				self.rqo_config	= self.context && self.context.request_config
-					? self.context.request_config.find(el => el.api_engine==='dedalo')
+					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}else{
 				// rqo_config. get the rqo_config from request_config
 				self.rqo_config = self.request_config
-					? self.request_config.find(el => el.api_engine==='dedalo')
+					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}
 
