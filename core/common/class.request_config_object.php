@@ -5,8 +5,9 @@
 
 	// STRUCTURE
 		api_engine	: engine for manage the request. Default is 'dedalo' but could be external like 'zenon'
-		sqo		: search query object active width DDBB
-		show	: layout_map and sqo_config
+		type 		: type of the requests, string that the components can use to define his own requests and modifiers. by default will be 'main'
+		sqo			: search query object active width DDBB
+		show		: layout_map and sqo_config
 			(it will create the search and choose, when these objects are not sended)
 		search	: layout_map and sqo_config
 			(it modify the show and it will create the choose, when these object is not sended)
@@ -17,6 +18,7 @@
 		[
 			{
 				"api_engine" : "dedalo",
+				"type"		:"main",
 				"sqo" : {
 					"section_tipo" : [
 						{"source" : "hierarchy_types", "value": [2]},
@@ -108,7 +110,7 @@
 				]},
 			},
 			{
-				"search_engine": "zenon_engine",
+				"api_engine": "zenon_engine",
 				"sqo" : {
 					"section_tipo": [{"source":"section", "value":["zenon1"]}]
 				},
@@ -170,6 +172,16 @@ class request_config_object {
 
 		$this->api_engine = $value;
 	}//end set_api_engine
+
+
+
+	/**
+	* SET_TYPE
+	*/
+	public function set_type(string $value) {
+
+		$this->type = $value;
+	}//end set_type
 
 
 
