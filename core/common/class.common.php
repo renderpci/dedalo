@@ -1604,6 +1604,7 @@ abstract class common {
 				if($model==='section'){
 					$dd_object->relation_list		= $this->get_relation_list();
 					$dd_object->time_machine_list	= $this->get_time_machine_list();
+					$dd_object->section_map 		= section::get_section_map( $section_tipo );
 				}
 				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_time_unit($start_time) );
 
@@ -2467,6 +2468,11 @@ abstract class common {
 							$item_request_config->api_engine ?? 'dedalo'
 						);
 
+					// type
+						$parsed_item->set_type(
+							$item_request_config->type ?? 'main'
+						);
+
 					// sqo. Add search query object property
 						$parsed_item->set_sqo(
 							$item_request_config->sqo ?? new stdClass()
@@ -3051,6 +3057,7 @@ abstract class common {
 
 					$request_config_item = new request_config_object();
 						$request_config_item->set_api_engine('dedalo');
+						$request_config_item->set_type('main');
 						$request_config_item->set_show($show);
 						$request_config_item->set_sqo($sqo);
 
