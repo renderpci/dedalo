@@ -101,6 +101,8 @@ abstract class component_common extends common {
 		public $from_component_tipo;
 		// array data_list
 		public $data_list;
+		// object column_obj
+		public $column_obj;
 
 
 

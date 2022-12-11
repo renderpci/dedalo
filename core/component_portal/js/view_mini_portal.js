@@ -20,11 +20,11 @@ export const view_mini_portal = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node for use in list
 * @return DOM node wrapper
 */
-view_mini_portal.render = async function(self, options) {
+view_mini_portal.render = async function(self) {
 
 	// ar_section_record
 		const children_view	= self.context.children_view || self.context.view || 'text'

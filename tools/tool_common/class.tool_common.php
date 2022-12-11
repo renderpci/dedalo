@@ -10,6 +10,10 @@ class tool_common {
 
 	public $name;
 	public $config;
+	// string section_tipo
+	public $section_tipo;
+	// string section_id
+	public $section_id;
 
 
 
@@ -49,9 +53,9 @@ class tool_common {
 				if (true===$options->get_context) {
 					$json->context = $this->get_context();
 				}
-				if (true===$options->get_data) {
-					$json->data = $this->get_data();
-				}
+				// if (true===$options->get_data) {
+				// 	$json->data = $this->get_data();
+				// }
 
 		return $json;
 	}//end get_json
@@ -416,7 +420,9 @@ class tool_common {
 
 		// scan dir
 			try {
-				$root = scandir($dir);
+				$root = is_dir($dir)
+					? scandir($dir)
+					: null;
 			} catch (Exception $e) {
 				debug_log(__METHOD__." Error on read dir ".to_string($dir), logger::ERROR);
 				//return($e);
@@ -585,7 +591,7 @@ class tool_common {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			if (method_exists($component, $method)) {
+			if (!empty($method) && method_exists($component, $method)) {
 
 				// call component
 					$call_result = $component->{$method}($method_arguments);
