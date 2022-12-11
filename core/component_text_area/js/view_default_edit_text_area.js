@@ -525,10 +525,10 @@ const get_custom_events = (self, i, text_editor) => {
 		}//end focus
 
 	// blur
-		custom_events.blur = (evt, options) => {
-			// save. text_editor save function calls current component save_value()
-			text_editor.save()
-		}//end blur
+		// custom_events.blur = (evt, options) => {
+		// 	// save. text_editor save function calls current component save_value()
+		// 		text_editor.save()
+		// }//end blur
 
 	// click
 		custom_events.click = (evt, options) => {
@@ -688,6 +688,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
+
 			// use the observe property into ontology of the components to subscribe to this events
 			switch(true) {
 
@@ -779,9 +780,28 @@ const get_custom_events = (self, i, text_editor) => {
 				// 	console.log(options)
 				// break;
 			}
+
+			// change data. Delayed to minimize editor interference
+				setTimeout(()=>{
+					const value = text_editor.editor.getData();
+					self.preprocess_text_to_save(value)
+					.then(function(parsed_value){
+
+						const changed_data_item = Object.freeze({
+							action	: 'update',
+							key		: i,
+							value	: parsed_value || ''
+						})
+
+					// fix instance changed_data
+						self.set_changed_data(changed_data_item)
+							// console.log('self.db_data.value[i]:', self.db_data.value[i]);
+							// console.log('parsed_value:', parsed_value);
+					})
+				}, 100)
 		}//end KeyUp
 
-	//changeData
+	// changeData
 		custom_events.changeData = (evt, options) => {
 			const ar_changes = options
 			const changes_len = ar_changes.length
@@ -795,6 +815,7 @@ const get_custom_events = (self, i, text_editor) => {
 				event_manager.publish(event_name, change)
 			}
 		}// end changeData event
+
 
 	return custom_events
 }//end get_custom_events
