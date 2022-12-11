@@ -271,7 +271,7 @@ const get_content_data = function(self) {
 					const file_name = 'register.json'
 
 					// confirm action by user
-						if (!confirm(`Donwload file: ${file_name} ${self.caller.section_id} ?`)) {
+						if (!confirm(`Download file: ${file_name} ${self.caller.section_id} ?`)) {
 							return false
 						}
 

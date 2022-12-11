@@ -15,14 +15,16 @@ class tool_export extends tool_common {
 		// public static $internal_separator = PHP_EOL;
 		// public $section_list_custom;
 
-		// data_format. string 'standard', 'dedalo'
-			public $data_format;
-		// ar_ddo_map. array
-			public $ar_ddo_map;
-		// sqo. object
-			public $sqo;
-		// ar_records. array|null Array of records to export (section_id) or null
-			public $ar_records;
+		// string data_format. Values: 'standard', 'dedalo'
+		public $data_format;
+		// array ar_ddo_map
+		public $ar_ddo_map;
+		// object sqo
+		public $sqo;
+		// string model
+		public $model;
+		// array|null ar_records.  Array of records to export (section_id) or null
+		public $ar_records;
 
 
 
@@ -215,7 +217,7 @@ class tool_export extends tool_common {
 			// when the component is portal inside portal, like 'photograph' inside 'identifying image' inside 'interview'.
 			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
 			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
-			foreach ($ar_row_value->ar_columns_obj as $column_pos => $current_column_obj) {
+			foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
 				// check if the current column exists in the full column array
 				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
 					return ($el->id===$current_column_obj->id);

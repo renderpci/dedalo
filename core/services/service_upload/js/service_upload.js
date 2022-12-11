@@ -336,8 +336,10 @@ service_upload.prototype.upload_file = async function(options) {
 		const file = options.file
 
 	// short vars
-		const resource_type			= self.caller.context.features.resource_type || self.caller.model || null // like 'image'
-		const allowed_extensions	= self.allowed_extensions
+		const resource_type = self.caller.context.features
+			? self.caller.context.features.resource_type
+			: (self.caller.model || null) // like 'image'
+		const allowed_extensions = self.allowed_extensions
 
 	// upload (using service upload)
 		const api_response = await upload({
@@ -394,8 +396,8 @@ service_upload.prototype.upload_file = async function(options) {
 	// 			section_tipo	: self.caller.section_tipo,
 	// 			section_id		: self.caller.section_id,
 	// 			caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on service_upload class
-	// 			quality			: self.caller.context.target_quality || self.caller.context.features.default_target_quality || null, // only for components
-	// 			target_dir		: self.caller.context.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
+	// 			quality			: self.caller.context.features.target_quality || self.caller.context.features.default_target_quality || null, // only for components
+	// 			target_dir		: self.caller.context.features.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
 	// 		}
 
 	// 	// rqo

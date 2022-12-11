@@ -25,7 +25,7 @@
 
 
 /**
-* view_default_edit_portal
+* VIEW_DEFAULT_EDIT_PORTAL
 * Manage the components logic and appearance in client side
 */
 export const view_default_edit_portal = function() {

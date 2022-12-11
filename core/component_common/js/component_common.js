@@ -429,11 +429,11 @@ component_common.prototype.save = async function(changed_data) {
 
 	// remove previous success/error CSS class if exists
 		if (self.node) {
-			if (self.node.classList.contains("error")) {
-				self.node.classList.remove("error")
+			if (self.node.classList.contains('error')) {
+				self.node.classList.remove('error')
 			}
-			if (self.node.classList.contains("save_success")) {
-				self.node.classList.remove("save_success")
+			if (self.node.classList.contains('save_success')) {
+				self.node.classList.remove('save_success')
 			}
 		}
 

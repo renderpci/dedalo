@@ -781,21 +781,23 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 /**
 * GET_SEARCH_GROUP_OPERATOR
-* @return string search_group_operator (Like '$and' | '$or')
+* @param object search_group
+* @return string search_group_operator
+* 	Like '$and' | '$or'
 */
 search.prototype.get_search_group_operator = function(search_group) {
 
 	let operator_value = '$and' // Default (first level)
 
-	// Get search_group direct childrens
-	const childrens = search_group.children
-		//console.log("childrens:",childrens);
+	// Get search_group direct children
+	const children = search_group.children
+		//console.log("children:",children);
 
 	// Iterate to find .search_group_operator div
-	const len = childrens.length
+	const len = children.length
 	for (let i = 0; i < len; i++) {
-		if(childrens[i].classList.contains('search_group_operator')) {
-			operator_value = childrens[i].dataset.value;
+		if(children[i].classList.contains('search_group_operator')) {
+			operator_value = children[i].dataset.value;
 			break;
 		}
 	}
@@ -944,23 +946,25 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 	/**
 	* SAVE_TEMP_PRESET
-	* @return
+	* @param string section_tipo
+	* @return object api_response
 	*/
 	search.prototype.save_temp_preset = async function(section_tipo) {
 
 		const self = this
 
 		// Recalculate filter_obj from DOM in default mode (include components with empty values)
-		const filter_obj = await self.parse_dom_to_json_filter({}).filter
+			const filter_obj = await self.parse_dom_to_json_filter({}).filter
 
 		// save editing preset
 			const api_response = await data_manager.request({
 				body : {
-					action			: "filter_set_editing_preset",
-					section_tipo	: self.section_tipo,
+					action			: 'filter_set_editing_preset',
+					section_tipo	: section_tipo, // self.section_tipo,
 					filter_obj		: filter_obj
 				}
 			})
+
 
 		return api_response
 	}//end save_temp_preset
@@ -1001,11 +1005,15 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 	/**
 	* SHOW_ALL
+	* Trigger by button 'show_all'
+	* @param DOM node button_node
 	* @return promise
 	*/
-	search.prototype.show_all = async function(button_obj) {
+	search.prototype.show_all = async function(button_node) {
 
 		const self = this
+
+		button_node.classList.add('loading')
 
 		// source search_action
 			self.source.search_action = 'show_all'
@@ -1020,7 +1028,10 @@ search.prototype.get_search_group_operator = function(search_group) {
 			const filter_by_locators = null
 
 		// update_section
-			const js_promise = update_section(section, filter_obj, filter_by_locators, self)
+			const js_promise = await update_section(section, filter_obj, filter_by_locators, self)
+
+			button_node.classList.remove('loading')
+
 
 		return js_promise
 	}//end show_all
