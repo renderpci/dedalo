@@ -353,11 +353,11 @@ component_text_area.prototype.set_value = function(value) {
 * @param string value
 *	value from active text editor
 */
-component_text_area.prototype.save_value = function(key, value) {
+component_text_area.prototype.save_value = async function(key, value) {
 
 	const self = this
 
-	const new_data = self.preprocess_text_to_save(value)
+	const new_data = await self.preprocess_text_to_save(value)
 
 	// const string_value = value.innerHTML
 	// const old_data = self.data.value[key]
@@ -372,7 +372,7 @@ component_text_area.prototype.save_value = function(key, value) {
 		changed_data	: changed_data,
 		refresh			: false
 	})
-	.then((save_response)=>{
+	.then(()=>{
 		// event to update the dom elements of the instance
 		// event_manager.publish('update_value_'+self.id, changed_data)
 
@@ -441,7 +441,7 @@ component_text_area.prototype.save = async function(changed_data = undefined) {
 * Unify text content format
 * @return string
 */
-component_text_area.prototype.preprocess_text_to_save = function(html_value) {
+component_text_area.prototype.preprocess_text_to_save = async function(html_value) {
 
 	const self = this
 
