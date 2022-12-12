@@ -43,6 +43,7 @@
 										component_tipo
 								  }]
 		allow_sub_select_by_id	: (true || false)
+		children_recursive 		: (true || false)
 		remove_distinc			: (true || false)
 		skip_projects_filter	: (true || false)
 		parsed					: (true || false) // boolean, state of the sqo
@@ -67,6 +68,7 @@ class search_query_object {
 		public $order_custom;
 		public $filter_by_locators;
 		public $allow_sub_select_by_id;
+		public $children_recursive;
 		public $remove_distinc;
 		public $skip_projects_filter;
 		public $parsed;
@@ -343,6 +345,21 @@ class search_query_object {
 
 		return true;
 	}//end set_allow_sub_select_by_id
+
+
+
+	/**
+	* SET_CHILDREN_RECURSIVE
+	* Allow / disallow the default sql query to get children of the main search
+	* @param bool $value
+	* @return bool true
+	*/
+	public function set_children_recursive(bool $value) {
+
+		$this->children_recursive = $value;
+
+		return true;
+	}//end set_children_recursive
 
 
 
