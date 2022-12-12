@@ -1453,7 +1453,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		const choose_limit_default = 25
 		const limit	= rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.limit
 			? rqo_config.choose.sqo_config.limit
-			: (sqo_config.limit && sqo_config.limit>choose_limit_default)
+			: (sqo_config.limit)
 				? sqo_config.limit
 				: choose_limit_default
 		const offset = rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.offset
