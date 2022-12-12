@@ -1604,6 +1604,7 @@ abstract class common {
 				if($model==='section'){
 					$dd_object->relation_list		= $this->get_relation_list();
 					$dd_object->time_machine_list	= $this->get_time_machine_list();
+					$dd_object->section_map 		= section::get_section_map( $section_tipo );
 				}
 				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_time_unit($start_time) );
 
@@ -2161,10 +2162,15 @@ abstract class common {
 			//     "mode": "edit",
 			//     "lang": "lg-eng"
 			// }
-			$requested_source = dd_core_api::$rqo->source ?? false;
+			$requested_source	= dd_core_api::$rqo->source ?? false;
+			$requested_sqo		= dd_core_api::$rqo->sqo ?? false;
 
 		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
-		if(false!==$requested_source &&	$requested_source->tipo===$this->tipo) {
+		if( false!==$requested_source
+			&& (	$requested_source->tipo===$this->tipo
+				|| (isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo))
+			   )
+			) {
 
 			// set the request_config with the API rqo sent by client
 
@@ -2172,33 +2178,38 @@ abstract class common {
 			$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
 				? unserialize(serialize(dd_core_api::$rqo->show))
 				: false;
+					// dump($requested_show, ' requested_show ++ '.to_string($this->tipo));
 
 			if (!empty($requested_show)) {
 
 				// consolidate ddo items properties
+					$new_show_ddo_map = [];
 					foreach ($requested_show->ddo_map as $key => $current_ddo) {
 						//get the direct ddo linked by the source
-						if ($current_ddo->parent===$requested_source->tipo || $current_ddo->parent==='self') {
+						$new_ddo = unserialize(serialize($current_ddo));
+						if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
 							// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-							if(in_array($this->tipo, (array)$current_ddo->section_tipo) || $current_ddo->section_tipo==='self'){
-								$current_ddo->parent		= $this->tipo;
-								$current_ddo->section_tipo	= $this->tipo;
+							if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
+								$new_ddo->parent		= $this->tipo;
+								$new_ddo->section_tipo	= $this->tipo;
 							}
 						}
+
 						// added label & mode if not are already defined
-						if(!isset($current_ddo->label)) {
-							$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+						if(!isset($new_ddo->label)) {
+							$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 						}
-						if(!isset($current_ddo->mode)) {
-							$current_ddo->mode = $this->mode;
+						if(!isset($new_ddo->mode)) {
+							$new_ddo->mode = $this->mode;
 						}
+						$new_show_ddo_map[] = $new_ddo;
 					}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
 					// create the new request_config with the caller
 					$request_config = new stdClass();
-						$request_config->api_engine	= 'dedalo';
-						$request_config->show		= $requested_show;
-
+						$request_config->api_engine		= 'dedalo';
+						$request_config->show			= new stdClass();
+						$request_config->show->ddo_map	= $new_show_ddo_map;
 
 					$requested_search = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->search)
 						? unserialize(serialize(dd_core_api::$rqo->search))
@@ -2206,26 +2217,31 @@ abstract class common {
 
 					if (!empty($requested_search)) {
 
+						$new_search_ddo_map = [];
 						// consolidate ddo items properties
 						foreach ($requested_search->ddo_map as $key => $current_ddo) {
 							//get the direct ddo linked by the source
-							if ($current_ddo->parent===$requested_source->tipo || $current_ddo->parent==='self') {
+							$new_ddo = unserialize(serialize($current_ddo));
+							if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
 								// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-								if(in_array($this->tipo, (array)$current_ddo->section_tipo) || $current_ddo->section_tipo==='self'){
-									$current_ddo->parent		= $this->tipo;
-									$current_ddo->section_tipo	= $this->tipo;
+								if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
+									$new_ddo->parent		= $this->tipo;
+									$new_ddo->section_tipo	= $this->tipo;
 								}
 							}
+
 							// added label & mode if not are already defined
-							if(!isset($current_ddo->label)) {
-								$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+							if(!isset($new_ddo->label)) {
+								$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 							}
-							if(!isset($current_ddo->mode)) {
-								$current_ddo->mode = $this->mode;
+							if(!isset($new_ddo->mode)) {
+								$new_ddo->mode = $this->mode;
 							}
+							$new_search_ddo_map[] = $new_ddo;
 						}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
-						$request_config->search		= $requested_search;
+						$request_config->search				= new stdClass();
+						$request_config->search->ddo_map	= $new_search_ddo_map;
 					}//end if (!empty($requested_search))
 
 					// sqo add
@@ -2465,6 +2481,11 @@ abstract class common {
 					// api_engine
 						$parsed_item->set_api_engine(
 							$item_request_config->api_engine ?? 'dedalo'
+						);
+
+					// type
+						$parsed_item->set_type(
+							$item_request_config->type ?? 'main'
 						);
 
 					// sqo. Add search query object property
@@ -3051,6 +3072,7 @@ abstract class common {
 
 					$request_config_item = new request_config_object();
 						$request_config_item->set_api_engine('dedalo');
+						$request_config_item->set_type('main');
 						$request_config_item->set_show($show);
 						$request_config_item->set_sqo($sqo);
 

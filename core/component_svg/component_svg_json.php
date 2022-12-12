@@ -61,8 +61,8 @@
 					// datalist
 						// files_info. For fast list we add directly the default image
 						$data_item = new stdClass();
-							$data_item->url		= $this->get_url(DEDALO_SVG_QUALITY_DEFAULT, false, false, false);
-							$data_item->quality	= DEDALO_SVG_QUALITY_DEFAULT;
+							$data_item->file_url	= $this->get_url(DEDALO_SVG_QUALITY_DEFAULT, false, false, false);
+							$data_item->quality		= DEDALO_SVG_QUALITY_DEFAULT;
 						$datalist = [$data_item];
 					break;
 

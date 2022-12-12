@@ -1693,7 +1693,13 @@ final class dd_core_api {
 								// }
 
 							// sections
-								$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+								$element = sections::get_instance(
+									null, // ?array $ar_locators
+									$sqo, // object $search_query_object	=null
+									$tipo, //  string $caller_tipo			=null
+									$mode, // string $mode					='list'
+									$lang // string $lang					=DEDALO_DATA_NOLAN
+								);
 
 							// store sqo section
 								if ($model==='section' && ($mode==='edit' || $mode==='list')) {

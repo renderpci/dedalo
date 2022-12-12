@@ -73,7 +73,7 @@ area_development.prototype.build = async function(autoload=true) {
 
 	// rqo_config
 		self.rqo_config	= (self.context && self.context.request_config)
-			? self.context.request_config.find(el => el.api_engine==='dedalo')
+			? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 			: {}
 
 	// rqo build
@@ -117,7 +117,7 @@ area_development.prototype.build = async function(autoload=true) {
 
 			// rebuild the rqo_config and rqo in the instance
 			// rqo_config
-				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 
 			// rqo build
 				self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')

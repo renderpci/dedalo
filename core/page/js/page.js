@@ -130,6 +130,7 @@ page.prototype.init = async function(options) {
 							if (!source.request_config && sqo) {
 								source.request_config = [{
 									api_engine	: 'dedalo',
+									type		: 'main',
 									sqo			: sqo
 								}]
 							}

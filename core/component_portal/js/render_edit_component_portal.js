@@ -832,8 +832,9 @@ export const activate_autocomplete = async function(self, wrapper) {
 
 		self.autocomplete = new service_autocomplete()
 		await self.autocomplete.init({
-			caller	: self,
-			wrapper : wrapper
+			caller		: self,
+			wrapper		: wrapper,
+			properties	: self.context.properties.service_autocomplete || null
 		})
 
 		self.autocomplete_active = true

@@ -1453,7 +1453,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		const choose_limit_default = 25
 		const limit	= rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.limit
 			? rqo_config.choose.sqo_config.limit
-			: (sqo_config.limit && sqo_config.limit>choose_limit_default)
+			: (sqo_config.limit)
 				? sqo_config.limit
 				: choose_limit_default
 		const offset = rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.offset
@@ -1473,6 +1473,11 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			allow_sub_select_by_id	: true
 		}
 
+	// children_recursive
+		if(rqo_config.sqo.children_recursive){
+			sqo.children_recursive = rqo_config.sqo.children_recursive
+		}
+
 
 	// FILTER_FREE
 	// the filter will be used to set the q with all paths to use to search.
@@ -1489,6 +1494,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 						section_tipo	: self.section_tipo,
 						component_tipo	: self.tipo,
 						model			: self.model,
+						parent			: 'self',
 						mode			: 'list'
 					}]
 
@@ -1512,7 +1518,7 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 						if(Array.isArray(current_ddo.section_tipo)){
 							current_ddo.section_tipo = current_ddo.section_tipo[0]
 						}
-						current_ddo.component_tipo = current_ddo.tipo
+						current_ddo.component_tipo	= current_ddo.tipo
 						new_path.push(current_ddo)
 					}
 					//add the path to the filter_free with the operator
@@ -1529,6 +1535,12 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			? rqo_config.sqo.fixed_filter
 			: false
 
+	// fixed_filter
+		if(rqo_config.sqo.fixed_children_filter){
+			sqo.fixed_children_filter = rqo_config.sqo.fixed_children_filter
+		}
+
+
 	// filter_by_list if exists
 		const filter_by_list = rqo_config.sqo && rqo_config.sqo.filter_by_list
 			? rqo_config.sqo.filter_by_list
@@ -1544,12 +1556,12 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			? sqo_config.fields_separator
 			: ', '
 
-	// optional configuration to use when the serach will be built
+	// optional configuration to use when the search will be built
 		const sqo_options = {
-			filter_free		: filter_free,
-			fixed_filter	: fixed_filter,
-			filter_by_list	: filter_by_list,
-			operator		: operator
+			filter_free				: filter_free,
+			fixed_filter			: fixed_filter,
+			filter_by_list			: filter_by_list,
+			operator				: operator
 		}
 
 	// DDO_MAP

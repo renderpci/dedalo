@@ -121,12 +121,13 @@ search.prototype.init = async function(options) {
 			: null
 
 	// dom stored pointers
-		self.wrapper							= undefined
-		self.search_global_container			= undefined
-		self.search_container_selector			= undefined
-		self.search_group_container				= undefined
-		self.search_container_selection_presets	= undefined
-		self.wrapper_sections_selector			= undefined
+		self.wrapper							= null
+		self.search_global_container			= null
+		self.search_container_selector			= null
+		self.search_group_container				= null
+		self.search_container_selection_presets	= null
+		self.wrapper_sections_selector			= null
+		self.search_children_recursive_node		= null
 
 		self.node = null
 
@@ -683,6 +684,17 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 			console.log("++++++++ [parse_dom_to_json_filter] filter_obj: ", filter_obj);
 		}
 
+	// children_recursive checkbox
+		if (self.search_children_recursive_node) {
+			const children_recursive_node = self.search_children_recursive_node
+			// modify filter_obj
+			if (children_recursive_node.checked===true) {
+				json_query_obj.children_recursive = true
+			}else{
+				json_query_obj.children_recursive = false
+			}
+		}
+
 	// Add object with groups fo filter array
 		json_query_obj.filter = filter_obj
 
@@ -986,14 +998,14 @@ search.prototype.get_search_group_operator = function(search_group) {
 		// section
 			const section = self.caller
 
-		// filter_obj. Recalculate filter_obj from DOM in default mode (include components with empty values)
-			const filter_obj = self.parse_dom_to_json_filter({
+		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
+			const json_query_obj = self.parse_dom_to_json_filter({
 				mode : "search"
-			}).filter
+			})
 
 		const js_promise = update_section(
 			section,
-			filter_obj,
+			json_query_obj,
 			null, // filter_by_locator
 			self
 		)
@@ -1042,7 +1054,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	* UPDATE_SECTION
 	* @return promise
 	*/
-	const update_section = async function(section_instance, filter_obj, filter_by_locators, self) {
+	const update_section = async function(section_instance, json_query_obj, filter_by_locators, self) {
 
 		// const section_node = section_instance.node[0]
 
@@ -1058,8 +1070,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 			section_instance.total						= null
 			section_instance.rqo.sqo.limit				= limit
 			section_instance.rqo.sqo.offset				= 0
-			section_instance.rqo.sqo.filter				= filter_obj
+			section_instance.rqo.sqo.filter				= json_query_obj.filter
 			section_instance.rqo.sqo.filter_by_locators	= filter_by_locators
+			section_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 
 		// paginator_node (could exist or not --area_thesaurus case--)
 			const paginator_node = section_instance?.paginator?.node || null
