@@ -180,7 +180,27 @@
 		opacity: 0.5;
 	}
 
+	.grid_choose_container {
+		background-color: #ffffff;
+		width: calc(100% - 1px);
+		min-height: 5rem;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		grid-gap: 1rem;
+		padding: 1.5rem;
 
+		.selected_instance_node {
+			grid-column: span 2;
+			text-align: center;
+			padding-bottom: 0.5rem;
+			font-size: 1.1rem;
+		}
+
+		>.wrapper_component {
+			border: 1px solid #e7e6e6;
+			border-radius: 0.3em;
+		}
+	}
 	// .autocomplete_data {
 	// 	//position: absolute;
 	// 	//top: 44px;
