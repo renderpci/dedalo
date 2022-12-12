@@ -737,7 +737,28 @@ const render_datalist = async function(self, api_response) {
 			// if(self.caller.mode==='search'){
 				// self.caller.datum.data.push({value: current_locator})
 			// }
-			// caller is refreshed after add value
+			const events = self.properties.events || null
+			if(events){
+				const add_value = events.find(el => el.event === 'add_value')
+				// caller is refreshed after add value
+				if(add_value){
+					if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
+						const params = add_value.perform.params
+						view_default_autocomplete[add_value.perform.function](self, li_node.instance , params)
+
+						// clean the last list
+						while (datalist.firstChild) {
+							datalist.removeChild(datalist.firstChild)
+						}
+
+
+					}else{
+						console.warn('Function sent is not defined to be exec by service autocomplete:', self.add_value);
+					}
+					return
+				}
+			}
+			// default action
 			self.caller.add_value(value)
 		});
 		// mouseover event
