@@ -159,7 +159,7 @@
 				]},
 			},
 			{
-				"search_engine": "zenon_engine",
+				"api_engine": "zenon_engine",
 				"sqo" : {
 					"section_tipo": [{"source":"section", "value":["zenon1"]}]
 				},

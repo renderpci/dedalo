@@ -172,7 +172,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		const generate_rqo = async function(){
 			// rqo_config. get the rqo_config from context
 			self.rqo_config	= (self.context && self.context.request_config)
-				? self.context.request_config.find(el => el.api_engine==='dedalo')
+				? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 				: {}
 
 			// rqo build

@@ -35,8 +35,9 @@ view_default_list_svg.render = function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 
 		})
-		wrapper.appendChild(fragment)
 
+		wrapper.appendChild(fragment)
+		console.log('wrapper:', wrapper);
 
 	return wrapper
 }//end render
@@ -51,30 +52,31 @@ view_default_list_svg.render = function(self, options) {
 export const get_value_fragment = function(self) {
 
 	// value
-	const data	= self.data || {}
-	const value	= data.value || []
+		const data	= self.data || {}
+		const value	= data.value || []
+
+	// short vars
+		const datalist	= self.data.datalist || []
+		const quality	= self.quality || self.context.features.quality
 
 	const fragment = new DocumentFragment()
 
 	// svg elements
-		const value_length = value.length
+		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
+		const value_length = inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 
-			const item_value = value[i]
+			// // media url from data.datalist based on selected context quality
+				const file_info	= datalist.find(el => el.quality===quality)
+				const url		= file_info.file_url
+					? file_info.file_url
+					: null
 
-			// check value
-				// if (!item_value) {
-				// 	console.warn("Ignored invalid item value:", item_value, self.data.value)
-				// 	continue
-				// }
-
-			const url	= item_value.file_url
 			const image	= ui.create_dom_element({
 				element_type	: 'img',
 				src				: url,
 				parent			: fragment
 			})
-			fragment.appendChild(image)
 		}
 
 	return fragment
