@@ -316,6 +316,42 @@ class search {
 			$ar_records[] = $row;
 		}
 
+		// children recursive
+			if (isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
+				$ar_row_children = [];
+				foreach ($ar_records as $row) {
+					$row_children 	 = component_relation_children::get_children(
+						$row->section_id,
+						$row->section_tipo,
+						$component_tipo=null,
+						$recursive=true,
+						$is_recursion=false
+					);
+
+					$ar_row_children = array_merge($ar_row_children, $row_children);
+				}
+				// dump($ar_row_children, ' ar_row_children ++ '.to_string());
+				// dump($this->search_query_object, ' search_query_object ++ '.to_string());
+
+				if (!empty($ar_row_children)) {
+
+					$ar_rows_mix = array_merge($ar_row_children, $ar_records);
+					$new_sqo 	 = $this->generate_children_recursive_search($ar_rows_mix);
+
+					// new full search
+						$children_search = search::get_instance($new_sqo);
+						$result = $children_search->search();
+
+					// replace current sqo changed properties to allow pagination
+						$this->search_query_object->filter				= $new_sqo->filter;
+						$this->search_query_object->full_count			= count($ar_rows_mix);
+						$this->search_query_object->children_recursive	= false;
+						$this->search_query_object->parsed				= true;
+
+					return $result;
+				}
+			}
+
 		// debug
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				// debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms'.' ms', logger::DEBUG);
@@ -417,6 +453,77 @@ class search {
 
 		return $records_data;
 	}//end count
+
+
+
+
+	/**
+	* GENERATE_CHILDREN_RECURSIVE_SEARCH
+	* Create a new filter to inject in current search query object
+	*
+	* @return object $new_sqo
+	*/
+	public function generate_children_recursive_search($ar_rows) {
+
+		// clone original sqo
+			$new_sqo = clone $this->search_query_object;
+
+		// force re - parse
+			$new_sqo->parsed = false;
+
+		// remove children_recursive to avoid infinite loop
+			$new_sqo->children_recursive = false;
+
+		// remove possible filter_by_locators (parent searched previously)
+			unset($new_sqo->filter_by_locators);
+
+		// not count
+			$new_sqo->full_count = false;
+
+		// new full filter
+			$filter = new stdClass();
+			$op_or = '$or';
+			$op_and = '$and';
+
+		// fixed_children_filter
+			if(isset($new_sqo->fixed_children_filter)){
+				$filter->{$op_and}[] = $new_sqo->fixed_children_filter;
+			}
+
+			// children filter
+			$children_filter = [];
+			foreach ($ar_rows as $row_value) {
+
+				$item = json_decode('{
+			        "q": "'.$row_value->section_id.'",
+			        "q_operator": null,
+			        "path": [
+			          {
+			            "section_tipo": "'.$row_value->section_tipo.'",
+			            "component_tipo": "section_id",
+			            "modelo": "component_section_id",
+			            "name": "Id"
+			          }
+			        ]
+			      }');
+
+				$children_filter[] = $item;
+			}
+
+			if(isset($filter->{$op_and})){
+				$add_children = new stdClass();
+				$add_children->{$op_or} = $children_filter;
+				$filter->{$op_and}[] = $add_children;
+			}else{
+				$filter->{$op_or} = $children_filter;
+			}
+
+
+		// replace filter in sqo
+			$new_sqo->filter = $filter;
+
+		return $new_sqo;
+	}//end generate_children_recursive_search
 
 
 
@@ -641,6 +748,12 @@ class search {
 			$main_from_sql  		= $this->build_main_from_sql();
 			$sql_limit 				= $this->search_query_object->limit;
 			$sql_offset 			= $this->search_query_object->offset;
+
+
+			if(isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
+				$sql_limit = "all";
+				$sql_offset= 0;
+			}
 
 			if (empty($sql_query_order)) {
 				$sql_query_order = $this->build_sql_query_order_default();
