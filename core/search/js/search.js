@@ -121,12 +121,13 @@ search.prototype.init = async function(options) {
 			: null
 
 	// dom stored pointers
-		self.wrapper							= undefined
-		self.search_global_container			= undefined
-		self.search_container_selector			= undefined
-		self.search_group_container				= undefined
-		self.search_container_selection_presets	= undefined
-		self.wrapper_sections_selector			= undefined
+		self.wrapper							= null
+		self.search_global_container			= null
+		self.search_container_selector			= null
+		self.search_group_container				= null
+		self.search_container_selection_presets	= null
+		self.wrapper_sections_selector			= null
+		self.search_children_recursive_node		= null
 
 		self.node = null
 
