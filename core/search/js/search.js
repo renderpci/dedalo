@@ -683,6 +683,17 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 			console.log("++++++++ [parse_dom_to_json_filter] filter_obj: ", filter_obj);
 		}
 
+	// children_recursive checkbox
+		if (self.search_children_recursive_node) {
+			const children_recursive_node = self.search_children_recursive_node
+			// modify filter_obj
+			if (children_recursive_node.checked===true) {
+				json_query_obj.children_recursive = true
+			}else{
+				json_query_obj.children_recursive = false
+			}
+		}
+
 	// Add object with groups fo filter array
 		json_query_obj.filter = filter_obj
 
@@ -1047,8 +1058,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 			section_instance.total						= null
 			section_instance.rqo.sqo.limit				= limit
 			section_instance.rqo.sqo.offset				= 0
-			section_instance.rqo.sqo.filter				= filter_obj
+			section_instance.rqo.sqo.filter				= json_query_obj.filter
 			section_instance.rqo.sqo.filter_by_locators	= filter_by_locators
+			section_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 
 		// paginator_node (could exist or not --area_thesaurus case--)
 			const paginator_node = section_instance?.paginator?.node || null
