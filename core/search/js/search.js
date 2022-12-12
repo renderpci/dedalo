@@ -994,14 +994,14 @@ search.prototype.get_search_group_operator = function(search_group) {
 		// section
 			const section = self.caller
 
-		// filter_obj. Recalculate filter_obj from DOM in default mode (include components with empty values)
-			const filter_obj = self.parse_dom_to_json_filter({
+		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
+			const json_query_obj = self.parse_dom_to_json_filter({
 				mode : "search"
-			}).filter
+			})
 
 		const js_promise = update_section(
 			section,
-			filter_obj,
+			json_query_obj,
 			null, // filter_by_locator
 			self
 		)
@@ -1043,7 +1043,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	* UPDATE_SECTION
 	* @return promise
 	*/
-	const update_section = async function(section_instance, filter_obj, filter_by_locators, self) {
+	const update_section = async function(section_instance, json_query_obj, filter_by_locators, self) {
 
 		// const section_node = section_instance.node[0]
 
