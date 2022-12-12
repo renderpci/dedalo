@@ -5,6 +5,7 @@
 
 // imports
 	import {ui} from '../../../common/js/ui.js'
+	import {data_manager} from '../../../common/js/data_manager.js'
 	import * as instances from '../../../common/js/instances.js'
 
 
@@ -146,7 +147,6 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end render
-
 
 
 
@@ -713,36 +713,6 @@ const render_datalist = async function(self, api_response) {
 	const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
 	const ar_locator	= (data_locator) ? data_locator.value : []
 
-	// follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
-	// all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
-	function get_last_ddo_data_value(current_path, value){
-		// check the path length sent, the first loop is the full path, but it is changed with the check data
-		const current_path_length = current_path.length
-		for (var i = 0; i < value.length; i++) {
-			const section_tipo 	= value[i].section_tipo
-			const section_id 	= value[i].section_id
-			// get the column data with last ddo
-			const ddo_item = current_path[current_path.length - 1];
-			// get the data into the full data from API and get the value (locator or final data as input_text data)
-			const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
-			const current_value = (current_element_data)
-				? current_element_data.value
-				: false
-			// if the element doesn't has data stop the recursion.
-			if(current_value === false) return false;
-			// create new_path without and remove the current ddo
-			const new_path = [...current_path]
-			new_path.pop()
-			// if it is the last ddo, the data is the correct data to build the column
-			// else continue with the path doing recursion
-			if (current_path_length===1) {
-				return current_element_data
-			}{
-				return get_last_ddo_data_value(new_path, current_value)
-			}
-		}
-	}
-
 	// iterate the sections
 	for (const current_locator of ar_locator) {
 
@@ -752,8 +722,6 @@ const render_datalist = async function(self, api_response) {
 		// get data that mach with the current section from the global data sent by the API
 		// get the full row with all items in the ddo that mach with the section_id
 		const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
-
-		// const current_ddo 	= ddo_map.filter(item => item.model !== 'section' && item.typo === 'ddo' && item.section_tipo === section_tipo)
 
 		// create the li node container
 		const li_node = ui.create_dom_element({
@@ -792,7 +760,7 @@ const render_datalist = async function(self, api_response) {
 				// the columns has the last element in the chain in the first position of the array,
 				// the first position is the only component that is necessary to build and show
 					const ddo_item = current_path[0]
-					const current_element_data = get_last_ddo_data_value(current_path, [current_locator])
+					const current_element_data = get_last_ddo_data_value(current_path, [current_locator], data)
 				// if the element doesn't has data continue to the next element.
 					if(current_element_data === false) continue;
 
@@ -834,6 +802,7 @@ const render_datalist = async function(self, api_response) {
 
 					// append node (span)
 					li_node.appendChild(node)
+					li_node.instance = current_instance
 
 				// span node
 					// const current_value = current_value_element.value
@@ -869,5 +838,46 @@ const render_datalist = async function(self, api_response) {
 
 	return datalist
 }//end render_datalist
+
+
+
+/**
+ * GET_LAST_DDO_DATA_VALUE
+ * follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
+ * all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
+ * @param array current_path
+ * @param array value
+ * @param array data
+ * @return ddo object current_element_data
+ * */
+const get_last_ddo_data_value = function(current_path, value, data){
+	// check the path length sent, the first loop is the full path, but it is changed with the check data
+	const current_path_length = current_path.length
+	for (let i = 0; i < value.length; i++) {
+		const section_tipo 	= value[i].section_tipo
+		const section_id 	= value[i].section_id
+		// get the column data with last ddo
+		const ddo_item = current_path[current_path.length - 1];
+		// get the data into the full data from API and get the value (locator or final data as input_text data)
+		const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
+		const current_value = (current_element_data)
+			? current_element_data.value
+			: false
+		// if the element doesn't has data stop the recursion.
+		if(current_value === false) return false;
+		// create new_path without and remove the current ddo
+		const new_path = [...current_path]
+		new_path.pop()
+		// if it is the last ddo, the data is the correct data to build the column
+		// else continue with the path doing recursion
+		if (current_path_length===1) {
+			return current_element_data
+		}{
+			return get_last_ddo_data_value(new_path, current_value, data)
+		}
+	}
+}//end get_last_ddo_data_value
+
+
 
 
