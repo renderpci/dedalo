@@ -41,7 +41,8 @@ service_autocomplete.prototype.init = async function(options) {
 	// options
 		self.caller		= options.caller
 		self.wrapper	= options.wrapper
-		self.view 		= options.view || 'default'
+		self.view		= options.view || 'default'
+		self.properties	= options.properties || {}
 
 	// set properties
 		self.tipo					= self.caller.tipo
@@ -52,9 +53,9 @@ service_autocomplete.prototype.init = async function(options) {
 		self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
 		self.ar_filter_by_list		= []
 		self.operator				= null
-		self.properties				= self.caller.context.properties || {}
 		self.list_name				= 's_'+new Date().getUTCMilliseconds()
 		self.search_fired			= false
+
 
 		// self.ar_dd_request			= self.caller.dd_request.search
 		// self.dd_request				= self.ar_dd_request[0]
@@ -64,9 +65,6 @@ service_autocomplete.prototype.init = async function(options) {
 
 	// engine. get the search_engine sended or set the default value
 		self.search_engine = (self.dd_request) ? self.dd_request.api_engine : 'dedalo';
-
-	// Custom events defined in properties
-		self.custom_events = (self.properties.custom_events) ? self.properties.custom_events : []
 
 	// render. Build_autocomplete_input nodes
 		self.render()
@@ -159,7 +157,7 @@ service_autocomplete.prototype.destroy = async function() {
 
 	const self = this
 
-	self.searh_container.remove()
+	self.content_data.remove()
 
 	event_manager.publish('destroy_'+self.id, this)
 
@@ -203,7 +201,6 @@ service_autocomplete.prototype.render = async function(options={}) {
 
 	return null
 }//end render
-
 
 
 
@@ -265,18 +262,24 @@ service_autocomplete.prototype.autocomplete_search = function(search_value) {
 * @param string q
 * @return bool
 */
-service_autocomplete.prototype.rebuild_search_query_object = async function(q) {
+service_autocomplete.prototype.rebuild_search_query_object = async function(options) {
 
 	const self = this
 
-	// search_query_object base stored in wrapper dataset
-		const original_rqo_search	= await self.caller.rqo_search
-		const rqo_search			= clone(original_rqo_search)
-		self.rqo_search				= rqo_search
-		self.sqo					= rqo_search.sqo
+	// options
+		const rqo_search		= options.rqo_search
+		const search_sections 	= options.search_sections || null
+		const filter_by_list	= options.filter_by_list || null
+		const q					= options.q || null
 
+		const sqo_options	= rqo_search.sqo_options
+		const fixed_filter	= sqo_options.fixed_filter //self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
+		const filter_free	= sqo_options.filter_free	//self.dd_request.find((current_item)=> current_item.typo==='filter_free')
+		// const operador		= sqo_options.operador
 
-		const sqo_options = original_rqo_search.sqo_options
+		const sqo				= rqo_search.sqo
+		sqo.section_tipo 		= search_sections || sqo.section_tipo
+
 	// delete the sqo_options to the final rqo_options
 		delete rqo_search.sqo_options
 
@@ -284,18 +287,14 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(q) {
 			// console.log('sqo_options:', sqo_options);
 		}
 
-	// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
-		const search_sections	= self.ar_search_section_tipo
-		self.sqo.section_tipo	= search_sections.map(el=>el.tipo)
+		sqo.filter = {
+			$and : []
+		}
 
-		const fixed_filter		= sqo_options.fixed_filter //self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
-		const filter_free		= sqo_options.filter_free	//self.dd_request.find((current_item)=> current_item.typo==='filter_free')
-		const filter_by_list	= self.ar_filter_by_list.map(item => item.value)
 		// rebuild the filter with the user inputs
-		if(filter_free){
-
-			const new_filter = {}
-			// Iterate current filter
+			if(filter_free){
+				const filter_free_parse = {}
+				// Iterate current filter
 				for (let operator in filter_free) {
 					// get the array of the filters objects, they have the default operator
 					const current_filter = filter_free[operator]
@@ -309,29 +308,36 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(q) {
 							: "false_muyfake_de verdad!"
 						current_filter[i].q_split = false
 						// create the filter with the operator choosed by the user
-						new_filter[new_operator] = current_filter
+						filter_free_parse[new_operator] = current_filter
 					}
 				}
 
-			// filter re-built
-				self.sqo.filter = {
-					'$and' : [new_filter]
-					// '$and' : [filter_free]
+				sqo.filter.$and.push(filter_free_parse)
+
+				// filter re-built
+				// sqo.filter = {
+				// 	'$and' : [new_filter]
+				// 	// '$and' : [filter_free]
+				// }
+			}//end if(filter_free)
+
+
+		// fixed_filter
+			if (fixed_filter) {
+				for (let i = 0; i < fixed_filter.length; i++) {
+					sqo.filter.$and.push(fixed_filter[i])
 				}
-				if (fixed_filter) {
-					for (let i = 0; i < fixed_filter.length; i++) {
-						self.sqo.filter.$and.push(fixed_filter[i])
-					}
-				}
-				if(filter_by_list){
-					self.sqo.filter.$and.push({
-						$or:[...filter_by_list]
-					})
-				}
-		}//end if(filter_free)
+			}
+
+			if(filter_by_list && filter_by_list.length > 0){
+				sqo.filter.$and.push({
+					$or:[...filter_by_list]
+				})
+			}
+
 
 	// allow_sub_select_by_id set to false to allow select deep fields
-		self.sqo.allow_sub_select_by_id = true
+		sqo.allow_sub_select_by_id = true
 
 	// Debug
 		if(SHOW_DEBUG===true) {
@@ -354,7 +360,26 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(q) {
 service_autocomplete.prototype.dedalo_engine = async function(options) {
 
 	const self = this
-	const rqo = await self.rebuild_search_query_object(options.q);
+
+	// search_query_object base stored in wrapper dataset
+		const original_rqo_search	= await self.caller.rqo_search
+		const rqo_search			= clone(original_rqo_search)
+		self.rqo_search				= rqo_search
+		self.sqo					= rqo_search.sqo
+
+	// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
+		const search_sections	= self.ar_search_section_tipo.map(el=>el.tipo)
+		self.sqo.section_tipo	= search_sections
+
+	// filter_by_list, modify by user
+		const filter_by_list	= self.ar_filter_by_list.map(item => item.value)
+
+	const rqo = await self.rebuild_search_query_object({
+		rqo_search		: rqo_search,
+		search_sections : search_sections,
+		filter_by_list	: filter_by_list,
+		q				: options.q
+	});
 	// const rqo = await options.rqo
 		rqo.prevent_lock = true
 
@@ -608,7 +633,4 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 
 		})//end Promise
 }//end zenon_engine
-
-
-
 
