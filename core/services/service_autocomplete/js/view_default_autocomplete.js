@@ -901,4 +901,158 @@ const get_last_ddo_data_value = function(current_path, value, data){
 
 
 
+/**
+* RENDER_GRID_CHOOSE to choose it by user
+* Render result data as DOM grid nodes and place it into self.grid_choose container
+* @param object api_response
+* @return DOM node datalist
+*/
+view_default_autocomplete.render_grid_choose = async function(self, selected_instance, params){
+
+
+	const grid_choose_data	= await get_grid_choose_data(self, selected_instance, params)
+	// get dd objects from the context that will be used to build the lists in correct order
+	const rqo_search 	= grid_choose_data.rqo_search
+	const data			= grid_choose_data.data
+	const context 		= grid_choose_data.context
+
+	// grid_choose_container
+		const grid_choose_container = self.grid_choose_container  || ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'grid_choose_container'
+		})
+		self.content_data.appendChild(grid_choose_container)
+		self.grid_choose_container = grid_choose_container
+		// clean the last list
+			while (grid_choose_container.firstChild) {
+				grid_choose_container.removeChild(grid_choose_container.firstChild)
+			}
+
+	// selected_instance
+		const selected_instance_node = await selected_instance.render()
+		selected_instance_node.classList.add('selected_instance_node')
+		grid_choose_container.appendChild(selected_instance_node)
+
+	// get the sections that was searched
+	const ar_search_sections = rqo_search.sqo.section_tipo
+
+	const columns = rqo_search.show.columns
+
+	// get the ar_locator founded in sections
+	const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
+	const ar_locator	= (data_locator) ? data_locator.value : []
+
+	// // iterate the sections
+	for (const current_locator of ar_locator) {
+
+		const section_tipo	= current_locator.section_tipo
+		const section_id	= current_locator.section_id
+
+		// get data that mach with the current section from the global data sent by the API
+		// get the full row with all items in the ddo that mach with the section_id
+		const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
+
+		// grid_item
+			// const grid_item = ui.create_dom_element({
+			// 	element_type	: 'div',
+			// 	class_name		: 'grid_item',
+			// 	dataset			: {value : JSON.stringify(current_locator)},
+			// 	parent			: grid_choose_container
+			// })
+
+		// values. build the text of the row with label nodes in correct order (the ddo order in context).
+			const columns_length = columns.length
+			for (let i = 0; i < columns_length; i++) {
+					const current_path = columns[i]
+				// the columns has the last element in the chain in the first position of the array,
+				// the first position is the only component that is necessary to build and show
+					const ddo_item = current_path[0]
+					const current_element_data = get_last_ddo_data_value(current_path, [current_locator], data)
+				// if the element doesn't has data continue to the next element.
+					if(current_element_data === false) continue;
+
+				// context of the element
+					const current_element_context = context.find( (item) =>
+						item.tipo===ddo_item.tipo &&
+						item.section_tipo===current_element_data.section_tipo
+					)
+					if (!current_element_context) {
+						console.error('Ignored element: context not found. ddo_item:', ddo_item, 'context:', context);
+						continue;
+					}
+
+					// mode and view
+						current_element_context.mode	= params.mode || 'list'
+						current_element_context.view	= params.view || 'default'
+
+					if (typeof current_element_data==='undefined') {
+						console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
+						continue
+					}
+
+					const instance_options = {
+						context			: current_element_context,
+						data			: current_element_data,
+						datum			: {data : data, context: context},
+						tipo			: current_element_context.tipo,
+						section_tipo	: current_element_context.section_tipo,
+						model			: current_element_context.model,
+						section_id		: current_element_data.section_id,
+						mode			: current_element_context.mode, // 'mini',
+						lang			: current_element_context.lang,
+						id_variant		: self.id
+					}
+
+					const current_instance = await instances.get_instance(instance_options)
+					current_instance.build(false)
+					const node = await current_instance.render()
+
+					// append node
+					grid_choose_container.appendChild(node)
+			}//end for ddo_item
+	}//end for (const current_locator of ar_locator)
+}//end render_grid_choose
+
+
+
+/**
+* GET_GRID_CHOOSE_DATA
+* @return object grid_choose_data
+*/
+const get_grid_choose_data = async function(self, selected_instance, params) {
+
+	// request_config
+		const request_config = self.caller.request_config.find(el => el.type === params.request_config_type)
+		if(!request_config){
+			console.warn("Called request_config is not defined with type: ", params.request_config_type);
+			return
+		}
+
+	// rqo
+		const rqo_search = await self.caller.build_rqo_search(request_config, 'search')
+		delete rqo_search.sqo_options.filter_free
+		delete rqo_search.sqo_options.filter_by_list
+		const rqo = await self.rebuild_search_query_object({
+			rqo_search		: rqo_search
+		});
+		rqo.sqo.filter_by_locators = [{
+			section_id		: selected_instance.section_id,
+			section_tipo	: selected_instance.section_tipo
+		}]
+
+	// API read request
+		const api_response	= await data_manager.request({
+			body : rqo
+		})
+
+	const grid_choose_data = {
+		rqo_search 	: rqo_search,
+		data		: api_response.result.data,
+		context 	: api_response.result.context
+	}
+
+	return grid_choose_data
+}//end get_grid_choose_data
+
+
 
