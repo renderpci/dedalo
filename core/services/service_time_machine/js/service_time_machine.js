@@ -10,6 +10,7 @@
 	import {data_manager} from '../../../../core/common/js/data_manager.js'
 	import {common, get_columns_map, create_source} from '../../../../core/common/js/common.js'
 	import {paginator} from '../../../paginator/js/paginator.js'
+	import {render_service_time_machine_list} from './render_service_time_machine_list.js'
 
 
 
@@ -41,10 +42,13 @@ export const service_time_machine = function () {
 * extend element functions from common
 */
 // prototypes assign
-	service_time_machine.prototype.render			= common.prototype.render
-	service_time_machine.prototype.refresh			= common.prototype.refresh
-	service_time_machine.prototype.destroy			= common.prototype.destroy
 	service_time_machine.prototype.build_rqo_show	= common.prototype.build_rqo_show
+	// life-cycle
+	service_time_machine.prototype.destroy			= common.prototype.destroy
+	service_time_machine.prototype.refresh			= common.prototype.refresh
+	service_time_machine.prototype.render			= common.prototype.render
+	service_time_machine.prototype.list				= render_service_time_machine_list.prototype.list
+	service_time_machine.prototype.tm				= render_service_time_machine_list.prototype.list
 
 
 
@@ -60,7 +64,7 @@ service_time_machine.prototype.init = async function(options) {
 	self.tipo			= options.tipo
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
-	self.mode			= options.mode || 'tm'
+	self.mode			= 'tm' // only allowed 'tm'
 	self.lang			= options.lang
 
 	self.caller			= options.caller || null
@@ -148,7 +152,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					body : self.rqo
 				})
 				if(SHOW_DEVELOPER===true) {
-					dd_console("[service_time_machine.build] by "+self.caller.model+" api_response:",
+					dd_console("2 [service_time_machine.build] by "+self.caller.model+" api_response:",
 						'DEBUG',
 						[self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']
 					);
@@ -512,16 +516,16 @@ service_time_machine.prototype.build_request_config = function() {
 * @param object options
 * @return DOM node wrapper | null
 */
-service_time_machine.prototype.tm = async function(options) {
+	// service_time_machine.prototype.tm = async function(options) {
 
-	const self = this
+	// 	const self = this
 
-	// view (is injected by the caller)
-		const view = self.view || null
-		if (!view) {
-			console.error("Error. self view is not defined:", self);
-			return false
-		}
+	// 	// view (is injected by the caller)
+	// 		const view = self.view || null
+	// 		if (!view) {
+	// 			console.error("Error. self view is not defined:", self);
+	// 			return false
+	// 		}
 
-	return self.view(self, options)
-}//end tm
+	// 	return self.view(self, options)
+	// }//end tm
