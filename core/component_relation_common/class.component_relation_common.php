@@ -11,7 +11,6 @@ class component_relation_common extends component_common {
 	/**
 	* CLASS VARS
 	*/
-
 		# relation_type (set in constructor).
 		# Defines type used in section relation locators to set own locator type
 		# protected $relation_type;

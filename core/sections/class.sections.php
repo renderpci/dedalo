@@ -1,6 +1,8 @@
 <?php
-/*
+/**
 * CLASS SECTIONS
+*
+*
 */
 class sections extends common {
 
@@ -9,21 +11,15 @@ class sections extends common {
 	/**
 	* CLASS VARS
 	*/
-		# Overwrite __construct var lang passed in this component
-		protected $lang;// = DEDALO_DATA_NOLAN;
-
-		# FIELDS
+		// FIELDS
 		protected $ar_locators;
 		protected $ar_section_tipo;
 		protected $dato;
 
-		# mode
-		protected $mode;
-
-		# dd_request. Full dd_request
+		// dd_request. Full dd_request
 		public $dd_request;
 
-		# search_query_object
+		// search_query_object
 		public $search_query_object;
 
 		// string

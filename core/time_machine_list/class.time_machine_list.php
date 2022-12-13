@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS TIME_MACHINE_LIST
 * Show the last changes in time machine of the sections
 * build the list with last changes inside the components of the sections
@@ -8,14 +8,15 @@ class time_machine_list extends common {
 
 
 
-	protected $tipo;
-	protected $section_id;
-	protected $section_tipo;
-	protected $mode;
-	protected $value_resolved;
-	protected $limit;
-	protected $offset;
-	protected $count;
+	/**
+	* CLASS VARS
+	*/
+		protected $section_id;
+		protected $section_tipo;
+		protected $value_resolved;
+		protected $limit;
+		protected $offset;
+		protected $count;
 
 
 
@@ -74,10 +75,6 @@ class time_machine_list extends common {
 			return (array)$json;
 		}
 
-		$ar_time_machine_obj = array();
-
-		#dump($ar_time_machine_records,'ar_time_machine_records');
-
 		# Create an array of objects corresponding to time_machine id's found
 		if( is_array($ar_time_machine_records)) foreach($ar_time_machine_records as $id)  {
 
@@ -90,17 +87,21 @@ class time_machine_list extends common {
 
 		foreach((array)$ar_component_time_machine as $tm_obj) {
 
-			$date					= component_date::timestamp_to_date($tm_obj->get_timestamp(), $seconds=true);
-			$userID					= $tm_obj->get_userID();
-			$mod_user_name			= section::get_user_name_by_userID($userID);
-			$id_time_machine		= $tm_obj->get_ID();
-			$component_tipo 		= $tm_obj->get_tipo();
-			$lang					= $tm_obj->get_lang();
-			$dato					= $tm_obj->get_dato();
-			$uid 					= $tm_obj->get_identificador_unico();
-			$show_row 		 		= false;
+			$date				= component_date::timestamp_to_date(
+				$tm_obj->get_timestamp(),
+				true // bool seconds
+			);
+			$userID				= $tm_obj->get_userID();
+			$mod_user_name		= section::get_user_name_by_userID($userID);
+			$id_time_machine	= $tm_obj->get_ID();
+			$component_tipo		= $tm_obj->get_tipo();
+			$lang				= $tm_obj->get_lang();
+			$dato				= $tm_obj->get_dato();
 
-			if(empty($component_tipo)) continue;
+			if(empty($component_tipo)) {
+				debug_log(__METHOD__." Ignored empty component_tipo. tm_obj: ".to_string($tm_obj), logger::ERROR);
+				continue;
+			}
 
 			$component_label = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -242,9 +243,9 @@ class time_machine_list extends common {
 	* GET_JSON
 	* @return string $json
 	*/
-	public function get_json() : object {
+	public function get_json(object $request_options=null) : object {
 
-		# Class name is called class (ex. component_input_text), not this class (common)
+		// Class name is called class (ex. component_input_text), not this class (common)
 		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
 
 		return $json;
