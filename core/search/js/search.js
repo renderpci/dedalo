@@ -1030,17 +1030,18 @@ search.prototype.get_search_group_operator = function(search_group) {
 		// source search_action
 			self.source.search_action = 'show_all'
 
-		// section
-			const section = self.caller
-
-		// filter reset
-			const filter_obj = null
-
-		// filter_by_locators reset
-			const filter_by_locators = null
+		// json_query_obj
+			const json_query_obj = {
+				filter : {$and:[]}
+			}
 
 		// update_section
-			const js_promise = await update_section(section, filter_obj, filter_by_locators, self)
+			const js_promise = await update_section(
+				self.caller, // section_instance,
+				json_query_obj, // json_query_obj
+				null, // filter_by_locators,
+				self
+			)
 
 			button_node.classList.remove('loading')
 
@@ -1056,11 +1057,6 @@ search.prototype.get_search_group_operator = function(search_group) {
 	*/
 	const update_section = async function(section_instance, json_query_obj, filter_by_locators, self) {
 
-		// const section_node = section_instance.node[0]
-
-		// loading css add
-			// section_node.classList.add('loading')
-
 		// limit
 			const limit = self.limit && self.limit>0
 				? self.limit
@@ -1070,7 +1066,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 			section_instance.total						= null
 			section_instance.rqo.sqo.limit				= limit
 			section_instance.rqo.sqo.offset				= 0
-			section_instance.rqo.sqo.filter				= json_query_obj.filter
+			section_instance.rqo.sqo.filter				= json_query_obj.filter || null
 			section_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 			section_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 
