@@ -65,6 +65,7 @@ service_time_machine.prototype.init = async function(options) {
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
 	self.mode			= 'tm' // only allowed 'tm'
+	self.view			=  options.view || 'default'
 	self.lang			= options.lang
 
 	self.caller			= options.caller || null
@@ -85,7 +86,7 @@ service_time_machine.prototype.init = async function(options) {
 	self.limit			= options.limit || 10
 	self.offset			= options.offset || 0
 
-	self.request_config = await self.build_request_config()
+	self.request_config	= await self.build_request_config()
 
 	// status update
 	self.status = 'initiated'
@@ -204,7 +205,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				const fn_paginator_goto = async function(offset) {
 					// loading
 						const container = self.node.list_body
-					   				   || self.node.content_data
+									   || self.node.content_data
 						if (container) {
 							container.classList.add('loading')
 						}else{
