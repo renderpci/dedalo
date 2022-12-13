@@ -1537,8 +1537,8 @@ abstract class common {
 				? ($this->get_columns_map() ?? [])
 				: null;
 
-		// real model
-			$legacy_model	= RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+		// legacy_model
+			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -1563,7 +1563,7 @@ abstract class common {
 			]);
 
 		// optional properties
-			// Filter_by_list
+			// filter_by_list
 				if (isset($properties->source->filter_by_list)) {
 					// Calculate array of elements to show in filter. Resolve self section items
 						$filter_list = array_map(function($item){
@@ -2162,11 +2162,11 @@ abstract class common {
 			//     "mode": "edit",
 			//     "lang": "lg-eng"
 			// }
-			$requested_source	= dd_core_api::$rqo->source ?? false;
-			$requested_sqo		= dd_core_api::$rqo->sqo ?? false;
+			$requested_source	= dd_core_api::$rqo->source ?? null;
+			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
 		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
-		if( false!==$requested_source
+		if( isset($requested_source)
 			&& (	$requested_source->tipo===$this->tipo
 				|| (isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo))
 			   )

@@ -140,8 +140,6 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		}
 		await generate_rqo()
 
-		// console.log("JSON.parse(JSON.stringify(self.rqo)): ----",JSON.parse(JSON.stringify(self.rqo)));
-
 	// load data if is not already received as option
 		if (autoload===true) {
 

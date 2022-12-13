@@ -1203,70 +1203,72 @@ component_common.prototype.change_mode = async function(options) {
 
 
 
+/**
+* CHANGE_MODE_DES
+*/
+	// component_common.prototype.change_mode_DES = async function(new_mode, autoload) {
 
-component_common.prototype.change_mode_DES = async function(new_mode, autoload) {
+	// 	const self = this
 
-	const self = this
+	// 	// short vars
+	// 		const current_context		= self.context
+	// 		const current_data			= self.data
+	// 		const current_datum			= self.datum
+	// 		const current_section_id	= self.section_id
+	// 		const section_lang			= self.section_lang
 
-	// short vars
-		const current_context		= self.context
-		const current_data			= self.data
-		const current_datum			= self.datum
-		const current_section_id	= self.section_id
-		const section_lang			= self.section_lang
+	// 	// element. Create the instance options for build it. The instance is reflect of the context and section_id
+	// 		const new_instance = await instances.get_instance({
+	// 			model			: current_context.model,
+	// 			tipo			: current_context.tipo,
+	// 			section_tipo	: current_context.section_tipo,
+	// 			section_id		: current_section_id,
+	// 			mode			: 'edit',
+	// 			lang			: current_context.lang,
+	// 			section_lang	: section_lang,
+	// 			parent			: current_context.parent,
+	// 			type			: current_context.type,
+	// 			context			: current_context,
+	// 			// data			: current_data,
+	// 			// datum			: current_datum
+	// 		})
 
-	// element. Create the instance options for build it. The instance is reflect of the context and section_id
-		const new_instance = await instances.get_instance({
-			model			: current_context.model,
-			tipo			: current_context.tipo,
-			section_tipo	: current_context.section_tipo,
-			section_id		: current_section_id,
-			mode			: 'edit',
-			lang			: current_context.lang,
-			section_lang	: section_lang,
-			parent			: current_context.parent,
-			type			: current_context.type,
-			context			: current_context,
-			// data			: current_data,
-			// datum			: current_datum
-		})
+	// 		autoload = true
 
-		autoload = true
+	// 	// build
+	// 		await new_instance.build(autoload)
 
-	// build
-		await new_instance.build(autoload)
+	// 	// render
+	// 		const new_node = await new_instance.render({
+	// 			render_level : 'full'
+	// 		})
 
-	// render
-		const new_node = await new_instance.render({
-			render_level : 'full'
-		})
+	// 	// body
+	// 		const body = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'body section_record'
+	// 		})
+	// 		body.appendChild(new_node)
 
-	// body
-		const body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'body section_record'
-		})
-		body.appendChild(new_node)
+	// 	// modal
+	// 		ui.attach_to_modal({
+	// 			header				: 'Edit ' + self.label,
+	// 			body				: body,
+	// 			footer				: null,
+	// 			size				: 'small'
+	// 			// remove_overlay	: bool
+	// 		})
 
-	// modal
-		ui.attach_to_modal({
-			header				: 'Edit ' + self.label,
-			body				: body,
-			footer				: null,
-			size				: 'small'
-			// remove_overlay	: bool
-		})
-
-	// active component at end
-		// if (new_mode.indexOf('edit')!==-1) {
-		// 	if (!new_instance.active) {
-		// 		event_manager.publish('activate_component', new_instance)
-		// 	}
-		// }
+	// 	// active component at end
+	// 		// if (new_mode.indexOf('edit')!==-1) {
+	// 		// 	if (!new_instance.active) {
+	// 		// 		event_manager.publish('activate_component', new_instance)
+	// 		// 	}
+	// 		// }
 
 
-	return true
-}//end open_as_editable
+	// 	return true
+	// }//end change_mode_DES
 
 
 
