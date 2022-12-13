@@ -10,6 +10,7 @@
 		render_inspector,
 		render_section_info,
 		render_component_info,
+		load_component_history,
 		update_project_container_body
 	} from './render_inspector.js'
 	// import * as instances from '../../common/js/instances.js'
@@ -55,12 +56,15 @@ inspector.prototype.init = async function(options) {
 	self.node			= null
 	self.caller			= options.caller
 
+	self.actived_component = null
+
 	self.events_tokens	= []
 	self.ar_instances	= []
 
 	// nodes
-		self.paginator_container	= null
-		self.element_info_container	= null
+		self.paginator_container			= null
+		self.element_info_container			= null
+		self.component_history_container	= null
 
 	// events
 		// section render
@@ -68,6 +72,7 @@ inspector.prototype.init = async function(options) {
 				event_manager.subscribe('render_' + self.caller.id, fn_update_section_info)
 			)
 			function fn_update_section_info() {
+				self.actived_component = null
 				render_section_info(self)
 			}
 		// activate_component (when user focus it in DOM)
@@ -75,7 +80,9 @@ inspector.prototype.init = async function(options) {
 				event_manager.subscribe('activate_component', fn_activate_component)
 			)
 			function fn_activate_component(actived_component) {
+				self.actived_component = actived_component
 				render_component_info(self, actived_component)
+				load_component_history(self, actived_component)
 			}
 		// deactivate_component
 			self.events_tokens.push(

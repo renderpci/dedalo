@@ -96,7 +96,7 @@ time_machine_list.prototype.build = async function(autoload=true){
 			model			: 'service_time_machine',
 			section_tipo	: self.section_tipo,
 			section_id		: self.section_id,
-			tipo			: self.section_tipo,
+			tipo			: self.tipo,
 			mode			: 'tm',
 			lang			: page_globals.dedalo_data_nolan,
 			caller			: self,
