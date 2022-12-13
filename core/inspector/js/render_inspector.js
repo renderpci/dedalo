@@ -962,9 +962,7 @@ const render_time_machine_list = function(self) {
 					caller			: self
 				})
 				await service_time_machine.build(true)
-				console.log('---> service_time_machine:', service_time_machine);
 				const time_machine_list_wrap = await service_time_machine.render()
-
 
 			// remove previous node if a pointer exists
 				if (time_machine_list_body.time_machine_list_wrap) {
