@@ -27,6 +27,10 @@ export const view_default_time_machine_list = function() {
 
 /**
 * RENDER
+* Renders main element wrapper for current view
+* @param object self
+* @param object options
+* @return DOM node wrapper
 */
 view_default_time_machine_list.render = async function(self, options) {
 
@@ -37,12 +41,12 @@ view_default_time_machine_list.render = async function(self, options) {
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
-	// ar_section_record. section_record instances (initied and built)
+	// ar_section_record. section_record instances (initialized and built)
 		const ar_section_record	= await get_ar_instances(self)
 		self.ar_instances		= ar_section_record
 
 	// content_data
-		const content_data = await get_content_data(self.ar_instances, self)
+		const content_data = await get_content_data(ar_section_record, self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -56,9 +60,6 @@ view_default_time_machine_list.render = async function(self, options) {
 			class_name		: 'paginator_container',
 			parent			: fragment
 		})
-		// change paginator mode on the fly
-		// (!) Note that by default, is initied with the caller mode (time_machine))
-		self.paginator.mode = 'mini'
 		await self.paginator.build()
 		self.paginator.render()
 		.then(paginator_wrapper =>{
@@ -75,7 +76,7 @@ view_default_time_machine_list.render = async function(self, options) {
 		// like 1fr 1fr 1fr 3fr 1fr
 		// const items				= ui.flat_column_items(columns_map)
 		// const template_columns	= items.join(' ')
-		const template_columns	= '1fr 1fr 1fr 2fr';
+		const template_columns		= '1fr 1fr 1fr 2fr';
 		const css_object = {
 			'.list_body' : {
 				'grid-template-columns': template_columns
@@ -96,8 +97,6 @@ view_default_time_machine_list.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 			class_name		: `wrapper_${self.model} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode} view_${self.view}`
 		})
 		wrapper.appendChild(fragment)
@@ -107,7 +106,7 @@ view_default_time_machine_list.render = async function(self, options) {
 
 
 	return wrapper
-}//end view_time_machine_list
+}//end render
 
 
 
@@ -123,7 +122,8 @@ view_default_time_machine_list.render = async function(self, options) {
 */
 const get_content_data = async function(ar_section_record, self) {
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
 		const ar_section_record_length = ar_section_record.length
@@ -159,7 +159,7 @@ const get_content_data = async function(ar_section_record, self) {
 
 	// content_data
 		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
+			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)
 
 
@@ -185,20 +185,20 @@ const rebuild_columns_map = async function(self) {
 		for (let i = 0; i < base_columns_map_length; i++) {
 			const el = base_columns_map[i]
 
-			// ignore matrix_id column
+			// // ignore matrix_id column
 				if (el.tipo==='dd1573') {
 					continue;
 				}
 
-			// short label (for small width columns)
-				switch (el.tipo) {
-					case 'dd201':
-						el.label = 'Date'
-						break;
-					case 'dd197':
-						el.label = 'User'
-						break;
-				}
+			// // short label (for small width columns)
+			// 	switch (el.tipo) {
+			// 		case 'dd201':
+			// 			el.label = 'Date'
+			// 			break;
+			// 		case 'dd197':
+			// 			el.label = 'User'
+			// 			break;
+			// 	}
 
 			columns_map.push(el)
 		}
