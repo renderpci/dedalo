@@ -18,7 +18,9 @@ $html='';
 					$html .= "<div class=\"list_title\">".label::get_label('elementos_desactivos')."</div>";
 					$html .= "<ul id=\"source_list\" class=\"connectedSortable\">";
 
-					$exclude_models = ['component_portal'];
+					$exclude_models = [
+						'component_portal'
+					];
 					foreach ($source_list as $tipo => $name) {
 
 						$html .= "<li data-tipo=\"$tipo\">";

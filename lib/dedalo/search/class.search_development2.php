@@ -3167,7 +3167,9 @@ class search_development2 {
 				'component_info',
 				'component_state',
 				'section_tab',
-				'component_autocomplete_ts'
+				'component_autocomplete_ts',
+				'section',
+				'dataframe'
 			];
 		}//if (empty($ar_components_exclude))
 
@@ -3243,7 +3245,10 @@ class search_development2 {
 
 				// section group children (components)
 					// $ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
-					$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');
+					$ar_exclude_models = [
+						'dataframe'
+					];
+					$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models, $order_by='norden');
 
 				// iterate children (components)
 					foreach ($ar_section_group_childrens as $component_tipo) {

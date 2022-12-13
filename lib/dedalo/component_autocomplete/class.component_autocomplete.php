@@ -266,7 +266,7 @@ class component_autocomplete extends component_relation_common {
 
 		$dato = $this->get_dato();
 
-		// $propiedades = $this->get_propiedades();
+		$propiedades = $this->get_propiedades();
 
 
 		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
@@ -320,6 +320,46 @@ class component_autocomplete extends component_relation_common {
 					$item->value 				= $current_value_export;
 
 				$ar_resolved[] = $item;
+			}
+
+			// dataframe value to export
+			if(isset($propiedades->dataframe)){
+				$dataframe			= $this->get_dataframe();
+				$curent_dataframe_dato = array_find($dataframe, function($item) use ($key){
+					return $item->from_key===$key;
+				});
+				$dataframe_tipo			= reset($propiedades->dataframe)->tipo;
+				$ar_exclude_models		= array('box elements','area');
+				$ar_recursive_childrens	= RecordObj_dd::get_ar_childrens($dataframe_tipo, false, $ar_exclude_models);
+				$df_component_tipo			= reset($ar_recursive_childrens);
+
+				$dataframe_name = RecordObj_dd::get_modelo_name_by_tipo($df_component_tipo,true);
+
+				if(!empty($curent_dataframe_dato)){
+					$component 		= component_common::get_instance(
+						$dataframe_name,
+						$df_component_tipo,
+						$this->parent,
+						'dataframe_edit',
+						$lang,
+						$this->section_tipo,
+						false
+					);
+					$component->set_dato([$curent_dataframe_dato]);
+					$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
+				}else{
+					$current_value_export = '';
+				}
+				$item = new stdClass();
+						$item->section_id 			= $section_id;
+						$item->component_tipo 		= $df_component_tipo;
+						$item->section_tipo 		= $section_tipo;
+						$item->from_section_tipo 	= $this->section_tipo;
+						$item->from_component_tipo 	= $this->tipo;
+						$item->model 				= $dataframe_name;
+						$item->value 				= $current_value_export;
+
+					$ar_resolved[] = $item;
 			}
 		}//end foreach( (array)$dato as $key => $value)
 		#dump($dato, ' dato ++ '.to_string($this->tipo));
