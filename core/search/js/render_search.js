@@ -499,25 +499,21 @@ render_search.prototype.render_search_buttons = function(){
 
 	// recursive children
 		if (self.caller.context.section_map && self.caller.context.section_map.thesaurus) {
-			const recursive_group = ui.create_dom_element({
-				element_type 	: "div",
-				class_name 	 	: "recursive_group",
-				parent 		 	: max_group
-			})
 			const recursive_label = ui.create_dom_element({
-				element_type 	: "span",
-				text_content 	: get_label["children_recursive"] || "Children",
-				class_name 	 	: "children_recursive_label",
-				parent 		 	: recursive_group
+				element_type	: 'label',
+				text_content	: get_label['children_recursive'] || 'Children',
+				class_name		: 'children_recursive_label',
+				parent			: max_group
 			})
-			const children_recursive_node = ui.create_dom_element({
-				element_type 	: "input",
-				type 			: "checkbox",
-				value 			: "",
-				class_name 	 	: "children_recursive",
-				parent 		 	: recursive_group,
+			const search_children_recursive_node = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				value			: '',
+				class_name		: 'children_recursive'
 			})
-			self.search_children_recursive_node	= children_recursive_node
+			recursive_label.prepend(search_children_recursive_node)
+			// fix node
+			self.search_children_recursive_node	= search_children_recursive_node
 		}
 
 	// reset group
