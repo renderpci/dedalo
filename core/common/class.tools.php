@@ -7,7 +7,10 @@ abstract class tools extends common {
 
 
 
-	public static $globals;
+	/**
+	* CLASS VARS
+	*/
+		public static $globals;
 
 
 

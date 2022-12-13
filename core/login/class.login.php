@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS LOGIN
 *
 *
@@ -8,22 +8,14 @@ class login extends common {
 
 
 
-	protected $id;
-	protected $tipo;
-	protected $lang;
-	protected $mode;
-
-	protected $modelo;
-	protected $tipo_active_account	= 'dd131';
-	protected $tipo_button_login	= 'dd259';
-
-	# STRUCTURE DATA
-	// public $RecordObj_dd;	// obj ts
-	protected $model;			// fixed on common->load_structure_data
-
-	protected static $login_matrix_table = 'matrix';
-
-	const SU_DEFAULT_PASSWORD = '';
+	/**
+	* CLASS VARS
+	*/
+		protected $id;
+		protected $tipo_active_account	= 'dd131';
+		protected $tipo_button_login	= 'dd259';
+		protected static $login_matrix_table = 'matrix';
+		const SU_DEFAULT_PASSWORD = '';
 
 
 
@@ -490,9 +482,9 @@ class login extends common {
 
 		$active_account = false; // Default false
 
-		$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
+		$model					= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
 		$component_radio_button	= component_common::get_instance(
-			$modelo_name,
+			$model,
 			DEDALO_CUENTA_ACTIVA_TIPO,
 			$section_id,
 			'edit',

@@ -8,33 +8,22 @@ abstract class component_common extends common {
 
 
 
-	// GENERAL VARS
-		// string tipo. Component tipo in ontology e.g. ('dd22') -equivalent of 'terminoID'-
-		protected string $tipo;
-		// string|int parent. Component's section section_id
-		protected $parent;
-		// string|int parent. Component's section section_id (alias of $parent)
+	/**
+	* CLASS VARS
+	*/
+		// string section_id. Component's section section_id
 		protected $section_id;
+		// string parent. Component's section section_id (alias of $section_id)
+		protected $parent;
 		// string section_tipo. Component's section tipo
-		protected string $section_tipo;
-		// string lang. Component's lang code as 'lg-eng'
-		protected ?string $lang;
-
+		protected $section_tipo;
 		protected $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
-		protected $traducible;				// string defined in thesaurus (si/no)
-		protected $mode;					// string default edit
+		// protected $traducible;			// string defined in thesaurus (si/no)
 		protected $dato;					// object dato (JSON encoded in db)
 		protected $valor;					// string usually dato
 		protected $dataframe;				// object dataframe
 		public $version_date;				// date normally resolved from time machine and assigned to current component
 		public $locator;					// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
-
-		// structure data
-		// public $RecordObj_dd;			// obj ts
-		// protected $model;					// fixed on common->load_structure_data
-		protected $norden;
-		protected $label;					// component label in current lang like 'Transcription'
-
 		protected $required;				// field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
 		protected $debugger;				// info for admin
 		// ar_tools_name. Default list of tools for every component. Override if component don't need this minimum tools

@@ -12,20 +12,9 @@ class section extends common {
 	/**
 	* CLASS VARS
 	*/
-		# Overwrite __construct var lang passed in this component
-		protected $lang;
-
 		# FIELDS
 		protected $section_id;
-		protected $tipo;
 		protected $dato;
-
-		# STATE
-		protected $mode;
-
-		# STRUCTURE DATA
-		protected $modelo;
-		protected $label;
 
 		# Buttons objects
 		public $ar_buttons;

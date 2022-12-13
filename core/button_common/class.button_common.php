@@ -1,20 +1,21 @@
 <?php
-/*
+/**
 * BUTTON_COMMON
 *
 *
 */
 class button_common extends common {
 
-	protected $tipo ;
-	protected $modelo ;
-	protected $label ;
-	protected $mode ;
-	protected $lang ;
-	protected $target ;
-	protected $section_tipo ;
 
-	public $context_tipo; //dependiendo de quien realice la llamada (area, seccion...) enviará su tipo, independiente de modelo, el tipo será el contexto de la llamada (dd12, dd323...)
+
+	/**
+	* CLASS VARS
+	*/
+		protected $target ;
+		protected $section_tipo ;
+		public $context_tipo; //dependiendo de quien realice la llamada (area, seccion...) enviará su tipo, independiente de modelo, el tipo será el contexto de la llamada (dd12, dd323...)
+
+
 
 	function __construct($tipo, $target, $section_tipo) {
 

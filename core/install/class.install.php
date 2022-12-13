@@ -5,11 +5,13 @@
 */
 class install extends common {
 
-	protected $id;
-	protected $tipo;
-	protected $lang;
-	protected $mode;
-	protected $model;
+
+	/**
+	* CLASS VARS
+	*/
+		protected $id;
+
+
 
 	/**
 	* __CONSTRUCT
