@@ -163,6 +163,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* 	Matrix id from target table record
 	*/
 	public function Save( object $save_options=null ) : int {
+		$start_time = start_time();
 
 		// test_can_save
 			if( $this->test_can_save()!==true ) {
@@ -178,7 +179,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
-		# if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity') {
+		# if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity') { DEDALO_ACTIVITY_SECTION_TIPO
 		if($this->matrix_table!=='matrix_activity') {
 			# Exec time machine save and set returned id
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
@@ -188,6 +189,11 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		// MATRIX SAVE (with parent RecordDataBoundObject)
 		// Returned id can be false (error on save), matrix id (normal case), section_id (activity case)
 		$id = parent::Save($save_options);
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
+			}
 
 
 		return $id;

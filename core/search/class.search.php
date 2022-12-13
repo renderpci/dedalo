@@ -2699,30 +2699,32 @@ class search {
 	/**
 	* PROPAGATE_COMPONENT_DATO_TO_RELATIONS_TABLE
 	* Get complete component relation dato and generate rows into relations table for fast LEFT JOIN
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function propagate_component_dato_to_relations_table( object $request_options ) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= array('Error. Request failed '.__METHOD__);
+	public static function propagate_component_dato_to_relations_table( object $options ) : object {
+		$start_time = start_time();
 
 		// options
-			$options = new stdClass();
-				$options->ar_locators			= null;
-				$options->section_tipo			= null;
-				$options->section_id			= null;
-				$options->from_component_tipo	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			// $ar_locators			= $options->ar_locators ?? null;
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$from_component_tipo	= $options->from_component_tipo ?? null;
 
-			if (strpos($options->section_id, DEDALO_SECTION_ID_TEMP)!==false) {
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= array('Error. Request failed '.__METHOD__);
+
+		// section temp case
+			if (!empty($section_id) && strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false) {
 				$response->result	= true;
-				$response->msg		= 'Ok. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
+				$response->msg		= 'OK. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
 				return $response;
 			}
 
-			if (empty($options->from_component_tipo)) {
+		// empty from_component_tipo case
+			if (empty($from_component_tipo)) {
 				$response->msg[]	= " options->from_component_tipo is mandatory ! Stopped action";
 				$response->msg		= implode(', ', $response->msg);
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
@@ -2730,13 +2732,10 @@ class search {
 			}
 
 		// short vars
-			$table					= 'relations';
-			$section_id				= $options->section_id;
-			$section_tipo			= $options->section_tipo;
-			$from_component_tipo	= $options->from_component_tipo;
+			$table = 'relations';
 
 		// DELETE . Remove all relations of current component
-			$strQuery	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
+			$strQuery	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo';";
 			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 
 		// INSERT . Create all relations again (multiple)
@@ -2773,7 +2772,7 @@ class search {
 				}
 				*/
 			$ar_insert_values = [];
-			foreach ((array)$options->ar_locators as $key => $locator) {
+			foreach ((array)$options->ar_locators as $locator) {
 
 				if (empty($locator)) {
 					debug_log(__METHOD__." Error. empty locator. Ignored relations insert empty locator.", logger::ERROR);
@@ -2787,7 +2786,6 @@ class search {
 				$target_section_tipo	= $locator->section_tipo;
 				$target_section_id		= $locator->section_id;
 
-
 				// prevents to save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO) - DEDALO_SECTION_USERS_TIPO ?
 					// if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO) {
 					// 	continue;
@@ -2797,9 +2795,9 @@ class search {
 				if (!in_array($value, $ar_insert_values)) {
 					$ar_insert_values[] = $value;
 				}
-
 			}
-			# Exec query (all records at once)
+
+			// Exec query (all records at once)
 				if (!empty($ar_insert_values)) {
 
 					$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
@@ -2814,6 +2812,7 @@ class search {
 						if(SHOW_DEBUG===true) {
 							if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
 								$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+								$msg .= ' in '. exec_time_unit($start_time).' ms';
 								debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
 							}
 						}
