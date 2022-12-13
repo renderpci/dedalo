@@ -2,7 +2,7 @@
 /**
 * MediaObj
 */
-abstract class MediaObj {
+abstract class MediaObj extends stdClass {
 
 
 

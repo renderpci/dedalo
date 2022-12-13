@@ -240,6 +240,61 @@
 					width: 100%;
 				}
 			}
+
+			.show_on_active {
+				display: none;
+			}
+			&.active {
+				// box-shadow: 3px 5px 8px 1px #c6c6c6;
+				// z-index: 1;
+				z-index: 3; // 3 allow over portal drag handlers
+				// outline: thin solid @color_orange_dedalo;
+				box-shadow: -1px 1px 0px @color_orange_dedalo, inset -1px 1px 0px @color_orange_dedalo;
+				color: @color_orange_dedalo;
+				// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
+				overflow: initial; // !important
+				// z-index: auto;
+				// background-color: rgb(255 252 249);
+				background-color: lighten(@color_orange_dedalo, 45.1%);
+
+				// >.content_data >.content_value >.show_on_active {
+				.show_on_active {
+					display: block;
+				}
+
+				//transition: background-color 0.3s ease;
+				// background-color: @color_grey_medium !important; // rgb(230, 230, 230)
+				// background-color: @color_white_dirty !important;
+				// background-color: rgb(250 249 249 / 40%) !important;
+
+				// resizable
+					// resize: both;
+					// overflow: auto;
+					// 	flex: unset;
+					// 	flex-grow: 1;
+					// 	flex-basis: auto;
+
+				@media screen and (max-width: @width_break_point_1) {
+					flex: 0 0 calc(100% - 2em) !important;
+				}
+
+				>.buttons_container {
+					display: block !important;
+
+					.button:last-of-type {
+						margin-right: 0.75rem;
+					}
+				}
+				>.label {
+					// color: @color_orange_dedalo !important;
+				}
+
+				&.inside {
+					// >.buttons_container {
+					// 	left: calc(100% - 1.5rem);
+					// }
+				}
+			}//end &.active
 		}//end &.edit
 
 		&.search {
@@ -292,62 +347,6 @@
 			// flex: unset;
 			// flex-grow: 1;
 			// flex-basis: auto;
-
-		.show_on_active {
-			display: none;
-		}
-		&.active {
-			// box-shadow: 3px 5px 8px 1px #c6c6c6;
-			// z-index: 1;
-			z-index: 3; // 3 allow over portal drag handlers
-			// outline: thin solid @color_orange_dedalo;
-			box-shadow: -1px 1px 0px @color_orange_dedalo, inset -1px 1px 0px @color_orange_dedalo;
-			color: @color_orange_dedalo;
-			// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
-			overflow: initial; // !important
-			// z-index: auto;
-			// background-color: rgb(255 252 249);
-			background-color: lighten(@color_orange_dedalo, 45.1%);
-
-			// >.content_data >.content_value >.show_on_active {
-			.show_on_active {
-				display: block;
-			}
-
-			//transition: background-color 0.3s ease;
-			// background-color: @color_grey_medium !important; // rgb(230, 230, 230)
-			// background-color: @color_white_dirty !important;
-			// background-color: rgb(250 249 249 / 40%) !important;
-
-			// resizable
-				// resize: both;
-				// overflow: auto;
-				// 	flex: unset;
-				// 	flex-grow: 1;
-				// 	flex-basis: auto;
-
-			@media screen and (max-width: @width_break_point_1) {
-				flex: 0 0 calc(100% - 2em) !important;
-			}
-
-			>.buttons_container {
-				display: block !important;
-
-				.button:last-of-type {
-					margin-right: 0.75rem;
-				}
-			}
-			>.label {
-				// color: @color_orange_dedalo !important;
-			}
-
-			&.inside {
-				// >.buttons_container {
-				// 	left: calc(100% - 1.5rem);
-				// }
-			}
-		}//end &.active
-
 
 		&.error {
 			transition: background-color 0.3s ease;
