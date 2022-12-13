@@ -322,7 +322,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_TARGET_DIR
-	* @return
+	* @return string $target_dir
 	*/
 	public function get_target_dir() : string {
 
@@ -330,10 +330,10 @@ class component_svg extends component_media_common {
 			$this->quality = $this->get_quality();
 		}
 
-		$additional_path 	= $this->get_additional_path();
 		$initial_media_path = $this->get_initial_media_path();
+		$additional_path 	= $this->get_additional_path();
 
-		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $this->initial_media_path. '/' . $this->quality . $additional_path . '/';
+		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $initial_media_path. '/' . $this->quality . $additional_path . '/';
 
 		return $target_dir;
 	}//end get_target_dir

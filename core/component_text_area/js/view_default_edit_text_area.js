@@ -440,7 +440,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 							}
 							const tag = self.build_view_tag_obj(note_tag, note_tag.tag_id)
 							// insert the new note tag in the caret position of the text_editor
-							const inserted_tag = text_editor.set_content(tag)
+							text_editor.set_content(tag)
 							// render and open the note section inside a modal
 							render_note({
 								self		: self,
@@ -798,7 +798,7 @@ const get_custom_events = (self, i, text_editor) => {
 							// console.log('self.db_data.value[i]:', self.db_data.value[i]);
 							// console.log('parsed_value:', parsed_value);
 					})
-				}, 100)
+				}, 150)
 		}//end KeyUp
 
 	// changeData
@@ -1372,42 +1372,45 @@ const render_persons_list = function(self, text_editor, i) {
 
 					const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
 
-					const person_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'person_container',
-						parent			: section_container
-					})
-						const person_keyboard = ui.create_dom_element({
+					// person_container
+						const person_container = ui.create_dom_element({
+							element_type	: 'div',
+							class_name 		: 'person_container',
+							parent			: section_container
+						})
+						person_container.addEventListener('mousedown', function (evt) {
+							evt.preventDefault()
+							evt.stopPropagation()
+
+							// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
+							const tag = self.build_view_tag_obj(current_person, current_person.tag_id)
+							text_editor.set_content(tag)
+						});
+
+					// person_keyboard
+						ui.create_dom_element({
 							element_type	: 'span',
 							text_node		: 'control ctrl+'+ k++,
-							class_name 		: 'label person_keyboard',
+							class_name		: 'label person_keyboard',
 							parent			: person_container
 						})
 						const html_tag = self.tags_to_html(current_person.tag)
 						person_container.insertAdjacentHTML('afterbegin', html_tag)
 
-						const person_name = ui.create_dom_element({
+					// person_name
+						ui.create_dom_element({
 							element_type	: 'span',
 							text_node		: current_person.full_name || '',
-							class_name 		: 'label person_name',
+							class_name		: 'label person_name',
 							parent			: person_container
 						})
-
-						const person_role = ui.create_dom_element({
+						// person_role
+						ui.create_dom_element({
 							element_type	: 'span',
 							text_node		: '('+current_person.role + ')',
-							class_name 		: 'label person_role',
+							class_name		: 'label person_role',
 							parent			: person_container
 						})
-
-					person_container.addEventListener('mousedown', function (evt) {
-						evt.preventDefault()
-						evt.stopPropagation()
-
-						// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
-						const tag = self.build_view_tag_obj(current_person, current_person.tag_id)
-						text_editor.set_content(tag)
-					});
 				}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
 			}//end for (let i = 0; i < value_length; i++)
 
