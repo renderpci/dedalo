@@ -804,6 +804,7 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function save(object $rqo) : object {
+		$start_time = start_time();
 
 		// response. Create the default save response
 			$response = new stdClass();
@@ -888,6 +889,7 @@ final class dd_core_api {
 						}
 
 					// save
+						debug_log(__METHOD__." --> API ready to save record $model ($tipo - $section_tipo - $section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
 						$component->Save();
 					// force recalculate dato
 						$component->get_dato();

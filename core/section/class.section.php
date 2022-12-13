@@ -681,6 +681,7 @@ class section extends common {
 	* @return int|null $section_id
 	*/
 	public function Save( object $save_options=null ) : ?int {
+		$start_time = start_time();
 
 		// options
 			$options = new stdClass();
@@ -1022,7 +1023,7 @@ class section extends common {
 					}else{
 
 						if (!empty($options->component_filter_dato)) {
-							// set the component_filter with the dato sended by the caller (portals)
+							// set the component_filter with the dato sent by the caller (portals)
 							$component_filter 	= component_common::get_instance(
 								'component_filter',
 								$ar_tipo_component_filter[0],
@@ -1080,7 +1081,7 @@ class section extends common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
+				debug_log(__METHOD__." Saved section ($this->tipo - $this->section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
 			}
 
 
@@ -2459,16 +2460,21 @@ class section extends common {
 	* @return bool
 	*/
 	public function diffusion_info_propagate_changes() : bool {
+		$start_time = start_time();
 
+		// inverse_locators
 		$inverse_locators = $this->get_inverse_locators();
-
-		foreach((array)$inverse_locators as $locator) {
+		foreach($inverse_locators as $locator) {
 
 			$current_section_tipo = $locator->from_section_tipo;
 			$current_section_id   = $locator->from_section_id;
 
-			$section = section::get_instance($current_section_id, $current_section_tipo, $mode='list');
-			$dato 	 = $section->get_dato();
+			$section = section::get_instance(
+				$current_section_id,
+				$current_section_tipo,
+				'list' // string mode
+			);
+			$dato = $section->get_dato();
 
 			if (!empty($dato->diffusion_info)) {
 
@@ -2480,9 +2486,9 @@ class section extends common {
 
 				// Save section with updated dato
 				$section->Save();
-				debug_log(__METHOD__." Propagated diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Propagated diffusion_info changes to section $current_section_tipo, $current_section_id ". exec_time_unit($start_time).' ms', logger::DEBUG);
 			}else{
-				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section $current_section_tipo, $current_section_id ". exec_time_unit($start_time).' ms', logger::DEBUG);
 			}
 		}
 
