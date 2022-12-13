@@ -4,59 +4,66 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {ui} from '../../../core/common/js/ui.js'
-	import {get_ar_instances} from '../../../core/section/js/section.js'
-	import {set_element_css} from '../../../core/page/js/css.js'
-	// import {tool_label} from '../../../tools/tool_common/js/tool_common.js'
+	import {ui} from '../../../../core/common/js/ui.js'
+	import {get_ar_instances} from '../../../../core/section/js/section.js'
+	import {set_element_css} from '../../../../core/page/js/css.js'
+	import {event_manager} from '../../../../core/common/js/event_manager.js'
+	// import {
+	// 	rebuild_columns_map
+	// } from './render_service_time_machine_list.js'
 
 
 
 /**
-* RENDER_TIME_MACHINE_VIEW
-*
-* Used by time_machine to render by itself in the same way that portals views
-* the tool assign the name of this method when it create the time_machine instance in self.time_machine.view
-* the time_machine call here when the render() is fired
-*
-* @param instance self
-* 	The time_machine instance (here the instance is not the tool)
-* @param instance options
-* 	The generic options, used for assign render_level
+* VIEW_TOOL_TIME_MACHINE_LIST
+* Manages the component's logic and appearance in client side
+*/
+export const view_tool_time_machine_list = function() {
+
+	return true
+}//end view_tool_time_machine_list
+
+
+
+/**
+* RENDER
+* Renders main element wrapper for current view
+* @param object self
+* @param object options
 * @return DOM node wrapper
 */
-export const render_time_machine_view = async function(self, options) {
+view_tool_time_machine_list.render = async function(self, options) {
 
 	// options
 		const render_level 	= options.render_level || 'full'
-
-	const fragment = new DocumentFragment()
 
 	// columns_map
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
-	// ar_section_record. section_record instances (initied and built)
+	// ar_section_record. section_record instances (initialized and built)
 		const ar_section_record	= await get_ar_instances(self)
 		self.ar_instances		= ar_section_record
 
 	// content_data
-		const content_data = await get_content_data(self.ar_instances, self)
+		const content_data = await get_content_data(ar_section_record, self)
 		if (render_level==='content') {
 			return content_data
 		}
 
+	// fragment
+		const fragment = new DocumentFragment()
+
 	// paginator container node
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'paginator',
+			class_name		: 'paginator_container',
 			parent			: fragment
 		})
-		self.paginator.build()
-		.then(function(){
-			self.paginator.render().then(paginator_wrapper =>{
-				paginator_div.appendChild(paginator_wrapper)
-			})
+		await self.paginator.build()
+		self.paginator.render()
+		.then(paginator_wrapper =>{
+			paginator_div.appendChild(paginator_wrapper)
 		})
 
 	// list_body
@@ -67,20 +74,15 @@ export const render_time_machine_view = async function(self, options) {
 		})
 		// flat columns create a sequence of grid widths taking care of sub-column space
 		// like 1fr 1fr 1fr 3fr 1fr
-		const items				= ui.flat_column_items(columns_map)
-		const template_columns	= items.join(' ')
-		// Object.assign(
-		// 	list_body.style,
-		// 	{
-		// 		"grid-template-columns": template_columns
-		// 	}
-		// )
+		// const items				= ui.flat_column_items(columns_map)
+		// const template_columns	= items.join(' ')
+		const template_columns	= 'auto 1fr 1fr 1fr 1fr 33%';
 		const css_object = {
 			'.list_body' : {
 				'grid-template-columns': template_columns
 			}
 		}
-		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.tm`
+		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.${self.mode}`
 		set_element_css(selector, css_object)
 
 	// list_header_node. Create and append if ar_instances is not empty
@@ -94,10 +96,8 @@ export const render_time_machine_view = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
-			element_type	: 'section',
-			// class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name		: `wrapper_${self.type} ${self.model} ${self.section_tipo+'_'+self.tipo} ${self.tipo} ${self.mode}`
+			element_type	: 'div',
+			class_name		: `wrapper_${self.model} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode} view_${self.view}`
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
@@ -106,13 +106,17 @@ export const render_time_machine_view = async function(self, options) {
 
 
 	return wrapper
-}//end render_time_machine_view
-
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA
+* Render previously built section_records into a content_data div container
+* @param array ar_section_record
+* 	Array of section_record instances
+* @param object self
+* 	service_time_machine instance
 * @return DOM node content_data
 */
 const get_content_data = async function(ar_section_record, self) {
@@ -133,24 +137,28 @@ const get_content_data = async function(ar_section_record, self) {
 
 		}else{
 			// rows
-			// parallel mode
+
+			// parallel render
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
 					const render_promise_node = ar_section_record[i].render()
 					ar_promises.push(render_promise_node)
 				}
+
+			// once rendered, append it preserving the order
 				await Promise.all(ar_promises)
-				.then(function(values) {
+				.then(function(section_record_nodes) {
 					for (let i = 0; i < ar_section_record_length; i++) {
-						const section_record_node = values[i]
+						const section_record_node = section_record_nodes[i]
 						fragment.appendChild(section_record_node)
 					}
 				});
 		}
 
 	// content_data
-		const content_data = ui.tool.build_content_data(self)
-		content_data.appendChild(fragment)
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
+			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -161,8 +169,7 @@ const get_content_data = async function(ar_section_record, self) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @param object self
-* @return array columns_map
+* @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -178,8 +185,30 @@ const rebuild_columns_map = async function(self) {
 
 	// columns base
 		const base_columns_map = await self.columns_map
-		columns_map.push(...base_columns_map)
 
+	// modify list and labels
+		const base_columns_map_length = base_columns_map.length
+		for (let i = 0; i < base_columns_map_length; i++) {
+			const el = base_columns_map[i]
+
+			// des
+				// // ignore matrix_id column
+				// 	if (el.tipo==='dd1573') {
+				// 		continue;
+				// 	}
+
+				// // short label (for small width columns)
+				// 	switch (el.tipo) {
+				// 		case 'dd201':
+				// 			el.label = 'Date'
+				// 			break;
+				// 		case 'dd197':
+				// 			el.label = 'User'
+				// 			break;
+				// 	}
+
+			columns_map.push(el)
+		}
 
 	return columns_map
 }//end rebuild_columns_map

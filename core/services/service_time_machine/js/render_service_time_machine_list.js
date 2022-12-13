@@ -6,7 +6,7 @@
 // imports
 	import {view_default_time_machine_list} from './view_default_time_machine_list.js'
 	import {view_mini_time_machine_list} from './view_mini_time_machine_list.js'
-
+	import {view_tool_time_machine_list} from './view_tool_time_machine_list.js'
 
 
 /**
@@ -30,12 +30,17 @@ render_service_time_machine_list.prototype.list = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view	= self.view || 'default'
 
 	switch(view) {
 
 		case 'mini':
+			// used by inspector
 			return view_mini_time_machine_list.render(self, options)
+
+		case 'tool':
+			// used by tool_time_machine
+			return view_tool_time_machine_list.render(self, options)
 
 		case 'default':
 		default:

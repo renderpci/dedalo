@@ -6,29 +6,60 @@
 .service_time_machine {
 	// background-color: #d5fe9a;
 
-	.head_column {
-		font-size: 0.85rem;
-		text-align: left;
-		// padding: 0.25rem;
+	&.view_default {
+		.head_column {
+			text-align: left;
 
-		.name {
-		    margin-left: 0.1rem;
+			.name {
+			    margin-left: 0.1rem;
+			}
+		}
+
+		.column_service_time_machine {
+			padding: 0.25rem;
+
+			>span {
+				word-break: break-word;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				display: -webkit-box;
+				-webkit-line-clamp: 10; /* number of lines to show */
+				line-clamp: 10;
+				-webkit-box-orient: vertical;
+			}
 		}
 	}
 
-	.column_service_time_machine {
-		// align-items: center; // vertical alignment
-		padding: 0.25rem;
+	&.view_mini {
+		.head_column {
+			font-size: 0.85rem;
+			text-align: left;
+			// padding: 0.25rem;
 
-		>span {
-			word-break: break-word;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			display: -webkit-box;
-			-webkit-line-clamp: 10; /* number of lines to show */
-			line-clamp: 10;
-			-webkit-box-orient: vertical;
+			.name {
+			    margin-left: 0.1rem;
+			}
 		}
+
+		.column_service_time_machine {
+			// align-items: center; // vertical alignment
+			padding: 0.25rem;
+
+			>span {
+				word-break: break-word;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				display: -webkit-box;
+				-webkit-line-clamp: 10; /* number of lines to show */
+				line-clamp: 10;
+				-webkit-box-orient: vertical;
+			}
+		}
+	}
+
+	&.view_tool {
+		// background-color: #ced9fd
+
 	}
 
 }//end .wrapper_service_time_machine
