@@ -195,6 +195,8 @@ const get_content_data = function(self) {
 		}
 
 	// time_machine_list container
+		// Note that 'time_machine_list' is a Ontology item children of current section if defined
+		// as 'numisdata588' and is used only to determine if current section have a history changes list or not
 		if (self.caller.context.time_machine_list) {
 			const time_machine_list = render_time_machine_list(self)
 			content_data.appendChild(time_machine_list)
@@ -920,7 +922,7 @@ const render_time_machine_list = function(self) {
 			parent			: time_machine_list_wrap
 		})
 
-	// time_machine_list events
+	// time_machine_list events subscription
 		self.events_tokens.push(
 			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
 		)
@@ -949,19 +951,22 @@ const render_time_machine_list = function(self) {
 			// updates list_head icon
 				time_machine_list_head.classList.add('up')
 
-			// create and render a time_machine_list instance
-				const time_machine_list	= await instances.get_instance({
-					model			: 'time_machine_list',
-					tipo			: self.caller.context.time_machine_list,
+			// create and render a service_time_machine instance
+				const service_time_machine	= await instances.get_instance({
+					model			: 'service_time_machine',
+					tipo			: self.section_tipo,
 					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
 					section_id		: self.caller.section_id,
-					mode			: self.mode
+					view			: 'mini',
+					id_variant		: self.model,
+					caller			: self
 				})
-				await time_machine_list.build()
-				const time_machine_list_wrap = await time_machine_list.render()
+				await service_time_machine.build(true)
+				console.log('---> service_time_machine:', service_time_machine);
+				const time_machine_list_wrap = await service_time_machine.render()
 
-			// remove previous node if exists pointer
+
+			// remove previous node if a pointer exists
 				if (time_machine_list_body.time_machine_list_wrap) {
 					time_machine_list_body.time_machine_list_wrap.remove()
 				}
