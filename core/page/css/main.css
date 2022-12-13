@@ -6527,17 +6527,36 @@ dd-modal .footer.content {
 *
 * Included from main.less file
 */
-.service_time_machine .head_column {
+.service_time_machine.view_default .head_column {
+  text-align: left;
+}
+.service_time_machine.view_default .head_column .name {
+  margin-left: 0.1rem;
+}
+.service_time_machine.view_default .column_service_time_machine {
+  padding: 0.25rem;
+}
+.service_time_machine.view_default .column_service_time_machine > span {
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 10;
+  /* number of lines to show */
+  line-clamp: 10;
+  -webkit-box-orient: vertical;
+}
+.service_time_machine.view_mini .head_column {
   font-size: 0.85rem;
   text-align: left;
 }
-.service_time_machine .head_column .name {
+.service_time_machine.view_mini .head_column .name {
   margin-left: 0.1rem;
 }
-.service_time_machine .column_service_time_machine {
+.service_time_machine.view_mini .column_service_time_machine {
   padding: 0.25rem;
 }
-.service_time_machine .column_service_time_machine > span {
+.service_time_machine.view_mini .column_service_time_machine > span {
   word-break: break-word;
   overflow: hidden;
   text-overflow: ellipsis;

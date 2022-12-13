@@ -159,7 +159,8 @@ const get_content_value = (i, current_value, self) => {
 */
 export const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
+	// const is_inside_tool	= self.is_inside_tool
+	const is_inside_tool	= self.caller && self.caller.type==='tool'
 	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
