@@ -7,160 +7,167 @@ abstract class common {
 
 
 
-	// // tipo. string like 'dd4525'
-	// public $tipo;
+	/**
+	* CLASS VARS
+	*/
+		// string tipo. like 'dd4525'
+		protected $tipo;
+		// string mode. like 'edit'
+		protected $mode;
+		// string model. like 'component_date'
+		protected $model;
+		// string lang. like 'lg-eng'
+		protected $lang;
+		// string label. like 'component_section_id'
+		protected $label;
 
-	// model. string like 'component_date'
-	protected $model;
-	// norden
-	protected $norden;
-	// label
-	protected $label;
-	// traducible
-	protected $traducible;
+		// object RecordObj_dd. Ontology definition object
+		public $RecordObj_dd;
 
-	// // section_id. string like '1526'
-	// public $section_id;
+		// norden
+		protected $norden;
+		// traducible
+		public $traducible;
 
-	// // lang. string like 'lg-eng'
-	// public $lang;
+		// // section_id. string like '1526'
+		// public $section_id;
 
-	// permissions. int value from 0 to 3
-	public $permissions;
+		// lang. string like 'lg-eng'
+		// public $lang;
 
-	// ar_loaded_modelos_name. List of all components/sections model name used in current page (without duplicates). Used to determine
-	// the css and css files to load
-	static $ar_loaded_modelos_name = array();
+		// permissions. int value from 0 to 3
+		public $permissions;
 
-	// identificador_unico. UID used to set DOM elements id unique based on section_tipo, section_id, lang, mode, etc.
-	public $identificador_unico;
-	// variant. Modifier of identificador_unico
-	public $variant;
+		// ar_loaded_modelos_name. List of all components/sections model name used in current page (without duplicates). Used to determine
+		// the css and css files to load
+		static $ar_loaded_modelos_name = array();
 
-	public $RecordObj_dd;
-
-	// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
-	protected $bl_loaded_structure_data;
-	//bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
-	protected $bl_loaded_matrix_data = false;
-
-	// TABLE  matrix_table
-	// public $matrix_table;
-
-	// context. Object with information about context of current element
-	public $context;
-
-	// public properties
-	public $properties;
-
-	// from_parent. Used to link context ddo elements
-	public $from_parent;
-
-	// parent_grouper
-	public $parent_grouper;
-
-	// build options sent by the client into show ddo to modify the standard get data.
-	// in area_thesaurus it send if the thesaurus need get models or terms.
-	// in component_portal it send if the source external need to be updated.
-	public $build_options = null;
-
-	// request config with show, select and search of the item
-	public $request_config;
-
-	// request_ddo_value
-	public $request_ddo_value;
-
-	// cache of calculated context, used to get the context that was calculated and reuse it.
-	static $structure_context_cache = [];
-
-	// view. Specific element view combined with mode is used to render elements
-	public $view;
-
-	// children_view. Specific element children_view used to render child elements
-	public $children_view;
-
-	// caller_dataframe the element that call to other element (component, section, area, etc)
-	public $caller_dataframe;
+		// identificador_unico. UID used to set DOM elements id unique based on section_tipo, section_id, lang, mode, etc.
+		public $identificador_unico;
+		// variant. Modifier of identificador_unico
+		public $variant;
 
 
 
-	// required methods
-		// abstract protected function define_id($id);
-		// abstract protected function define_tipo();
-		// abstract protected function define_lang();
-		// abstract public function get_html();
+		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
+		protected $bl_loaded_structure_data;
+		//bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
+		protected $bl_loaded_matrix_data = false;
 
+		// TABLE  matrix_table
+		// public $matrix_table;
 
-	// temporal excluded/mapped models
-		// public static $ar_temp_map_models = [
-		// 	// map to => old model
-		// 	'component_portal'	=> 'component_autocomplete_hi',
-		// 	'component_portal'	=> 'component_autocomplete',
-		// 	'section_group'		=> 'section_group_div'
-		// ];
-		public static $ar_temp_map_models = [
-			// map from old model => new model
-			'component_autocomplete_hi'	=> 'component_portal',
-			'component_autocomplete'	=> 'component_portal',
-			'section_group_div'			=> 'section_group'
-		];
-		public static $ar_temp_exclude_models = [
-			// v5
-			'component_security_areas',
-			'component_autocomplete_ts', // ?
-			// v6
-			// 'component_autocomplete'
-			// 'component_av'
-			'component_calculation',
-			// 'component_check_box'
-			// 'component_date'
-			// 'component_email'
-			// 'component_external',
-			// 'component_filter'
-			// 'component_filter_master'
-			// 'component_filter_records'
-			// 'component_geolocation'
-			'component_html_file',
-			// 'component_html_text',
-			// 'component_image'
-			// 'component_info',
-			// 'component_input_text'
-			'component_input_text_large',
-			//'component_inverse',
-			'component_ip',
-			// 'component_iri'
-			// 'component_json'
-			'component_layout',
-			// 'component_number'
-			// 'component_password',
-			// 'component_pdf'
-			// 'component_portal'
-			// 'component_publication'
-			// 'component_radio_button'
-			// 'component_relation_children',
-			// 'component_relation_index',
-			// 'component_relation_model',
-			// 'component_relation_parent',
-			// 'component_relation_related',
-			'component_relation_struct',
-			'component_score',
-			// 'component_section_id'
-			// 'component_security_access'
-			'component_security_tools',
-			// 'component_select'
-			// 'component_select_lang'
-			'component_state',
-			// 'component_svg'
-			// 'component_text_area'
-		];
-		public static $groupers = [
-			'section_group',
-			'section_group_div',
-			'section_tab',
-			'tab'
-			// 'section_group_relation',
-			// 'section_group_portal'
-		];
+		// context. Object with information about context of current element
+		public $context;
+
+		// public properties
+		public $properties;
+
+		// from_parent. Used to link context ddo elements
+		public $from_parent;
+
+		// parent_grouper
+		public $parent_grouper;
+
+		// build options sent by the client into show ddo to modify the standard get data.
+		// in area_thesaurus it send if the thesaurus need get models or terms.
+		// in component_portal it send if the source external need to be updated.
+		public $build_options = null;
+
+		// request config with show, select and search of the item
+		public $request_config;
+
+		// request_ddo_value
+		public $request_ddo_value;
+
+		// cache of calculated context, used to get the context that was calculated and reuse it.
+		static $structure_context_cache = [];
+
+		// view. Specific element view combined with mode is used to render elements
+		public $view;
+
+		// children_view. Specific element children_view used to render child elements
+		public $children_view;
+
+		// caller_dataframe the element that call to other element (component, section, area, etc)
+		public $caller_dataframe;
+
+		// required methods
+			// abstract protected function define_id($id);
+			// abstract protected function define_tipo();
+			// abstract protected function define_lang();
+			// abstract public function get_html();
+
+		// temporal excluded/mapped models
+			// public static $ar_temp_map_models = [
+			// 	// map to => old model
+			// 	'component_portal'	=> 'component_autocomplete_hi',
+			// 	'component_portal'	=> 'component_autocomplete',
+			// 	'section_group'		=> 'section_group_div'
+			// ];
+			public static $ar_temp_map_models = [
+				// map from old model => new model
+				'component_autocomplete_hi'	=> 'component_portal',
+				'component_autocomplete'	=> 'component_portal',
+				'section_group_div'			=> 'section_group'
+			];
+			public static $ar_temp_exclude_models = [
+				// v5
+				'component_security_areas',
+				'component_autocomplete_ts', // ?
+				// v6
+				// 'component_autocomplete'
+				// 'component_av'
+				'component_calculation',
+				// 'component_check_box'
+				// 'component_date'
+				// 'component_email'
+				// 'component_external',
+				// 'component_filter'
+				// 'component_filter_master'
+				// 'component_filter_records'
+				// 'component_geolocation'
+				'component_html_file',
+				// 'component_html_text',
+				// 'component_image'
+				// 'component_info',
+				// 'component_input_text'
+				'component_input_text_large',
+				//'component_inverse',
+				'component_ip',
+				// 'component_iri'
+				// 'component_json'
+				'component_layout',
+				// 'component_number'
+				// 'component_password',
+				// 'component_pdf'
+				// 'component_portal'
+				// 'component_publication'
+				// 'component_radio_button'
+				// 'component_relation_children',
+				// 'component_relation_index',
+				// 'component_relation_model',
+				// 'component_relation_parent',
+				// 'component_relation_related',
+				'component_relation_struct',
+				'component_score',
+				// 'component_section_id'
+				// 'component_security_access'
+				'component_security_tools',
+				// 'component_select'
+				// 'component_select_lang'
+				'component_state',
+				// 'component_svg'
+				// 'component_text_area'
+			];
+			public static $groupers = [
+				'section_group',
+				'section_group_div',
+				'section_tab',
+				'tab'
+				// 'section_group_relation',
+				// 'section_group_portal'
+			];
 
 
 
@@ -1537,8 +1544,8 @@ abstract class common {
 				? ($this->get_columns_map() ?? [])
 				: null;
 
-		// real model
-			$legacy_model	= RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+		// legacy_model
+			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -1563,7 +1570,7 @@ abstract class common {
 			]);
 
 		// optional properties
-			// Filter_by_list
+			// filter_by_list
 				if (isset($properties->source->filter_by_list)) {
 					// Calculate array of elements to show in filter. Resolve self section items
 						$filter_list = array_map(function($item){
@@ -2162,11 +2169,11 @@ abstract class common {
 			//     "mode": "edit",
 			//     "lang": "lg-eng"
 			// }
-			$requested_source	= dd_core_api::$rqo->source ?? false;
-			$requested_sqo		= dd_core_api::$rqo->sqo ?? false;
+			$requested_source	= dd_core_api::$rqo->source ?? null;
+			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
 		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
-		if( false!==$requested_source
+		if( isset($requested_source)
 			&& (	$requested_source->tipo===$this->tipo
 				|| (isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo))
 			   )
@@ -2324,7 +2331,7 @@ abstract class common {
 
 					// sqo. Preserves filter across calls using session sqo if exists
 						$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo, $mode]) : null; // cache key sqo_id
+						$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
 						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 							// replace default sqo with the already stored in session (except section_tipo to prevent to
 							// loose labels and limit to avoid overwrite list in edit and vice-versa)
@@ -2662,7 +2669,7 @@ abstract class common {
 							if (isset($parsed_item->show->sqo_config->limit)) {
 								// get session limit if it was defined
 								if ($model==='section') {
-									$sqo_id	= implode('_', ['section', $tipo, $mode]); // cache key sqo_id
+									$sqo_id	= implode('_', ['section', $tipo]); // cache key sqo_id
 									$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->show->sqo_config->limit;

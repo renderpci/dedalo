@@ -4,32 +4,34 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {get_ar_instances} from '../../../core/section/js/section.js'
-	import {ui} from '../../../core/common/js/ui.js'
-	import {set_element_css} from '../../../core/page/js/css.js'
+	import {ui} from '../../../../core/common/js/ui.js'
+	import {get_ar_instances} from '../../../../core/section/js/section.js'
+	import {set_element_css} from '../../../../core/page/js/css.js'
+	// import {event_manager} from '../../../../core/common/js/event_manager.js'
+	// import {
+	// 	rebuild_columns_map
+	// } from './render_service_time_machine_list.js'
 
 
 
 /**
-* VIEW_TIME_MACHINE_LIST
-*
-* Used by time_machine to render by itself in the same way that portals views
-* the tool assign the name of this method when it create the time_machine instance in self.time_machine.view
-* the time_machine call here when the render() is fired
-*
-* @param instance self
-* 	The time_machine instance (here the instance is not the tool)
-* @param instance options
-* 	The generic options, used for assign render_level
-* @return DOM node wrapper
+* VIEW_DEFAULT_TIME_MACHINE_LIST
+* Manages the component's logic and appearance in client side
 */
-export const view_time_machine_list = async function(self, options) {
+export const view_default_time_machine_list = function() {
+
+	return true
+}//end view_default_time_machine_list
+
+
+
+/**
+* RENDER
+*/
+view_default_time_machine_list.render = async function(self, options) {
 
 	// options
 		const render_level 	= options.render_level || 'full'
-
-	const fragment = new DocumentFragment()
 
 	// columns_map
 		const columns_map = await rebuild_columns_map(self)
@@ -45,6 +47,9 @@ export const view_time_machine_list = async function(self, options) {
 			return content_data
 		}
 
+	// fragment
+		const fragment = new DocumentFragment()
+
 	// paginator container node
 		const paginator_div = ui.create_dom_element({
 			element_type	: 'div',
@@ -59,7 +64,6 @@ export const view_time_machine_list = async function(self, options) {
 		.then(paginator_wrapper =>{
 			paginator_div.appendChild(paginator_wrapper)
 		})
-
 
 	// list_body
 		const list_body = ui.create_dom_element({
@@ -91,10 +95,10 @@ export const view_time_machine_list = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
-			element_type	: 'section',
+			element_type	: 'div',
 			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
 			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
-			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode}`
+			class_name		: `wrapper_${self.model} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode} view_${self.view}`
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
@@ -129,7 +133,7 @@ const get_content_data = async function(ar_section_record, self) {
 			const no_records_found_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'no_records',
-				inner_html		: get_label.no_records || "No records found"
+				inner_html		: get_label.no_records || 'No records found'
 			})
 			fragment.appendChild(no_records_found_node)
 
@@ -202,53 +206,3 @@ const rebuild_columns_map = async function(self) {
 
 	return columns_map
 }//end rebuild_columns_map
-
-
-
-/**
-* RENDER_COLUMN_ID
-* @param object options
-* @return DOM DocumentFragment
-*/
-	// const render_column_id = function(options){
-
-	// 	// options
-	// 		const self				= options.caller
-	// 		const section_id		= options.section_id
-	// 		const section_tipo		= options.section_tipo
-	// 		// const offset			= options.offset
-	// 		const matrix_id			= options.matrix_id
-	// 		const modification_date	= options.modification_date
-
-	// 	// permissions
-	// 		const permissions = self.permissions
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// section_id
-	// 		ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			text_content	: section_id,
-	// 			class_name		: 'section_id',
-	// 			parent			: fragment
-	// 		})
-
-	// 	// button time machine preview (eye)
-	// 		const edit_button_tm = ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'button eye',
-	// 			parent			: fragment
-	// 		})
-	// 		edit_button_tm.addEventListener("click", function(){
-	// 			// publish event
-	// 			event_manager.publish('tm_edit_record', {
-	// 				tipo		: section_tipo,
-	// 				section_id	: section_id,
-	// 				matrix_id	: matrix_id,
-	// 				date		: modification_date || null,
-	// 				mode		: 'tm'
-	// 			})
-	// 		})
-
-	// 	return fragment
-	// }//end render_column_id()

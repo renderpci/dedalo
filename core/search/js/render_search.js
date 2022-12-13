@@ -127,8 +127,8 @@ render_search.prototype.render_base = function() {
 			search_global_container.appendChild(thesaurus_options_node)
 		}
 
-	// button save_preset . Hidden by default
-		const button_save_preset = ui.create_dom_element({
+	// button_save_preset . Hidden by default
+		ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_save_preset hide',
 			inner_html		: get_label.salvar +' '+ get_label.cambios,
@@ -138,8 +138,8 @@ render_search.prototype.render_base = function() {
 			self.save_preset(this)
 		})
 
-	// button toggle fields (Show/hide where section fields list are loaded)
-		const toggle_container_selector = ui.create_dom_element({
+	// toggle_container_selector (Show/hide where section fields list are loaded)
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toggle_container_selector',
 			inner_html		: get_label.campos,
@@ -190,46 +190,47 @@ render_search.prototype.render_base = function() {
 		const search_container_selection_presets = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'search_container_selection_presets display_none',
-				dataset 		: {'section_tipo':section_tipo},
+				dataset			: {'section_tipo':section_tipo},
 				parent			: search_global_container
 			})
 			// set
 			self.search_container_selection_presets = search_container_selection_presets
 			const component_presets_label = ui.create_dom_element({
 				element_type	: 'div',
-				class_name 		: 'component_presets_label',
+				class_name		: 'component_presets_label',
 				inner_html		: get_label.presets_de_busqueda,
 				parent			: self.search_container_selection_presets
 			})
-			const button_new_preset = ui.create_dom_element({
+			// button_new_preset
+			ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button add',
+				class_name		: 'button add',
 				parent			: component_presets_label
 			})
 			.addEventListener('click',function(){
 				self.new_preset(this)
 			})
-		// create the new_preset_div
-			const new_preset_div = ui.create_dom_element({
-				element_type		: 'div',
-				class_name 			: 'new_preset_div',
-				parent				: self.search_container_selection_presets
+		// new_preset_div. create the new_preset_div
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'new_preset_div',
+				parent			: self.search_container_selection_presets
 			})
-		// create the  component_presets_list
-			const component_presets_list = ui.create_dom_element({
-				element_type		: 'ul',
-				class_name			: 'component_presets_list',
-				parent				: self.search_container_selection_presets,
+		// component_presets_list. create the  component_presets_list
+			ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'component_presets_list',
+				parent			: self.search_container_selection_presets,
 			})
 
-	// button toggle user presets
+	// toggle_container_selection_presets. button toggle user presets
 		const toggle_container_selection_presets = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toggle_container_selection_presets',
 			inner_html		: get_label.preset || 'Preset',
 			parent			: search_global_container
 		})
-		.addEventListener('click',function(){
+		toggle_container_selection_presets.addEventListener('click',function(){
 			toggle_presets(self)
 		})
 
@@ -479,8 +480,8 @@ render_search.prototype.render_search_buttons = function(){
 			class_name		: 'max_group',
 			parent			: search_buttons_container
 		})
-	// max label
-		const max_input_label = ui.create_dom_element({
+	// max_input_label
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'max_input_label unselectable',
 			inner_html		: get_label.max || 'max',
@@ -499,25 +500,21 @@ render_search.prototype.render_search_buttons = function(){
 
 	// recursive children
 		if (self.caller.context.section_map && self.caller.context.section_map.thesaurus) {
-			const recursive_group = ui.create_dom_element({
-				element_type 	: "div",
-				class_name 	 	: "recursive_group",
-				parent 		 	: max_group
-			})
 			const recursive_label = ui.create_dom_element({
-				element_type 	: "span",
-				text_content 	: get_label["children_recursive"] || "Children",
-				class_name 	 	: "children_recursive_label",
-				parent 		 	: recursive_group
+				element_type	: 'label',
+				text_content	: get_label['children_recursive'] || 'Children',
+				class_name		: 'children_recursive_label',
+				parent			: max_group
 			})
-			const children_recursive_node = ui.create_dom_element({
-				element_type 	: "input",
-				type 			: "checkbox",
-				value 			: "",
-				class_name 	 	: "children_recursive",
-				parent 		 	: recursive_group,
+			const search_children_recursive_node = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				value			: '',
+				class_name		: 'children_recursive'
 			})
-			self.search_children_recursive_node	= children_recursive_node
+			recursive_label.prepend(search_children_recursive_node)
+			// fix node
+			self.search_children_recursive_node	= search_children_recursive_node
 		}
 
 	// reset group
@@ -765,7 +762,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 * Auxiliary function to create DOM elements needed for build components presets list
 * @return bool
 */
-render_search.prototype.render_user_preset_list = function(ar_elements, permissions, target_section_tipo) {
+render_search.prototype.render_user_preset_list = async function(ar_elements, permissions, target_section_tipo) {
 
 	const self = this
 
@@ -777,15 +774,23 @@ render_search.prototype.render_user_preset_list = function(ar_elements, permissi
 		//}
 
 	// first item check
-		if (typeof ar_elements[0]==="undefined") {
-			//console.warn("[search.render_user_preset_list] Warning. Empty ar_elements received",ar_elements);
+		if (typeof ar_elements[0]==='undefined') {
+			//console.warn('[search.render_user_preset_list] Warning. Empty ar_elements received',ar_elements);
 			return false
 		}
 
 	// Read cookie to track preset selected
-		const cookie_name			= "search_presets"
-		const cookie_value			= JSON.parse(readCookie(cookie_name) || '{}')
-		const current_cookie_track	= cookie_value[target_section_tipo] || false
+		// const cookie_name			= 'search_presets'
+		// const cookie_value			= JSON.parse(readCookie(cookie_name) || '{}')
+		// const current_cookie_track	= cookie_value[target_section_tipo] || false
+
+		// WORK IN PROGRESS
+			// const current_cookie_track = await data_manager.get_local_db_data(
+			// 	'search_presets', // string id
+			// 	'status', // string table
+			// 	true // bool cache
+			// )
+			// console.log('>>>>>>>>>>>>>>>> render_user_preset_list:current_cookie_track:', current_cookie_track);
 
 	let is_default = false
 	const len = ar_elements.length
@@ -808,7 +813,7 @@ render_search.prototype.render_user_preset_list = function(ar_elements, permissi
 					// Load current preset
 						// self.parse_json_query_obj_to_dom(null, JSON.parse(element.json_preset))
 
-						// // Update state
+					// // Update state
 						// self.update_state({
 						// 	state					: 'unchanged',
 						// 	editing_section_id		: element.section_id,
@@ -819,23 +824,24 @@ render_search.prototype.render_user_preset_list = function(ar_elements, permissi
 				}
 			}
 
-		// Builds li element
+		// li_element. Builds li element
 			const li_element = ui.create_dom_element({
 				element_type	: 'li',
-				class_name		: (is_default===true) ? "selected" : "",
+				class_name		: (is_default===true) ? 'selected' : '',
 				data_set		: {
 					section_id		: element.section_id,
 					json_preset		: element.json_preset,
 					save_arguments	: element.save_arguments
 				}
 			})
-			// Button load preset (<)
+			// icon_load. Button load preset (<)
 			const icon_load = ui.create_dom_element({
 				element_type	: 'span',
 				parent			: li_element,
-				class_name		: "icon_bs component_presets_button_load"
+				class_name		: 'icon_bs component_presets_button_load'
 			})
-			icon_load.addEventListener("click",function(e){
+			icon_load.addEventListener('click', function(e){
+				e.stopPropagation()
 				self.load_search_preset(this)
 			})
 
@@ -844,15 +850,16 @@ render_search.prototype.render_user_preset_list = function(ar_elements, permissi
 				element_type	: 'span',
 				parent			: li_element,
 				inner_html		: element.name,
-				class_name		: "css_span_dato",
+				class_name		: 'css_span_dato',
 				data_set		: {
 					parent			: element.section_id,
-					section_tipo	: "dd623",
-					tipo			: "dd624"
+					section_tipo	: 'dd623',
+					tipo			: 'dd624'
 				}
 			})
 			if (permissions>=2) {
-				span_name.addEventListener("click",function(e){
+				span_name.addEventListener('click', function(e){
+					e.stopPropagation()
 					self.edit_preset(this)
 				})
 			}
@@ -862,24 +869,25 @@ render_search.prototype.render_user_preset_list = function(ar_elements, permissi
 			const icon_delete = ui.create_dom_element({
 				element_type	: 'span',
 				parent			: li_element,
-				class_name		: "icon_bs component_presets_button_delete"
+				class_name		: 'icon_bs component_presets_button_delete'
 			})
-			icon_delete.addEventListener("click",function(e){
+			icon_delete.addEventListener('click',function(e){
+				e.stopPropagation()
 				self.delete_preset(this)
 			})
 			}
 
-			// DIV edit
-			const div_edit = ui.create_dom_element({
+			// div_edit
+			ui.create_dom_element({
 				element_type	: 'div',
 				parent			: li_element,
-				class_name		: "div_edit"
+				class_name		: 'div_edit'
 			})
 
 		// add
 			ar_nodes.push(li_element)
-
 	}//end for (var i = 0; i < ar_elements.length; i++)
+
 
 
 	return ar_nodes

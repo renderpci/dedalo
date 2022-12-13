@@ -4,7 +4,7 @@
 * Build dd_date objects like common dates but without restrictions/limitations of
 * negative dates and similar issues of timestamps
 */
-class dd_date {
+class dd_date extends stdClass {
 
 	// Errors Optional
 	#public $errors;
@@ -17,22 +17,24 @@ class dd_date {
 	// Virtual month days
 	static $virtual_month_days = 31;
 
-	// int year
-	public $year;
-	// int month
-	public $month;
-	// int day
-	public $day;
-	// int hour
-	public $hour;
-	// int minute
-	public $minute;
-	// int second
-	public $second;
-	// time
-	public $time;
-	// timestamp
-	public $timestamp;
+	// dynamic properties. (!) Note that it is useful to maintain dd_date properties as dynamic
+	// to prevent undesired empty values in dd_date values (inside component_date)
+	// // int year
+	// public $year;
+	// // int month
+	// public $month;
+	// // int day
+	// public $day;
+	// // int hour
+	// public $hour;
+	// // int minute
+	// public $minute;
+	// // int second
+	// public $second;
+	// // time
+	// public $time;
+	// // timestamp
+	// public $timestamp;
 
 
 
@@ -86,21 +88,20 @@ class dd_date {
 	/**
 	* SET_TIME
 	* Store absolute date value in seconds
-	* @return bool true
+	* @return void
 	*/
-	public function set_time($value) {
-		$this->time = (int)$value;
+	public function set_time($value) : void {
 
-		return true;
+		$this->time = (int)$value;
 	}//end set_time
 
 
 
 	/**
 	* SET_YEAR
-	* @return bool true
+	* @return void
 	*/
-	public function set_year($value) {
+	public function set_year($value) : void {
 		/*
 		if( !is_int($value) ) {
 		  #throw new Exception("Error Processing Request. Invalid year: $value", 1);
@@ -109,8 +110,6 @@ class dd_date {
 		}
 		*/
 		$this->year = (int)$value;
-
-		return true;
 	}//end set_year
 
 
@@ -203,6 +202,7 @@ class dd_date {
 	#public function set_min($value, $constrain=false) {	return $this->set_minute($value, $constrain); }
 
 
+
 	/**
 	* SET_SECOND
 	* @return bool true
@@ -270,31 +270,31 @@ class dd_date {
 	public function get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true) {
 
 		if (isset($this->year)) {
-		$year   = $this->year;
+			$year = $this->year;
 		}
 
 		if (isset($this->month)) {
-		$month  = $this->month;
+			$month = $this->month;
 		}
 
 		if (isset($this->day)) {
-		$day    = $this->day;
+			$day = $this->day;
 		}
 
 		if (isset($this->hour)) {
-		$hour   = $this->hour;
+			$hour = $this->hour;
 		}
 
 		if (isset($this->minute)) {
-		$minute = $this->minute;
+			$minute = $this->minute;
 		}
 
 		if (isset($this->second)) {
-		$second = $this->second;
+			$second = $this->second;
 		}
 
 		if (isset($this->ms)) {
-		$ms     = $this->ms;
+			$ms = $this->ms;
 		}
 
 
@@ -348,14 +348,16 @@ class dd_date {
 			$ms=null;
 		}
 
-		/* OLD WORLD no compatible with negative years, etc..
-		$time       	= mktime($hour,$minute,$second,$month,$day,$year);
-		$dd_timestamp   = date($date_format, $time);
-		*/
+		// OLD WORLD no compatible with negative years, etc..
+			// $time			= mktime($hour,$minute,$second,$month,$day,$year);
+			// $dd_timestamp	= date($date_format, $time);
 
-		$dd_timestamp = str_replace( array('Y','m','d','H','i','s','u'),
-									 array($year,$month,$day,$hour,$minute,$second,$ms),
-									 $date_format);
+
+		$dd_timestamp = str_replace(
+			['Y','m','d','H','i','s','u'],
+			[$year,$month,$day,$hour,$minute,$second,$ms],
+			$date_format
+		);
 
 
 		return (string)$dd_timestamp;
@@ -369,7 +371,7 @@ class dd_date {
 	*/
 	public function get_date_from_timestamp( $timestamp ) {
 
-		$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+		$regex = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 		preg_match($regex, $timestamp, $matches);
 
 		if(isset($matches[1])) $this->set_year((int)$matches[1]);
@@ -453,7 +455,7 @@ class dd_date {
 	/**
 	* CONVERT_DATE_TO_SECONDS
 	* Calculate absolute "time" from dd_date object
-	* This operation is not reversible and is only for reference pourposes
+	* This operation is not reversible and is only for reference purposes
 	* @return int $seconds
 	*/
 	public static function convert_date_to_seconds( $source_dd_date, $mode=false ) {
@@ -509,8 +511,8 @@ class dd_date {
 
 	/**
 	* CONVERT_SECONDS_TO_PERIOD
-	* Calculate current seconds in minutes, hours, days, totals and aproximative partials.
-	* Note that non total values are aproximations because we need use
+	* Calculate current seconds in minutes, hours, days, totals and approximate partials.
+	* Note that non total values are approximations because we need use
 	* a reference year of 365 days and a reference month of 30 days
 	* @param int $seconds
 	* @return object $response
@@ -574,6 +576,31 @@ class dd_date {
 
 		return $unix_timestamp;
 	}//end convert_date_to_unit
+
+
+
+	/**
+	* GET METHODS
+	* By accessors. When property exits, return property value, else return null
+	*/
+	final public function __get($name) {
+
+		if (isset($this->$name)) {
+			return $this->$name;
+		}
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
+	}//end __get
+	final public function __set($name, $value) {
+		$this->$name = $value;
+	}
 
 
 

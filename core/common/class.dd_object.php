@@ -708,13 +708,14 @@ class dd_object extends stdClass {
 			return $this->$name;
 		}
 
-		$trace = debug_backtrace();
-		debug_log(
-			__METHOD__
-			.' Undefined property via __get(): '.$name .
-			' in ' . $trace[0]['file'] .
-			' on line ' . $trace[0]['line'],
-			logger::DEBUG);
+		// $trace = debug_backtrace();
+		// debug_log(
+		// 	__METHOD__
+		// 	.' Undefined property accessed via __get(): '.$name .
+		// 	' in ' . $trace[0]['file'] .
+		// 	' on line ' . $trace[0]['line'],
+		// 	logger::DEBUG);
+
 		return null;
 	}//end __get
 	// final public function __set($name, $value) {

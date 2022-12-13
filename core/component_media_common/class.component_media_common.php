@@ -9,8 +9,11 @@ class component_media_common extends component_common {
 
 
 	// public $allowed_extensions;
+
 	// string additional_path
 	public $additional_path;
+	// string initial_media_path
+	public $initial_media_path;
 
 
 

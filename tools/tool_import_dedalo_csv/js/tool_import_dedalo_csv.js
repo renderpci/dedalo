@@ -389,4 +389,4 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 				resolve(response)
 			})
 		})
-};
+}//end process_uploaded_file

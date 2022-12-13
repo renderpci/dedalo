@@ -37,7 +37,7 @@ view_default_list_svg.render = function(self, options) {
 		})
 
 		wrapper.appendChild(fragment)
-		console.log('wrapper:', wrapper);
+
 
 	return wrapper
 }//end render

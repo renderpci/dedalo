@@ -1,0 +1,34 @@
+/**
+* service_time_machine
+*
+* Included from main.less file
+*/
+.service_time_machine {
+	// background-color: #d5fe9a;
+
+	.head_column {
+		font-size: 0.85rem;
+		text-align: left;
+		// padding: 0.25rem;
+
+		.name {
+		    margin-left: 0.1rem;
+		}
+	}
+
+	.column_service_time_machine {
+		// align-items: center; // vertical alignment
+		padding: 0.25rem;
+
+		>span {
+			word-break: break-word;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			display: -webkit-box;
+			-webkit-line-clamp: 10; /* number of lines to show */
+			line-clamp: 10;
+			-webkit-box-orient: vertical;
+		}
+	}
+
+}//end .wrapper_service_time_machine

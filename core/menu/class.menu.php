@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS MENU
 *
 *
@@ -7,16 +7,14 @@
 class menu extends common {
 
 
-	// id
-	protected $id;
-	// tipo. Default : 'dd85'
-	protected $tipo;
-	// lang
-	protected $lang;
-	// mode
-	protected $mode;
-	// section_tipo
-	protected $section_tipo;
+
+	/**
+	* CLASS VARS
+	*/
+		// id
+		protected $id;
+		// section_tipo
+		protected $section_tipo;
 
 
 

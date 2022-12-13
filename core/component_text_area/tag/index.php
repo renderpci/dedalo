@@ -11,7 +11,7 @@ date_default_timezone_set($myDateTimeZone);
 // text default
 	$text = $_GET['id'] ?? false;
 	if (empty($text)) {
-		die("text var is manadatory!");
+		die("text var is mandatory!");
 	}
 
 
@@ -24,7 +24,7 @@ function tag_safe_xss(string $value) {
 	if (!empty($value)) {
 
 		if ($decode_json=json_decode($value)) {
-			// If var is a stringify json, not verify string now
+			// If var is a stringify JSON, not verify string now
 		}else{
 			$value = strip_tags($value,'<br><strong><em>');
 			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -168,28 +168,30 @@ $text = strip_tags($text, '');
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$file_content = $component->get_file_content();
 
+			// read the physical file (usually svg)
+				$file_content = $component->get_file_content();
 
+			// throw file contents with proper headers
+				header("Cache-Control: private, max-age=10800, pre-check=10800");
+				header("Pragma: private");
+				header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
 
+				# No cache header
+				#header("Cache-Control: no-cache, must-revalidate");
 
-			header("Cache-Control: private, max-age=10800, pre-check=10800");
-			header("Pragma: private");
-			header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
+				# Output to browser
+				// header('Content-Length: '.strlen($file_content));
+				header('Content-Type: image/svg+xml');
+				// header('Content-Length: '.filesize($file_path));
+				// header('Accept-Ranges: bytes');
+				header('Vary: Accept-Encoding');
+				// fpassthru( $file_path );
+				header('Connection: close');
+				echo $file_content;
 
-			# No cache header
-			#header("Cache-Control: no-cache, must-revalidate");
-
-			# Output to browser
-			// header('Content-Length: '.strlen($file_content));
-			header('Content-Type: image/svg+xml');
-			// header('Content-Length: '.filesize($file_path));
-			// header('Accept-Ranges: bytes');
-			header('Vary: Accept-Encoding');
-			// fpassthru( $file_path );
-			header('Connection: close');
-			echo $file_content;
-			exit;
+			// stop here
+				exit;
 			break;
 
 		default:

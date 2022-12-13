@@ -40,7 +40,7 @@ export const view_indexation_edit_portal = function() {
 */
 view_indexation_edit_portal.render = async function(self, options) {
 
-	// prevents to load autocpmplete service
+	// prevents to load autocomplete service
 		self.autocomplete = false
 
 	// options
