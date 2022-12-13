@@ -2324,7 +2324,7 @@ abstract class common {
 
 					// sqo. Preserves filter across calls using session sqo if exists
 						$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo, $mode]) : null; // cache key sqo_id
+						$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
 						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 							// replace default sqo with the already stored in session (except section_tipo to prevent to
 							// loose labels and limit to avoid overwrite list in edit and vice-versa)
@@ -2662,7 +2662,7 @@ abstract class common {
 							if (isset($parsed_item->show->sqo_config->limit)) {
 								// get session limit if it was defined
 								if ($model==='section') {
-									$sqo_id	= implode('_', ['section', $tipo, $mode]); // cache key sqo_id
+									$sqo_id	= implode('_', ['section', $tipo]); // cache key sqo_id
 									$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->show->sqo_config->limit;

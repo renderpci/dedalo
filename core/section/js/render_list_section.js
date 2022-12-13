@@ -181,7 +181,7 @@ render_list_section.prototype.list = async function(options) {
 */
 const get_content_data = async function(ar_section_record, self) {
 
-	// section_record instances (initied and built)
+	// section_record instances (initiated and built)
 	// const ar_section_record = await self.get_ar_instances()
 
 	const fragment = new DocumentFragment()
@@ -331,7 +331,7 @@ render_list_section.render_column_id = function(options){
 							class_name		: 'button_edit',
 							parent			: fragment
 						})
-						button_edit.addEventListener("click", async function(){
+						button_edit.addEventListener('click', async function(){
 							// navigate link
 								// const user_navigation_options = {
 								// 	tipo		: section_tipo,
@@ -359,6 +359,7 @@ render_list_section.render_column_id = function(options){
 										}]
 									}
 								}
+
 								if(SHOW_DEBUG===true) {
 									console.log("// section_record build_id_column user_navigation_rqo initiator component:", user_navigation_rqo);
 								}
@@ -521,6 +522,14 @@ render_list_section.render_column_id = function(options){
 							})
 							button_edit.addEventListener('click', function(){
 
+								// sqo. Note that sqo will be used as request_config.sqo on navigate
+									const sqo = self.rqo_config.sqo
+									// set updated filter
+									sqo.filter = self.rqo.sqo.filter
+									// reset pagination
+									sqo.limit		= 1
+									sqo.offset	= offset
+
 								// source
 									const source = {
 										action			: 'search',
@@ -531,11 +540,6 @@ render_list_section.render_column_id = function(options){
 										mode			: 'edit',
 										lang			: self.lang
 									}
-
-								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo	= clone(self.rqo_config.sqo)
-										  sqo.limit		= 1
-										  sqo.offset	= offset
 
 								// user_navigation
 									const user_navigation_rqo = {

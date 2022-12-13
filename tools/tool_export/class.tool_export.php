@@ -72,6 +72,7 @@ class tool_export extends tool_common {
 			$ar_ddo_map		= $options->ar_ddo_map;
 			$sqo			= $options->sqo;
 			$model			= $options->model;
+			$section_tipo	= $options->section_tipo;
 
 		// fix data_format
 			$this->data_format = $data_format;
@@ -80,6 +81,15 @@ class tool_export extends tool_common {
 			$this->ar_ddo_map = $ar_ddo_map;
 
 		// fix sqo
+			// add filter from saved session if exists
+			$sqo_id = implode('_', ['section', $section_tipo]); // cache key sqo_id
+			if (!isset($sqo->filter)
+				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
+				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter)
+				){
+				// add current section filter
+				$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
+			}
 			$this->sqo = $sqo;
 
 		// fix model
@@ -153,7 +163,8 @@ class tool_export extends tool_common {
 				'data_format'	=> $data_format,
 				'ar_ddo_map'	=> $ar_ddo_to_export,
 				'sqo'			=> $sqo,
-				'model'			=> $model
+				'model'			=> $model,
+				'section_tipo'	=> $section_tipo
 			]);
 			$export_grid = $tool_export->build_export_grid();
 
@@ -409,6 +420,7 @@ class tool_export extends tool_common {
 
 					$request_config = new stdClass();
 						$request_config->api_engine	= 'dedalo';
+						$request_config->type		= 'main';
 						$request_config->show		= $show;
 
 					$current_component->request_config = [$request_config];
