@@ -6,8 +6,8 @@
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	// import {get_ar_instances} from '../../../core/section/js/section.js'
-	import {ui} from '../../../core/common/js/ui.js'
 	// import {create_source} from '../../../core/common/js/common.js'
+	import {ui} from '../../../core/common/js/ui.js'
 
 
 
@@ -34,13 +34,6 @@ render_tool_time_machine.prototype.edit = async function (options) {
 	// options
 		const render_level 	= options.render_level || 'full'
 
-	// columns_map
-		// const columns_map = await rebuild_columns_map(self)
-		// self.time_machine.columns_map = columns_map
-
-	// section_record
-		// const ar_section_record = await get_ar_instances(self.time_machine)
-
 	// content_data
 		const content_data = await get_content_data(self)
 		if (render_level==='content') {
@@ -53,39 +46,6 @@ render_tool_time_machine.prototype.edit = async function (options) {
 		})
 		// set pointer
 		wrapper.content_data = content_data
-
-	// tool_container
-		//const tool_container = document.getElementById('tool_container')
-		//if(tool_container!==null){
-		//	tool_container.appendChild(wrapper)
-		//}else{
-		//	const main = document.getElementById('main')
-		//	const new_tool_container = ui.create_dom_element({
-		//		id 				: 'tool_container',
-		//		element_type	: 'div',
-		//		parent 			: main
-		//	})
-		//	new_tool_container.appendChild(wrapper)
-		//}
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
-		// 	modal.on_close	= () => {
-		// 		self.destroy(true, true, true) // (delete_self, delete_dependencies, remove_dom)
-		// 	}
-		// 	// fix
-		// 	self.modal_container = modal
-		// }
-
-	// events
-		// click
-			// wrapper.addEventListener("click", function(e){
-			// 	e.stopPropagation()
-			// 	console.log("e:",e);
-			// 	return
-			// })
 
 
 	return wrapper
@@ -201,33 +161,9 @@ const get_content_data = async function(self) {
 				})
 		}//end if (self.caller!=='section')
 
-	// section container
-		// const section_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name 		: 'section_container',
-		// 	parent 			: fragment
-		// })
-
-	// section list. Call time machine service render callback
-		const time_machine_list_node = await self.time_machine.render()
+	// service_time_machine
+		const time_machine_list_node = await self.service_time_machine.render()
 		fragment.appendChild(time_machine_list_node)
-
-		// const node = await ui.load_item_with_spinner({
-		// 	container			: fragment,
-		// 	preserve_content	: true,
-		// 	label				: 'Time Machine list',
-		// 	callback			: async () => {
-		// 		const node = await self.time_machine.render()
-		// 		return node
-		// 	}
-		// })
-
-	// buttons container
-		// const buttons_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name 		: 'buttons_container',
-		// 	parent 			: components_container
-		// })
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -264,42 +200,26 @@ export const add_component = async (self, component_container, lang_value, label
 			return false
 		}
 
-	const node = ui.load_item_with_spinner({
-		container			: component_container,
-		preserve_content	: false,
-		label				: label,
-		callback			: async () => {
-			// component load
-				const component = matrix_id===null
-					? self.main_element
-					: await self.load_component(lang_value, mode, matrix_id)
+	// load component gracefully
+		const node = ui.load_item_with_spinner({
+			container			: component_container,
+			preserve_content	: false,
+			label				: label,
+			callback			: async () => {
+				// component load
+					const component = matrix_id===null
+						? self.main_element
+						: await self.load_component(lang_value, mode, matrix_id)
 
-			// render node
-				const node = await component.render({
-					render_mode : mode // 'edit'
-				})
-				node.classList.add('disabled_component')
+				// render node
+					const node = await component.render({
+						render_mode : 'edit'//mode // 'edit'
+					})
+					node.classList.add('disabled_component')
 
-			return node
-		}
-	})
-
-	// // component load
-	// 	const component = matrix_id===null
-	// 		? self.main_element
-	// 		: await self.load_component(lang_value, mode, matrix_id)
-
-	// // render node
-	// 	const node = await component.render({
-	// 		render_mode : mode // 'edit'
-	// 	})
-
-	// // clean previous and append rendered node
-	// 	while (component_container.firstChild) {
-	// 		component_container.removeChild(component_container.firstChild)
-	// 	}
-	// 	node.classList.add('disabled_component')
-	// 	component_container.appendChild(node)
+				return node
+			}
+		})
 
 	// label
 		ui.create_dom_element({

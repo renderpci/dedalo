@@ -11,7 +11,7 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
-	import {render_time_machine_view} from './render_time_machine_view.js'
+	// import {render_time_machine_view} from './render_time_machine_view.js'
 	// import {paginator} from '../../../core/paginator/js/paginator.js'
 
 
@@ -22,23 +22,22 @@
 */
 export const tool_time_machine = function () {
 
-	this.id					= null
-	this.model				= null
-	this.mode				= null
-	this.lang				= null
-	this.node				= null
-	this.ar_instances		= null
-	this.status				= null
-	this.events_tokens		= []
-	this.type				= null
+	this.id						= null
+	this.model					= null
+	this.mode					= null
+	this.lang					= null
+	this.node					= null
+	this.ar_instances			= null
+	this.status					= null
+	this.events_tokens			= []
+	this.type					= null
 
-	this.caller				= null
-	this.time_machine 		= null
-	// this.section			= null// custom section generated in tm mode on build
-	this.button_apply		= null
-	this.selected_matrix_id	= null
-	this.modal_container	= null
-
+	this.caller					= null
+	this.service_time_machine	= null
+	// this.section				= null// custom section generated in tm mode on build
+	this.button_apply			= null
+	this.selected_matrix_id		= null
+	this.modal_container		= null
 
 
 	return true
@@ -131,44 +130,38 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
+	// service_time_machine
+		try {
 
-	try {
+			// fix main_element for convenience
+				const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
+				self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
-		// fix main_element for convenience
-			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
-			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+			// time_machine
+			// Create, build and assign the time machine service to the instance
+				self.service_time_machine = await get_instance({
+					model			: 'service_time_machine',
+					// tipo			: self.main_element.tipo,
+					tipo			: self.caller.section_tipo,
+					section_tipo	: self.caller.section_tipo,
+					section_id		: self.caller.section_id,
+					view			: 'tool',
+					id_variant		: self.model,
+					caller			: self,
+					lang			: page_globals.dedalo_data_nolan,
+					main_element	: self.main_element
+				})
 
-		// time_machine
-		// Create, build and assign the time machine service to the instance
-			self.time_machine = await get_instance({
-				// model		: 'time_machine',
-				model			: 'service_time_machine',
-				section_tipo	: self.caller.section_tipo,
-				section_id		: self.caller.section_id,
-				// tipo			: self.main_element.tipo,
-				tipo			: self.caller.section_tipo,
-				mode			: 'tm',
-				lang			: page_globals.dedalo_data_nolan,
-				main_element	: self.main_element,
-				caller			: self,
-				id_variant		: self.model,
-				direct_path		: '../../services/service_time_machine/js/service_time_machine.js'
-			})
+			// build
+				await self.service_time_machine.build(true)
 
-		// assign the render view function
-			self.time_machine.view = render_time_machine_view
+			// add to self instances list
+				self.ar_instances.push(self.service_time_machine)
 
-		// build
-			await self.time_machine.build(true)
-
-
-		// add to self instances list
-			self.ar_instances.push(self.time_machine)
-
-	} catch (error) {
-		self.error = error
-		console.error(error)
-	}
+		} catch (error) {
+			self.error = error
+			console.error(error)
+		}
 
 
 	return common_build
