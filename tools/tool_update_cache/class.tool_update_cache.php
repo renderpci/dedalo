@@ -12,31 +12,26 @@ class tool_update_cache extends tool_common {
 	* UPDATE_CACHE
 	* Exec a custom action called from client
 	* Note that tool config is stored in the tool section data (tools_register)
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function update_cache(object $request_options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+	public static function update_cache(object $options) : object {
 
 		// options
-			$options = new stdClass();
-				$options->section_tipo		= null;
-				$options->ar_component_tipo	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$section_tipo		= $options->section_tipo ?? null;
+			$ar_component_tipo	= $options->ar_component_tipo ?? null;
 
-		// short vars
-			$section_tipo		= $options->section_tipo;
-			$ar_component_tipo	= $options->ar_component_tipo;
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// Disable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log = false;
-			RecordObj_time_machine::$save_time_machine_version = false;
+			logger_backend_activity::$enable_log				= false;
+			RecordObj_time_machine::$save_time_machine_version	= false;
 
 		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= implode('_', ['section', $section_tipo, 'list']); // cache key sqo_id
+			$sqo_id	= implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 				$response->msg .= ' section session sqo is not found!';
 				return $response;
@@ -78,7 +73,7 @@ class tool_update_cache extends tool_common {
 						$current_component->get_dato(); # !! Important get dato before regenerate
 						$result = $current_component->regenerate_component();
 						if ($result!==true) {
-							debug_log(__METHOD__." Error on regenerate componet $model - $current_component_tipo - $section_tipo - $section_id ".to_string(), logger::ERROR);
+							debug_log(__METHOD__." Error on regenerate component $model - $current_component_tipo - $section_tipo - $section_id ", logger::ERROR);
 						}
 
 				}//end foreach ($related_terms as $current_component_tipo)
@@ -87,12 +82,15 @@ class tool_update_cache extends tool_common {
 
 
 		// Enable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log = true;
-			RecordObj_time_machine::$save_time_machine_version = true;
+			logger_backend_activity::$enable_log 				= true;
+			RecordObj_time_machine::$save_time_machine_version 	= true;
 
 		// response
 			$response->result	= true;
-			$response->msg		= "Updated cache of section $section_tipo successufully. Total records: ".count($rows_data->ar_records)." where components count: ".count($ar_component_tipo);
+			$response->msg		= "Updated cache of section $section_tipo successfully. Total records: "
+				.count($rows_data->ar_records)
+				." where components count: "
+				.count($ar_component_tipo);
 
 
 		return $response;
