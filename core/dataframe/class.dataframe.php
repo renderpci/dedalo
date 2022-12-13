@@ -1,24 +1,24 @@
 <?php
-/*
+/**
 * CLASS DATAFRAME
 *
 *
 */
 class dataframe extends common {
 
-	public $tipo;
 
-	# dataframe mode
-	public $mode;
 
-	# Component
-	public $component_obj;
+	/**
+	* CLASS VARS
+	*/
+		public $component_obj;
+		# Caller vars
+		public $caller_key;
+		public $caller_component_tipo;
+		public $caller_section_tipo;
+		public $caller_section_id;
 
-	# Caller vars
-	public $caller_key;
-	public $caller_component_tipo;
-	public $caller_section_tipo;
-	public $caller_section_id;
+
 
 	/**
 	* __CONSTRUCT

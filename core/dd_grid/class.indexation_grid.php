@@ -245,9 +245,10 @@ class indexation_grid {
 						$show->ddo_map = $sub_ddo_map;
 
 					$request_config = new stdClass();
-						$request_config->api_engine = 'dedalo';
+						$request_config->api_engine	= 'dedalo';
+						$request_config->type		= 'main';
 						// $rqo->set_sqo($sqo);
-						$request_config->show = $show;
+						$request_config->show		= $show;
 
 					$current_component->request_config = [$request_config];
 

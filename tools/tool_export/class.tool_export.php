@@ -15,14 +15,16 @@ class tool_export extends tool_common {
 		// public static $internal_separator = PHP_EOL;
 		// public $section_list_custom;
 
-		// data_format. string 'standard', 'dedalo'
-			public $data_format;
-		// ar_ddo_map. array
-			public $ar_ddo_map;
-		// sqo. object
-			public $sqo;
-		// ar_records. array|null Array of records to export (section_id) or null
-			public $ar_records;
+		// string data_format. Values: 'standard', 'dedalo'
+		public $data_format;
+		// array ar_ddo_map
+		public $ar_ddo_map;
+		// object sqo
+		public $sqo;
+		// string model
+		public $model;
+		// array|null ar_records.  Array of records to export (section_id) or null
+		public $ar_records;
 
 
 
@@ -70,6 +72,7 @@ class tool_export extends tool_common {
 			$ar_ddo_map		= $options->ar_ddo_map;
 			$sqo			= $options->sqo;
 			$model			= $options->model;
+			$section_tipo	= $options->section_tipo;
 
 		// fix data_format
 			$this->data_format = $data_format;
@@ -78,6 +81,15 @@ class tool_export extends tool_common {
 			$this->ar_ddo_map = $ar_ddo_map;
 
 		// fix sqo
+			// add filter from saved session if exists
+			$sqo_id = implode('_', ['section', $section_tipo]); // cache key sqo_id
+			if (!isset($sqo->filter)
+				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
+				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter)
+				){
+				// add current section filter
+				$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
+			}
 			$this->sqo = $sqo;
 
 		// fix model
@@ -151,7 +163,8 @@ class tool_export extends tool_common {
 				'data_format'	=> $data_format,
 				'ar_ddo_map'	=> $ar_ddo_to_export,
 				'sqo'			=> $sqo,
-				'model'			=> $model
+				'model'			=> $model,
+				'section_tipo'	=> $section_tipo
 			]);
 			$export_grid = $tool_export->build_export_grid();
 
@@ -215,7 +228,7 @@ class tool_export extends tool_common {
 			// when the component is portal inside portal, like 'photograph' inside 'identifying image' inside 'interview'.
 			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
 			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
-			foreach ($ar_row_value->ar_columns_obj as $column_pos => $current_column_obj) {
+			foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
 				// check if the current column exists in the full column array
 				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
 					return ($el->id===$current_column_obj->id);
@@ -407,6 +420,7 @@ class tool_export extends tool_common {
 
 					$request_config = new stdClass();
 						$request_config->api_engine	= 'dedalo';
+						$request_config->type		= 'main';
 						$request_config->show		= $show;
 
 					$current_component->request_config = [$request_config];

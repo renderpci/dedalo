@@ -126,7 +126,7 @@
 		]
 
 */
-class request_config_object {
+class request_config_object extends stdClass {
 
 
 
@@ -135,6 +135,8 @@ class request_config_object {
 	*/
 		// $api_engine; // string like 'dedalo'. Default 'dedalo'
 		public $api_engine;
+		// string $type . (main*|secondary)
+		public $type;
 		// $sqo; // object search_query_object
 		public $sqo;
 		// $show; // object. config of elements to show (ddo_map, sqo_config..)

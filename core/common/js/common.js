@@ -1540,7 +1540,6 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 			sqo.fixed_children_filter = rqo_config.sqo.fixed_children_filter
 		}
 
-
 	// filter_by_list if exists
 		const filter_by_list = rqo_config.sqo && rqo_config.sqo.filter_by_list
 			? rqo_config.sqo.filter_by_list
@@ -1573,7 +1572,6 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// columns. get the sub elements with the ddo_map, the method is recursive,
 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
 		const columns = get_ar_inverted_paths(ddo_map)
-
 
 	// rqo. Build the request query object
 		const rqo = {

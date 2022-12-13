@@ -6,7 +6,7 @@
 	* Onclick arrow button in search presets list, load jquery preset from db and apply to current canvas
 	* @return true
 	*/
-	export const load_search_preset = function(button_obj) {
+	export const load_search_preset = async function(button_obj) {
 
 		const self = this
 
@@ -28,6 +28,17 @@
 			cookie_value 				= JSON.parse(cookie_value)
 			cookie_value[section_tipo]  = section_id
 			create_cookie(cookie_name, JSON.stringify(cookie_value), 365)
+
+		// WORK IN PROGRESS
+			// const current_cookie_track = await data_manager.set_local_db_data(
+			// 	{
+			// 		id		: 'search_presets',
+			// 		value	: {}
+			// 	},
+			// 	'status' // string table
+			// )
+			// console.log('++++++++++++++++++++++ current_cookie_track:', current_cookie_track);
+
 
 		// Re-Load user presets list
 		// self.get_component_presets({target_section_tipo : section_tipo})

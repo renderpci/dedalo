@@ -8,12 +8,13 @@ class relation_list extends common {
 
 
 
-	protected $tipo;
-	protected $section_id;
-	protected $section_tipo;
-	protected $mode;
-	protected $sqo;
-	protected $count;
+	/**
+	* CLASS VARS
+	*/
+		protected $section_id;
+		protected $section_tipo;
+		protected $sqo;
+		protected $count;
 
 
 

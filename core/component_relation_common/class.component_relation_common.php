@@ -11,7 +11,6 @@ class component_relation_common extends component_common {
 	/**
 	* CLASS VARS
 	*/
-
 		# relation_type (set in constructor).
 		# Defines type used in section relation locators to set own locator type
 		# protected $relation_type;
@@ -40,6 +39,9 @@ class component_relation_common extends component_common {
 
 		// array|null ar_target_section_tipo
 		protected $ar_target_section_tipo;
+
+		// sub_columns_divison
+		protected $sub_columns_divison;
 
 
 
@@ -361,8 +363,9 @@ class component_relation_common extends component_common {
 						$show->ddo_map = $sub_ddo_map;
 
 					$request_config = new stdClass();
-						$request_config->api_engine = 'dedalo';
-						$request_config->show = $show;
+						$request_config->api_engine	= 'dedalo';
+						$request_config->type		= 'main';
+						$request_config->show		= $show;
 
 					$current_component->request_config = [$request_config];
 				}

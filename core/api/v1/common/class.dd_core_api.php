@@ -618,7 +618,6 @@ final class dd_core_api {
 			$ddo_source = $rqo->source;
 
 		// source vars
-			$action			= $ddo_source->action ?? 'delete';
 			$delete_mode	= $ddo_source->delete_mode ?? 'delete_data';
 			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id		= $ddo_source->section_id ?? null;
@@ -724,7 +723,7 @@ final class dd_core_api {
 			if ($delete_mode==='delete_record') {
 
 				$check_search		= search::get_instance($sqo);
-				$check_rows_data	= $search->search();
+				$check_rows_data	= $check_search->search();
 				$check_ar_records	= $check_rows_data->ar_records;
 				if(count($check_ar_records)>0) {
 
@@ -805,6 +804,7 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function save(object $rqo) : object {
+		$start_time = start_time();
 
 		// response. Create the default save response
 			$response = new stdClass();
@@ -889,9 +889,10 @@ final class dd_core_api {
 						}
 
 					// save
+						debug_log(__METHOD__." --> API ready to save record $model ($tipo - $section_tipo - $section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
 						$component->Save();
 					// force recalculate dato
-						$dato = $component->get_dato();
+						$component->get_dato();
 				}
 
 				// pagination. Update offset based on save request (portals)
@@ -901,7 +902,7 @@ final class dd_core_api {
 
 				// datalist. if is received, inject to the component for recycle
 					if (isset($data->datalist)) {
-						$component->datalist = $data->datalist;
+						$component->set_datalist($data->datalist);
 					}
 
 				// element JSON
@@ -969,10 +970,10 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$search_query_object = $rqo->sqo;
+		$sqo = $rqo->sqo;
 
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
-			$ar_section_tipo = $search_query_object->section_tipo;
+			$ar_section_tipo = $sqo->section_tipo;
 			foreach ($ar_section_tipo as $current_section_tipo) {
 				$permissions	= common::get_permissions($current_section_tipo, $current_section_tipo);
 				if($permissions<1){
@@ -982,9 +983,21 @@ final class dd_core_api {
 				}
 			}
 
+		// session filter check
+			// If session filter exists from current section, add to the sqo
+			// to be consistent with the last search
+			$model			= $rqo->source->model;
+			$tipo			= $rqo->source->tipo;
+			$sqo_id			= ($model==='section') ? implode('_', ['section', $tipo]) : 'undefined';
+			$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
+				$sqo->filter = $sqo_session->filter;
+			}
+				dump($sqo, ' sqo count ++++++++++++++++++++++++++++++++++ '.to_string());
+
 		// search
 			if (!isset($result)) {
-				$search	= search::get_instance($search_query_object);
+				$search	= search::get_instance($sqo);
 				$result	= $search->count();
 			}
 
@@ -1493,355 +1506,171 @@ final class dd_core_api {
 
 
 		// source vars
-			$action			= $ddo_source->action ?? 'search';
-			$mode			= $ddo_source->mode ?? 'list';
-			$view			= $ddo_source->view ?? null;
-			$lang			= $ddo_source->lang ?? null;
-			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-			$section_id		= $ddo_source->section_id ?? null;
-			$tipo			= $ddo_source->tipo ?? null;
-			$model			= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
-			$caller_dataframe			= $ddo_source->caller_dataframe ?? null;
+			$action				= $ddo_source->action ?? 'search';
+			$mode				= $ddo_source->mode ?? 'list';
+			$view				= $ddo_source->view ?? null;
+			$lang				= $ddo_source->lang ?? null;
+			$section_tipo		= $ddo_source->section_tipo ?? $ddo_source->tipo;
+			$section_id			= $ddo_source->section_id ?? null;
+			$tipo				= $ddo_source->tipo ?? null;
+			$model				= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
+			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 
-		// sqo. search_query_object. If empty, we look at the session, and if not exists, we will create a new one with default values
-			$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo, $mode]) : 'undefined'; // cache key sqo_id
-			$sqo	= !empty($rqo->sqo)
-				? $rqo->sqo // use received sqo
-				: (($model==='section' && ($mode==='edit' || $mode==='list') && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]))
-					? $_SESSION['dedalo']['config']['sqo'][$sqo_id]
-					: (function() use($model, $tipo, $section_tipo, $section_id, $mode, $rqo, $sqo_id, $start_time) {
+		// sqo (search_query_object)
+			// If empty, we look at the session, and if not exists, we will create a new one with default values
+			$sqo_id			= ($model==='section') ? implode('_', ['section', $tipo]) : 'undefined'; // cache key sqo_id
+			$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+			if ( !empty($rqo->sqo) ) {
 
-						// limit. get the limit from the show
-							$limit = (isset($rqo->show) && isset($rqo->show->sqo_config->limit))
-								? $rqo->show->sqo_config->limit
-								: (function() use($tipo, $section_tipo, $mode){
-									// user preset check (defined sqo limit)
-									$user_preset = layout_map::search_user_preset_layout_map(
-										$tipo,
-										$section_tipo,
-										navigator::get_user_id(), // int $user_id
-										$mode,
-										null // view
-									);
-									if (!empty($user_preset[0])) {
-										$user_preset_rqo = $user_preset[0]->rqo;
-										if (isset($user_preset_rqo) && isset($user_preset_rqo->show->sqo_config->limit)) {
-											$limit = $user_preset_rqo->show->sqo_config->limit;
-										}
+				// received case
+
+				$sqo = clone $rqo->sqo;
+				// add filter from session if not defined (and session yes)
+				if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
+					$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
+				}
+			}else{
+
+				// non received case
+
+				if ( $model==='section' && ($mode==='edit' || $mode==='list') && isset($sqo_session) ) {
+
+					// use session already set sqo
+					$sqo = $sqo_session;
+
+				}else{
+
+					// create a new sqo from scratch
+
+					// limit. get the limit from the show
+						$limit = (isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+							? $rqo->show->sqo_config->limit
+							: (function() use($tipo, $section_tipo, $mode){
+								// user preset check (defined sqo limit)
+								$user_preset = layout_map::search_user_preset_layout_map(
+									$tipo,
+									$section_tipo,
+									navigator::get_user_id(), // int $user_id
+									$mode,
+									null // view
+								);
+								if (!empty($user_preset[0])) {
+									$user_preset_rqo = $user_preset[0]->rqo;
+									if (isset($user_preset_rqo) && isset($user_preset_rqo->show->sqo_config->limit)) {
+										$limit = $user_preset_rqo->show->sqo_config->limit;
 									}
-									return $limit ?? ($mode==='list' ? 10 : 1);
-								  })();
-						// offset . reset to zero
-							$offset	= 0;
-
-						// build the new sqo from show or user preset
-
-						// des
-							// $sqo_options = new stdClass();
-							// 	$sqo_options->id			= $sqo_id;
-							// 	$sqo_options->mode			= $mode;
-							// 	$sqo_options->section_tipo	= [$section_tipo];
-							// 	$sqo_options->tipo			= $section_tipo;
-							// 	$sqo_options->full_count	= false;
-							// 	$sqo_options->add_select	= false;
-							// 	$sqo_options->limit			= $limit;
-							// 	$sqo_options->offset		= $offset;
-							// 	$sqo_options->direct		= true;
-							// 	// filter_by_locators. when section_id is received
-
-							// 	if (!empty($section_id)) {
-							// 		$self_locator = new locator();
-							// 			$self_locator->set_section_tipo($section_tipo);
-							// 			$self_locator->set_section_id($section_id);
-							// 		$sqo_options->filter_by_locators = [$self_locator];
-
-							// 	}
-							// $sqo = common::build_search_query_object($sqo_options);
-
-						// sqo create
-							$sqo = new search_query_object();
-								$sqo->set_id($sqo_id);
-								$sqo->set_mode($mode);
-								$sqo->set_section_tipo([$section_tipo]);
-								$sqo->set_limit($limit);
-								$sqo->set_offset($offset);
-
-								if (!empty($section_id)) {
-									$self_locator = new locator();
-										$self_locator->set_section_tipo($section_tipo);
-										$self_locator->set_section_id($section_id);
-									$sqo->set_filter_by_locators([$self_locator]);
 								}
+								return $limit ?? ($mode==='list' ? 10 : 1);
+							  })();
 
-						// tm case
-							// if ($mode==='tm') {
-							// 	$search_query_object->order = json_decode('[{"direction": "DESC","path": [{"component_tipo": "id"}]}]');
-							// 	$search_query_object->limit = 10;
-							// 	$search_query_object->offset= 0;
-							// 	// add component tipo and lang to locator for tm search
-							// 	$component_ddo = array_find($rqo, function($item){
-							// 		return (isset($item->typo) && $item->typo==='ddo' && $item->type==='component');
-							// 	});
-							// 	$locator = reset($search_query_object->filter_by_locators);
-							// 	$locator->tipo = $component_ddo->tipo;
-							// 	$locator->lang = $component_ddo->lang;
-							// }
-							// dump($search_query_object, ' search_query_object 2 (autogenerated) ++ '.to_string());
+					// offset . reset to zero
+						$offset	= 0;
 
-						// debug
-							// error_log("------------------------- build_json_rows sqo ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+					// sqo create
+						$sqo = new search_query_object();
+							$sqo->set_id($sqo_id);
+							$sqo->set_mode($mode);
+							$sqo->set_section_tipo([$section_tipo]);
+							$sqo->set_limit($limit);
+							$sqo->set_offset($offset);
 
-						return $sqo;
-					  })());
-
-				// when sqo limit is false, apply the default limit
-					// if (property_exists($sqo, 'limit') && $sqo->limit===false) {
-					// 	$sqo->limit = 0;
-					// }
-
-		// CONTEXT
-			// $context = [];
-
-			// 	switch ($action) {
-
-			// 		case 'search': // example use: get section records in list or edit mode, search in autocomplete service
-
-			// 			// sections
-			// 				$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
-
-			// 				// set always
-			// 				// $element->set_rqo($rqo); // inject whole rqo context
-
-			// 			break;
-
-			// 		case 'get_data': // example use: paginate a component portal or component autocomplete
-
-			// 			if(strpos($model, 'component')===0) {
-			// 				// component
-			//					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-			//						? $lang
-			//						: DEDALO_DATA_NOLAN;
-			// 					$element		= component_common::get_instance($model,
-			// 																	 $tipo,
-			// 																	 $section_id,
-			// 																	 $mode,
-			// 																	 $component_lang,
-			// 																	 $section_tipo);
-			// 					if ($mode==='tm') {
-			// 						// set matrix_id value to component to allow it search dato in
-			// 						// matrix_time_machine component function 'get_dato' will be
-			// 						// overwritten to get time machine dato instead the real dato
-			// 						$element->matrix_id = $ddo_source->matrix_id;
-			// 					}
-			// 			}else if(strpos($model, 'area')===0) {
-			// 				// area
-			// 					$element = area::get_instance($model, $tipo, $mode);
-			// 			}else{
-			// 				// others
-			// 					// get data model not defined
-			// 					debug_log(__METHOD__." WARNING context:get_data model not defined for ".to_string($model), logger::WARNING);
-			// 			}
-			// 			break;
-
-			// 		default:
-			// 			# not defined model from context / data
-			// 			debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
-			// 			break;
-			// 	}// end switch (true)
-
-
-			// 	// element json
-			// 		$get_json_options = new stdClass();
-			// 			$get_json_options->get_context	= true;
-			// 			$get_json_options->get_data		= false;
-			// 		$element_json = $element->get_json($get_json_options);
-
-			// 	// context add
-			// 		$context = $element_json->context;
-			// 		// $context[] = (object)[
-			// 		// 	// 'source'	=> 'request_ddo',
-			// 		// 	'typo'	=> 'request_ddo',
-			// 		// 	'value'	=> dd_core_api::$request_ddo_value
-			// 		// ];
-
-			// 	// fix final static var context
-			// 		// dd_core_api::$context = $context;
-
-			// $context_exec_time	= exec_time_unit($start_time,'ms').' ms';
-
+							if (!empty($section_id)) {
+								$self_locator = new locator();
+									$self_locator->set_section_tipo($section_tipo);
+									$self_locator->set_section_id($section_id);
+								$sqo->set_filter_by_locators([$self_locator]);
+							}
+				}
+			}//end if (!empty($rqo->sqo))
 
 		// DATA
-			// $data = [];
+			switch ($action) {
 
-				$data_start_time = start_time();
+				case 'search': // Used by section and service autocomplete
 
-				unset($element);
+					// if ($model==='section'){
 
-				switch ($action) {
-
-					case 'search': // Used by section and service autocomplete
-
-						// if ($model==='section'){
-
-							// resolve limit before use sqo
-								// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
-								// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
-								// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
-								// ) {
-								// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
-								// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
-								// }
-
-							// sections
-								$element = sections::get_instance(
-									null, // ?array $ar_locators
-									$sqo, // object $search_query_object	=null
-									$tipo, //  string $caller_tipo			=null
-									$mode, // string $mode					='list'
-									$lang // string $lang					=DEDALO_DATA_NOLAN
-								);
-
-							// store sqo section
-								if ($model==='section' && ($mode==='edit' || $mode==='list')) {
-									$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
-									debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
-								}
-
-						// }else if ($model==='area_thesaurus'){
-							// IN PROCESS TO IMPLEMENT
-							// // area_thesaurus
-							// 	$element = area::get_instance($model, $tipo, $mode);
-
-							// // search_action
-							// 	$obj = new stdClass();
-							// 		$obj->sqo	 = $sqo;
-							// 	$element->set_search_action($obj);
-						// }
-						break;
-
-					case 'related_search': // Used to get the related sections that call to the source section
+						// resolve limit before use sqo
+							// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
+							// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
+							// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
+							// ) {
+							// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
+							// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
+							// }
 
 						// sections
-							$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+							$element = sections::get_instance(
+								null, // ?array $ar_locators
+								$sqo, // object $search_query_object = null
+								$tipo, //  string $caller_tipo = null
+								$mode, // string $mode = 'list'
+								$lang // string $lang = DEDALO_DATA_NOLAN
+							);
 
-						// store sqo section
+						// store sqo section in session
 							if ($model==='section' && ($mode==='edit' || $mode==='list')) {
 								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+								debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
 							}
-						break;
 
-					case 'get_data': // Used by components and areas
+					// }else if ($model==='area_thesaurus'){
+						// IN PROCESS TO IMPLEMENT
+						// // area_thesaurus
+						// 	$element = area::get_instance($model, $tipo, $mode);
 
-						if (strpos($model, 'component_')===0) {
+						// // search_action
+						// 	$obj = new stdClass();
+						// 		$obj->sqo	 = $sqo;
+						// 	$element->set_search_action($obj);
+					// }
+					break;
 
-							if ($section_id<1) {
-								// invalid call
-								debug_log(__METHOD__." WARNING data:get_data invalid section_id: ".to_string($section_id), logger::WARNING);
-							}else{
-								// component
-									$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-										? $lang
-										: DEDALO_DATA_NOLAN;
+				case 'related_search': // Used to get the related sections that call to the source section
 
-									$element = component_common::get_instance(
-										$model,
-										$tipo,
-										$section_id,
-										$mode,
-										$component_lang,
-										$section_tipo,
-										true // cache
-									);
-									if ($mode==='tm') {
-										// set matrix_id value to component to allow it search dato in
-										// matrix_time_machine component function 'get_dato' will be
-										// overwritten to get time machine dato instead the real dato
-										$element->matrix_id = $ddo_source->matrix_id;
-									}
-									// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+					// sections
+						$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
 
-								// view optional
-									if (!empty($view)) {
-										$element->set_view($view);
-									}
-
-								// pagination. fix pagination vars (defined in class component_common)
-									if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
-										$pagination = new stdClass();
-											$pagination->limit	= $rqo->sqo->limit;
-											$pagination->offset	= $rqo->sqo->offset;
-
-										$element->pagination = $pagination;
-									}
-								// set caller_dataframe information
-									if(isset($caller_dataframe)){
-										$element->set_caller_dataframe($caller_dataframe);
-									}
-							}//end if ($section_id>=1)
-
-						}else if (strpos($model, 'area')===0) {
-
-							// areas
-								$element = area::get_instance($model, $tipo, $mode);
-
-							// thesaurus_mode
-								if (isset($ddo_source->thesaurus_mode)) {
-									$element->thesaurus_mode = $ddo_source->thesaurus_mode;
-								}
-
-							// search_action
-								$search_action = $ddo_source->search_action ?? 'show_all';
-
-								$obj = new stdClass();
-									$obj->action = $search_action;
-									$obj->sqo	 = $sqo;
-									if (isset($ddo_source->hierarchy_sections)) {
-										$obj->hierarchy_sections = $ddo_source->hierarchy_sections;
-									}
-									if (isset($ddo_source->hierarchy_terms)) {
-										$obj->hierarchy_terms = $ddo_source->hierarchy_terms;
-									}
-								$element->set_search_action($obj);
-
-						}else if ($model==='section') {
-
-							// $element = section::get_instance($section_id, $section_tipo);
-							// (!) Not used anymore
-							debug_log(__METHOD__." WARNING data:get_data model section skip. Use action 'search' instead.", logger::WARNING);
-
-						}else if (class_exists($model)) {
-
-							// case menu and similar generic elements
-
-							$element = new $model();
-
-						}else{
-
-							// others
-								// get data model not defined
-								debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
+					// store sqo section
+						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 						}
-						break;
+					break;
 
-					case 'resolve_data': // Used by components in search mode like portals to resolve locators data
+				case 'get_data': // Used by components and areas
 
-						if (strpos($model, 'component')===0) {
+					if (strpos($model, 'component_')===0) {
 
+						if ($section_id<1) {
+							// invalid call
+							debug_log(__METHOD__." WARNING data:get_data invalid section_id: ".to_string($section_id), logger::WARNING);
+						}else{
 							// component
 								$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
 									? $lang
 									: DEDALO_DATA_NOLAN;
+
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
 									$section_id,
 									$mode,
 									$component_lang,
-									$section_tipo
+									$section_tipo,
+									true // cache
 								);
-							// inject custom value to the component (usually an array of locators)
-								$value = $rqo->source->value ?? [];
-								$element->set_dato($value);
+								if ($mode==='tm') {
+									// set matrix_id value to component to allow it search dato in
+									// matrix_time_machine component function 'get_dato' will be
+									// overwritten to get time machine dato instead the real dato
+									$element->matrix_id = $ddo_source->matrix_id;
+								}
+								// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+
+							// view optional
+								if (!empty($view)) {
+									$element->set_view($view);
+								}
 
 							// pagination. fix pagination vars (defined in class component_common)
 								if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
@@ -1851,81 +1680,142 @@ final class dd_core_api {
 
 									$element->pagination = $pagination;
 								}
+							// set caller_dataframe information
+								if(isset($caller_dataframe)){
+									$element->set_caller_dataframe($caller_dataframe);
+								}
+						}//end if ($section_id>=1)
 
-						}else{
+					}else if (strpos($model, 'area')===0) {
 
-							// others
-								// resolve_data model not defined
-								debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
-						}
-						break;
+						// areas
+							$element = area::get_instance($model, $tipo, $mode);
 
-					default:
-						# not defined model from context / data
-						debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
-						break;
-				}// end switch (true)
+						// thesaurus_mode
+							if (isset($ddo_source->thesaurus_mode)) {
+								$element->thesaurus_mode = $ddo_source->thesaurus_mode;
+							}
 
+						// search_action
+							$search_action = $ddo_source->search_action ?? 'show_all';
 
+							$obj = new stdClass();
+								$obj->action = $search_action;
+								$obj->sqo	 = $sqo;
+								if (isset($ddo_source->hierarchy_sections)) {
+									$obj->hierarchy_sections = $ddo_source->hierarchy_sections;
+								}
+								if (isset($ddo_source->hierarchy_terms)) {
+									$obj->hierarchy_terms = $ddo_source->hierarchy_terms;
+								}
+							$element->set_search_action($obj);
 
-				// add if exists
-					if (isset($element)) {
+					}else if ($model==='section') {
 
-						// build_options
-							$build_options = $ddo_source->build_options ?? null;
-							$element->set_build_options($build_options);
+						// $element = section::get_instance($section_id, $section_tipo);
+						// (!) Not used anymore
+						debug_log(__METHOD__." WARNING data:get_data model section skip. Use action 'search' instead.", logger::WARNING);
 
-						// element json
-							$get_json_options = new stdClass();
-								$get_json_options->get_context	= true;
-								$get_json_options->get_data		= true;
-							$element_json = $element->get_json($get_json_options);
+					}else if (class_exists($model)) {
 
-						// data add
-							// $data = array_merge($data, $element_json->data);
+						// case menu and similar generic elements
 
-						// context and data add
-							$context	= $element_json->context;
-							$data		= $element_json->data;
+						$element = new $model();
 
-						// debug
-							// if ($tipo==='oh18') {
-							// 	dump($context, ' context ++ '.to_string());
-							// 	dump($data, ' data ++ '.to_string());
-							// }
+					}else{
 
-						// ar_all_section_id (experimental)
-							// $ar_all_section_id = $element->get_ar_all_section_id();
-							// 	dump($ar_all_section_id, ' ar_all_section_id ++ '.to_string());
-
-					}//end if (isset($element))
-					else {
-						debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ".to_string(), logger::WARNING);
-						$context = $data = [];
+						// others
+							// get data model not defined
+							debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
 					}
+					break;
 
+				case 'resolve_data': // Used by components in search mode like portals to resolve locators data
 
-			// smart remove data duplicates (!)
-				#$data = self::smart_remove_data_duplicates($data);
+					if (strpos($model, 'component')===0) {
 
-			$data_exec_time	= exec_time_unit($data_start_time,'ms').' ms';
+						// component
+							$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+								? $lang
+								: DEDALO_DATA_NOLAN;
+							$element = component_common::get_instance(
+								$model,
+								$tipo,
+								$section_id,
+								$mode,
+								$component_lang,
+								$section_tipo
+							);
+						// inject custom value to the component (usually an array of locators)
+							$value = $rqo->source->value ?? [];
+							$element->set_dato($value);
 
-				// dump($context, ' context ++ '.to_string());
-				// dump($data, ' data ++ '.to_string());
+						// pagination. fix pagination vars (defined in class component_common)
+							if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
+								$pagination = new stdClass();
+									$pagination->limit	= $rqo->sqo->limit;
+									$pagination->offset	= $rqo->sqo->offset;
+
+								$element->pagination = $pagination;
+							}
+
+					}else{
+
+						// others
+							// resolve_data model not defined
+							debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
+					}
+					break;
+
+				default:
+					// not defined model from context / data
+					debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
+					break;
+			}//end switch($action)
+
+			// add if exists
+				if (isset($element)) {
+
+					// build_options
+						$build_options = $ddo_source->build_options ?? null;
+						$element->set_build_options($build_options);
+
+					// element json
+						$get_json_options = new stdClass();
+							$get_json_options->get_context	= true;
+							$get_json_options->get_data		= true;
+						$element_json = $element->get_json($get_json_options);
+
+					// data add
+						// $data = array_merge($data, $element_json->data);
+
+					// context and data add
+						$context	= $element_json->context;
+						$data		= $element_json->data;
+
+					// ar_all_section_id (experimental)
+						// $ar_all_section_id = $element->get_ar_all_section_id();
+						// 	dump($ar_all_section_id, ' ar_all_section_id ++ '.to_string());
+
+				}//end if (isset($element))
+				else {
+					debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ".to_string(), logger::WARNING);
+					$context = $data = [];
+				}
 
 		// result. Set result object
 			$result->context	= $context;
 			$result->data		= $data;
 
-		// Debug
+		// debug
 			if(SHOW_DEBUG===true) {
+				// dump($context, ' context ++ '.to_string());
+				// dump($data, ' data ++ '.to_string());
 				$debug = new stdClass();
-					$debug->sqo						= $sqo ?? null;
-					// $debug->rqo					= $rqo;
-					// $debug->context_exec_time	= $context_exec_time;
-					$debug->data_exec_time			= $data_exec_time;
-					$debug->exec_time				= exec_time_unit($start_time,'ms').' ms';
-					$debug->memory_usage			= dd_memory_usage();
+					$debug->sqo				= $sqo ?? null;
+					// $debug->rqo			= $rqo;
+					$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
+					$debug->memory_usage	= dd_memory_usage();
 				$result->debug = $debug;
 			}
 
@@ -1943,7 +1833,7 @@ final class dd_core_api {
 	private static function smart_remove_data_duplicates(array $data) : array {
 
 		$clean_data = [];
-		foreach ($data as $key => $value_obj) {
+		foreach ($data as $value_obj) {
 			#if (!in_array($value_obj, $clean_data, false)) {
 			#	$clean_data[] = $value_obj;
 			#}
@@ -1980,7 +1870,7 @@ final class dd_core_api {
 	private static function smart_remove_context_duplicates(array $context) : array {
 
 		$clean_context = [];
-		foreach ($context as $key => $value_obj) {
+		foreach ($context as $value_obj) {
 			#if (!in_array($value_obj, $clean_context, false)) {
 			#	$clean_context[] = $value_obj;
 			#}
@@ -2253,6 +2143,7 @@ final class dd_core_api {
 									}
 									return 'Failed!';
 								}catch(Exception $e){
+									debug_log(__METHOD__." Error: ".$e->getMessage(), logger::ERROR);
 									return 'Failed with Exception!';
 								}
 							})();

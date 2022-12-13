@@ -440,7 +440,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 							}
 							const tag = self.build_view_tag_obj(note_tag, note_tag.tag_id)
 							// insert the new note tag in the caret position of the text_editor
-							const inserted_tag = text_editor.set_content(tag)
+							text_editor.set_content(tag)
 							// render and open the note section inside a modal
 							render_note({
 								self		: self,
@@ -525,10 +525,10 @@ const get_custom_events = (self, i, text_editor) => {
 		}//end focus
 
 	// blur
-		custom_events.blur = (evt, options) => {
-			// save. text_editor save function calls current component save_value()
-			text_editor.save()
-		}//end blur
+		// custom_events.blur = (evt, options) => {
+		// 	// save. text_editor save function calls current component save_value()
+		// 		text_editor.save()
+		// }//end blur
 
 	// click
 		custom_events.click = (evt, options) => {
@@ -688,6 +688,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// keyup
 		custom_events.KeyUp = (evt, options) => {
+
 			// use the observe property into ontology of the components to subscribe to this events
 			switch(true) {
 
@@ -779,9 +780,28 @@ const get_custom_events = (self, i, text_editor) => {
 				// 	console.log(options)
 				// break;
 			}
+
+			// change data. Delayed to minimize editor interference
+				setTimeout(()=>{
+					const value = text_editor.editor.getData();
+					self.preprocess_text_to_save(value)
+					.then(function(parsed_value){
+
+						const changed_data_item = Object.freeze({
+							action	: 'update',
+							key		: i,
+							value	: parsed_value || ''
+						})
+
+					// fix instance changed_data
+						self.set_changed_data(changed_data_item)
+							// console.log('self.db_data.value[i]:', self.db_data.value[i]);
+							// console.log('parsed_value:', parsed_value);
+					})
+				}, 150)
 		}//end KeyUp
 
-	//changeData
+	// changeData
 		custom_events.changeData = (evt, options) => {
 			const ar_changes = options
 			const changes_len = ar_changes.length
@@ -795,6 +815,7 @@ const get_custom_events = (self, i, text_editor) => {
 				event_manager.publish(event_name, change)
 			}
 		}// end changeData event
+
 
 	return custom_events
 }//end get_custom_events
@@ -1351,42 +1372,45 @@ const render_persons_list = function(self, text_editor, i) {
 
 					const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)
 
-					const person_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name 		: 'person_container',
-						parent			: section_container
-					})
-						const person_keyboard = ui.create_dom_element({
+					// person_container
+						const person_container = ui.create_dom_element({
+							element_type	: 'div',
+							class_name 		: 'person_container',
+							parent			: section_container
+						})
+						person_container.addEventListener('mousedown', function (evt) {
+							evt.preventDefault()
+							evt.stopPropagation()
+
+							// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
+							const tag = self.build_view_tag_obj(current_person, current_person.tag_id)
+							text_editor.set_content(tag)
+						});
+
+					// person_keyboard
+						ui.create_dom_element({
 							element_type	: 'span',
 							text_node		: 'control ctrl+'+ k++,
-							class_name 		: 'label person_keyboard',
+							class_name		: 'label person_keyboard',
 							parent			: person_container
 						})
 						const html_tag = self.tags_to_html(current_person.tag)
 						person_container.insertAdjacentHTML('afterbegin', html_tag)
 
-						const person_name = ui.create_dom_element({
+					// person_name
+						ui.create_dom_element({
 							element_type	: 'span',
 							text_node		: current_person.full_name || '',
-							class_name 		: 'label person_name',
+							class_name		: 'label person_name',
 							parent			: person_container
 						})
-
-						const person_role = ui.create_dom_element({
+						// person_role
+						ui.create_dom_element({
 							element_type	: 'span',
 							text_node		: '('+current_person.role + ')',
-							class_name 		: 'label person_role',
+							class_name		: 'label person_role',
 							parent			: person_container
 						})
-
-					person_container.addEventListener('mousedown', function (evt) {
-						evt.preventDefault()
-						evt.stopPropagation()
-
-						// event_manager.publish('key_up_persons' +'_'+ self.id_base, k)
-						const tag = self.build_view_tag_obj(current_person, current_person.tag_id)
-						text_editor.set_content(tag)
-					});
 				}//end for (let j = 0; j < ar_persons_for_this_section.length; j++)
 			}//end for (let i = 0; i < value_length; i++)
 

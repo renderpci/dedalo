@@ -1,24 +1,17 @@
 <?php
-/*
+/**
 * CLASS SECTION GROUP
+*
+*
 */
-
-
 class section_group extends common {
+
 
 
 	/**
 	* VARS
 	*/
-		protected $tipo;
 		protected $section_tipo;
-		protected $mode;
-		protected $lang;
-		# structure data
-		// protected $RecordObj_dd;
-		protected $modelo;
-		protected $norden;
-		protected $label;
 
 
 
@@ -49,4 +42,4 @@ class section_group extends common {
 
 
 
-}//end class
+}//end section_group class

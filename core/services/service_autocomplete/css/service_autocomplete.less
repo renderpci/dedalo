@@ -188,12 +188,22 @@
 		grid-template-columns: 1fr 1fr;
 		grid-gap: 1rem;
 		padding: 1.5rem;
+		padding-top: 0.5rem;
+		max-height: 38rem;
+		overflow: auto;
 
 		.selected_instance_node {
 			grid-column: span 2;
 			text-align: center;
-			padding-bottom: 0.5rem;
 			font-size: 1.1rem;
+			position: sticky;
+			top: -0.5rem;
+			background-color: #ffffff;
+			width: 100%;
+			z-index: 1;
+			padding-top: 0.5rem;
+			padding-bottom: 0.5rem;
+			border-bottom: 1px solid #e7e6e6;
 		}
 
 		>.wrapper_component {
