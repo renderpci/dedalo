@@ -2803,6 +2803,10 @@
 		Added component_autocomplete breakdown option to export values (as component_portal do). Implemented in tool_export
 		Added component_autocomplete export dataframe.
 	Released version 5.9.3
+		Valencia 14-12-2022T14:28:00
+		Fixed search parse_search_query_object error were count fails where JOIN is used inside window frame query
+
+
 
 	[/HISTORY]
 
@@ -2833,7 +2837,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-12-2022T17:54:00');
+	define('DEDALO_BUILD'	, '14-12-2022T14:28:00');
 
 
 
