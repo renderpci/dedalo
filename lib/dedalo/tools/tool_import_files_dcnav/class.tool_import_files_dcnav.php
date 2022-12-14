@@ -1171,6 +1171,39 @@ class tool_import_files_dcnav extends tool_common {
 										$component->set_dato( (array)$value );
 										$result = $component->Save();
 
+									//UPNA identifier for victims
+										foreach ((array)$value as $value_data) {
+											if(strpos($value_data, 'UPNA:')===0){
+												preg_match('/\d+/', $value_data, $output);
+
+												if(!empty($output) && (int)$output[0]>0) {
+
+													$victims_tipo = 'navarra107';
+
+													$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($victims_tipo,true);
+													$victims_component	= component_common::get_instance(
+														$modelo_name,
+														$victims_tipo,
+														$section_id,
+														'list',
+														DEDALO_DATA_NOLAN,
+														$section_tipo
+													);
+													$locator = new locator();
+														$locator->set_type('dd151');
+														$locator->set_section_tipo('rsc197');
+														$locator->set_section_id($output[0]);
+														$locator->set_from_component_tipo($victims_tipo);
+
+
+													$victims_component->set_dato([$locator]);
+													$result = $victims_component->Save();
+
+												}
+											}
+										}
+
+
 										return $result;
 									})('navarra20', $section_tipo, $section_id, $identifier);
 								}
