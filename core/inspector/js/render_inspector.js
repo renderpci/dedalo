@@ -202,6 +202,12 @@ const get_content_data = function(self) {
 			content_data.appendChild(time_machine_list)
 		}
 
+	// component_history container
+		if (self.caller.context.time_machine_list) {
+			const component_history = render_component_history(self)
+			content_data.appendChild(component_history)
+		}
+
 	// activity_info
 		const activity_info = render_activity_info(self)
 		content_data.appendChild(activity_info)
@@ -536,7 +542,6 @@ export const render_component_info = function(self, component) {
 					open_ontology_window(tipo, custom_url)
 				})
 			}
-
 
 	// model
 		// label
@@ -1060,7 +1065,7 @@ const render_activity_info = function(self) {
 
 /**
 * OPEN_ONTOLOGY_WINDOW
-*
+* Opens Dédalo Ontology page in a new window
 * @param string tipo
 * @param string|null custom_url
 * @return bool
@@ -1091,3 +1096,128 @@ const open_ontology_window = function(tipo, custom_url) {
 
 	return true
 }//end open_ontology_window
+
+
+
+/**
+* RENDER_COMPONENT_HISTORY
+* Note that self.element_info_containe is fixed to allow inspector init event
+* to locate the target node when is invoked
+* @return DOM node element_info_wrap
+*/
+const render_component_history = function(self) {
+
+	// wrapper
+		const component_history_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'component_history'
+		})
+
+	// component_history_head
+		const component_history_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'component_history_head icon_arrow',
+			inner_html		: get_label.component_history || 'Component history',
+			parent			: component_history_wrap
+		})
+
+	// component_history_body
+		const component_history_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'component_history_body hide',
+			parent			: component_history_wrap
+		})
+
+		// fix pointer to node placeholder
+		self.component_history_container = component_history_body
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			toggler				: component_history_head,
+			container			: component_history_body,
+			collapsed_id		: 'inspector_component_history_block',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			component_history_head.classList.remove('up')
+		}
+		function expose() {
+			load_component_history(self, self.actived_component)
+			component_history_head.classList.add('up')
+		}
+
+	return component_history_wrap
+}//end render_component_history
+
+
+
+/**
+* LOAD_COMPONENT_HISTORY
+* @return DOM node component_history_wrap
+*/
+export const load_component_history = function(self, component) {
+
+	const container	= self.component_history_container
+
+	// prevent load the component data when component is not selected
+	if(!component){
+		return
+	}
+
+	// values from caller (section)
+		const tipo			= component.tipo
+		const label			= component.label
+		const model			= component.model
+		const translatable	= component.context.translatable
+			? JSON.stringify(component.context.translatable)
+			: 'no'
+
+	// prevent load data when the component_history is collapse
+	const is_open = !container.classList.contains('hide')
+	if (is_open) {
+		load_component_history(component)
+	}
+
+
+	// // track collapse toggle state of content
+	// 	ui.collapse_toggle_track({
+	// 		toggler				: component_history_head,
+	// 		container			: component_history_body,
+	// 		collapsed_id		: 'inspector_component_history',
+	// 		collapse_callback	: unload_component_history,
+	// 		expose_callback		: load_component_history,
+	// 		default_state		: 'closed'
+	// 	})
+
+		// (!) Note that load_component_history is called on each section pagination, whereby must be generated
+		// even if user close and re-open the component_history inspector tab
+		async function load_component_history(component) {
+
+			// create and render a component_history instance
+				const component_history	= await instances.get_instance({
+					model			: 'time_machine_list',
+					tipo			: component.tipo,
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					mode			: ''
+				})
+				await component_history.build()
+				const component_history_wrap = await component_history.render()
+
+			// remove previous node if exists pointer
+				if (container.component_history_wrap) {
+					container.component_history_wrap.remove()
+				}
+
+			// append node
+				container.appendChild(component_history_wrap)
+				// set pointers
+				container.component_history_wrap = component_history_wrap
+
+			return true
+		}
+
+
+	return container
+}//end load_component_history
