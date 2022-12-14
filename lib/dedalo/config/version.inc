@@ -2801,7 +2801,8 @@
 		Fix lang import for tool_import_files_dcnav
 		Valencia 07-12-2022T17:54:00
 		Added component_autocomplete breakdown option to export values (as component_portal do). Implemented in tool_export
-
+		Added component_autocomplete export dataframe.
+	Released version 5.9.3
 
 	[/HISTORY]
 
@@ -2826,7 +2827,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.2';
+	$DEDALO_VERSION = '5.9.3';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();

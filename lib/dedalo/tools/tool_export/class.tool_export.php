@@ -510,6 +510,11 @@ class tool_export extends tool_common {
 			if ($key==='id' || $key==='section_tipo' || $key==='section_id' || $key==='datos' || (strpos($component_tipo, '_order')!==false)) continue;
 
 			switch (true) {
+				// case ($modelo_name==='dataframe'):
+				// 	$relation_list	= new relation_list($component_tipo, $section_id, $section_tipo, 'list');
+				// 	$valor_export	= $relation_list->get_valor_export();
+				// 	break;
+
 				case ($modelo_name==='relation_list'):
 					$relation_list	= new relation_list($component_tipo, $section_id, $section_tipo, 'list');
 					$valor_export	= $relation_list->get_valor_export();
@@ -1032,18 +1037,34 @@ class tool_export extends tool_common {
 		$section_tipo 			 = $this->section_tipo;
 		$ar_modelo_name_required = array('component');
 
-		$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true);
+		// $ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true);
 			#dump($ar_elements, ' $ar_elements ++ '.to_string($section_tipo));
 
+		$ar_components_exclude = [
+			'component_password',
+			'component_security_administrator',
+			'section_tab'
+		];
+		$components_from_section = search_development2::get_components_from_section([$section_tipo], [], $ar_tipo_exclude_elements=false, $ar_components_exclude);
+
 		$ar_columns=array();
-		foreach ($ar_elements as $key => $tipo) {
+		foreach ($components_from_section->result as $item) {
 
-			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			#if($modelo_name=='component_section_id') continue; # Skip component_section_id (is fixed data in export)
-
-			$name = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
-			$ar_columns[$tipo] = $name;
+			if($item->modelo_name === 'dataframe'){
+				continue;
+			}
+			$ar_columns[$item->component_tipo] = $item->component_label;
 		}
+
+
+		// foreach ($ar_elements as $key => $tipo) {
+
+		// 	#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 	#if($modelo_name=='component_section_id') continue; # Skip component_section_id (is fixed data in export)
+
+		// 	$name = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+		// 	$ar_columns[$tipo] = $name;
+		// }
 
 		// aditional section info fields. dd196
 			$parent_tipo 	= DEDALO_SECTION_INFO_SECTION_GROUP;
