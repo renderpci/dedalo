@@ -964,15 +964,19 @@ const render_time_machine_list = function(self) {
 					view			: 'mini',
 					id_variant		: self.section_tipo + '_tm_list',
 					caller			: self,
-					element			: {
-						model				: 'dd_grid',
-						tipo				: self.section_tipo,
+					config			: {
+						id					: 'section_history',
+						model				: 'dd_grid', // used to create the filter
+						tipo				: self.section_tipo, // used to create the filter
 						template_columns	: '1fr 1fr 1fr 2fr',
+						ignore_columns		: [
+							'matrix_id' // matrix_id dd1573
+						],
 						ddo_map				: [{
 							tipo			: 'dd1574', // 'dd1574' generic tm info ontology item 'Value'
 							type			: 'dd_grid',
 							typo			: 'ddo',
-							model			: 'dd_grid', // 'dd_grid', // (!) changed to dd_grid to allow identification
+							model			: 'dd_grid', // (!) changed to dd_grid to allow identification
 							section_tipo	: self.section_tipo,
 							parent			: self.section_tipo,
 							debug_label		: 'Value',
@@ -1161,62 +1165,96 @@ export const load_component_history = function(self, component) {
 	const container	= self.component_history_container
 
 	// prevent load the component data when component is not selected
-	if(!component){
-		return
-	}
+		if(!component){
+			return
+		}
 
 	// values from caller (section)
-		const tipo			= component.tipo
-		const label			= component.label
-		const model			= component.model
-		const translatable	= component.context.translatable
-			? JSON.stringify(component.context.translatable)
-			: 'no'
+		// const tipo			= component.tipo
+		// const label			= component.label
+		// const model			= component.model
+		// const translatable	= component.context.translatable
+		// 	? JSON.stringify(component.context.translatable)
+		// 	: 'no'
 
 	// prevent load data when the component_history is collapse
-	const is_open = !container.classList.contains('hide')
-	if (is_open) {
-		load_component_history(component)
-	}
-
-
-	// // track collapse toggle state of content
-	// 	ui.collapse_toggle_track({
-	// 		toggler				: component_history_head,
-	// 		container			: component_history_body,
-	// 		collapsed_id		: 'inspector_component_history',
-	// 		collapse_callback	: unload_component_history,
-	// 		expose_callback		: load_component_history,
-	// 		default_state		: 'closed'
-	// 	})
-
-		// (!) Note that load_component_history is called on each section pagination, whereby must be generated
-		// even if user close and re-open the component_history inspector tab
-		async function load_component_history(component) {
-
-			// create and render a component_history instance
-				const component_history	= await instances.get_instance({
-					model			: 'time_machine_list',
-					tipo			: component.tipo,
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					mode			: ''
-				})
-				await component_history.build()
-				const component_history_wrap = await component_history.render()
-
-			// remove previous node if exists pointer
-				if (container.component_history_wrap) {
-					container.component_history_wrap.remove()
-				}
-
-			// append node
-				container.appendChild(component_history_wrap)
-				// set pointers
-				container.component_history_wrap = component_history_wrap
-
-			return true
+		const is_open = !container.classList.contains('hide')
+		if (is_open) {
+			load_component_history(component)
 		}
+
+	// track collapse toggle state of content
+		// 	ui.collapse_toggle_track({
+		// 		toggler				: component_history_head,
+		// 		container			: component_history_body,
+		// 		collapsed_id		: 'inspector_component_history',
+		// 		collapse_callback	: unload_component_history,
+		// 		expose_callback		: load_component_history,
+		// 		default_state		: 'closed'
+		// 	})
+
+	// (!) Note that load_component_history is called on each section pagination, whereby must be generated
+	// even if user close and re-open the component_history inspector tab
+	async function load_component_history(component) {
+
+		// create and render a component_history instance
+			const service_time_machine	= await instances.get_instance({
+				model			: 'service_time_machine',
+				section_tipo	: self.section_tipo,
+				section_id		: self.caller.section_id,
+				view			: 'mini',
+				id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',
+				caller			: self,
+				config			: {
+					id					: 'component_history_' + component.tipo,
+					model				: component.model, // used to create the filter
+					tipo				: component.tipo, // used to create the filter
+					// template_columns	: '1fr 1fr 2fr 2fr',
+					ignore_columns		: [
+						'matrix_id', // matrix_id dd1573
+						'where' // where dd546
+					],
+					ddo_map				: [{
+						tipo			: component.tipo,
+						type			: 'component',
+						typo			: 'ddo',
+						model			: component.model,
+						section_tipo	: self.section_tipo,
+						parent			: self.section_tipo,
+						label			: component.label,
+						mode			: 'list',
+						view			: 'text'
+					},
+					{	// notes component
+						tipo			: 'rsc329',
+						type			: 'component',
+						typo			: 'ddo',
+						model			: 'component_text_area',
+						section_tipo	: 'rsc832',
+						parent			: self.section_tipo,
+						label			: 'Annotation',
+						mode			: 'list',
+						view			: 'note'
+					}
+					]
+				}
+			})
+			await service_time_machine.build(true)
+			const component_history_wrap = await service_time_machine.render()
+
+
+		// remove previous node if exists pointer
+			if (container.component_history_wrap) {
+				container.component_history_wrap.remove()
+			}
+
+		// append node
+			container.appendChild(component_history_wrap)
+			// set pointers
+			container.component_history_wrap = component_history_wrap
+
+		return true
+	}
 
 
 	return container
