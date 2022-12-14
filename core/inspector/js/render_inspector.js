@@ -954,12 +954,27 @@ const render_time_machine_list = function(self) {
 			// create and render a service_time_machine instance
 				const service_time_machine	= await instances.get_instance({
 					model			: 'service_time_machine',
-					tipo			: self.section_tipo,
 					section_tipo	: self.section_tipo,
 					section_id		: self.caller.section_id,
 					view			: 'mini',
-					id_variant		: self.model,
-					caller			: self
+					id_variant		: self.section_tipo + '_tm_list',
+					caller			: self,
+					element			: {
+						model				: 'dd_grid',
+						tipo				: self.section_tipo,
+						template_columns	: '1fr 1fr 1fr 2fr',
+						ddo_map				: [{
+							tipo			: 'dd1574', // 'dd1574' generic tm info ontology item 'Value'
+							type			: 'dd_grid',
+							typo			: 'ddo',
+							model			: 'dd_grid', // 'dd_grid', // (!) changed to dd_grid to allow identification
+							section_tipo	: self.section_tipo,
+							parent			: self.section_tipo,
+							debug_label		: 'Value',
+							mode			: 'list',
+							view			: 'mini'
+						}]
+					}
 				})
 				await service_time_machine.build(true)
 				const time_machine_list_wrap = await service_time_machine.render()
@@ -1076,4 +1091,3 @@ const open_ontology_window = function(tipo, custom_url) {
 
 	return true
 }//end open_ontology_window
-
