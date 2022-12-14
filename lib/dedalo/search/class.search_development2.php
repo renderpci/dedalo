@@ -999,12 +999,8 @@ class search_development2 {
 				# Only for count
 
 				# SELECT
-					#$sql_query .= 'SELECT ' . $sql_query_select;
-					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-						$sql_query .= 'SELECT '.$this->main_section_tipo_alias.'.section_id';
-					}else{
-						$sql_query .= 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
-					}
+					$sql_query .= 'SELECT DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';
+
 				# FROM
 					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# join virtual tables
