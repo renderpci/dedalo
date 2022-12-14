@@ -44,6 +44,6 @@ view_mini_text_area.render = async function(self, options) {
 
 
 	return wrapper
-}//end mini
+}//end render
 
 

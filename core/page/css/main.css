@@ -2647,6 +2647,39 @@ button.geo:before {
   -webkit-mask-position: center;
   mask-position: center;
 }
+button.note:before {
+  background-color: #3f3f3f;
+  content: ' ';
+  display: inline-block;
+  height: 1em;
+  margin-right: 0.25em;
+  opacity: 1;
+  vertical-align: baseline;
+  width: 1em;
+  -webkit-mask-image: url('../../themes/default/icons/note.svg');
+  mask-image: url('../../themes/default/icons/note.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+@media screen and (max-width: 960px) {
+  button.note:before {
+    margin-right: 0px;
+  }
+}
+.button.note {
+  -webkit-mask-image: url('../../themes/default/icons/note.svg');
+  mask-image: url('../../themes/default/icons/note.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
 .contenteditable_buttons {
   display: flex;
   padding: 0px;
@@ -6527,6 +6560,9 @@ dd-modal .footer.content {
 *
 * Included from main.less file
 */
+.service_time_machine.view_default {
+  background-color: #fdf2dc;
+}
 .service_time_machine.view_default .head_column {
   text-align: left;
 }
@@ -6554,6 +6590,7 @@ dd-modal .footer.content {
   margin-left: 0.1rem;
 }
 .service_time_machine.view_mini .column_service_time_machine {
+  font-size: 0.85rem;
   padding: 0.25rem;
 }
 .service_time_machine.view_mini .column_service_time_machine > span {
@@ -10408,6 +10445,15 @@ dd-modal .footer.content {
 }
 .component_text_area.list img {
   height: 16px;
+}
+.component_text_area.view_note .button.note {
+  height: 1.25rem;
+  width: 1.25rem;
+  cursor: pointer;
+  background-color: #b9b9b9;
+}
+.component_text_area.view_note .button.note.green {
+  background-color: #23ab48;
 }
 .component_text_area_mini img {
   height: 1em;

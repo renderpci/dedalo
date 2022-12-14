@@ -137,19 +137,52 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 				self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
-			// time_machine
-			// Create, build and assign the time machine service to the instance
+			// ddo_map for service_time_machine. Section uses is rqo_config show
+				const ddo_map = self.main_element.model==='section'
+					? self.main_element.rqo_config.show.ddo_map
+					: [{
+							tipo			: self.main_element.tipo,
+							type			: self.main_element.type,
+							typo			: 'ddo',
+							model			: self.main_element.model,
+							section_tipo	: self.main_element.section_tipo,
+							parent			: self.main_element.section_tipo,
+							label			: self.main_element.label,
+							mode			: 'list',
+							view			: 'text'
+					   }]
+
+			// ignore_columns
+				const ignore_columns = self.main_element.model==='section'
+					? [
+						'dd1573', // matrix_id
+						'dd547', // when
+						'dd543', // who
+						'dd546' // where
+						]
+					: []
+
+			 // template_columns
+				const template_columns = self.main_element.model==='section'
+					? null
+					: '5rem 8rem 8rem 16rem 1fr 5fr'
+
+			// time_machine. Create, build and assign the time machine service to the instance
 				self.service_time_machine = await get_instance({
 					model			: 'service_time_machine',
-					// tipo			: self.main_element.tipo,
-					tipo			: self.caller.section_tipo,
 					section_tipo	: self.caller.section_tipo,
 					section_id		: self.caller.section_id,
 					view			: 'tool',
-					id_variant		: self.model,
+					id_variant		: self.main_element.tipo +'_'+ self.model,
 					caller			: self,
-					lang			: page_globals.dedalo_data_nolan,
-					main_element	: self.main_element
+					config			: {
+						id					: 'tool_tm',
+						model				: self.main_element.model,
+						tipo				: self.main_element.tipo,
+						template_columns	: template_columns,
+						ignore_columns		: ignore_columns,
+						ddo_map				: ddo_map
+					}
 				})
 
 			// build
