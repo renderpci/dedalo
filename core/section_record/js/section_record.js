@@ -152,13 +152,17 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		// For this, only the first one is added and therefore parent value it is not reliable. Use always self.caller.tipo as parent
 			current_context.parent = self.caller.tipo
 
+	// mode
+		const mode = current_context.fixed_mode || current_context.mode || self.mode
+
+
 	// component / section group instance_options
 		const instance_options = {
 			model			: current_context.model,
 			tipo			: current_context.tipo,
 			section_tipo	: current_context.section_tipo,
 			section_id		: section_id,
-			mode			: (current_context.fixed_mode) ? current_context.mode : self.mode,
+			mode			: mode,
 			lang			: current_context.lang,
 			section_lang	: self.lang,
 			parent			: current_context.parent,
