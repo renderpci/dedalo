@@ -1512,6 +1512,8 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 					ddo: for (let j = current_path_length - 1; j >= 0; j--) {
 						// Semantic node is outside the portal sqo (it has his own sqo) and need to be excluded, only when the caller it's a semantic node include it
 						if(current_path[j].model==='component_semantic_node' && (current_path[j].model !== self.model)){continue paths}
+						// Dataframe nodes are outside the portal sqo (it has his own sqo) and need to be excluded
+						if(current_path[j].is_dataframe && current_path[j].is_dataframe===true){continue paths}
 						// create a copy of the current ddo, it ensure that the original path is not touched
 						const current_ddo = clone(current_path[j])
 						current_ddo.mode = 'list' // enable lang fallback value

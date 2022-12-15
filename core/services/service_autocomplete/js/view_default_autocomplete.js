@@ -582,6 +582,11 @@ const render_inputs_list = function(self) {
 		// check if the current ddo is a semantic node and the caller it's not a component_semantic_node,
 		//if the caller is a portal the semantic node it's necessary remove it, because the semantic node has his own sqo (it's outside of the portal sqo )
 		if(current_ddo.model==='component_semantic_node' && self.caller.model !== current_ddo.model) continue;
+
+		// check if the current ddo is a dataframe node,
+		//if the caller is a portal the dataframe it's necessary remove it, because dataframes nodes has his own sqo (it's outside of the portal sqo )
+		if(current_ddo.is_dataframe && current_ddo.is_dataframe===true ) continue;
+
 		// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo is the component
 		const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
 		if(current_ar_valid_ddo.length !== 0) continue
@@ -696,6 +701,7 @@ const render_datalist = async function(self, api_response) {
 		const data		= result.data
 		const context	= result.context
 
+
 	// get the sections that was searched
 	// const ar_search_sections = self.ar_search_section_tipo
 
@@ -727,13 +733,17 @@ const render_datalist = async function(self, api_response) {
 		const li_node = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'autocomplete_data_li',
-			dataset			: {value : JSON.stringify(current_locator)},
 			parent			: datalist
 		})
+		li_node.locator = {
+			section_tipo	: section_tipo,
+			section_id		: section_id
+		}
 		// click event. When the user do click in one row send the data to the caller_instance for save it.
 		li_node.addEventListener('click', function(e){
 			e.stopPropagation()
-			const value = JSON.parse(this.dataset.value)
+			const value = this.locator
+
 			// if(self.caller.mode==='search'){
 				// self.caller.datum.data.push({value: current_locator})
 			// }
