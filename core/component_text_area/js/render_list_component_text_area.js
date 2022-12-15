@@ -6,6 +6,7 @@
 // imports
 	import {view_default_list_text_area} from './view_default_list_text_area.js'
 	import {view_mini_text_area} from './view_mini_text_area.js'
+	import {view_note_text_area} from './view_note_text_area.js'
 
 
 /**
@@ -36,6 +37,9 @@ render_list_component_text_area.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_text_area.render(self, options)
+
+		case 'note':
+			return view_note_text_area.render(self, options)
 
 		case 'default':
 		default:

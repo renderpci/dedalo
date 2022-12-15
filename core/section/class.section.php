@@ -3245,6 +3245,7 @@ class section extends common {
 
 							case ($current_ddo_tipo==='dd1573'): // id (model: component_section_id)
 								$data_item = (object)[
+									'id'					=> 'matrix_id',
 									'section_id'			=> $section_id,
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
@@ -3258,6 +3259,63 @@ class section extends common {
 								];
 								$ar_subdata[]		= $data_item;
 								$ar_subcontext[]	= $ddo;
+								break;
+
+							case ($current_ddo_tipo==='rsc329'): // user notes
+								// search notes with current matrix_id
+									$sqo = new search_query_object();
+										$sqo->section_tipo	= 'rsc832';
+										$sqo->filter		= json_decode('{
+											"$and": [
+												{
+													"q": "'.$id.'",
+													"q_operator": null,
+													"path": [
+														{
+															"section_tipo": "rsc832",
+															"component_tipo": "rsc835",
+															"model": "component_number",
+															"name": "Code"
+														}
+													]
+												}
+											]
+										}');
+									$search = search::get_instance($sqo);
+									$result = $search->search();
+									if (!empty($result->ar_records) && !empty($result->ar_records[0])) {
+										$note_section_id	= $result->ar_records[0]->section_id;
+										$note_model			= RecordObj_dd::get_modelo_name_by_tipo($current_ddo_tipo,true);
+										$component			= component_common::get_instance(
+											$note_model,
+											$current_ddo_tipo,
+											$note_section_id,
+											'list',
+											DEDALO_DATA_LANG,
+											$sqo->section_tipo
+										);
+
+										// get component json
+											$get_json_options = new stdClass();
+												$get_json_options->get_context	= false;
+												$get_json_options->get_data		= true;
+											$element_json = $component->get_json($get_json_options);
+
+										// edit section_id to match section locator data item
+											$data_item = reset($element_json->data);
+												$data_item->matrix_id = $id;
+
+										// attach to current ddo
+											$data_item->from_component_tipo = $current_ddo_tipo;
+											$data_item->section_id		= $section_id;
+											$data_item->section_tipo	= $section_tipo;
+
+										$ar_subdata[]		= $data_item;
+										$ar_subcontext[]	= $ddo;
+									}else{
+										// $ar_subdata[]	= null;
+										$ar_subcontext[]	= $ddo;
+									}
 								break;
 
 							case ($current_ddo_tipo==='dd547'): // When (model: component_date) from activity section
@@ -3310,6 +3368,7 @@ class section extends common {
 									true // bool include_self
 								);
 								$data_item = (object)[
+									'id'					=> 'who',
 									'section_id'			=> $section_id,
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,
@@ -3348,6 +3407,7 @@ class section extends common {
 									}
 								$current_value	= [$component_label];
 								$data_item		= (object)[
+									'id'					=> 'where',
 									'section_id'			=> $section_id,
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
@@ -3376,6 +3436,7 @@ class section extends common {
 									]
 								];
 								$data_item = (object)[
+									'id'					=> 'dd_grid',
 									'section_id'			=> $section_id,
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,
