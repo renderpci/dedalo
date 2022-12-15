@@ -2622,7 +2622,7 @@ abstract class common {
 										$current_ddo->parent = $tipo;
 									}
 
-								// when the mode is set in properties or is set by tool or user templates
+								// fixed_mode. When the mode is set in properties or is set by tool or user templates
 								// set the fixed_mode to true, to maintenance the mode across changes in render process
 									if( isset($current_ddo->mode) ) {
 										$current_ddo->fixed_mode = true;
