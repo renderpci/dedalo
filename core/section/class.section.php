@@ -3286,20 +3286,27 @@ class section extends common {
 									if (!empty($result->ar_records) && !empty($result->ar_records[0])) {
 										$note_section_id	= $result->ar_records[0]->section_id;
 										$note_model			= RecordObj_dd::get_modelo_name_by_tipo($current_ddo_tipo,true);
-										$component			= component_common::get_instance(
+										$current_component	= component_common::get_instance(
 											$note_model,
 											$current_ddo_tipo,
 											$note_section_id,
 											'list',
-											DEDALO_DATA_LANG,
+											$ddo->lang ?? DEDALO_DATA_LANG,
 											$sqo->section_tipo
 										);
 
-										// get component json
+										// inject this tipo as related component from_component_tipo
+											$current_component->from_component_tipo	= $current_ddo_tipo;
+											$current_component->from_section_tipo	= $section_tipo;
+
+										// permissions. Set to allow all users read
+											$current_component->set_permissions(1);
+
+										// get component JSON
 											$get_json_options = new stdClass();
 												$get_json_options->get_context	= false;
 												$get_json_options->get_data		= true;
-											$element_json = $component->get_json($get_json_options);
+											$element_json = $current_component->get_json($get_json_options);
 
 										// edit section_id to match section locator data item
 											$data_item = reset($element_json->data);
@@ -3343,7 +3350,7 @@ class section extends common {
 									$component->set_dato($component_dato);
 									$component->set_permissions(1);
 
-								// get component json
+								// get component JSON
 									$get_json_options = new stdClass();
 										$get_json_options->get_context	= false;
 										$get_json_options->get_data		= true;
@@ -3471,7 +3478,7 @@ class section extends common {
 										$component_model,
 										$component_tipo,
 										$section_id,
-										$mode,
+										$ddo->mode,
 										$lang,
 										$section_tipo
 									);
@@ -3536,6 +3543,7 @@ class section extends common {
 
 									// ar_subcontext
 										$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
+											dump($element_json->context, ' element_json->context ++ '.to_string($ddo->tipo));
 
 									// empty data case. Generate and add a empty value item
 										if (empty($element_json->data) && $model!=='component_section_id') {
@@ -3547,11 +3555,9 @@ class section extends common {
 
 									// parse component_data. Add matrix_id and unify output value
 										$component_data	= array_map(function($data_item) use($id, $section_id, $ddo, $current_component) {
-
-											$data_item->matrix_id			= $id; // (!) needed to match context and data in tm mode section
+											$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
 											return $data_item;
 										}, $element_json->data);
-
 
 									// data add
 										$ar_subdata = array_merge($ar_subdata, $component_data);
