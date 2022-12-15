@@ -701,6 +701,7 @@ const render_datalist = async function(self, api_response) {
 		const data		= result.data
 		const context	= result.context
 
+
 	// get the sections that was searched
 	// const ar_search_sections = self.ar_search_section_tipo
 
@@ -732,13 +733,17 @@ const render_datalist = async function(self, api_response) {
 		const li_node = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'autocomplete_data_li',
-			dataset			: {value : JSON.stringify(current_locator)},
 			parent			: datalist
 		})
+		li_node.locator = {
+			section_tipo	: section_tipo,
+			section_id		: section_id
+		}
 		// click event. When the user do click in one row send the data to the caller_instance for save it.
 		li_node.addEventListener('click', function(e){
 			e.stopPropagation()
-			const value = JSON.parse(this.dataset.value)
+			const value = this.locator
+
 			// if(self.caller.mode==='search'){
 				// self.caller.datum.data.push({value: current_locator})
 			// }

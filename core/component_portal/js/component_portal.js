@@ -510,7 +510,6 @@ component_portal.prototype.add_value = async function(value) {
 			// stop the process
 			return false
 		}
-
 	// check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
 		const exists		= current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
 		if (typeof exists!=="undefined") {
