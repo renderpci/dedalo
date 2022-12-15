@@ -65,6 +65,8 @@ view_default_edit_portal.render = async function(self, options) {
 				if (ar_section_record.length>0) {
 					// self.node.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
 					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.remove('hide')
+				}else{
+					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.add('hide')
 				}
 
 			return content_data
