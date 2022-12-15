@@ -21,16 +21,6 @@ import {data_manager} from '../../common/js/data_manager.js'
 
 		const elements = [];
 
-		// time_machine_list
-			elements.push({
-				model			: 'time_machine_list',
-				tipo			: 'test52', // input text
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				mode			: mode,
-				lang			: page_globals.dedalo_data_nolan
-			})
-
 		// login
 			elements.push({
 				model	: 'login',
