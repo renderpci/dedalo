@@ -39,10 +39,10 @@ service_autocomplete.prototype.init = async function(options) {
 	const self = this
 
 	// options
-		self.caller		= options.caller
-		self.wrapper	= options.wrapper
-		self.view		= options.view || 'default'
-		self.properties	= options.properties || {}
+		self.caller				= options.caller
+		self.component_wrapper	= options.wrapper // component_wrapper
+		self.view				= options.view || 'default'
+		self.properties			= options.properties || {}
 
 	// set properties
 		self.tipo					= self.caller.tipo
@@ -157,7 +157,7 @@ service_autocomplete.prototype.destroy = async function() {
 
 	const self = this
 
-	self.content_data.remove()
+	self.autocomplete_wrapper.remove()
 
 	event_manager.publish('destroy_'+self.id, this)
 
@@ -175,7 +175,7 @@ service_autocomplete.prototype.destroy = async function() {
 * based on self.context.view value
 * @param object options
 * {
-* 	render_level : string full|content_data
+* 	render_level : string full|autocomplete_wrapper
 * }
 * @return DOM node wrapper | null
 */
