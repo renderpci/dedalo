@@ -6,7 +6,9 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {tr} from '../../common/js/tr.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import * as instances from '../../common/js/instances.js'
+	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
@@ -48,16 +50,92 @@ view_note_text_area.render = async function(self, options) {
 			class_name		: 'button note' + css,
 			parent			: wrapper
 		})
-		image_note.addEventListener('click', function(e) {
+		image_note.addEventListener('click', async function(e) {
 			e.stopPropagation()
+			console.log('self:', self);
+
+			const parent_section_tipo	= self.data.parent_section_tipo || self.section_tipo
+			const parent_section_id		= self.data.parent_section_id
+				? self.data.parent_section_id
+				: await (async ()=>{
+					// new record. data_manager. create
+					const rqo = {
+						action	: 'create',
+						source	: {
+							section_tipo : parent_section_tipo
+						}
+					}
+					const api_response = await data_manager.request({
+						body : rqo
+					})
+					if (api_response.result && api_response.result>0) {
+
+						const new_section_id = api_response.result
+						return new_section_id
+					}
+
+					return null
+				  })()
+				  console.log('parent_section_id:', parent_section_id, parent_section_tipo);
+
+			if (!parent_section_id) {
+				console.error('Invalid parent_section_id!', self);
+				return
+			}
+
+			const options = {
+				model				: self.model,
+				tipo				: self.tipo,
+				section_tipo		: parent_section_tipo,
+				section_id			: parent_section_id,
+				mode				: 'edit',
+				view				: 'default',
+				lang				: self.lang,
+				auto_init_editor	: true
+			}
+			console.log('options:', options);
+
+			// content
+				const content = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'content'
+				})
 
 			// modal. create new modal
 				ui.attach_to_modal({
-					header	: `Note ${self.section_tipo}-${self.section_id}`,
-					body	: value_string || '...   Working here!   ...',
+					header	: `Note ${parent_section_tipo}-${parent_section_id}`,
+					body	: content,
 					footer	: null,
 					size	: 'small'
 				})
+
+			// load component gracefully
+				const node = await ui.load_item_with_spinner({
+					container			: content,
+					preserve_content	: false,
+					label				: options.tipo,
+					callback			: async () => {
+
+						// component. Create a edit component in edit mode
+						const component = await instances.get_instance(options)
+						await component.build(true)
+						// force is_inside_tool to remove buttons
+						component.is_inside_tool = true
+						const node = await component.render()
+
+						// event subscription. Focus editor when ready
+						event_manager.subscribe(
+							'editor_ready_' + component.id,
+							function(service_text_editor){
+								// force focus component editor
+								service_text_editor.editor.editing.view.focus()
+							}
+						)
+
+						return node
+					}
+				})
+				content.appendChild(node)
 		})
 
 	// add value
