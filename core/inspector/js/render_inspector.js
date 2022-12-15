@@ -1209,6 +1209,7 @@ export const load_component_history = function(self, component) {
 					id					: 'component_history_' + component.tipo,
 					model				: component.model, // used to create the filter
 					tipo				: component.tipo, // used to create the filter
+					lang				: component.lang,
 					// template_columns	: '1fr 1fr 2fr 2fr',
 					ignore_columns		: [
 						'matrix_id', // matrix_id dd1573

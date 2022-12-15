@@ -167,7 +167,7 @@ section.prototype.init = async function(options) {
 					}
 				}
 				const api_response = await data_manager.request({
-					body:rqo
+					body : rqo
 				})
 				if (api_response.result && api_response.result>0) {
 

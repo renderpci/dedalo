@@ -3306,9 +3306,12 @@ class section extends common {
 												$data_item->matrix_id = $id;
 
 										// attach to current ddo
-											$data_item->from_component_tipo = $current_ddo_tipo;
-											$data_item->section_id		= $section_id;
-											$data_item->section_tipo	= $section_tipo;
+											$data_item->from_component_tipo	= $current_ddo_tipo;
+											$data_item->section_id			= $section_id;
+											$data_item->section_tipo		= $section_tipo;
+											// parent properties
+											$data_item->parent_section_tipo	= $sqo->section_tipo;
+											$data_item->parent_section_id	= $note_section_id;
 
 										$ar_subdata[]		= $data_item;
 										$ar_subcontext[]	= $ddo;

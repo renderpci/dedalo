@@ -246,6 +246,11 @@ component_text_area.prototype.init = async function(options) {
 		// self.service_text_editor	= service_tinymce
 		self.service_text_editor	= service_ckeditor
 
+	// auto_init_editor
+		if (options.auto_init_editor) {
+			self.auto_init_editor = options.auto_init_editor
+		}
+
 
 	return common_init
 }//end init
@@ -914,16 +919,14 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 
 /**
 * UPDATED_LAYER_DATA
-* @param object layer
+* @param object options
 * {
 * 	type // type of the layer, it's equivalent to tag.type ('geo', 'svg', ...)
 * 	layer_id // number of the layer, it's equivalent to tag.tag_id ex: 2
 * }
-* @param caller
-* @return promise
-* 	resolve object response
+* @return void
 */
-component_text_area.prototype.updated_layer_data= function(options) {
+component_text_area.prototype.updated_layer_data = function(options) {
 
 	const self = this
 
@@ -931,7 +934,6 @@ component_text_area.prototype.updated_layer_data= function(options) {
 	const type		= options.layer.type
 	const layer_id	= options.layer.layer_id
 	const tag_id 	= JSON.stringify(layer_id)
-
 	const tag_obj 	= {
 		type	: type,
 		tag_id	: tag_id
@@ -959,8 +961,6 @@ component_text_area.prototype.updated_layer_data= function(options) {
 		// insert the new note tag in the caret position of the text_editor
 		const inserted_tag = self.text_editor[key].set_content(geo_view_tag)
 	}
-
-
 }//end updated_layer_data
 
 
