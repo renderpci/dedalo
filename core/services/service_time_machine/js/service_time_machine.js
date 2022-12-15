@@ -360,7 +360,7 @@ service_time_machine.prototype.build_request_config = function() {
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					label			: 'Matrix id',
-					mode			: 'list',
+					mode			: 'tm',
 					view			: 'mini'
 				},
 				// when dd547 (from activity section)
@@ -373,7 +373,7 @@ service_time_machine.prototype.build_request_config = function() {
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					debug_label		: 'When',
-					mode			: 'list',
+					mode			: 'tm',
 					view			: 'mini'
 				},
 				// who dd543 (from activity section)
@@ -386,7 +386,7 @@ service_time_machine.prototype.build_request_config = function() {
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					debug_label		: 'Who',
-					mode			: 'list',
+					mode			: 'tm',
 					view			: 'mini'
 				},
 				// where dd546 (from activity section)
@@ -399,7 +399,7 @@ service_time_machine.prototype.build_request_config = function() {
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					debug_label		: 'Where',
-					mode			: 'list',
+					mode			: 'tm',
 					view			: 'mini'
 				}
 			]
@@ -432,7 +432,6 @@ service_time_machine.prototype.build_request_config = function() {
 				ddo_map : ddo_map
 			}
 		}]
-		console.log('request_config:', request_config);
 
 
 	return request_config

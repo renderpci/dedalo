@@ -3543,7 +3543,6 @@ class section extends common {
 
 									// ar_subcontext
 										$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
-											dump($element_json->context, ' element_json->context ++ '.to_string($ddo->tipo));
 
 									// empty data case. Generate and add a empty value item
 										if (empty($element_json->data) && $model!=='component_section_id') {
