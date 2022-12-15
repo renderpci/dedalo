@@ -39,7 +39,7 @@ export const service_time_machine = function () {
 
 /**
 * COMMON FUNCTIONS
-* extend element functions from common
+* extend config functions from common
 */
 // prototypes assign
 	service_time_machine.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -61,16 +61,17 @@ service_time_machine.prototype.init = async function(options) {
 	const self = this
 
 	self.model			= options.model || 'service_time_machine'
-	self.tipo			= options.tipo
+	self.tipo			= options.section_tipo
 	self.section_tipo	= options.section_tipo
 	self.section_id		= options.section_id
 	self.mode			= 'tm' // only allowed 'tm'
-	self.view			=  options.view || 'default'
+	self.view			= options.view || 'default'
 	self.lang			= options.lang
 
 	self.caller			= options.caller || null
 
-	self.main_element	= options.main_element || null
+	self.config			= options.config || {}
+
 	self.id_variant		= options.id_variant || self.model
 
 	self.datum			= options.datum || null
@@ -87,6 +88,9 @@ service_time_machine.prototype.init = async function(options) {
 	self.offset			= options.offset || 0
 
 	self.request_config	= await self.build_request_config()
+
+	console.log('self.config:', self.config);
+	console.log('self:', self);
 
 	// status update
 	self.status = 'initiated'
@@ -248,31 +252,107 @@ service_time_machine.prototype.build = async function(autoload=false) {
 * BUILD_REQUEST_CONFIG
 * Build a new service_time_machine custom request config based on caller requirements
 * Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
-* Data for this elements is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
+* Data for this config is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
 * @return object context
 */
 service_time_machine.prototype.build_request_config = function() {
 
 	const self = this
 
-	// main_element
-		const main_element = self.main_element
-			? self.main_element
-			: null
+	// config. config is an object with basic component/section definitions and preferences (model, tipo, section_tipo, section_id, lang)
+		const config = self.config
+		if (!config) {
+			console.error('Error. config is mandatory');
+			return null
+		}
 
-		const section_tipo		= self.section_tipo
-		const section_id		= self.section_id
-		const lang				= main_element
-			? main_element.lang
-			: page_globals.dedalo_data_nolan
+	// config short vars
+		const model				= config.model
+		const tipo				= config.tipo
+		const lang				= config.lang || page_globals.dedalo_data_nolan
+		const config_ddo_map	= config.ddo_map || []
+		const config_sqo		= config.sqo || null
+		console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>> config:', config);
 
-	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
-	// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
-		const ddo_map = main_element && main_element.model==='section'
-			? [] // em
-			: [
-				//  matrix id . tm info -> Id
+	// general vars
+		const section_tipo	= self.section_tipo
+		const section_id	= self.section_id
+
+	// sqo
+		// common base sqo
+		const sqo = config_sqo
+			? config_sqo
+			: {
+				id				: 'tmp',
+				mode			: 'tm',
+				section_tipo	: [{ tipo : section_tipo }],
+				limit			: self.limit,
+				offset			: 0,
+				order			: [{
+					direction	: 'DESC',
+					path		: [{ component_tipo : 'id' }]
+				}]
+			  }
+		// custom sqo modifier based on config model
+		if (!config_sqo) {
+			switch (model) {
+
+				case 'section':
+
+					// section case. Usually from Tool Time machine listing deleted sections
+
+					// sqo. filter
+						sqo.parsed = true,
+						sqo.filter = {
+							and : [
+								{
+									q_parsed	: "\'deleted\'",
+									operator	: "=",
+									format		: "column",
+									column_name	: "state",
+									path		: [{ section_tipo : section_tipo }]
+								}
+							]
+						}
+					break;
+
+				case 'dd_grid':
+
+					// time machine list case. Usually from inspector listing section changes history
+
+					// sqo. filter_by_locators
+						sqo.filter_by_locators = [{
+							section_tipo	: section_tipo,
+							section_id		: section_id
+							// removed because limit components by lang
+							// lang			: lang // (!) used only in time machine to filter by column lang
+						}]
+					break;
+
+				default:
+
+					// component case. Usually from tool or inspector component history
+
+					// sqo. filter_by_locators
+						sqo.filter_by_locators = [{
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							tipo			: tipo, // (!) used only in time machine to filter by column tipo
+							lang			: lang // (!) used only in time machine to filter by column lang
+						}]
+					break;
+			}
+		}//end if (!config_sqo)
+
+	// ddo_map
+		const ddo_map = []
+
+		// default_ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
+			// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
+			const default_ddo_map = [
+				//  matrix_id . tm info -> Id
 				{
+					id				: 'matrix_id',
 					tipo			: 'dd1573',
 					type			: 'component',
 					typo			: 'ddo',
@@ -285,6 +365,7 @@ service_time_machine.prototype.build_request_config = function() {
 				},
 				// when dd547 (from activity section)
 				{
+					id				: 'when',
 					tipo			: 'dd547',
 					type			: 'component',
 					typo			: 'ddo',
@@ -297,6 +378,7 @@ service_time_machine.prototype.build_request_config = function() {
 				},
 				// who dd543 (from activity section)
 				{
+					id				: 'who',
 					tipo			: 'dd543',
 					type			: 'component',
 					typo			: 'ddo',
@@ -309,6 +391,7 @@ service_time_machine.prototype.build_request_config = function() {
 				},
 				// where dd546 (from activity section)
 				{
+					id				: 'where',
 					tipo			: 'dd546',
 					type			: 'component',
 					typo			: 'ddo',
@@ -319,191 +402,37 @@ service_time_machine.prototype.build_request_config = function() {
 					mode			: 'list',
 					view			: 'mini'
 				}
-			  ]
+			]
+			// add defaults
+			ddo_map.push(...default_ddo_map)
 
-	// sqo
-		const sqo = {
-			id					: 'tmp',
-			mode				: 'tm',
-			section_tipo		: [{tipo:section_tipo}],
-			limit				: self.limit,
-			offset				: 0,
-			order				: [{
-				direction	: 'DESC',
-				path		: [{component_tipo : 'id'}]
-			}]
-		}
+		// config_ddo_map. Additional ddo array
+			if (config_ddo_map) {
+				const config_ddo_map_length = config_ddo_map.length
+				for (let i = 0; i < config_ddo_map_length; i++) {
 
-	// component
-	// add itself to the ddo_map when the caller set the main_element and set the component show if exists (portals) to ddo_map
-		if(main_element) {
+					const item = config_ddo_map[i]
 
-			if (main_element.model==='section') {
-
-				sqo.parsed = true,
-				sqo.filter = {
-					and : [
-						{
-							q_parsed		: "\'deleted\'",
-							operator		: "=",
-							format			: "column",
-							column_name		: "state",
-							path			: [
-								{
-									section_tipo	: section_tipo
-								}
-							]
+					// safe parent check
+						if (item.parent!==section_tipo) {
+							console.log('Fixed wrong ddo parent from:', config_ddo_map[i].parent, ' to ', section_tipo);
+							item.parent = section_tipo
 						}
-					]
+
+					ddo_map.push(item)
 				}
-
-			}else{
-
-				ddo_map.push({
-					tipo			: main_element.tipo,
-					type			: 'component',
-					typo			: 'ddo',
-					section_tipo	: section_tipo,
-					model			: main_element.model,
-					parent			: section_tipo,
-					label			: main_element.label,
-					mode			: 'list',
-					view			: 'mini'
-				})
-
-				// filter_by_locators
-					sqo.filter_by_locators = [{
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-						tipo			: main_element.tipo, // (!) used only in time machine to filter by column tipo
-						lang			: lang // (!) used only in time machine to filter by column lang
-					}]
-
-				// filter
-					// sqo.parsed = true,
-					// sqo.filter = {
-					// 	'$and' : [
-					// 		{
-					// 			q_parsed	: `\'${section_tipo}\'`,
-					// 			operator	: "=",
-					// 			path		: [{}],
-					// 			format		: 'column',
-					// 			column_name	: 'section_tipo'
-					// 		},
-					// 		{
-					// 			q_parsed	: `${section_id}`,
-					// 			operator	: "=",
-					// 			path		: [{}],
-					// 			format		: 'column',
-					// 			column_name	: 'section_id'
-					// 		},
-					// 		{
-					// 			q_parsed	: `\'${section_tipo}\'`,
-					// 			operator	: "!=",
-					// 			path		: [{}],
-					// 			format		: 'column',
-					// 			column_name	: 'tipo'
-					// 		}
-					// 	]
-					// }
-
-			}//end if (main_element.model==='section')
-
-			// main_element show . From rqo_config_show
-				const element_show = main_element.rqo_config && main_element.rqo_config.show && main_element.rqo_config.show.ddo_map
-					? clone(main_element.rqo_config.show.ddo_map)
-					: null
-				if (element_show) {
-					for (let i = 0; i < element_show.length; i++) {
-
-						const item = element_show[i]
-							  item.mode = 'list'
-							  item.view = 'mini'
-
-						// item.section_tipo = Array.isArray(item.section_tipo)
-						// 	? item.section_tipo[0]
-						// 	: item.section_tipo
-						// item.section_tipo = main_element.section_tipo
-
-						// item.parent	= item.section_tipo
-						item.type	= 'component'
-						item.typo	= 'ddo'
-
-						ddo_map.push(item)
-					}
-					// console.log('ddo_map:', ddo_map);
-				}
-		}else{
-
-			// fallback (time machine list case) tm info -> Value
-				// ddo_map.push({
-				// 	tipo			: 'dd1574', // generic tm info ontology item 'Value'
-				// 	type			: 'component',
-				// 	typo			: 'ddo',
-				// 	model			: 'component_input_text',
-				// 	section_tipo	: section_tipo,
-				// 	parent			: section_tipo,
-				// 	debug_label		: 'Value',
-				// 	mode			: 'list',
-				// 	view			: 'mini'
-				// })
-			ddo_map.push({
-				tipo			: 'dd1574', // generic tm info ontology item 'Value'
-				type			: 'dd_grid',
-				typo			: 'ddo',
-				model			: 'dd_grid', // (!) changed to dd_grid to allow identification
-				section_tipo	: section_tipo,
-				parent			: section_tipo,
-				debug_label		: 'Value',
-				mode			: 'list',
-				view			: 'mini'
-			})
-
-			sqo.filter_by_locators = [{
-				section_tipo	: section_tipo,
-				section_id		: section_id
-				// removed because limit components by lang
-				// lang			: lang // (!) used only in time machine to filter by column lang
-			}]
-
-			// filter
-				// sqo.parsed = true,
-				// sqo.filter = {
-				// 	'$and' : [
-				// 		{
-				// 			q_parsed	: `\'${section_tipo}\'`,
-				// 			operator	: "=",
-				// 			path		: [{}],
-				// 			format		: 'column',
-				// 			column_name	: 'section_tipo'
-				// 		},
-				// 		{
-				// 			q_parsed	: `${section_id}`,
-				// 			operator	: "=",
-				// 			path		: [{}],
-				// 			format		: 'column',
-				// 			column_name	: 'section_id'
-				// 		},
-				// 		{
-				// 			q_parsed	: `\'${section_tipo}\'`,
-				// 			operator	: "!=",
-				// 			path		: [{}],
-				// 			format		: 'column',
-				// 			column_name	: 'tipo'
-				// 		}
-				// 	]
-				// }
-		}
+			}
 
 	// request_config
 		const request_config = [{
 			api_engine	: 'dedalo',
-			// source	: source,
+			type		: 'main',
 			sqo			: sqo,
 			show		: {
 				ddo_map : ddo_map
 			}
 		}]
+		console.log('request_config:', request_config);
 
 
 	return request_config

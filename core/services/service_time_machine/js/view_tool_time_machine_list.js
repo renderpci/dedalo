@@ -8,9 +8,9 @@
 	import {get_ar_instances} from '../../../../core/section/js/section.js'
 	import {set_element_css} from '../../../../core/page/js/css.js'
 	import {event_manager} from '../../../../core/common/js/event_manager.js'
-	// import {
-	// 	rebuild_columns_map
-	// } from './render_service_time_machine_list.js'
+	import {
+		get_content_data
+	} from './render_service_time_machine_list.js'
 
 
 
@@ -74,15 +74,16 @@ view_tool_time_machine_list.render = async function(self, options) {
 		})
 		// flat columns create a sequence of grid widths taking care of sub-column space
 		// like 1fr 1fr 1fr 3fr 1fr
-		// const items				= ui.flat_column_items(columns_map)
-		// const template_columns	= items.join(' ')
-		const template_columns	= 'auto 1fr 1fr 1fr 1fr 33%';
+		const items				= ui.flat_column_items(columns_map)
+		const template_columns	= self.config.template_columns
+			? self.config.template_columns
+			: items.join(' ')
 		const css_object = {
 			'.list_body' : {
 				'grid-template-columns': template_columns
 			}
 		}
-		const selector = `${self.section_tipo}_${self.tipo}.${self.tipo}.${self.mode}`
+		const selector = `${self.config.id}.${self.section_tipo+'_'+self.tipo}.view_${self.view}`
 		set_element_css(selector, css_object)
 
 	// list_header_node. Create and append if ar_instances is not empty
@@ -97,7 +98,7 @@ view_tool_time_machine_list.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `wrapper_${self.model} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.mode} view_${self.view}`
+			class_name		: `wrapper_${self.model} ${self.model} ${self.config.id} ${self.section_tipo+'_'+self.tipo} view_${self.view}`
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
@@ -119,50 +120,50 @@ view_tool_time_machine_list.render = async function(self, options) {
 * 	service_time_machine instance
 * @return DOM node content_data
 */
-const get_content_data = async function(ar_section_record, self) {
+	// const get_content_data = async function(ar_section_record, self) {
 
-	const fragment = new DocumentFragment()
+	// 	const fragment = new DocumentFragment()
 
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length===0) {
+	// 	// add all section_record rendered nodes
+	// 		const ar_section_record_length = ar_section_record.length
+	// 		if (ar_section_record_length===0) {
 
-			// no records found case
-			const no_records_found_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'no_records',
-				inner_html		: get_label.no_records || 'No records found'
-			})
-			fragment.appendChild(no_records_found_node)
+	// 			// no records found case
+	// 			const no_records_found_node = ui.create_dom_element({
+	// 				element_type	: 'div',
+	// 				class_name		: 'no_records',
+	// 				inner_html		: get_label.no_records || 'No records found'
+	// 			})
+	// 			fragment.appendChild(no_records_found_node)
 
-		}else{
-			// rows
+	// 		}else{
+	// 			// rows
 
-			// parallel render
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render()
-					ar_promises.push(render_promise_node)
-				}
+	// 			// parallel render
+	// 				const ar_promises = []
+	// 				for (let i = 0; i < ar_section_record_length; i++) {
+	// 					const render_promise_node = ar_section_record[i].render()
+	// 					ar_promises.push(render_promise_node)
+	// 				}
 
-			// once rendered, append it preserving the order
-				await Promise.all(ar_promises)
-				.then(function(section_record_nodes) {
-					for (let i = 0; i < ar_section_record_length; i++) {
-						const section_record_node = section_record_nodes[i]
-						fragment.appendChild(section_record_node)
-					}
-				});
-		}
+	// 			// once rendered, append it preserving the order
+	// 				await Promise.all(ar_promises)
+	// 				.then(function(section_record_nodes) {
+	// 					for (let i = 0; i < ar_section_record_length; i++) {
+	// 						const section_record_node = section_record_nodes[i]
+	// 						fragment.appendChild(section_record_node)
+	// 					}
+	// 				});
+	// 		}
 
-	// content_data
-		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
-			  content_data.appendChild(fragment)
+	// 	// content_data
+	// 		const content_data = document.createElement('div')
+	// 			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
+	// 			  content_data.appendChild(fragment)
 
 
-	return content_data
-}//end get_content_data
+	// 	return content_data
+	// }//end get_content_data
 
 
 
@@ -186,29 +187,39 @@ const rebuild_columns_map = async function(self) {
 	// columns base
 		const base_columns_map = await self.columns_map
 
+	// ignore_columns
+		const ignore_columns = (self.config.ignore_columns
+			? self.config.ignore_columns
+			: [
+				'dd1573', // matrix_id
+				'dd547', // when
+				'dd543', // who
+				'dd546' // where
+			  ])
+		// map names to tipo (columns already parse id for another uses)
+		.map(el => {
+			switch (el) {
+				case 'matrix_id': return 'dd1573';
+				case 'when'		: return 'dd547';
+				case 'who'		: return 'dd543';
+				case 'where'	: return 'dd546';
+				default			: return el;
+			}
+		})
+
 	// modify list and labels
 		const base_columns_map_length = base_columns_map.length
 		for (let i = 0; i < base_columns_map_length; i++) {
 			const el = base_columns_map[i]
 
-			// des
-				// // ignore matrix_id column
-				// 	if (el.tipo==='dd1573') {
-				// 		continue;
-				// 	}
-
-				// // short label (for small width columns)
-				// 	switch (el.tipo) {
-				// 		case 'dd201':
-				// 			el.label = 'Date'
-				// 			break;
-				// 		case 'dd197':
-				// 			el.label = 'User'
-				// 			break;
-				// 	}
+			// ignore some columns
+				if (ignore_columns.includes(el.tipo)) {
+					continue;
+				}
 
 			columns_map.push(el)
 		}
+
 
 	return columns_map
 }//end rebuild_columns_map
