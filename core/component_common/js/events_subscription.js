@@ -34,7 +34,35 @@ export const events_subscription = function(self) {
 					})
 				}, 150)
 			}
-		}
+		}//end if (self.mode==='search')
+
+	// update value
+		if (self.mode!=='tm') {
+			// sync data on similar components (same id_base)
+			// Subscription to the changes: if the DOM input value was changed,
+			// observers DOM elements will be changed own value with the observable value
+			self.events_tokens.push(
+				event_manager.subscribe('update_value_'+self.id_base, fn_update_value)
+			)
+			function fn_update_value (options) {
+
+				if(options.caller.id === self.id){
+					return
+				}
+
+				const changed_data_item = options.changed_data
+
+				self.update_data_value(changed_data_item)
+				self.refresh({
+					build_autoload	: self.mode==='edit'
+						? false
+						: true,
+					render_level	: self.mode==='edit'
+						? 'content'
+						: 'full'
+				})
+			}
+		}//end if (self.mode!=='tm')
 
 
 	return true

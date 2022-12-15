@@ -149,7 +149,7 @@ export const ui = {
 					]
 					if (view) {ar_css.push('view_'+view)}
 					if (mode==='search') ar_css.push('tooltip_toggle')
-					if (mode==='tm') ar_css.push('edit')
+					// if (mode==='tm') ar_css.push('edit')
 					wrapper.classList.add(...ar_css)
 
 				// legacy CSS
@@ -191,7 +191,7 @@ export const ui = {
 						// 		}
 						// }
 						if (instance.context.css) {
-							const selector = `${section_tipo}_${tipo}.${tipo}.edit`
+							const selector = `${section_tipo}_${tipo}.${tipo}.${mode}`
 							set_element_css(selector, element_css)
 						}
 					}//end if (model!=='component_filter')
