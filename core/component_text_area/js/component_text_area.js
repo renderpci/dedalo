@@ -246,6 +246,11 @@ component_text_area.prototype.init = async function(options) {
 		// self.service_text_editor	= service_tinymce
 		self.service_text_editor	= service_ckeditor
 
+	// auto_init_editor
+		if (options.auto_init_editor) {
+			self.auto_init_editor = options.auto_init_editor
+		}
+
 
 	return common_init
 }//end init
@@ -956,8 +961,6 @@ component_text_area.prototype.updated_layer_data = function(options) {
 		// insert the new note tag in the caret position of the text_editor
 		const inserted_tag = self.text_editor[key].set_content(geo_view_tag)
 	}
-
-
 }//end updated_layer_data
 
 
