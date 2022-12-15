@@ -18,33 +18,39 @@
 */
 export const events_subscription = function() {
 
-	const self = this
+	// const self = this
 
 	// update value
-		// sync data on similar components (same id_base)
-		// Subscription to the changes: if the DOM input value was changed,
-		// observers DOM elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('update_value_'+self.id_base, fn_update_value)
-		)
-		function fn_update_value (options) {
+		// // sync data on similar components (same id_base)
+		// // Subscription to the changes: if the DOM input value was changed,
+		// // observers DOM elements will be changed own value with the observable value
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('update_value_'+self.id_base, fn_update_value)
+		// )
+		// function fn_update_value (options) {
 
-			if(options.caller.id === self.id){
-				return
-			}
+		// 	if (self.mode==='tm') {
+		// 		return
+		// 	}
+		// 	console.log('self.mode:', self.mode);
+		// 	console.log('self:', self);
 
-			const changed_data_item = options.changed_data
+		// 	if(options.caller.id === self.id){
+		// 		return
+		// 	}
 
-			self.update_data_value(changed_data_item)
-			self.refresh({
-				build_autoload	: self.mode==='edit'
-					? false
-					: true,
-				render_level	: self.mode==='edit'
-					? 'content'
-					: 'full'
-			})
-		}
+		// 	const changed_data_item = options.changed_data
+
+		// 	self.update_data_value(changed_data_item)
+		// 	self.refresh({
+		// 		build_autoload	: self.mode==='edit'
+		// 			? false
+		// 			: true,
+		// 		render_level	: self.mode==='edit'
+		// 			? 'content'
+		// 			: 'full'
+		// 	})
+		// }
 
 	// activate. Nothing to do. Only as example of manage
 		// self.events_tokens.push(
