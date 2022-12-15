@@ -505,7 +505,10 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 
 	// component_data
 		const component_data = self.datum.data.find(function(el) {
-			if (el.tipo===ddo.tipo && parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo) {
+			if (el.tipo===ddo.tipo && // match tipo
+				parseInt(el.section_id)===parseInt(section_id) && // match section_id
+				el.section_tipo===section_tipo // match section_tipo
+				) {
 
 				if (el.matrix_id) {
 					// console.error("match matrix_id:", el.matrix_id);
