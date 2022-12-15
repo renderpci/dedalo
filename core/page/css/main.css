@@ -1,4 +1,167 @@
-
+/**
+* main
+*
+* Include all core dedalo css files
+*/
+html,
+body,
+div,
+span,
+applet,
+object,
+iframe,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+a,
+abbr,
+acronym,
+address,
+big,
+cite,
+code,
+del,
+dfn,
+em,
+img,
+ins,
+kbd,
+q,
+s,
+samp,
+small,
+strike,
+strong,
+sub,
+sup,
+tt,
+var,
+b,
+u,
+i,
+center,
+dl,
+dt,
+dd,
+ol,
+ul,
+li,
+fieldset,
+form,
+label,
+legend,
+table,
+caption,
+tbody,
+tfoot,
+thead,
+tr,
+th,
+td,
+article,
+aside,
+canvas,
+details,
+embed,
+figure,
+figcaption,
+footer,
+header,
+hgroup,
+menu,
+nav,
+output,
+ruby,
+section,
+summary,
+time,
+mark,
+audio,
+video {
+  border: 0px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 100%;
+  margin: 0px;
+  padding: 0px;
+  vertical-align: baseline;
+  z-index: unset;
+}
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+menu,
+nav,
+section {
+  display: block;
+}
+html {
+  box-sizing: border-box;
+}
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+body {
+  line-height: 1;
+}
+ol,
+ul {
+  list-style: none;
+  margin: 0px;
+  padding: 0px;
+}
+blockquote,
+q {
+  quotes: none;
+}
+blockquote:before,
+q:before,
+blockquote:after,
+q:after {
+  content: '';
+  content: none;
+}
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+body {
+  -webkit-text-size-adjust: none;
+}
+mark {
+  background-color: transparent;
+  color: inherit;
+  font-style: italic;
+  opacity: 0.7;
+}
+input::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+pre {
+  background-color: rgba(240, 248, 255, 0.9);
+  font-family: monospace;
+  padding: 1em;
+  z-index: 99999;
+  white-space: break-spaces;
+}
+object {
+  pointer-events: none;
+}
+/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
 /* Document
 	   ========================================================================== */
 /**
@@ -6035,7 +6198,7 @@ dd-modal .footer.distribute {
 .tool_header.header > .button.close {
   display: none;
 }
-.autocomplete_search_container {
+.autocomplete_search_wrapper {
   background-color: #f78a1c;
   border: 0px;
   border-bottom-left-radius: 5px;
@@ -6050,33 +6213,33 @@ dd-modal .footer.distribute {
   min-width: 20rem;
   z-index: 0;
 }
-.autocomplete_search_container > .options_hidden {
+.autocomplete_search_wrapper > .options_hidden {
   display: none;
 }
-.autocomplete_search_container > .options_hidden > .source_selector {
+.autocomplete_search_wrapper > .options_hidden > .source_selector {
   background-color: #b9b9b9;
   color: #ffff;
   display: flex;
   line-height: 1.25em;
 }
-.autocomplete_search_container > .options_hidden > .source_selector > * {
+.autocomplete_search_wrapper > .options_hidden > .source_selector > * {
   margin: 0.25em;
   padding: 0.5em;
 }
-.autocomplete_search_container > .options_hidden > .source_selector select {
+.autocomplete_search_wrapper > .options_hidden > .source_selector select {
   -webkit-appearance: caret;
   background-color: transparent;
   color: #ffff;
   outline: none;
 }
-.autocomplete_search_container > .options_hidden ul.filter_node {
+.autocomplete_search_wrapper > .options_hidden ul.filter_node {
   background-color: #b9b9b9;
   border-bottom: 1px solid #ffffff;
   display: table;
   padding: 0.5em;
   width: 100%;
 }
-.autocomplete_search_container > .options_hidden ul.filter_node > li {
+.autocomplete_search_wrapper > .options_hidden ul.filter_node > li {
   color: white;
   direction: rtl;
   display: flex;
@@ -6088,34 +6251,34 @@ dd-modal .footer.distribute {
   white-space: nowrap;
   width: 33.2%;
 }
-.autocomplete_search_container > .options_hidden ul.filter_node > li.all_selector {
+.autocomplete_search_wrapper > .options_hidden ul.filter_node > li.all_selector {
   width: 100%;
 }
-.autocomplete_search_container > .options_hidden ul.filter_node > li.all_selector label {
+.autocomplete_search_wrapper > .options_hidden ul.filter_node > li.all_selector label {
   font-weight: bold;
 }
-.autocomplete_search_container > .options_hidden ul.filter_node > li label {
+.autocomplete_search_wrapper > .options_hidden ul.filter_node > li label {
   line-height: 0.75em;
   padding-left: 0.5em;
   padding-right: 0.5em;
 }
-.autocomplete_search_container > .options_hidden > div.inputs_list {
+.autocomplete_search_wrapper > .options_hidden > div.inputs_list {
   background-color: #f0f0f0;
   padding: 0.5em;
 }
-.autocomplete_search_container > .options_hidden > div.search_operators_div {
+.autocomplete_search_wrapper > .options_hidden > div.search_operators_div {
   background-color: #f0f0f0;
   padding: 0.25em;
   padding-left: 0.5em;
   display: flex;
 }
-.autocomplete_search_container > .options_hidden > div.search_operators_div > * {
+.autocomplete_search_wrapper > .options_hidden > div.search_operators_div > * {
   height: 1.5em;
   line-height: 1.5em;
   padding-right: 0.5em;
   width: auto;
 }
-.autocomplete_search_container > .button_options {
+.autocomplete_search_wrapper > .button_options {
   margin: 0.5em;
   margin-right: 0.75em;
   margin-top: 1em;
@@ -6124,10 +6287,10 @@ dd-modal .footer.distribute {
   top: 0px;
   background-color: white;
 }
-.autocomplete_search_container > .autocomplete_data {
+.autocomplete_search_wrapper > .autocomplete_data {
   background-color: #f0f0f0;
 }
-.autocomplete_search_container > input.autocomplete_input {
+.autocomplete_search_wrapper > input.autocomplete_input {
   background: #ffffff url('../../themes/default/icons/search.svg');
   background-position: bottom 6px right 10px;
   background-repeat: no-repeat;
@@ -6136,27 +6299,27 @@ dd-modal .footer.distribute {
   width: calc(100% - 3.25em);
   outline: 1px solid #ffffff;
 }
-.autocomplete_search_container > input.autocomplete_input:focus {
+.autocomplete_search_wrapper > input.autocomplete_input:focus {
   box-shadow: none;
 }
-.autocomplete_search_container > .visible {
+.autocomplete_search_wrapper > .visible {
   display: block;
 }
-.autocomplete_search_container > ul.autocomplete_data > li {
+.autocomplete_search_wrapper > ul.autocomplete_data > li {
   border-top: 0.07em solid #cdcdcd;
   cursor: pointer;
   padding: 0.5em;
 }
-.autocomplete_search_container > ul.autocomplete_data > li:first-child {
+.autocomplete_search_wrapper > ul.autocomplete_data > li:first-child {
   border-top: 0px;
 }
-.autocomplete_search_container > ul.autocomplete_data > li.selected {
+.autocomplete_search_wrapper > ul.autocomplete_data > li.selected {
   background-color: #d7d7d7;
 }
-.autocomplete_search_container > ul.autocomplete_data > li:active {
+.autocomplete_search_wrapper > ul.autocomplete_data > li:active {
   background-color: #c56607;
 }
-.autocomplete_search_container > ul.autocomplete_data > li > span {
+.autocomplete_search_wrapper > ul.autocomplete_data > li > span {
   padding-right: 0.5em;
   pointer-events: none;
 }
