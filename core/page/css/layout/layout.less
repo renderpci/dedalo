@@ -358,7 +358,7 @@
 		.section_record &,
 		.wrapper_tool &,
 		.search_group &,
-		dd-modal .content &,
+		dd-modal &, // dd-modal .content &, //  dd-modal .content
 		.project_container & { // , .page &
 			// color: @color_grey_dark; // #9e9e9e;
 			// background-color: rgba(251, 251, 251, 0.70); // #FBFBFB;
@@ -658,6 +658,16 @@
 				}
 			}
 
+			&.content_no_buttons {
+				padding: 0.5rem;
+				min-width: 34rem;
+				min-height: 20rem;
+
+				>.wrapper_component {
+					margin: 1rem;
+				}
+			}
+
 			&.fill_vertical {
 				height: 70vh;
 			}
@@ -694,6 +704,12 @@
 				padding: 1rem;
 				padding-top: 1.5rem;
 				padding-bottom: 1.5rem;
+			}
+
+			&.distribute {
+				display: flex;
+				justify-content: space-between;
+				padding-top: 0rem;
 			}
 		}
 	}//end dd-modal
