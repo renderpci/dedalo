@@ -179,6 +179,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 						id					: 'tool_tm',
 						model				: self.main_element.model,
 						tipo				: self.main_element.tipo,
+						lang				: self.main_element.lang,
 						template_columns	: template_columns,
 						ignore_columns		: ignore_columns,
 						ddo_map				: ddo_map
