@@ -1209,34 +1209,35 @@ export const load_component_history = function(self, component) {
 					id					: 'component_history_' + component.tipo,
 					model				: component.model, // used to create the filter
 					tipo				: component.tipo, // used to create the filter
-					lang				: component.lang,
+					lang				: component.lang, // used to create the filter
 					// template_columns	: '1fr 1fr 2fr 2fr',
 					ignore_columns		: [
 						'matrix_id', // matrix_id dd1573
 						'where' // where dd546
 					],
-					ddo_map				: [{
-						tipo			: component.tipo,
-						type			: 'component',
-						typo			: 'ddo',
-						model			: component.model,
-						section_tipo	: self.section_tipo,
-						parent			: self.section_tipo,
-						label			: component.label,
-						mode			: 'list',
-						view			: 'text'
-					},
-					{	// notes component
-						tipo			: 'rsc329',
-						type			: 'component',
-						typo			: 'ddo',
-						model			: 'component_text_area',
-						section_tipo	: 'rsc832',
-						parent			: self.section_tipo,
-						label			: 'Annotation',
-						mode			: 'list',
-						view			: 'note'
-					}
+					ddo_map				: [
+						{ // selected component
+							typo			: 'ddo',
+							type			: 'component',
+							model			: component.model,
+							tipo			: component.tipo,
+							section_tipo	: self.section_tipo,
+							parent			: self.section_tipo,
+							label			: component.label,
+							mode			: 'tm',
+							view			: 'text'
+						},
+						{	// notes component
+							typo			: 'ddo',
+							type			: 'component',
+							model			: 'component_text_area',
+							tipo			: 'rsc329',
+							section_tipo	: 'rsc832',
+							parent			: self.section_tipo,
+							label			: 'Annotation',
+							mode			: 'list',
+							view			: 'note'
+						}
 					]
 				}
 			})
