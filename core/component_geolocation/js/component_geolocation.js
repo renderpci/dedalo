@@ -8,6 +8,8 @@
 	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
+
 	// import langs from '../../common/js/lang.json' assert { type: "json" };
 	import {render_edit_component_geolocation, render_popup_text, render_color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
@@ -989,13 +991,16 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		// 	: {}
 
 	// publish the change to used by component_text_area from properties like 'hierarchy42'
-		event_manager.publish('updated_layer_data_'+ self.id_base, {
+		event_manager.publish(
+			'updated_layer_data_'+ self.id_base,
+			{
 				layer: {
 					type		: 'geo',
 					layer_id	: layer_id
 				},
 				caller: self
-			})
+			}
+		)
 
 		self.current_value[key].lib_data = self.ar_layer_loaded
 
