@@ -1165,32 +1165,27 @@ const open_ontology_window = function(tipo, custom_url) {
 		load_component_history(component)
 	}
 
-
-
-
-	// // track collapse toggle state of content
-	// 	ui.collapse_toggle_track({
-	// 		toggler				: component_history_head,
-	// 		container			: component_history_body,
-	// 		collapsed_id		: 'inspector_component_history',
-	// 		collapse_callback	: unload_component_history,
-	// 		expose_callback		: load_component_history,
-	// 		default_state		: 'closed'
-	// 	})
-
 		// (!) Note that load_component_history is called on each section pagination, whereby must be generated
 		// even if user close and re-open the component_history inspector tab
 		async function load_component_history(component) {
 
 			// create and render a component_history instance
 				const component_history	= await instances.get_instance({
-					model			: 'time_machine_list',
+					model			: 'service_time_machine',
 					tipo			: component.tipo,
 					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					mode			: ''
+					section_id		: self.caller.section_id,
+					view			: 'mini',
+					id_variant		: self.model,
+					caller			: self,
+					main_element 	: {
+						tipo			: component.tipo,
+						section_tipo	: self.section_tipo,
+						section_id		: self.caller.section_id,
+						model			: model
+					}
 				})
-				await component_history.build()
+				await component_history.build(true)
 				const component_history_wrap = await component_history.render()
 
 			// remove previous node if exists pointer
