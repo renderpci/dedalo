@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
-	import {common} from '../../common/js/common.js'
+	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {tr} from '../../common/js/tr.js'
 	import {ui} from '../../common/js/ui.js'
@@ -155,13 +155,19 @@ component_text_area.prototype.init = async function(options) {
 			function fn_show_button_create_fragment(options) {
 				// dd_console('--> show_button_create_fragment options', 'DEBUG', options)
 
-				if (self.view_properties.read_only===true) {
-					return
-				}
-
 				// options
 					const selection	= options.selection
 					const caller	= options.caller
+
+				// read_only case
+					if (self.view_properties.read_only===true) {
+						return
+					}
+
+				// called by another text_area case. Sample: component history notes
+					if (caller && caller.model===self.model) {
+						return
+					}
 
 				// short vars
 					const key						= 0; // key (only one editor is available but component could support multiple)
@@ -425,6 +431,8 @@ component_text_area.prototype.save_editor = function(key=0) {
 * @return promise save_promise
 */
 component_text_area.prototype.save = async function(changed_data = undefined) {
+
+	const self = this
 
 	// change data could be sent by the caller, if not is sent use the change_value that will be set by the change event
 	const safe_changed_data = changed_data
@@ -962,6 +970,90 @@ component_text_area.prototype.updated_layer_data = function(options) {
 		const inserted_tag = self.text_editor[key].set_content(geo_view_tag)
 	}
 }//end updated_layer_data
+
+
+
+/**
+* ADD_COMPONENT_HISTORY_NOTE
+* Creates a new record in matrix_notes and set 'code' field value with received
+* matrix_id from time_machine
+* @param object options
+* 	{
+*		matrix_id			: int matrix_id,
+* 		notes_section_tipo	: string notes_section_tipo
+*   }
+* @return string|null new_section_id
+*/
+component_text_area.prototype.add_component_history_note = async function(options) {
+
+	// options
+		const notes_section_tipo	= options.notes_section_tipo
+		const matrix_id				= options.matrix_id
+
+	// check
+		if (!matrix_id) {
+			console.error('Undefined matrix_id. options:', options);
+			return
+		}
+
+	// create new notes record
+		const rqo = {
+			action	: 'create',
+			source	: {
+				section_tipo : notes_section_tipo
+			}
+		}
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+		if (!api_response.result || api_response.result<1) {
+			console.error('Error on create matrix note record. api_response:', api_response);
+			return null
+		}
+		const new_section_id = api_response.result || null
+
+	// set code (component_number) value wit matrix_id
+		const code_tipo	= 'rsc835'
+		const source	= create_source({ // source object
+			type			: 'component',
+			action			: 'save',
+			model			: null,
+			tipo			: code_tipo,
+			section_tipo	: notes_section_tipo,
+			section_id		: new_section_id,
+			mode			: 'list',
+			view			: null,
+			lang			: page_globals.dedalo_data_nolan
+		}, null)
+		const code_rqo = {
+			action	: 'save',
+			source	: source,
+			data : {
+				section_id			: new_section_id,
+				section_tipo		: notes_section_tipo,
+				tipo				: code_tipo,
+				lang				: page_globals.dedalo_data_nolan,
+				// from_component_tipo	: code_tipo,
+				value				: null,
+				changed_data : [{
+					action	: 'insert',
+					key		: 0,
+					value	: matrix_id
+				}]
+			}
+		}
+		const code_api_response = await data_manager.request({
+			body : code_rqo
+		})
+		if (!code_api_response.result || code_api_response.result<1) {
+			console.error('Error on set matrix note code. code_api_response:', code_api_response);
+			return null
+		}
+		console.log(`Created a new record in ${notes_section_tipo}:`, new_section_id, matrix_id );
+
+
+	return new_section_id
+}//end add_component_history_note
 
 
 

@@ -1158,14 +1158,22 @@ const render_component_history = function(self) {
 
 /**
 * LOAD_COMPONENT_HISTORY
+* Get selected component time_machine history records and notes
+* @param object self
+* 	inspector instance
+* @param object|null component
+* 	component instance
 * @return DOM node component_history_wrap
 */
 export const load_component_history = function(self, component) {
 
-	const container	= self.component_history_container
-
 	// prevent load the component data when component is not selected
 		if(!component){
+			return
+		}
+
+	// prevent to affect modals
+		if (component.section_tipo!==self.section_tipo) {
 			return
 		}
 
@@ -1177,10 +1185,11 @@ export const load_component_history = function(self, component) {
 		// 	? JSON.stringify(component.context.translatable)
 		// 	: 'no'
 
-	// prevent load data when the component_history is collapse
-		const is_open = !container.classList.contains('hide')
+	// container. prevent load data when the component_history is collapse
+		const container	= self.component_history_container
+		const is_open	= container && !container.classList.contains('hide')
 		if (is_open) {
-			load_component_history(component)
+			exec_load_component_history(component)
 		}
 
 	// track collapse toggle state of content
@@ -1195,7 +1204,7 @@ export const load_component_history = function(self, component) {
 
 	// (!) Note that load_component_history is called on each section pagination, whereby must be generated
 	// even if user close and re-open the component_history inspector tab
-	async function load_component_history(component) {
+	async function exec_load_component_history(component) {
 
 		// create and render a component_history instance
 			const service_time_machine	= await instances.get_instance({
@@ -1244,7 +1253,6 @@ export const load_component_history = function(self, component) {
 			await service_time_machine.build(true)
 			const component_history_wrap = await service_time_machine.render()
 
-
 		// remove previous node if exists pointer
 			if (container.component_history_wrap) {
 				container.component_history_wrap.remove()
@@ -1256,7 +1264,7 @@ export const load_component_history = function(self, component) {
 			container.component_history_wrap = component_history_wrap
 
 		return true
-	}
+	}//end exec_load_component_history
 
 
 	return container

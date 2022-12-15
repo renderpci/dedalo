@@ -3283,49 +3283,50 @@ class section extends common {
 										}');
 									$search = search::get_instance($sqo);
 									$result = $search->search();
-									if (!empty($result->ar_records) && !empty($result->ar_records[0])) {
-										$note_section_id	= $result->ar_records[0]->section_id;
-										$note_model			= RecordObj_dd::get_modelo_name_by_tipo($current_ddo_tipo,true);
-										$current_component	= component_common::get_instance(
-											$note_model,
-											$current_ddo_tipo,
-											$note_section_id,
-											'list',
-											$ddo->lang ?? DEDALO_DATA_LANG,
-											$sqo->section_tipo
-										);
 
-										// inject this tipo as related component from_component_tipo
-											$current_component->from_component_tipo	= $current_ddo_tipo;
-											$current_component->from_section_tipo	= $section_tipo;
+									$note_section_id = $result->ar_records[0]->section_id ?? null;
 
-										// permissions. Set to allow all users read
-											$current_component->set_permissions(1);
+								// component
+									$note_model			= RecordObj_dd::get_modelo_name_by_tipo($current_ddo_tipo,true);
+									$current_component	= component_common::get_instance(
+										$note_model,
+										$current_ddo_tipo,
+										$note_section_id,
+										'list',
+										$ddo->lang ?? DEDALO_DATA_LANG,
+										$sqo->section_tipo
+									);
 
-										// get component JSON
-											$get_json_options = new stdClass();
-												$get_json_options->get_context	= false;
-												$get_json_options->get_data		= true;
-											$element_json = $current_component->get_json($get_json_options);
+									// inject this tipo as related component from_component_tipo
+										$current_component->from_component_tipo	= $current_ddo_tipo;
+										$current_component->from_section_tipo	= $section_tipo;
 
-										// edit section_id to match section locator data item
-											$data_item = reset($element_json->data);
-												$data_item->matrix_id = $id;
+									// permissions. Set to allow all users read
+										$current_component->set_permissions(1);
 
-										// attach to current ddo
-											$data_item->from_component_tipo	= $current_ddo_tipo;
-											$data_item->section_id			= $section_id;
-											$data_item->section_tipo		= $section_tipo;
-											// parent properties
-											$data_item->parent_section_tipo	= $sqo->section_tipo;
-											$data_item->parent_section_id	= $note_section_id;
+									// get component JSON
+										$get_json_options = new stdClass();
+											$get_json_options->get_context	= false;
+											$get_json_options->get_data		= true;
+										$element_json = $current_component->get_json($get_json_options);
 
-										$ar_subdata[]		= $data_item;
-										$ar_subcontext[]	= $ddo;
-									}else{
-										// $ar_subdata[]	= null;
-										$ar_subcontext[]	= $ddo;
-									}
+									// edit section_id to match section locator data item
+										$data_item = !empty($element_json->data) && !empty($element_json->data[0])
+											? $element_json->data[0]
+											: $current_component->get_data_item(null);
+										// set matrix_id
+										$data_item->matrix_id = $id;
+
+									// attach to current ddo
+										$data_item->from_component_tipo	= $current_ddo_tipo;
+										$data_item->section_id			= $section_id;
+										$data_item->section_tipo		= $section_tipo;
+										// parent properties
+										$data_item->parent_section_tipo	= $sqo->section_tipo;
+										$data_item->parent_section_id	= $note_section_id;
+
+									$ar_subdata[]		= $data_item;
+									$ar_subcontext[]	= $ddo;
 								break;
 
 							case ($current_ddo_tipo==='dd547'): // When (model: component_date) from activity section
