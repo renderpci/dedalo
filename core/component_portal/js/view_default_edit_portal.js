@@ -66,6 +66,7 @@ view_default_edit_portal.render = async function(self, options) {
 					// self.node.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
 					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.remove('hide')
 				}
+
 			return content_data
 		}
 

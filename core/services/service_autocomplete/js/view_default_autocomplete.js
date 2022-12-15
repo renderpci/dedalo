@@ -32,32 +32,32 @@ view_default_autocomplete.render = async function (self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data(self)
+		const autocomplete_wrapper = get_autocomplete_wrapper(self)
 		if (render_level==='content') {
-			return content_data
+			return autocomplete_wrapper
 		}
 
 	// wrapper
-		const wrapper = self.wrapper
-		wrapper.appendChild(content_data)
-		wrapper.content_data = content_data
+		const component_wrapper = self.component_wrapper
+		component_wrapper.appendChild(autocomplete_wrapper)
+		component_wrapper.autocomplete_wrapper = autocomplete_wrapper
 
-	return wrapper
+	return component_wrapper
 }//end view_default_autocomplete
 
 
 
 /**
-* GET_CONTENT_DATA
+* GET_autocomplete_wrapper
 * Creates the DOM nodes of the service
-* @return DOM node content_data
+* @return DOM node autocomplete_wrapper
 */
-const get_content_data = function(self) {
+const get_autocomplete_wrapper = function(self) {
 
 	// search container
-		const content_data = ui.create_dom_element({
+		const autocomplete_wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'autocomplete_search_container', // css_autocomplete_hi_search_field
+			class_name		: 'autocomplete_search_wrapper', // css_autocomplete_hi_search_field
 			parent			: self.wrapper
 		})
 
@@ -82,16 +82,16 @@ const get_content_data = function(self) {
 				element_type	: 'div',
 				class_name		: 'debug',
 				inner_html		: msg,
-				parent			: content_data
+				parent			: autocomplete_wrapper
 			})
-			return content_data
+			return autocomplete_wrapper
 		}
 
 	// options container
 		const options_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'options_hidden',
-			parent			: content_data
+			parent			: autocomplete_wrapper
 		})
 
 	// source selector (Dédalo, Zenon, etc.)
@@ -112,7 +112,7 @@ const get_content_data = function(self) {
 
 	// search_input
 		const search_input = render_search_input(self)
-		content_data.appendChild(search_input)
+		autocomplete_wrapper.appendChild(search_input)
 
 		// scroll to search input
 			// search_input.addEventListener('focus', function(e){
@@ -124,7 +124,7 @@ const get_content_data = function(self) {
 		const button_options = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button_options button gear',
-			parent			: content_data
+			parent			: autocomplete_wrapper
 		})
 		// add listener to the select
 		button_options.addEventListener('mouseup',function(){
@@ -136,16 +136,16 @@ const get_content_data = function(self) {
 			element_type	: 'ul',
 			id				: self.list_name,
 			class_name		: 'autocomplete_data',
-			parent			: content_data
+			parent			: autocomplete_wrapper
 		})
 
 	// fix main nodes pointers
-		self.content_data	= content_data
-		self.search_input	= search_input
-		self.datalist		= datalist
+		self.autocomplete_wrapper	= autocomplete_wrapper
+		self.search_input			= search_input
+		self.datalist				= datalist
 
 
-	return content_data
+	return autocomplete_wrapper
 }//end render
 
 
