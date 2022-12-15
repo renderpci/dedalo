@@ -582,6 +582,11 @@ const render_inputs_list = function(self) {
 		// check if the current ddo is a semantic node and the caller it's not a component_semantic_node,
 		//if the caller is a portal the semantic node it's necessary remove it, because the semantic node has his own sqo (it's outside of the portal sqo )
 		if(current_ddo.model==='component_semantic_node' && self.caller.model !== current_ddo.model) continue;
+
+		// check if the current ddo is a dataframe node,
+		//if the caller is a portal the dataframe it's necessary remove it, because dataframes nodes has his own sqo (it's outside of the portal sqo )
+		if(current_ddo.is_dataframe && current_ddo.is_dataframe===true ) continue;
+
 		// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo is the component
 		const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
 		if(current_ar_valid_ddo.length !== 0) continue
