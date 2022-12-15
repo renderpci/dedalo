@@ -497,7 +497,9 @@ component_common.prototype.save = async function(changed_data) {
 		const response = await send_data()
 
 		// remove loading class on finish
-			self.node.classList.remove('loading')
+			if (self.node) {
+				self.node.classList.remove('loading')
+			}
 
 	// check result for errors
 	// result expected is current section_id. False is returned if a problem found

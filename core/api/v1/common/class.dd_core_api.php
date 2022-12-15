@@ -548,9 +548,6 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// fix section tipo
-			// define('SECTION_TIPO', $section_tipo);
-
 		// section
 			$section	= section::get_instance(null, $section_tipo);
 			$section_id	= $section->Save(); // Section save, returns the created section_id
@@ -618,7 +615,7 @@ final class dd_core_api {
 			$ddo_source = $rqo->source;
 
 		// source vars
-			$delete_mode	= $ddo_source->delete_mode ?? 'delete_data';
+			$delete_mode	= $ddo_source->delete_mode ?? 'delete_data'; // delete_record|delete_data*
 			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo;
@@ -813,19 +810,19 @@ final class dd_core_api {
 				$response->error	= null;
 
 		// rqo vars
-			$source			= $rqo->source;
-			$data			= $rqo->data ?? new stdClass();
+			$source	= $rqo->source;
+			$data	= $rqo->data ?? new stdClass();
 
 		// short vars
-			$model			= $source->model;
-			$tipo			= $source->tipo;
-			$section_tipo	= $source->section_tipo;
-			$section_id		= $source->section_id;
-			$mode			= $source->mode;
-			$lang			= $source->lang;
-			$type			= $source->type; // the type of the dd_object that is calling to update like 'component'
-			$changed_data	= $data->changed_data ?? null;
-			$caller_dataframe			= $source->caller_dataframe ?? null;
+			$tipo				= $source->tipo;
+			$model				= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$section_tipo		= $source->section_tipo;
+			$section_id			= $source->section_id;
+			$mode				= $source->mode ?? 'list';
+			$lang				= $source->lang;
+			$type				= $source->type; // the type of the dd_object that is calling to update like 'component'
+			$changed_data		= $data->changed_data ?? null;
+			$caller_dataframe	= $source->caller_dataframe ?? null;
 
 		// switch by the element context type (component, section)
 		switch ($type) {

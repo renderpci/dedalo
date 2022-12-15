@@ -1621,6 +1621,39 @@ button.email:before {
   -webkit-mask-position: center;
   mask-position: center;
 }
+button.email_multiple:before {
+  background-color: #3f3f3f;
+  content: ' ';
+  display: inline-block;
+  height: 1em;
+  margin-right: 0.25em;
+  opacity: 1;
+  vertical-align: baseline;
+  width: 1em;
+  -webkit-mask-image: url('../../themes/default/icons/email_multiple.svg');
+  mask-image: url('../../themes/default/icons/email_multiple.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+@media screen and (max-width: 960px) {
+  button.email_multiple:before {
+    margin-right: 0px;
+  }
+}
+.button.email_multiple {
+  -webkit-mask-image: url('../../themes/default/icons/email_multiple.svg');
+  mask-image: url('../../themes/default/icons/email_multiple.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
 button.close:before {
   background-color: #3f3f3f;
   content: ' ';
@@ -2581,39 +2614,6 @@ button.drag:before {
   -webkit-mask-position: center;
   mask-position: center;
 }
-button.email_multiple:before {
-  background-color: #3f3f3f;
-  content: ' ';
-  display: inline-block;
-  height: 1em;
-  margin-right: 0.25em;
-  opacity: 1;
-  vertical-align: baseline;
-  width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/email_multiple.svg');
-  mask-image: url('../../themes/default/icons/email_multiple.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-}
-@media screen and (max-width: 960px) {
-  button.email_multiple:before {
-    margin-right: 0px;
-  }
-}
-.button.email_multiple {
-  -webkit-mask-image: url('../../themes/default/icons/email_multiple.svg');
-  mask-image: url('../../themes/default/icons/email_multiple.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-}
 button.geo:before {
   background-color: #3f3f3f;
   content: ' ';
@@ -3146,7 +3146,7 @@ input:-moz-placeholder {
 .section_record .wrapper_component > .label,
 .wrapper_tool .wrapper_component > .label,
 .search_group .wrapper_component > .label,
-dd-modal .content .wrapper_component > .label,
+dd-modal .wrapper_component > .label,
 .project_container .wrapper_component > .label {
   padding: 1rem;
   padding-bottom: 0px;
@@ -3162,7 +3162,7 @@ dd-modal .content .wrapper_component > .label,
 .section_record .wrapper_component > .top,
 .wrapper_tool .wrapper_component > .top,
 .search_group .wrapper_component > .top,
-dd-modal .content .wrapper_component > .top,
+dd-modal .wrapper_component > .top,
 .project_container .wrapper_component > .top {
   display: flex;
   flex: 0 1 100%;
@@ -3174,7 +3174,7 @@ dd-modal .content .wrapper_component > .top,
 .section_record .wrapper_component > .top > select.mono,
 .wrapper_tool .wrapper_component > .top > select.mono,
 .search_group .wrapper_component > .top > select.mono,
-dd-modal .content .wrapper_component > .top > select.mono,
+dd-modal .wrapper_component > .top > select.mono,
 .project_container .wrapper_component > .top > select.mono {
   background-color: transparent;
   outline: none;
@@ -3189,7 +3189,7 @@ dd-modal .content .wrapper_component > .top > select.mono,
 .section_record .wrapper_component > .buttons_container,
 .wrapper_tool .wrapper_component > .buttons_container,
 .search_group .wrapper_component > .buttons_container,
-dd-modal .content .wrapper_component > .buttons_container,
+dd-modal .wrapper_component > .buttons_container,
 .project_container .wrapper_component > .buttons_container {
   background-color: #f78a1c;
   display: none;
@@ -3208,7 +3208,7 @@ dd-modal .content .wrapper_component > .buttons_container,
 .section_record .wrapper_component > .buttons_container span,
 .wrapper_tool .wrapper_component > .buttons_container span,
 .search_group .wrapper_component > .buttons_container span,
-dd-modal .content .wrapper_component > .buttons_container span,
+dd-modal .wrapper_component > .buttons_container span,
 .project_container .wrapper_component > .buttons_container span {
   margin-left: 0.5em;
   margin-bottom: 0.45em;
@@ -3217,21 +3217,21 @@ dd-modal .content .wrapper_component > .buttons_container span,
 .section_record .wrapper_component > .buttons_container span:first-child,
 .wrapper_tool .wrapper_component > .buttons_container span:first-child,
 .search_group .wrapper_component > .buttons_container span:first-child,
-dd-modal .content .wrapper_component > .buttons_container span:first-child,
+dd-modal .wrapper_component > .buttons_container span:first-child,
 .project_container .wrapper_component > .buttons_container span:first-child {
   margin-left: 0.75rem;
 }
 .section_record .wrapper_component > .buttons_container span:last-child,
 .wrapper_tool .wrapper_component > .buttons_container span:last-child,
 .search_group .wrapper_component > .buttons_container span:last-child,
-dd-modal .content .wrapper_component > .buttons_container span:last-child,
+dd-modal .wrapper_component > .buttons_container span:last-child,
 .project_container .wrapper_component > .buttons_container span:last-child {
   margin-right: 0.75rem;
 }
 .section_record .wrapper_component > .content_data,
 .wrapper_tool .wrapper_component > .content_data,
 .search_group .wrapper_component > .content_data,
-dd-modal .content .wrapper_component > .content_data,
+dd-modal .wrapper_component > .content_data,
 .project_container .wrapper_component > .content_data {
   display: flex;
   flex: 1 1 100%;
@@ -3244,7 +3244,7 @@ dd-modal .content .wrapper_component > .content_data,
 .list .section_record .wrapper_component > .content_data,
 .list .wrapper_tool .wrapper_component > .content_data,
 .list .search_group .wrapper_component > .content_data,
-.list dd-modal .content .wrapper_component > .content_data,
+.list dd-modal .wrapper_component > .content_data,
 .list .project_container .wrapper_component > .content_data {
   padding: 0px;
 }
@@ -3252,7 +3252,7 @@ dd-modal .content .wrapper_component > .content_data,
   .section_record .wrapper_component > .content_data,
   .wrapper_tool .wrapper_component > .content_data,
   .search_group .wrapper_component > .content_data,
-  dd-modal .content .wrapper_component > .content_data,
+  dd-modal .wrapper_component > .content_data,
   .project_container .wrapper_component > .content_data {
     flex: 1 1 100%;
   }
@@ -3260,14 +3260,14 @@ dd-modal .content .wrapper_component > .content_data,
 .section_record .wrapper_component > .content_data > .q_operator,
 .wrapper_tool .wrapper_component > .content_data > .q_operator,
 .search_group .wrapper_component > .content_data > .q_operator,
-dd-modal .content .wrapper_component > .content_data > .q_operator,
+dd-modal .wrapper_component > .content_data > .q_operator,
 .project_container .wrapper_component > .content_data > .q_operator {
   width: 3em;
 }
 .section_record .wrapper_component > .content_data .close99,
 .wrapper_tool .wrapper_component > .content_data .close99,
 .search_group .wrapper_component > .content_data .close99,
-dd-modal .content .wrapper_component > .content_data .close99,
+dd-modal .wrapper_component > .content_data .close99,
 .project_container .wrapper_component > .content_data .close99 {
   position: absolute;
   top: -6px;
@@ -3278,7 +3278,7 @@ dd-modal .content .wrapper_component > .content_data .close99,
 .section_record .wrapper_component > .content_data.vertical,
 .wrapper_tool .wrapper_component > .content_data.vertical,
 .search_group .wrapper_component > .content_data.vertical,
-dd-modal .content .wrapper_component > .content_data.vertical,
+dd-modal .wrapper_component > .content_data.vertical,
 .project_container .wrapper_component > .content_data.vertical {
   flex: 1 1 100%;
   background-color: #a1cccc5c;
@@ -3378,6 +3378,14 @@ dd-modal .body.content {
 dd-modal .body.content > .wrapper_component {
   margin-top: 1rem;
 }
+dd-modal .body.content_no_buttons {
+  padding: 0.5rem;
+  min-width: 34rem;
+  min-height: 20rem;
+}
+dd-modal .body.content_no_buttons > .wrapper_component {
+  margin: 1rem;
+}
 dd-modal .body.fill_vertical {
   height: 70vh;
 }
@@ -3400,6 +3408,11 @@ dd-modal .footer.content {
   padding: 1rem;
   padding-top: 1.5rem;
   padding-bottom: 1.5rem;
+}
+dd-modal .footer.distribute {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0rem;
 }
 .disabled_component .content_data.component,
 .disabled_component .buttons_container {
@@ -10297,6 +10310,7 @@ dd-modal .footer.content {
   margin: 0px;
   padding: 0px;
   overflow: hidden;
+  min-width: 30rem;
 }
 .component_text_area.edit > .content_data > .content_value {
   display: contents;
@@ -10373,6 +10387,8 @@ dd-modal .footer.content {
 .component_text_area.edit > .content_data > .content_value > .ck-content {
   margin-top: 0.5rem;
   padding-top: 0px;
+  width: 100%;
+  height: 100%;
 }
 .component_text_area.edit > .content_data > .content_value > .ck-source-editing-area {
   width: 100%;
