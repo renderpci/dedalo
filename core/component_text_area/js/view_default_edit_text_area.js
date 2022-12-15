@@ -219,6 +219,12 @@ const get_input_element = (i, current_value, self) => {
 			// fix current_service_text_editor when is ready
 				self.text_editor[i] = current_service_text_editor
 
+			// event ready
+				event_manager.publish(
+					'editor_ready_' + self.id,
+					current_service_text_editor
+				)
+
 			return current_service_text_editor
 		}//end init_current_service_text_editor
 
