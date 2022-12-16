@@ -21,7 +21,7 @@ export const view_text_list_check_box = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
@@ -37,6 +37,4 @@ view_text_list_check_box.render = async function(self, options) {
 		const text_node = document.createTextNode(value_string)
 
 	return text_node
-}//end mini
-
-
+}//end render

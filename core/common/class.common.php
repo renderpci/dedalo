@@ -2623,7 +2623,7 @@ abstract class common {
 									}
 
 								// fixed_mode. When the mode is set in properties or is set by tool or user templates
-								// set the fixed_mode to true, to maintenance the mode across changes in render process
+								// set the fixed_mode to true, to preserve the mode across changes in render process
 									if( isset($current_ddo->mode) ) {
 										$current_ddo->fixed_mode = true;
 									}
@@ -3033,7 +3033,7 @@ abstract class common {
 							$ddo->set_mode($current_mode);
 							$ddo->set_view($view);
 							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
-							// fixed_mode. Used by component_semantic_node for force the render mode
+							// fixed_mode. Used by component_semantic_node to force the render mode
 							if(isset($current_fixed_mode)){
 								$ddo->set_fixed_mode($current_fixed_mode);
 							}
