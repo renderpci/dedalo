@@ -48,26 +48,26 @@ inspector.prototype.init = async function(options) {
 
 	const self = this
 
-	self.id				= 'inspector_' + options.section_tipo
-	self.model			= 'inspector'
-	self.section_tipo	= options.section_tipo
-	self.section_id		= options.section_id
-	self.mode			= 'edit'
-	self.node			= null
-	self.caller			= options.caller
+	self.id								= 'inspector_' + options.section_tipo
+	self.model							= 'inspector'
+	self.section_tipo					= options.section_tipo
+	self.section_id						= options.section_id
+	self.mode							= 'edit'
+	self.node							= null
+	self.caller							= options.caller
 
-	self.actived_component = null
+	self.actived_component				= null
 
-	self.events_tokens	= []
-	self.ar_instances	= []
+	self.events_tokens					= []
+	self.ar_instances					= []
 
 	// nodes
-		self.paginator_container			= null
-		self.element_info_container			= null
-		self.component_history_container	= null
+	self.paginator_container			= null
+	self.element_info_container			= null
+	self.component_history_container	= null
 
 	// events
-		// section render
+		// render_ section
 			self.events_tokens.push(
 				event_manager.subscribe('render_' + self.caller.id, fn_update_section_info)
 			)
@@ -88,7 +88,7 @@ inspector.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('deactivate_component', fn_update_section_info)
 			)
-		// render_component_filter (published by render_edit_section_record)
+		// render_component_filter_ (published by render_edit_section_record)
 			self.events_tokens.push(
 				event_manager.subscribe('render_component_filter_' + self.section_tipo, fn_render_filter)
 			)
@@ -128,5 +128,3 @@ inspector.prototype.build = async function() {
 
 	return true
 }//end build
-
-
