@@ -6,6 +6,8 @@
 // imports
 	import {view_default_list_number} from './view_default_list_number.js'
 	import {view_mini_number} from './view_mini_number.js'
+	import {view_text_list_number} from './view_text_list_number.js'
+
 
 
 /**
@@ -36,6 +38,8 @@ render_list_component_number.prototype.list = async function(options) {
 		case 'mini':
 			return view_mini_number.render(self, options)
 
+		case 'text':
+			return view_text_list_number.render(self, options)
 
 		case 'default':
 		default:

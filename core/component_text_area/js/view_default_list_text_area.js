@@ -5,7 +5,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {tr} from '../../common/js/tr.js'
+	// import {tr} from '../../common/js/tr.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
@@ -25,7 +25,7 @@ export const view_default_list_text_area = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
 * @return DOM node
 */
@@ -45,4 +45,4 @@ view_default_list_text_area.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render

@@ -6,7 +6,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_geolocation} from './view_default_edit_geolocation.js'
-	import {view_text_geolocation} from './view_text_geolocation.js'
+	// import {view_text_geolocation} from './view_text_geolocation.js'
 	import {view_mini_geolocation} from './view_mini_geolocation.js'
 
 /**
@@ -38,8 +38,8 @@ render_edit_component_geolocation.prototype.edit = async function(options) {
 		case 'mini':
 			return view_mini_geolocation.render(self, options)
 
-		case 'text':
-			return view_text_geolocation.render(self, options)
+		// case 'text':
+		// 	return view_text_geolocation.render(self, options)
 
 		case 'default':
 		default:

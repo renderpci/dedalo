@@ -61,9 +61,9 @@ export const component_select = function(){
 	// component_select.prototype.build_rqo_show	= common.prototype.build_rqo_show
 
 	// render
-	component_select.prototype.edit					= render_edit_component_select.prototype.edit
-	component_select.prototype.tm					= render_edit_component_select.prototype.edit
 	component_select.prototype.list					= render_list_component_select.prototype.list
+	component_select.prototype.tm					= render_list_component_select.prototype.list
+	component_select.prototype.edit					= render_edit_component_select.prototype.edit
 	component_select.prototype.search				= render_search_component_select.prototype.search
 
 	component_select.prototype.change_mode			= component_common.prototype.change_mode

@@ -6,7 +6,7 @@
 // imports
 	import {view_default_list_geolocation} from './view_default_list_geolocation.js'
 	import {view_mini_geolocation} from './view_mini_geolocation.js'
-	import {view_text_geolocation} from './view_text_geolocation.js'
+	import {view_text_list_geolocation} from './view_text_list_geolocation.js'
 
 
 /**
@@ -38,7 +38,7 @@ render_list_component_geolocation.prototype.list = async function(options) {
 			return view_mini_geolocation.render(self, options)
 
 		case 'text':
-			return view_text_geolocation.render(self, options)
+			return view_text_list_geolocation.render(self, options)
 
 		case 'default':
 		default:

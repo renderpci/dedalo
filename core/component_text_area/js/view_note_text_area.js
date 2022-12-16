@@ -5,7 +5,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {tr} from '../../common/js/tr.js'
+	// import {tr} from '../../common/js/tr.js'
 	import * as instances from '../../common/js/instances.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -26,7 +26,7 @@ export const view_note_text_area = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
@@ -36,7 +36,7 @@ view_note_text_area.render = async function(self, options) {
 		const data					= self.data
 		const value					= data.value || []
 		// const value_string		= tr.add_tag_img_on_the_fly( value.join(self.context.fields_separator) )
-		const value_string			= value.join(self.context.fields_separator)
+		// const value_string		= value.join(self.context.fields_separator)
 		const matrix_id				= data.matrix_id
 		const parent_section_tipo	= data.parent_section_tipo || self.section_tipo
 
@@ -184,8 +184,7 @@ view_note_text_area.render = async function(self, options) {
 		})
 
 	// add value
-		// wrapper.innerHTML += value_string
-		wrapper.insertAdjacentHTML('beforeend', value_string)
+		// wrapper.insertAdjacentHTML('beforeend', value_string)
 
 
 	return wrapper
