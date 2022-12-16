@@ -122,15 +122,15 @@ export const get_ar_raw_data_value = (self) => {
 
 				if(year){
 					const text_year = year + ' ' +label_year
-					ar_period(text_year)
+					ar_period.push(text_year)
 				}
 				if(month){
 					const text_month = month + ' ' +label_month
-					ar_period(text_month)
+					ar_period.push(text_month)
 				}
 				if(day){
 					const text_day = day + ' ' +label_day
-					ar_period(text_day)
+					ar_period.push(text_day)
 				}
 				const text_period = ar_period.join(', ')
 				ar_raw_value.push(text_period)
