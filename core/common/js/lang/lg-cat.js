@@ -357,7 +357,7 @@
     "tool_metadata": "Metadata",
     "exportar_jerarquias": "<mark>Exportar jerarquias<\/mark>",
     "tool_user_admin": "Administració d'usuari",
-    "historial_del_componente": "Històric del component",
+    "component_history": "Històric del component",
     "date": "Data",
     "delete_data_and_record": "Esborrar registre complet",
     "delete_data_only": "Esborrar només dades",

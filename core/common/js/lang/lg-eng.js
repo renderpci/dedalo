@@ -357,7 +357,7 @@
     "tool_metadata": "Metadata",
     "exportar_jerarquias": "Export hierarchies",
     "tool_user_admin": "User administration",
-    "historial_del_componente": "Component history",
+    "component_history": "Component history",
     "date": "Date",
     "delete_data_and_record": "Delete data and record",
     "delete_data_only": "Delete data only",
