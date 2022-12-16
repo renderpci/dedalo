@@ -7,10 +7,12 @@
 	import {view_default_list_text_area} from './view_default_list_text_area.js'
 	import {view_mini_text_area} from './view_mini_text_area.js'
 	import {view_note_text_area} from './view_note_text_area.js'
+	import {view_text_list_text_area} from './view_text_list_text_area.js'
+
 
 
 /**
-* RENDER_LIST_COMPONENT_text_area
+* RENDER_LIST_COMPONENT_TEXT_AREA
 * Manage the components logic and appearance in client side
 */
 export const render_list_component_text_area = function() {
@@ -40,6 +42,9 @@ render_list_component_text_area.prototype.list = async function(options) {
 
 		case 'note':
 			return view_note_text_area.render(self, options)
+
+		case 'text':
+			return view_text_list_text_area.render(self, options)
 
 		case 'default':
 		default:

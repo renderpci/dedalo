@@ -7,6 +7,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {view_mini_list_radio_button} from './view_mini_list_radio_button.js'
 	import {view_default_list_radio_button} from './view_default_list_radio_button.js'
+	import {view_text_list_radio_button} from './view_text_list_radio_button.js'
 
 
 
@@ -37,6 +38,9 @@ render_list_component_radio_button.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_list_radio_button.render(self, options)
+
+		case 'text':
+			return view_text_list_radio_button.render(self, options)
 
 		case 'default':
 		default:

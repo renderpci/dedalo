@@ -9,7 +9,6 @@
 	import {set_before_unload} from '../../common/js/events.js'
 	import {view_default_edit_iri} from './view_default_edit_iri.js'
 	import {view_line_edit_iri} from './view_line_edit_iri.js'
-	import {view_text_iri} from './view_text_iri.js'
 	import {view_mini_iri} from './view_mini_iri.js'
 
 
@@ -44,9 +43,6 @@ render_edit_component_iri.prototype.edit = async function(options) {
 
 		case 'mini':
 			return view_mini_iri.render(self, options)
-
-		case 'text':
-			return view_text_iri.render(self, options)
 
 		case 'default':
 		default:

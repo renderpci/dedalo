@@ -89,9 +89,10 @@ export const component_portal = function() {
 
 	// render
 	component_portal.prototype.list					= render_list_component_portal.prototype.list
+	component_portal.prototype.tm					= render_list_component_portal.prototype.list
 	component_portal.prototype.edit					= render_edit_component_portal.prototype.edit
-	component_portal.prototype.tm					= render_edit_component_portal.prototype.edit
 	component_portal.prototype.search				= render_search_component_portal.prototype.search
+
 	component_portal.prototype.change_mode			= component_common.prototype.change_mode
 
 

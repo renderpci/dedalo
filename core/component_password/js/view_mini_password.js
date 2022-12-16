@@ -21,7 +21,7 @@ export const view_mini_password = function() {
 
 
 /**
-* MINI
+* REDNER
 * Render node to be used by service autocomplete or any datalist
 * It shouldn't be use but just in case someone added it to a list the page would work properly
 * @return DOM node
@@ -44,4 +44,4 @@ view_mini_password.render = async function(self, options) {
 
 
 	return wrapper
-}//end mini
+}//end render

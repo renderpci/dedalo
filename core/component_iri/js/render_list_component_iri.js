@@ -7,12 +7,12 @@
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_list_iri} from './view_default_list_iri.js'
 	import {view_mini_iri} from './view_mini_iri.js'
-	import {view_text_iri} from './view_text_iri.js'
+	import {view_text_list_iri} from './view_text_list_iri.js'
 
 
 
 /**
-* render_list_component_iri
+* RENDER_LIST_COMPONENT_IRI
 * Manage the components logic and appearance in client side
 */
 export const render_list_component_iri = function() {
@@ -40,7 +40,7 @@ render_list_component_iri.prototype.list = async function(options) {
 			return view_mini_iri.render(self, options)
 
 		case 'text':
-			return view_text_iri.render(self, options)
+			return view_text_list_iri.render(self, options)
 
 		case 'default':
 		default:
@@ -49,7 +49,6 @@ render_list_component_iri.prototype.list = async function(options) {
 
 	return null
 }//end list
-
 
 
 

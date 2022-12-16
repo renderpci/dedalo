@@ -24,7 +24,7 @@ export const view_mini_text_area = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
@@ -45,5 +45,3 @@ view_mini_text_area.render = async function(self, options) {
 
 	return wrapper
 }//end render
-
-

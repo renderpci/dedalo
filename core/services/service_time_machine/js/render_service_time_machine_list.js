@@ -10,7 +10,7 @@
 	import {view_default_time_machine_list} from './view_default_time_machine_list.js'
 	import {view_mini_time_machine_list} from './view_mini_time_machine_list.js'
 	import {view_tool_time_machine_list} from './view_tool_time_machine_list.js'
-
+	import {view_history_time_machine_list} from './view_history_time_machine_list.js'
 
 /**
 * RENDER_SERVICE_TIME_MACHINE_LIST
@@ -41,6 +41,10 @@ render_service_time_machine_list.prototype.list = async function(options) {
 			// used by inspector
 			return view_mini_time_machine_list.render(self, options)
 
+		case 'history':
+			// used by inspector
+			return view_history_time_machine_list.render(self, options)
+
 		case 'tool':
 			// used by tool_time_machine
 			return view_tool_time_machine_list.render(self, options)
@@ -65,7 +69,8 @@ render_service_time_machine_list.prototype.list = async function(options) {
 export const common_render = async function(self, options) {
 
 	// options
-		const render_level 	= options.render_level || 'full'
+		const render_level	= options.render_level || 'full'
+		const no_header		= options.no_header || false
 
 	// columns_map
 		const columns_map = await rebuild_columns_map(self)
@@ -118,7 +123,7 @@ export const common_render = async function(self, options) {
 		set_element_css(selector, css_object)
 
 	// list_header_node. Create and append if ar_instances is not empty
-		if (ar_section_record.length>0) {
+		if (ar_section_record.length>0 && no_header!==true) {
 			const list_header_node = ui.render_list_header(columns_map, self)
 			list_body.appendChild(list_header_node)
 		}
