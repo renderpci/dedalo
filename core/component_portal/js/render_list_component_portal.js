@@ -8,7 +8,7 @@
 	// import {set_element_css} from '../../page/js/css.js'
 	import {view_default_list_portal} from './view_default_list_portal.js'
 	import {view_mini_portal} from './view_mini_portal.js'
-	import {view_text_portal} from './view_text_portal.js'
+	import {view_text_list_portal} from './view_text_list_portal.js'
 	import {view_line_list_portal} from './view_line_list_portal.js'
 
 
@@ -46,7 +46,7 @@ render_list_component_portal.prototype.list = async function(options) {
 			return view_mini_portal.render(self, options)
 
 		case 'text':
-			return view_text_portal.render(self, options)
+			return view_text_list_portal.render(self, options)
 
 		case 'default':
 		default:

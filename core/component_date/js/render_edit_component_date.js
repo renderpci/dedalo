@@ -5,7 +5,6 @@
 
 // imports
 	import {view_default_edit_date} from './view_default_edit_date.js'
-	import {view_text_date} from './view_text_date.js'
 	import {view_mini_date} from './view_mini_date.js'
 	import {view_line_edit_date} from './view_line_edit_date.js'
 	import {ui} from '../../common/js/ui.js'
@@ -41,9 +40,6 @@ render_edit_component_date.prototype.edit = async function(options) {
 
 		case 'mini':
 			return view_mini_date.render(self, options)
-
-		case 'text':
-			return view_text_date.render(self, options)
 
 		case 'line':
 			return view_line_edit_date.render(self, options)
@@ -122,15 +118,15 @@ export const get_ar_raw_data_value = (self) => {
 
 				if(year){
 					const text_year = year + ' ' +label_year
-					ar_period(text_year)
+					ar_period.push(text_year)
 				}
 				if(month){
 					const text_month = month + ' ' +label_month
-					ar_period(text_month)
+					ar_period.push(text_month)
 				}
 				if(day){
 					const text_day = day + ' ' +label_day
-					ar_period(text_day)
+					ar_period.push(text_day)
 				}
 				const text_period = ar_period.join(', ')
 				ar_raw_value.push(text_period)

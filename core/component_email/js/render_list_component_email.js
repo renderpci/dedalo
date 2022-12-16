@@ -6,11 +6,12 @@
 // imports
 	import {view_default_list_email} from './view_default_list_email.js'
 	import {view_mini_email} from './view_mini_email.js'
-	import {view_text_email} from './view_text_email.js'
+	import {view_text_list_email} from './view_text_list_email.js'
+
 
 
 /**
-* render_list_component_email
+* RENDER_LIST_COMPONENT_EMAIL
 * Manage the components logic and appearance in client side
 */
 export const render_list_component_email = function() {
@@ -38,7 +39,7 @@ render_list_component_email.prototype.list = async function(options) {
 			return view_mini_email.render(self, options)
 
 		case 'text':
-			return view_text_email.render(self, options)
+			return view_text_list_email.render(self, options)
 
 		case 'default':
 		default:

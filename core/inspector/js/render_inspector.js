@@ -27,7 +27,7 @@ export const render_inspector = function() {
 
 /**
 * EDIT
-* Render node for use in edit
+* Render node for use in this mode
 * @param object options
 * @return DOM node wrapper
 */
@@ -88,12 +88,11 @@ render_inspector.prototype.edit = async function(options) {
 
 
 
-
 /**
 * GET_CONTENT_DATA
 * Renders the whole content_data node
-* @param instance self
-* 	Tool instance pointer
+* @param object self
+* 	inspector instance
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
@@ -194,19 +193,17 @@ const get_content_data = function(self) {
 			content_data.appendChild(relation_list)
 		}
 
-	// time_machine_list container
-		// Note that 'time_machine_list' is a Ontology item children of current section if defined
-		// as 'numisdata588' and is used only to determine if current section have a history changes list or not
-		if (self.caller.context.time_machine_list) {
-			const time_machine_list = render_time_machine_list(self)
-			content_data.appendChild(time_machine_list)
-		}
+	// Note that 'time_machine_list' is a Ontology item children of current section if defined
+	// as 'numisdata588' and is used ONLY to determine if current section have a history changes list or not
+		// if (self.caller.context.time_machine_list) {
+			// time_machine_list container
+				const time_machine_list = render_time_machine_list(self)
+				content_data.appendChild(time_machine_list)
 
-	// component_history container
-		if (self.caller.context.time_machine_list) {
-			const component_history = render_component_history(self)
-			content_data.appendChild(component_history)
-		}
+			// component_history container
+				const component_history = render_component_history(self)
+				content_data.appendChild(component_history)
+		// }
 
 	// activity_info
 		const activity_info = render_activity_info(self)
@@ -315,6 +312,8 @@ const get_content_data = function(self) {
 /**
 * RENDER_SECTION_INFO
 * Called from info.js throw event manager: render_' + self.caller.id
+* @param object self
+* 	inspector instance
 * @return DOM DocumentFragment
 */
 export const render_section_info = function(self) {
@@ -452,6 +451,11 @@ export const render_section_info = function(self) {
 
 /**
 * RENDER_COMPONENT_INFO
+* Show selected component main info and value
+* @param object self
+* 	inspector instance
+* @param object component
+* 	component instance
 * @return DOM DocumentFragment
 */
 export const render_component_info = function(self, component) {
@@ -684,6 +688,10 @@ const render_element_info = function(self) {
 
 /**
 * RENDER_PROJECT_BLOCK
+* Show full component_project_filter of current section
+* to allow user configure section projects
+* @param object self
+* 	inspector instance
 * @return DOM node project_wrap
 */
 const render_project_block = function(self) {
@@ -736,7 +744,7 @@ const render_project_block = function(self) {
 
 /**
 * UPDATE_PROJECT_CONTAINER_BODY
-* Clean project_container_body and add init event wath fixed node: 'self.component_filter_node'
+* Clean project_container_body and add init event what fixed node: 'self.component_filter_node'
 * @return bool true
 */
 export const update_project_container_body = function(self) {
@@ -902,6 +910,9 @@ const render_relation_list = function(self) {
 
 /**
 * RENDER_TIME_MACHINE_LIST
+* Show whole section recent activity (component value changes) list
+* @param object self
+* 	inspector instance
 * @return DOM node time_machine_list_wrap
 */
 const render_time_machine_list = function(self) {
@@ -1012,6 +1023,9 @@ const render_time_machine_list = function(self) {
 
 /**
 * RENDER_ACTIVITY_INFO
+* Show component save and error messages
+* @param object self
+* 	inspector instance
 * @return DOM node time_machine_list_wrap
 */
 const render_activity_info = function(self) {
@@ -1068,45 +1082,11 @@ const render_activity_info = function(self) {
 
 
 /**
-* OPEN_ONTOLOGY_WINDOW
-* Opens Dédalo Ontology page in a new window
-* @param string tipo
-* @param string|null custom_url
-* @return bool
-*/
-const open_ontology_window = function(tipo, custom_url) {
-
-	window.docu_window = window.docu_window || null
-
-	// case online documentation window https://dedalo.dev/ontology
-
-	const url = custom_url
-		? custom_url
-		: 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
-
-	if (window.docu_window && !window.docu_window.closed) {
-		window.docu_window.location = url
-		window.docu_window.focus()
-	}else{
-		const window_width	= 1001
-		const screen_width	= window.screen.width
-		const screen_height	= window.screen.height
-		window.docu_window	= window.open(
-			url,
-			'docu_window',
-			`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
-		)
-	}
-
-	return true
-}//end open_ontology_window
-
-
-
-/**
 * RENDER_COMPONENT_HISTORY
 * Note that self.element_info_containe is fixed to allow inspector init event
 * to locate the target node when is invoked
+* @param object self
+* 	inspector instance
 * @return DOM node element_info_wrap
 */
 const render_component_history = function(self) {
@@ -1211,7 +1191,7 @@ export const load_component_history = function(self, component) {
 				model			: 'service_time_machine',
 				section_tipo	: self.section_tipo,
 				section_id		: self.caller.section_id,
-				view			: 'mini',
+				view			: 'history',
 				id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',
 				caller			: self,
 				config			: {
@@ -1234,6 +1214,7 @@ export const load_component_history = function(self, component) {
 							parent			: self.section_tipo,
 							label			: component.label,
 							mode			: 'tm',
+							fixed_mode		: true, // preserves mode across section_record
 							view			: 'text'
 						},
 						{	// notes component
@@ -1245,6 +1226,7 @@ export const load_component_history = function(self, component) {
 							parent			: self.section_tipo,
 							label			: 'Annotation',
 							mode			: 'list',
+							fixed_mode		: true, // preserves mode across section_record
 							view			: 'note'
 						}
 					]
@@ -1269,3 +1251,39 @@ export const load_component_history = function(self, component) {
 
 	return container
 }//end load_component_history
+
+
+
+/**
+* OPEN_ONTOLOGY_WINDOW
+* Opens Dédalo Ontology page in a new window
+* @param string tipo
+* @param string|null custom_url
+* @return bool
+*/
+const open_ontology_window = function(tipo, custom_url) {
+
+	window.docu_window = window.docu_window || null
+
+	// case online documentation window https://dedalo.dev/ontology
+
+	const url = custom_url
+		? custom_url
+		: 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
+
+	if (window.docu_window && !window.docu_window.closed) {
+		window.docu_window.location = url
+		window.docu_window.focus()
+	}else{
+		const window_width	= 1001
+		const screen_width	= window.screen.width
+		const screen_height	= window.screen.height
+		window.docu_window	= window.open(
+			url,
+			'docu_window',
+			`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
+		)
+	}
+
+	return true
+}//end open_ontology_window

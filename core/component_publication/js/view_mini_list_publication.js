@@ -28,12 +28,15 @@ export const view_mini_list_publication = function() {
 view_mini_list_publication.render = async function(self, options) {
 
 	// short vars
-		const value_string = self.data.value || ''
+		const data			= self.data
+		const value			= data.value || []
+		const value_string	= value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
 			value_string : value_string
 		})
+
 
 	return wrapper
 }//end render

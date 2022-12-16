@@ -38,7 +38,7 @@ render_edit_component_publication.prototype.edit = async function(options) {
 
 		case 'line':
 			return view_line_edit_publication.render(self, options)
-			break;
+
 		case 'default':
 		default:
 			return view_default_edit_publication.render(self, options)

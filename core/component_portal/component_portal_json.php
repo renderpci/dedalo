@@ -83,6 +83,7 @@
 		// value
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 					// data item (list mode result don't include self data, only subdata)
 					$limit	= $limit; // (!) note than in list mode, limit is always 2
 					$value	= $this->get_dato_paginated($limit);
@@ -149,7 +150,6 @@
 			}//end if (!empty($dato))
 		// }// end get_data
 	}//end if $options->get_data===true && $permissions>0
-
 
 
 // JSON string

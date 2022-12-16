@@ -10,7 +10,7 @@
 	// import {object_to_url_vars} from '../../common/js/utils/index.js'
 	import {view_column_list_av} from './view_column_list_av.js'
 	import {view_mini_list_av} from './view_mini_list_av.js'
-
+	import {view_text_list_av} from './view_text_list_av.js'
 
 
 /**
@@ -40,6 +40,9 @@ render_list_component_av.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_list_av.render(self, options)
+
+		case 'text':
+			return view_text_list_av.render(self, options)
 
 		case 'column':
 		case 'default':

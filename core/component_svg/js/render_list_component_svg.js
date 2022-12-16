@@ -9,6 +9,7 @@
 	import {view_mini_list_svg} from './view_mini_list_svg.js'
 	import {view_default_list_svg} from './view_default_list_svg.js'
 	import {view_tag_list_svg} from './view_tag_list_svg.js'
+	import {view_text_list_svg} from './view_text_list_svg.js'
 
 
 /**
@@ -38,6 +39,10 @@ render_list_component_svg.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_list_svg.render(self, options)
+			break;
+
+		case 'text':
+			return view_text_list_svg.render(self, options)
 			break;
 
 		case 'tag':

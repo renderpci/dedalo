@@ -7,9 +7,10 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {view_mini_image} from './view_mini_image.js'
-	import {view_mosaic_list_image} from './view_mosaic_list_image.js'
 	import {view_default_list_image} from './view_default_list_image.js'
+	import {view_mini_image} from './view_mini_image.js'
+	import {view_text_list_image} from './view_text_list_image.js'
+	import {view_mosaic_list_image} from './view_mosaic_list_image.js'
 	import {view_viewer_image} from './view_viewer_image.js'
 
 
@@ -50,6 +51,10 @@ render_list_component_image.prototype.list = function(options) {
 
 			case 'mini':
 				wrapper = view_mini_image.render(self, options)
+				break;
+
+			case 'text':
+				wrapper = view_text_list_image.render(self, options)
 				break;
 
 			case 'mosaic':

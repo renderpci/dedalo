@@ -376,12 +376,12 @@ component_common.prototype.save = async function(changed_data) {
 	// check changed_data format
 		if (typeof changed_data==='undefined' || !Array.isArray(changed_data) || changed_data.length<1) {
 			if(SHOW_DEBUG===true) {
-				console.error("Invalid changed_data [stop save]:", changed_data)
+				console.warn("Invalid changed_data [stop save]:", changed_data)
 				console.trace()
 			}
-			const msg = "Error on save. changed_data is undefined or empty!"
-			console.error('msg:', msg);
-			alert("Error on save. changed_data is undefined or empty!")
+			const msg = "Ignored save. changed_data is undefined or empty!"
+			// console.error('msg:', msg);
+			// alert("Error on save. changed_data is undefined or empty!")
 
 			// dispatch event save
 				event_manager.publish('save', {

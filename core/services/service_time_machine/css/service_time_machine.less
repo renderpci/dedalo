@@ -66,4 +66,64 @@
 
 	}
 
+	&.view_history {
+
+		.list_body {
+			display: contents;
+		}
+
+		.content_data > .section_record {
+			// pointer-events: none;
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr 2.65rem;
+			border-left: 2px solid @color_orange_dedalo;
+
+
+			.column {
+				display: grid;
+				outline: none;
+				padding: 0.33rem;
+				padding-bottom: 0.25rem;
+				font-size: 90%;
+			}
+
+			@bg_color: #ededed;
+
+			// when (date)
+			.column:nth-child(1)  {
+				grid-column: span 1;
+				background-color: @bg_color;
+			}
+			// who (user name)
+			.column:nth-child(2) {
+				grid-column: span 2;
+				background-color: @bg_color;
+			}
+			// value
+			.column:nth-child(3) {
+				grid-column: span 4;
+				font-size: 90%;
+				word-break: break-all;
+				img {
+					max-height: 1rem;
+
+					&.view_text {
+						max-height: 4rem;
+					}
+					&.svg {
+						min-height: 2rem;
+					}
+				}
+
+			}
+			// notes icon
+			.column:nth-child(4) {
+				grid-column: span 1;
+				grid-column-start: 4;
+    			grid-row-start: 1;
+    			background-color: @bg_color;
+			}
+		}
+	}
+
 }//end .wrapper_service_time_machine

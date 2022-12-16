@@ -23,7 +23,7 @@ export const view_default_edit_text_area = function() {
 
 
 /**
-* EDIT
+* RENDER
 * Render node for use in modes: edit, edit_in_list
 * @return DOM node wrapper
 */
@@ -66,7 +66,7 @@ view_default_edit_text_area.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 

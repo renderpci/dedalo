@@ -35,6 +35,7 @@
 		// value
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 					$value = $this->get_list_value();
 					break;
 
@@ -52,6 +53,7 @@
 			if (isset($datalist)) {
 				$item->datalist = $datalist;
 			}
+
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
