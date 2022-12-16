@@ -1315,12 +1315,12 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		const source = create_source(self, action)
 
 	// sqo_config
-		const sqo_config = rqo_config.show && rqo_config.show.sqo_config
+		const sqo_config = rqo_config && rqo_config.show && rqo_config.show.sqo_config
 			? rqo_config.show.sqo_config
 			: false
 
 	// sqo with fallback to sqo_config
-		const sqo = rqo_config.sqo
+		const sqo = rqo_config && rqo_config.sqo
 			? rqo_config.sqo
 			: sqo_config
 				? sqo_config

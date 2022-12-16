@@ -445,7 +445,7 @@ export const ui = {
 				const type			= instance.type 		// like 'component'
 				const tipo			= instance.tipo 		// like 'rsc26'
 				const section_tipo	= instance.section_tipo // like 'oh1'
-				const view			= instance.view || instance.context.view || null
+				const view			= instance.view || instance.context.view || 'default'
 
 			// wrapper
 				const wrapper = document.createElement('div')
@@ -455,7 +455,8 @@ export const ui = {
 						model,
 						tipo,
 						section_tipo +'_'+ tipo,
-						'list'
+						'list',
+						'view_' + view
 					]
 					if (view) {ar_css.push('view_'+view)}
 					wrapper.classList.add(...ar_css)
