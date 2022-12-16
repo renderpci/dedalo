@@ -6,7 +6,7 @@
 // imports
 	import {view_default_list_date} from './view_default_list_date.js'
 	import {view_mini_date} from './view_mini_date.js'
-	import {view_text_date} from './view_text_date.js'
+	import {view_text_list_date} from './view_text_list_date.js'
 
 
 /**
@@ -38,7 +38,7 @@ render_list_component_date.prototype.list = async function(options) {
 			return view_mini_date.render(self, options)
 
 		case 'text':
-			return view_text_date.render(self, options)
+			return view_text_list_date.render(self, options)
 
 		case 'default':
 		default:

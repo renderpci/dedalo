@@ -22,7 +22,7 @@ export const view_mini_input_text = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used in current mode
 * @return DOM node wrapper
 */

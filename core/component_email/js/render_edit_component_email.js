@@ -7,8 +7,8 @@
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_email} from './view_default_edit_email.js'
 	import {view_line_edit_email} from './view_line_edit_email.js'
-	import {view_text_email} from './view_text_email.js'
 	import {view_mini_email} from './view_mini_email.js'
+
 
 
 /**
@@ -42,9 +42,6 @@ render_edit_component_email.prototype.edit = async function(options) {
 
 		case 'mini':
 			return view_mini_email.render(self, options)
-
-		case 'text':
-			return view_text_email.render(self, options)
 
 		case 'default':
 		default:
@@ -350,7 +347,3 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-

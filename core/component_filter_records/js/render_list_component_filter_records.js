@@ -9,6 +9,7 @@
 	import {view_text_list_filter_records} from './view_text_list_filter_records.js'
 
 
+
 /**
 * render_list_component_filter_records
 * Manage the components logic and appearance in client side

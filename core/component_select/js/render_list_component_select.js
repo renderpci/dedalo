@@ -6,13 +6,14 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {ui} from '../../common/js/ui.js'
-	import {view_mini_list_select} from './view_mini_list_select.js'
 	import {view_default_list_select} from './view_default_list_select.js'
+	import {view_mini_list_select} from './view_mini_list_select.js'
+	import {view_text_list_select} from './view_text_list_select.js'
 
 
 
 /**
-* render_list_component_select
+* RENDER_LIST_COMPONENT_SELECT
 * Manages the component's logic and appearance in client side
 */
 export const render_list_component_select = function() {
@@ -38,6 +39,9 @@ render_list_component_select.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_list_select.render(self, options)
+
+		case 'text':
+			return view_text_list_select.render(self, options)
 
 		case 'default':
 		default:

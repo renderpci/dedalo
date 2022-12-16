@@ -153,8 +153,12 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			current_context.parent = self.caller.tipo
 
 	// mode
-		const mode = current_context.fixed_mode || current_context.mode || self.mode
-
+		// original fallback
+			const mode = (current_context.fixed_mode===true)
+				? current_context.mode
+				: self.mode
+		// new fallback
+			// const mode = current_context.mode || self.mode
 
 	// component / section group instance_options
 		const instance_options = {
@@ -417,7 +421,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 									? current_column.columns_map
 									: false
 								// set the fixed_mode when is set by preferences, properties or tools, to maintain the mode defined
-								// if not the ddo will get the mode of the section_record
+								// if not, the ddo will get the mode from current section_record
 								if(current_ddo.fixed_mode){
 									new_context.fixed_mode		= current_ddo.fixed_mode
 									new_context.properties.mode	= current_ddo.fixed_mode

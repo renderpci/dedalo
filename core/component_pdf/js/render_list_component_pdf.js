@@ -6,6 +6,8 @@
 // imports
 	import {view_default_list_pdf} from './view_default_list_pdf.js'
 	import {view_mini_pdf} from './view_mini_pdf.js'
+	import {view_text_list_pdf} from './view_text_list_pdf.js'
+
 
 
 /**
@@ -36,6 +38,8 @@ render_list_component_pdf.prototype.list = async function(options) {
 		case 'mini':
 			return view_mini_pdf.render(self, options)
 
+		case 'text':
+			return view_text_list_pdf.render(self, options)
 
 		case 'default':
 		default:

@@ -15,23 +15,19 @@ export const view_text_list_filter = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
 view_text_list_filter.render = async function(self, options) {
 
-	// short vars
-		const data	= self.data
+	// Value as string
+		const data	= self.data || {}
 		const value	= data.value || []
 
-	// Value as string
-		const value_string = value.join(' | ')
+	const value_string = value.join(self.context.fields_separator)
 
-	// Set value
-		const text_node = document.createTextNode(value_string)
+	const text_node = document.createTextNode(value_string)
 
-
-	return wrapper
-}//end mini
-
+	return text_node
+}//end render
