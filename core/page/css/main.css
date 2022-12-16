@@ -6616,6 +6616,49 @@ dd-modal .footer.distribute {
   line-clamp: 10;
   -webkit-box-orient: vertical;
 }
+.service_time_machine.view_history .list_body {
+  display: contents;
+}
+.service_time_machine.view_history .content_data > .section_record {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 2.65rem;
+  border-left: 2px solid #f78a1c;
+}
+.service_time_machine.view_history .content_data > .section_record .column {
+  display: grid;
+  outline: none;
+  padding: 0.33rem;
+  padding-bottom: 0.25rem;
+  font-size: 90%;
+}
+.service_time_machine.view_history .content_data > .section_record .column:nth-child(1) {
+  grid-column: span 1;
+  background-color: #ededed;
+}
+.service_time_machine.view_history .content_data > .section_record .column:nth-child(2) {
+  grid-column: span 2;
+  background-color: #ededed;
+}
+.service_time_machine.view_history .content_data > .section_record .column:nth-child(3) {
+  grid-column: span 4;
+  font-size: 90%;
+  word-break: break-all;
+}
+.service_time_machine.view_history .content_data > .section_record .column:nth-child(3) img {
+  max-height: 1rem;
+}
+.service_time_machine.view_history .content_data > .section_record .column:nth-child(3) img.view_text {
+  max-height: 4rem;
+}
+.service_time_machine.view_history .content_data > .section_record .column:nth-child(3) img.svg {
+  min-height: 2rem;
+}
+.service_time_machine.view_history .content_data > .section_record .column:nth-child(4) {
+  grid-column: span 1;
+  grid-column-start: 4;
+  grid-row-start: 1;
+  background-color: #ededed;
+}
 /**
 * login
 *
@@ -10310,7 +10353,6 @@ dd-modal .footer.distribute {
   margin: 0px;
   padding: 0px;
   overflow: hidden;
-  min-width: 30rem;
 }
 .component_text_area.edit > .content_data > .content_value {
   display: contents;
@@ -10387,7 +10429,6 @@ dd-modal .footer.distribute {
 .component_text_area.edit > .content_data > .content_value > .ck-content {
   margin-top: 0.5rem;
   padding-top: 0px;
-  width: 100%;
   height: 100%;
 }
 .component_text_area.edit > .content_data > .content_value > .ck-source-editing-area {
@@ -10463,8 +10504,8 @@ dd-modal .footer.distribute {
   height: 16px;
 }
 .component_text_area.view_note .button.note {
-  height: 1.25rem;
-  width: 1.25rem;
+  height: 1.1rem;
+  width: 1.1rem;
   cursor: pointer;
   background-color: #b9b9b9;
 }
