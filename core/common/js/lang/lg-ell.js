@@ -357,7 +357,7 @@
     "tool_metadata": "<mark>Metadata<\/mark>",
     "exportar_jerarquias": "<mark>Exportar jerarquias<\/mark>",
     "tool_user_admin": "<mark>Administración de usuario<\/mark>",
-    "historial_del_componente": "Ιστορικό συστατικών",
+    "component_history": "Ιστορικό συστατικών",
     "date": "ημερομηνία",
     "delete_data_and_record": "Διαγραφή πλήρες αρχείο",
     "delete_data_only": "Διαγραφή μόνο τα δεδομένα",
