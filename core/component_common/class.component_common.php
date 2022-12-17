@@ -92,6 +92,8 @@ abstract class component_common extends common {
 		public $data_list;
 		// object column_obj
 		public $column_obj;
+		// observers_data
+		public $observers_data;
 
 
 
@@ -558,13 +560,18 @@ abstract class component_common extends common {
 		if (!is_null($dato) && !is_array($dato)) {
 
 			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
-			debug_log(__METHOD__ . ' '
-				. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
-				. 'model: '. get_called_class() .PHP_EOL
-				. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
-				. 'table: '. $matrix_table
-				, logger::ERROR
-			);
+			if ($matrix_table==='matrix_dd') {
+				// v5 matrix_dd list compatibility
+				// nothing to do here
+			}else{
+				debug_log(__METHOD__ . ' '
+					. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
+					. 'model: '. get_called_class() .PHP_EOL
+					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+					. 'table: '. $matrix_table
+					, logger::ERROR
+				);
+			}
 		}
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
@@ -631,13 +638,19 @@ abstract class component_common extends common {
 		$dato = $this->dato;
 		if (!is_null($dato) && !is_array($dato)) {
 			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
-			debug_log(__METHOD__ . ' '
-				. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
-				. 'model: '. get_called_class() .PHP_EOL
-				. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
-				. 'table: '. $matrix_table
-				, logger::ERROR
-			);
+			if ($matrix_table==='matrix_dd') {
+				// v5 matrix_dd list compatibility
+				$dato = [$dato];
+			}else{
+
+				debug_log(__METHOD__ . ' '
+					. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
+					. 'model: '. get_called_class() .PHP_EOL
+					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+					. 'table: '. $matrix_table
+					, logger::ERROR
+				);
+			}
 		}
 
 		return $dato; # <- Se aplicará directamente el fallback de idioma para el mode list
@@ -1082,6 +1095,7 @@ abstract class component_common extends common {
 	* @return array|null $observers_data
 	*/
 	public function propagate_to_observers() : ?array {
+		$start_time=start_time(1);
 
 		// get all observers defined in properties
 			$properties = $this->get_properties();
@@ -1118,6 +1132,9 @@ abstract class component_common extends common {
 
 		// store data to access later in api
 			$this->observers_data = $observers_data;
+
+		// debug
+			debug_log(__METHOD__." Exec time: ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 
 
 		return $observers_data;
