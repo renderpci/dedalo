@@ -72,9 +72,54 @@ $updates->$v = new stdClass();
 				REINDEX TABLE public.matrix_descriptors_dd;
 			");
 
-		// vacuum table
+		// vacuum table matrix_dd
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
+			");
+
+		// Index matrix tables to get flat locator used by inverse searches
+		// Create functions with base flat locators
+		// st = section_tipo si= section_id (oh1_3)
+		// fct=from_section_tipo st=section_tipo si=section_id (oh24_rsc197_2)
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+
+				CREATE OR REPLACE FUNCTION public.relations_flat_st_si(datos jsonb) RETURNS jsonb
+					AS $$ SELECT jsonb_agg( concat(rel->>'section_tipo','_',rel->>'section_id') )
+					FROM jsonb_array_elements($1->'relations') rel(rel)
+					$$ LANGUAGE sql IMMUTABLE;
+
+				-- Create function with base flat locators fct=from_section_tipo st=section_tipo si=section_id (oh24_rsc197_2)
+
+				CREATE OR REPLACE FUNCTION public.relations_flat_fct_st_si(datos jsonb) RETURNS jsonb
+					AS $$ SELECT jsonb_agg( concat(rel->>'from_component_tipo','_',rel->>'section_tipo','_',rel->>'section_id') )
+					FROM jsonb_array_elements($1->'relations') rel(rel)
+					$$ LANGUAGE sql IMMUTABLE;
+
+				-- Create indexes with base flat locators st = section_tipo si= section_id (oh1_3)
+				CREATE INDEX matrix_relations_flat_st_si ON matrix
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_hierarchy_relations_flat_st_si ON matrix_hierarchy
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_activities_relations_flat_st_si ON matrix_activities
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_list_relations_flat_st_si ON matrix_list
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				-- Create indexes with  flat locators fct=from_section_tipo st=section_tipo si=section_id (oh24_rsc197_2)
+				CREATE INDEX matrix_relations_flat_fct_st_si ON matrix
+					USING gin(relations_flat_fct_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_hierarchy_relations_flat_fct_st_si ON matrix_hierarchy
+					USING gin(relations_flat_fct_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_activities_relations_flat_fct_st_si ON matrix_activities
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_list_relations_flat_fct_st_si ON matrix_list
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
 			");
 
 	// register tools. Before parse old data, we need to have the tools available
