@@ -274,7 +274,7 @@ class locator extends stdClass {
 
 	/**
 	* GET_TERM_ID_FROM_LOCATOR
-	* Contract locator object as string like 'es_185' (section_tipo and section_id)
+	* Contract locator object as string like 'es1_185' (section_tipo and section_id)
 	* @return string $term_id
 	*/
 	public static function get_term_id_from_locator(object $locator) : string {
