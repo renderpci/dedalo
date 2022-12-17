@@ -56,7 +56,6 @@ export const service_time_machine = function () {
 * INIT
 */
 service_time_machine.prototype.init = async function(options) {
-	// console.log("service_time_machine INIT options:",options);
 
 	const self = this
 
@@ -89,9 +88,6 @@ service_time_machine.prototype.init = async function(options) {
 
 	self.request_config	= await self.build_request_config()
 
-	console.log('self.config:', self.config);
-	console.log('self:', self);
-
 	// status update
 	self.status = 'initiated'
 
@@ -110,11 +106,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	console.log("===================== 1 build service_time_machine:",self);
-
-	// console.log("self.prototype:",self);
-	// self.build_rqo_show	= common.prototype.build_rqo_show
-	// self.get_columns_map	= common.prototype.get_columns_map
+	// console.log("===================== 1 build service_time_machine:",self);
 
 	// status update
 		self.status = 'building'
@@ -272,7 +264,6 @@ service_time_machine.prototype.build_request_config = function() {
 		const lang				= config.lang || page_globals.dedalo_data_nolan
 		const config_ddo_map	= config.ddo_map || []
 		const config_sqo		= config.sqo || null
-		console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>> config:', config);
 
 	// general vars
 		const section_tipo	= self.section_tipo
@@ -436,25 +427,3 @@ service_time_machine.prototype.build_request_config = function() {
 
 	return request_config
 }//end build_request_config
-
-
-
-/**
-* TM (render callback manager)
-* Chose the view render module to generate DOM nodes
-* @param object options
-* @return DOM node wrapper | null
-*/
-	// service_time_machine.prototype.tm = async function(options) {
-
-	// 	const self = this
-
-	// 	// view (is injected by the caller)
-	// 		const view = self.view || null
-	// 		if (!view) {
-	// 			console.error("Error. self view is not defined:", self);
-	// 			return false
-	// 		}
-
-	// 	return self.view(self, options)
-	// }//end tm
