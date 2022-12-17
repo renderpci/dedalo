@@ -54,7 +54,23 @@ class search_related extends search {
 
 				$locators_query = [];
 				foreach ($ar_locators as $locator) {
-					$locators_query[]	= PHP_EOL.'datos#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
+
+					$base_flat_locator = locator::get_term_id_from_locator($locator);
+
+					switch (true) {
+						case isset($locator->from_component_tipo):
+							$locator_index = $locator->from_component_tipo.'_'.$base_flat_locator;
+							$locators_query[] = PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator) . ']\'::jsonb';
+							break;
+
+						default:
+							$locators_query[] = PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							break;
+					}
+					// Old model, it search directly in the table with gin index of relations, but it's slow for large databases.
+					// now tables has a contraction/flat of the locator to be indexed the combination of section_tipo and section_id
+					// $locators_query[]	= PHP_EOL.'datos#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
+
 				}
 				$query	.= '(' . implode(' OR ', $locators_query) . ')';
 
