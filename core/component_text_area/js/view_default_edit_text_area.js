@@ -171,7 +171,7 @@ const get_input_element = (i, current_value, self) => {
 	// value_container
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value_container',
+			class_name		: 'value_container editor_container',
 			parent			: content_value,
 			inner_html 		: value
 		})
