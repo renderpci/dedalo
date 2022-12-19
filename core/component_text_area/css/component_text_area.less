@@ -75,7 +75,7 @@
 
 				// value_container
 				// Where component value is placed and parsed by the editor inline
-				>.value_container, >.ck-content {
+				>.editor_container {
 					// background-color: #d9fdaf;
 					margin: 0.5rem;
 					margin-bottom: 1.5rem;
@@ -143,17 +143,17 @@
 					}
 				}//end >.value_container
 
-				>.ck-content {
-					margin-top: 0.5rem;
-					padding-top: 0px;
+				// >.editor_container {
+				// 	margin-top: 0.5rem;
+				// 	padding-top: 0px;
 
-					// background-color: antiquewhite;
-					// width: inherit;
-					// min-width: 28rem;
-					// margin: 0;
-					// padding: 0;
-					height: 100%;
-				}
+				// 	// background-color: antiquewhite;
+				// 	// width: inherit;
+				// 	// min-width: 28rem;
+				// 	// margin: 0;
+				// 	// padding: 0;
+				// 	height: 100%;
+				// }
 
 				// source ckeditor
 				>.ck-source-editing-area {
@@ -177,6 +177,9 @@
 					height: 33px;
 				}
 
+			.ck.ck-editor__editable_inline>:first-child {
+				 margin-top: unset;
+			}
 
 			}//end >content_value
 		}//end >.content_data

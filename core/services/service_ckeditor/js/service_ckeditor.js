@@ -402,9 +402,15 @@ export const service_ckeditor = function() {
 
 						self.toolbar_container.classList.remove('hide')
 						editor.editing.view.focus()
+
 						document.body.addEventListener('mouseup', fn_remove)
 						// value_container.remove()
 					}
+
+				// add custom class to the root element of the editor
+					editor.editing.view.change( writer => {
+						writer.addClass( 'editor_container', editor.editing.view.document.getRoot() );
+					});
 
 				// toolbar toggle event
 					// show toolbar_container on user mousedown
@@ -1429,7 +1435,7 @@ export const service_ckeditor = function() {
 
 
 
-		/**
+	/**
 	 * Checks the attribute value of the first node in the selection that allows the attribute.
 	 * For the collapsed selection returns the selection attribute.
 	 *
@@ -1474,8 +1480,8 @@ export const service_ckeditor = function() {
 		const self		= this
 		const editor	= self.editor
 
-		const model				= editor.model;
-		const selection			= model.document.selection;
+		const model		= editor.model;
+		const selection	= model.document.selection;
 
 		// get the reference_editing plug-ing to get ck_funcitonalities
 		const reference_editing = editor.plugins.get( 'reference_editing' )
