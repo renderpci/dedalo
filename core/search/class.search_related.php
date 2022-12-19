@@ -111,16 +111,17 @@ class search_related extends search {
 	* @param object $reference_locator
 	*	Basic locator with section_tipo and section_id properties
 	* @param int|null $limit = null
-	* @param int|null $offset
-	* @param bool $count
+	* @param int|null $offset = null
+	* @param bool $count = false
 	*
 	* @return array $ar_inverse_locators
 	*/
 	public static function get_referenced_locators( object $reference_locator, ?int $limit=null, ?int $offset=null, bool $count=false ) : array {
+		$start_time = start_time();
 
 		$ar_inverse_locators = [];
 
-		//new way done in relations field with standard sqo
+		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
 				$sqo->set_section_tipo(['all']);
 				$sqo->set_mode('related');
@@ -159,6 +160,12 @@ class search_related extends search {
 					}
 				}
 			}
+
+		// debug
+			debug_log(__METHOD__." Calculated referenced_locators $reference_locator->section_tipo, $reference_locator->section_id "
+				. exec_time_unit($start_time).' ms'
+				, logger::DEBUG
+			);
 
 
 		return $ar_inverse_locators;

@@ -13,7 +13,8 @@ import {clone} from '../../common/js/utils/util.js'
 		'line_edit'
 	]
 	const ar_view_list = [
-		'mini'
+		'mini',
+		'text'
 	]
 	const ar_mode = [
 		'edit',
@@ -202,13 +203,14 @@ async function life_cycle_test(element, view) {
 				}
 				else if(new_instance.mode==='list') {
 					// console.log('+++ new_instance.node:', new_instance.node);
-					if (new_instance.model!=='component_portal' && new_instance.model.indexOf('component_relation')==-1) {
-						assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
-						assert.equal(new_instance.node.querySelector('.content_data'), null, 'content_data must be null on list mode');
+					if (new_instance.node) {
+						if (new_instance.model!=='component_portal' && new_instance.model.indexOf('component_relation')===-1) {
+							assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
+							assert.equal(new_instance.node.querySelector('.content_data'), null, 'content_data must be null on list mode');
+						}
+						assert.equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
+						assert.equal(new_instance.node.querySelector('.buttons_container'), null, 'buttons_container must be null on list mode');
 					}
-					assert.equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
-					assert.equal(new_instance.node.querySelector('.buttons_container'), null, 'buttons_container must be null on list mode');
-
 				}
 		});
 
