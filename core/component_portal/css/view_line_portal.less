@@ -54,12 +54,12 @@
 						&:hover {
 							background-color: unset;
 
-							.pen {
+							.pen, .edit {
 								background-color: @color_green_success;
 								opacity: 1;
 							}
 
-							.delete_bold {
+							.delete_bold, .delete_light {
 								background-color: @color_danger;
 								opacity: 1;
 							}
@@ -67,11 +67,13 @@
 					}
 
 					>.button_edit {
-						margin-left: 0.5rem;
+						// margin-left: 0.5rem;
+						margin-right: 0.25rem;
 					}
 
 					>.button_remove {
-						margin-right: 0.33rem;
+						// margin-right: 0.33rem;
+						margin-left: 0.5rem;
 					}
 				}
 
