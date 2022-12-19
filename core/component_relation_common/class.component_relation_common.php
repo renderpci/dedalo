@@ -1369,7 +1369,7 @@ class component_relation_common extends component_common {
 	* @return bool
 	*/
 	public function set_dato_external(bool $save=false, bool $changed=false, $current_dato=false, int $references_limit=10) : bool {
-		// $start_time=start_time();
+		$start_time=start_time();
 
 		// dato set
 			$dato = ($current_dato!==false)
@@ -1599,8 +1599,8 @@ class component_relation_common extends component_common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				//$total = exec_time_unit($start_time,'ms')." ms";
-				//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . to_string(), logger::DEBUG);
+				$total = exec_time_unit($start_time,'ms')." ms";
+				debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . to_string(), logger::DEBUG);
 			}
 
 

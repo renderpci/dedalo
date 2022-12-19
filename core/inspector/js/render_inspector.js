@@ -461,7 +461,6 @@ export const render_section_info = function(self) {
 export const render_component_info = function(self, component) {
 
 	const container	= self.element_info_container
-	// console.log("component:",component);
 
 	// values from caller (section)
 		const tipo			= component.tipo
