@@ -31,7 +31,7 @@ view_default_autocomplete.render = async function (self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// content_data
+	// autocomplete_wrapper
 		const autocomplete_wrapper = get_autocomplete_wrapper(self)
 		if (render_level==='content') {
 			return autocomplete_wrapper
@@ -933,7 +933,7 @@ view_default_autocomplete.render_grid_choose = async function(self, selected_ins
 			element_type	: 'div',
 			class_name		: 'grid_choose_container'
 		})
-		self.content_data.appendChild(grid_choose_container)
+		self.autocomplete_wrapper.appendChild(grid_choose_container)
 		self.grid_choose_container = grid_choose_container
 		// clean the last list
 			while (grid_choose_container.firstChild) {
