@@ -1398,9 +1398,9 @@ class component_relation_common extends component_common {
 
 				// overwrite source locator
 					$component_to_search_tipo	= reset($ar_component_to_search);
-					$modelo_name				= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
+					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
 					$component_to_search		= component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$component_to_search_tipo,
 						$section_id,
 						'list',
@@ -1420,9 +1420,9 @@ class component_relation_common extends component_common {
 					if (isset($locator)) {
 
 						$data_from_field_tipo	= $properties->source->source_overwrite->data_from_field;
-						$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
+						$model_name				= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
 						$component_overwrite	= component_common::get_instance(
-							$modelo_name,
+							$model_name,
 							$data_from_field_tipo,
 							$locator->section_id,
 							'list',
@@ -1432,7 +1432,7 @@ class component_relation_common extends component_common {
 						$overwrite_dato = $component_overwrite->get_dato();
 
 						$this->set_dato($overwrite_dato);
-						debug_log(__METHOD__." Overwritten dato ($modelo_name - $data_from_field_tipo - $locator->section_tipo - $locator->section_id)".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." Overwritten dato ($model_name - $data_from_field_tipo - $locator->section_tipo - $locator->section_id)".to_string(), logger::DEBUG);
 						$this->Save();
 					}
 
@@ -1460,9 +1460,9 @@ class component_relation_common extends component_common {
 				$data_from_field  = $properties->source->data_from_field;
 
 				foreach ($data_from_field as $current_component_tipo) {
-					$modelo_name				= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
 					$component_data_for_search	= component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$current_component_tipo,
 						$locator->section_id,
 						'list',
