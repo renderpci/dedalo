@@ -990,7 +990,6 @@ final class dd_core_api {
 			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
 				$sqo->filter = $sqo_session->filter;
 			}
-				dump($sqo, ' sqo count ++++++++++++++++++++++++++++++++++ '.to_string());
 
 		// search
 			if (!isset($result)) {
@@ -998,7 +997,7 @@ final class dd_core_api {
 				$result	= $search->count();
 			}
 
-		// response ok
+		// response OK
 			$response->result	= $result;
 			$response->msg		= empty($response->error)
 				? 'OK. Request done successfully'
