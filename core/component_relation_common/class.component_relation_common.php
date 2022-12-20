@@ -1431,21 +1431,22 @@ class component_relation_common extends component_common {
 
 				// task done. return
 					return true;
-			}else{
-
-				// default normal case
-
-				// locator . get the locator of the current section for search in the component that call this section
-					$locator = new locator();
-						$locator->set_section_id($section_id);
-						$locator->set_section_tipo($section_tipo);
-						if($ar_component_to_search !== false){
-							$locator->set_from_component_tipo($component_to_search);
-						}
 			}
 
 		// new dato
 			$new_relation_locators = [];
+
+		// default normal case
+		// locator . get the locator of the current section for search in the component that call this section
+			$locator = new locator();
+				$locator->set_section_id($section_id);
+				$locator->set_section_tipo($section_tipo);
+				if($ar_component_to_search !== false){
+					$locator->set_from_component_tipo($component_to_search);
+				}
+
+			$new_relation_locators[] = $locator;
+
 
 		// data_from_field. get if the search need add fields data:
 			if( isset($properties->source->data_from_field) ) {
