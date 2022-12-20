@@ -109,12 +109,12 @@ class image {
 
 	/**
 	* GET_FULL_FRAGMENTS
-	* Resturns an array for maintain format, but only one fragment can exists
+	* Returns an array for maintain format, but only one fragment can exists
 	* @return array $full_fragments
 	*/
 	public function get_full_fragments( $raw_text ) {
 		
-		$fragm = TR::deleteMarks($raw_text_sure);
+		$fragm = TR::deleteMarks($raw_text);
 		
 		$full_fragments = array();
 		$obj = new stdClass();
