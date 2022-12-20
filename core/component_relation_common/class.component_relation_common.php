@@ -1393,6 +1393,47 @@ class component_relation_common extends component_common {
 			$section_id		= $this->get_section_id();
 			$section_tipo	= $this->get_section_tipo();
 
+		// data source is got and processed from the observer field, it could need to be processed to be saved.
+		// in case as component_text_area, data is in the middle of the text as svg, or person tag see: numisdata575 and numisdata197
+		// in cases when the component has locators data it will save directly.
+			if (isset($properties->source->set_observed_data)){
+				// get the observer_data properties
+				$set_observed_data = $properties->source->set_observed_data;
+				foreach ($set_observed_data as $current_ddo) {
+
+					$current_component_tipo = $current_ddo->tipo;
+					$model_name			= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$observer_component	= component_common::get_instance(
+						$model_name,
+						$current_component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo,
+						false
+					);
+					if(isset($current_ddo->perform)){
+						// get the locators from components literals, as component_text_area
+						$function			= $current_ddo->perform->function;
+						$params_definition	= $current_ddo->perform->params ?? [];
+						$params = is_array($params_definition)
+							? $params_definition
+							: [$params_definition];
+						$final_data = call_user_func_array(array($observer_component, $function), $params);
+					}else{
+						// get the dato from components with data locators
+						$final_data = $observer_component->get_dato();
+					}
+					$this->set_dato($final_data);
+					debug_log(__METHOD__."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)".to_string(), logger::DEBUG);
+					$this->Save();
+				// task done. return
+					return true;
+
+				}//end foreach
+			}//end if set_observed_data
+
+
 		// data source overwrite (tool cataloging case)
 			if (isset($properties->source->source_overwrite) && isset($properties->source->component_to_search)) {
 
