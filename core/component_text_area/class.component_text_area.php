@@ -386,32 +386,13 @@ class component_text_area extends component_common {
 			foreach ($ar_tag[$data_key] as $pseudo_locator) {
 				$current_locator = str_replace("'", "\"", $pseudo_locator);
 				$current_locator = json_decode($current_locator);
-				if(!in_array($current_locator, $ar_current_locator)){
-					$ar_current_locator[] = $current_locator;
+				if(!in_array($current_locator, $ar_locators)){
+					$ar_locators[] = $current_locator;
 				}
 			}
 		}
-		// create the component relation for save the locators
-		$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$alt_save_component = component_common::get_instance(
-			$modelo_name,
-			$component_tipo,
-			$section_id,
-			'edit',
-			DEDALO_DATA_NOLAN,
-			$section_tipo
-		);
-		if(SHOW_DEBUG===true) {
-			#debug_log(__METHOD__." $component_tipo - $modelo_name - $section_tipo - $section_id ".to_string(), logger::DEBUG);
-			#debug_log(__METHOD__." ar_current_locator ".to_string($ar_current_locator), logger::DEBUG);
-		}
-
-		// Set the dato of the component with the locators
-		$alt_save_component->set_dato($ar_current_locator);
-		$alt_save_component->Save();
-
-		return true;
-	}//end alt_save
+		return $ar_locators;
+	}//end get_locators_of_tag
 
 
 
