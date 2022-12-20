@@ -1570,15 +1570,15 @@ class component_relation_common extends component_common {
 		// changed true
 			if ($changed===true) {
 				$dato = array_values($final_dato);
-				foreach ($new_relation_locators as $current_locator) {
+				// foreach ($new_relation_locators as $current_locator) {
 
 					$component_to_update = component_common::get_instance(
 						get_called_class(),
 						$this->tipo,
-						$current_locator->section_id,
+						$this->section_id,
 						'list',
 						DEDALO_DATA_NOLAN,
-						$current_locator->section_tipo,
+						$this->section_tipo,
 						false
 					);
 
@@ -1594,7 +1594,7 @@ class component_relation_common extends component_common {
 					if($current_locator->section_id==$this->section_id){
 						$this->set_dato($dato);
 					}
-				}//end foreach ($new_relation_locators as $current_locator)
+				// }//end foreach ($new_relation_locators as $current_locator)
 			}//end if ($changed===true)
 
 		// debug
