@@ -486,7 +486,9 @@ const item_hierarchy = (options) => {
 
 	// events
 		// mouseover
-			li.addEventListener('mouseover', (e) => {
+			// li.addEventListener('mouseover', (e) => {
+			li.addEventListener('mouseenter', (e) => {
+
 				//e.stopPropagation();
 				if(self.menu_active===false) {
 					return false
@@ -549,7 +551,9 @@ const item_hierarchy = (options) => {
 			});//end mouseover
 
 		// mouseout
-			li.addEventListener('mouseout', (e) => {
+			// li.addEventListener('mouseout', (e) => {
+			li.addEventListener('mouseleave', (e) => {
+
 				// e.stopPropagation();
 				if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
 					close_all_drop_menu(self);

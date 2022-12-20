@@ -267,7 +267,8 @@ const get_content_data = async function(self, ar_section_record) {
 						})
 
 						// mouseover event
-							section_record_node.addEventListener('mouseover',function(e){
+							// section_record_node.addEventListener('mouseover',function(e){
+							section_record_node.addEventListener('mouseenter',function(e){
 								e.stopPropagation()
 								const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 								event_manager.publish(event_id, this)

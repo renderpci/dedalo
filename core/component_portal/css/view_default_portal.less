@@ -15,6 +15,26 @@
 			min-height: @content_data_min_height;
 			// grid-template-rows: 2rem;
 			position: relative;
+			// height: fit-content;
+
+
+			.button_edit {
+				position: relative;
+				// pointer-events: unset;
+
+				// section_id
+				.section_id {
+					// pointer-events: unset;
+
+					&:hover {
+						// opacity: 0.2;
+					}
+				}
+				// edit_icon
+				.icon.edit {
+					// pointer-events: unset;
+				}
+			}
 
 			// drag selectors
 				.drag.icon {
@@ -24,7 +44,7 @@
 					margin: 0px;
 					padding: 0.5em;
 					background-image: url('../../themes/default/icons/drag.svg');
-					background-position: 92%; // right 0.36rem top 0px;
+					background-position: center; // right 0.36rem top 0px;
 					background-repeat: no-repeat;
 					background-size: 22px 22px;
 					height: auto;
@@ -35,8 +55,33 @@
 					cursor: move;
 					z-index: 2;
 
+					position: absolute;
+					top: 0;
+					left: -2.2rem;
+					width: 2.2rem;
+					height: 2.5rem;
+					opacity: 1;
+					background-color: #f6f6f6;
+					display: block;
+					z-index: 2;
+					border-top-left-radius: 0.33rem;
+					border-bottom-left-radius: 0.33rem;
+
 					&:hover {
-						opacity: 0.3;
+						background-color: @color_orange_dedalo;
+					}
+
+					&.dragging {
+						// position: relative;
+						// background-color: #d9f720;
+						// height: auto;
+						cursor: move;
+						border-radius: 0.33rem;
+					}
+
+
+					&:hover {
+						// opacity: 0.3;
 					}
 
 					// &.dragging {

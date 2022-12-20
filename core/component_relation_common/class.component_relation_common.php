@@ -1498,8 +1498,8 @@ class component_relation_common extends component_common {
 					$sqo->set_section_tipo($target_section_to_search);
 					$sqo->set_mode('related'); // force use of class.search_related.php
 					$sqo->set_full_count(false);
-					$sqo->set_filter_by_locators($new_relation_locators);
 					$sqo->set_limit($references_limit); // default 0 ('ALL')
+					$sqo->set_filter_by_locators($new_relation_locators);
 
 				$search		= search::get_instance($sqo);
 				$rows_data	= $search->search();

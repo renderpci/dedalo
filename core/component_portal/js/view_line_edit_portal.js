@@ -92,6 +92,8 @@ view_line_edit_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
+* @param object self
+* @param array ar_section_record
 * @return DOM node content_data
 */
 const get_content_data = async function(self, ar_section_record) {
@@ -144,22 +146,20 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
+* Adding control columns to the columns_map that will processed by section_recod
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
 
-	// column remove
-		if (self.permissions>1) {
-			columns_map.push({
-				id			: 'remove',
-				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
-				callback	: view_line_edit_portal.render_column_remove
-			})
-		}
+	// column section_id
+		columns_map.push({
+			id			: 'section_id',
+			label		: 'Id',
+			width 		: 'auto',
+			callback	: view_line_edit_portal.render_column_id
+		})
 
 	// base_columns_map
 		const base_columns_map = await self.columns_map
@@ -174,13 +174,15 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
-	// column section_id
-		columns_map.push({
-			id			: 'section_id',
-			label		: 'Id',
-			width 		: 'auto',
-			callback	: view_line_edit_portal.render_column_id
-		})
+	// column remove
+		if (self.permissions>1) {
+			columns_map.push({
+				id			: 'remove',
+				label		: '', // get_label.delete || 'Delete',
+				width 		: 'auto',
+				callback	: view_line_edit_portal.render_column_remove
+			})
+		}
 
 
 	return columns_map
@@ -190,6 +192,7 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * RENDER_COLUMN_ID
+* It is called by section_record to create the column id with custom options
 * @param object options
 * @return DOM DocumentFragment
 */
@@ -249,7 +252,8 @@ view_line_edit_portal.render_column_id = function(options){
 	// edit icon
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button pen icon grey',
+			// class_name	: 'button pen icon grey',
+			class_name		: 'button edit icon grey',
 			parent			: button_edit
 		})
 
@@ -261,6 +265,7 @@ view_line_edit_portal.render_column_id = function(options){
 
 /**
 * RENDER_COLUMN_REMOVE
+* It is called by section_record to create the column remove with custom options
 * Render column_remov node
 * Shared across views
 * @param object options
@@ -353,7 +358,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 	// remove_icon
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button delete_bold icon grey',
+			class_name		: 'button delete_light icon grey',
 			parent			: button_remove
 		})
 

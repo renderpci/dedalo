@@ -772,7 +772,8 @@ const render_datalist = async function(self, api_response) {
 			self.caller.add_value(value)
 		});
 		// mouseover event
-		li_node.addEventListener('mouseover', async function(e){
+		// li_node.addEventListener('mouseover', async function(e){
+		li_node.addEventListener('mouseenter', async function(e){
 			const children = e.target.parentNode.children;
 			await [...children].map((el)=>{
 				if(el.classList.contains('selected')) el.classList.remove('selected')
@@ -780,7 +781,8 @@ const render_datalist = async function(self, api_response) {
 			e.target.classList.add('selected')
 		});
 		// mouseout event
-		li_node.addEventListener('mouseout', function(e){
+		// li_node.addEventListener('mouseout', function(e){
+		li_node.addEventListener('mouseleave', function(e){
 			e.target.classList.remove('selected')
 		});
 
