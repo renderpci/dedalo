@@ -635,9 +635,13 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 	// remove_dom optional
 		if (remove_dom===true) {
-			if(self.node){
+			if(self.node && (self.node.nodeType===Node.ELEMENT_NODE || self.node.nodeType===Node.TEXT_NODE)) {
 				// remove DOM node if exists (wrapper)
-				self.node.remove()
+				try {
+					self.node.remove()
+				} catch (error) {
+					console.error('Error removing node of type: ' + self.node.nodeType, error)
+				}
 			}
 			// reset instance node property value
 			self.node = null
