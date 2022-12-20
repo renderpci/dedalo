@@ -1262,14 +1262,21 @@ abstract class component_common extends common {
 				// get the specific event function in preferences to be fired (instead the default get_dato)
 				if(isset($current_observer->server->perform)){
 
-					$function	= $current_observer->server->perform->function;
-					$params		= $current_observer->server->perform->params;
+					$function			= $current_observer->server->perform->function;
+					$params_definition	= $current_observer->server->perform->params ?? [];
+					$params = is_array($params_definition)
+						? $params_definition
+						: [$params_definition];
 					call_user_func_array(array($component, $function), $params);
 
 				}else{
 
 					// force to update the dato of the observer component
 					$dato = $component->get_dato();
+
+					$component->observable_dato = ($component_name === 'component_relation_related')
+						? $component->get_dato_with_references()
+						: $dato;
 
 					// save the new dato into the database, this will be used for search into components calculations of info's
 					$component->Save();
@@ -1284,7 +1291,6 @@ abstract class component_common extends common {
 					$ar_data = array_merge($ar_data, $component_json->data);
 				}
 			}//end foreach ($ar_section as $current_section)
-
 
 		return $ar_data;
 	}//end update_observers_dato
