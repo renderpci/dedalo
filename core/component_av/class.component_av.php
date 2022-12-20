@@ -5,79 +5,13 @@
 */
 class component_av extends component_media_common {
 
-	# Overwrite __construct var lang passed in this component
-	#protected $lang = DEDALO_DATA_LANG;
-
-	# file name formatted as 'tipo'-'order_id' like dd732-1
-	public $video_id;
-	public $video_url;
-	public $quality;
-
-	public $target_filename;
-	public $target_dir;
-
-	public $additional_path;
-
 
 
 	/**
-	* __CONSTRUCT
-	*
+	* CLASS VARS
 	*/
-	function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
-
-		// common constructor. Creates the component as normally do with parent class
-			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
-
-		// video_id. Set and fix current video_id
-			if (!empty($this->section_id)) {
-				$this->video_id = $this->get_video_id();
-			}
-	}//end __construct
-
-
-
-	/**
-	* GET DATO
-	*
-	* Sample data:
-	* [{
-	*	 "original_file_name": "interview2.mp4",
-	*	 "upload_date": {
-	*      "day": 27,
-	*      "hour": 12,
-	*      "time": 65009738806,
-	*      "year": 2022,
-	*      "month": 8,
-	*      "minute": 46,
-	*      "second": 46
-	*    },
-	*	 "user_id": -1
-	* }]
-	* @return array|null $dato
-	*/
-	public function get_dato() : ?array {
-
-		$dato = parent::get_dato();
-		if (!empty($dato) && !is_array($dato)) {
-			$dato = [$dato];
-		}
-
-		// test
-			// $new_dato	= [];
-			// $ar_quality = DEDALO_AV_AR_QUALITY;
-			// foreach ($ar_quality as $current_quality) {
-			// 	// read file if exists to get dato_item
-			// 	$dato_item = $this->get_quality_file_info($current_quality);
-			// 	// add non empty quality files data
-			// 	if (!empty($dato_item)) {
-			// 		$new_dato[] = $dato_item;
-			// 	}
-			// }
-			// dump($new_dato, ' new_dato +///////////////////++++++++++++++++++++++++++++++++++++++++++ '.to_string($this->tipo));
-
-		return $dato;
-	}//end get_dato
+		// string id .file name formatted as 'tipo'-'order_id' like dd732-1
+		public $video_url;
 
 
 
@@ -90,23 +24,22 @@ class component_av extends component_media_common {
 	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
-	* @return object $value
+	* @return dd_grid_cell_object $grid_cell_object
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_value(string $lang=DEDALO_DATA_LANG, ?object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+			$column_obj = isset($this->column_obj)
+				? $this->column_obj
+				: (object)[
+					'id' => $this->section_tipo.'_'.$this->tipo
+				  ];
 
 		// dato
 			$dato = $this->get_dato();
-			if (!is_array($dato)) {
-				$dato = [$dato];
-			}
+
+		// quality
+			$quality = $this->get_default_quality();
 
 		// data item
 			$item  = new stdClass();
@@ -115,7 +48,7 @@ class component_av extends component_media_common {
 					false, // bool absolute
 					false // bool avoid_cache
 				);
-				$item->video_url = $this->file_exist()
+				$item->video_url = $this->file_exist( $quality )
 					? $this->get_url(false)
 					: null;
 
@@ -123,28 +56,16 @@ class component_av extends component_media_common {
 			$label = $this->get_label();
 
 		// value
-			$value = new dd_grid_cell_object();
-				$value->set_type('column');
-				$value->set_label($label);
-				$value->set_ar_columns_obj([$column_obj]);
-				$value->set_cell_type('av');
-				$value->set_value([$item]);
+			$grid_cell_object = new dd_grid_cell_object();
+				$grid_cell_object->set_type('column');
+				$grid_cell_object->set_label($label);
+				$grid_cell_object->set_ar_columns_obj([$column_obj]);
+				$grid_cell_object->set_cell_type('av');
+				$grid_cell_object->set_value([$item]);
 
 
-		return $value;
+		return $grid_cell_object;
 	}//end get_value
-
-
-
-	/**
-	* GET VALOR
-	* Get value . default is get dato . overwrite in every different specific component
-	* @return string id|null
-	*/
-	public function get_valor() : ?string {
-
-		return $this->get_name();
-	}//end get_valor
 
 
 
@@ -153,7 +74,7 @@ class component_av extends component_media_common {
 	* Return component value sent to export data
 	* @return string $valor_export
 	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : string {
 
 		if (empty($valor)) {
 			$this->get_dato();				// Get dato from DB
@@ -161,10 +82,10 @@ class component_av extends component_media_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
-		$av_file_path = $this->get_valor() . '.' . $this->get_extension();
+		$av_file_path = $this->get_valor();
 
 		$test_file	= true;	// output dedalo image placeholder when not file exists
-		$absolute	= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
+		$absolute	= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg'
 
 		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
 
@@ -173,82 +94,6 @@ class component_av extends component_media_common {
 
 		return $valor_export;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET_NAME
-	* Alias of get_video_id
-	*/
-	public function get_name() : ?string {
-
-		return $this->get_video_id();
-	}//end get_name
-
-
-
-	/**
-	* GET_VIDEO_ID
-	* @return string|null $video_id
-	*/
-	public function get_video_id() : ?string {
-
-		// already set
-			if(isset($this->video_id) && !empty($this->video_id)) {
-				return $this->video_id;
-			}
-
-		// // dato
-		// 	$dato = $this->get_dato();
-
-		// // check empty or invalid dato
-		// 	if (empty($dato) || empty($dato[0]) || empty($dato[0]->section_id)) {
-		// 		if(SHOW_DEBUG===true) {
-		// 			debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo", logger::WARNING);
-		// 		}
-		// 		return null;
-		// 	}
-
-		// // flat locator as id
-		// 	$locator	= new locator($dato[0]);
-		// 	$video_id	= $locator->get_flat();
-
-		// section_id check
-			$section_id = $this->get_section_id();
-			if (!isset($section_id)) {
-				if(SHOW_DEBUG===true) {
-					error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
-				}
-				return null;
-			}
-
-		// flat locator as id
-			$locator = new locator();
-				$locator->set_section_tipo($this->get_section_tipo());
-				$locator->set_section_id($this->get_section_id());
-				$locator->set_component_tipo($this->get_tipo());
-
-			$video_id	= $locator->get_flat();
-
-		// fix value
-			$this->video_id = $video_id;
-
-
-		return $video_id;
-	}//end get_video_id
-
-
-
-	/**
-	* GET_QUALITY
-	* 	Takes quality from fixed value or fallback to default config value
-	*/
-		// public function get_quality() {
-
-		// 	$quality = $this->quality ?? $this->get_default_quality();
-
-		// 	return $quality;
-		// }//end get_quality
 
 
 
@@ -263,19 +108,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* UPLOAD NEEDED
-	*/
-	public function get_target_filename() : string {
-		return $this->video_id .'.'. $this->get_extension();
-	}
-	public function get_target_dir() : string  {
-		return DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $this->get_quality() ;
-		#return $this->AVObj->get_media_path_abs();
-	}//end get_target_dir
-
-
-
-	/**
 	* GET_URL
 	* @param string|null $quality = null
 	* @return string $video_url
@@ -286,46 +118,15 @@ class component_av extends component_media_common {
 			$quality = $this->get_quality();
 		}
 
-		$video_id = $this->get_video_id();
-
+		$id		= $this->get_id();
 		$path	= DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
-		$name	= $video_id .'.'. $this->get_extension();
+		$name	= $id .'.'. $this->get_extension();
 
-		$video_url = $path . $name;
+		// media file av url
+		$url = $path . $name;
 
-		return $video_url;
+		return $url;
 	}//end get_url
-
-
-
-	/**
-	* GET_VIDEO_PATH
-	* @param string|null $quality = null
-	* @return string $video_path
-	*/
-	public function get_video_path( ?string $quality=null ) : string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
-
-		$video_id = $this->get_video_id();
-
-		$video_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. $this->get_extension();
-
-		return $video_path;
-	}//end get_video_path
-
-
-
-	/**
-	* GET_PATH
-	* Alias of get_video_path
-	*/
-	public function get_path($quality=false) : string {
-
-		return $this->get_video_path($quality);
-	}//end get_path
 
 
 
@@ -335,7 +136,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_posterframe_file_name() : string {
 
-		$posterframe_file_name = $this->get_name() .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+		$posterframe_file_name = $this->get_id() .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
 
 		return $posterframe_file_name;
 	}//end get_posterframe_file_name
@@ -361,7 +162,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_posterframe_url(bool $test_file=true, bool $absolute=false, bool $avoid_cache=false) : string {
 
-		$video_id	= $this->get_video_id();
+		$id	= $this->get_id();
 		$file_name	= $this->get_posterframe_file_name();
 
 		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
@@ -393,7 +194,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_subtitles_path( string $lang=DEDALO_DATA_LANG ) : string  {
 
-		$subtitles_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+		$subtitles_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 
 		return $subtitles_path;
 	}//end get_subtitles_path
@@ -406,7 +207,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_subtitles_url( string $lang=DEDALO_DATA_LANG ) : string {
 
-		$subtitles_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+		$subtitles_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 
 		return $subtitles_url;
 	}//end get_subtitles_url
@@ -426,26 +227,27 @@ class component_av extends component_media_common {
 		$result = null;
 
 		// store initial_quality
-			$initial_quality = $this->get_quality();
+			// $initial_quality = $this->get_quality();
 
 		// quality. Changes current component quality temporally
-			$this->set_quality($quality);
+			// $this->set_quality($quality);
 
-		// file do not exists case
-			$target_dir = $this->get_target_dir();
-			if(!file_exists($target_dir)) {
-				return $result;
+		// directory do not exists case
+			$target_dir = $this->get_media_path($quality);
+			if( !file_exists($target_dir) ) {
+				debug_log(__METHOD__." Directory '$target_dir' do not exists !. quality: ".to_string($quality), logger::ERROR);
+				return null;
 			}
 
 		// ar_originals
 			$ar_originals	= [];
-			$findme			= $this->get_video_id() . '.';
+			$findme			= $this->get_id() . '.';
 			if ($handle = opendir($target_dir)) {
 
 				while (false !== ($file = readdir($handle))) {
 
 					// is dir case (DVD files)
-					if($this->get_video_id() == $file && is_dir($target_dir.'/'.$file)){
+					if($this->get_id() == $file && is_dir($target_dir.'/'.$file)){
 
 						// DES
 							// $dvd_folder = $target_dir.'/'.$file;
@@ -494,7 +296,7 @@ class component_av extends component_media_common {
 		}
 
 		// restore component quality
-			$this->set_quality($initial_quality);
+			// $this->set_quality($initial_quality);
 
 
 		return $result;
@@ -504,37 +306,40 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VIDEO SIZE
+	* Calculate the current quality file size in the more human readable unit (kilobytes, megabytes, et.)
+	* @param string $quality = null
+	* @param string $filename = null
 	* @return string
+	* 	Sample: '35.2 MB'
 	*/
 	public function get_video_size(string $quality=null, string $filename=null) : ?string {
 
-		if (empty($filename)) {
-
-			if(empty($quality)) {
-				$quality = $this->get_quality();
+		// empty filename case
+			if (empty($filename)) {
+				if(empty($quality)) {
+					$quality = $this->get_quality();
+				}
+				$filename = $this->get_local_full_path($quality);
 			}
 
-			$video_id	= $this->get_video_id();
-			$filename	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. $this->get_extension();
-		}
+		// file do not exists case
+			if ( !file_exists( $filename )) {
+				return null ;
+			}
 
-		if ( !file_exists( $filename )) {
-			return false ;
-		}
 		$size = 0;
-		if(is_dir($filename)){
-			//minimum size of the initial vob (512KB)
+		if( is_dir($filename) ) {
+
+			// minimum size of the initial VOB (512KB)
 			$vob_filesize = 512*1000;
 
-			if(is_dir($filename.'/VIDEO_TS')){
+			if( is_dir($filename.'/VIDEO_TS') ) {
 
 				$handle = opendir($filename.'/VIDEO_TS');
 					 while (false !== ($file = readdir($handle))) {
 						$extension = pathinfo($file,PATHINFO_EXTENSION);
-						if($extension === 'VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize){
-							#dump($file,'$file: '.filesize($filename.'/VIDEO_TS/'.$file));
-
-							//reset the size of the vob (for the end files of the video)
+						if($extension==='VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize) {
+							// reset the size of the VOB (for the end files of the video)
 							$vob_filesize = 0;
 							$size += filesize($filename.'/VIDEO_TS/'.$file);
 						}
@@ -543,7 +348,7 @@ class component_av extends component_media_common {
 		}else{
 			try {
 				$size		= @filesize($filename) ;
-				if(!$size)	throw new Exception('Unknow size!') ;
+				if(!$size)	throw new Exception('Unknown size!') ;
 			} catch (Exception $e) {
 				#echo '',  $e->getMessage(), "\n";
 				#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
@@ -551,12 +356,13 @@ class component_av extends component_media_common {
 			}
 		}
 
+		// size in unit
+			$size_unit = $size <= 1024
+				? round($size) . ' KB'
+				: round($size / 1024) . ' MB';
 
-		$size_kb = round($size / 1024) ;
 
-		if($size_kb <= 1024) return $size_kb . ' KB' ;
-
-		return round($size_kb / 1024) . ' MB' ;
+		return $size_unit;
 	}//end get_video_size
 
 
@@ -645,10 +451,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_source_quality_to_build(string $target_quality) : ?string {
 
-		$ar_quality_source_valid = array();
-		$ar_quality 			 = DEDALO_AV_AR_QUALITY;
-			#dump($ar_quality,'$ar_quality');
-
+		$ar_quality = DEDALO_AV_AR_QUALITY;
 		foreach($ar_quality as $current_quality) {
 
 			if($target_quality===DEDALO_AV_QUALITY_ORIGINAL) continue;
@@ -662,7 +465,7 @@ class component_av extends component_media_common {
 			if ($current_quality!==$target_quality && $file_exists) {
 				return $current_quality;
 			}
-		}#end foreach($ar_quality as $quality)
+		}//end foreach($ar_quality as $quality)
 
 
 		return null;
@@ -681,12 +484,12 @@ class component_av extends component_media_common {
 			$ar_quality = DEDALO_AV_AR_QUALITY;
 		}
 
-		$ar_all_files_by_quality=array();
+		$ar_all_files_by_quality = [];
 		foreach ($ar_quality as $current_quality) {
 			$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
 		}
 
-		return (array)$ar_all_files_by_quality;
+		return $ar_all_files_by_quality;
 	}//end get_ar_all_files_by_quality
 
 
@@ -724,7 +527,7 @@ class component_av extends component_media_common {
 					}
 
 				// move/rename file
-					$reelID				= $this->get_video_id();
+					$reelID				= $this->get_id();
 					$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . $this->get_extension();
 					if( !rename($media_path, $media_path_moved) ) {
 						trigger_error(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
@@ -752,7 +555,7 @@ class component_av extends component_media_common {
 						}
 
 					// move/rename file
-						$reelID				= $this->get_video_id();
+						$reelID				= $this->get_id();
 						$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 						if( !rename($media_path, $media_path_moved) ) {
 							trigger_error("Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
@@ -785,17 +588,17 @@ class component_av extends component_media_common {
 			# media_path
 			$media_path = $this->get_video_path($current_quality);
 			$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-			$video_id 	= $this->get_video_id();
+			$id 	= $this->get_id();
 			if(SHOW_DEBUG===true) {
-				#dump($media_path, "media_path current_quality:$current_quality - get_video_id:$video_id");	#continue;
+				#dump($media_path, "media_path current_quality:$current_quality - get_id:$id");	#continue;
 			}
-			$file_pattern 	= $media_path .'/'. $video_id .'_*.'. $this->get_extension();
+			$file_pattern 	= $media_path .'/'. $id .'_*.'. $this->get_extension();
 			$ar_files 		= glob($file_pattern);
 			if(SHOW_DEBUG===true) {
 				#dump($ar_files, ' ar_files');#continue;
 			}
 			if (empty($ar_files)) {
-				debug_log(__METHOD__." No files to restore were found for video_id:$video_id. Nothing was restored (1)");
+				debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1)");
 				continue; // Skip
 			}
 			natsort($ar_files);	# sort the files from newest to oldest
@@ -815,17 +618,17 @@ class component_av extends component_media_common {
 		# Posterframe restore
 		$media_path = $this->get_posterframe_path();
 		$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-		$video_id 	= $this->get_video_id();
+		$id 	= $this->get_id();
 		if(SHOW_DEBUG===true) {
-			#dump($media_path, "media_path posterframe - get_video_id:$video_id");	#continue;
+			#dump($media_path, "media_path posterframe - get_id:$id");	#continue;
 		}
-		$file_pattern 	= $media_path.'/'.$video_id.'_*.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+		$file_pattern 	= $media_path.'/'.$id.'_*.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 		$ar_files 		= glob($file_pattern);
 		if(SHOW_DEBUG===true) {
 			#dump($ar_files, ' ar_files');#continue;
 		}
 		if (empty($ar_files)) {
-			debug_log(__METHOD__." No files to restore were found for posterframe:$video_id. Nothing was restored (3)");
+			debug_log(__METHOD__." No files to restore were found for posterframe:$id. Nothing was restored (3)");
 		}else {
 			natsort($ar_files);	# sort the files from newest to oldest
 			$last_file_path = end($ar_files);
@@ -841,25 +644,6 @@ class component_av extends component_media_common {
 
 		return true;
 	}//end restore_component_media_files
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$diffusion_value = $this->get_url(DEDALO_AV_QUALITY_DEFAULT);
-
-
-		return (string)$diffusion_value;
-	}//end get_diffusion_value
 
 
 
@@ -1034,16 +818,16 @@ class component_av extends component_media_common {
 					$response->msg .= $msg;
 					return $response;
 				}
-			// video_id (without extension, like 'test81_test65_2')
-				$video_id = $this->get_video_id();
-				if (empty($video_id)) {
-					throw new Exception("Error Processing Request. Invalid video_id: ".to_string($video_id), 1);
+			// id (without extension, like 'test81_test65_2')
+				$id = $this->get_id();
+				if (empty($id)) {
+					throw new Exception("Error Processing Request. Invalid id: ".to_string($id), 1);
 				}
 
 			// quality default in upload is 'original' (!)
 				$quality  = $this->get_quality();
 
-			$AVObj = new AVObj($video_id, $quality);
+			$AVObj = new AVObj($id, $quality);
 
 		try {
 
@@ -1073,9 +857,10 @@ class component_av extends component_media_common {
 
 						# If default quality file not exists, generate default quality version now
 						# $target_file  = $AVObj->get_local_full_path(); ???????????????????????????????? SURE ???????
-						$quality_default_AVObj 		 = new AVObj($video_id, DEDALO_AV_QUALITY_DEFAULT);
+						$quality_default_AVObj 		 = new AVObj($id, DEDALO_AV_QUALITY_DEFAULT);
 						$quality_default_target_file = $quality_default_AVObj->get_local_full_path();
-						if (!file_exists($quality_default_target_file)) {
+						// $quality_default_target_file = $this->get_local_full_path(DEDALO_AV_QUALITY_DEFAULT);
+						if ( !file_exists($quality_default_target_file) ) {
 							$source_file = $full_file_path; // actually full original path and name
 							if (!file_exists($source_file)) {
 								debug_log(__METHOD__." ERROR: Source file not exists ($source_file) ".to_string(), logger::ERROR);
@@ -1090,7 +875,7 @@ class component_av extends component_media_common {
 
 
 				// posterframe. Create posterframe of current video if not exists
-					$PosterFrameObj = new PosterFrameObj($video_id);
+					$PosterFrameObj = new PosterFrameObj($id);
 					if(Ffmpeg::get_ffmpeg_installed_path() && !$PosterFrameObj->get_file_exists()) {
 						$timecode	= '00:00:05';
 						$Ffmpeg		= new Ffmpeg();
@@ -1112,7 +897,7 @@ class component_av extends component_media_common {
 				if (in_array($file_ext, $ar_audio_only_ext) && $quality===DEDALO_AV_QUALITY_ORIGINAL) {
 
 					# Audio conversion
-					$AVObj_target = new AVObj($video_id, 'audio');
+					$AVObj_target = new AVObj($id, 'audio');
 					$target_file  = $AVObj_target->get_local_full_path();
 					if (!file_exists($target_file)) {
 						$source_file = $full_file_path;
@@ -1257,6 +1042,18 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_FOLDER
+	* 	Get element dir from config
+	* @return string
+	*/
+	public function get_folder() : string {
+
+		return $this->folder ?? DEDALO_AV_FOLDER;
+	}//end get_folder
+
+
+
+	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files dir
 	* @see component_av->remove_component_media_files
@@ -1282,7 +1079,7 @@ class component_av extends component_media_common {
 
 		// DES
 			// // short vars
-			// 	$video_id			= $this->get_video_id();
+			// 	$id					= $this->get_id();
 			// 	$file_name			= $this->get_target_filename(); // ex. rsc15_rsc78_45.mp4
 			// 	$folder_path_del	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/deleted';
 
@@ -1323,7 +1120,7 @@ class component_av extends component_media_common {
 			// 			}
 
 			// 		// delete temp sh file
-			// 			$tmp_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$video_id.'.sh';
+			// 			$tmp_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$id.'.sh';
 			// 			if(file_exists($tmp_file)) {
 			// 				$del_sh = unlink($tmp_file);
 			// 				if(!$del_sh) {
@@ -1334,7 +1131,7 @@ class component_av extends component_media_common {
 
 			// 		// delete posterframe if media deleted is quality default
 			// 			if($quality===DEDALO_AV_QUALITY_DEFAULT) {
-			// 				$poster_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$video_id}.jpg";
+			// 				$poster_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$id}.jpg";
 			// 				if(file_exists($poster_file)) {
 			// 					unlink($poster_file);
 			// 				}
@@ -1353,7 +1150,7 @@ class component_av extends component_media_common {
 			// 					'section_id'	=> $this->section_id,
 			// 					'top_id'		=> TOP_ID ?? null,
 			// 					'top_tipo'		=> TOP_TIPO ?? null,
-			// 					'video_id'		=> $video_id,
+			// 					'id'		=> $id,
 			// 					'quality'		=> $quality
 			// 				]
 			// 			);
@@ -1386,11 +1183,11 @@ class component_av extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// short vars
-			$video_id		= $this->get_name();
+			$id				= $this->get_id();
 			$source_quality	= $this->get_source_quality_to_build($quality);
 
 		// AVObj
-			$AVObj = new AVObj($video_id, $source_quality);
+			$AVObj = new AVObj($id, $source_quality);
 
 		// Ffmpeg
 			$Ffmpeg				= new Ffmpeg();
@@ -1414,7 +1211,7 @@ class component_av extends component_media_common {
 					'parent'			=> $this->section_id,
 					'top_id'			=> TOP_ID ?? null,
 					'top_tipo'			=> TOP_TIPO ?? null,
-					'video_id'			=> $video_id,
+					'id'			=> $id,
 					'quality'			=> $quality,
 					'source_quality'	=> $source_quality
 				]
@@ -1438,10 +1235,10 @@ class component_av extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// short vars
-			$video_id = $this->get_video_id();
+			$id = $this->get_id();
 
 		// AVObj
-			$AVObj = new AVObj($video_id, $quality);
+			$AVObj = new AVObj($id, $quality);
 
 		// Ffmpeg
 			$Ffmpeg				= new Ffmpeg();
@@ -1464,7 +1261,7 @@ class component_av extends component_media_common {
 					'parent'	=> $this->section_id,
 					'top_id'	=> TOP_ID ?? null,
 					'top_tipo'	=> TOP_TIPO ?? null,
-					'video_id'	=> $video_id,
+					'id'	=> $id,
 					'quality'	=> $quality
 				]
 			);
@@ -1490,7 +1287,7 @@ class component_av extends component_media_common {
 	*/
 	public function create_posterframe($current_time, $target_quality=null, $ar_target=null) {
 
-		$reelID		= $this->get_name();
+		$reelID		= $this->get_id();
 		$quality	= $target_quality ?? $this->get_quality_default();
 
 		# AVObj
@@ -1512,7 +1309,7 @@ class component_av extends component_media_common {
 	*/
 	public function delete_posterframe() : bool {
 
-		$name	= $this->get_name();
+		$name	= $this->get_id();
 		$file	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe/' . $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 
 		// check file already exists
@@ -1603,7 +1400,7 @@ class component_av extends component_media_common {
 						);
 
 					// get existing files data
-						$file_name			= $component->get_name();
+						$file_name			= $component->get_id();
 						$source_quality		= $component->get_original_quality();
 						$additional_path	= $component->get_additional_path();
 						$initial_media_path	= $component->get_initial_media_path();

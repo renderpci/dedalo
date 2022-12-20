@@ -63,7 +63,8 @@ abstract class MediaObj extends stdClass {
 
 	/**
 	* LOCAL PATH
-	* @return complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
+	* @return string $path
+	* 	Complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/
 	public function get_local_full_path() : string {
 

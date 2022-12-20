@@ -55,6 +55,8 @@ final class Ffmpeg {
 	/**
 	* GET_SETTING_NAME_FROM_QUALITY
 	* Setting name from quality
+	*
+	* @return string $setting
 	*/
 	public function get_setting_name_from_quality(AVObj $AVObj, string $quality) : string {
 
@@ -187,7 +189,7 @@ final class Ffmpeg {
 	/**
 	* GET_MASTER_MEDIA_FILE_OBJ
 	* Get master media file quality from file name
-	* @return object AVObj $obj
+	* @return AVObj $obj
 	*/
 	public function get_master_media_file_obj(AVObj $AVObj) : AVObj {
 
@@ -206,10 +208,10 @@ final class Ffmpeg {
 	* @param $AVObj
 	*	AVObj object
 	* @param $setting
-	*	ffmpeg_settings to aplicate like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
+	*	ffmpeg_settings to apply like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
 	*
 	* @return string|null $av_alternate_command_exc
-	*	Terminal commnad response
+	*	Terminal command response
 	*/
 	public function create_av_alternate(AVObj $AVObj, string $setting) : ?string {
 
@@ -483,13 +485,13 @@ final class Ffmpeg {
 	* @param $AVObj
 	*	AVObj Object
 	* @param $timecode
-	*	Float number timecode like 102.369217 (from javascript media engine tc control)
-	*	Is formated here to ffmpeg as 102.369
+	*	Float number timecode like 102.369217 (from JavaScript media engine tc control)
+	*	Is formatted here to ffmpeg as 102.369
 	* @param $ar_target
 	*	array|bool default false
 	*
-	* @return $posterFrame_command_exc
-	*	Terminal commnad response
+	* @return mixed $posterFrame_command_exc
+	*	Terminal command response
 	*/
 	public function create_posterframe(AVObj $AVObj, $timecode, ?array $ar_target=null) {
 
@@ -517,7 +519,7 @@ final class Ffmpeg {
 				$target_path	= $ar_target['target_path'];  // Absolute path to image dir
 				$target_file	= $ar_target['target_file'];  // Absolute final path of file (included target_path)
 			}else{
-				# Deafult case . Paths are extracted from PosterFrameObj
+				# Default case . Paths are extracted from PosterFrameObj
 				$PosterFrameObj	= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
 				$target_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe';
 				$target_file	= $target_path .'/'. $AVObj->get_name() .'.' . $PosterFrameObj->get_extension();
@@ -645,10 +647,11 @@ final class Ffmpeg {
 
 	/**
 	* CONFORM_HEADER
+	* @return string|null
 	*/
 	public function conform_header(AVObj $AVObj) : ?string {
 
-		$result = false;
+		$result = null;
 
 		$ffmpeg_installed_path 			= DEDALO_AV_FFMPEG_PATH;
 		$qt_faststart_installed_path 	= DEDALO_AV_FASTSTART_PATH;
@@ -751,6 +754,7 @@ final class Ffmpeg {
 	* CONVERT_TO_DEDALO_AV
 	* Trans-code any media to dedalo standard quality (usually 404)
 	* Not return nothing, open terminal process and send result to /dev/null
+	* @return void
 	*/
 	public static function convert_to_dedalo_av( string $source_file, string $target_file, bool $async=true ) : void {
 
@@ -789,7 +793,8 @@ final class Ffmpeg {
 
 	/**
 	* GET_MEDIA_ATTRIBUTES
-	* @return object JSON mixed file info like:
+	* @return object|null $output
+	* 	JSON mixed file info like:
 	* {
 	* 	"format": {
 	* 		"filename": "/../dedalo/media/av/404/rsc35_rsc167_1.mp4",
@@ -811,7 +816,7 @@ final class Ffmpeg {
 	* 	}
 	* }
 	*/
-	public static function get_media_attributes( string $source_file ) {
+	public static function get_media_attributes( string $source_file ) : ?object {
 
 		$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -print_format json -show_format ' . $source_file . ' 2>&1';
 		$output  = json_decode( shell_exec($command) );
