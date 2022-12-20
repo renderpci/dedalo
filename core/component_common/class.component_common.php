@@ -1222,9 +1222,24 @@ abstract class component_common extends common {
 
 		// get the dato of the observable component to be used to create the observer component
 		// in case of any relation component will be used to find "the component that I call" or "use my relations"
-		if(isset($current_observer->server->mode) && $current_observer->server->mode==='use_observable_dato') {
-			if (!empty($observable_dato)) {
-				$ar_section = array_merge($ar_section, $observable_dato);
+		$config = $current_observer->server->config ?? null;
+
+		if(isset($config)){
+			switch (true) {
+				case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
+					 && (isset($config->use_self_section) && $config->use_self_section===true))):
+						if (!empty($observable_dato)) {
+							$ar_section = array_merge($ar_section, $observable_dato);
+						}
+					break;
+
+				case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
+					 && (isset($config->use_self_section) && $config->use_self_section===false))):
+					$ar_section = $observable_dato;
+					break;
+
+				default:
+					break;
 			}
 		}
 
