@@ -37,7 +37,7 @@ include(DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
 // include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
+// include(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 include(DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'); # new 27-07-2021
 include(DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'); # new 28-07-2021

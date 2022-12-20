@@ -7,138 +7,10 @@
 class component_svg extends component_media_common {
 
 
-	public $quality;
-
-
 
 	/**
-	* GET DATO
-	*
-	* Sample data:
-	* [{
-	* 	 "original_file_name": "icon_link.svg",
-	*    "upload_date": {
-	*      "day": 27,
-	*      "hour": 17,
-	*      "time": 65009757539,
-	*      "year": 2022,
-	*      "month": 8,
-	*      "minute": 58,
-	*      "second": 59
-	*    },
-	*    "user_id": -1
-	* }]
-	* @return array|null $dato
+	* CLASS VARS
 	*/
-	public function get_dato() : ?array {
-
-		$dato = parent::get_dato();
-		if (!empty($dato) && !is_array($dato)) {
-			$dato = [$dato];
-		}
-
-		return (array)$dato;
-	}//end get_dato
-
-
-
-
-	/**
-	* GET VALOR
-	* LIST:
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
-	*/
-	public function get_valor() {
-
-		return $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-	}//end get_valor
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor_export
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
-		$valor = $this->get_url(true);
-
-		return $valor;
-	}//end get_valor_export
-
-
-
-	/**
-	* GET_NAME
-	* Alias of get_svg_id
-	*/
-	public function get_name() : ?string {
-
-		return $this->get_svg_id();
-	}//end get_name
-
-
-
-	/**
-	* GET SVG ID
-	* By default, it is built with the type of the current component_image and the section_id number, eg. 'dd20_rsc750_1'
-	* It can be overwritten in properties with JSON eg. {"svg_id":"dd851"} and will read from the content of the referenced component
-	* @return string|null $svg_id
-	*/
-	public function get_svg_id() : string {
-
-		// already set
-			if(isset($this->svg_id) && !empty($this->svg_id)) {
-				return $this->svg_id;
-			}
-
-		$properties = $this->get_properties();
-
-		switch (true) {
-			case isset($properties->svg_id):
-				$component_tipo		= $properties->svg_id;
-				$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component			= component_common::get_instance(
-					$component_modelo,
-					$component_tipo,
-					$this->parent,
-					'edit',
-					DEDALO_DATA_NOLAN,
-					$this->section_tipo
-				);
-
-				$valor	= trim($component->get_valor());
-				$svg_id	= (!empty($valor) && strlen($valor)>0)
-					? $valor
-					: null;
-				break;
-
-			default:
-				// $svg_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
-				// flat locator as id
-				$locator = new locator();
-					$locator->set_section_tipo($this->get_section_tipo());
-					$locator->set_section_id($this->get_section_id());
-					$locator->set_component_tipo($this->get_tipo());
-
-				$svg_id	= $locator->get_flat();
-				break;
-		}
-
-
-		// fix value
-			$this->svg_id = $svg_id;
-
-
-		return $svg_id;
-	}//end get_svg_id
 
 
 
@@ -182,7 +54,7 @@ class component_svg extends component_media_common {
 		}
 
 		$additional_path	= false;
-		$svg_id			= $this->get_svg_id();
+		$id			= $this->get_id();
 		$parent			= $this->get_parent();
 		$section_tipo	= $this->get_section_tipo();
 
@@ -190,9 +62,9 @@ class component_svg extends component_media_common {
 		if (isset($properties->additional_path) && !empty($parent) ) {
 
 			$component_tipo		= $properties->additional_path;
-			$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component			= component_common::get_instance(
-				$component_modelo,
+				$component_model,
 				$component_tipo,
 				$parent,
 				'edit',
@@ -247,19 +119,6 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_FILE_NAME
-	* @return string $file_name
-	*/
-	public function get_file_name() : string {
-
-		$file_name = $this->tipo .'_'. $this->section_tipo .'_'. $this->parent;
-
-		return $file_name;
-	}//end get_file_name
-
-
-
-	/**
 	* GET_DEFAULT_QUALITY
 	*/
 	public function get_default_quality() : string {
@@ -296,7 +155,7 @@ class component_svg extends component_media_common {
 
 		$additional_path = $this->get_additional_path();
 
-		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
+		$file_name 	= $this->get_id() .'.'. DEDALO_SVG_EXTENSION;
 		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . $quality . $additional_path . '/' . $file_name;
 
 		return $file_path;
@@ -322,21 +181,58 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_TARGET_DIR
+	* @param string|null $quality
 	* @return string $target_dir
 	*/
-	public function get_target_dir() : string {
+	public function get_target_dir(?string $quality) : string {
 
-		if(!$this->quality) {
-			$this->quality = $this->get_quality();
+		if(empty($quality)) {
+			$quality = $this->get_quality();
 		}
 
-		$initial_media_path = $this->get_initial_media_path();
-		$additional_path 	= $this->get_additional_path();
-
-		$target_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . $initial_media_path. '/' . $this->quality . $additional_path . '/';
+		$target_dir = $this->get_media_path($quality);
 
 		return $target_dir;
 	}//end get_target_dir
+
+
+
+	/**
+	* GET_MEDIA_PATH
+	* 	Creates the absolute path to the media in current quality as:
+	* 	'/user/myuser/httpddocs/dedalo//media/svg/standard'
+	* @param string $quality
+	* @return string $media_path
+	* 	Absolute media path
+	*/
+	public function get_media_path(string $quality) : string {
+
+		$initial_media_path	= $this->initial_media_path;
+		$additional_path	= $this->additional_path;
+		$base_path			= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $additional_path;
+		$media_path			= DEDALO_MEDIA_PATH . $base_path;
+
+		return $media_path;
+	}//end get_media_path
+
+
+
+	/**
+	* GET_MEDIA_DIR
+	* 	Creates the relative url path in current quality as
+	* 	'/dedalo/media/pd/standard'
+	* @param string $quality
+	* @return string $media_path
+	*/
+	public function get_media_dir(string $quality) : string {
+
+		$initial_media_path	= $this->initial_media_path;
+		$additional_path	= $this->additional_path;
+		$base_path			= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $additional_path;
+		$media_dir			= DEDALO_MEDIA_URL . $base_path;
+
+		return $media_dir;
+	}//end get_media_dir
 
 
 
@@ -355,29 +251,6 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_URL
-	*	Return relative o absolute url. Default false (relative)
-	* @param bool $absolute
-	* @return string $url
-	*/
-		// public function get_url($absolute=false) {
-
-		// 	$additional_path = $this->get_additional_path();
-
-		// 	$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
-		// 	$url 		= DEDALO_MEDIA_URL .''. DEDALO_SVG_FOLDER . $additional_path . '/' . $file_name;
-
-		// 	# ABSOLUTE (Default false)
-		// 	if ($absolute) {
-		// 		$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-		// 	}
-
-		// 	return $url;
-		// }//end get_url
-
-
-
-	/**
-	* GET_IMAGE_URL
 	* Get image url for current quality
 	* @param string $quality = null
 	*	optional default (bool)false
@@ -396,10 +269,10 @@ class component_svg extends component_media_common {
 			}
 
 		// image id
-			$image_id 	= $this->get_svg_id();
+			$image_id 	= $this->get_id();
 
 		// url
-			$additional_path		= $this->get_additional_path();
+			$additional_path	= $this->get_additional_path();
 			$initial_media_path	= $this->get_initial_media_path();
 			$file_name			= $image_id .'.'. DEDALO_SVG_EXTENSION;
 			$image_url			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $additional_path . '/' . $file_name;
@@ -407,7 +280,6 @@ class component_svg extends component_media_common {
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
 				$file = $this->get_path();
-
 				if(!file_exists($file)) {
 					if ($default_add===false) {
 						return null;
@@ -422,7 +294,7 @@ class component_svg extends component_media_common {
 			}
 
 		return $image_url;
-	}//end get_image_url
+	}//end get_url
 
 
 
@@ -433,9 +305,9 @@ class component_svg extends component_media_common {
 	*/
 	public static function get_url_from_locator(object $locator) : ?string {
 
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-		$component		= component_common::get_instance(
-			$modelo_name,
+		$model		= RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
+		$component	= component_common::get_instance(
+			$model,
 			$locator->component_tipo,
 			$locator->section_id,
 			'list',
@@ -446,25 +318,6 @@ class component_svg extends component_media_common {
 
 		return $url;
 	}//end get_url_from_locator
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$diffusion_value = $this->get_url();
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
 
 
 
@@ -502,8 +355,12 @@ class component_svg extends component_media_common {
 	*/
 	public function get_preview_url() : string {
 
-		// $preview_url = $this->get_thumb_url();
-		$preview_url = $this->get_url($quality=false, $test_file=true, $absolute=false, $default_add=false);
+		$preview_url = $this->get_url(
+			null,  // string|null quality
+			true, // bool test_file
+			false, // bool absolute
+			false // bool default_add
+		);
 
 		return $preview_url;
 	}//end get_preview_url
@@ -549,6 +406,18 @@ class component_svg extends component_media_common {
 
 		return $this->extension ?? DEDALO_SVG_EXTENSION;
 	}//end get_extension
+
+
+
+	/**
+	* GET_FOLDER
+	* 	Get element dir from config
+	* @return string
+	*/
+	public function get_folder() : string {
+
+		return $this->folder ?? DEDALO_SVG_FOLDER;
+	}//end get_folder
 
 
 
@@ -599,7 +468,6 @@ class component_svg extends component_media_common {
 			// 	$this->set_dato([$media_value]);
 			// 	$this->Save();
 			// }
-
 
 		// get files info
 			$files_info	= [];

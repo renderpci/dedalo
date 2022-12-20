@@ -8,30 +8,43 @@ class component_media_common extends component_common {
 
 
 
-	// public $allowed_extensions;
-
-	// string additional_path
-	public $additional_path;
-	// string initial_media_path
-	public $initial_media_path;
+	/**
+	* CLASS VARS
+	*/
+		// string quality
+		public $quality;
+		// string additional_path. An optional file path to files to conform path as /media/images/my_initial_media_path/<1.5MB/..
+		public $additional_path;
+		// string initial_media_path
+		public $initial_media_path;
+		// string target_filename
+		public $target_filename;
+		// string target_dir
+		public $target_dir;
+		// string folder. From config element definitions like: DEDALO_PDF_FOLDER
+		public $folder;
+		// string id. Usually is a flat locator like 'dd522_dd128_1'
+		public $id;
+		// string extension. like 'mp4'
+		public $extension;
 
 
 
 	// Unified data sample:
-	// [{
-	//	"files_info": [{
-	//		'quality'			: $quality,
-	//		'file_name'			: $file_name,
-	//		'file_path'			: $file_path,
-	//		'file_url'			: $file_url,
-	//		'file_size'			: $file_size,
-	//		'file_time'			: $file_time,
-	//		'upload_file_name'	: $source_file_name,
-	//		'upload_date'		: $upload_date,
-	//		'upload_user'		: $upload_user,
-	//	}],
-	//	"lib_data": {} // component_image only
-	// }]
+		// [{
+		//	"files_info": [{
+		//		'quality'			: $quality,
+		//		'file_name'			: $file_name,
+		//		'file_path'			: $file_path,
+		//		'file_url'			: $file_url,
+		//		'file_size'			: $file_size,
+		//		'file_time'			: $file_time,
+		//		'upload_file_name'	: $source_file_name,
+		//		'upload_date'		: $upload_date,
+		//		'upload_user'		: $upload_user,
+		//	}],
+		//	"lib_data": {} // component_image only
+		// }]
 
 
 
@@ -51,6 +64,40 @@ class component_media_common extends component_common {
 
 
 	/**
+	* __CONSTRUCT
+	*/
+	function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+
+		// lang. Force always DEDALO_DATA_NOLAN when is not translatable
+		// (note that PDF can be translatable)
+			$translatable = RecordObj_dd::get_translatable($tipo);
+			if ($translatable!==true) {
+				$lang = DEDALO_DATA_NOLAN;
+			}
+
+		// common constructor. Creates the component as normally do with parent class
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
+
+		// quality
+			$this->quality = $this->get_quality();
+
+		// id. Set and fix current id
+			if (!empty($this->section_id)) {
+
+				// id. Set and fix current id
+					$this->id = $this->get_id();
+
+				// initial_media_path set
+					$this->initial_media_path = $this->get_initial_media_path();
+
+				// additional_path : Set and fix current additional image path
+					$this->additional_path = $this->get_additional_path();
+			}
+	}//end __construct
+
+
+
+	/**
 	* GET_MEDIA_COMPONENTS
 	* Return array with model names of defined as 'media components'.
 	* Add future media components here
@@ -66,6 +113,206 @@ class component_media_common extends component_common {
 			'component_svg'
 		];
 	}//end get_media_components
+
+
+
+	/**
+	* GET DATO
+	*
+	* Sample data:
+	* [{
+	*    "original_file_name": "poblado_raspa.jpg",
+	*    "original_upload_date": {
+	*      "day": 20,
+	*      "hour": 17,
+	*      "time": 65009152486,
+	*      "year": 2022,
+	*      "month": 8,
+	*      "minute": 54,
+	*      "second": 46
+	*    }
+	* }]
+	* @return array|null $dato
+	*/
+	public function get_dato() : ?array {
+
+		$dato = parent::get_dato();
+		if (!empty($dato) && !is_array($dato)) {
+			$dato = [$dato];
+		}
+
+		return $dato;
+	}//end get_dato
+
+
+
+	/**
+	* GET_VALUE
+	* Get the value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* Some the text components can set the value with the dato directly
+	* the relation components need to process the locator to resolve the value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $grid_cell_object
+	*/
+	public function get_value(string $lang=DEDALO_DATA_LANG, ?object $ddo=null) : dd_grid_cell_object {
+
+		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$column_obj = isset($this->column_obj)
+				? $this->column_obj
+				: (object)[
+					'id' => $this->section_tipo.'_'.$this->tipo
+				  ];
+
+		// current_url. get from dato
+			$dato = $this->get_dato();
+			if(isset($dato)){
+				$element_quality = ($this->mode==='edit')
+					? $this->get_default_quality()
+					: $this->get_thumb_quality();
+
+				$current_url = $this->get_url(
+					$element_quality, // string quality
+					false, // bool test_file
+					false,  // bool absolute
+					false // bool default_add
+				);
+			}else{
+				$current_url = '';
+			}
+
+		// label
+			$label = $this->get_label();
+
+		// class_list
+			$class_list = $ddo->class_list ?? null;
+
+		// value
+			$grid_cell_object = new dd_grid_cell_object();
+				$grid_cell_object->set_type('column');
+				$grid_cell_object->set_label($label);
+				$grid_cell_object->set_ar_columns_obj([$column_obj]);
+				$grid_cell_object->set_cell_type('img');
+				if(isset($class_list)){
+					$grid_cell_object->set_class_list($class_list);
+				}
+				$grid_cell_object->set_value([$current_url]);
+
+
+		return $grid_cell_object;
+	}//end get_value
+
+
+
+	/**
+	* GET VALOR
+	* LIST:
+	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	*/
+	public function get_valor() {
+
+		return $this->get_id() .'.'. $this->get_extension();
+	}//end get_valor
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sent to export data
+	* @return string $valor_export
+	*/
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : string {
+
+		$element_quality	= $this->get_default_quality();
+		$valor				= $this->get_url(
+			$element_quality,
+			true, // bool test_file, output dedalo image placeholder when not file exists
+			true, // bool absolute, output absolute path like 'http://myhost/mypath/myimage.jpg'
+			false // bool default_add
+		);
+
+		return $valor;
+	}//end get_valor_export
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+
+		$default_quality = $this->get_default_quality();
+		$diffusion_value = $this->get_url(
+			$default_quality,
+			false,  // bool test_file
+			false,  // bool absolute
+			false // bool default_add
+		);
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_ID
+	* @return string|null $id
+	*/
+	public function get_id() : ?string {
+
+		// already set
+			if(isset($this->id) && !empty($this->id)) {
+				return $this->id;
+			}
+
+		// section_id check
+			$section_id = $this->get_section_id();
+			if (!isset($section_id)) {
+				if(SHOW_DEBUG===true) {
+					error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
+				}
+				return null;
+			}
+
+		// flat locator as id
+			$locator = new locator();
+				$locator->set_section_tipo($this->get_section_tipo());
+				$locator->set_section_id($this->get_section_id());
+				$locator->set_component_tipo($this->get_tipo());
+
+			$id	= $locator->get_flat();
+
+		// add lang when translatable
+			if ($this->traducible==='si') {
+				$id .= '_'.DEDALO_DATA_LANG;
+			}
+
+		// fix value
+			$this->id = $id;
+
+
+		return $id;
+	}//end get_id
+
+
+
+	/**
+	* GET_NAME
+	* Alias of get_id
+	*/
+	public function get_name() : ?string {
+
+		return $this->get_id();
+	}//end get_name
 
 
 
@@ -131,9 +378,12 @@ class component_media_common extends component_common {
 		// target file info
 			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_name		= $this->get_name();
-			$folder_path	= $this->get_target_dir($quality);
+			// $folder_path	= $this->get_target_dir_abs($quality);
+			$folder_path	= $this->get_media_path($quality);
 			$full_file_name	= $file_name . '.' . $file_extension;
 			$full_file_path	= $folder_path .'/'. $full_file_name;
+
+			debug_log(__METHOD__." Target file (full_file_path): ".to_string($full_file_path), logger::DEBUG);
 
 		// validate extension
 			if (!$this->valid_file_extension($file_extension)) {
@@ -214,19 +464,28 @@ class component_media_common extends component_common {
 	*/
 	protected function rename_old_files(string $file_name, string $folder_path) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 
-		// deleted dir. Verify / create the dir "deleted"
-		if(!file_exists($folder_path . "/deleted")) {
-			if(!mkdir($folder_path."/deleted", 0777,true)) {
-				$msg = "Error on create dir: $folder_path . Permission denied";
+		// check target fir
+			if (empty($folder_path)) {
+				$msg = "Invalid folder_path: '$folder_path' from filename: '$file_name'. Ignored rename";
 				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 				$response->msg .= $msg;
 				return $response;
 			}
-		}
+
+		// deleted dir. Verify / create the dir "deleted"
+			if( !file_exists($folder_path . '/deleted') ) {
+				if( !mkdir($folder_path.'/deleted', 0775, true) ) {
+					$msg = "Error on create dir: '$folder_path' . Permission denied";
+					debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+					$response->msg .= $msg;
+					return $response;
+				}
+			}
 
 		// remove old versions by extension. Iterate all extensions looking for possible files to delete
 		$allowed_extensions = $this->get_allowed_extensions();
@@ -341,97 +600,6 @@ class component_media_common extends component_common {
 
 				// add
 				$files_info[] = $quality_file_info;
-
-				// OLD
-					// // path file
-					// 	$path = $this->get_path($quality);
-
-					// // file_exist
-					// 	$file_exist	= !empty($path)
-					// 		? file_exists($path)
-					// 		: false;
-					// 		// $this->file_exist($quality);
-
-					// // file_size
-					// 	$file_size	= ($file_exist===true)
-					// 		? (function() use($path) {
-					// 			try {
-					// 				$size = @filesize($path);
-					// 			} catch (Exception $e) {
-					// 				trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
-					// 			}
-					// 			return $size ?? null; // in bytes
-					// 		  })()
-					// 		: null;
-
-					// // file_url
-					// 	$file_url = ($file_exist===true) //  && $quality!=='original'
-					// 		? $this->get_url($quality)
-					// 		: null;
-
-					// // original case
-					// 	$quality_name = $quality;
-					// 	if ($quality==='original') {
-					// 		$raw_path = $this->get_original_file_path($quality);
-					// 		if ($raw_path!==$path) {
-					// 			$quality_name = 'original_viewable';
-					// 		}
-					// 	}
-
-					// // item
-					// 	$files_info[] = (object)[
-					// 		'quality'		=> $quality_name,
-					// 		'file_exist'	=> $file_exist,
-					// 		'file_size'		=> $file_size,
-					// 		'url'			=> $file_url
-					// 	];
-
-					// // original case
-					// 	if ($quality==='original' && $raw_path!==$path) {
-
-					// 		$path = $raw_path;
-
-					// 		// file_exist
-					// 			$file_exist	= !empty($path)
-					// 				? file_exists($path)
-					// 				: false;
-					// 				// $this->file_exist($quality);
-
-					// 		// file_size
-					// 			$file_size	= ($file_exist===true)
-					// 				? (function() use($path) {
-					// 					try {
-					// 						$size = @filesize($path);
-					// 					} catch (Exception $e) {
-					// 						trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE);
-					// 					}
-					// 					return $size ?? null; // in bytes
-					// 				  })()
-					// 				: null;
-
-					// 		// inject extension temporally
-					// 			$default_extension		= $this->get_extension();
-
-					// 			$raw_original_extension	= ($file_exist===true)
-					// 				? pathinfo($path)['extension']
-					// 				: null;
-					// 			$this->extension		= $raw_original_extension;
-
-					// 		// file_url
-					// 			$file_url = ($file_exist===true)
-					// 				? $this->get_url($quality)
-					// 				: null;
-
-					// 		// restore default extension
-					// 			$this->extension = $default_extension;
-
-					// 		$files_info[] = (object)[
-					// 			'quality'		=> $quality,
-					// 			'file_exist'	=> $file_exist,
-					// 			'file_size'		=> $file_size,
-					// 			'url'			=> $file_url
-					// 		];
-					// 	}
 			}//end foreach ($ar_quality as $quality)
 
 
@@ -533,7 +701,7 @@ class component_media_common extends component_common {
 			foreach ($ar_quality as $current_quality) {
 
 				// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
-					$media_path = $this->get_path($current_quality);
+					$media_path = $this->get_local_full_path($current_quality);
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete directory
@@ -682,12 +850,11 @@ class component_media_common extends component_common {
 					'external'		=> true
 				];
 				return $dato_item;
-
 			}
 
 
 		// file path
-			$file_path = $this->get_path($quality);
+			$file_path = $this->get_local_full_path($quality);
 			// original could override default path
 			if ($quality==='original') {
 				$raw_path = $this->get_original_file_path($quality);
@@ -720,7 +887,12 @@ class component_media_common extends component_common {
 			$file_name = basename($file_path);
 
 		// file_url
-			$file_url = $this->get_url($quality);
+			$file_url = $this->get_url(
+				$quality, // string quality
+				true, // bool test_file
+				false, // bool absolute
+				true // bool default_add
+			);
 			if ($quality==='original') {
 				// replace default extension for the real file extension
 				$path_parts	= pathinfo($file_path);
@@ -766,6 +938,19 @@ class component_media_common extends component_common {
 
 		return $dato_item;
 	}//end get_quality_file_info
+
+
+
+	/**
+	* GET_TARGET_FILENAME
+	* @return string target_filename
+	*/
+	public function get_target_filename() : string {
+
+		$target_filename = $this->id .'.'. $this->get_extension();
+
+		return $target_filename;
+	}//end get_target_filename
 
 
 
@@ -895,6 +1080,66 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_MEDIA_PATH
+	* 	Creates the absolute path to the media in current quality as:
+	* 	'/user/myuser/httpddocs/dedalo//media/pd/standard'
+	* @param string $quality
+	* @return string $media_path
+	* 	Absolute media path
+	*/
+	public function get_media_path(string $quality) : string {
+
+		$initial_media_path	= $this->initial_media_path ?? '';
+		$additional_path	= $this->additional_path ?? '';
+		$folder				= $this->get_folder(); // like '/svg'
+		$base_path			= $folder . $initial_media_path . '/' . $quality . $additional_path;
+		$media_path			= DEDALO_MEDIA_PATH . $base_path;
+
+		return $media_path;
+	}//end get_media_path
+
+
+
+	/**
+	* GET_MEDIA_DIR
+	* 	Creates the relative url path in current quality as
+	* 	'/dedalo/media/pd/standard'
+	* @param string $quality
+	* @return string $media_path
+	*/
+	public function get_media_dir(string $quality) : string {
+
+		$initial_media_path	= $this->initial_media_path;
+		$additional_path	= $this->additional_path;
+		$folder				= $this->get_folder(); // like '/svg'
+		$base_path			= $folder . $initial_media_path . '/' . $quality . $additional_path;
+		$media_dir			= DEDALO_MEDIA_URL . $base_path;
+
+		return $media_dir;
+	}//end get_media_dir
+
+
+
+
+	/**
+	* GET_TARGET_DIR
+	* @param string|null $quality
+	* @return string $target_dir
+	*/
+	public function get_target_dir(?string $quality) : string {
+
+		if(empty($quality)) {
+			$quality = $this->get_quality();
+		}
+
+		$target_dir = $this->get_media_path($quality);
+
+		return $target_dir;
+	}//end get_target_dir
+
+
+
+	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
@@ -927,11 +1172,12 @@ class component_media_common extends component_common {
 
 	/**
 	* LOCAL PATH
-	* @return complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
+	* @return string $path
+	* complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/
 	public function get_local_full_path(string $quality) : string {
 
-		$path = $this->get_media_path_abs($quality) .'/'. $this->get_name() . '.' . $this->get_extension();
+		$path = $this->get_media_path($quality) .'/'. $this->get_name() . '.' . $this->get_extension();
 
 		return	$path;
 	}//end get_local_full_path
@@ -941,12 +1187,13 @@ class component_media_common extends component_common {
 	/**
 	* SET_QUALITY
 	* Sync this quality value
+	* @return bool
 	*/
 	public function set_quality(string $quality) :bool {
 
 		$ar_valid 	= $this->get_ar_quality();
 
-		if(!in_array($quality,$ar_valid)) {
+		if(!in_array($quality, $ar_valid)) {
 			#$quality = $default ;		#dump($ar_valid, "$quality NO IS IN ARRAY !!!!!");
 			debug_log(__METHOD__." $quality is not accepted value as quality. Please configure media options in config.php".to_string(), logger::ERROR);
 			return false;
@@ -966,7 +1213,7 @@ class component_media_common extends component_common {
 	*/
 	public function get_size(string $quality) : ?string {
 
-		$filename = $this->get_media_path_abs($quality) . $this->get_name() . '.' . $this->get_extension() ;
+		$filename = $this->get_media_path($quality) . $this->get_name() . '.' . $this->get_extension() ;
 
 		try {
 
