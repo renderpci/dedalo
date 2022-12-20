@@ -203,7 +203,8 @@ async function life_cycle_test(element, view) {
 				}
 				else if(new_instance.mode==='list') {
 					// console.log('+++ new_instance.node:', new_instance.node);
-					if (new_instance.node) {
+					if (new_instance.view!=='text') {
+						// console.log('new_instance.node:', new_instance.node, new_instance.mode, new_instance.view);
 						if (new_instance.model!=='component_portal' && new_instance.model.indexOf('component_relation')===-1) {
 							assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
 							assert.equal(new_instance.node.querySelector('.content_data'), null, 'content_data must be null on list mode');
