@@ -60,7 +60,7 @@ class search_related extends search {
 					switch (true) {
 						case isset($locator->from_component_tipo):
 							$locator_index = $locator->from_component_tipo.'_'.$base_flat_locator;
-							$locators_query[] = PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator) . ']\'::jsonb';
+							$locators_query[] = PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							break;
 
 						default:
