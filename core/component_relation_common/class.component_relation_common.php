@@ -1368,7 +1368,14 @@ class component_relation_common extends component_common {
 	* @see used by component_autocomplete and component_portal
 	* @return bool
 	*/
-	public function set_dato_external(bool $save=false, bool $changed=false, $current_dato=false, int $references_limit=10) : bool {
+	public function set_dato_external($options) : bool {
+
+		// options
+		$save				= $options->save ?? false;
+		$changed			= $options->changed ?? false;
+		$current_dato		= $options->current_dato ?? false;
+		$references_limit	= $options->references_limit ?? 10;
+
 		$start_time=start_time();
 
 		// dato set
@@ -1476,8 +1483,8 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		// Add locator at end
-			$new_relation_locators[] = $locator;
+		// // Add locator at end
+		// 	$new_relation_locators[] = $locator;
 		// get the inverse references
 			//old way done in relations table
 				// $ar_result 	= $this->get_external_result_from_relations_table($new_relation_locators, $ar_component_to_search);
@@ -1518,12 +1525,19 @@ class component_relation_common extends component_common {
 					$ar_result[] = $current_locator;
 				}
 
+
+
 			$total_ar_result	= sizeof($ar_result);
 			$total_ar_dato		= sizeof($dato);
+			$final_dato			= [];
 
 			if ($total_ar_result===0 && $total_ar_dato===0) {
 				// empty values
 				$changed = false;
+
+			}else if ($total_ar_result===0 && $total_ar_dato > 0){
+
+				$changed = true;
 
 			}else if ($total_ar_result>2000) {
 				// Not maintain order, is too expensive above 1000 locators
@@ -1534,24 +1548,17 @@ class component_relation_common extends component_common {
 				}
 			}else{
 				// preserve order
-				$final_dato = [];
 					foreach ((array)$dato as $key => $current_locator) {
 
-						// Array filter is faster in this case for big arrays
-						// $res = array_filter($ar_result, function($item) use($current_locator){
-						// 	if ($item->section_id===$current_locator->section_id && $item->section_tipo===$current_locator->section_tipo) {
-						// 		return $item;
-						// 	}
-						// });
-						$res = array_find($ar_result, function($el) use($current_locator){
+						$found = array_find($ar_result, function($el) use($current_locator){
 							return ($el->section_id===$current_locator->section_id && $el->section_tipo===$current_locator->section_tipo);
 						});
-						// if (empty($res)) {
+						// if (empty($found)) {
 						// 	unset($dato[$key]);
 						// 	$changed = true;
 						// 	break;
 						// }
-						if(!empty($res)){
+						if(!empty($found)){
 							$final_dato[] = $current_locator;
 							$changed = true;
 						}
