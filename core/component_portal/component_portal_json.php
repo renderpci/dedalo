@@ -70,11 +70,13 @@
 			// 		(isset($properties->source->mode) && $properties->source->mode==='external')) {
 
 			// 		// set_dato_external: $save=false, $changed=false, $current_dato=false, $references_limit=0
-			// 		$save				= true; // $mode==='edit' ? true : false;
-			// 		$changed			= false; // $mode==='edit' ? true : false;
-			// 		$current_dato		= false; // $this->get_dato();
-			// 		$references_limit	= 0; // (!) Set to zero to get all references to enable sort
-			// 		$this->set_dato_external($save, $changed, $current_dato, $references_limit);	// Forces update dato with calculated external dato
+			// 		$options = new stdClass();
+			// 			$options->save				= true; // $mode==='edit' ? true : false;
+			// 			$options->changed			= false; // $mode==='edit' ? true : false;
+			// 			$options->current_dato		= false; // $this->get_dato();
+			// 			$options->references_limit	= 0; // (!) Set to zero to get all references to enable sort
+
+			// 		$this->set_dato_external($options);	// Forces update dato with calculated external dato
 			// 	}
 			// }
 
