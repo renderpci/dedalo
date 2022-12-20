@@ -5,14 +5,14 @@
 
 // imports
 	// import {event_manager} from '../../../common/js/event_manager.js'
+	// import {ui} from '../../../common/js/ui.js'
 	import {common} from '../../../common/js/common.js'
 	import {set_before_unload} from '../../../common/js/events.js';
-	// import {ui} from '../../../common/js/ui.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
-
 	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
+
 
 
 /**
@@ -1429,13 +1429,14 @@ export const service_ckeditor = function() {
 
 
 
-		/**
-	 * Checks the attribute value of the first node in the selection that allows the attribute.
-	 * For the collapsed selection returns the selection attribute.
-	 *
-	 * @private
-	 * @returns {Boolean} The attribute value.
-	 */
+	/**
+	* _GETVALUEFROMFIRSTALLOWEDNODE
+	* Checks the attribute value of the first node in the selection that allows the attribute.
+	* For the collapsed selection returns the selection attribute.
+	*
+	* @private
+	* @returns {Boolean} The attribute value.
+	*/
 	this._getValueFromFirstAllowedNode = function() {
 		const model = this.editor.model;
 		const schema = model.schema;
@@ -1454,21 +1455,23 @@ export const service_ckeditor = function() {
 		}
 
 		return false;
-	}
+	}//end _getValueFromFirstAllowedNode
+
 
 
 	/**
-	 * Returns the link {@link module:engine/view/attributeelement~AttributeElement} under
-	 * the {@link module:engine/view/document~Document editing view's} selection or `null`
-	 * if there is none.
-	 *
-	 * **Note**: For a non–collapsed selection, the link element is returned when **fully**
-	 * selected and the **only** element within the selection boundaries, or when
-	 * a linked widget is selected.
-	 *
-	 * @private
-	 * @returns {module:engine/view/attributeelement~AttributeElement|null}
-	 */
+	* GET_SELECTED_REFERENCE_ELEMENT
+	* Returns the link {@link module:engine/view/attributeelement~AttributeElement} under
+	* the {@link module:engine/view/document~Document editing view's} selection or `null`
+	* if there is none.
+	*
+	* **Note**: For a non–collapsed selection, the link element is returned when **fully**
+	* selected and the **only** element within the selection boundaries, or when
+	* a linked widget is selected.
+	*
+	* @private
+	* @returns {module:engine/view/attributeelement~AttributeElement|null}
+	*/
 	this.get_selected_reference_element = function() {
 
 		const self		= this
@@ -1494,60 +1497,61 @@ export const service_ckeditor = function() {
 				? selectedElement.getAttribute( 'reference' )
 				: selection.getAttribute( 'reference' )
 
+		//des
+			// 	this.isEnabled = model.schema.checkAttribute( selectedElement, 'reference' );
+			// } else {
+			// 	this.value = selection.getAttribute( 'reference' );
+			// 	this.isEnabled = model.schema.checkAttributeInSelection( selection, 'reference' );
+			// }
+
+			// const self		= this
+			// const editor	= self.editor
+
+			// const view				= editor.editing.view;
+			// const selection			= view.document.selection;
+			// const selectedElement	= selection.getSelectedElement();
+
+			// function is_widget( node ) {
+			// 	if ( !node.is( 'element' ) ) {
+			// 		return false;
+			// 	}
+			// 	return !!node.getCustomProperty( 'widget' );
+			// }
+
+			// // The selection is collapsed or some widget is selected (especially inline widget).
+			// if ( selection.isCollapsed || selectedElement && is_widget(selectedElement) ) {
+			// 	return self.find_reference_element_ancestor( selection.getFirstPosition() );
+			// } else {
+			// 	// The range for fully selected link is usually anchored in adjacent text nodes.
+			// 	// Trim it to get closer to the actual link element.
+			// 	const range = selection.getFirstRange().getTrimmed();
+			// 	const start_reference	= self.find_reference_element_ancestor( range.start );
+			// 	const end_reference		= self.find_reference_element_ancestor( range.end );
+
+			// 	if ( !start_reference || start_reference != end_reference ) {
+			// 		return null;
+			// 	}
+
+			// 	// Check if the reference element is fully selected.
+			// 	if ( view.createRangeIn( start_reference ).getTrimmed().isEqual( range ) ) {
+			// 		return start_reference;
+			// 	} else {
+			// 		return null;
+			// 	}
+			// }
+
 		return value
+	}//end get_selected_reference_element
 
-		// 	this.isEnabled = model.schema.checkAttribute( selectedElement, 'reference' );
-		// } else {
-		// 	this.value = selection.getAttribute( 'reference' );
-		// 	this.isEnabled = model.schema.checkAttributeInSelection( selection, 'reference' );
-		// }
-
-
-
-		// const self		= this
-		// const editor	= self.editor
-
-		// const view				= editor.editing.view;
-		// const selection			= view.document.selection;
-		// const selectedElement	= selection.getSelectedElement();
-
-		// function is_widget( node ) {
-		// 	if ( !node.is( 'element' ) ) {
-		// 		return false;
-		// 	}
-		// 	return !!node.getCustomProperty( 'widget' );
-		// }
-
-		// // The selection is collapsed or some widget is selected (especially inline widget).
-		// if ( selection.isCollapsed || selectedElement && is_widget(selectedElement) ) {
-		// 	return self.find_reference_element_ancestor( selection.getFirstPosition() );
-		// } else {
-		// 	// The range for fully selected link is usually anchored in adjacent text nodes.
-		// 	// Trim it to get closer to the actual link element.
-		// 	const range = selection.getFirstRange().getTrimmed();
-		// 	const start_reference	= self.find_reference_element_ancestor( range.start );
-		// 	const end_reference		= self.find_reference_element_ancestor( range.end );
-
-		// 	if ( !start_reference || start_reference != end_reference ) {
-		// 		return null;
-		// 	}
-
-		// 	// Check if the reference element is fully selected.
-		// 	if ( view.createRangeIn( start_reference ).getTrimmed().isEqual( range ) ) {
-		// 		return start_reference;
-		// 	} else {
-		// 		return null;
-		// 	}
-		// }
-	}
 
 
 	/**
-	 * Returns `true` if a given view node is the reference element.
-	 *
-	 * @param {module:engine/view/node~Node} node
-	 * @returns {Boolean}
-	 */
+	* FIND_REFERENCE_ELEMENT_ANCESTOR
+	* Returns `true` if a given view node is the reference element.
+	*
+	* @param {module:engine/view/node~Node} node
+	* @returns bool
+	*/
 	this.find_reference_element_ancestor = function ( position ) {
 
 		const node = position.getAncestors()
@@ -1555,7 +1559,7 @@ export const service_ckeditor = function() {
 		return node.find( ancestor =>
 			ancestor.is( 'attributeElement' ) && !!ancestor.getCustomProperty( 'reference' )
 		);
-	}
+	}//end find_reference_element_ancestor
 
 
 
@@ -1568,6 +1572,7 @@ export const service_ckeditor = function() {
 	* 	tag_id : 1,
 	* 	new_data_obj : { type : n } (former dataset)
 	* }
+	* @return void
 	*/
 	this.set_reference = function(options) {
 
@@ -1630,7 +1635,7 @@ export const service_ckeditor = function() {
 				// [ 'reference', ...truthyManualDecorators, ...falsyManualDecorators ].forEach( item => {
 				writer.removeSelectionAttribute( 'reference' );
 				// } );
-			} else {
+			}else{
 				// If selection has non-collapsed ranges, we change attribute on nodes inside those ranges
 				// omitting nodes where the `reference` attribute is disallowed.
 				const ranges = model.schema.getValidRanges( selection.getRanges(), 'reference' );
@@ -1673,14 +1678,14 @@ export const service_ckeditor = function() {
 					// } );
 				}
 			}
-		} );
+		});
+	}//end set_reference
 
-	};//end set_reference
 
 
 	/**
 	* REMOVE_REFERENCE
-	* @return
+	* @return void
 	*/
 	this.remove_reference = function() {
 
@@ -1707,10 +1712,6 @@ export const service_ckeditor = function() {
 			for ( const range of ranges_to_remove ) {
 				writer.removeAttribute( 'reference', range );
 			}
-		} );
-
-
-	};//end remove_reference
-
-
+		});
+	}//end remove_reference
 }//end service_ckeditor
