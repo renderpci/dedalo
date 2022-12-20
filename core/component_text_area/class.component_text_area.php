@@ -338,11 +338,11 @@ class component_text_area extends component_common {
 		// Dato current assigned
 			$dato_current = $this->dato;
 
-		// alt_save. Alternative save with relation components for store in relations and matrix relations the locators used inside the text
-			$properties = $this->get_properties();
-			if(isset($properties->alt_save)){
-				$this->alt_save();
-			}
+		// // alt_save. Alternative save with relation components for store in relations and matrix relations the locators used inside the text
+		// 	$properties = $this->get_properties();
+		// 	if(isset($properties->alt_save)){
+		// 		$this->alt_save();
+		// 	}
 
 		// clean dato
 			if ($clean_text && !empty($dato_current)) {
@@ -373,22 +373,70 @@ class component_text_area extends component_common {
 	* Executed before save component when component structure properties have defined alt_save actions
 	* @return bool true
 	*/
-	public function alt_save() : bool {
+	// public function alt_save() : bool {
 
-		// get the current dato with all text
-			$dato_current	= reset($this->dato); // (!) Note that only one value is expected in component_text_area but format is array
-			$section_id		= $this->get_parent();
-			$section_tipo	= $this->get_section_tipo();
+	// 	// get the current dato with all text
+	// 		$dato_current	= reset($this->dato); // (!) Note that only one value is expected in component_text_area but format is array
+	// 		$section_id		= $this->get_parent();
+	// 		$section_tipo	= $this->get_section_tipo();
 
-		// get the alt_save options
-			$properties			= $this->get_properties();
-			$ar_mark_to_process	= $properties->alt_save->mark;
-			$component_tipo		= $properties->alt_save->component_tipo;
+	// 	// get the alt_save options
+	// 		$properties			= $this->get_properties();
+	// 		$ar_mark_to_process	= $properties->alt_save->mark;
+	// 		$component_tipo		= $properties->alt_save->component_tipo;
+
+	// 	$ar_current_locator = [];
+	// 	foreach ($ar_mark_to_process as $current_mark) {
+	// 		$pattern = TR::get_mark_pattern($current_mark);
+	// 		preg_match_all($pattern, $dato_current, $ar_tag);
+
+	// 		// Array result key 7 is the locator stored in the result of the preg_match_all
+	// 		$data_key = 7;
+
+	// 		// The locator inside the tag are with ' and is necessary change to "
+	// 		foreach ($ar_tag[$data_key] as $pseudo_locator) {
+	// 			$current_locator = str_replace("'", "\"", $pseudo_locator);
+	// 			$current_locator = json_decode($current_locator);
+	// 			if(!in_array($current_locator, $ar_current_locator)){
+	// 				$ar_current_locator[] = $current_locator;
+	// 			}
+	// 		}
+	// 	}
+	// 	// create the component relation for save the locators
+	// 	$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+	// 	$alt_save_component = component_common::get_instance(
+	// 		$modelo_name,
+	// 		$component_tipo,
+	// 		$section_id,
+	// 		'edit',
+	// 		DEDALO_DATA_NOLAN,
+	// 		$section_tipo
+	// 	);
+	// 	if(SHOW_DEBUG===true) {
+	// 		#debug_log(__METHOD__." $component_tipo - $modelo_name - $section_tipo - $section_id ".to_string(), logger::DEBUG);
+	// 		#debug_log(__METHOD__." ar_current_locator ".to_string($ar_current_locator), logger::DEBUG);
+	// 	}
+
+	// 	// Set the dato of the component with the locators
+	// 	$alt_save_component->set_dato($ar_current_locator);
+	// 	$alt_save_component->Save();
+
+	// 	return true;
+	// }//end alt_save
+
+
+	/**
+	* GET_LOCATORS_OF_TAG
+	* @return
+	*/
+	public function get_locators_of_tags($ar_mark_tag) {
+
+		$current_data	= reset($this->dato); // (!) Note that only one value is expected in component_text_area but format is array
 
 		$ar_current_locator = [];
-		foreach ($ar_mark_to_process as $current_mark) {
-			$pattern = TR::get_mark_pattern($current_mark);
-			preg_match_all($pattern, $dato_current, $ar_tag);
+		foreach ($ar_mark_tag as $current_tag) {
+			$pattern = TR::get_mark_pattern($current_tag);
+			preg_match_all($pattern, $current_data, $ar_tag);
 
 			// Array result key 7 is the locator stored in the result of the preg_match_all
 			$data_key = 7;
