@@ -10,11 +10,14 @@
 /**
 * ON_DRAGSTART
 * Get element dataset path as event.dataTransfer from selected component
+* @param DOM node
+* 	Usually a drag icon node
+* @param event
+* @param object options
 * @return bool true
 */
 export const on_dragstart = function(node, event, options) {
 	event.stopPropagation();
-
 
 	// transfer_data. Will be necessary the original locator of the section_record and
 	// the paginated_key (the position in the array of data)
@@ -22,7 +25,7 @@ export const on_dragstart = function(node, event, options) {
 			locator			: options.locator,
 			paginated_key	: options.paginated_key
 		}
-		console.log('>> on_dragstart transfer_data:', transfer_data);
+		// console.log('>> on_dragstart transfer_data:', transfer_data);
 
 	// data. The data will be transfer to drop in text format
 		const data = JSON.stringify(transfer_data)
@@ -74,23 +77,31 @@ export const on_dragstart = function(node, event, options) {
 /**
 * ON_DRAGSTART
 * Get element dataset path as event.dataTransfer from selected component
+* @param DOM node
+*	Its a section record (only in mosaic mode)
+* @param event
+* @param object options
 * @return bool true
 */
 export const on_dragstart_mosaic = function(node, event, options) {
 	// event.preventDefault();
 	event.stopPropagation();
+
 	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
 	const transfer_data = {
 		locator			: options.locator,
 		paginated_key	: options.paginated_key
 	}
+
 	// the data will be transfer to drop in text format
 	const data = JSON.stringify(transfer_data)
 
 	event.dataTransfer.effectAllowed = 'move';
 	event.dataTransfer.setData('text/plain', data);
+
 	// style the drag element to be showed in drag mode
 	// node.classList.add('dragging')
+
 	return true
 }//end ondrag_start
 
@@ -98,7 +109,11 @@ export const on_dragstart_mosaic = function(node, event, options) {
 
 /**
 * ON_DRAGOVER
-* active the drop node action when the drag over it
+* Actives the drop node action when the drag over it
+* @param DOM node
+* 	This node is the drop node
+* @param event
+* @return void
 */
 export const on_dragover = function(node, event) {
 	event.preventDefault();
@@ -111,6 +126,10 @@ export const on_dragover = function(node, event) {
 
 /**
 * ON_DRAGLEAVE
+* @param DOM node
+* 	This node is the drop node
+* @param event
+* @return void
 */
 export const on_dragleave = function(node, event) {
 	event.preventDefault()
@@ -123,13 +142,18 @@ export const on_dragleave = function(node, event) {
 /**
 * ON_DRAGEND
 * Reset drop nodes to the original size and hide them
-* @param DOM node node
-* @param Event event
+* @param DOM node
+* 	Usually a drag icon node
+* @param event
+* @param object options
 * @return void
 */
 export const on_dragend = function(node, event) {
 	event.preventDefault();
 	event.stopPropagation();
+
+	// style the drag element to be showed in drag mode
+		node.classList.remove('dragging')
 
 	// get content data, it has the section_records nodes with the drop nodes.
 	const content_data		= node.parentNode.parentNode.parentNode
@@ -140,8 +164,8 @@ export const on_dragend = function(node, event) {
 		const section_record_node	= ar_section_record[i]
 		const current_drop			= section_record_node.querySelector('.drop')
 		// set the drop nodes to the original size and hide it.
-		current_drop.style.height = 0
-		current_drop.style.width = 0
+		current_drop.style.height	= 0
+		current_drop.style.width	= 0
 		current_drop.classList.add('hide')
 	}
 }//end on_dragend

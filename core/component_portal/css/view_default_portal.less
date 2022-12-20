@@ -44,7 +44,7 @@
 					margin: 0px;
 					padding: 0.5em;
 					background-image: url('../../themes/default/icons/drag.svg');
-					background-position: 92% 0.5rem; // right 0.36rem top 0px;
+					background-position: center; // right 0.36rem top 0px;
 					background-repeat: no-repeat;
 					background-size: 22px 22px;
 					height: auto;
@@ -56,17 +56,16 @@
 					z-index: 2;
 
 					position: absolute;
-					left: -2rem;
 					top: 0;
-					width: 2rem;
-					height: 100%;
+					left: -2.2rem;
+					width: 2.2rem;
+					height: 2.5rem;
 					opacity: 1;
 					background-color: #f6f6f6;
 					display: block;
-					z-index: 9999999999;
-					border-top-left-radius: 5px;
-					border-bottom-left-radius: 5px;
-					height: 2.5rem;
+					z-index: 2;
+					border-top-left-radius: 0.33rem;
+					border-bottom-left-radius: 0.33rem;
 
 					&:hover {
 						background-color: @color_orange_dedalo;
@@ -77,6 +76,7 @@
 						// background-color: #d9f720;
 						// height: auto;
 						cursor: move;
+						border-radius: 0.33rem;
 					}
 
 

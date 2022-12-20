@@ -92,6 +92,8 @@ view_line_edit_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
+* @param object self
+* @param array ar_section_record
 * @return DOM node content_data
 */
 const get_content_data = async function(self, ar_section_record) {
@@ -144,7 +146,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
+* Adding control columns to the columns_map that will processed by section_recod
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
@@ -190,6 +192,7 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * RENDER_COLUMN_ID
+* It is called by section_record to create the column id with custom options
 * @param object options
 * @return DOM DocumentFragment
 */
@@ -262,6 +265,7 @@ view_line_edit_portal.render_column_id = function(options){
 
 /**
 * RENDER_COLUMN_REMOVE
+* It is called by section_record to create the column remove with custom options
 * Render column_remov node
 * Shared across views
 * @param object options
