@@ -729,7 +729,8 @@ export const get_buttons = (self) => {
 						parent			: buttons_fold
 					})
 					button_update_data_external.addEventListener("click", async function(){
-						const source = self.rqo_config.show.find(item => item.typo === 'source')
+
+						const source = self.rqo.source
 						source.build_options = {
 							get_dato_external : true
 						}
