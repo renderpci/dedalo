@@ -266,12 +266,14 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// button_remove
-		columns_map.push({
-			id			: 'remove',
-			label		: '', // get_label.delete || 'Delete',
-			width 		: 'auto',
-			callback	: render_column_remove
-		})
+		if ( self.context.properties.source?.mode !=='external' && self.permissions>1) {
+			columns_map.push({
+				id			: 'remove',
+				label		: '', // get_label.delete || 'Delete',
+				width 		: 'auto',
+				callback	: render_column_remove
+			})
+		}
 
 
 	return columns_map
