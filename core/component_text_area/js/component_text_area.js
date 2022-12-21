@@ -604,7 +604,6 @@ component_text_area.prototype.update_changed_data = function (options) {
 
 	self.preprocess_text_to_save(value)
 		.then(function(parsed_value){
-console.log("parsed_value:------------->",parsed_value);
 			const changed_data_item = Object.freeze({
 				action	: 'update',
 				key		: key,
