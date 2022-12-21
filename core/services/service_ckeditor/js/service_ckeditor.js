@@ -490,7 +490,7 @@ export const service_ckeditor = function() {
 
 		// the editor send a event when the data is changed and change the is_dirty state
 		editor.model.document.on( 'change:data', () => {
-			self.is_dirty = true;
+			self.set_dirty(true);
 		});
 	}//end init_status_changes
 
@@ -1251,13 +1251,11 @@ export const service_ckeditor = function() {
 			if (value===true) {
 				self.is_dirty = true
 				// is_data_changed
-				self.caller.is_data_changed = true
+				self.caller.update_changed_data({
+					text_editor	: self,
+					key			: self.key
+				})
 			}
-
-		// page unload event
-			// set_before_unload (bool)
-			set_before_unload(value)
-
 
 		return true
 	}//end set_dirty
