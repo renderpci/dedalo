@@ -1,5 +1,5 @@
 <?php
-require_once( DEDALO_CONFIG_PATH .'/config.php');
+// require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 // require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 /**
@@ -674,13 +674,13 @@ final class Ffmpeg {
 		# Copy file
 		$command .= "&& $ffmpeg_installed_path -i $file_path -c:v copy -c:a copy $file_path_temp ";	# && rm -f $file_path && mv $file_path_temp $file_path # -y
 
-		# Rename original to conservate original file untouched
+		# Rename original to preserve the original file untouched
 		$command .= "&& mv $file_path $file_path_original ";
 
 		# Rename new file as source
 		#$command .= "&& mv $file_path_temp $file_path ";
 
-		# Faststart (build final file)
+		# faststart (build final file)
 		$command .= "&& $qt_faststart_installed_path $file_path_temp $target_file_path ";
 
 		# Remove temp file
