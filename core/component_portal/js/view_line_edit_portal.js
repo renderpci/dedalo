@@ -175,7 +175,7 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// column remove
-		if (self.permissions>1) {
+		if ( self.context.properties.source?.mode !=='external' && self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
