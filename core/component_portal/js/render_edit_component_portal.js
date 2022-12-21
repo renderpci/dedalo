@@ -681,191 +681,211 @@ export const get_buttons = (self) => {
 			  // sort section by label ascendant
 			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-	// fragment
-		const fragment = new DocumentFragment()
-
-		if (is_inside_tool===true || self.context.properties.source?.mode==='external') {
+		if (is_inside_tool===true){
+			// fragment
+				const fragment = new DocumentFragment()
 			return fragment
 		}
 
+		// buttons container
+			const buttons_container = ui.component.build_buttons_container(self)
+			  // buttons_container.appendChild(fragment)
+
+		// buttons_fold (allow sticky position on large components)
+			const buttons_fold = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'buttons_fold',
+				parent			: buttons_container
+			})
+
+
+		const show_interface = (!self.rqo_config.show.interface)
+			? {
+				button_add		: true,
+				button_link		: true,
+				tools			: true,
+				button_external	: false,
+				button_tree		: false
+			}
+			: self.rqo_config.show.interface
+
+		// Default source external buttons configuration,
+		// if show.interface is defined in properties used the definition, else use this default
+			if(!self.rqo_config.show.interface && self.context.properties.source?.mode==='external') {
+				show_interface.button_add		= false
+				show_interface.button_link		= false
+				show_interface.tools			= false
+				show_interface.button_external	= true
+				show_interface.button_tree		= false
+			}// end if external
+
+		// button_update_data_external
+			if( show_interface.button_external === true){
+
+				// button_update data external
+					const button_update_data_external = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button sync',
+						parent			: buttons_fold
+					})
+					button_update_data_external.addEventListener("click", async function(){
+						const source = self.rqo_config.show.find(item => item.typo === 'source')
+						source.build_options = {
+							get_dato_external : true
+						}
+						const built = await self.build(true)
+						// render
+						if (built) {
+							self.render({render_level : 'content'})
+						}
+					})
+			}//end button external
+
 	// button_add
-		const button_add = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button add',
-			parent			: fragment
-		})
-		button_add.addEventListener('click', async function(){
+		if( show_interface.button_add === true){
+			const button_add = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button add',
+				parent			: buttons_fold
+			})
+			button_add.addEventListener('click', async function(){
 
-			// target_section_tipo. to add section selector
-				const target_section_tipo = target_section_lenght > 1
-					? false
-					: target_section[0].tipo
-				if (!target_section_tipo) {
-					alert("Error. Empty target_section");
-					return
-				}
-
-			// source
-				const source = create_source(self, null)
-
-			// data
-				const data = clone(self.data)
-				data.changed_data = {
-					action	: 'add_new_element',
-					key		: null,
-					value	: target_section_tipo
-				}
-
-			// rqo
-				const rqo = {
-					action	: 'save',
-					source	: source,
-					data	: data
-				}
-
-			// data_manager. create new record
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				// add value to current data
-				if (api_response.result) {
-					self.refresh()
-				}else{
-					console.error('Error on api_response on try to create new row:', api_response);
-				}
-		})
-
-	// button_link
-		const button_link = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button link',
-			parent			: fragment
-		})
-		button_link.addEventListener("click", async function(e){
-			e.stopPropagation()
-
-			// const section_tipo	= select_section.value
-			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
-			const section_tipo	= target_section[0].tipo;
-			// const section_label	= target_section[0].label;
-
-			// iframe
-				( () => {
-
-					const iframe_url = (tipo) => {
-						return DEDALO_CORE_URL + '/page/?tipo=' + tipo + '&mode=list&menu=false&initiator=' + self.id
+				// target_section_tipo. to add section selector
+					const target_section_tipo = target_section_lenght > 1
+						? false
+						: target_section[0].tipo
+					if (!target_section_tipo) {
+						alert("Error. Empty target_section");
+						return
 					}
 
-					const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
-					const iframe = ui.create_dom_element({
-						element_type	: 'iframe',
-						class_name		: 'fixed',
-						src				: iframe_url(section_tipo),
-						parent			: iframe_container
+				// source
+					const source = create_source(self, null)
+
+				// data
+					const data = clone(self.data)
+					data.changed_data = {
+						action	: 'add_new_element',
+						key		: null,
+						value	: target_section_tipo
+					}
+
+				// rqo
+					const rqo = {
+						action	: 'save',
+						source	: source,
+						data	: data
+					}
+
+				// data_manager. create new record
+					const api_response = await data_manager.request({
+						body : rqo
 					})
+					// add value to current data
+					if (api_response.result) {
+						self.refresh()
+					}else{
+						console.error('Error on api_response on try to create new row:', api_response);
+					}
+			})
+		}//end button_add
 
-					// select_section
-						const select_section = ui.create_dom_element({
-							element_type	: 'select',
-							class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
-						})
-						select_section.addEventListener("change", function(){
-							iframe.src = iframe_url(this.value)
-						})
-						// options for select_section
-							for (let i = 0; i < target_section_lenght; i++) {
-								const item = target_section[i]
-								ui.create_dom_element({
-									element_type	: 'option',
-									value			: item.tipo,
-									inner_html		: item.label + " [" + item.tipo + "]",
-									parent			: select_section
-								})
-							}
+	// button_link
+		if( show_interface.button_link === true){
+			const button_link = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button link',
+				parent			: buttons_fold
+			})
+			button_link.addEventListener("click", async function(e){
+				e.stopPropagation()
 
-					// header label
-						const header = ui.create_dom_element({
-							element_type	: 'span',
-							inner_html		: get_label.seccion,
-							class_name		: 'label'
-						})
+				// const section_tipo	= select_section.value
+				// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
+				const section_tipo	= target_section[0].tipo;
+				// const section_label	= target_section[0].label;
 
-					// header custom
-						const header_custom = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'header_custom'
-						})
-						header_custom.appendChild(header)
-						header_custom.appendChild(select_section)
+				// iframe
+					( () => {
 
-					// fix modal to allow close later, on set value
-						self.modal = ui.attach_to_modal({
-							header	: header_custom,
-							body	: iframe_container,
-							footer	: null,
-							size	: 'big'
+						const iframe_url = (tipo) => {
+							return DEDALO_CORE_URL + '/page/?tipo=' + tipo + '&mode=list&menu=false&initiator=' + self.id
+						}
+
+						const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
+						const iframe = ui.create_dom_element({
+							element_type	: 'iframe',
+							class_name		: 'fixed',
+							src				: iframe_url(section_tipo),
+							parent			: iframe_container
 						})
 
-				})()
-				return
-		})
+						// select_section
+							const select_section = ui.create_dom_element({
+								element_type	: 'select',
+								class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
+							})
+							select_section.addEventListener("change", function(){
+								iframe.src = iframe_url(this.value)
+							})
+							// options for select_section
+								for (let i = 0; i < target_section_lenght; i++) {
+									const item = target_section[i]
+									ui.create_dom_element({
+										element_type	: 'option',
+										value			: item.tipo,
+										inner_html		: item.label + " [" + item.tipo + "]",
+										parent			: select_section
+									})
+								}
+
+						// header label
+							const header = ui.create_dom_element({
+								element_type	: 'span',
+								inner_html		: get_label.seccion,
+								class_name		: 'label'
+							})
+
+						// header custom
+							const header_custom = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'header_custom'
+							})
+							header_custom.appendChild(header)
+							header_custom.appendChild(select_section)
+
+						// fix modal to allow close later, on set value
+							self.modal = ui.attach_to_modal({
+								header	: header_custom,
+								body	: iframe_container,
+								footer	: null,
+								size	: 'big'
+							})
+
+					})()
+					return
+			})
+		}//end button_link
 
 	// button tree terms selector
-		if( self.rqo_config.show.interface &&
-			self.rqo_config.show.interface.button_tree &&
-			self.rqo_config.show.interface.button_tree=== true){
+		if( show_interface.button_tree === true){
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button gear',
-				parent			: fragment
+				parent			: buttons_fold
 			})
 			// add listener to the select
 			button_tree_selector.addEventListener('mouseup',function(){
 
 			})
-		}
-
-	// button_update_data_external
-		if( self.rqo_config.show.interface &&
-			self.rqo_config.show.interface.button_external &&
-			self.rqo_config.show.interface.button_external === true){
-
-			// button_update data external
-				const button_update_data_external = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button sync',
-					parent			: fragment
-				})
-				button_update_data_external.addEventListener("click", async function(){
-					const source = self.rqo_config.show.find(item => item.typo === 'source')
-					source.build_options = {
-						get_dato_external : true
-					}
-					const built = await self.build(true)
-					// render
-					if (built) {
-						self.render({render_level : 'content'})
-					}
-				})
-		}
+		}//end button_external
 
 	// buttons tools
-		if (!is_inside_tool && self.mode==='edit') {
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-			  // buttons_container.appendChild(fragment)
-
-	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
-		})
-		buttons_fold.appendChild(fragment)
-
+		if( show_interface.tools === true){
+			if (!is_inside_tool && self.mode==='edit') {
+				ui.add_tools(self, buttons_fold)
+			}
+		}//end add tools
 
 	return buttons_container
 }//end get_buttons
