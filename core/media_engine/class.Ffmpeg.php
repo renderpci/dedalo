@@ -63,15 +63,15 @@ final class Ffmpeg {
 		# CREATE A NEW AVOBJ AS MASTER MEDIA
 		$master_media_file_obj = $this->get_master_media_file_obj($AVObj);
 
-		# MEDIA STANDAR (PAL/NTSC)
-		$media_standar	= strtolower($master_media_file_obj->get_media_standar());
+		# MEDIA STANDARD (PAL/NTSC)
+		$media_standard	= strtolower( $master_media_file_obj->get_media_standard() );
 
-		if($media_standar) {
-			$media_standar = '_' . $media_standar ;
+		if($media_standard) {
+			$media_standard = '_' . $media_standard ;
 		}else{
-			$media_standar = '';
+			$media_standard = '';
 		}
-		if($quality==='audio') $media_standar = '';
+		if($quality==='audio') $media_standard = '';
 
 		# ASPECT RATIO (16X9/4X3)
 		$aspect_ratio = strtolower($master_media_file_obj->get_aspect_ratio());
@@ -83,7 +83,7 @@ final class Ffmpeg {
 
 		if($quality==='audio') $aspect_ratio = '';
 
-		$setting = $quality . $media_standar . $aspect_ratio ;
+		$setting = $quality . $media_standard . $aspect_ratio ;
 
 		return $setting;
 	}//end get_setting_name_from_quality
@@ -96,10 +96,11 @@ final class Ffmpeg {
 	*/
 	public function get_quality_from_setting(string $setting) : ?string {
 
-		if($setting==='audio') return $setting;
+		if($setting==='audio') {
+			return $setting;
+		}
 
-		$ar_quality 	= self::$ar_supported_qualitys;
-
+		$ar_quality = self::$ar_supported_qualitys;
 		foreach($ar_quality as $quality) {
 
 			$pos = stripos($setting, $quality);
@@ -710,43 +711,50 @@ final class Ffmpeg {
 
 	/**
 	* CONVERT_AUDIO
-	* @return string|null $result
+	* Transform audio file to default codec
+	* @param object $options
+	* @return string|false|null $result
+	* 	A string containing the output from the executed command, false if the pipe cannot be established
+	* 	or null if an error occurs or the command produces no output.
 	*/
-	public function convert_audio(AVObj $AVObj, string $uploaded_file_path) : ?string {
+	// public function convert_audio(AVObj $AVObj, string $uploaded_file_path) : ?string {
+	public static function convert_audio( object $options ) : ?string {
 
-		$ffmpeg_installed_path			= DEDALO_AV_FFMPEG_PATH;
-		$qt_faststart_installed_path	= DEDALO_AV_FASTSTART_PATH;
+		// options
+			$output_file_path	= $options->output_file_path;
+			$uploaded_file_path	= $options->uploaded_file_path;
 
-		$output_file_path = $AVObj->get_local_full_path();
+		// short vars
+			$ffmpeg_installed_path			= DEDALO_AV_FFMPEG_PATH;
+			$qt_faststart_installed_path	= DEDALO_AV_FASTSTART_PATH;
 
-		$command  = '';
+		// command
+			$command  = '';
 
-		# ffmpeg -i INPUT_FILE.EXT -aq 500 -acodec libfaac -map_meta_data OUTPUT_FILE.EXT:INPUT_FILE.EXT OUTPUT_FILE.EXT
-		# ffmpeg -i INPUT_FILE.EXT -aq 70 -acodec libfaac -map_meta_data OUTPUT_FILE.EXT:INPUT_FILE.EXT OUTPUT_FILE.EXT
-		# ffmpeg -i input.wav -c:a libfdk_aac -b:a 128k output.m4a
-		# ffmpeg -i input.wav -strict experimental -c:a aac -b:a 240k output.m4a
+			// ffmpeg -i INPUT_FILE.EXT -aq 500 -acodec libfaac -map_meta_data OUTPUT_FILE.EXT:INPUT_FILE.EXT OUTPUT_FILE.EXT
+			// ffmpeg -i INPUT_FILE.EXT -aq 70 -acodec libfaac -map_meta_data OUTPUT_FILE.EXT:INPUT_FILE.EXT OUTPUT_FILE.EXT
+			// ffmpeg -i input.wav -c:a libfdk_aac -b:a 128k output.m4a
+			// ffmpeg -i input.wav -strict experimental -c:a aac -b:a 240k output.m4a
 
-		#
-		# FFMPEG AUDIO CODEC TEST
-		$acodec = self::get_audio_codec();
+			// ffmpeg audio codec test
+			$acodec = self::get_audio_codec();
 
-		# Convert file
-		$command .= "$ffmpeg_installed_path -i $uploaded_file_path -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path ";
+			// convert file
+			$command .= "$ffmpeg_installed_path -i $uploaded_file_path -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path ";
 
-		# Faststart
-		$command .= "&& $qt_faststart_installed_path $output_file_path $output_file_path ";
+			// faststart
+			$command .= "&& $qt_faststart_installed_path $output_file_path $output_file_path ";
 
-		if(SHOW_DEBUG===true) {
-			#error_log($command);
-		}
+		// exec
+			$result = shell_exec( $command );
+			// $conform_header_command_exc = Exec::exec_command($command);
 
-		$result = shell_exec( $command );
-		#$conform_header_command_exc = Exec::exec_command($command);
+		// debug
+			debug_log(__METHOD__." Executed command: $command . result: ".to_string($result), logger::DEBUG);
 
-		if(SHOW_DEBUG===true) error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>") ;
 
 		return $result;
-	}//end conform_header
+	}//end convert_audio
 
 
 
@@ -754,9 +762,9 @@ final class Ffmpeg {
 	* CONVERT_TO_DEDALO_AV
 	* Trans-code any media to dedalo standard quality (usually 404)
 	* Not return nothing, open terminal process and send result to /dev/null
-	* @return void
+	* @return string|false|null $result
 	*/
-	public static function convert_to_dedalo_av( string $source_file, string $target_file, bool $async=true ) : void {
+	public static function convert_to_dedalo_av( string $source_file, string $target_file, bool $async=true ) : ?string {
 
 		$ffmpeg_path		= DEDALO_AV_FFMPEG_PATH;
 		$qt_faststart_path	= DEDALO_AV_FASTSTART_PATH;
@@ -782,11 +790,14 @@ final class Ffmpeg {
 
 		if ($async) {
 			# Exec without wait finish
-			exec("$command  > /dev/null &");
+			$result = exec("$command  > /dev/null &");
 		}else{
 			# Exec wait finish
-			exec("$command");
+			$result = exec("$command");
 		}
+
+
+		return $result;
 	}//end convert_to_dedalo_av
 
 
