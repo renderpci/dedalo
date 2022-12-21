@@ -60,6 +60,9 @@
 						// specific sqo configuration for the show
 					}
 					"interface"		:{
+						"button_add" : true || false // control of the input interface button to add new registers
+						"button_link" : true || false // control of the input interface button to link existent registers
+						"tools" : true || false // control of the input interface to add the tools of the component
 						"button_tree" : true || false // control of the input interface button tree
 						"button_external" : true || false // control of the refresh button when the data of the portal is external
 					}
