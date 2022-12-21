@@ -194,10 +194,12 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_TYPO
+	* @param string $value
+	* @return void
 	*/
 	public function set_typo(string $value) : void {
 		if($value!=='ddo') {
-			debug_log(__METHOD__." Error. Fixed invalid typo ".to_string($value), logger::DEBUG);
+			debug_log(__METHOD__." Error. Fixed invalid typo ".to_string($value), logger::WARNING);
 			$value = 'ddo';
 		}
 		$this->typo = $value;
@@ -208,6 +210,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_TYPE
 	* Only allow 'section','component','grouper','button'
+	* @param string $value
+	* @return void
 	*/
 	public function set_type(string $value) : void  {
 		$ar_type_allowed = self::$ar_type_allowed;
@@ -222,6 +226,7 @@ class dd_object extends stdClass {
 	/**
 	* SET_TIPO
 	* @param string $value
+	* @return void
 	*/
 	public function set_tipo(string $value) : void  {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
@@ -236,6 +241,7 @@ class dd_object extends stdClass {
 	* SET_SECTION_TIPO
 	* @param string|array $value
 	* 	Could be array or string
+	* @return void
 	*/
 	public function set_section_tipo($value) : void  { // string|array
 		if (!isset($this->model) && isset($this->tipo)) {
@@ -251,6 +257,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_PARENT
+	* @param string $value
+	* @return void
 	*/
 	public function set_parent(string $value) : void {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
@@ -263,6 +271,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_PARENT_GROUPER
+	* @param string $value
+	* @return void
 	*/
 	public function set_parent_grouper(string $value) : void {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
@@ -275,6 +285,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_LANG
+	* @param string $value
+	* @return void
 	*/
 	public function set_lang(string $value) : void {
 		if(strpos($value, 'lg-')!==0) {
@@ -287,6 +299,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_MODE
+	* @param string $value
+	* @return void
 	*/
 	public function set_mode(string $value) : void {
 
@@ -297,6 +311,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_MODEL
+	* @param string $value
+	* @return void
 	*/
 	public function set_model(string $value) : void {
 
@@ -307,6 +323,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_LEGACY_MODEL
+	* @param string $value
+	* @return void
 	*/
 	public function set_legacy_model(string $value) : void {
 
@@ -319,7 +337,8 @@ class dd_object extends stdClass {
 	* SET_PROPERTIES
 	* Note hint parameter 'object' is not supported bellow php 7.2
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
-	* @param object|array|null
+	* @param object|array|null $value
+	* @return void
 	*/
 	public function set_properties($value) : void {
 
@@ -330,6 +349,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_PERMISSIONS
+	* @param int $value
+	* @return void
 	*/
 	public function set_permissions(int $value) : void {
 
@@ -340,6 +361,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_LABEL
+	* @param string $value
+	* @return void
 	*/
 	public function set_label(string $value) : void {
 
@@ -352,6 +375,7 @@ class dd_object extends stdClass {
 	* SET_LABELS
 	* Used by tools
 	* @param array|null $value
+	* @return void
 	*/
 	public function set_labels(?array $value) : void {
 
@@ -362,6 +386,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_TRANSLATABLE
+	* @param bool $value
+	* @return void
 	*/
 	public function set_translatable(bool $value) : void {
 
@@ -373,6 +399,7 @@ class dd_object extends stdClass {
 	/**
 	* SET_TOOLS
 	* @param array|null $value
+	* @return void
 	*/
 	public function set_tools(?array $value) : void {
 
@@ -388,6 +415,7 @@ class dd_object extends stdClass {
 	/**
 	* SET_BUTTONS
 	* @param array|null $value
+	* @return void
 	*/
 	public function set_buttons(?array $value) : void {
 
@@ -403,6 +431,7 @@ class dd_object extends stdClass {
 	/**
 	* SET_CSS
 	* @param object|null $value
+	* @return void
 	*/
 	public function set_css(?object $value) : void {
 
@@ -413,6 +442,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_TARGET_SECTIONS
+	* @param array $value
+	* @return void
 	*/
 	public function set_target_sections(array $value) : void {
 
@@ -423,6 +454,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_REQUEST_CONFIG
+	* @param array|null $value
+	* @return void
 	*/
 	public function set_request_config(?array $value) : void {
 
@@ -433,6 +466,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_AR_SECTIONS_TIPO
+	* @param array $value
+	* @return void
 	*/
 	public function set_ar_sections_tipo(array $value) : void {
 
@@ -443,6 +478,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_COLUMNS_MAP
+	* @param array|null $value
+	* @return void
 	*/
 	public function set_columns_map(?array $value) : void {
 
@@ -453,6 +490,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_VIEW
+	* @param string|null $value
+	* @return void
 	*/
 	public function set_view(?string $value) : void {
 
@@ -463,6 +502,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_CHILDREN_VIEW
+	* @param string|null $value
+	* @return void
 	*/
 	public function set_children_view(?string $value) : void {
 
@@ -473,6 +514,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_FIXED_MODE
+	* @param string $value
+	* @return void
 	*/
 	public function set_fixed_mode(string $value) : void {
 
@@ -485,6 +528,7 @@ class dd_object extends stdClass {
 	* SET_SECTION_ID
 	* Used by tools
 	* @param int|null $value
+	* @return void
 	*/
 	public function set_section_id(?int $value) : void {
 
@@ -496,6 +540,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_NAME
 	* Used by tools
+	* @param string $value
+	* @return void
 	*/
 	public function set_name(string $value) : void {
 
@@ -507,6 +553,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_DESCRIPTION
 	* Used by tools
+	* @param string $value
+	* @return void
 	*/
 	public function set_description(string $value) : void {
 
@@ -518,6 +566,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_ICON
 	* Used by tools
+	* @param string $value
+	* @return void
 	*/
 	public function set_icon(string $value) : void {
 
@@ -526,8 +576,10 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_show_in_inspector
+	* SET_SHOW_IN_INSPECTOR
 	* Used by tools
+	* @param bool $value
+	* @return void
 	*/
 	public function set_show_in_inspector(bool $value) : void {
 
@@ -537,8 +589,10 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_show_in_component
+	* SET_SHOW_IN_COMPONENT
 	* Used by tools
+	* @param bool $value
+	* @return void
 	*/
 	public function set_show_in_component(bool $value) : void {
 
@@ -550,6 +604,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_CONFIG
 	* Used by tools
+	* @param object|null $value
+	* @return void
 	*/
 	public function set_config(?object $value) : void {
 
@@ -561,6 +617,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_SORTABLE
 	* Used by components (columns)
+	* @param bool $value
+	* @return void
 	*/
 	public function set_sortable(bool $value) : void {
 
@@ -572,6 +630,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_FIELDS_SEPARATOR
 	* Used by tools
+	* @param string $value
+	* @return void
 	*/
 	public function set_fields_separator(string $value) : void {
 
@@ -583,6 +643,8 @@ class dd_object extends stdClass {
 	/**
 	* SET_RECORDS_SEPARATOR
 	* Used by tools
+	* @param string $value
+	* @return void
 	*/
 	public function set_records_separator(string $value) : void {
 
@@ -593,6 +655,10 @@ class dd_object extends stdClass {
 
 	/**
 	* COMPARE_DDO
+	* @param object $ddo1
+	* @param object $ddo2
+	* @param array $ar_properties = ['model','tipo','section_tipo','mode','lang', 'parent','typo','type']
+	* @param array $ar_exclude_properties = []
 	* @return bool $equal
 	*/
 	public static function compare_ddo(object $ddo1, object $ddo2, array $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type'], array $ar_exclude_properties=[]) : bool {
@@ -674,6 +740,9 @@ class dd_object extends stdClass {
 
 	/**
 	* IN_ARRAY_DDO
+	* @param object $ddo
+	* @param array $ar_ddo
+	* @param array $ar_properties = ['model','tipo','section_tipo','mode','lang', 'parent','typo','type']
 	* @return bool $found
 	*/
 	public static function in_array_ddo(object $ddo, array $ar_ddo, array $ar_properties=['model','tipo','section_tipo','mode','lang', 'parent','typo','type']) : bool {
@@ -701,8 +770,9 @@ class dd_object extends stdClass {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
+	* @param string $name
 	*/
-	final public function __get($name) {
+	final public function __get(string $name) {
 
 		if (isset($this->$name)) {
 			return $this->$name;
@@ -711,13 +781,12 @@ class dd_object extends stdClass {
 		// $trace = debug_backtrace();
 		// debug_log(
 		// 	__METHOD__
-		// 	.' Undefined property accessed via __get(): '.$name .
+		// 	.' Undefined property via __get(): '.$name .
 		// 	' in ' . $trace[0]['file'] .
 		// 	' on line ' . $trace[0]['line'],
 		// 	logger::DEBUG);
-
 		return null;
-	}//end __get
+	}
 	// final public function __set($name, $value) {
 	// 	$this->$name = $value;
 	// }
