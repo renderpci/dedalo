@@ -563,7 +563,7 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 				}
 
 			// button_remove
-				if (self.permissions>1) {
+				if( self.context.properties.source?.mode !=='external' && self.permissions>1) {
 					full_columns_map.push({
 						id			: 'remove',
 						label		: '', // get_label.delete || 'Delete',
