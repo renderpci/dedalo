@@ -3504,6 +3504,10 @@ class section extends common {
 									$current_component->from_component_tipo	= $current_ddo_tipo;
 									$current_component->from_section_tipo	= $section_tipo;
 
+								// view
+									$current_view = $ddo->view ?? 'text';
+									$current_component->set_view($current_view);
+
 								// dato. inject dato from time machine record
 									$current_dato = ($source_model!=='section')
 										? $dato // from deleted component dato case
