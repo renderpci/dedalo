@@ -130,9 +130,9 @@ session_write_close();
 						}
 					})();
 				}
-				$obj->php_version		= PHP_VERSION;
-				// $obj->php_version	.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
-				$obj->php_memory		= to_string(ini_get('memory_limit'));
+				$obj->php_version	= PHP_VERSION;
+				$obj->php_version	.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
+				$obj->php_memory	= to_string(ini_get('memory_limit'));
 			}
 
 

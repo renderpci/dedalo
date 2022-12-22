@@ -5,8 +5,8 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
+	import {ui} from '../../common/js/ui.js'
 	import {view_csv_dd_grid} from './view_csv_dd_grid.js'
 	import {view_table_dd_grid} from './view_table_dd_grid.js'
 	import {view_default_dd_grid} from './view_default_dd_grid.js'
@@ -129,7 +129,7 @@ export const get_av_column = function(data_item) {
 * @param object data_item
 * @return DOM node image (img)
 */
-export const get_img_column = function(data_item){
+export const get_img_column = function(data_item) {
 
 	const class_list = data_item.class_list || ''
 
@@ -176,7 +176,7 @@ export const get_label_column = function(current_data) {
 * @param object current_data
 * @return DOM node button (img)
 */
-export const get_button_column = function(current_data){
+export const get_button_column = function(current_data) {
 
 	const value			= current_data.value[0]
 	const class_list	= value.class_list || ''

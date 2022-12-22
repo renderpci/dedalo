@@ -183,7 +183,7 @@ final class dd_ts_api {
 						$target_section_tipo
 					);
 					$component->get_dato();
-					debug_log(__METHOD__." Saved default dato to 'is_descriptor' component ($component_tipo : $modelo_name) on section_id: ".to_string($new_section_id), logger::DEBUG);
+					debug_log(__METHOD__." Saved default dato to 'is_descriptor' component ($component_tipo : $model) on section_id: ".to_string($new_section_id), logger::DEBUG);
 				}
 			}
 
@@ -193,9 +193,9 @@ final class dd_ts_api {
 			}else{
 				if ($section_map->thesaurus->is_indexable!==false) {
 					$component_tipo	= $section_map->thesaurus->is_indexable;
-					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$component		= component_common::get_instance(
-						$modelo_name,
+						$model,
 						$component_tipo,
 						$new_section_id,
 						'edit', // note mode edit autosave default value
@@ -203,7 +203,7 @@ final class dd_ts_api {
 						$target_section_tipo
 					);
 					$component->get_dato();
-					debug_log(__METHOD__." Saved default dato to 'is_indexable' component ($component_tipo : $modelo_name) on section_id: ".to_string($new_section_id), logger::DEBUG);
+					debug_log(__METHOD__." Saved default dato to 'is_indexable' component ($component_tipo : $model) on section_id: ".to_string($new_section_id), logger::DEBUG);
 				}
 			}
 
