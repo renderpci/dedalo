@@ -1,5 +1,5 @@
 <?php
-// ontology custon config file
+// ontology custom config file
 require_once( dirname(__FILE__) .'/config/config_ontology.php');
 
 /*
@@ -63,7 +63,7 @@ class dd extends dd_elements {
 	protected function set_mode(string $modo) : void {
 		$this->valid_modes = array('tesauro_list','tesauro_edit','modelo_edit','tesauro_rel');
 		if( !in_array($modo, $this->valid_modes) ) {
-			die(__METHOD__." DD Tesauro Error: mode not valid! [<b>$mode</b>] <br> Use a valid mode to access.");
+			die(__METHOD__." DD Tesauro Error: mode not valid! [<b>$modo</b>] <br> Use a valid mode to access.");
 		}
 
 		# set value "esmodelo" for filter when build tree

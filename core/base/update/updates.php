@@ -83,6 +83,17 @@ $updates->$v = new stdClass();
 		// fct=from_section_tipo st=section_tipo si=section_id (oh24_rsc197_2)
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 
+				DROP INDEX IF EXISTS matrix_relations_flat_st_si;
+				DROP INDEX IF EXISTS matrix_hierarchy_relations_flat_st_si;
+				DROP INDEX IF EXISTS matrix_activities_relations_flat_st_si;
+				DROP INDEX IF EXISTS matrix_list_relations_flat_st_si;
+				DROP INDEX IF EXISTS matrix_relations_flat_fct_st_si;
+				DROP INDEX IF EXISTS matrix_hierarchy_relations_flat_fct_st_si;
+				DROP INDEX IF EXISTS matrix_activities_relations_flat_fct_st_si;
+				DROP INDEX IF EXISTS matrix_list_relations_flat_fct_st_si;
+				DROP FUNCTION IF EXISTS public.relations_flat_fct_st_si(jsonb);
+				DROP FUNCTION IF EXISTS public.relations_flat_st_si(jsonb);
+
 				CREATE OR REPLACE FUNCTION public.relations_flat_st_si(datos jsonb) RETURNS jsonb
 					AS $$ SELECT jsonb_agg( concat(rel->>'section_tipo','_',rel->>'section_id') )
 					FROM jsonb_array_elements($1->'relations') rel(rel)

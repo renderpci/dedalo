@@ -54,13 +54,11 @@ view_mini_dd_grid.render = async function(self, options) {
 
 	// grid. Array of nodes deep resolved
 		const grid = get_grid_nodes( data )
-
-	// Set value
 		wrapper.append(...grid)
 
 
 	return wrapper
-}//end list
+}//end render
 
 
 
