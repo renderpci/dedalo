@@ -279,7 +279,7 @@ render_list_section.render_column_id = function(options){
 		const self					= options.caller // object instance, usually section or portal
 		const section_id			= options.section_id
 		const section_tipo			= options.section_tipo
-		const offset				= options.offset // int . Current item offset in all result
+		const paginated_key				= options.paginated_key // int . Current item paginated_key in all result
 		// const matrix_id			= options.matrix_id
 		// const modification_date	= options.modification_date
 
@@ -295,7 +295,7 @@ render_list_section.render_column_id = function(options){
 			text_content	: section_id
 		})
 		if(SHOW_DEBUG===true) {
-			section_id_node.title = 'offset: ' + offset
+			section_id_node.title = 'paginated_key: ' + paginated_key
 		}
 
 	// buttons
@@ -526,8 +526,8 @@ render_list_section.render_column_id = function(options){
 									// set updated filter
 									sqo.filter = self.rqo.sqo.filter
 									// reset pagination
-									sqo.limit		= 1
-									sqo.offset	= offset
+									sqo.limit	= 1
+									sqo.offset	= paginated_key
 
 								// source
 									const source = {
