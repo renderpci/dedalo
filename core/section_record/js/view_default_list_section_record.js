@@ -174,7 +174,7 @@ const get_content_data = async function(self) {
 							section_id			: self.section_id,
 							row_key				: self.row_key,
 							paginated_key		: self.paginated_key,
-							offset				: self.offset,
+							// offset				: self.offset,
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
 							modification_date	: self.modification_date || null, // tm var

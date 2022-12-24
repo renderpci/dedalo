@@ -127,11 +127,6 @@
 					);
 
 				// pagination. fix pagination vars (defined in class component_common)
-					$limit	= $this->search_query_object->limit;
-					$offset	= $this->search_query_object->offset;
-					$pagination = new stdClass();
-						$pagination->limit	= $limit;
-						$pagination->offset	= $offset;
 					$section->pagination = $pagination;
 
 				// set dato
@@ -180,6 +175,8 @@
 						$current_value->modified_date			= $section->get_modified_date();
 						$current_value->created_by_user_name	= $section->get_created_by_user_name();
 						$current_value->modified_by_user_name	= $section->get_modified_by_user_name();
+
+						$current_value->paginated_key			= $key + $offset;
 					// tm case
 						if($mode==='tm'){
 							$current_value->matrix_id	= $current_record->id;
