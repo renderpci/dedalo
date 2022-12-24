@@ -685,70 +685,84 @@ section.prototype.render = async function(options={}) {
 * GET_AR_INSTANCES (section_records)
 * Generate a section_record instance for each data value
 */
-export const get_ar_instances = async function(self){
+section.prototype.get_ar_instances = async function(options={}){
 
-	// const self = this
+	const self = this
 
-	// self data verification
-		// if (typeof self.data==="undefined") {
-		// 	self.data = {
-		// 		value : []
-		// 	}
-		// }
+	// options
+		const mode			= options.mode || self.mode || 'list'
+		const columns_map	= options.columns_map || self.columns_map
+		const id_variant	= options.id_variant || self.id_variant || null
+		const view			= options.view || 'default'
 
 	// iterate records
-		const lang 			= self.lang
+		const lang 			= self.section_lang || self.lang
 		const value			= self.data && self.data.value
 			? self.data.value
 			: []
 		const value_length	= value.length
-		const section_record_mode = self.mode==='tm'
+
+		const section_record_mode = mode==='tm'
 			? 'list'
-			: self.mode
+			: mode
+
+		const request_config = clone(self.context.request_config)
+
 
 		// const ar_instances = []
 		const ar_promises = []
 		for (let i = 0; i < value_length; i++) {
-			// console.groupCollapsed("section: section_record " + self.tipo +'-'+ value[i]);
-			const current_section_id	= value[i].section_id
-			const current_section_tipo	= value[i].section_tipo
+
+			const locator				= value[i];
+			const current_section_id	= locator.section_id
+			const current_section_tipo	= locator.section_tipo
 			// const current_data			= (self.mode==='tm')
 			// 	? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
 			// 	: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-			const current_context 		= (typeof self.datum.context!=="undefined")
-				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
-				: []
-
-			const offset = (self.rqo.sqo.offset + i)
+			// const current_context 		= (typeof self.datum.context!=="undefined")
+			// 	? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
+			// 	: []
 
 			const instance_options = {
 				model			: 'section_record',
-				tipo			: current_section_tipo,
+				tipo			: self.tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
 				mode			: section_record_mode,
 				lang			: lang,
-				context			: current_context,
+				context			: {
+					view				: view,
+					request_config		: request_config,
+					fields_separator	: self.context.fields_separator
+				},
 				// data			: current_data,
 				datum			: self.datum,
 				row_key 		: i,
 				caller			: self,
-				offset			: offset,
+				paginated_key	: locator.paginated_key,
 				columns_map		: self.columns_map,
-				column_id		: self.column_id
+				column_id		: self.column_id,
+				locator			: locator
 			}
 
 			// id_variant . Propagate a custom instance id to children
-				if (self.id_variant) {
-					instance_options.id_variant = self.id_variant
+				if (id_variant) {
+					instance_options.id_variant = id_variant
 				}
 
+			// locator tag_id modifies id_variant when is present
+				if (locator.tag_id) {
+					const tag_id_add = '_l' + locator.tag_id
+					instance_options.id_variant = (instance_options.id_variant)
+						? instance_options.id_variant + tag_id_add
+						: tag_id_add
+				}
+
+
 			// time machine options
-				if (self.mode==='tm') {
-					instance_options.matrix_id			= value[i].matrix_id
-					instance_options.modification_date	= value[i].timestamp
-					instance_options.mode				= 'list' // section record and components will be created in list mode (!)
-					// instance_options.state			= value[i].state
+				if (mode==='tm') {
+					instance_options.matrix_id			= locator.matrix_id
+					instance_options.modification_date	= locator.timestamp
 				}
 
 			// section_record. init and build

@@ -1018,18 +1018,20 @@ component_common.prototype.get_ar_instances = async function(options={}){
 		const columns_map	= options.columns_map || self.columns_map
 		const id_variant	= options.id_variant || self.id_variant || null
 		const view			= options.view || 'default'
-	// self data verification
-		// 	if (typeof self.data==="undefined") {
-		// 		self.data = {
-		// 			value : []
-		// 		}
-		// 	}
 
 	// short vars
 		// const records_mode	= (self.context.properties.source) ? self.context.properties.source.records_mode : null
-		const lang				= self.section_lang
-		const value				= self.data.value || []
+		const lang			= self.section_lang || self.lang
+		const value			= self.data && self.data.value
+			? self.data.value
+			: []
 		const value_length		= value.length
+
+		const section_record_mode = mode==='tm'
+			? 'list'
+			: mode
+
+		const request_config = clone(self.context.request_config)
 
 	// console.log("---- get_ar_instances deep_render value:", clone(value));
 
@@ -1056,10 +1058,14 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				tipo			: self.tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
-				mode			: mode,
+				mode			: section_record_mode,
 				lang			: lang,
-				context			: {view: view},
-				// context		: current_context,
+				context			: {
+					view				: view,
+					request_config		: request_config,
+					fields_separator	: self.context.fields_separator
+				},
+				// context        : current_context,
 				// data			: current_data,
 				datum			: self.datum,
 				row_key			: i,
@@ -1074,7 +1080,8 @@ component_common.prototype.get_ar_instances = async function(options={}){
 				if (id_variant) {
 					instance_options.id_variant = id_variant
 				}
-				// locator tag_id modifies id_variant when is present
+
+			// locator tag_id modifies id_variant when is present
 				if (locator.tag_id) {
 					const tag_id_add = '_l' + locator.tag_id
 					instance_options.id_variant = (instance_options.id_variant)
