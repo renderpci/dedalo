@@ -2746,6 +2746,18 @@ abstract class common {
 								if (!isset($parsed_item->search->sqo_config->operator)) {
 									$parsed_item->search->sqo_config->operator = '$or';
 								}
+								// limit. Overwrite config by session value if exists
+								if (isset($parsed_item->search->sqo_config->limit)) {
+									// get session limit if it was defined
+									if ($model==='section') {
+										$sqo_id	= implode('_', ['section', $tipo]); // cache key sqo_id
+										$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+											? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+											: $parsed_item->search->sqo_config->limit;
+									}else{
+										$parsed_item->sqo->limit = $parsed_item->search->sqo_config->limit;
+									}
+								}
 							}else{
 								// fallback non defined sqo_config
 								$sqo_config = new stdClass();
