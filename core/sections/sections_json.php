@@ -99,6 +99,13 @@
 
 			$data[] = $item;
 
+		// get pagination of the result of search
+			$limit	= $this->search_query_object->limit;
+			$offset	= $this->search_query_object->offset;
+			$pagination = new stdClass();
+				$pagination->limit	= $limit;
+				$pagination->offset	= $offset;
+
 		// subdatum
 			foreach ($dato as $key => $current_record) {
 
