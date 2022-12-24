@@ -1287,8 +1287,9 @@ abstract class common {
 				$options->get_request_config	= false;
 				if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$called_model = get_class($this); // get_called_class(); // static::class
-			$called_tipo  = $this->get_tipo();
+			$called_model	= get_class($this); // get_called_class(); // static::class
+			$called_tipo	= $this->get_tipo();
+			$get_data		= $options->get_data;
 
 		// cache context
 			static $resolved_get_json = [];
@@ -1338,7 +1339,7 @@ abstract class common {
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
 
-					if (strpos($called_model, 'component_')!==false && $options->get_data===true && !empty($json->data)) {
+					if (strpos($called_model, 'component_')!==false && $get_data===true && !empty($json->data)) {
 
 						$current = reset($json->data);
 							// $current->debug_time_json	= $exec_time;
@@ -1926,12 +1927,23 @@ abstract class common {
 
 										}
 										if (!empty($children_search)) {
+											if (empty($new_rqo_config->search)) {
+												$new_rqo_config->search = (object)[
+													'ddo_map' => []
+												];
+											}
 											$new_rqo_config->search->ddo_map  = $children_search;
 										}
 										if (!empty($children_choose)) {
+											if (empty($new_rqo_config->choose)) {
+												$new_rqo_config->choose = (object)[
+													'ddo_map' => []
+												];
+											}
 											$new_rqo_config->choose->ddo_map  = $children_choose;
 										}
 									}
+									dump($new_rqo_config, ' new_rqo_config ++ '.to_string($this->tipo));
 
 								// Inject the request_config inside the component
 									$related_element->request_config = $component_rqo_config;
