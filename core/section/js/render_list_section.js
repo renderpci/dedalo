@@ -10,7 +10,6 @@
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {get_ar_instances} from './section.js'
 	import {
 		render_server_response_error,
 		no_records_node
@@ -55,7 +54,7 @@ render_list_section.prototype.list = async function(options) {
 	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
-			: await get_ar_instances(self)
+			: await self.get_ar_instances()
 
 	// content_data
 		const content_data = await get_content_data(self.ar_instances, self)
