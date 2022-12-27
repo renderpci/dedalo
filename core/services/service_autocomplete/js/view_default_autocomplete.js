@@ -7,6 +7,10 @@
 	import {ui} from '../../../common/js/ui.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import * as instances from '../../../common/js/instances.js'
+	import {get_section_records} from '../../../section/js/section.js'
+
+
+
 
 
 
@@ -63,7 +67,7 @@ const get_autocomplete_wrapper = function(self) {
 
 	// check there exists valid target sections before create the options and selector
 		const all_ar_section	= []
-		const ar_source			= self.request_config || []
+		const ar_source			= self.context.request_config || []
 		const ar_source_length	= ar_source.length
 		for (let i = 0; i < ar_source_length; i++) {
 			const source		= ar_source[i]
@@ -157,7 +161,7 @@ const get_autocomplete_wrapper = function(self) {
 const render_source_selector = function(self) {
 
 	// source elements
-		const ar_source = self.request_config
+		const ar_source = self.context.request_config
 
 	// switcher source
 		const source_selector = ui.create_dom_element({
@@ -698,7 +702,9 @@ const render_datalist = async function(self, api_response) {
 
 	// get the result from the API response
 		const result	= api_response.result
-		const data		= result.data
+		const data		= result.data.find(el=> el.tipo ===self.tipo && el.typo==='sections')
+
+
 		const context	= result.context
 
 
@@ -716,29 +722,48 @@ const render_datalist = async function(self, api_response) {
 	const columns = rqo_search.show.columns
 
 	// get the ar_locator founded in sections
-	const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
-	const ar_locator	= (data_locator) ? data_locator.value : []
+	// const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
+	// const ar_locator	= (data_locator) ? data_locator.value : []
+
+	self.ar_instances = []
+
+	// ar_section_record
+		const ar_section_record	= await get_section_records({
+			caller				: self,
+			mode				: 'list',
+			datum				: result,
+			value				: data.value,
+			request_config		: [self.rqo_search],
+			columns_map			: self.columns_map,
+			fields_separator	: fields_separator,
+			id_variant 			: new Date().getUTCMilliseconds()
+		})
+		// store to allow destroy later
+		self.ar_instances.push(...ar_section_record)
 
 	// iterate the sections
-	for (const current_locator of ar_locator) {
+	// for (const current_locator of ar_locator) {
 
-		const section_tipo	= current_locator.section_tipo
-		const section_id	= current_locator.section_id
 
+	for (let i = 0; i < ar_section_record.length; i++) {
+
+		const current_section_record = ar_section_record[i]
+		const locator = current_section_record.locator
 		// get data that mach with the current section from the global data sent by the API
 		// get the full row with all items in the ddo that mach with the section_id
-		const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
+		// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
 
+		const section_record_node = await current_section_record.render()
 		// create the li node container
 		const li_node = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'autocomplete_data_li',
 			parent			: datalist
 		})
-		li_node.locator = {
-			section_tipo	: section_tipo,
-			section_id		: section_id
-		}
+		li_node.locator = locator
+
+		li_node.appendChild(section_record_node)
+
 		// click event. When the user do click in one row send the data to the caller_instance for save it.
 		li_node.addEventListener('click', function(e){
 			e.stopPropagation()
@@ -786,84 +811,113 @@ const render_datalist = async function(self, api_response) {
 			e.target.classList.remove('selected')
 		});
 
-		// values. build the text of the row with label nodes in correct order (the ddo order in context).
-			const columns_length = columns.length
-			for (let i = 0; i < columns_length; i++) {
-					const current_path = columns[i]
-				// the columns has the last element in the chain in the first position of the array,
-				// the first position is the only component that is necessary to build and show
-					const ddo_item = current_path[0]
-					const current_element_data = get_last_ddo_data_value(current_path, [current_locator], data)
-				// if the element doesn't has data continue to the next element.
-					if(current_element_data === false) continue;
+		// const instance_options = {
+		// 	model			: 'section_record',
+		// 	tipo			: self.caller.tipo,
+		// 	section_tipo	: section_tipo,
+		// 	section_id		: section_id,
+		// 	mode			: 'list',
+		// 	lang			: self.caller.lang,
+		// 	context			: {
+		// 			view				: 'text',
+		// 			request_config		: self.request_config,
+		// 			fields_separator	: fields_separator
+		// 		},
+		// 	caller			: self,
+		// 	// data			: current_element_data,
+		// 	datum			: result,
+		// 	columns_map		: self.columns_map,
+		// 	row_key			: i,
+		// 	locator			: current_locator,
+		// 	id_variant		: section_tipo +'_'+section_id+'_'+new Date().getTime()
+		// }
 
-				// context of the element
-					const current_element_context = context.find( (item) =>
-						item.tipo===ddo_item.tipo &&
-						item.section_tipo===current_element_data.section_tipo
-					)
-					if (!current_element_context) {
-						console.error('Ignored element: context not found. ddo_item:', ddo_item, 'context:', context);
-						continue;
-					}
+		// const current_instance = await instances.get_instance(instance_options)
+		// current_instance.build(false)
+		// const node = await current_instance.render()
 
-					// mode and view
-						current_element_context.mode	= 'list'
-						current_element_context.view	= 'mini'
+		// li_node.appendChild(node)
+		// li_node.instance = current_instance
 
-					if (typeof current_element_data==='undefined') {
-						console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
-						continue
-					}
 
-					const instance_options = {
-						context			: current_element_context,
-						data			: current_element_data,
-						datum			: {data : data, context: context},
-						tipo			: current_element_context.tipo,
-						section_tipo	: current_element_context.section_tipo,
-						model			: current_element_context.model,
-						section_id		: current_element_data.section_id,
-						mode			: current_element_context.mode, // 'mini',
-						lang			: current_element_context.lang,
-						id_variant		: self.id
-					}
+		// // values. build the text of the row with label nodes in correct order (the ddo order in context).
+		// 	const columns_length = columns.length
+		// 	for (let i = 0; i < columns_length; i++) {
+		// 			const current_path = columns[i]
+		// 		// the columns has the last element in the chain in the first position of the array,
+		// 		// the first position is the only component that is necessary to build and show
+		// 			const ddo_item = current_path[0]
+		// 			const current_element_data = get_last_ddo_data_value(current_path, [current_locator], data)
+		// 		// if the element doesn't has data continue to the next element.
+		// 			if(current_element_data === false) continue;
 
-					const current_instance = await instances.get_instance(instance_options)
-					// current_instance.build(false)
-					const node = await current_instance.render()
+		// 		// context of the element
+		// 			const current_element_context = context.find( (item) =>
+		// 				item.tipo===ddo_item.tipo &&
+		// 				item.section_tipo===current_element_data.section_tipo
+		// 			)
+		// 			if (!current_element_context) {
+		// 				console.error('Ignored element: context not found. ddo_item:', ddo_item, 'context:', context);
+		// 				continue;
+		// 			}
 
-					// append node (span)
-					li_node.appendChild(node)
-					li_node.instance = current_instance
+		// 			// mode and view
+		// 				current_element_context.mode	= 'list'
+		// 				current_element_context.view	= 'mini'
 
-				// span node
-					// const current_value = current_value_element.value
-					// ui.create_dom_element({
-					// 	element_type	: 'span',
-					// 	inner_html		: current_value,
-					// 	parent			: li_node
-					// })// end create dom node
-			}//end for ddo_item
+		// 			if (typeof current_element_data==='undefined') {
+		// 				console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
+		// 				continue
+		// 			}
+
+		// 			const instance_options = {
+		// 				context			: current_element_context,
+		// 				data			: current_element_data,
+		// 				datum			: {data : data, context: context},
+		// 				tipo			: current_element_context.tipo,
+		// 				section_tipo	: current_element_context.section_tipo,
+		// 				model			: current_element_context.model,
+		// 				section_id		: current_element_data.section_id,
+		// 				mode			: current_element_context.mode, // 'mini',
+		// 				lang			: current_element_context.lang,
+		// 				id_variant		: section_tipo +'_'+section_id+'_'+new Date().getTime()
+		// 			}
+
+		// 			const current_instance = await instances.get_instance(instance_options)
+		// 			// current_instance.build(false)
+		// 			const node = await current_instance.render()
+
+		// 			// append node (span)
+		// 			li_node.appendChild(node)
+		// 			li_node.instance = current_instance
+
+		// 		// span node
+		// 			// const current_value = current_value_element.value
+		// 			// ui.create_dom_element({
+		// 			// 	element_type	: 'span',
+		// 			// 	inner_html		: current_value,
+		// 			// 	parent			: li_node
+		// 			// })// end create dom node
+		// 	}//end for ddo_item
 
 		// dd_info: information about the row, like parents, model, etc, that help to identify the data.
-			const current_dd_info = current_row.find((item)=> item.tipo==='ddinfo')
-			if(current_dd_info){
-				const current_dd_info_value = '- ' + current_dd_info.value.join(fields_separator)
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'attenuated',
-					inner_html		: current_dd_info_value,
-					parent			: li_node
-				})// end create dom node
-			}// end if of check current_dd_info
+			// const current_dd_info = current_row.find((item)=> item.tipo==='ddinfo')
+			// if(current_dd_info){
+			// 	const current_dd_info_value = '- ' + current_dd_info.value.join(fields_separator)
+			// 	ui.create_dom_element({
+			// 		element_type	: 'span',
+			// 		class_name		: 'attenuated',
+			// 		inner_html		: current_dd_info_value,
+			// 		parent			: li_node
+			// 	})// end create dom node
+			// }// end if of check current_dd_info
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'attenuated',
-					inner_html		: ' [' + current_locator.section_tipo + '-' + current_locator.section_id + ']',
+					inner_html		: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
 					parent			: li_node
 				});
 			}
@@ -883,7 +937,7 @@ const render_datalist = async function(self, api_response) {
  * @param array data
  * @return ddo object current_element_data
  * */
-const get_last_ddo_data_value = function(current_path, value, data){
+const get_last_ddo_data_value = function(current_path, value, data, recurs){
 	// check the path length sent, the first loop is the full path, but it is changed with the check data
 	const current_path_length = current_path.length
 	for (let i = 0; i < value.length; i++) {
@@ -905,9 +959,9 @@ const get_last_ddo_data_value = function(current_path, value, data){
 		// else continue with the path doing recursion
 		if (current_path_length===1) {
 			return current_element_data
-		}{
-			return get_last_ddo_data_value(new_path, current_value, data)
 		}
+
+		return get_last_ddo_data_value(new_path, current_value, data)
 	}
 }//end get_last_ddo_data_value
 
