@@ -2800,6 +2800,17 @@ abstract class common {
 										? $tipo
 										: $current_ddo_map->parent;
 
+								// label. Add to all ddo_map items
+									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+
+
+								// mode
+									$current_ddo_map->mode = isset($current_ddo_map->mode)
+										? $current_ddo_map->mode
+										: ($model !== 'section'
+											? 'list'
+											: $mode);
+
 								$final_ddo_map[] = $current_ddo_map;
 							}
 
