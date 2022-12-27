@@ -65,6 +65,8 @@
 						"tools" : true || false // control of the input interface to add the tools of the component
 						"button_tree" : true || false // control of the input interface button tree
 						"button_external" : true || false // control of the refresh button when the data of the portal is external
+						"show_autcomplete" : true || false // control of the input interface for autocomplete for search records
+
 					}
 				},
 				"search"		: {

@@ -786,25 +786,6 @@ const get_custom_events = (self, i, text_editor) => {
 				// 	console.log(options)
 				// break;
 			}
-
-			// change data. Delayed to minimize editor interference
-				setTimeout(()=>{
-					const value = text_editor.editor.getData();
-					self.preprocess_text_to_save(value)
-					.then(function(parsed_value){
-
-						const changed_data_item = Object.freeze({
-							action	: 'update',
-							key		: i,
-							value	: parsed_value || ''
-						})
-
-					// fix instance changed_data
-						self.set_changed_data(changed_data_item)
-							// console.log('self.db_data.value[i]:', self.db_data.value[i]);
-							// console.log('parsed_value:', parsed_value);
-					})
-				}, 150)
 		}//end KeyUp
 
 	// changeData

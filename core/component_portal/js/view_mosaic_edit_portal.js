@@ -223,14 +223,11 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		wrapper.content_data	= content_data
 
 	// autocomplete
-		if (self.is_inside_tool===true || self.context.properties.source?.mode==='external') {
-			// Avoid to active activate_autocomplete
-		}else{
-			wrapper.addEventListener('click', function(e) {
-				e.stopPropagation()
-				activate_autocomplete(self, wrapper)
-			})
-		}
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
+			activate_autocomplete(self, wrapper)
+		})
+
 
 
 	return wrapper

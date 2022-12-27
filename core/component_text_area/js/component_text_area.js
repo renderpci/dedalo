@@ -589,6 +589,38 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 
 /**
+* UPDATE_CHANGED_DATA
+* @return bool
+*/
+component_text_area.prototype.update_changed_data = function (options) {
+
+	const self = this
+
+	// options
+	const text_editor	= options.text_editor
+	const key			= options.key
+
+	const value = text_editor.editor.getData();
+
+	self.preprocess_text_to_save(value)
+		.then(function(parsed_value){
+			const changed_data_item = Object.freeze({
+				action	: 'update',
+				key		: key,
+				value	: parsed_value || ''
+			})
+
+		// fix instance changed_data
+			self.set_changed_data(changed_data_item)
+				// console.log('self.db_data.value[i]:', self.db_data.value[i]);
+				// console.log('parsed_value:', parsed_value);
+		})
+}// end update_changed_data
+
+
+
+
+/**
 * UNWRAP_ELEMENT
 * @return bool
 */
