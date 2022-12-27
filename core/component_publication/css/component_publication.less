@@ -5,7 +5,8 @@
 */
 .component_publication {
 
-	&.edit {
+
+	&.view_default {
 		box-shadow: none;
 
 		>.content_data {
@@ -86,14 +87,17 @@
 			}//end >.content_value
 		}//end >.content_data
 
-		&.view_line {
-			>.content_data {
-				>.content_value {
-					margin: 0.25rem;
-				}
+	}//end view_default
+
+
+	&.view_line {
+		>.content_data {
+			>.content_value {
+				margin: 0.25rem;
 			}
 		}
-	}//end .edit
+	}//end view_line
+
 
 	&.search {
 		>.content_data {
