@@ -4,6 +4,7 @@
 
 
 // imports
+	import {get_section_records} from '../../section/js/section.js'
 	// import {ui} from '../../common/js/ui.js'
 
 
@@ -41,7 +42,8 @@ view_text_list_portal.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// ar_section_record
-		const ar_section_record = await self.get_ar_instances({
+		const ar_section_record = await get_section_records({
+			caller	: self,
 			mode	: 'list',
 			view	: self.context.view
 		})

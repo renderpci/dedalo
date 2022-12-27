@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
@@ -54,7 +54,7 @@ render_list_section.prototype.list = async function(options) {
 	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
-			: await self.get_ar_instances()
+			: await get_section_records({caller: self})
 
 	// content_data
 		const content_data = await get_content_data(self.ar_instances, self)
@@ -179,9 +179,6 @@ render_list_section.prototype.list = async function(options) {
 * @return DOM node content_data
 */
 const get_content_data = async function(ar_section_record, self) {
-
-	// section_record instances (initiated and built)
-	// const ar_section_record = await self.get_ar_instances()
 
 	const fragment = new DocumentFragment()
 

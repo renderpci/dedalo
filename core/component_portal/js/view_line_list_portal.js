@@ -4,8 +4,8 @@
 
 
 // imports
+	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {
 		// activate_autocomplete,
 		render_references
@@ -42,8 +42,9 @@ view_line_list_portal.render = async function(self, options) {
 		const children_view	= self.context.children_view || self.context.view || 'default'
 
 	// ar_section_record
-		const ar_section_record	= await self.get_ar_instances({
-			view : children_view
+		const ar_section_record	= await get_section_records({
+			caller	: self,
+			view	: children_view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
