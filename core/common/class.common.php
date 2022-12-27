@@ -1750,16 +1750,16 @@ abstract class common {
 
 		// full_ddo_map. Get the full ddo in every request_config
 			$full_ddo_map = [];
-			foreach ($request_config as $request_config_item) {
+			foreach ($request_config as $request_config_object) {
 
 				// skip empty ddo_map
-				if(empty($request_config_item->show->ddo_map)) {
-					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo) in request_config_item:".to_string($request_config_item), logger::ERROR);
+				if(empty($request_config_object->show->ddo_map)) {
+					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo) in request_config_object:".to_string($request_config_object), logger::ERROR);
 					continue;
 				}
 				// merge all ddo of all request_config
-				$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
-			}//end foreach ($request_config_dedalo as $request_config_item)
+				$full_ddo_map = array_merge($full_ddo_map, $request_config_object->show->ddo_map);
+			}//end foreach ($request_config_dedalo as $request_config_object)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 

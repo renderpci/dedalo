@@ -519,7 +519,7 @@ render_list_section.render_column_id = function(options){
 							button_edit.addEventListener('click', function(){
 
 								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo = self.rqo_config.sqo
+									const sqo = self.request_config_object.sqo
 									// set updated filter
 									sqo.filter = self.rqo.sqo.filter
 									// reset pagination
