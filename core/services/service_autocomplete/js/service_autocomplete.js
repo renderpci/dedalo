@@ -7,6 +7,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
+	import {get_columns_map} from '../../../common/js/common.js'
 	import {view_default_autocomplete} from './view_default_autocomplete.js'
 
 
@@ -41,30 +42,43 @@ service_autocomplete.prototype.init = async function(options) {
 	// options
 		self.caller				= options.caller
 		self.component_wrapper	= options.wrapper // component_wrapper
-		self.view				= options.view || 'default'
+		self.view				= options.view || 'text'
+		self.children_view		= options.children_view || null
 		self.properties			= options.properties || {}
+		self.tipo				= options.tipo
+		self.section_tipo		= options.section_tipo
+		self.request_config		= clone(options.request_config)
 
 	// set properties
-		self.tipo					= self.caller.tipo
-		self.id						= 'service_autocomplete' +'_'+ options.caller.tipo +'_'+ options.caller.section_tipo
-		self.request_config			= clone(self.caller.context.request_config)
+		self.model					= 'service_autocomplete'
+		self.id						= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
+		self.mode 					= 'search'
+		self.ar_instances 			= []
+		self.context 				= {
+			tipo			: self.tipo,
+			section_tipo	: self.section_tipo,
+			model 			: self.model,
+			view			: self.view,
+			children_view	: self.children_view,
+			request_config	: self.request_config,
+			mode 			: self.mode
+		}
+
 		self.sqo					= {}
-		self.dd_request				= self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
-		self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
+		self.request_config_object	= self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+		self.ar_search_section_tipo	= self.request_config_object.sqo.section_tipo
 		self.ar_filter_by_list		= []
 		self.operator				= null
 		self.list_name				= 's_'+new Date().getUTCMilliseconds()
 		self.search_fired			= false
 
-
-		// self.ar_dd_request			= self.caller.dd_request.search
-		// self.dd_request				= self.ar_dd_request[0]
-		// self.sqo						= self.dd_request.find(item => item.typo==='sqo')
-		// self.ar_search_section_tipo	= self.sqo.section_tipo
-		// self.ar_filter_by_list		= []
+		// set service autocomplete as caller, use the caller context to build section_records as caller
+		// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
 
 	// engine. get the search_engine sended or set the default value
-		self.search_engine = (self.dd_request) ? self.dd_request.api_engine : 'dedalo';
+		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
+
+		await self.build()
 
 	// render. Build_autocomplete_input nodes
 		self.render()
@@ -81,6 +95,33 @@ service_autocomplete.prototype.init = async function(options) {
 	return true
 }//end init
 
+
+
+/**
+* BUILD
+*
+* @param object options
+* @return bool
+*/
+service_autocomplete.prototype.build = async function(options) {
+
+	const self = this
+
+		// status update
+		self.status = 'building'
+
+	// rqo_search, it's necesary do it by caller, because rqo is dependent of the source.
+	// API get rqo to do the search as the caller.
+		self.rqo_search				= await self.caller.build_rqo_search(self.request_config_object, 'search')
+		// self.columns_map	= self.rqo_search.show.columns
+	// columns_map
+		self.columns_map = get_columns_map(self.context)
+	console.log("self.columns_map:",self);
+	// status update
+		self.status = 'built'
+
+	return true
+}//end build
 
 
 /**
@@ -133,19 +174,6 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 	return true
 }//end service_autocomplete_keys
 
-
-
-/**
-* BUILD
-* @return bool
-*/
-service_autocomplete.prototype.build = async function() {
-
-	const self = this
-
-
-	return true
-}//end build
 
 
 
@@ -249,6 +277,10 @@ service_autocomplete.prototype.autocomplete_search = function(search_value) {
 
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
 		const js_promise = self[engine]( options )
+
+		js_promise.then(()=>{
+			console.log('js_promise:', js_promise);
+		})
 
 
 	return js_promise
@@ -362,14 +394,16 @@ service_autocomplete.prototype.dedalo_engine = async function(options) {
 	const self = this
 
 	// search_query_object base stored in wrapper dataset
-		const original_rqo_search	= await self.caller.rqo_search
-		const rqo_search			= clone(original_rqo_search)
-		self.rqo_search				= rqo_search
-		self.sqo					= rqo_search.sqo
+		const rqo_search	= await clone(self.rqo_search)
+
+
+		// const rqo_search			= clone(original_rqo_search)
+		// self.rqo_search			= rqo_search
+		// self.sqo					= rqo_search.sqo
 
 	// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
-		const search_sections	= self.ar_search_section_tipo.map(el=>el.tipo)
-		self.sqo.section_tipo	= search_sections
+		const search_sections		= self.ar_search_section_tipo.map(el=>el.tipo)
+		rqo_search.sqo.section_tipo	= search_sections
 
 	// filter_by_list, modify by user
 		const filter_by_list	= self.ar_filter_by_list.map(item => item.value)
@@ -424,12 +458,12 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 		// const rqo	= await options.rqo
 
 	// dd_request
-		const dd_request = self.dd_request
+		const dd_request = self.request_config_object
 
 
 	// rqo
 		const generate_rqo = async function(){
-			// rqo_config. get the rqo_config from context
+			// request_config_object. get the request_config_object from context
 			// rqo build
 			// const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= true
