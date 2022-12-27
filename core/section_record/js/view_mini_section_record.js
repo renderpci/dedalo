@@ -33,7 +33,6 @@ view_mini_section_record.render = async function(self, options) {
 	const render_level = options.render_level || 'full'
 
 	// ar_columns_instances
-		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
 		const columns_map = await self.columns_map
 

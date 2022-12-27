@@ -65,37 +65,6 @@ export const component_check_box = function(){
 
 
 
-/**
-* BUILD
-*/
-	// component_check_box.prototype.build = async function(autoload=false) {
-
-	// 	const self = this
-
-	// 	// call generic common tool build
-	// 		const common_build = await component_common.prototype.build.call(this, autoload);
-
-	// 	// rqo
-	// 		// const generate_rqo = async function(){
-	// 		// 	// rqo_config. get the rqo_config from context
-	// 		// 	self.rqo_config	= self.context && self.context.request_config
-	// 		// 		? self.context.request_config.find(el => el.api_engine==='dedalo')
-	// 		// 		: {}
-	// 		// 	// rqo build
-	// 		// 	const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
-	// 		// 	const add_show	= false
-	// 		// 	self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
-	// 		// 	if(self.mode==='search') {
-	// 		// 		self.rqo.source.value = self.data.value
-	// 		// 	}
-	// 		// }
-	// 		// await generate_rqo()
-
-
-	// 	return common_build
-	// }//end build_custom
-
-
 
 /**
 * GET_CHANGED_KEY

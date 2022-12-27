@@ -128,25 +128,6 @@ export const add_events = function(self, wrapper) {
 
 				return true
 			}//end if(e.target.matches('.button.remove'))
-
-		// activate service autocomplete. Enable the service_autocomplete when the user do click
-			// if(self.autocomplete_active===false){
-
-			// 	// set rqo
-			// 		self.rqo_search 	= self.rqo_search || self.build_rqo_search(self.rqo_config, 'search')
-			// 		// self.rqo.choose 	= self.rqo.choose || self.build_rqo('choose', self.context.request_config, 'get_data')
-
-			// 	self.autocomplete = new service_autocomplete()
-			// 	self.autocomplete.init({
-			// 		caller	: self,
-			// 		wrapper : wrapper
-			// 	})
-			// 	self.autocomplete_active = true
-			// 	self.autocomplete.search_input.focus()
-
-			// 	return true
-			// }
-
 		})//end click event
 
 
@@ -392,10 +373,6 @@ const get_buttons = (self) => {
 			// 	if (typeof parent_area_is_model!=='undefined' && JSON.parse(parent_area_is_model)===true) {
 			// 		url_vars.model = 1;
 			// 	}
-
-			// if(self.rqo_config){
-			// 	url_vars.sqo = JSON.stringify(self.rqo_config.sqo)
-			// }
 
 			if(caller_id){
 				url_vars.initiator = JSON.stringify(caller_id)
