@@ -21,12 +21,12 @@
 				break;
 
 			default:
-				//  item_context
+				// item_context
 					$item_context = $this->get_structure_context(
 						$permissions,
 						false // bool add_request_config
 					);
-				// append target_sections
+				// target_sections add
 					$target_sections = array_map(function($tipo) {
 						return [
 							'tipo'	=> $tipo,
@@ -48,9 +48,9 @@
 	if($options->get_data===true && $permissions>0) {
 
 		// value
-			switch ($mode) {
+			switch($mode) {
+
 				case 'list':
-				case 'tm':
 					$value				= $this->get_list_value();
 					break;
 

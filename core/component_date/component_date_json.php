@@ -34,8 +34,8 @@
 
 		// value
 		switch ($mode) {
+
 			case 'list':
-				// $value = $this->get_list_value();
 				$value = $this->get_dato();
 				break;
 
