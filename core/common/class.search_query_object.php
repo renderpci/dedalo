@@ -6,7 +6,7 @@
 * Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
 
 
- 	// FORMAT
+	// FORMAT
 		id						: 'oh1'		// optional. section_tipo and other params to define the unique id
 		section_tipo			: ['oh1']	// array of section_tipo for search
 		mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB
@@ -19,6 +19,11 @@
 												section_tipo
 												component_tipo
 											}]
+											format : 'direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function' // string, use to change the WHERE format
+											use_function : 'relations_flat_fct_st_si' // if format is function use_function define the PostgreSQL function to be used.
+											q_split : true || false // bool, define if the q need to be split into multiple WHERE queries
+											unaccent : true || false // bool, define if the q will us the unaccent function in WHERE
+											type : 'jsonb' || 'string' // define the type of data to be searched
 										}]
 								  } || null
 		select					: [{	// array of objects optional
@@ -151,20 +156,23 @@ class search_query_object {
 	* Object as Mango Query
 	* @param object $value like
 	* {
-	*    "$and": [
-	*        {
-	*            "q": "1",
-	*            "q_operator": null,
-	*            "path": [
-	*                {
-	*                    "section_tipo": "oh1",
-	*                    "component_tipo": "oh62",
-	*                    "modelo": "component_section_id",
-	*                    "name": "Id"
-	*                }
-	*            ]
-	*        }
-	*    ]
+	*	"$and": [
+	*		{
+	*			"q": "1",
+	*			"q_operator": null,
+	*			"path": [
+	*				{
+	*					"section_tipo": "oh1",
+	*					"component_tipo": "oh62",
+	*					"modelo": "component_section_id",
+	*					"name": "Id"
+	*				}
+	*			]
+	* 			"q_split" : false,
+	* 			"format" : "direct",
+	* 			"use_function" : "relations_flat_fct_st_si"
+	*		}
+	*	]
 	* }
 	* @return bool true
 	*/
