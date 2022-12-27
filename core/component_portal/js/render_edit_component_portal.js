@@ -698,26 +698,36 @@ export const get_buttons = (self) => {
 				parent			: buttons_container
 			})
 
-
-		const show_interface = (!self.rqo_config.show.interface)
+		// Default source external buttons configuration,
+		// if show.interface is defined in properties used the definition, else use this default
+		const default_interface = (self.context.properties.source?.mode==='external')
 			? {
+				button_add		: false,
+				button_link		: false,
+				tools			: false,
+				button_external	: true,
+				button_tree		: false
+			}
+			: {
 				button_add		: true,
 				button_link		: true,
 				tools			: true,
 				button_external	: false,
 				button_tree		: false
 			}
-			: self.rqo_config.show.interface
+		const show_interface = (!self.rqo_config.show.interface)
+			? default_interface
+			: (()=>{
+				const new_show_interface = self.rqo_config.show.interface
+				// add missing keys
+				for (const [key, value] of Object.entries(default_interface)) {
+					if (new_show_interface[key]===undefined) {
+						new_show_interface[key] = value
+					}
+				}
 
-		// Default source external buttons configuration,
-		// if show.interface is defined in properties used the definition, else use this default
-			if(!self.rqo_config.show.interface && self.context.properties.source?.mode==='external') {
-				show_interface.button_add		= false
-				show_interface.button_link		= false
-				show_interface.tools			= false
-				show_interface.button_external	= true
-				show_interface.button_tree		= false
-			}// end if external
+				return new_show_interface
+			  })()
 
 		// button_update_data_external
 			if( show_interface.button_external === true){
@@ -903,7 +913,22 @@ export const get_buttons = (self) => {
 */
 export const activate_autocomplete = async function(self, wrapper) {
 
-	if(self.autocomplete!==false && self.autocomplete_active!==undefined && self.autocomplete_active===false){
+	const show_interface = ( typeof self.rqo_config.show.interface?.show_autcomplete ==='undefined' )
+		? { show_autcomplete : true }
+		: self.rqo_config.show.interface
+
+	// Default source external buttons configuration,
+	// if show.interface is defined in properties used the definition, else use this default
+		if( typeof self.rqo_config.show.interface?.show_autcomplete ==='undefined'
+			 && self.context.properties.source?.mode==='external') {
+			show_interface.show_autcomplete		= false
+		}// end if external
+
+
+	if( show_interface.show_autcomplete === true
+		&& self.autocomplete!==false
+		&& self.autocomplete_active!==undefined
+		&& self.autocomplete_active===false ){
 
 		// set rqo
 			self.rqo_search	= self.rqo_search || await self.build_rqo_search(self.rqo_config, 'search')
