@@ -6,7 +6,7 @@
 .component_email {
 	// background-color: #ffa88d !important;
 
-	&.edit {
+	&.view_default {
 
 		>.content_data {
 
@@ -26,17 +26,17 @@
 				}
 			}
 		}
+	}//end .view_default
 
-		&.view_line {
-			>.content_data {
+	&.view_line {
+		>.content_data {
 
-				>.content_value {
-					.button.hidden_button {
-						display: none;
-					}
+			>.content_value {
+
+				.button.hidden_button {
+					display: none;
 				}
 			}
 		}
-
-	}//end .edit
+	}//end view_line
 }//end .component_email

@@ -1,5 +1,5 @@
 <?php
-/**
+/*
 * REQUEST_CONFIG_OBJECT
 * Defines an object with normalized properties and checks
 
@@ -8,9 +8,9 @@
 		type 		: type of the requests, string that the components can use to define his own requests and modifiers. by default will be 'main'
 		sqo			: search query object active width DDBB
 		show		: layout_map and sqo_config
-			(it will create the search and choose, when these objects are not sended)
+			(it will create the search and choose, when these objects are not sent)
 		search	: layout_map and sqo_config
-			(it modify the show and it will create the choose, when these object is not sended)
+			(it modify the show and it will create the choose, when these object is not sent)
 		choose	: layout_map
 			(it modify search)
 
@@ -150,7 +150,7 @@ class request_config_object extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data = null
+	* @param object|null $data = null
 	*/
 	public function __construct( ?object $data=null ) {
 
@@ -169,6 +169,8 @@ class request_config_object extends stdClass {
 
 	/**
 	* SET_API_ENGINE
+	* @param string $value
+	* @return void
 	*/
 	public function set_api_engine(string $value) {
 
@@ -179,6 +181,8 @@ class request_config_object extends stdClass {
 
 	/**
 	* SET_TYPE
+	* @param string $value
+	* @return void
 	*/
 	public function set_type(string $value) {
 
@@ -189,6 +193,8 @@ class request_config_object extends stdClass {
 
 	/**
 	* SET_SQO
+	* @param object $value
+	* @return void
 	*/
 	public function set_sqo(object $value) {
 
@@ -199,6 +205,8 @@ class request_config_object extends stdClass {
 
 	/**
 	* SET_SHOW
+	* @param object $value
+	* @return void
 	*/
 	public function set_show(object $value) {
 
@@ -209,6 +217,8 @@ class request_config_object extends stdClass {
 
 	/**
 	* SET_SEARCH
+	* @param object $value
+	* @return void
 	*/
 	public function set_search(object $value) {
 
@@ -219,6 +229,8 @@ class request_config_object extends stdClass {
 
 	/**
 	* SET_CHOOSE
+	* @param object $value
+	* @return void
 	*/
 	public function set_choose(object $value) {
 
@@ -230,30 +242,9 @@ class request_config_object extends stdClass {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
+	* @param string $name
 	*/
-	// final public function __call(string $strFunction, $arArguments) {
-
-	// 	$strMethodType		= substr($strFunction, 0, 4); # like set or get_
-	// 	$strMethodMember	= substr($strFunction, 4);
-	// 	switch($strMethodType) {
-	// 		#case 'set_' :
-	// 		#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
-	// 		#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
-	// 		#	break;
-	// 		case 'get_' :
-	// 			return($this->GetAccessor($strMethodMember));
-	// 			break;
-	// 	}
-	// 	return(false);
-	// }
-	// private function GetAccessor(string $variable) {
-	// 	if(property_exists($this, $variable)) {
-	// 		return (string)$this->$variable;
-	// 	}else{
-	// 		return false;
-	// 	}
-	// }
-	final public function __get($name) {
+	final public function __get(string $name) {
 
 		if (isset($this->$name)) {
 			return $this->$name;
@@ -268,6 +259,9 @@ class request_config_object extends stdClass {
 			logger::DEBUG);
 		return null;
 	}
+	// final public function __set($name, $value) {
+	// 	$this->$name = $value;
+	// }
 
 
 

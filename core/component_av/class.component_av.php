@@ -89,7 +89,7 @@ class component_av extends component_media_common {
 
 		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
 
-		$valor_export = $av_file_path .",".$posterframe_file_path;
+		$valor_export = $av_file_path .','. $posterframe_file_path;
 
 
 		return $valor_export;
@@ -99,6 +99,7 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_DEFAULT_QUALITY
+	* @return string DEDALO_AV_QUALITY_DEFAULT
 	*/
 	public function get_default_quality() : string {
 
@@ -133,6 +134,7 @@ class component_av extends component_media_common {
 	/**
 	* GET_POSTERFRAME_FILE_NAME
 	*  like 'rsc35_rsc167_1.jpg'
+	* @return string $posterframe_file_name;
 	*/
 	public function get_posterframe_file_name() : string {
 
@@ -145,6 +147,8 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_POSTERFRAME_PATH
+	* Get full file path
+	* @return string $posterframe_path
 	*/
 	public function get_posterframe_path() : string {
 
@@ -863,8 +867,8 @@ class component_av extends component_media_common {
 
 
 				// posterframe. Create posterframe of current video if not exists
-					$PosterFrameObj = new PosterFrameObj($id);
-					if(Ffmpeg::get_ffmpeg_installed_path() && !$PosterFrameObj->get_file_exists()) {
+					$posterframe_path = $this->get_posterframe_path();
+					if( !file_exists($posterframe_path) ) {
 						$timecode	= '00:00:05';
 						$Ffmpeg		= new Ffmpeg();
 						$Ffmpeg->create_posterframe($AVObj, $timecode);
@@ -876,7 +880,6 @@ class component_av extends component_media_common {
 					# Apply qt-faststart to optimize file headers position
 					#$Ffmpeg = new Ffmpeg();
 					#$Ffmpeg->conform_header($AVObj);
-
 			}//end if ($quality=='audio') {
 
 
@@ -991,7 +994,7 @@ class component_av extends component_media_common {
 	/**
 	* GET_MEDIA_STREAMS
 	* Check the file to get the head streams of the video file
-	* @return
+	* @return mixed
 	*/
 	public function get_media_streams(?string $quality=null) {
 

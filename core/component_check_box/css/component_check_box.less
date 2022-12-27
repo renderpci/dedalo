@@ -108,7 +108,9 @@
 			overflow: hidden;
 
 			>.content_value {
-				line-height: 1rem;
+				display: flex;
+				align-items: stretch;
+				line-height: 1.33rem;
 				border-bottom: 1px solid #eeeeee;
 				margin-left: 1.5rem;
 				padding: 0.33rem;
@@ -120,7 +122,26 @@
 					width: 1.33rem;
 					margin-right: 0.5rem;
 					margin-left: 0px;
-					vertical-align: text-bottom;
+					// vertical-align: text-bottom;
+				}
+
+				// label input
+				>.input_label {
+					// vertical-align: text-bottom;
+					// background-color: #ffffff;
+
+					>.input_checkbox {
+						margin-right: 0.33rem;
+						// vertical-align: top;
+					}
+
+					>span {
+						vertical-align: text-bottom;
+					}
+				}
+
+				>.developer_info {
+					margin-left: 0.33rem
 				}
 			}
 		}

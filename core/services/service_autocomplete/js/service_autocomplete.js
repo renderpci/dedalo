@@ -11,6 +11,7 @@
 	import {view_default_autocomplete} from './view_default_autocomplete.js'
 
 
+
 /**
 * SERVICE_AUTOCOMPLETE
 * Used as service by component_portal, (old component_autocomplete, component_autocomplete_hi)
@@ -20,12 +21,6 @@
 export const service_autocomplete = function() {
 
 }//end service_autocomplete
-
-	/**
-	* VARS
-	*/
-		// sections_without_filter_fields . exclude this section to build dom filter fields
-		// this.sections_without_filter_fields = ['zenon1']
 
 
 
@@ -133,8 +128,6 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 
 	const self = this
 
-	// console.log("/////////////// e.which:",e.which);
-
 	// down arrow
 	if(e.which === 40) {
 
@@ -173,7 +166,6 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 
 	return true
 }//end service_autocomplete_keys
-
 
 
 

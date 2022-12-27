@@ -6,7 +6,8 @@
 .component_iri {
 	// background-color: #f496a1;
 
-	&.edit {
+	&.view_default {
+
 		>.content_data {
 
 			>.content_value {
@@ -49,23 +50,24 @@
 			}
 		}
 
-		&.view_line {
-			>.content_data {
+	}//end &.edit
 
-				>.content_value {
-					flex-wrap: wrap;
+	&.view_line {
+		>.content_data {
 
-					>.input_value {
-						flex: 1 1 100%;
-					}
+			>.content_value {
+				flex-wrap: wrap;
 
-					.button.hidden_button {
-						display: none;
-					}
+				>.input_value {
+					flex: 1 1 100%;
+				}
+
+				.button.hidden_button {
+					display: none;
 				}
 			}
 		}
-	}//end &.edit
+	}
 
 
 	&.search {

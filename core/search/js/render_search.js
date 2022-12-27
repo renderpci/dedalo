@@ -1065,7 +1065,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			const status_id					= 'open_search_panel'
 			const status_table				= 'status'
 
-		if (search_global_container.classList.contains('hide')) {
+		if (search_global_container && search_global_container.classList.contains('hide')) {
 
 			self.search_panel_is_open = true
 

@@ -47,8 +47,9 @@
 			// align-items: center; // vertical alignment
 			font-size: 0.85rem;
 			padding: 0.25rem;
+			overflow: hidden;
 
-			>span {
+			span {
 				word-break: break-word;
 				overflow: hidden;
 				text-overflow: ellipsis;
@@ -56,6 +57,7 @@
 				-webkit-line-clamp: 10; /* number of lines to show */
 				line-clamp: 10;
 				-webkit-box-orient: vertical;
+				word-break: break-all;
 			}
 		}
 	}
@@ -64,6 +66,19 @@
 	&.view_tool {
 		// background-color: #ced9fd
 
+		.content_data > .section_record {
+
+			img {
+				max-height: 1rem;
+
+				&.view_text {
+					max-height: 4rem;
+				}
+				&.svg {
+					min-height: 2rem;
+				}
+			}
+		}
 	}
 
 	&.view_history {
@@ -114,7 +129,6 @@
 						min-height: 2rem;
 					}
 				}
-
 			}
 			// notes icon
 			.column:nth-child(4) {

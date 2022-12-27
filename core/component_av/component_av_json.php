@@ -47,7 +47,7 @@
 
 		// value
 			switch ($mode) {
-				case 'tm':
+
 				case 'list':
 					$value = $this->get_list_value();
 					break;

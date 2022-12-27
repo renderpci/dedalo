@@ -1,5 +1,5 @@
 <?php
-/**
+/*
 * REQUEST QUERY OBJECT (RQO)
 * Defines an object with normalized properties and checks
 
@@ -81,6 +81,7 @@
 		]
 
 
+	@see class.request.config.php
 	// REQUEST_CONFIG (request configuration for Dédalo API or others API):
 		[
 			{
@@ -192,6 +193,7 @@ class request_query_object {
 			public $dd_api;
 			public $action;
 			public $source;
+			public $api_engine;
 
 		// optional (disabled to prevent null values)
 			// object sqo
@@ -211,7 +213,7 @@ class request_query_object {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data = null
+	* @param object|null $data = null
 	*/
 	public function __construct( object $data=null ) {
 
@@ -224,21 +226,21 @@ class request_query_object {
 			// }
 
 		// default always is 'dedalo'
-		$this->set_api_engine = 'dedalo';
+		$this->api_engine ='dedalo';
 
 		// set all properties
 			foreach ($data as $key => $value) {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-
-		return true;
 	}//end __construct
 
 
 
 	/**
 	* SET_DD_API
+	* @param string $value
+	* @return void
 	*/
 	public function set_dd_api(string $value) {
 
@@ -249,6 +251,8 @@ class request_query_object {
 
 	/**
 	* SET_ACTION
+	* @param string $value
+	* @return void
 	*/
 	public function set_action(string $value) {
 
@@ -259,6 +263,8 @@ class request_query_object {
 
 	/**
 	* SET_SOURCE
+	* @param object $value
+	* @return void
 	*/
 	public function set_source(object $value) {
 
@@ -269,6 +275,8 @@ class request_query_object {
 
 	/**
 	* SET_SQO
+	* @param object $value
+	* @return void
 	*/
 	public function set_sqo(object $value) {
 
@@ -279,6 +287,8 @@ class request_query_object {
 
 	/**
 	* SET_SHOW
+	* @param object $value
+	* @return void
 	*/
 	public function set_show(object $value) {
 
@@ -289,6 +299,8 @@ class request_query_object {
 
 	/**
 	* SET_SEARCH
+	* @param object $value
+	* @return void
 	*/
 	public function set_search(object $value) {
 
@@ -299,6 +311,8 @@ class request_query_object {
 
 	/**
 	* SET_CHOOSE
+	* @param object $value
+	* @return void
 	*/
 	public function set_choose(object $value) {
 
@@ -310,28 +324,22 @@ class request_query_object {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
+	* @param string $name
 	*/
-	final public function __call(string $strFunction, $arArguments) {
+	final public function __get(string $name) {
 
-		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
-		$strMethodMember	= substr($strFunction, 4);
-		switch($strMethodType) {
-			#case 'set_' :
-			#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
-			#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
-			#	break;
-			case 'get_' :
-				return($this->GetAccessor($strMethodMember));
-				break;
+		if (isset($this->$name)) {
+			return $this->$name;
 		}
-		return(false);
-	}
-	private function GetAccessor(string $variable) {
-		if(property_exists($this, $variable)) {
-			return (string)$this->$variable;
-		}else{
-			return false;
-		}
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
 	}
 
 
