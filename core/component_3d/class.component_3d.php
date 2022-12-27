@@ -259,7 +259,7 @@ class component_3d extends component_media_common {
 			$this->set_quality($quality);
 
 		// file do not exists case
-			$target_dir = $this->get_target_dir();
+			$target_dir = $this->get_target_dir($quality);
 			if(!file_exists($target_dir)) {
 				return $result;
 			}

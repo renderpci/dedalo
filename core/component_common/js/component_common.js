@@ -563,7 +563,7 @@ component_common.prototype.save = async function(changed_data) {
 				}
 			}
 
-		// dispatch save event general
+		// event save. Dispatch save event general
 			event_manager.publish(
 				'save',
 				{
@@ -571,7 +571,8 @@ component_common.prototype.save = async function(changed_data) {
 					api_response	: response
 				}
 			)
-		// dispatch event specific by id_base (usually observed by component properties 'observe' definition)
+
+		// event save_ . Dispatch event specific by id_base (usually observed by component properties 'observe' definition)
 			event_manager.publish(
 				'save_'+ self.id_base,
 				{}

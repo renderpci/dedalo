@@ -1,110 +1,110 @@
 <?php
-/**
+/*
 *  DD_GRID_CELL_OBJECT
 *
 *  Used as standard object format to use in client to render tables with unspecific data or component.
 *  The grid will process the object as simple table with heads, captions and rows, etc, but the object doesn't has type of the row, only the CSS that will used to render the data.
 *  The format use flat data and add possibility to include buttons or links to the data.
 *
-*  Example:
-*
-*	[
-*	  [
-*	    {
-*	      "class_list": "head grey",
-*	      "column": "portal",
-*	      "fields_separator": ", ",
-*	      "records_separator": "<br>",
-*	      "total_rows":3,
-*	      "data": [
-*	        {
-*	          "column": "id",
-*	          "data": [
-*	            5,
-*	            8
-*	          ]
-*	        },
-*	        {
-*	          "column": "nombre",
-*	          "data": [
-*	            "paco",
-*	            "Pepe"
-*	          ]
-*	        },
-*	        {
-*	          "column": "apellido",
-*	          "data": [
-*	            "otro",
-*	            "mas"
-*	          ]
-*	        }
-*	      ]
-*	    },
-*	    {
-*	      "class_list": "head grey",
-*	      "column": "input_x",
-*	      "fields_separator": null,
-*	      "records_separator": "<br>",
-*	      "data": [
-*	        {
-*	          "column": "my input",
-*	          "data": [
-*	            "raspa"
-*	          ]
-*	        }
-*	      ]
-*	    }
-*	  ],
-*	  [
-*	    {
-*	      "class_list": "head grey",
-*	      "column": "portal",
-*	      "fields_separator": ", ",
-*	      "records_separator": "<br>",
-*	      "data": [
-*	        {
-*	          "column": "id",
-*	          "data": [
-*	            5,
-*	            8
-*	          ]
-*	        },
-*	        {
-*	          "column": "nombre",
-*	          "data": [
-*	            "paco",
-*	            "Pepe"
-*	          ]
-*	        },
-*	        {
-*	          "column": "apellido",
-*	          "data": [
-*	            "otro",
-*	            "mas"
-*	          ]
-*	        }
-*	      ]
-*	    },
-*	    {
-*	      "class_list": "head grey",
-*	      "column": "input_x",
-*	      "fields_separator": null,
-*	      "records_separator": "<br>",
-*	      "data": [
-*	        {
-*	          "column": "my input",
-*	          "data": [
-*	            "raspa"
-*	          ]
-*	        }
-*	      ]
-*	    }
-*	  ]
-*	]
-*
-*
+*  Sample:
+
+	[
+	  [
+	    {
+	      "class_list": "head grey",
+	      "column": "portal",
+	      "fields_separator": ", ",
+	      "records_separator": "<br>",
+	      "total_rows":3,
+	      "data": [
+	        {
+	          "column": "id",
+	          "data": [
+	            5,
+	            8
+	          ]
+	        },
+	        {
+	          "column": "nombre",
+	          "data": [
+	            "paco",
+	            "Pepe"
+	          ]
+	        },
+	        {
+	          "column": "apellido",
+	          "data": [
+	            "otro",
+	            "mas"
+	          ]
+	        }
+	      ]
+	    },
+	    {
+	      "class_list": "head grey",
+	      "column": "input_x",
+	      "fields_separator": null,
+	      "records_separator": "<br>",
+	      "data": [
+	        {
+	          "column": "my input",
+	          "data": [
+	            "raspa"
+	          ]
+	        }
+	      ]
+	    }
+	  ],
+	  [
+	    {
+	      "class_list": "head grey",
+	      "column": "portal",
+	      "fields_separator": ", ",
+	      "records_separator": "<br>",
+	      "data": [
+	        {
+	          "column": "id",
+	          "data": [
+	            5,
+	            8
+	          ]
+	        },
+	        {
+	          "column": "nombre",
+	          "data": [
+	            "paco",
+	            "Pepe"
+	          ]
+	        },
+	        {
+	          "column": "apellido",
+	          "data": [
+	            "otro",
+	            "mas"
+	          ]
+	        }
+	      ]
+	    },
+	    {
+	      "class_list": "head grey",
+	      "column": "input_x",
+	      "fields_separator": null,
+	      "records_separator": "<br>",
+	      "data": [
+	        {
+	          "column": "my input",
+	          "data": [
+	            "raspa"
+	          ]
+	        }
+	      ]
+	    }
+	  ]
+	]
 */
 class dd_grid_cell_object {
+
+
 
 	// string id. As "oh1_id" - the unique id of the column to identify data inside the same column
 	public $id;
@@ -190,110 +190,156 @@ class dd_grid_cell_object {
 
 
 	/**
-	* SET_ID
-	*/
-	// public function set_id(string $value) {
-	// 	$this->id = $value;
-	// }
-
-	/**
 	* SET_CLASS_LIST
+	* @param string $value
+	* @return void
 	*/
-	public function set_class_list(string $value) {
+	public function set_class_list(string $value) : void {
 		$this->class_list = $value;
-	}
+	}//end set_class_list
+
+
 
 	/**
 	* SET_TYPE
+	* @param string $value
+	* @return void
 	*/
-	public function set_type(string $value) {
+	public function set_type(string $value) : void {
 		$this->type = $value;
-	}
+	}//end set_class_list
+
+
 
 	/**
 	* SET_LABEL
+	* @param string $value
+	* @return void
 	*/
-	public function set_label(string $value) {
+	public function set_label(string $value) : void {
 		$this->label = $value;
-	}
+	}//end set_label
+
+
 
 	/**
 	* SET_ROW_COUNT
+	* @param int $value
+	* @return void
 	*/
-	public function set_row_count(int $value) {
+	public function set_row_count(int $value) : void {
 		$this->row_count = $value;
-	}
+	}//end set_row_count
+
+
 
 	/**
 	* SET_COLUMN_COUNT
+	* @param int $value
+	* @return void
 	*/
 	public function set_column_count(int $value) {
 		$this->column_count = $value;
-	}
+	}//end set_column_count
+
 
 
 	/**
 	* SET_AR_COLUMNS_OBJ
+	* @param array $value
+	* @return void
 	*/
-	public function set_ar_columns_obj($value) {
+	public function set_ar_columns_obj(array $value) : void {
 		$this->ar_columns_obj = $value;
-	}
+	}//end set_ar_columns_obj
+
+
 
 	/**
 	* SET_COLUMN_LABELS
+	* @param array $value
+	* @return void
 	*/
-	public function set_column_labels(array $value) {
+	public function set_column_labels(array $value) : void  {
 		$this->column_labels = $value;
-	}
+	}//end set_column_labels
+
+
 
 	/**
-	* SET_fields_separator
+	* SET_FIELDS_SEPARATOR
+	* @param string $value
+	* @return void
 	*/
-	public function set_fields_separator(string $value) {
+	public function set_fields_separator(string $value) : void  {
 		$this->fields_separator = $value;
-	}
+	}//end set_fields_separator
+
+
 
 	/**
-	* SET_records_separator
+	* SET_RECORDS_SEPARATOR
+	* @param string $value
+	* @return void
 	*/
-	public function set_records_separator(string $value) {
+	public function set_records_separator(string $value) : void  {
 		$this->records_separator = $value;
-	}
+	}//end set_records_separator
+
+
 
 	/**
 	* SET_CELL_TYPE
+	* @param string $value
+	* @return void
 	*/
-	public function set_cell_type(string $value) {
+	public function set_cell_type(string $value) : void {
 		$this->cell_type = $value;
-	}
+	}//end set_cell_type
+
+
 
 	/**
 	* SET_ACTION
+	* @param string $value
+	* @return void
 	*/
-	public function set_action(string $value) {
+	public function set_action(string $value) : void {
 		$this->action = $value;
-	}
+	}//end set_action
+
+
 
 	/**
 	* SET_VALUE
+	* @param mixed $value
+	* @return void
 	*/
-	public function set_value($value) {
+	public function set_value($value) : void  {
 		$this->value = $value;
-	}
+	}//end set_value
+
+
 
 	/**
 	* SET_FALLBACK_VALUE
+	* @param array $value
+	* @return void
 	*/
-	public function set_fallback_value(array $value) {
+	public function set_fallback_value(array $value) : void {
 		$this->fallback_value = $value;
-	}
+	}//end set_fallback_value
+
+
 
 	/**
 	* SET_RENDER_LABEL
+	* @param bool $value
+	* @return void
 	*/
-	public function set_render_label(bool $value) {
+	public function set_render_label(bool $value) : void {
 		$this->render_label = $value;
-	}
+	}//end set_render_label
 
 
 

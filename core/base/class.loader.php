@@ -34,11 +34,11 @@ include(DEDALO_CORE_PATH . '/common/class.search_query_object.php'); # new 30-06
 include(DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
-// include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
-// include(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+// include(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
+// include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
+// include(DEDALO_CORE_PATH . '/media_engine/class.PdfObj.php');
 include(DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'); # new 27-07-2021
 include(DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'); # new 28-07-2021
 #include(DEDALO_CORE_PATH . '/common/class.relation.php');
@@ -118,6 +118,10 @@ include(DEDALO_SHARED_PATH . '/class.subtitles.php');
 class class_loader {
 
 
+
+	/**
+	* __CONSTRUCT
+	*/
 	public function __construct() {
 
 		# Check if PHP version is supported
@@ -133,6 +137,7 @@ class class_loader {
 	* LOADER
 	* Include the file of given class resolving more common paths
 	* @param string $className
+	* @return bool
 	*/
 	private static function loader(string $className) : bool {
 
@@ -169,14 +174,16 @@ class class_loader {
 		return true;
 	}//end loader
 
+
+
 }//end class_loader
 
 
 
-# LOAD . Auto Init class
+// LOAD . Auto Init class
 $autoloader	= new class_loader();
 
 
 
-# INIT NAVIGATOR at end
+// INIT NAVIGATOR at end
 $navigator	= new navigator();

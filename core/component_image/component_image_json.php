@@ -45,7 +45,7 @@
 
 		// value
 			switch ($mode) {
-				case 'tm':
+
 				case 'list':
 					$value = $this->get_list_value();
 
@@ -77,7 +77,6 @@
 			$item->base_svg_url = $this->get_base_svg_url(true);
 			// item datalist
 			$item->datalist = $datalist;
-
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

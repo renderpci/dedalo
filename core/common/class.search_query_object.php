@@ -1,12 +1,12 @@
 <?php
-/**
+/*
 * SEARCH QUERY OBJECT (SQO)
 * Defines object with normalized properties and checks.
 * SQO or Search Query Object definition is based on
 * Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
-*
-* 	// FORMAT
 
+
+ 	// FORMAT
 		id						: 'oh1'		// optional. section_tipo and other params to define the unique id
 		section_tipo			: ['oh1']	// array of section_tipo for search
 		mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB
@@ -44,10 +44,10 @@
 								  }]
 		allow_sub_select_by_id	: (true || false)
 		children_recursive 		: (true || false)
-		remove_distinc			: (true || false)
+		remove_distinct			: (true || false)
 		skip_projects_filter	: (true || false)
 		parsed					: (true || false) // boolean, state of the sqo
-*
+
 */
 class search_query_object {
 
@@ -69,7 +69,7 @@ class search_query_object {
 		public $filter_by_locators;
 		public $allow_sub_select_by_id;
 		public $children_recursive;
-		public $remove_distinc;
+		public $remove_distinct;
 		public $skip_projects_filter;
 		public $parsed;
 		public $select;
@@ -213,7 +213,7 @@ class search_query_object {
 	*/
 	public function set_limit($value) {
 
-		if(empty($value)){
+		if( empty($value) ) {
 			$this->limit = 'ALL';
 			return true;
 		}
@@ -371,12 +371,12 @@ class search_query_object {
 	* @param bool $value
 	* @return bool true
 	*/
-	public function set_remove_distinc(bool $value) {
+	public function set_remove_distinct(bool $value) {
 
-		$this->remove_distinc = $value;
+		$this->remove_distinct = $value;
 
 		return true;
-	}//end set_remove_distinc
+	}//end set_remove_distinct
 
 
 
@@ -420,29 +420,26 @@ class search_query_object {
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
+	* @param string $name
 	*/
-	final public function __call(string $strFunction, $arArguments) {
+	final public function __get(string $name) {
 
-		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
-		$strMethodMember	= substr($strFunction, 4);
-		switch($strMethodType) {
-			#case 'set_' :
-			#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
-			#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
-			#	break;
-			case 'get_' :
-				return($this->GetAccessor($strMethodMember));
-				break;
+		if (isset($this->$name)) {
+			return $this->$name;
 		}
-		return(false);
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
 	}
-	private function GetAccessor(string $variable) {
-		if(property_exists($this, $variable)) {
-			return (string)$this->$variable;
-		}else{
-			return false;
-		}
-	}
+	// final public function __set($name, $value) {
+	// 	$this->$name = $value;
+	// }
 
 
 

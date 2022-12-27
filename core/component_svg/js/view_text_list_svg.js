@@ -6,10 +6,10 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {
-		get_value_fragment
-	}
-	from './view_default_list_svg.js'
+	// import {
+	// 	get_value_fragment
+	// }
+	// from './view_default_list_svg.js'
 
 
 
@@ -33,8 +33,6 @@ view_text_list_svg.render = function(self, options) {
 
 	// short vars
 		const datalist = self.data.datalist || []
-		console.log('datalist:', datalist);
-		console.log('self:', self);
 
 	// url
 		const quality		= 'standard'

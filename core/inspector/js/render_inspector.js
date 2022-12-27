@@ -914,7 +914,7 @@ const render_relation_list = function(self) {
 * 	inspector instance
 * @return DOM node time_machine_list_wrap
 */
-const render_time_machine_list = function(self) {
+export const render_time_machine_list = function(self) {
 
 	// wrapper
 		const time_machine_list_wrap = ui.create_dom_element({
@@ -936,82 +936,36 @@ const render_time_machine_list = function(self) {
 			class_name		: 'time_machine_list_body hide',
 			parent			: time_machine_list_wrap
 		})
+		// fix pointer to node placeholder
+		self.time_machine_list_container = time_machine_list_body
 
 	// time_machine_list events subscription
-		self.events_tokens.push(
-			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
-		)
-		function fn_updated_section(){
-			// triggered after section pagination, it forces relation list update
-			const is_open = !time_machine_list_body.classList.contains('hide')
-			if (is_open) {
-				load_time_machine_list()
-			}
-		}
+		// self.events_tokens.push(
+		// 	event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
+		// )
+		// function fn_updated_section(){
+		// 	// triggered after section pagination, it forces relation list update
+		// 	const is_open = !time_machine_list_body.classList.contains('hide')
+		// 	if (is_open) {
+		// 		load_time_machine_list()
+		// 	}
+		// }
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
 			toggler				: time_machine_list_head,
 			container			: time_machine_list_body,
 			collapsed_id		: 'inspector_time_machine_list',
-			collapse_callback	: unload_time_machine_list,
-			expose_callback		: load_time_machine_list,
+			collapse_callback	: collapse,
+			expose_callback		: expose,
 			default_state		: 'closed'
 		})
-
-		// (!) Note that load_time_machine_list is called on each section pagination, whereby must be generated
-		// even if user close and re-open the time_machine_list inspector tab
-		async function load_time_machine_list() {
-
-			// updates list_head icon
-				time_machine_list_head.classList.add('up')
-
-			// create and render a service_time_machine instance
-				const service_time_machine	= await instances.get_instance({
-					model			: 'service_time_machine',
-					section_tipo	: self.section_tipo,
-					section_id		: self.caller.section_id,
-					view			: 'mini',
-					id_variant		: self.section_tipo + '_tm_list',
-					caller			: self,
-					config			: {
-						id					: 'section_history',
-						model				: 'dd_grid', // used to create the filter
-						tipo				: self.section_tipo, // used to create the filter
-						template_columns	: '1fr 1fr 1fr 2fr',
-						ignore_columns		: [
-							'matrix_id' // matrix_id dd1573
-						],
-						ddo_map				: [{
-							tipo			: 'dd1574', // 'dd1574' generic tm info ontology item 'Value'
-							type			: 'dd_grid',
-							typo			: 'ddo',
-							model			: 'dd_grid', // (!) changed to dd_grid to allow identification
-							section_tipo	: self.section_tipo,
-							parent			: self.section_tipo,
-							debug_label		: 'Value',
-							mode			: 'list',
-							view			: 'mini'
-						}]
-					}
-				})
-				await service_time_machine.build(true)
-				const time_machine_list_wrap = await service_time_machine.render()
-
-			// remove previous node if a pointer exists
-				if (time_machine_list_body.time_machine_list_wrap) {
-					time_machine_list_body.time_machine_list_wrap.remove()
-				}
-
-			// append node
-				time_machine_list_body.appendChild(time_machine_list_wrap)
-				// set pointers
-				time_machine_list_body.time_machine_list_wrap = time_machine_list_wrap
-
-			return true
-		}
-		function unload_time_machine_list() {
+		function collapse() {
 			time_machine_list_head.classList.remove('up')
+		}
+		function expose() {
+			load_time_machine_list(self)
+			time_machine_list_head.classList.add('up')
 		}
 
 
@@ -1021,62 +975,75 @@ const render_time_machine_list = function(self) {
 
 
 /**
-* RENDER_ACTIVITY_INFO
-* Show component save and error messages
+* LOAD_TIME_MACHINE_LIST
+* Get section time_machine history records
 * @param object self
 * 	inspector instance
-* @return DOM node time_machine_list_wrap
+* @return DOM node|null component_history_wrap
 */
-const render_activity_info = function(self) {
+export const load_time_machine_list = async function(self) {
 
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'activity_info'
-		})
-
-	// activity_info_head
-		const activity_info_head = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'activity_info_head icon_arrow',
-			inner_html		: get_label.actividad || 'Activity',
-			parent			: wrapper
-		})
-
-	// activity_info_body
-		const activity_info_body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'activity_info_body hide',
-			parent			: wrapper
-		})
-
-	// events
-		self.events_tokens.push(
-			event_manager.subscribe('save', fn_saved)
-		)
-		function fn_saved(options){
-			const node_info = render_node_info(options)
-			activity_info_body.prepend(node_info)
+	// container. Prevent to load data when the viewer is collapsed
+		const container	= self.time_machine_list_container
+		const is_open	= container && !container.classList.contains('hide')
+		if (!is_open) {
+			return null
 		}
 
-	// track collapse toggle state of content
-		ui.collapse_toggle_track({
-			toggler				: activity_info_head,
-			container			: activity_info_body,
-			collapsed_id		: 'inspector_activity_info',
-			collapse_callback	: collapse,
-			expose_callback		: expose
+	// set as loading
+		container.classList.add('loading')
+
+	// (!) Note that expose is called on each section pagination, whereby must be generated
+	// even if user close and re-open the time_machine_list inspector tab
+
+	// create and render a service_time_machine instance
+		const service_time_machine	= await instances.get_instance({
+			model			: 'service_time_machine',
+			section_tipo	: self.section_tipo,
+			section_id		: self.caller.section_id,
+			view			: 'mini',
+			id_variant		: self.section_tipo + '_tm_list',
+			caller			: self,
+			config			: {
+				id					: 'section_history',
+				model				: 'dd_grid', // used to create the filter
+				tipo				: self.section_tipo, // used to create the filter
+				template_columns	: '1fr 1fr 1fr 2fr',
+				ignore_columns		: [
+					'matrix_id' // matrix_id dd1573
+				],
+				ddo_map				: [{
+					tipo			: 'dd1574', // 'dd1574' generic tm info ontology item 'Value'
+					type			: 'dd_grid',
+					typo			: 'ddo',
+					model			: 'dd_grid', // (!) changed to dd_grid to allow identification
+					section_tipo	: self.section_tipo,
+					parent			: self.section_tipo,
+					debug_label		: 'Value',
+					mode			: 'list',
+					view			: 'mini'
+				}]
+			}
 		})
-		function collapse() {
-			activity_info_head.classList.remove('up')
-		}
-		function expose() {
-			activity_info_head.classList.add('up')
+		await service_time_machine.build(true)
+		const time_machine_list_wrap = await service_time_machine.render()
+
+	// remove previous node if a pointer exists
+		if (container.time_machine_list_wrap) {
+			container.time_machine_list_wrap.remove()
 		}
 
+	// append node
+		container.appendChild(time_machine_list_wrap)
+		// set pointers
+		container.time_machine_list_wrap = time_machine_list_wrap
 
-	return wrapper
-}//end render_activity_info
+	// set as loaded
+		container.classList.remove('loading')
+
+
+	return container
+}//end load_time_machine_list
 
 
 
@@ -1110,7 +1077,6 @@ const render_component_history = function(self) {
 			class_name		: 'component_history_body hide',
 			parent			: component_history_wrap
 		})
-
 		// fix pointer to node placeholder
 		self.component_history_container = component_history_body
 
@@ -1130,6 +1096,7 @@ const render_component_history = function(self) {
 			component_history_head.classList.add('up')
 		}
 
+
 	return component_history_wrap
 }//end render_component_history
 
@@ -1142,33 +1109,31 @@ const render_component_history = function(self) {
 * 	inspector instance
 * @param object|null component
 * 	component instance
-* @return DOM node component_history_wrap
+* @return DOM node|null component_history_wrap
 */
-export const load_component_history = function(self, component) {
+export const load_component_history = async function(self, component) {
+
+	// container
+		const container	= self.component_history_container
 
 	// prevent load the component data when component is not selected
-		if(!component){
-			return
+		if(!component) {
+			// remove previous node if exists pointer
+			if (container && container.component_history_wrap) {
+				container.component_history_wrap.remove()
+			}
+			return null
 		}
 
 	// prevent to affect modals
 		if (component.section_tipo!==self.section_tipo) {
-			return
+			return null
 		}
 
-	// values from caller (section)
-		// const tipo			= component.tipo
-		// const label			= component.label
-		// const model			= component.model
-		// const translatable	= component.context.translatable
-		// 	? JSON.stringify(component.context.translatable)
-		// 	: 'no'
-
-	// container. prevent load data when the component_history is collapse
-		const container	= self.component_history_container
-		const is_open	= container && !container.classList.contains('hide')
-		if (is_open) {
-			exec_load_component_history(component)
+	// container. Prevent to load data when the viewer is collapsed
+		const is_open = container && !container.classList.contains('hide')
+		if (!is_open) {
+			return null
 		}
 
 	// track collapse toggle state of content
@@ -1181,75 +1146,162 @@ export const load_component_history = function(self, component) {
 		// 		default_state		: 'closed'
 		// 	})
 
+	// set as loading
+		container.classList.add('loading')
+
 	// (!) Note that load_component_history is called on each section pagination, whereby must be generated
 	// even if user close and re-open the component_history inspector tab
-	async function exec_load_component_history(component) {
 
-		// create and render a component_history instance
-			const service_time_machine	= await instances.get_instance({
-				model			: 'service_time_machine',
-				section_tipo	: self.section_tipo,
-				section_id		: self.caller.section_id,
-				view			: 'history',
-				id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',
-				caller			: self,
-				config			: {
-					id					: 'component_history_' + component.tipo,
-					model				: component.model, // used to create the filter
-					tipo				: component.tipo, // used to create the filter
-					lang				: component.lang, // used to create the filter
-					// template_columns	: '1fr 1fr 2fr 2fr',
-					ignore_columns		: [
-						'matrix_id', // matrix_id dd1573
-						'where' // where dd546
-					],
-					ddo_map				: [
-						{ // selected component
-							typo			: 'ddo',
-							type			: 'component',
-							model			: component.model,
-							tipo			: component.tipo,
-							section_tipo	: self.section_tipo,
-							parent			: self.section_tipo,
-							label			: component.label,
-							mode			: 'tm',
-							fixed_mode		: true, // preserves mode across section_record
-							view			: 'text'
-						},
-						{	// notes component
-							typo			: 'ddo',
-							type			: 'component',
-							model			: 'component_text_area',
-							tipo			: 'rsc329',
-							section_tipo	: 'rsc832',
-							parent			: self.section_tipo,
-							label			: 'Annotation',
-							mode			: 'list',
-							fixed_mode		: true, // preserves mode across section_record
-							view			: 'note'
-						}
-					]
-				}
-			})
-			await service_time_machine.build(true)
-			const component_history_wrap = await service_time_machine.render()
-
-		// remove previous node if exists pointer
-			if (container.component_history_wrap) {
-				container.component_history_wrap.remove()
+	// create and render a component_history instance
+		const service_time_machine	= await instances.get_instance({
+			model			: 'service_time_machine',
+			section_tipo	: self.section_tipo,
+			section_id		: self.caller.section_id,
+			view			: 'history',
+			id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',
+			caller			: self,
+			config			: {
+				id					: 'component_history_' + component.tipo,
+				model				: component.model, // used to create the filter
+				tipo				: component.tipo, // used to create the filter
+				lang				: component.lang, // used to create the filter
+				// template_columns	: '1fr 1fr 2fr 2fr',
+				ignore_columns		: [
+					'matrix_id', // matrix_id dd1573
+					'where' // where dd546
+				],
+				ddo_map				: [
+					{ // selected component
+						typo			: 'ddo',
+						type			: 'component',
+						model			: component.model,
+						tipo			: component.tipo,
+						section_tipo	: self.section_tipo,
+						parent			: self.section_tipo,
+						label			: component.label,
+						mode			: 'tm',
+						fixed_mode		: true, // preserves mode across section_record
+						view			: 'text'
+					},
+					{	// notes component
+						typo			: 'ddo',
+						type			: 'component',
+						model			: 'component_text_area',
+						tipo			: 'rsc329',
+						section_tipo	: 'rsc832',
+						parent			: self.section_tipo,
+						label			: 'Annotation',
+						mode			: 'list',
+						fixed_mode		: true, // preserves mode across section_record
+						view			: 'note'
+					}
+				]
 			}
+		})
+		await service_time_machine.build(true)
+		const component_history_wrap = await service_time_machine.render()
 
-		// append node
-			container.appendChild(component_history_wrap)
-			// set pointers
-			container.component_history_wrap = component_history_wrap
+	// remove previous node if exists pointer
+		if (container.component_history_wrap) {
+			container.component_history_wrap.remove()
+		}
 
-		return true
-	}//end exec_load_component_history
+	// append node
+		container.appendChild(component_history_wrap)
+		// set pointers
+		container.component_history_wrap = component_history_wrap
+
+	// set as loaded
+		container.classList.remove('loading')
 
 
 	return container
 }//end load_component_history
+
+
+
+/**
+* RENDER_ACTIVITY_INFO
+* Show component save and error messages
+* @param object self
+* 	inspector instance
+* @return DOM node time_machine_list_wrap
+*/
+const render_activity_info = function(self) {
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info'
+		})
+
+	// activity_info_head
+		const activity_info_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_head icon_arrow',
+			inner_html		: get_label.actividad || 'Activity',
+			parent			: wrapper
+		})
+
+	// activity_info_body
+		const activity_info_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_body hide',
+			parent			: wrapper
+		})
+		// fix pointer to node placeholder
+		self.activity_info_container = activity_info_body
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			toggler				: activity_info_head,
+			container			: activity_info_body,
+			collapsed_id		: 'inspector_activity_info',
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			activity_info_head.classList.remove('up')
+		}
+		function expose() {
+			activity_info_head.classList.add('up')
+		}
+
+
+	return wrapper
+}//end render_activity_info
+
+
+
+/**
+* LOAD_ACTIVITY_INFO
+* Get selected component time_machine history records and notes
+* @param object self
+* 	inspector instance
+* @param object options
+* 	event save subscription received options
+* @return DOM node|null activity_info_wrap
+*/
+export const load_activity_info = async function(self, options) {
+
+	// container
+		const container	= self.activity_info_container
+
+	// container. Prevent to load data when the viewer is collapsed
+		// const is_open = container && !container.classList.contains('hide')
+		// if (!is_open) {
+		// 	return null
+		// }
+
+	// render notification bubble
+		const node_info = render_node_info(options)
+
+	// prepend node (at top of the list)
+		container.prepend(node_info)
+
+
+	return container
+}//end load_activity_info
 
 
 
