@@ -210,9 +210,9 @@ const render_source_selector = function(self) {
 		select.addEventListener('change',function(e){
 			const key = e.target.value
 
-			self.dd_request				= clone(self.request_config[key])
-			self.ar_search_section_tipo	= self.dd_request.sqo.section_tipo
-			self.search_engine			= self.dd_request.api_engine //.find((current_item)=> current_item.typo==='search_engine').value
+			self.request_config_object	= clone(self.context.request_config[key])
+			self.ar_search_section_tipo	= self.request_config_object.sqo.section_tipo
+			self.search_engine			= self.request_config_object.api_engine //.find((current_item)=> current_item.typo==='search_engine').value
 			// console.log('self.ar_search_section_tipo', self.ar_search_section_tipo);
 			self.destroy()
 			self.render()
@@ -287,7 +287,7 @@ const render_filters_selector = function(self) {
 
 				const ddo_section		= ar_sections[i]
 				// const id				= ddo_section.tipo
-				// const request_ddo	= self.dd_request.find(item => item.typo === 'request_ddo').value
+				// const request_ddo	= self.request_config_object.find(item => item.typo === 'request_ddo').value
 				// const ddo_section	= request_ddo.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
 				const datalist_item	= {
 					grouper	: 'sections',
@@ -315,7 +315,7 @@ const render_filters_selector = function(self) {
 		}
 
 	// filter_by_list . if the component caller has a filter_by_list we add the datalist of the component
-		const filter_by_list = self.dd_request.sqo.filter_by_list//find(item => item.typo==='filter_by_list') || false
+		const filter_by_list = self.request_config_object.sqo.filter_by_list//find(item => item.typo==='filter_by_list') || false
 		if(filter_by_list) {
 
 			const ar_filter_by_list	= self.ar_filter_by_list
@@ -573,7 +573,7 @@ const render_inputs_list = function(self) {
 		class_name		: 'inputs_list' // css_autocomplete_hi_search_field
 	})
 
-	const ddo_map = self.dd_request.show.ddo_map
+	const ddo_map = self.request_config_object.show.ddo_map
 	const ddo_map_length = ddo_map.length
 
 	const ar_components = []
@@ -594,7 +594,7 @@ const render_inputs_list = function(self) {
 		ar_components.push(current_ddo)
 	}
 
-	// const request_ddo = self.dd_request.find(item => item.typo === 'request_ddo').value
+	// const request_ddo = self.request_config_object.find(item => item.typo === 'request_ddo').value
 	// const sqo_length = request_ddo.length
 
 
@@ -633,8 +633,8 @@ const render_operator_selector = function(self) {
 
 	// operator selector
 	// get the operator to use into the filter free
-	const operator	= self.dd_request.search && self.dd_request.search.sqo_config && self.dd_request.search.sqo_config.operator
-		? self.caller.rqo_config.search.sqo_config.operator
+	const operator	= self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
+		? self.caller.request_config_object.search.sqo_config.operator
 		: '$and'
 
 		const operator_selector = ui.create_dom_element({

@@ -92,27 +92,27 @@
 */
 export const relation_list = function() {
 
-	this.id				= null
+	this.id						= null
 
 	// element properties declare
-	this.model			= null
-	this.type			= null
-	this.tipo			= null
-	this.section_tipo	= null
-	this.section_id		= null
-	this.mode			= null
-	this.lang			= null
+	this.model					= null
+	this.type					= null
+	this.tipo					= null
+	this.section_tipo			= null
+	this.section_id				= null
+	this.mode					= null
+	this.lang					= null
 
-	this.datum			= null
-	this.context		= null
-	this.data			= null
+	this.datum					= null
+	this.context				= null
+	this.data					= null
 
-	this.node			= null
-	this.status			= null
-	this.filter			= null
+	this.node					= null
+	this.status					= null
+	this.filter					= null
 
-	this.rqo_config		= null
-	this.rqo			= null
+	this.request_config_object	= null
+	this.rqo					= null
 
 	return true
 }//end relation_list

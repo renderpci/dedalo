@@ -582,7 +582,7 @@ export const render_column_remove = function(options) {
 
 			const delete_dataframe_record = async function() {
 				// check if the show has any ddo that call to any dataframe section.
-				const ddo_dataframe = self.rqo_config.show.ddo_map.find(el => el.is_dataframe === true)
+				const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe === true)
 
 				if(!ddo_dataframe){
 					return
@@ -715,10 +715,10 @@ export const get_buttons = (self) => {
 				button_external	: false,
 				button_tree		: false
 			}
-		const show_interface = (!self.rqo_config.show.interface)
+		const show_interface = (!self.request_config_object.show.interface)
 			? default_interface
 			: (()=>{
-				const new_show_interface = self.rqo_config.show.interface
+				const new_show_interface = self.request_config_object.show.interface
 				// add missing keys
 				for (const [key, value] of Object.entries(default_interface)) {
 					if (new_show_interface[key]===undefined) {
@@ -913,31 +913,31 @@ export const get_buttons = (self) => {
 */
 export const activate_autocomplete = async function(self, wrapper) {
 
-	const show_interface = ( typeof self.rqo_config.show.interface?.show_autcomplete ==='undefined' )
-		? { show_autcomplete : true }
-		: self.rqo_config.show.interface
+	const show_interface = ( typeof self.request_config_object.show.interface?.show_autocomplete ==='undefined' )
+		? { show_autocomplete : true }
+		: self.request_config_object.show.interface
 
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
-		if( typeof self.rqo_config.show.interface?.show_autcomplete ==='undefined'
+		if( typeof self.request_config_object.show.interface?.show_autocomplete ==='undefined'
 			 && self.context.properties.source?.mode==='external') {
-			show_interface.show_autcomplete		= false
+			show_interface.show_autocomplete		= false
 		}// end if external
 
 
-	if( show_interface.show_autcomplete === true
+	if( show_interface.show_autocomplete === true
 		&& self.autocomplete!==false
 		&& self.autocomplete_active!==undefined
 		&& self.autocomplete_active===false ){
 
-		// set rqo
-			self.rqo_search	= self.rqo_search || await self.build_rqo_search(self.rqo_config, 'search')
-
 		self.autocomplete = new service_autocomplete()
 		await self.autocomplete.init({
-			caller		: self,
-			wrapper		: wrapper,
-			properties	: self.context.properties.service_autocomplete || null
+			caller			: self,
+			tipo 			: self.tipo,
+			section_tipo 	: self.section_tipo,
+			request_config	: self.context.request_config,
+			wrapper			: wrapper,
+			properties		: self.context.properties.service_autocomplete || null
 		})
 
 		self.autocomplete_active = true
