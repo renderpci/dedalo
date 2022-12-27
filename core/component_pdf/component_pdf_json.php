@@ -46,29 +46,25 @@
 
 		// value
 			switch ($mode) {
-				case 'tm':
+
 				case 'list':
 					$value = $this->get_list_value();
-
-					// datalist
-						// files_info. For fast list we add directly the default image
-						$data_item = new stdClass();
-							$data_item->url = $this->get_pdf_url(
-								DEDALO_PDF_QUALITY_DEFAULT, // string quality
-								true, // bool test_file
-								false, // bool absolute
-								false // bool default_add
-							);
-							$data_item->quality	= DEDALO_PDF_QUALITY_DEFAULT;
-						$datalist = [$data_item];
+					// datalist. files_info. For fast list we add directly the default image
+					$data_item = new stdClass();
+						$data_item->url = $this->get_pdf_url(
+							DEDALO_PDF_QUALITY_DEFAULT, // string quality
+							true, // bool test_file
+							false, // bool absolute
+							false // bool default_add
+						);
+						$data_item->quality	= DEDALO_PDF_QUALITY_DEFAULT;
+					$datalist = [$data_item];
 					break;
 
 				default:
 				case 'edit':
-					$value = $this->get_dato();
-
-					// datalist
-						$datalist = $this->get_datalist();
+					$value		= $this->get_dato();
+					$datalist	= $this->get_datalist();
 					break;
 			}
 

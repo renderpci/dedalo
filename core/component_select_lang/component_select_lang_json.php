@@ -48,10 +48,10 @@
 	if($options->get_data===true && $permissions>0) {
 
 		// value
-			switch ($mode) {
+			switch($mode) {
+
 				case 'list':
-				case 'tm':
-					$value = $this->get_list_value();
+					$value				= $this->get_list_value();
 					break;
 
 				case 'edit':
