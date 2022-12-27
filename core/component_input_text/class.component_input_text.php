@@ -293,7 +293,7 @@ class component_input_text extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql( object $query_object) : object {
+	public static function resolve_query_object_sql( object $query_object) : object | array {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		// if (isset($query_object->type) && $query_object->type==='jsonb') {
@@ -502,7 +502,6 @@ class component_input_text extends component_common {
 				$query_object->unaccent	= true;
 				break;
 		}//end switch (true) {
-
 
 		return $query_object;
 	}//end resolve_query_object_sql

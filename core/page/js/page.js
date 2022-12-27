@@ -355,9 +355,6 @@ page.prototype.build = async function() {
 
 	const self = this
 
-	// instances (like section). Instances are returned init and built
-		// await self.get_ar_instances() // (!) processed directly from render to allow async
-
 	// status update
 		self.status = 'built'
 
@@ -441,49 +438,6 @@ page.prototype.add_events = function() {
 
 	return true
 }//end add_events
-
-
-
-/**
-* GET_AR_INSTANCES
-* Create and build one instance for each self.context item
-* @return promise array self.ar_instances
-* 	Array of instance objects (like menu, section, area..)
-*/
-	// page.prototype.get_ar_instances = async function(){
-
-	// 	const self = this
-
-	// 	// instances
-	// 		const ar_promises = []
-
-	// 		const context_length = self.context.length
-	// 		for (let i = 0; i < context_length; i++) {
-
-	// 			const current_ddo = self.context[i]
-	// 			ar_promises.push( new Promise(function(resolve){
-
-	// 				instantiate_page_element(self, current_ddo)
-	// 				.then(function(current_instance){
-
-	// 					// build (load data)
-	// 					const autoload = current_instance.status==="initiated" // avoid reload menu data
-	// 					current_instance.build(autoload)
-	// 					.then(function(){
-	// 						resolve(current_instance)
-	// 					})
-	// 				})
-	// 			}))
-	// 		}//end for (let i = 0; i < elements_length; i++)
-
-	// 	// set on finish
-	// 		await Promise.all(ar_promises).then((ar_instances) => {
-	// 			self.ar_instances = ar_instances
-	// 		})
-	// 		console.log("page self.ar_instances:",self.ar_instances);
-
-	// 	return self.ar_instances
-	// }//end get_ar_instances
 
 
 
