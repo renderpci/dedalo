@@ -929,24 +929,6 @@ export const get_columns_map = function(context, datum_context) {
 				}else{
 					// if the ddo don't has column_id and the column_map is not defined in properties,
 					// create a new column with the ddo information or join all components in one column
-
-					// semantic node is a exception, it will create a column for itself,
-					// it works with different sqo than his parent portal and it's necessary always his own space
-					// to change the active sqo.
-						if(dd_object.model==='component_semantic_node'){
-
-							columns_map.push(
-								{
-									id		: dd_object.tipo,
-									label	: dd_object.tipo,
-									tipo	: dd_object.tipo,
-									model	: dd_object.model
-								}
-							)
-							dd_object.column_id = dd_object.tipo
-							continue;
-						}
-
 					switch(view){
 						// component_portal will join the components that doesn't has columns defined.
 						case 'line':
