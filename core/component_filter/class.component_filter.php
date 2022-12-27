@@ -230,11 +230,20 @@ class component_filter extends component_relation_common {
 			$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		// dato
-			$dato		= $this->get_dato();
+			$dato		= $this->get_dato() ?? [];
 			$ar_final	= [];
 			// check if the dato is available to the projects of the user has permissions.
-			foreach ((array)$ar_projects as $key => $row) {
-				if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
+			foreach ($ar_projects as $row) {
+
+				$locator = new locator();
+					$locator->set_section_tipo($row->locator->section_tipo);
+					$locator->set_section_id($row->locator->section_id);
+
+				if (locator::in_array_locator(
+					$locator, // object locator
+					(array)$dato, // array ar_locator
+					['section_id','section_tipo'] // array $ar_properties
+				)) { // ['section_id','section_tipo']			 object $locator, array $ar_locator, array $ar_properties=[]
 					$ar_final[] = $row;
 				}
 			}//end foreach
@@ -266,20 +275,19 @@ class component_filter extends component_relation_common {
 					: ' | ');
 
 		// dd_grid_cell_object
-			$value = new dd_grid_cell_object();
-				$value->set_type('column');
-				$value->set_label($label);
-				$value->set_cell_type('text');
-				$value->set_ar_columns_obj([$column_obj]);
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_label($label);
+				$dd_grid_cell_object->set_cell_type('text');
+				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
 				if(isset($class_list)){
-					$value->set_class_list($class_list);
+					$dd_grid_cell_object->set_class_list($class_list);
 				}
-				$value->set_fields_separator($fields_separator);
-				$value->set_records_separator($records_separator);
-				$value->set_value($ar_values);
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($ar_values);
 
-
-		return $value;
+		return $dd_grid_cell_object;
 	}//end get_value
 
 

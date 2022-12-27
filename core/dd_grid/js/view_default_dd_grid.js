@@ -49,18 +49,18 @@ view_default_dd_grid.render = async function(self, options) {
 
 	// grid. Value as string
 		const grid = get_grid_nodes( data )
-
-	// Set value
 		wrapper.appendChild(grid)
 
 
 	return wrapper
-}//end list
+}//end render
 
 
 
 /**
 * GET_GRID_NODES
+* @param array data
+* @return DocumentFragment
 */
 const get_grid_nodes = function(data) {
 
@@ -149,7 +149,7 @@ const get_grid_nodes = function(data) {
 /**
 * GET_DIV_CONTAINER
 * @param object current_data
-* @return DOM node div_container (div)
+* @return DOM node div_container
 */
 const get_div_container = function(current_data) {
 

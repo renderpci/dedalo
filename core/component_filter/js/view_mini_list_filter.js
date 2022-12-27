@@ -25,7 +25,7 @@ export const view_mini_list_filter = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_mini_list_filter.render = async function(self, options) {
+view_mini_list_filter.render = async function(self) {
 
 	// short vars
 		const data	= self.data
@@ -42,6 +42,6 @@ view_mini_list_filter.render = async function(self, options) {
 
 
 	return wrapper
-}//end mini
+}//end render
 
 
