@@ -77,7 +77,7 @@ export const render_links_list = function(value) {
 						try {
 							return new URL(value[i].iri)
 						} catch (error) {
-							console.error(error)
+							// console.error(error)
 							console.error('Unable to create a URL object from value[i]:', value[i]);
 						}
 						return null
