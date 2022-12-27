@@ -126,8 +126,12 @@ const get_content_value = (i, current_value, self) => {
 			})
 			//end change
 			input_title.addEventListener('keyup', function(e) {
-				current_value.title = input_title.value
-				update_value(self, i, current_value)
+
+				// update property title
+					current_value.title = input_title.value
+
+				// update_value(self, i, current_value)
+					self.keyup_handler(e, i, current_value, self)
 			})//end keyup
 	} // end if(use_title)
 
@@ -143,19 +147,27 @@ const get_content_value = (i, current_value, self) => {
 			value			: iri,
 			parent			: content_value
 		})
-		input_iri.addEventListener('keyup', function() {
+		input_iri.addEventListener('keyup', function(e) {
 
-			const regex = /(https?)?:\/\/.*\..+/;
-			const value = input_iri.value
+			// check if url is valid
+				const regex = /(https?)?:\/\/.*\..+/;
+				const value = input_iri.value
 
-			if(value && !value.match(regex)){
-				input_iri.classList.add('error')
-				return false
-			}
-			input_iri.classList.remove('error')
+				if(value && !value.match(regex)){
+					input_iri.classList.add('error')
+					return false
+				}
 
-			current_value.iri = input_iri.value
-			update_value(self, i, current_value)
+			// clean error class if exists
+				if (input_iri.classList.contains('error')) {
+					input_iri.classList.remove('error')
+				}
+
+			// update property iri
+				current_value.iri = input_iri.value
+
+			// update_value(self, i, current_value)
+				self.keyup_handler(e, i, current_value, self)
 		})//end keyup
 
 	// active
@@ -251,68 +263,6 @@ const get_content_value = (i, current_value, self) => {
 
 	return content_value
 }//end get_content_value
-
-
-
-/**
-* UPDATE_VALUE
-* @return promise
-*/
-const update_value = function(self, i, current_value) {
-
-	// full object value built as:
-	// {
-	//		iri	  : iri_value,
-	//		title : title_value
-	// 		dataframe : [] || true || false
-	// }
-
-
-
-	// change_value
-	const changed_data_item = Object.freeze({
-		action	: 'update',
-		key		: i,
-		value	: current_value
-	})
-	// fix instance changed_data
-	self.set_changed_data(changed_data_item)
-
-}//end update_value
-
-
-
-/**
-* SET_UNLOAD_STATE
-* Page unload event
-* @param instance self
-* @param int i
-*
-* @return bool
-*/
-const set_unload_state = function(self, i, current_value) {
-
-	// values
-		const original_value	= self.db_data.value[i] || null
-		// const current_value			= self.build_value(i)
-
-	// compares new and old full values by property
-		let equal = true
-		if (original_value) {
-			for(const prop in current_value) {
-				if (!original_value[prop] || original_value[prop]!==current_value[prop]) {
-					equal = false
-					break
-				}
-			}
-		}
-
-	// set_before_unload (bool)
-		set_before_unload(!equal)
-
-
-	return true
-}//end set_unload_state
 
 
 

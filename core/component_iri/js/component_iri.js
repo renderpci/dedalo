@@ -89,3 +89,43 @@ component_iri.prototype.build_value = function(key) {
 
 	return value
 }//end build_value
+
+
+
+/**
+* KEYUP_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+component_iri.prototype.keyup_handler = function(e, key, current_value, self) {
+	e.preventDefault()
+
+	// Enter key force to save changes
+		if (e.key==='Enter') {
+
+			// force to save current input if changed
+				const changed_data = self.data.changed_data || []
+				// change_value (save data)
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+		}else{
+			// change data
+				const changed_data_item = Object.freeze({
+					action	: 'update',
+					key		: key,
+					value	: current_value // full object value as {title: xx, uri: xxx}
+				})
+
+			// fix instance changed_data
+				self.set_changed_data(changed_data_item)
+		}
+
+
+	return true
+}//end keyup_handler
