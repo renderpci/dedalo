@@ -138,7 +138,7 @@ class component_relation_common extends component_common {
 	*	$dato is always an array of locators or an empty array
 	*/
 	public function get_dato() {
-
+		/*
 		if(isset($this->dato_resolved)) {
 			return $this->dato_resolved;
 		}
@@ -160,8 +160,12 @@ class component_relation_common extends component_common {
 
 		// load. Load matrix data and set this->dato
 			$this->load_component_dato();
+		*/
 
-		// read value
+		// common get_dato
+			parent::get_dato();
+
+		// fallback to empty array
 			$dato = $this->dato ?? [];
 
 
