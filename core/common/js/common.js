@@ -1338,7 +1338,7 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 
 	// Get the limit, offset, full count, and filter by locators.
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
-	// and finally if the rqo_config don't has sqo or sqo_config, set the default parameter to each.
+	// and finally if the request_config_object don't has sqo or sqo_config, set the default parameter to each.
 		// sqo.limit
 		if (sqo.limit===undefined) {
 			sqo.limit = (sqo_config && sqo_config.limit!==undefined)
@@ -1389,8 +1389,8 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 		}
 
 		if (add_show===true) {
-			if (rqo_config.show) {
-				rqo.show = rqo_config.show
+			if (request_config_object.show) {
+				rqo.show = request_config_object.show
 			}
 			console.warn("added rqo.show:", self.tipo, self.mode );
 		}

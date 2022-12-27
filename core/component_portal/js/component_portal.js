@@ -55,7 +55,7 @@ export const component_portal = function() {
 	this.autocomplete_active	= null
 
 	// rqo
-	this.rqo_config				= null
+	this.request_config_object	= null
 	this.rqo					= null
 
 
