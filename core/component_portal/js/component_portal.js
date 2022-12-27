@@ -82,7 +82,6 @@ export const component_portal = function() {
 	component_portal.prototype.update_datum			= component_common.prototype.update_datum
 	component_portal.prototype.change_value			= component_common.prototype.change_value
 	component_portal.prototype.set_changed_data		= component_common.prototype.set_changed_data
-	component_portal.prototype.get_ar_instances		= component_common.prototype.get_ar_instances
 	component_portal.prototype.build_rqo_show		= common.prototype.build_rqo_show
 	component_portal.prototype.build_rqo_search		= common.prototype.build_rqo_search
 	component_portal.prototype.build_rqo_choose		= common.prototype.build_rqo_choose

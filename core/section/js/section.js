@@ -682,50 +682,46 @@ section.prototype.render = async function(options={}) {
 
 
 /**
-* GET_AR_INSTANCES (section_records)
+* GET_SECTION_RECORDS
 * Generate a section_record instance for each data value
+* Create (init and build) a section_record for each component value
+* Used by portals to get all rows for render
 */
-section.prototype.get_ar_instances = async function(options={}){
-
-	const self = this
+export const get_section_records = async function(options){
 
 	// options
-		const mode			= options.mode || self.mode || 'list'
-		const columns_map	= options.columns_map || self.columns_map
-		const id_variant	= options.id_variant || self.id_variant || null
-		const view			= options.view || 'default'
-
-	// iterate records
-		const lang 			= self.section_lang || self.lang
-		const value			= self.data && self.data.value
+		const self				= options.caller
+		const tipo				= options.tipo || self.tipo || {}
+		const mode				= options.mode || self.mode || 'list'
+		const columns_map		= options.columns_map || self.columns_map
+		const id_variant		= options.id_variant || self.id_variant || null
+		const view				= options.view || 'default'
+		const column_id			= options.column_id || self.column_id || null
+		const datum				= options.datum || self.datum || {}
+		const request_config	= (options.request_config)
+			? clone(options.request_config)
+			: clone(self.context.request_config)
+		const fields_separator	= options.fields_separator || self.context.fields_separator || {}
+		const lang				= options.lang || self.section_lang || self.lang
+		const value				= options.value || ((self.data && self.data.value)
 			? self.data.value
-			: []
-		const value_length	= value.length
-
+			: [])
 		const section_record_mode = mode==='tm'
 			? 'list'
 			: mode
 
-		const request_config = clone(self.context.request_config)
-
-
-		// const ar_instances = []
-		const ar_promises = []
+	// iterate records
+		const ar_promises	= []
+		const value_length	= value.length
 		for (let i = 0; i < value_length; i++) {
 
 			const locator				= value[i];
 			const current_section_id	= locator.section_id
 			const current_section_tipo	= locator.section_tipo
-			// const current_data			= (self.mode==='tm')
-			// 	? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-			// 	: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-			// const current_context 		= (typeof self.datum.context!=="undefined")
-			// 	? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
-			// 	: []
 
 			const instance_options = {
 				model			: 'section_record',
-				tipo			: self.tipo,
+				tipo			: tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
 				mode			: section_record_mode,
@@ -733,15 +729,15 @@ section.prototype.get_ar_instances = async function(options={}){
 				context			: {
 					view				: view,
 					request_config		: request_config,
-					fields_separator	: self.context.fields_separator
+					fields_separator	: fields_separator
 				},
 				// data			: current_data,
-				datum			: self.datum,
+				datum			: datum,
 				row_key 		: i,
 				caller			: self,
 				paginated_key	: locator.paginated_key,
-				columns_map		: self.columns_map,
-				column_id		: self.column_id,
+				columns_map		: columns_map,
+				column_id		: column_id,
 				locator			: locator
 			}
 
@@ -758,19 +754,13 @@ section.prototype.get_ar_instances = async function(options={}){
 						: tag_id_add
 				}
 
-
 			// time machine options
 				if (mode==='tm') {
-					instance_options.matrix_id			= locator.matrix_id
-					instance_options.modification_date	= locator.timestamp
+					instance_options.matrix_id = (self.model==='section')
+						? locator.matrix_id
+						: self.matrix_id
+					instance_options.modification_date	= locator.timestamp || null
 				}
-
-			// section_record. init and build
-				// 	const current_section_record = await instances.get_instance(instance_options)
-				// 	await current_section_record.build(true)
-
-			// add instance
-				// 	ar_instances.push(current_section_record)
 
 			// promise add and continue init and build
 				ar_promises.push(new Promise(function(resolve){
@@ -782,20 +772,15 @@ section.prototype.get_ar_instances = async function(options={}){
 						})
 					})
 				}))
-
 		}//end for (let i = 0; i < value_length; i++)
 
 	// ar_instances. When all section_record instances are built, set them
-		const ar_instances = await Promise.all(ar_promises).then((ready_instances) => {
+		const section_records = await Promise.all(ar_promises).then((ready_instances) => {
 			return ready_instances
 		});
 
-	// set
-		// self.ar_instances.push(...ar_instances)
-
-
-	return ar_instances
-}//end get_ar_instances
+	return section_records
+}//end get_section_records
 
 
 

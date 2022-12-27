@@ -5,7 +5,7 @@
 
 // imports
 	import {set_element_css} from '../../../../core/page/js/css.js'
-	import {get_ar_instances} from '../../../../core/section/js/section.js'
+	import {get_section_records} from '../../../../core/section/js/section.js'
 	import {ui} from '../../../../core/common/js/ui.js'
 	import {view_default_time_machine_list} from './view_default_time_machine_list.js'
 	import {view_mini_time_machine_list} from './view_mini_time_machine_list.js'
@@ -77,7 +77,7 @@ export const common_render = async function(self, options) {
 		self.columns_map = columns_map
 
 	// ar_section_record. section_record instances (initialized and built)
-		const ar_section_record	= await get_ar_instances(self)
+		const ar_section_record	= await get_section_records({caller:self})
 		self.ar_instances		= ar_section_record
 
 	// content_data

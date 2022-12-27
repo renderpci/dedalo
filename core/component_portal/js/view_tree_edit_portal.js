@@ -5,11 +5,8 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {create_source} from '../../common/js/common.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {object_to_url_vars} from '../../common/js/utils/index.js'
 	import {render_column_remove} from './render_edit_component_portal.js'
 
@@ -41,7 +38,10 @@ view_tree_edit_portal.render = async function(self, options) {
 		self.columns_map = columns_map
 
 	// ar_section_record
-		const ar_section_record	= await self.get_ar_instances({mode:'list'})
+		const ar_section_record	= await get_section_records({
+			caller	: self,
+			mode	:'list'
+		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 

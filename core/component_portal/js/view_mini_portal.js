@@ -4,6 +4,7 @@
 
 
 // imports
+	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -29,8 +30,9 @@ view_mini_portal.render = async function(self) {
 	// ar_section_record
 		const children_view	= self.context.children_view || self.context.view || 'text'
 
-		const ar_section_record	= await self.get_ar_instances({
-			view : children_view
+		const ar_section_record	= await get_section_records({
+			caller	: self,
+			view	: children_view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)

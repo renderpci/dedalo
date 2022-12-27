@@ -4,9 +4,7 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_server_response_error} from './render_common_section.js'
@@ -45,7 +43,7 @@ render_edit_section.prototype.edit = async function(options) {
 	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
-			: await self.get_ar_instances()
+			: await get_section_records({caller: self})
 
 	// content_data
 		const content_data = await get_content_data(self, self.ar_instances)
