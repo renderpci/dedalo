@@ -2054,8 +2054,8 @@ class search {
 			//   ]
 			// }
 
-		// path : array|null
-			$path = $search_object->path ?? null;
+		// path : array
+			$path = $search_object->path ?? [];
 
 		// table_alias : string
 			$table_alias = $this->get_table_alias_from_path($path);
