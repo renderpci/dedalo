@@ -1403,12 +1403,13 @@ class component_relation_common extends component_common {
 
 					$current_component_tipo = $current_ddo->tipo;
 					$model_name			= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$is_translatable	= RecordObj_dd::get_translatable($current_component_tipo);
 					$observer_component	= component_common::get_instance(
 						$model_name,
 						$current_component_tipo,
 						$section_id,
 						'list',
-						DEDALO_DATA_NOLAN,
+						$is_translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
 						$section_tipo,
 						false
 					);
