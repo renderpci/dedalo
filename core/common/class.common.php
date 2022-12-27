@@ -1901,52 +1901,51 @@ abstract class common {
 								// the main component has all config, his children has specific config (only his own part)
 
 									// get the component rqo to be updated with the current config
-									$component_rqo_config = $related_element->build_request_config();
-									foreach ($request_config as $request_config_item) {
+									$component_request_config = $related_element->build_request_config();
+									foreach ($request_config as $request_config_object) {
 
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
-										$api_engine			= $request_config_item->api_engine;
-										$children_show		= isset($request_config_item->show)
-											? get_children_recursive($request_config_item->show->ddo_map, $dd_object)
+										$api_engine			= $request_config_object->api_engine;
+										$children_show		= isset($request_config_object->show)
+											? get_children_recursive($request_config_object->show->ddo_map, $dd_object)
 											: null;
-										$children_search	= isset($request_config_item->search)
-											? get_children_recursive($request_config_item->search->ddo_map, $dd_object)
+										$children_search	= isset($request_config_object->search)
+											? get_children_recursive($request_config_object->search->ddo_map, $dd_object)
 											: null;
-										$children_choose	= isset($request_config_item->choose)
-											? get_children_recursive($request_config_item->choose->ddo_map, $dd_object)
+										$children_choose	= isset($request_config_object->choose)
+											? get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
 											: null;
 
 										// select the current api_engine
-										$new_rqo_config = array_find($component_rqo_config, function($el) use($api_engine){
+										$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
 											return $el->api_engine===$api_engine;
 										});
 
 										// set the ddo_map with the new config
 										if (!empty($children_show)) {
-											$new_rqo_config->show->ddo_map  = $children_show;
+											$new_request_config_object->show->ddo_map  = $children_show;
 
 										}
 										if (!empty($children_search)) {
-											if (empty($new_rqo_config->search)) {
-												$new_rqo_config->search = (object)[
+											if (empty($new_request_config_object->search)) {
+												$new_request_config_object->search = (object)[
 													'ddo_map' => []
 												];
 											}
-											$new_rqo_config->search->ddo_map  = $children_search;
+											$new_request_config_object->search->ddo_map  = $children_search;
 										}
 										if (!empty($children_choose)) {
-											if (empty($new_rqo_config->choose)) {
-												$new_rqo_config->choose = (object)[
+											if (empty($new_request_config_object->choose)) {
+												$new_request_config_object->choose = (object)[
 													'ddo_map' => []
 												];
 											}
-											$new_rqo_config->choose->ddo_map  = $children_choose;
+											$new_request_config_object->choose->ddo_map  = $children_choose;
 										}
 									}
-									dump($new_rqo_config, ' new_rqo_config ++ '.to_string($this->tipo));
 
 								// Inject the request_config inside the component
-									$related_element->request_config = $component_rqo_config;
+									$related_element->request_config = $component_request_config;
 
 								// Inject this tipo as related component from_component_tipo
 									$source_model = get_called_class();
@@ -3092,23 +3091,23 @@ abstract class common {
 					$sqo = new stdClass();
 						$sqo->section_tipo = $ddo_section_tipo;
 
-				// request_config_item. build
-					// $request_config_item = new stdClass();
-					// 	$request_config_item->api_engine	= 'dedalo';
-					// 	$request_config_item->show			= $show;
-					// 	$request_config_item->sqo			= $sqo;
-					// 	// $request_config_item->sqo->tipo	= $tipo;
-					// 	// $request_config_item->search		= $search;
-					// 	// $request_config_item->select		= $select;
+				// request_config_object. build
+					// $request_config_object = new stdClass();
+					// 	$request_config_object->api_engine	= 'dedalo';
+					// 	$request_config_object->show			= $show;
+					// 	$request_config_object->sqo			= $sqo;
+					// 	// $request_config_object->sqo->tipo	= $tipo;
+					// 	// $request_config_object->search		= $search;
+					// 	// $request_config_object->select		= $select;
 
-					$request_config_item = new request_config_object();
-						$request_config_item->set_api_engine('dedalo');
-						$request_config_item->set_type('main');
-						$request_config_item->set_show($show);
-						$request_config_item->set_sqo($sqo);
+					$request_config_object = new request_config_object();
+						$request_config_object->set_api_engine('dedalo');
+						$request_config_object->set_type('main');
+						$request_config_object->set_show($show);
+						$request_config_object->set_sqo($sqo);
 
 				// added parsed item
-					$ar_request_query_objects[] = $request_config_item;
+					$ar_request_query_objects[] = $request_config_object;
 
 				// set var (TEMPORAL TO GIVE ACCESS FROM GET_SUB_DATA)
 					dd_core_api::$context_dd_objects = $ddo_map;

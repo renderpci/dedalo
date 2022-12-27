@@ -216,7 +216,7 @@ service_autocomplete.prototype.autocomplete_search = function(search_value) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log('[service_autocomplete.autocomplete_search] search_engine:', self.search_engine)
-			// console.log('self.dd_request', self.dd_request);
+			// console.log('self.request_config_object', self.request_config_object);
 		}
 
 		const engine = self.search_engine+'_engine'
@@ -229,8 +229,8 @@ service_autocomplete.prototype.autocomplete_search = function(search_value) {
 	// recombine the select ddo with the search ddo to get the list
 		// const select = self.caller.dd_request.select
 		// const dd_request = (select)
-		// 	? self.dd_request.filter(item => item.typo!=='request_ddo')
-		// 	: [...self.dd_request]
+		// 	? self.request_config_object.filter(item => item.typo!=='request_ddo')
+		// 	: [...self.request_config_object]
 
 		// if(select){
 		// 	const ddo_select = select.find(item => item.typo === 'request_ddo')
@@ -273,8 +273,8 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 		const q					= options.q || null
 
 		const sqo_options	= rqo_search.sqo_options
-		const fixed_filter	= sqo_options.fixed_filter //self.dd_request.find((current_item)=> current_item.typo==='fixed_filter')
-		const filter_free	= sqo_options.filter_free	//self.dd_request.find((current_item)=> current_item.typo==='filter_free')
+		const fixed_filter	= sqo_options.fixed_filter //self.request_config_object.find((current_item)=> current_item.typo==='fixed_filter')
+		const filter_free	= sqo_options.filter_free	//self.request_config_object.find((current_item)=> current_item.typo==='filter_free')
 		// const operador		= sqo_options.operador
 
 		const sqo				= rqo_search.sqo

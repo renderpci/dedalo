@@ -71,11 +71,11 @@ area.prototype.build = async function(autoload=true) {
 	// status update
 		self.status = 'building'
 
-	// rqo_config
-		self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+	// request_config_object
+		self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 
 	// rqo build
-		self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
+		self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, 'get_data')
 		self.rqo.prevent_lock = true
 
 	// debug
@@ -112,12 +112,12 @@ area.prototype.build = async function(autoload=true) {
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
 				self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
 
-			// rebuild the rqo_config and rqo in the instance
-			// rqo_config
-				self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+			// rebuild the request_config_object and rqo in the instance
+			// request_config_object
+				self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 
 			// rqo build
-				self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')
+				self.rqo = await self.build_rqo_show(self.request_config_object, 'get_data')
 		}//end if (autoload===true)
 
 		self.label = self.context.label

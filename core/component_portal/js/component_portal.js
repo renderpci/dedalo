@@ -219,13 +219,13 @@ component_portal.prototype.build = async function(autoload=false) {
 		const generate_rqo = async function() {
 
 			if (!self.context) {
-				// rqo_config. get the rqo_config from request_config
-				self.rqo_config = self.request_config
+				// request_config_object. get the request_config_object from request_config
+				self.request_config_object = self.request_config
 					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}else{
-				// rqo_config. get the rqo_config from context
-				self.rqo_config	= self.context && self.context.request_config
+				// request_config_object. get the request_config_object from context
+				self.request_config_object	= self.context && self.context.request_config
 					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}
@@ -234,7 +234,7 @@ component_portal.prototype.build = async function(autoload=false) {
 			const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= false
 			self.rqo = self.rqo || await self.build_rqo_show(
-				self.rqo_config, // object rqo_config
+				self.request_config_object, // object request_config_object
 				action,  // string action like 'get_data' or 'resolve_data'
 				add_show // bool add_show
 			)
@@ -246,7 +246,7 @@ component_portal.prototype.build = async function(autoload=false) {
 
 	// debug check
 		// if(SHOW_DEBUG===true) {
-		// 	// console.log("portal generate_rqo 1 self.rqo_config:", clone(self.rqo_config) );
+		// 	// console.log("portal generate_rqo 1 self.request_config_object:", clone(self.request_config_object) );
 		// 	// console.log("portal generate_rqo 1 self.rqo:", clone(self.rqo) );
 		// 	const ar_used = []
 		// 	for(const element of self.datum.data) {
@@ -423,8 +423,8 @@ component_portal.prototype.build = async function(autoload=false) {
 		}
 
 	// target_section
-		self.target_section = self.rqo_config && self.rqo_config.sqo
-			? self.rqo_config.sqo.section_tipo
+		self.target_section = self.request_config_object && self.request_config_object.sqo
+			? self.request_config_object.sqo.section_tipo
 			: null
 		// self.target_section = self.rqo.sqo.section_tipo
 
@@ -452,12 +452,12 @@ component_portal.prototype.build = async function(autoload=false) {
 
 	// set fields_separator
 		self.context.fields_separator = self.context.fields_separator
-									|| self.rqo_config.show.fields_separator
+									|| self.request_config_object.show.fields_separator
 									|| ' | '
 
 	// set records_separator
 		self.context.records_separator = self.context.records_separator
-									|| self.rqo_config.show.records_separator
+									|| self.request_config_object.show.records_separator
 									|| ' | '
 
 	// status update

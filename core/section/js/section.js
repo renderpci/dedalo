@@ -56,7 +56,7 @@ export const section = function() {
 
 	this.id_variant				= null
 
-	this.rqo_config				= null
+	this.request_config_object	= null
 	this.rqo					= null
 
 	this.config					= null
@@ -316,13 +316,13 @@ section.prototype.build = async function(autoload=false) {
 		const generate_rqo = async function(){
 
 			if (!self.context) {
-				// rqo_config. get the rqo_config from request_config
-				self.rqo_config = self.request_config
+				// request_config_object. get the request_config_object from request_config
+				self.request_config_object = self.request_config
 					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}else{
-				// rqo_config. get the rqo_config from context
-				self.rqo_config	= self.context && self.context.request_config
+				// request_config_object. get the request_config_object from context
+				self.request_config_object	= self.context && self.context.request_config
 					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}
@@ -331,7 +331,7 @@ section.prototype.build = async function(autoload=false) {
 			const action	= 'search'
 			const add_show	= self.mode==='tm'
 			self.rqo = self.rqo || await self.build_rqo_show(
-				self.rqo_config, // object rqo_config
+				self.request_config_object, // object request_config_object
 				action,  // string action like 'search'
 				add_show // bool add_show
 			)
@@ -579,7 +579,7 @@ section.prototype.build = async function(autoload=false) {
 						self.navigate(
 							() => { // callback
 								// fix new offset value
-									self.rqo_config.sqo.offset	= offset
+									self.request_config_object.sqo.offset	= offset
 									self.rqo.sqo.offset			= offset
 								// set_local_db_data updated rqo
 									if (self.mode==='list') {
@@ -918,7 +918,7 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 		if (navigation_history===true) {
 
 			const source	= create_source(self, null)
-			const sqo		= self.rqo_config.sqo
+			const sqo		= self.request_config_object.sqo
 			const title		= self.id
 			const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode
 
