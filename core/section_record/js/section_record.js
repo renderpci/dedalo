@@ -91,6 +91,9 @@ section_record.prototype.init = async function(options) {
 
 	self.datum				= options.datum
 	self.context			= options.context
+	// fields_separator
+	self.context.fields_separator	= self.context.fields_separator || ' + '
+	self.context.view				= self.context.view || 'line'
 	// self.data			= options.data
 	self.paginated_key		= options.paginated_key
 	self.row_key			= options.row_key
@@ -111,6 +114,8 @@ section_record.prototype.init = async function(options) {
 	self.offset				= options.offset
 
 	self.locator			= options.locator
+
+
 
 	// events subscription
 		// event active (when user focus in dom)
@@ -150,7 +155,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		// Fix context issues with parent value
 		// (!) Note that the API prevents more than one same component in context.
 		// For this, only the first one is added and therefore parent value it is not reliable. Use always self.caller.tipo as parent
-			current_context.parent = self.caller.tipo
+			current_context.parent = self.tipo
 
 	// mode
 		// original fallback
@@ -181,7 +186,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		}
 
 		// id_variant . Propagate a custom instance id to children
-			const section_record_id_variant = self.caller.tipo +'_'+ section_id
+			const section_record_id_variant = self.tipo +'_'+ section_id
 			instance_options.id_variant = self.id_variant
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
@@ -243,14 +248,14 @@ section_record.prototype.get_ar_instances_edit = async function() {
 		const mode			= self.mode
 		const section_tipo	= self.section_tipo
 		const section_id	= self.section_id
-		const caller_tipo	= self.caller.tipo
+		const tipo			= self.tipo
 
 	// items. Get the items inside the section/component of the record to render it
 		// const items = (mode==="list")
-		// 	? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===caller_tipo && el.mode===mode)
-		// 	: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===caller_tipo && el.mode===mode)
+		// 	? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===tipo && el.mode===mode)
+		// 	: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===tipo && el.mode===mode)
 		const items = self.datum.context.filter(el => el.section_tipo===section_tipo
-											 && el.parent===caller_tipo
+											 && el.parent===tipo
 											 && (el.type==='component' || el.type==='grouper')
 											 && el.mode===mode)
 
@@ -328,7 +333,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 	// request config
 	// get the request_config with all ddo, it will be use to create the instances
-		const request_config		= self.caller.context.request_config || []
+		const request_config		= self.context.request_config || []
 		const request_config_length	= request_config.length
 
 	// instances
@@ -345,14 +350,11 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 					const request_config_item = request_config[j]
 
 					// get the ddo map to be used
-					const ddo_map = (self.caller.context.mode !== 'search')
+					const ddo_map = (self.mode !== 'search')
 						? request_config_item.show.ddo_map
 						: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
 							? request_config_item.search.ddo_map
 							: request_config_item.show.ddo_map
-
-					// fields_separator
-					self.context.fields_separator = self.caller.context.fields_separator || ' + '
 
 					// get the direct components of the caller (component or section)
 					const ar_first_level_ddo = ddo_map.filter(item => item.parent === self.tipo)
@@ -381,7 +383,6 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 							// add to the ddo to the column
 								ar_column_ddo.push(current_ddo)
-
 							// current_data. get the component data to assign to it and create the instance
 								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 

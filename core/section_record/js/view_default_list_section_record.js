@@ -104,14 +104,14 @@ view_default_list_section_record.render = async function(self, options) {
 			}//end if (self.caller.model==='section' || self.caller.model==='time_machine')
 
 	// wrapper css
-		const css = self.caller.context.css && self.caller.context.css.section_record
-			? self.caller.context.css.section_record
-			: null
-		if (css) {
-			for(const key in css) {
-				wrapper.style[key] = css[key]
-			}
-		}
+		// const css = self.caller.context.css && self.caller.context.css.section_record
+		// 	? self.caller.context.css.section_record
+		// 	: null
+		// if (css) {
+		// 	for(const key in css) {
+		// 		wrapper.style[key] = css[key]
+		// 	}
+		// }
 
 	// content_data render_columns
 		const fragment = await get_content_data(self)
