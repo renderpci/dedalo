@@ -869,6 +869,7 @@ export const get_columns_map = function(context, datum_context) {
 
 	// storage of all ddo_map in flat array, without hierarchy, to find the components easily.
 		const full_ddo_map = []
+	// set itself as ddo
 		full_ddo_map.push(context)
 
 	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create
@@ -881,9 +882,11 @@ export const get_columns_map = function(context, datum_context) {
 			// get the ddo map to be used
 			const ddo_map = (context.mode !== 'search')
 				? request_config_item.show.ddo_map
-				: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
-					? request_config_item.search.ddo_map
-					: request_config_item.show.ddo_map
+				: request_config_item.choose && request_config_item.choose.ddo_map && request_config_item.choose.ddo_map.length > 0
+					? request_config_item.choose.ddo_map
+					: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
+						? request_config_item.search.ddo_map
+						: request_config_item.show.ddo_map
 
 			// get the direct components of the caller (component or section)
 			const ar_first_level_ddo		= ddo_map.filter(item => item.parent === tipo)
@@ -891,7 +894,6 @@ export const get_columns_map = function(context, datum_context) {
 
 			// store the current component in the full ddo map
 			full_ddo_map.push(...ddo_map)
-
 			for (let j = 0; j < ar_first_level_ddo_len; j++) {
 
 				const dd_object = ar_first_level_ddo[j]
@@ -900,7 +902,7 @@ export const get_columns_map = function(context, datum_context) {
 
 				// if the ddo has a column_id and columns_maps are defined in the properties,
 				// get the column as it has defined.
-				if (dd_object.column_id && source_columns_map.length >0){
+				if (dd_object.column_id && source_columns_map.length > 0){
 
 					// column_exists. If the column has stored by previous ddo, don't touch the array,
 					// it's necessary to preserve the order of the columns_map
