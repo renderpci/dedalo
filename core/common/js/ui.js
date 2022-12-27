@@ -208,7 +208,7 @@ export const ui = {
 					})
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
-				if (label===null || items.label===null) {
+				if (label===null) { //  || items.label===null
 					// no label add
 				}else if(items.label) {
 					// add custom label
