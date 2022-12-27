@@ -115,14 +115,16 @@ const get_input_element = (i, current_value, self) => {
 		// const label_string	= (SHOW_DEBUG===true) ? tool_label + ` [${tool_name} - ${section_id}]` : tool_label
 		const option_label	= ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: tool_label,
+			class_name		: 'input_label',
+			inner_html		: '<span>'+tool_label+'</span>',
 			parent			: content_value
 		})
 
 	// input checkbox
 		const input_checkbox = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'checkbox'
+			type			: 'checkbox',
+			class_name		: 'input_checkbox',
 		})
 		option_label.prepend(input_checkbox)
 		input_checkbox.addEventListener('focus', function() {
@@ -131,30 +133,52 @@ const get_input_element = (i, current_value, self) => {
 				ui.component.activate(self)
 			}
 		})
-		input_checkbox.addEventListener('change', function(){
+		input_checkbox.addEventListener('change', function(e) {
 
-			const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			const changed_value	= (action==='insert') ? datalist_value : null
+			// add style modified to wrapper node
+				// if (!self.node.classList.contains('modified')) {
+				// 	self.node.classList.add('modified')
+				// }
 
-			const changed_data = [Object.freeze({
-				action	: action,
-				key		: changed_key,
-				value	: changed_value
-			})]
-			// fix instance changed_data
-				self.data.changed_data = changed_data
-			// force to save on every change
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false,
-					remove_dialog	: ()=>{
-						return true
-					}
-				})
-				.then((api_response)=>{
-					self.selected_key = i
-				})
+			// // change data vars
+			// 	const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
+			// 	// changed key. Find the data.value key (could be different of datalist key)
+			// 	const changed_key	= self.get_changed_key(
+			// 		action,
+			// 		datalist_value,
+			// 		self.data.value
+			// 	)
+			// 	const changed_value	= (action==='insert') ? datalist_value : null
+
+			// // change data array
+			// 	const changed_data = [Object.freeze({
+			// 		action	: action,
+			// 		key		: changed_key,
+			// 		value	: changed_value
+			// 	})]
+
+			// // fix instance changed_data
+			// 	self.data.changed_data = changed_data
+
+			// // force to save on every change. Needed to recalculate the value keys
+			// 	self.change_value({
+			// 		changed_data	: changed_data,
+			// 		refresh			: false,
+			// 		remove_dialog	: ()=>{
+			// 			return true
+			// 		}
+			// 	})
+			// 	.then(()=>{
+			// 		self.selected_key = i
+			// 	})
+
+			self.change_handler({
+				self			: self,
+				e				: e,
+				i				: i,
+				datalist_value	: datalist_value,
+				input_checkbox	: input_checkbox
+			})
 		})//end change event
 		// checked input_checkbox set on match
 		for (let j = 0; j < value_length; j++) {
