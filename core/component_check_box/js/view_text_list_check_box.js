@@ -23,18 +23,29 @@ export const view_text_list_check_box = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @param object self
+* 	Instance of current component
+* @return DOM node wrapper
 */
-view_text_list_check_box.render = async function(self, options) {
+view_text_list_check_box.render = async function(self) {
 
-	// Options vars
+	// short vars
 		const data	= self.data
 		const value	= data.value || []
 
+	// fields_separator
+		const fields_separator = self.context.fields_separator || ', '
+
 	// Value as string
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = value.join( fields_separator )
 
-		const text_node = document.createTextNode(value_string)
+		// const text_node = document.createTextNode(value_string)
 
-	return text_node
+	// wrapper. Set as span to preserve html tags like mark, etc.
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: value_string
+		})
+
+	return wrapper
 }//end render

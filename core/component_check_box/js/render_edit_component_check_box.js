@@ -129,33 +129,41 @@ const get_input_element_edit = (i, current_value, self) => {
 				ui.component.activate(self)
 			}
 		})
-		input_checkbox.addEventListener('change', function(){
+		input_checkbox.addEventListener('change', function(e){
 
 			// add style modified to wrapper node
 				if (!self.node.classList.contains('modified')) {
 					self.node.classList.add('modified')
 				}
 
-			const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			const changed_value	= (action==='insert') ? datalist_value : null
+			// const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
+			// const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			// const changed_value	= (action==='insert') ? datalist_value : null
 
-			const changed_data = [Object.freeze({
-				action	: action,
-				key		: changed_key,
-				value	: changed_value
-			})]
-			// force to save on every change
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false,
-					remove_dialog	: ()=>{
-						return true
-					}
-				})
-				.then((api_response)=>{
-					self.selected_key = i
-				})
+			// const changed_data = [Object.freeze({
+			// 	action	: action,
+			// 	key		: changed_key,
+			// 	value	: changed_value
+			// })]
+			// // force to save on every change
+			// 	self.change_value({
+			// 		changed_data	: changed_data,
+			// 		refresh			: false,
+			// 		remove_dialog	: ()=>{
+			// 			return true
+			// 		}
+			// 	})
+			// 	.then(()=>{
+			// 		self.selected_key = i
+			// 	})
+
+			self.change_handler({
+				self			: self,
+				e				: e,
+				i				: i,
+				datalist_value	: datalist_value,
+				input_checkbox	: input_checkbox
+			})
 		})//end change event
 
 		// checked option set on match
