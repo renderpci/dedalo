@@ -39,13 +39,11 @@ view_csv_dd_grid.render = function(self, options) {
 
 	// grid. Value as string
 		const grid = get_table_nodes(data, self.data_format)
-
-	// Set value
 		wrapper.appendChild(grid)
 
 
 	return wrapper
-}//end table
+}//end render
 
 
 
@@ -69,7 +67,7 @@ const get_table_nodes = function(data, data_format) {
 	// the first row has all columns, direct columns and calculated columns (from section_ids rows)
 	// ar_columns_obj will be the map of the columns, used for create the header of the table and for extract the data and fill the empty values.
 	const ar_columns		= data[0].value
-	const ar_columns_obj	= ar_columns.map(item => item.ar_columns_obj)
+	const ar_columns_obj	= ar_columns.map(item => item.column_obj)
 
 	// build the header
 	// get every column to create the header of the table, get the node and add to the root node
@@ -322,7 +320,7 @@ const get_row_container = function() {
 */
 const get_header_column = function(current_data) {
 
-	const ar_labels		= current_data.ar_columns_obj.ar_labels || []
+	const ar_labels		= current_data.column_obj.ar_labels || []
 	const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
 	const label_node	= '"' + even_labels.join(' | ') + '"'
 
@@ -334,7 +332,7 @@ const get_header_column = function(current_data) {
 /**
 * GET_TEXT_COLUMN
 * @param object current_data
-* @return DOM node text_node (span)
+* @return DOM node text_node
 */
 const get_text_column = function(current_data) {
 	// console.log("---> get_text_column current_data.value:", current_data.value);
@@ -360,7 +358,7 @@ const get_text_column = function(current_data) {
 /**
 * GET_AV_COLUMN
 * @param object current_data
-* @return DOM node image (img)
+* @return DOM node av_node
 */
 const get_av_column = function(current_data) {
 
@@ -376,7 +374,7 @@ const get_av_column = function(current_data) {
 		const url				= posterframe_url
 
 	// image
-		const av = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: class_list,
 			src				: url,
@@ -391,21 +389,21 @@ const get_av_column = function(current_data) {
 /**
 * GET_IMG_COLUMN
 * @param object current_data
-* @return DOM node image (img)
+* @return DOM node image_node
 */
-const get_img_column = function(current_data){
+const get_img_column = function(current_data) {
 
 	const class_list = current_data.class_list || ''
 
 	const image_node = ui.create_dom_element({
-		// id				: current_data.id,
+		// id			: current_data.id,
 		element_type	: 'td'
 	})
 
 	// url
 		const url = current_data.value[0]
 	// image
-		const image = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: class_list,
 			src				: url,
@@ -420,9 +418,9 @@ const get_img_column = function(current_data){
 /**
 * GET_BUTTON_COLUMN
 * @param object current_data
-* @return DOM node button (img)
+* @return DOM node bbutton_node
 */
-const get_button_column = function(current_data){
+const get_button_column = function(current_data) {
 
 	const value			= current_data.value[0]
 	const class_list	= value.class_list || ''
@@ -459,7 +457,7 @@ const get_button_column = function(current_data){
 /**
 * GET_JSON_COLUMN
 * @param object current_data
-* @return DOM node text_json (span)
+* @return DOM node text_json
 */
 const get_json_column = function(current_data) {
 

@@ -1865,9 +1865,9 @@ class component_image extends component_media_common {
 
 	/**
 	* PIXEL_TO_CENTIMETERS
-	* @param string $quality 
+	* @param string $quality
 	* 	dir source of image
-	* @param $dpi 
+	* @param $dpi
 	*	resolution to convert E.g.: 72dpi or 300dpi
 	* Use:
 	*	$image = "/User/Dedalo/images/0.jpg";

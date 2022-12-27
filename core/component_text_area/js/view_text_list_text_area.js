@@ -37,10 +37,10 @@ view_text_list_text_area.render = async function(self, options) {
 	// Value as string
 		const value_string = tr.add_tag_img_on_the_fly( value.join(self.context.fields_separator) )
 
-	// wrapper
+	// wrapper. Set as span to preserve html tags like images, bold, italic, etc.
 		const wrapper = ui.create_dom_element({
-			element_type : 'span',
-			inner_html : value_string
+			element_type	: 'span',
+			inner_html		: value_string
 		})
 
 

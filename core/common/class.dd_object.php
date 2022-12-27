@@ -9,100 +9,102 @@ class dd_object extends stdClass {
 
 
 	// properties
-		// // typo					: "ddo"  (ddo | sqo)
-		// public $typo;
-		// // type					: "component"  (section | component | grouper | button | tool ..)
-		// public $type;
-		// // tipo					: 'oh14',
-		// public $tipo;
-		// // section_tipo			: 'oh1',
-		// public $section_tipo;
-		// // parent				: 'oh2', // caller section / portal  tipo
-		// public $parent;
-		// // parent_grouper		: 'oh7', // structure parent
-		// public $parent_grouper;
-		// // lang					: 'lg-eng',
-		// public $lang;
-		// // mode					: "list",
-		// public $mode;
-		// // model				: 'component_input_text',
-		// public $model;
-		// // properties			: {}
-		// public $properties;
-		// // permissions			: 1
-		// public $permissions;
-		// // label				: 'Title'
-		// public $label;
-		// // labels				: ['Title']
-		// public $labels;
-		// // translatable			: true
-		// public $translatable;
-		// // tools				: [] // array of tools dd_objects (context)
-		// public $tools;
-		// // buttons				: [] // array of buttons dd_objects (context)
-		// public $buttons;
-		// // css					: {}
-		// public $css;
-		// // target_sections		: [{'tipo':'dd125','label':'Projects']
-		// public $target_sections;
-		// // request_config		: [],
-		// public $request_config;
-		// // ar_sections_tipo		: ['oh1']
-		// public $ar_sections_tipo;
-		// // columns_map			: array
-		// public $columns_map;
-		// // view					: string|null like 'table'
-		// public $view;
-		// // children_view		: string like "text"
-		// public $children_view;
-		// // fixed_mode			: string like 'edit'
-		// public $fixed_mode;
-		// // section_id			: int like 1 // Used by tools
-		// public $section_id;
-		// // name					: string like 'tool_lang' // Used by tools
-		// public $name;
-		// // description			: string like 'Description of tool x' // Used by tools
-		// public $description;
-		// // icon					: string like '/tools/tool_lang/img/icon.svg' // Used by tools
-		// public $icon;
-		// // show_in_inspector	: bool // Used by tools
-		// public $show_in_inspector;
-		// // show_in_component	: bool // Used by tools
-		// public $show_in_component;
-		// // config				: object // Used by tools
-		// public $config;
-		// // sortable				: bool // Used by components (columns)
-		// public $sortable;
-		// // fields_separator		: string like ", " // used by portal to join different fields
-		// public $fields_separator;
-		// // records_separator	: string like " | " // used by portal to join different records (rows)
-		// public $records_separator;
-		// // legacy_model			: string like "component_autocomplet_hi"
-		// public $legacy_model;
-		// // relation_list		: string
-		// public $relation_list;
-		// // path		: array
-		// public $path;
-		// // debug				: object
-		// public $debug;
-		// // add_label : bool
-		// public $add_label;
-		// // string|null time_machine_list . Get the time machine list tipo for the section
-		// public $time_machine_list;
-		// // object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
-		// public $features;
-		// // array toolbar_buttons
-		// public $toolbar_buttons;
-		// // bool value_with_parents
-		// public $value_with_parents;
-		// // object tool_config
-		// public $tool_config;
-		// // array search_operators_info
-		// public $search_operators_info;
-		// // string search_options_title
-		// public $search_options_title;
-		// // string target_section_tipo
-		// public $target_section_tipo;
+		/*
+		// typo					: "ddo"  (ddo | sqo)
+		public $typo;
+		// type					: "component"  (section | component | grouper | button | tool ..)
+		public $type;
+		// tipo					: 'oh14',
+		public $tipo;
+		// section_tipo			: 'oh1',
+		public $section_tipo;
+		// parent				: 'oh2', // caller section / portal  tipo
+		public $parent;
+		// parent_grouper		: 'oh7', // structure parent
+		public $parent_grouper;
+		// lang					: 'lg-eng',
+		public $lang;
+		// mode					: "list",
+		public $mode;
+		// model				: 'component_input_text',
+		public $model;
+		// properties			: {}
+		public $properties;
+		// permissions			: 1
+		public $permissions;
+		// label				: 'Title'
+		public $label;
+		// labels				: ['Title']
+		public $labels;
+		// translatable			: true
+		public $translatable;
+		// tools				: [] // array of tools dd_objects (context)
+		public $tools;
+		// buttons				: [] // array of buttons dd_objects (context)
+		public $buttons;
+		// css					: {}
+		public $css;
+		// target_sections		: [{'tipo':'dd125','label':'Projects']
+		public $target_sections;
+		// request_config		: [],
+		public $request_config;
+		// ar_sections_tipo		: ['oh1']
+		public $ar_sections_tipo;
+		// columns_map			: array
+		public $columns_map;
+		// view					: string|null like 'table'
+		public $view;
+		// children_view		: string like "text"
+		public $children_view;
+		// fixed_mode			: string like 'edit'
+		public $fixed_mode;
+		// section_id			: int like 1 // Used by tools
+		public $section_id;
+		// name					: string like 'tool_lang' // Used by tools
+		public $name;
+		// description			: string like 'Description of tool x' // Used by tools
+		public $description;
+		// icon					: string like '/tools/tool_lang/img/icon.svg' // Used by tools
+		public $icon;
+		// show_in_inspector	: bool // Used by tools
+		public $show_in_inspector;
+		// show_in_component	: bool // Used by tools
+		public $show_in_component;
+		// config				: object // Used by tools
+		public $config;
+		// sortable				: bool // Used by components (columns)
+		public $sortable;
+		// fields_separator		: string like ", " // used by portal to join different fields
+		public $fields_separator;
+		// records_separator	: string like " | " // used by portal to join different records (rows)
+		public $records_separator;
+		// legacy_model			: string like "component_autocomplet_hi"
+		public $legacy_model;
+		// relation_list		: string
+		public $relation_list;
+		// path					: array
+		public $path;
+		// debug				: object
+		public $debug;
+		// add_label : bool
+		public $add_label;
+		// string|null time_machine_list . Get the time machine list tipo for the section
+		public $time_machine_list;
+		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
+		public $features;
+		// array toolbar_buttons
+		public $toolbar_buttons;
+		// bool value_with_parents
+		public $value_with_parents;
+		// object tool_config
+		public $tool_config;
+		// array search_operators_info
+		public $search_operators_info;
+		// string search_options_title
+		public $search_options_title;
+		// string target_section_tipo
+		public $target_section_tipo;
+		*/
 
 
 		// ar_type_allowed

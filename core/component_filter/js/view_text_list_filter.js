@@ -19,7 +19,7 @@ export const view_text_list_filter = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_text_list_filter.render = async function(self, options) {
+view_text_list_filter.render = async function(self) {
 
 	// Value as string
 		const data	= self.data || {}
