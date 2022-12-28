@@ -332,9 +332,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 						continue
 					}
 
-					// wildcards
-						filter_item.q = "*" + q + "*"
-
+					filter_item.q = q
 					filter_item.q_split = true
 
 					// create the filter with the operator choosed by the user
@@ -356,7 +354,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 					sqo.filter.$and.push(fixed_filter[i])
 				}
 			}
-	console.log("filter_by_list:-------------->",filter_by_list);
+
 			if(filter_by_list && filter_by_list.length > 0){
 				sqo.filter.$and.push({
 					$or:[...filter_by_list]

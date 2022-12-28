@@ -610,7 +610,7 @@ const render_option_chekbox = function(self, datalist_item) {
 
 
 /**
-* BUILD_INPUTS_LIST
+* RENDER_INPUTS_LIST
 * @return DOM node inputs_list
 */
 const render_inputs_list = function(self) {
@@ -661,7 +661,7 @@ const render_inputs_list = function(self) {
 
 
 /**
-* BUILD_OPERATOR_SELECTOR
+* RENDER_OPERATOR_SELECTOR
 * @return DOM node operator_selector
 */
 const render_operator_selector = function(self) {
