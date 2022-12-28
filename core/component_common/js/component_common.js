@@ -54,6 +54,9 @@ component_common.prototype.init = async function(options) {
 		self.data			= options.data		|| null // current specific data of this component
 		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 
+	// data_source
+		self.data_source = options.data_source
+
 	// DOM
 		self.node			= null // node place in light DOM
 

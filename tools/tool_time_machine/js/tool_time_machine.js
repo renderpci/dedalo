@@ -218,15 +218,16 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 	// context (clone and edit)
 		const context = Object.assign(clone(self.main_element.context), {
 			lang		: lang,
-			mode		: mode,
+			mode		: 'edit', // mode,
 			section_id	: self.main_element.section_id,
-			matrix_id	: matrix_id
+			matrix_id	: matrix_id,
+			data_source	: 'tm'
 		})
 
 	// options
 		const options = {
 			context				: context,
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
+			to_delete_instances	: to_delete_instances // array of instances to delete after create the new on
 		}
 
 	// call generic common tool build
