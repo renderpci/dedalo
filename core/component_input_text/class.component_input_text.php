@@ -491,7 +491,7 @@ class component_input_text extends component_common {
 				$q_clean  = str_replace("'", '', $q);
 				$query_object->operator	= $operator;
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent	= false;
+				$query_object->unaccent	= true;
 				break;
 			# DEFAULT CONTAIN
 			default:
