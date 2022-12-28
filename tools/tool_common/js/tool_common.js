@@ -288,7 +288,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 								// 	// resolve whole context from API (init event observer problem..)
 								// 	// (!) This is mandatory now because some components (e.g. component_portal) need
-								// 	// the rqo_config to generate rqo correctly
+								// 	// the request_config_object to generate rqo correctly
 								// 		const api_response = await data_manager.get_element_context(el)
 
 								// 	return api_response.result[0] || null

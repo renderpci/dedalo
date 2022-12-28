@@ -33,7 +33,6 @@ view_mini_section_record.render = async function(self, options) {
 	const render_level = options.render_level || 'full'
 
 	// ar_columns_instances
-		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances = await self.get_ar_columns_instances_list()
 		const columns_map = await self.columns_map
 
@@ -122,7 +121,7 @@ view_mini_section_record.render = async function(self, options) {
 							if(j === ar_instances_length-1) continue
 							const node_fields_separator = ui.create_dom_element({
 								element_type	: 'span',
-								inner_html		: self.caller.fields_separator || ' | ',
+								inner_html		: self.fields_separator || ' | ',
 								parent			: column_node
 							})
 

@@ -56,7 +56,7 @@ export const section = function() {
 
 	this.id_variant				= null
 
-	this.rqo_config				= null
+	this.request_config_object	= null
 	this.rqo					= null
 
 	this.config					= null
@@ -316,13 +316,13 @@ section.prototype.build = async function(autoload=false) {
 		const generate_rqo = async function(){
 
 			if (!self.context) {
-				// rqo_config. get the rqo_config from request_config
-				self.rqo_config = self.request_config
+				// request_config_object. get the request_config_object from request_config
+				self.request_config_object = self.request_config
 					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}else{
-				// rqo_config. get the rqo_config from context
-				self.rqo_config	= self.context && self.context.request_config
+				// request_config_object. get the request_config_object from context
+				self.request_config_object	= self.context && self.context.request_config
 					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}
@@ -331,7 +331,7 @@ section.prototype.build = async function(autoload=false) {
 			const action	= 'search'
 			const add_show	= self.mode==='tm'
 			self.rqo = self.rqo || await self.build_rqo_show(
-				self.rqo_config, // object rqo_config
+				self.request_config_object, // object request_config_object
 				action,  // string action like 'search'
 				add_show // bool add_show
 			)
@@ -579,7 +579,7 @@ section.prototype.build = async function(autoload=false) {
 						self.navigate(
 							() => { // callback
 								// fix new offset value
-									self.rqo_config.sqo.offset	= offset
+									self.request_config_object.sqo.offset	= offset
 									self.rqo.sqo.offset			= offset
 								// set_local_db_data updated rqo
 									if (self.mode==='list') {
@@ -682,81 +682,85 @@ section.prototype.render = async function(options={}) {
 
 
 /**
-* GET_AR_INSTANCES (section_records)
+* GET_SECTION_RECORDS
 * Generate a section_record instance for each data value
+* Create (init and build) a section_record for each component value
+* Used by portals to get all rows for render
 */
-export const get_ar_instances = async function(self){
+export const get_section_records = async function(options){
 
-	// const self = this
-
-	// self data verification
-		// if (typeof self.data==="undefined") {
-		// 	self.data = {
-		// 		value : []
-		// 	}
-		// }
+	// options
+		const self				= options.caller
+		const tipo				= options.tipo || self.tipo || {}
+		const mode				= options.mode || self.mode || 'list'
+		const columns_map		= options.columns_map || self.columns_map
+		const id_variant		= options.id_variant || self.id_variant || null
+		const view				= options.view || 'default'
+		const column_id			= options.column_id || self.column_id || null
+		const datum				= options.datum || self.datum || {}
+		const request_config	= (options.request_config)
+			? clone(options.request_config)
+			: clone(self.context.request_config)
+		const fields_separator	= options.fields_separator || self.context.fields_separator || {}
+		const lang				= options.lang || self.section_lang || self.lang
+		const value				= options.value || ((self.data && self.data.value)
+			? self.data.value
+			: [])
+		const section_record_mode = mode==='tm'
+			? 'list'
+			: mode
 
 	// iterate records
-		const lang 			= self.lang
-		const value			= self.data && self.data.value
-			? self.data.value
-			: []
+		const ar_promises	= []
 		const value_length	= value.length
-		const section_record_mode = self.mode==='tm'
-			? 'list'
-			: self.mode
-
-		// const ar_instances = []
-		const ar_promises = []
 		for (let i = 0; i < value_length; i++) {
-			// console.groupCollapsed("section: section_record " + self.tipo +'-'+ value[i]);
-			const current_section_id	= value[i].section_id
-			const current_section_tipo	= value[i].section_tipo
-			// const current_data			= (self.mode==='tm')
-			// 	? self.datum.data.filter(element => element.matrix_id===value[i].matrix_id && element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-			// 	: self.datum.data.filter(element => element.section_tipo===current_section_tipo && element.section_id===current_section_id)
-			const current_context 		= (typeof self.datum.context!=="undefined")
-				? self.datum.context.filter(el => el.section_tipo===current_section_tipo && el.parent===self.tipo)
-				: []
 
-			const offset = (self.rqo.sqo.offset + i)
+			const locator				= value[i];
+			const current_section_id	= locator.section_id
+			const current_section_tipo	= locator.section_tipo
 
 			const instance_options = {
 				model			: 'section_record',
-				tipo			: current_section_tipo,
+				tipo			: tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
 				mode			: section_record_mode,
 				lang			: lang,
-				context			: current_context,
+				context			: {
+					view				: view,
+					request_config		: request_config,
+					fields_separator	: fields_separator
+				},
 				// data			: current_data,
-				datum			: self.datum,
+				datum			: datum,
 				row_key 		: i,
 				caller			: self,
-				offset			: offset,
-				columns_map		: self.columns_map,
-				column_id		: self.column_id
+				paginated_key	: locator.paginated_key,
+				columns_map		: columns_map,
+				column_id		: column_id,
+				locator			: locator
 			}
 
 			// id_variant . Propagate a custom instance id to children
-				if (self.id_variant) {
-					instance_options.id_variant = self.id_variant
+				if (id_variant) {
+					instance_options.id_variant = id_variant
+				}
+
+			// locator tag_id modifies id_variant when is present
+				if (locator.tag_id) {
+					const tag_id_add = '_l' + locator.tag_id
+					instance_options.id_variant = (instance_options.id_variant)
+						? instance_options.id_variant + tag_id_add
+						: tag_id_add
 				}
 
 			// time machine options
-				if (self.mode==='tm') {
-					instance_options.matrix_id			= value[i].matrix_id
-					instance_options.modification_date	= value[i].timestamp
-					instance_options.mode				= 'list' // section record and components will be created in list mode (!)
-					// instance_options.state			= value[i].state
+				if (mode==='tm') {
+					instance_options.matrix_id = (self.model==='section')
+						? locator.matrix_id
+						: self.matrix_id
+					instance_options.modification_date	= locator.timestamp || null
 				}
-
-			// section_record. init and build
-				// 	const current_section_record = await instances.get_instance(instance_options)
-				// 	await current_section_record.build(true)
-
-			// add instance
-				// 	ar_instances.push(current_section_record)
 
 			// promise add and continue init and build
 				ar_promises.push(new Promise(function(resolve){
@@ -768,20 +772,15 @@ export const get_ar_instances = async function(self){
 						})
 					})
 				}))
-
 		}//end for (let i = 0; i < value_length; i++)
 
 	// ar_instances. When all section_record instances are built, set them
-		const ar_instances = await Promise.all(ar_promises).then((ready_instances) => {
+		const section_records = await Promise.all(ar_promises).then((ready_instances) => {
 			return ready_instances
 		});
 
-	// set
-		// self.ar_instances.push(...ar_instances)
-
-
-	return ar_instances
-}//end get_ar_instances
+	return section_records
+}//end get_section_records
 
 
 
@@ -904,7 +903,7 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 		if (navigation_history===true) {
 
 			const source	= create_source(self, null)
-			const sqo		= self.rqo_config.sqo
+			const sqo		= self.request_config_object.sqo
 			const title		= self.id
 			const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode
 

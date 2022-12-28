@@ -297,7 +297,7 @@ render_menu.prototype.edit = async function() {
 								order	: current_instance.rqo.sqo.order || null,
 								offset	: current_instance.offset_list
 							 }
-						sqo.section_tipo = current_instance.rqo_config.sqo.section_tipo // always use rqo_config format
+						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo // always use request_config_object format
 						if(SHOW_DEBUG===true) {
 							// console.log("---- fn_update_section_label sqo:", sqo.offset, sqo);
 							// console.log("---- fn_update_section_label current_instance:", current_instance);

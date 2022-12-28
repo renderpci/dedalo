@@ -6,10 +6,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {create_source} from '../../common/js/common.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
-	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {
 		render_column_component_info,
@@ -53,7 +50,8 @@ view_line_edit_portal.render = async function(self, options) {
 		const children_view	= self.context.children_view || self.context.view || 'default'
 
 	// ar_section_record
-		const ar_section_record	= await self.get_ar_instances({
+		const ar_section_record	= await get_section_records({
+			caller	: self,
 			mode	: 'list',
 			view	: children_view
 		})

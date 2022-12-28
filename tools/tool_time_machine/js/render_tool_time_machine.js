@@ -4,9 +4,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
-	// import {get_ar_instances} from '../../../core/section/js/section.js'
-	// import {create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 

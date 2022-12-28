@@ -5,7 +5,6 @@
 
 // imports
 	// import {ui} from '../../../../core/common/js/ui.js'
-	// import {get_ar_instances} from '../../../../core/section/js/section.js'
 	// import {set_element_css} from '../../../../core/page/js/css.js'
 	// import {event_manager} from '../../../../core/common/js/event_manager.js'
 	import {
