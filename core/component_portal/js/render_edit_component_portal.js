@@ -924,7 +924,6 @@ export const activate_autocomplete = async function(self, wrapper) {
 			show_interface.show_autocomplete		= false
 		}// end if external
 
-
 	if( show_interface.show_autocomplete === true
 		&& self.autocomplete!==false
 		&& self.autocomplete_active!==undefined
@@ -933,13 +932,16 @@ export const activate_autocomplete = async function(self, wrapper) {
 		self.autocomplete = new service_autocomplete()
 		await self.autocomplete.init({
 			caller			: self,
-			tipo 			: self.tipo,
-			section_tipo 	: self.section_tipo,
+			tipo			: self.tipo,
+			section_tipo	: self.section_tipo,
 			request_config	: self.context.request_config,
-			wrapper			: wrapper,
 			properties		: self.context.properties.service_autocomplete || null
 		})
 
+		await self.autocomplete.build()
+		// render. Build_autocomplete_input nodes
+		const autocomplete_node = await self.autocomplete.render()
+		wrapper.appendChild(autocomplete_node)
 		self.autocomplete_active = true
 		// self.autocomplete.search_input.focus()
 	}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)

@@ -36,7 +36,6 @@ service_autocomplete.prototype.init = async function(options) {
 
 	// options
 		self.caller				= options.caller
-		self.component_wrapper	= options.wrapper // component_wrapper
 		self.view				= options.view || 'text'
 		self.children_view		= options.children_view || null
 		self.properties			= options.properties || {}
@@ -48,7 +47,6 @@ service_autocomplete.prototype.init = async function(options) {
 		self.model					= 'service_autocomplete'
 		self.id						= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
 		self.mode 					= 'search'
-		self.ar_instances 			= []
 		self.context 				= {
 			tipo			: self.tipo,
 			section_tipo	: self.section_tipo,
@@ -58,25 +56,9 @@ service_autocomplete.prototype.init = async function(options) {
 			request_config	: self.request_config,
 			mode 			: self.mode
 		}
+		self.filter_free_nodes = []
 
-		self.sqo					= {}
-		self.request_config_object	= self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
-		self.ar_search_section_tipo	= self.request_config_object.sqo.section_tipo
-		self.ar_filter_by_list		= []
-		self.operator				= null
-		self.list_name				= 's_'+new Date().getUTCMilliseconds()
-		self.search_fired			= false
-
-		// set service autocomplete as caller, use the caller context to build section_records as caller
-		// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
-
-	// engine. get the search_engine sended or set the default value
-		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
-
-		await self.build()
-
-	// render. Build_autocomplete_input nodes
-		self.render()
+	self.node = null
 
 	// event keys
 		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
@@ -98,25 +80,47 @@ service_autocomplete.prototype.init = async function(options) {
 * @param object options
 * @return bool
 */
-service_autocomplete.prototype.build = async function(options) {
+service_autocomplete.prototype.build = async function(options={}) {
 
 	const self = this
 
-		// status update
+	// status update
 		self.status = 'building'
+
+	// options vars
+		self.request_config_object =  (options.request_config_object)
+			? options.request_config_object
+			: self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+
+	// reset search options
+		self.sqo					= {}
+		self.ar_filter_by_list		= []
+		self.ar_instances 			= []
+		self.operator				= null
+		self.list_name				= 's_'+new Date().getUTCMilliseconds()
+		self.search_fired			= false
+
+
+	// engine. get the search_engine sended or set the default value
+		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
 
 	// rqo_search, it's necesary do it by caller, because rqo is dependent of the source.
 	// API get rqo to do the search as the caller.
-		self.rqo_search				= await self.caller.build_rqo_search(self.request_config_object, 'search')
-		// self.columns_map	= self.rqo_search.show.columns
+		self.rqo_search	= await self.caller.build_rqo_search(self.request_config_object, 'search')
+
+	// set the section_tipo to be searched
+		self.ar_search_section_tipo	= self.rqo_search.sqo.section_tipo
+
 	// columns_map
-		self.columns_map = get_columns_map(self.context)
-	console.log("self.columns_map:",self);
+	// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
+		self.columns_map = await get_columns_map(self.context)
+
 	// status update
 		self.status = 'built'
 
 	return true
 }//end build
+
 
 
 /**
@@ -246,29 +250,15 @@ service_autocomplete.prototype.autocomplete_search = function(search_value) {
 			console.error('ERROR. Received search_engine function not exists. Review your component properties source->request_config->search_engine :', self.search_engine);
 			return new Promise(()=>{})
 		}
-	// recombine the select ddo with the search ddo to get the list
-		// const select = self.caller.dd_request.select
-		// const dd_request = (select)
-		// 	? self.request_config_object.filter(item => item.typo!=='request_ddo')
-		// 	: [...self.request_config_object]
 
-		// if(select){
-		// 	const ddo_select = select.find(item => item.typo === 'request_ddo')
-		// 	const value_with_parents = select.find(item => item.typo === 'value_with_parents')
-		// 	dd_request.push(ddo_select)
-		// 	if(value_with_parents){
-		// 		dd_request.push(value_with_parents)
-		// 	}
-		// }
-
-
-	// search options
-		const options = {
-			q	: search_value
+	// check valid filters_selector
+		if (self.ar_search_section_tipo.length<1) {
+			alert('Please, select search section');
+			return new Promise(()=>{})
 		}
 
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
-		const js_promise = self[engine]( options )
+		const js_promise = self[engine]()
 
 		js_promise.then(()=>{
 			console.log('js_promise:', js_promise);
@@ -292,9 +282,13 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 
 	// options
 		const rqo_search		= options.rqo_search
-		const search_sections 	= options.search_sections || null
+		const search_sections 	= options.search_sections || []
 		const filter_by_list	= options.filter_by_list || null
-		const q					= options.q || null
+
+			console.log("search_sections:",search_sections);
+		if(search_sections.length ===0){
+			return null
+		}
 
 		const sqo_options	= rqo_search.sqo_options
 		const fixed_filter	= sqo_options.fixed_filter //self.request_config_object.find((current_item)=> current_item.typo==='fixed_filter')
@@ -302,7 +296,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 		// const operador		= sqo_options.operador
 
 		const sqo				= rqo_search.sqo
-		sqo.section_tipo 		= search_sections || sqo.section_tipo
+		// sqo.section_tipo 		= search_sections || sqo.section_tipo
 
 	// delete the sqo_options to the final rqo_options
 		delete rqo_search.sqo_options
@@ -316,34 +310,44 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 		}
 
 		// rebuild the filter with the user inputs
-			if(filter_free){
-				const filter_free_parse = {}
-				// Iterate current filter
-				for (let operator in filter_free) {
-					// get the array of the filters objects, they have the default operator
-					const current_filter = filter_free[operator]
-					// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
-					const new_operator		= self.operator || operator
+			const filter_free_parse	= {}
 
-					for (let i = 0; i < current_filter.length; i++) {
-						// Update q property
-						current_filter[i].q	= (q !== "")
-							? "*" + q + "*"
-							: "false_muyfake_de verdad!"
-						current_filter[i].q_split = false
-						// create the filter with the operator choosed by the user
-						filter_free_parse[new_operator] = current_filter
+			// Iterate current filter
+			for (let operator in filter_free) {
+
+				// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
+				const new_operator				= self.operator || operator
+				filter_free_parse[new_operator]	= []
+
+				// get the array of the filters objects, they have the default operator
+				const current_filter = filter_free[operator]
+				const current_filter_length = current_filter.length
+				for (let i = 0; i < current_filter_length; i++) {
+
+					const filter_item = current_filter[i]
+
+					const q =  filter_item.q
+
+					if( !q || q === "" ){
+						continue
 					}
+
+					// wildcards
+						filter_item.q = "*" + q + "*"
+
+					filter_item.q_split = true
+
+					// create the filter with the operator choosed by the user
+					filter_free_parse[new_operator].push(filter_item)
 				}
 
-				sqo.filter.$and.push(filter_free_parse)
+				const filter_empty = filter_free_parse[new_operator].length === 0
+				if(filter_empty){
+					return null
+				}
+			}
 
-				// filter re-built
-				// sqo.filter = {
-				// 	'$and' : [new_filter]
-				// 	// '$and' : [filter_free]
-				// }
-			}//end if(filter_free)
+			sqo.filter.$and.push(filter_free_parse)
 
 
 		// fixed_filter
@@ -352,7 +356,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 					sqo.filter.$and.push(fixed_filter[i])
 				}
 			}
-
+	console.log("filter_by_list:-------------->",filter_by_list);
 			if(filter_by_list && filter_by_list.length > 0){
 				sqo.filter.$and.push({
 					$or:[...filter_by_list]
@@ -381,7 +385,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 * @param object options
 * @return promise api_response
 */
-service_autocomplete.prototype.dedalo_engine = async function(options) {
+service_autocomplete.prototype.dedalo_engine = async function() {
 
 	const self = this
 
@@ -394,25 +398,33 @@ service_autocomplete.prototype.dedalo_engine = async function(options) {
 		// self.sqo					= rqo_search.sqo
 
 	// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
-		const search_sections		= self.ar_search_section_tipo.map(el=>el.tipo)
+		const search_sections		= self.ar_search_section_tipo
+
 		rqo_search.sqo.section_tipo	= search_sections
 
 	// filter_by_list, modify by user
 		const filter_by_list	= self.ar_filter_by_list.map(item => item.value)
 
-	const rqo = await self.rebuild_search_query_object({
-		rqo_search		: rqo_search,
-		search_sections : search_sections,
-		filter_by_list	: filter_by_list,
-		q				: options.q
-	});
+	// rqo
+		const rqo = await self.rebuild_search_query_object({
+			rqo_search		: rqo_search,
+			search_sections : search_sections,
+			filter_by_list	: filter_by_list
+		})
+
+	// empty filter_free values case. Nothing to search
+		if(rqo===null){
+			return {
+				result	: {
+					data :[]
+				},
+				msg		: 'Empty result'
+			}
+		}
+
 	// const rqo = await options.rqo
 		rqo.prevent_lock = true
 
-	if(SHOW_DEBUG===true) {
-		// console.log('options', options)
-		// console.log('+++ [service_autocomplete.dedalo_engine] rqo:', rqo)
-	}
 
 	// verify source is in list mode to allow lang fallback
 		const source	= rqo.source
@@ -446,29 +458,29 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 	const self = this
 
 	// options
-		const q			= options.q
+		// const q			= options.q
 		// const rqo	= await options.rqo
 
 	// dd_request
-		const dd_request = self.request_config_object
-
+		// const dd_request = self.request_config_object
+		const rqo_search	= await clone(self.rqo_search)
 
 	// rqo
-		const generate_rqo = async function(){
-			// request_config_object. get the request_config_object from context
-			// rqo build
-			// const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
-			const add_show	= true
-			const zenon_rqo	= await self.caller.build_rqo_show(dd_request, 'get_data', add_show)
-			self.rqo_search	= self.caller.build_rqo_search(zenon_rqo, 'search')
-		}
-		generate_rqo()
+		// const generate_rqo = async function(){
+		// 	// request_config_object. get the request_config_object from context
+		// 	// rqo build
+		// 	// const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
+		// 	const add_show	= true
+		// 	const zenon_rqo	= await self.caller.build_rqo_show(dd_request, 'get_data', add_show)
+		// 	self.rqo_search	= self.caller.build_rqo_search(zenon_rqo, 'search')
+		// }
+		// generate_rqo()
 
 
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log('[zenon_engine] rqo:',rqo);
-			console.log('[zenon_engine] dd_request:', dd_request);
+			console.log('[zenon_engine] dd_request:', rqo_search);
 			// console.log('self.caller-----------------:',self.caller);
 		}
 
@@ -477,7 +489,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 	// const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
 
 	// fields of Zenon 'title' for zenon4
-		const fields		= dd_request.show.ddo_map
+		const fields		= rqo_search.show.ddo_map
 		const fields_length	= fields.length
 	// section_tipo of Zenon zenon1
 		const section_tipo	= fields[0].section_tipo
@@ -538,7 +550,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 
 					// value
 						// const fields_separator = self.caller.fields_separator || ' | '
-						const value = ar_value.join('')
+						const value = ar_value
 
 
 					// record_data
@@ -591,6 +603,32 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 		}
 
 	// trigger vars
+
+		// Iterate current filter
+		let q = ''
+		const filter_free =  rqo_search.sqo_options.filter_free
+			for (let operator in filter_free) {
+
+				// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
+				const new_operator				= self.operator || operator
+
+				// get the array of the filters objects, they have the default operator
+				const current_filter = filter_free[operator]
+				const current_filter_length = current_filter.length
+				for (let i = 0; i < current_filter_length; i++) {
+
+					const filter_item = current_filter[i]
+
+					const q_check =  filter_item.q
+
+					if( !q_check || q_check === "" ){
+						continue
+					}
+					// wildcards
+						q = q_check
+				}
+			}
+
 		const url_trigger  = 'https://zenon.dainst.org/api/v1/search'
 		const trigger_vars = {
 				lookfor		: (q==='') ? 'ñññññññ---!!!!!' : q, // when the q is empty, Zenon get the first 10 records of your DDBB, in that case we change the empty with a nonsense q
