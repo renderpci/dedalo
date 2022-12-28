@@ -707,9 +707,12 @@ const render_operator_selector = function(self) {
 			class_name		: 'operator_selector',
 			parent			: operator_selector
 		})
-		select.addEventListener('change',function(e){
+		select.addEventListener('change',async function(e){
 			// set the new operator selected
 			self.operator	= e.target.value
+
+			const api_response	= await self.autocomplete_search()
+			await render_datalist(self, api_response)
 		})
 		const option_or = ui.create_dom_element({
 			element_type	: 'option',
