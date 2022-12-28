@@ -34,7 +34,10 @@ view_mini_geolocation.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(' | ')
+		const string_values = value.map(el => {
+			return JSON.stringify(el)
+		})
+		const value_string = string_values.join(self.context.fields_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)

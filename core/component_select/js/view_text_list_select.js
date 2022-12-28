@@ -24,7 +24,7 @@ export const view_text_list_select = function() {
 * Render node to be used by service autocomplete or any datalist
 * @return DOM node
 */
-view_text_list_select.render = async function(self, options) {
+view_text_list_select.render = async function(self) {
 
 	// Value as string
 		const data	= self.data || {}
@@ -32,7 +32,14 @@ view_text_list_select.render = async function(self, options) {
 
 		const value_string = value.join(self.context.fields_separator)
 
-	const text_node = document.createTextNode(value_string)
+	// const text_node = document.createTextNode(value_string)
 
-	return text_node
+	// wrapper. Set as span to preserve html tags like mark, etc.
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: value_string
+		})
+
+
+	return wrapper
 }//end render

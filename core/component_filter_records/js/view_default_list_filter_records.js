@@ -31,7 +31,11 @@ view_default_list_filter_records.render = async function(self, options) {
 	// short vars
 		const data			= self.data || {}
 		const value			= data.value || []
-		const value_string	= value.join(' | ')
+		// const value_flat	= value.flat()
+		const string_values = value.map(el => {
+			return JSON.stringify(el)
+		})
+		const value_string = string_values.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

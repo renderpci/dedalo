@@ -134,6 +134,31 @@ class component_geolocation extends component_common {
 
 
 	/**
+	* GET_VALUE
+	* Alias of component_common->get_value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $dd_grid_cell_object
+	*/
+		// public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+
+		// 	$dd_grid_cell_object = parent::get_value($lang, $ddo);
+
+		// 	// map values to JOSN to allow render it in list
+		// 		if (!empty($dd_grid_cell_object->value)) {
+		// 			$dd_grid_cell_object->value = array_map(function($el){
+		// 				return json_encode($el);
+		// 			}, $dd_grid_cell_object->value);
+		// 		}
+
+
+		// 	return $dd_grid_cell_object;
+		// }//end get_value
+
+
+
+	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)

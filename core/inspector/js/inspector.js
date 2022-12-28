@@ -9,6 +9,7 @@
 	import {
 		render_inspector,
 		render_section_info,
+		render_component_info,
 		load_time_machine_list,
 		load_component_history,
 		load_activity_info,
@@ -88,6 +89,8 @@ inspector.prototype.init = async function(options) {
 				self.actived_component = actived_component
 				// component_history load history changes list
 				load_component_history(self, actived_component)
+
+				render_component_info(self, actived_component)
 			}
 		// save. When selected component is saved, update component_history, time_machine_list and activity_info
 			self.events_tokens.push(

@@ -155,20 +155,27 @@ const get_input_element = (element, self) => {
 			type			: 'checkbox'
 		})
 		label_node.prepend(input_node)
-		input_node.addEventListener('change',function() {
+		input_node.addEventListener('change',function(e) {
 
-			const action		= (input_node.checked===true) ? 'insert' : 'remove'
-			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			const changed_value	= (action==='insert') ? datalist_value : null
+			// const action		= (input_node.checked===true) ? 'insert' : 'remove'
+			// const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			// const changed_value	= (action==='insert') ? datalist_value : null
 
-			const changed_data_item = Object.freeze({
-				action	: action,
-				key		: changed_key,
-				value	: changed_value
+			// const changed_data_item = Object.freeze({
+			// 	action	: action,
+			// 	key		: changed_key,
+			// 	value	: changed_value
+			// })
+
+			// // fix instance changed_data
+			// 	self.set_changed_data(changed_data_item)
+
+			self.change_handler({
+				self			: self,
+				e				: e, // event
+				datalist_value	: datalist_value,
+				input_checkbox	: input_node
 			})
-
-			// fix instance changed_data
-				self.set_changed_data(changed_data_item)
 		})//end change event
 
 		if(element.has_children){
