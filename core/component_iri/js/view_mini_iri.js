@@ -32,10 +32,11 @@ view_mini_iri.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data || {}
-		const value	= data.value || []
+
+		data.fields_separator = self.context.fields_separator
 
 	// DOM fragment. Use common function render_links_list
-		const fragment = render_links_list(value)
+		const fragment = render_links_list(data)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {})

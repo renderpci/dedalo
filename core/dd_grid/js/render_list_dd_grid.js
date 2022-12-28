@@ -253,11 +253,8 @@ export const get_iri_column = function(current_data) {
 
 	const class_list = current_data.class_list || ''
 
-	// value
-		const value = current_data.value || []
-
 	// DOM fragment
-		const fragment = render_links_list(value)
+		const fragment = render_links_list(current_data)
 
 	// column
 		const column = ui.create_dom_element({
