@@ -1859,15 +1859,14 @@ class component_text_area extends component_common {
 
 	/**
 	* BUILD_GEOLOCATION_DATA
-	* @param string $raw_text
 	* @return array $ar_elements
 	*/
-	public static function build_geolocation_data(string $raw_text) : array {
+	public static function build_geolocation_data( string $raw_text, bool $geojson=false) : array {
 
-		// Test data
-			// $request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-			// $request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-			// $request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
+		# Test data
+		// $request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
+		// $request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
+		// $request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
 
 		// $raw_text = str_replace("'", '"', $raw_text);
 
@@ -1885,77 +1884,84 @@ class component_text_area extends component_common {
 		// $result  = free_node::pregMatchCapture($matchAll=true, $pattern, $options->raw_text, $offset=0);
 
 
-		// split by pattern
-			$pattern_geo_full	= TR::get_mark_pattern('geo_full',$standalone=true);
-			$result				= preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+		# split by pattern
+		$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
+		$result 		  = preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
-		// sample result
-			// [0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
-			// [1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
-			// [2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
-			// [3] => &nbsp;Texto dos
+		//  sample result
+		// [0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
+		//    [1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
+		//    [2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
+		//    [3] => &nbsp;Texto dos
 
-		$format_text = function($text) {
-			$text	= str_replace("&nbsp;"," ",$text);
-			$text	= trim($text);
+	    $format_text = function($text) {
+			$text = str_replace("&nbsp;"," ",$text);
+			$text = trim($text);
 			return $text;
-		};
+	    };
 
-		$ar_elements	= array();
-		$pattern_geo	= TR::get_mark_pattern('geo',$standalone=true);
-		$key_tag_id		= 4;
-		$key_data		= 7;
-		foreach ((array)$result as $key => $value) {
-			if (strpos($value,'[geo-')===0) {
-				$tag_string		= $value;
-				$next_row_id	= (int)($key+2);
-				$text			= '';
-				if (isset($result[$next_row_id]) && strpos($result[$next_row_id],'[geo-')!==0 && strpos($result[$next_row_id],'-')!==0 && strpos($result[$next_row_id],'{\'type')!==0) { // && strpos($result[$next_row_id],'{\'type')!==0 && trim($result[$next_row_id])!=='-'
-					$text = $format_text( $result[$next_row_id] );
-				}elseif (isset($result[$next_row_id+1]) && strpos($result[$next_row_id+1],'[geo-')!==0 && strpos($result[$next_row_id+1],'-')!==0 && strpos($result[$next_row_id+1],'{\'type')!==0) { // {\u0027type
-					$text = $format_text( $result[$next_row_id+1] );
-				}elseif (isset($result[$next_row_id+2]) && strpos($result[$next_row_id+2],'[geo-')!==0 && strpos($result[$next_row_id+2],'-')!==0 && strpos($result[$next_row_id+2],'{\'type')!==0) { // {\u0027type
-					$text = $format_text( $result[$next_row_id+2] );
-				}
-				// JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-				if (!empty($text)) {
-					$text = json_encode($text, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-				}
+	    $ar_elements = array();
+	    $pattern_geo = TR::get_mark_pattern('geo',$standalone=true);
+	    $key_tag_id  = 4;
+	    $key_data    = 7;
+	    foreach ((array)$result as $key => $value) {
+	    	if (strpos($value,'[geo-')===0) {
+	    		$tag_string  = $value;
+	    		$next_row_id = (int)($key+2);
+	    		$text 		 = '';
+	    		if (isset($result[$next_row_id]) && strpos($result[$next_row_id],'[geo-')!==0 && strpos($result[$next_row_id],'-')!==0 && strpos($result[$next_row_id],'{\'type')!==0) { // && strpos($result[$next_row_id],'{\'type')!==0 && trim($result[$next_row_id])!=='-'
+	    			$text = $format_text( $result[$next_row_id] );
+	    		}elseif (isset($result[$next_row_id+1]) && strpos($result[$next_row_id+1],'[geo-')!==0 && strpos($result[$next_row_id+1],'-')!==0 && strpos($result[$next_row_id+1],'{\'type')!==0) { // {\u0027type
+	    			$text = $format_text( $result[$next_row_id+1] );
+	    		}elseif (isset($result[$next_row_id+2]) && strpos($result[$next_row_id+2],'[geo-')!==0 && strpos($result[$next_row_id+2],'-')!==0 && strpos($result[$next_row_id+2],'{\'type')!==0) { // {\u0027type
+	    			$text = $format_text( $result[$next_row_id+2] );
+	    		}
+	    		// JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
+	    		if (!empty($text)) {
+	    			$text = json_encode($text, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+	    		}
 
-				preg_match_all($pattern_geo, $value, $matches);
-				$layer_id	= (int)$matches[$key_tag_id][0];
-				$geo_data	= $matches[$key_data][0];
+	    		preg_match_all($pattern_geo, $value, $matches);
+	    		$layer_id = (int)$matches[$key_tag_id][0];
+	    		$geo_data = $matches[$key_data][0];
 
-				# Skip empty values
-				if (!empty($geo_data)) {
+	    		# Skip empty values
+	    		if (!empty($geo_data)) {
 
-					$geo_data	= str_replace('\'', '"', $geo_data);
-					$geo_data	= json_decode($geo_data);
+		    		$geo_data = str_replace('\'', '"', $geo_data);
+		    		$geo_data = json_decode($geo_data);
 
-					$layer_data = array();
-					if(!empty($geo_data->features)){
-						foreach ((array)$geo_data->features as $key => $feature) {
+					if ($geojson===true) {
 
-							$lon	= isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
-							$lat	= isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
+						$layer_data = $geo_data;
 
-							$object = new stdClass();
-								$object->lon	= $lon;
-								$object->lat	= $lat;
-								$object->type	= $feature->geometry->type;
-							$layer_data[] = $object;
+					}else{
+
+						$layer_data = array();
+						if(!empty($geo_data->features)){
+							foreach ((array)$geo_data->features as $key => $feature) {
+								$lon = isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
+								$lat = isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
+
+								$object = new stdClass();
+									$object->lon	= $lon;
+									$object->lat	= $lat;
+									$object->type	= $feature->geometry->type;
+								$layer_data[] = $object;
+							}
 						}
 					}
 
-					$element = new stdClass();
-						$element->layer_id		= $layer_id;
-						$element->text			= $text;
-						$element->layer_data	= $layer_data;
 
-					$ar_elements[] = $element;
-				}
-			}
-		}//end foreach ((array)$result as $key => $value)
+		    		$element = new stdClass();
+		    			$element->layer_id 		= $layer_id;
+		    			$element->text 			= $text;
+		    			$element->layer_data	= $layer_data;
+
+		    		$ar_elements[] = $element;
+	    		}
+	    	}
+	    }//end foreach ((array)$result as $key => $value)
 
 
 		return $ar_elements;

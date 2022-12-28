@@ -46,218 +46,6 @@ abstract class diffusion  {
 
 
 	/**
-	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
-	* @return string $html
-	*	Get standar path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
-	*	and return rendered html code
-	*/
-	public function get_html() {
-
-		if(SHOW_DEBUG) $start_time = start_time();
-
-		# Class name is called class (ex. component_input_text), not this class (common)
-		$class_name	= get_called_class();
-
-		$file = DEDALO_CORE_PATH .'/diffusion/'. $class_name .'/'. $class_name .'.php' ; 	#dump("$class_name");
-
-		ob_start();
-		include ( $file );
-		$html =  ob_get_clean();
-
-		return $html;
-	}//end get_html
-
-
-
-	/**
-	* CLEAN_DUPLICATES
-	* @return array
-	*//* NOT USED
-	public static function clean_duplicates( $ar_locators ) {
-
-		$ar_temp = array();
-		foreach ($ar_locators as $key => $locator) {
-
-			if (is_object($locator)) {
-
-				$section_tipo 	= $locator->section_tipo;
-				$section_id 	= $locator->section_id;
-
-				if(in_array($section_tipo.'_'.$section_id, $ar_temp)) {
-					unset($ar_locators[$key]);
-					#debug_log(__METHOD__." UNSETED locator: {$section_tipo}_{$section_id} - key:".to_string($key), logger::DEBUG);
-				}
-				$ar_temp[] = $section_tipo.'_'.$section_id;
-
-			}else{
-
-				if(in_array($locator, $ar_temp)) {
-					unset($ar_locators[$key]);
-					#debug_log(__METHOD__." UNSETED locator: {$locator} - key:".to_string($key), logger::DEBUG);
-				}
-			}
-		}
-
-		return array_values($ar_locators);
-	}//end clean_duplicates
-	*/
-
-
-
-	/**
-	* GET_AR_DEDALO_COUNTRIES
-	* Return array of dedalo_countries for request tipo ts
-	* In mode 'columns' ($options->request='columns') return a simple array of standar 'dedalo_countries' like (country,autonomous_community,province,..)
-	* In mode 'fields' ($options->request='fields') return a asociative array resolved for request lang like ([country] => España, [autonomous_community] => País Vasco, ..)
-	* Note: current source element column will be replaced by its correspondence in dedalo_countries
-	* @param object $options
-	* @return array $ar_dedalo_countries
-	*//* NOT USED
-	protected static function get_ar_dedalo_countries( $request_options ) {
-		error_log("STOPPED UNACTIVE OLD METHOD GET_AR_DEDALO_COUNTRIES");
-		return array();
-
-		## DEPRECATED
-			$ar_dedalo_countries=array();
-
-			$options = new stdClass();
-				$options->ts_map 				= false; # name of ts_map from properties
-				$options->ts_map_prefix 		= false; # optional name of ts_map_prefix from properties, it will put in the name of the field / column
-				$options->curent_children_tipo  = false; # tipo of diffusion element
-				$options->request 				= false; # type of request (fields / columns)
-				$options->parent 				= false; # parent id matrix
-				$options->lang 					= false; # current iterate lang
-				$options->section_tipo 			= null;
-
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-			# TS_MAP . Calculate ts_map
-			$ts_map = Tesauro::get_ar_ts_map( $options->ts_map );
-				#dump($ts_map, ' ts_map +');die();
-
-
-			switch ($options->request) {
-
-				case 'columns':
-					# Add all elements of first ts_map element as columns like array('country','autonomous_community','province'..)
-					foreach ((array)reset($ts_map) as $dedalo_country => $ar_value) {
-						if($options->ts_map_prefix !== false){
-								$dedalo_country = $options->ts_map_prefix.$dedalo_country;
-							}
-						$ar_dedalo_countries[] = $dedalo_country;
-					}
-					#dump($ar_dedalo_countries, '$ar_dedalo_countries ++ '.to_string());die();
-					break;
-
-				case 'fields':
-
-					# POINTER TARGET COMPONENT (Normally component_autocomplete_ts)
-					$target_component_tipo  = RecordObj_dd::get_ar_terminos_relacionados($options->curent_children_tipo, true, true)[0];
-					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
-					$section_tipo 			= $options->section_tipo;
-					if (empty($section_tipo)) {
-						$section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($target_component_tipo, 'section', 'parent')[0];
-							#dump($section_tipo, ' var ++ calculated from '.$modelo_name.' - '.to_string($target_component_tipo));
-					}
-					$target_component 	 	= component_common::get_instance($modelo_name,	// component_autocomplete_ts
-																			 $target_component_tipo,
-																			 $options->parent,
-																			 'list',
-																			 $options->lang,
-																			 $section_tipo,
-																			 false );
-					$dato   				= $target_component->get_dato(); # Dato is a ts term like 'es623'
-					if (is_array($dato)) {
-
-						# CASE VERSION >= 4.0.0
-
-						$dato_untouch = $dato;
-						$ar_locator   = $dato_untouch;
-						#$dato 	 		= $locator->section_tipo; // New format of component_autocomplete_ts is a locator for compatibility with future thesaurus
-
-						foreach ((array)$ar_locator as $key => $locator) {
-
-							if (!empty($locator) && !isset($locator->section_tipo)) debug_log(__METHOD__." section_tipo is not set ".to_string(), logger::WARNING);
-							if (!empty($locator) && !isset($locator->section_id))   debug_log(__METHOD__." section_id is not set ".to_string(), logger::WARNING);
-
-							if (isset($locator->section_tipo) && isset($locator->section_id)) {
-								$prefix 	= RecordObj_dd::get_prefix_from_tipo($locator->section_tipo);
-								$terminoID 	= $prefix . $locator->section_id;
-							}else{
-								# Empty record case
-								$prefix 	= null;
-								$terminoID 	= null;
-							}
-							break; // Only one by now
-						}
-						#debug_log(__METHOD__." Dato is not as expected type string (current: ". gettype($dato_untouch) ."). Changed to: $dato from: ".to_string($dato_untouch), logger::DEBUG);
-
-					}elseif (is_string($dato)) {
-
-						# CASE VERSION < 4.0.0
-
-						$prefix = RecordObj_dd::get_prefix_from_tipo($dato);
-						if(empty($prefix) || !isset($ts_map[$prefix])) throw new Exception("Error Processing Request. Prefix $prefix is not defined in ts_map ($options->ts_map)", 1);
-						$terminoID = $dato ; // Pre 4.0 versions
-					}
-					#dump($dato, ' dato ++ '.to_string($dato_untouch));
-
-
-					if(empty($prefix)) {
-
-						// Filled with empty values
-						foreach ((array)reset($ts_map) as $dedalo_country => $ar_value) {
-							$ar_dedalo_countries[$dedalo_country] = '';
-						}
-
-					}else if(!isset($ts_map[$prefix])) {
-
-						// Filled with the same value
-						$first_ts_map = reset($ts_map);
-						foreach ((array)$first_ts_map as $dedalo_country => $ar_value) {
-							$ar_dedalo_countries[$dedalo_country] = strip_tags( RecordObj_ts::get_termino_by_tipo($terminoID,$options->lang) );
-						}
-
-					}else{
-
-						$RecordObj_ts 	= new RecordObj_ts($terminoID);
-						$ts_parents  	= (array)$RecordObj_ts->get_ar_parents_of_this();
-						# Add self dato to ts parents
-						$ts_parents[] 	= $terminoID;
-							#dump($ts_parents, ' ts_parents');
-
-						foreach ((array)$ts_map[$prefix] as $dedalo_country => $ar_value) {
-
-							if($options->ts_map_prefix !== false){
-								$dedalo_country = $options->ts_map_prefix.$dedalo_country;
-							}
-
-							$ar_dedalo_countries[$dedalo_country] = (string)''; # Defined and Empty default
-
-							foreach ($ts_parents as $current_parent) {
-								$RecordObj_ts 	= new RecordObj_ts($current_parent);
-								$modelo 	  	= $RecordObj_ts->get_modelo();	# Model of parent like 'es8869'
-								if (in_array($modelo, $ar_value)) {
-									$ar_dedalo_countries[$dedalo_country] = strip_tags( RecordObj_ts::get_termino_by_tipo($current_parent,$options->lang) );
-								}else{
-									#$ar_dedalo_countries[$dedalo_country] = '';
-								}
-							}
-
-						}//end foreach
-					}
-					#dump($ar_dedalo_countries, ' ar_dedalo_countries for parent:'.$options->parent);
-					break;
-			}//end switch $options->request
-			#dump($ar_dedalo_countries, ' ar_dedalo_countries ++ '.to_string($options));
-
-			return (array)$ar_dedalo_countries;
-	}//end get_ar_dedalo_countries
-	*/
-
-
-
-	/**
 	* GET_DIFFUSION_DOMAINS
 	* Get array of ALL diffusion domains in struture
 	*/
@@ -297,7 +85,7 @@ abstract class diffusion  {
 				foreach ($ar_childrens as $current_children) {
 
 				 	$RecordObj_dd = new RecordObj_dd($current_children);
-					$properties  = $RecordObj_dd->get_properties();
+					$properties  = $RecordObj_dd->get_propiedades(true);
 						#dump($properties, ' properties '.$current_children);
 
 					if ($properties && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
@@ -316,83 +104,6 @@ abstract class diffusion  {
 
 		return null;
 	}//end get_my_diffusion_domain
-
-
-
-	/**
-	* GET_SINGLE_DIFFUSION_MAP
-	* Get diffusion mapa of current only one section
-	* @return
-	*//* NOT USED
-	public function get_single_diffusion_map( $section_tipo ) {
-
-		$diffusion_map = array();
-
-		$domain = $this->domain;
-		$domain = 'diffusion_index_ts';
-
-
-		# DIFFUSION_DOMAIN : Get structure tipo of current ('dedalo') diffusion_index_ts
-		$diffusion_domain = diffusion::get_my_diffusion_domain($domain, get_called_class());
-			dump($diffusion_domain, ' diffusion_domain ++ '.to_string($domain));
-
-		# DIFFUSION_SECTIONS : Get sections defined in structure to view
-		$ar_diffusion_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain, 'diffusion_section', 'children');
-			dump($ar_diffusion_section, ' ar_diffusion_section ++ '.to_string());
-
-		# DIFFUSION_SECTIONS : Recorremos las secciones de difusión para localizar las coincidencias con los tipos de sección de las indexaciones
-		foreach ($ar_diffusion_section as $diffusion_section_tipo) {
-
-			# diffusion_section_tipo ar_relateds_terms
-			$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, 'section', 'termino_relacionado');
-			$current_section_tipo 	 = $ar_current_section_tipo[0];
-
-			if ($current_section_tipo === $section_tipo) {
-
-				# HEAD
-				$diffusion_head_tipo 		 = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, $modelo_name='diffusion_head', $relation_type='children')[0];
-					#dump($diffusion_section_tipo,'$diffusion_section_tipo');
-				$ar_diffusion_head_childrens = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_head_tipo, $modelo_name='diffusion_component', $relation_type='children');
-					#dump($ar_diffusion_head_childrens,'$ar_diffusion_head_childrens');
-				$diffusion_map['head'][$current_section_tipo] =  $ar_diffusion_head_childrens ;
-					#dump($diffusion_map,'$diffusion_map');
-
-				return $diffusion_map;
-				break;
-			}
-		}
-
-		return false;
-	}//end get_single_diffusion_map */
-
-
-
-	/**
-	* GET_ALL_TS_RECORDS
-	* @return array
-	*//* NOT USED
-	public static function get_all_ts_records( $table, $root=0 ) {
-
-		$start_time = start_time();
-
-		$root_tipo = $table.$root;
-		$RecordObj_ts = new RecordObj_ts( $root_tipo );
-		$options = new stdClass();
-			#$options->visible 		= 'si';
-			$options->esmodelo 		= 'no';
-			#$options->esdescriptor 	= 'si';	// deactivated to allow non descriptors
-		$ar_childrens = $RecordObj_ts->get_ar_recursive_childrens_with_options($root_tipo, 0, $options); // $terminoID, $is_recursion=0, $options=null
-			#dump($ar_childrens, ' ar_childrens ++ '.$root_tipo.' - '.to_string($options));
-
-		if(empty($ar_childrens)) {
-			debug_log(__METHOD__." 0 terms was found in thesaurus. Please review column 'visible' is set to 'si' to publish ".to_string($options), logger::WARNING);
-		}
-		debug_log(__METHOD__." exec_time secs: [".count($ar_childrens)." items] ".exec_time_unit($start_time,'secs')." - memory_get_usage: ".memory_get_usage(), logger::DEBUG);
-
-
-		return $ar_childrens;
-	}//end get_all_ts_records */
-
 
 
 	/**
@@ -440,12 +151,29 @@ abstract class diffusion  {
 			#
 			# DIFFUSION_ELEMENT
 			# Search inside current diffusion_group and iterate all diffusion_element
-			$ar_diffusion_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element', $relation_type='children', $search_exact=true);
-				#dump($ar_diffusion_element_tipo, ' ar_diffusion_element_tipo ++ '.to_string());
+			$ar_diffusion_elements = [];
+
+			// 1 get the diffusion element alias
+			$ar_diffusion_element_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element_alias', $relation_type='children', $search_exact=true);
+
+			if(!empty($ar_diffusion_element_alias_tipo)){
+				foreach ($ar_diffusion_element_alias_tipo as $element_alias) {
+					$ar_real_diffusion_element = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_alias, 'diffusion_element', 'termino_relacionado', false);
+					$ar_diffusion_elements[] = reset($ar_real_diffusion_element);
+				}
+			}
+			// 2 get direct diffusion element
+			$direct_diffusion_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element', $relation_type='children', $search_exact=true);
+
+			// 3 mix to final array of diffusion_elements
+			$ar_diffusion_element_tipo = !empty($ar_diffusion_elements)
+				? array_merge($ar_diffusion_elements, $direct_diffusion_elements)
+				: $direct_diffusion_elements;
+
 			foreach ($ar_diffusion_element_tipo as $element_tipo) {
 
 				$RecordObj_dd			= new RecordObj_dd($element_tipo);
-				$properties				= $RecordObj_dd->get_properties();
+				$properties				= $RecordObj_dd->get_propiedades(true);
 				$diffusion_class_name	= isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
 				$name					= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
@@ -637,7 +365,7 @@ abstract class diffusion  {
 
 		// Diffusion element (current column/field)
 			$diffusion_term  = new RecordObj_dd($tipo);
-			$properties 	 = $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
+			$properties 	 = $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// Component
@@ -894,7 +622,7 @@ abstract class diffusion  {
 														  DEDALO_DATA_NOLAN,
 														  $locator->section_tipo);
 		// Dimensions from default quality
-			$image_dimensions = $component->ImageObj->get_image_dimensions();
+			$image_dimensions = $component->get_image_dimensions(DEDALO_IMAGE_QUALITY_DEFAULT);
 
 		// Response (from imagemagick)
 			# [0] => 617
@@ -939,13 +667,13 @@ abstract class diffusion  {
 
 		// Locate component_publication in current section
 		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
-			$section_tipo,
-			['component_publication'],
-			$from_cache=true,
-			$resolve_virtual=true,
-			$recursive=true,
-			$search_exact=true,
-			$ar_tipo_exclude_elements=false
+			$section_tipo, // string section_tipo
+			['component_publication'], // array ar_modelo_name_required
+			true, // bool from_cache
+			true, // bool resolve_virtual
+			true, // bool recursive
+			true, // bool search_exact
+			false // array|false ar_tipo_exclude_elements
 		);
 		// Check list of values cases (returns is_publicable true by default)
 		if (empty($ar_children)) {
@@ -998,13 +726,15 @@ abstract class diffusion  {
 	*/
 	public static function get_component_publication_bool_value( $component_publication_tipo, $section_id, $section_tipo ) {
 
-		$component_publication = component_common::get_instance( 'component_publication',
-																  $component_publication_tipo,
-																  $section_id,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo,
-																  false);
+		$component_publication = component_common::get_instance(
+			'component_publication',
+			$component_publication_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo,
+			false
+		);
 		$dato = $component_publication->get_dato();
 			#dump($dato, ' dato ++ '.to_string());
 
@@ -1260,12 +990,14 @@ abstract class diffusion  {
 		// first . component publication first. save if not exist
 			// date
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $publication_first_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$component 		= component_common::get_instance(
+					$modelo_name,
+					$publication_first_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$dato = $component->get_dato();
 				if (empty($dato)) {
 					$component->set_dato($current_date_dato);
@@ -1279,12 +1011,14 @@ abstract class diffusion  {
 				if (isset($save_first)) {
 
 					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
-																	 $publication_first_user_tipo,
-																	 $section_id,
-																	 'list',
-																	 DEDALO_DATA_NOLAN,
-																	 $section_tipo);
+					$component 		= component_common::get_instance(
+						$modelo_name,
+						$publication_first_user_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 					$locator = new locator();
 						$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 						$locator->set_section_id($user_id);
@@ -1301,12 +1035,14 @@ abstract class diffusion  {
 		// last . publication last. save updated date always
 			// date
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $publication_last_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$component 		= component_common::get_instance(
+					$modelo_name,
+					$publication_last_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$component->set_dato($current_date_dato);
 				// section avoid save_modified by user in diffusion
 					$section = $component->get_my_section();
@@ -1315,12 +1051,14 @@ abstract class diffusion  {
 
 			// user
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $publication_last_user_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$component 		= component_common::get_instance(
+					$modelo_name,
+					$publication_last_user_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$locator = new locator();
 					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 					$locator->set_section_id($user_id);
@@ -1356,6 +1094,79 @@ abstract class diffusion  {
 
 		return $publication_ux_tm;
 	}//end get_publication_unix_timestamp
+
+
+
+	/**
+	* PARSE_DATABASE_ALIAS_TABLES
+	*
+	* @param array $ar_table_tipo
+	* 	Current list of tables tipo resolved from target database element
+	* @param string $database_alias_tipo
+	* 	tipo of current database alias
+	* @return array $ar_table_tipo_edit
+	* 	Modified version of the original table list
+	*/
+	public static function parse_database_alias_tables(array $ar_table_tipo, string $database_alias_tipo) : array {
+
+		// original_ar_table_tipo. Source possible additional tables
+			$original_ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$database_alias_tipo, // Original database_alias element
+				'table', // modelo_name
+				'children_recursive', // relation_type
+				false // search_exact (allow 'table' and 'table_alias')
+			);
+			// dump($original_ar_table_tipo, ' original_ar_table_tipo ++ '.to_string());
+			if (empty($original_ar_table_tipo)) {
+				// nothing to parse or add. Stop here
+				return $ar_table_tipo;
+			}
+
+		$ar_table_tipo_edit	= $ar_table_tipo; // start coping source table
+		$replaced_list		= []; // for debug only
+		foreach ($original_ar_table_tipo as $key => $current_table_tipo) {
+			$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			if ($current_model==='table') {
+				// add
+				$ar_table_tipo[] = $current_table_tipo;
+			}
+			else if($current_model==='table_alias') {
+				// find related terms
+				$current_ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$current_table_tipo, // Original database
+					'table', // modelo_name
+					'termino_relacionado', // relation_type
+					true // search_exact (allow only 'table')
+				);
+				if (isset($current_ar_table_tipo[0])) {
+
+					// replace it if was found
+					$value			= $current_ar_table_tipo[0];
+					$replacement	= $current_table_tipo;
+
+					$found_key = array_search($value, $ar_table_tipo_edit);
+					if (false!==$found_key) {
+						// debug only
+						$replaced_list[] = (object)[
+							'from'			=> $value,
+							'from_model'	=> RecordObj_dd::get_modelo_name_by_tipo($value,true),
+							'from_label'	=> RecordObj_dd::get_termino_by_tipo($value),
+							'to'			=> $replacement,
+							'to_model'		=> RecordObj_dd::get_modelo_name_by_tipo($replacement,true),
+							'to_label'		=> RecordObj_dd::get_termino_by_tipo($replacement),
+						];
+						$ar_table_tipo_edit[$found_key] = $replacement;
+					}
+				}
+			}
+		}//end foreach ($original_ar_table_tipo as $key => $current_table_tipo)
+		// dump($ar_table_tipo, ' ar_table_tipo ++ '.to_string($database_alias_tipo));
+		// dump($ar_table_tipo_edit, ' FINAL ar_table_tipo_edit ++++++++++++++++++++++++++++ '.to_string());
+		debug_log(__METHOD__." Replaced some tables in database list: ".PHP_EOL.json_encode($replaced_list, JSON_PRETTY_PRINT), logger::WARNING);
+
+
+		return $ar_table_tipo_edit;
+	}//end parse_database_alias_tables
 
 
 
