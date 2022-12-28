@@ -116,11 +116,11 @@ export const ui = {
 		* BUILD_WRAPPER_EDIT
 		* Component wrapper unified builder
 		* @param object instance (self component instance)
-		* @param object items = {}
+		* @param object options = {}
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
 		* @return DOM node wrapper
 		*/
-		build_wrapper_edit : (instance, items={}) => {
+		build_wrapper_edit : (instance, options={}) => {
 
 			// short vars
 				const model			= instance.model 	// like component_input-text
@@ -181,12 +181,12 @@ export const ui = {
 						// 		}
 						// }
 						// const legacy_selector_content_data = '.content_data'
-						// if (element_css[legacy_selector_content_data] && items.content_data) {
+						// if (element_css[legacy_selector_content_data] && options.content_data) {
 						// 	// style
 						// 		if (element_css[legacy_selector_content_data].style) {
 						// 			// height from style
 						// 			if (element_css[legacy_selector_content_data].style.height) {
-						// 				items.content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
+						// 				options.content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
 						// 			}
 						// 		}
 						// }
@@ -208,13 +208,13 @@ export const ui = {
 					})
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
-				if (label===null) { //  || items.label===null
+				if (options.label===null) { //  || options.label===null
 					// no label add
-				}else if(items.label) {
+				}else if(options.label) {
 					// add custom label
-					wrapper.appendChild(items.label)
+					wrapper.appendChild(options.label)
 					// set pointer
-					wrapper.label = items.label
+					wrapper.label = options.label
 				}else{
 					// default
 					const component_label = ui.create_dom_element({
@@ -231,13 +231,13 @@ export const ui = {
 				}
 
 			// top
-				if (items.top) {
-					wrapper.appendChild(items.top)
+				if (options.top) {
+					wrapper.appendChild(options.top)
 				}
 
 			// buttons
-				if (items.buttons && instance.permissions>1) {
-					wrapper.appendChild(items.buttons)
+				if (options.buttons && instance.permissions>1) {
+					wrapper.appendChild(options.buttons)
 				}
 
 			// filter
@@ -267,18 +267,18 @@ export const ui = {
 				}
 
 			// list_body
-				if (items.list_body) {
-					wrapper.appendChild(items.list_body)
+				if (options.list_body) {
+					wrapper.appendChild(options.list_body)
 				}
 
 			// content_data
-				if (items.content_data) {
-					// const content_data = items.content_data
+				if (options.content_data) {
+					// const content_data = options.content_data
 					// // css
 					// 	const content_data_structure_css = typeof element_css.content_data!=='undefined' ? element_css.content_data : []
 					// 	const ar_css = ['content_data', type, ...content_data_structure_css]
 					// 	content_data.classList.add(...ar_css)
-					wrapper.appendChild(items.content_data)
+					wrapper.appendChild(options.content_data)
 				}
 
 			// tooltip
