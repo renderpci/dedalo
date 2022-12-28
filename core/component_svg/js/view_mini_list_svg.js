@@ -35,7 +35,7 @@ view_mini_list_svg.render = function(self, options) {
 		const fragment = get_value_fragment(self)
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_render(self)
+		const wrapper = ui.component.build_wrapper_mini(self)
 		wrapper.appendChild(fragment)
 
 

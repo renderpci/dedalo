@@ -105,3 +105,55 @@ component_filter.prototype.get_changed_key = function(action, value) {
 }//end get_changed_key
 
 
+
+/**
+* CHANGE_HANDLER
+* Manages the change event actions
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+component_filter.prototype.change_handler = async function(options) {
+
+	// options
+		const self				= options.self
+		const e					= options.e // event
+		const datalist_value	= options.datalist_value
+		const input_checkbox	= options.input_checkbox
+
+	// prevent event default
+		e.preventDefault()
+
+	// change data vars
+		const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
+		// changed key. Find the data.value key (could be different of datalist key)
+		const changed_key	= self.get_changed_key(
+			action,
+			datalist_value,
+			self.data.value
+		)
+		const changed_value	= (action==='insert') ? datalist_value : null
+
+	// change data array
+		const changed_data = [Object.freeze({
+			action	: action,
+			key		: changed_key,
+			value	: changed_value
+		})]
+
+	// fix instance changed_data
+		self.data.changed_data = changed_data
+
+	// force to save on every change. Needed to recalculate the value keys
+		await self.change_value({
+			changed_data	: changed_data,
+			refresh			: false,
+			remove_dialog	: ()=>{
+				return true
+			}
+		})
+
+
+	return true
+}//end change_handler

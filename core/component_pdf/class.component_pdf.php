@@ -133,6 +133,66 @@ class component_pdf extends component_media_common {
 
 
 	/**
+	* GET_VALUE
+	* Get the value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* Some the text components can set the value with the dato directly
+	* the relation components need to process the locator to resolve the value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $grid_cell_object
+	*/
+	public function get_value(string $lang=DEDALO_DATA_LANG, ?object $ddo=null) : dd_grid_cell_object {
+
+		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$column_obj = isset($this->column_obj)
+				? $this->column_obj
+				: (object)[
+					'id' => $this->section_tipo.'_'.$this->tipo
+				  ];
+
+		// current_url. get from dato
+			$dato = $this->get_dato();
+			if(isset($dato)){
+				$element_quality = ($this->mode==='edit')
+					? $this->get_default_quality()
+					: $this->get_thumb_quality();
+
+				$current_url = $this->get_url(
+					$element_quality, // string quality
+					false, // bool test_file
+					true,  // bool absolute
+					false // bool default_add
+				);
+			}else{
+				$current_url = '';
+			}
+
+		// label
+			$label = $this->get_label();
+
+		// class_list
+			$class_list = $ddo->class_list ?? null;
+
+		// value
+			$grid_cell_object = new dd_grid_cell_object();
+				$grid_cell_object->set_type('column');
+				$grid_cell_object->set_label($label);
+				$grid_cell_object->set_ar_columns_obj([$column_obj]);
+				$grid_cell_object->set_cell_type('text');
+				if(isset($class_list)){
+					$grid_cell_object->set_class_list($class_list);
+				}
+				$grid_cell_object->set_value([$current_url]);
+
+
+		return $grid_cell_object;
+	}//end get_value
+
+
+
+	/**
 	* GET_URL
 	* Get PDF url for current quality
 	*
@@ -280,61 +340,64 @@ class component_pdf extends component_media_common {
 	* Once the full path is specified, the command is working as desired.
 	* @param bool $force_create = false
 	* @param bool $absolute = false
-	* @return string|false $result
+	* @return string|false $url
 	*/
 	public function get_pdf_thumb(bool $force_create=false, bool $absolute=false) : ?string {
 
-		$url = null;
-
-		if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
-			define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
-		}
-
-		$file_name  = $this->get_id();
-		$thumb_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
-
-		#
-		# THUMB ALREADY EXISTS
-		if (!$force_create && file_exists($thumb_path)) {
-			$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
-			# ABSOLUTE (Default false)
-			if ($absolute) {
-				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+		// check config constant definition
+			if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
+				define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
+				debug_log(__METHOD__." Undefined config 'DEDALO_PDF_THUMB_DEFAULT'. Using fallback 'thumb' value".to_string(), logger::WARNING);
 			}
-			return $url;
-		}
 
-		#
-		# THUMB NOT EXISTS: GENERATE FROM PDF
-		$quality	= $this->get_default_quality();
-		$path		= $this->get_local_full_path($quality);
-		if (file_exists($path)) {
+		// url default
+			$url = null;
 
-			$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 102;
-			$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 57;
+		// thumb_path
+			$file_name  = $this->get_id();
+			$thumb_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
-			# Like "102x57"
-			$dimensions = $width.'x'.$height.'>';
-
-			#$flags 		= '-debug all';
-			#$flags 		= " -scale 200x200 -background white -flatten ";
-			$command 	= MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
-
-			exec($command.' 2>&1', $output, $result);
-			if ($result==0) {
-				# All is ok
+		// thumb already exists case
+			if (!$force_create && file_exists($thumb_path)) {
 				$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
-
 				# ABSOLUTE (Default false)
 				if ($absolute) {
 					$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
 				}
 				return $url;
-			}else{
-				# An error occurred
-				debug_log(__METHOD__." An error occurred! Failed command: '$command'  ".to_string(), logger::ERROR);
 			}
-		}
+
+		// thumb not exists case: generate from PDF
+			$quality	= $this->get_default_quality();
+			$path		= $this->get_local_full_path($quality);
+			if (file_exists($path)) {
+
+				// dimensions . Like "102x57"
+					$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
+					$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
+					$dimensions	= $width.'x'.$height.'>';
+
+				// command
+					// $flags 		= '-debug all';
+					// $flags 		= " -scale 200x200 -background white -flatten ";
+					$command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
+
+				// exec command
+					exec($command.' 2>&1', $output, $result_code);
+					if ($result_code==0) {
+
+						// url. All is OK
+						$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+
+						// absolute (Default false). Prepend protocol and host
+						if ($absolute===true) {
+							$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+						}
+					}else{
+						// Error. An error occurred
+						debug_log(__METHOD__." An error occurred! Failed command: '$command'  - result_code: ".to_string($result_code), logger::ERROR);
+					}
+			}
 
 		return $url;
 	}//end get_pdf_thumb
@@ -423,6 +486,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
+	* Manages after upload (using service or tool upload) actions
 	* @param object $file_data
 	*	Data from trigger upload file
 	* @return object $response
@@ -438,8 +502,10 @@ class component_pdf extends component_media_common {
 			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.pdf"
 			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
 
-		// thumb : Create pdf_thumb
-			$thumb_url = $this->get_pdf_thumb( $force_create=true );
+		// thumb : Create pdf_thumb image
+			$thumb_url = $this->get_pdf_thumb(
+				true // bool force_create
+			);
 
 		// transcription to text automatic
 			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
@@ -476,7 +542,6 @@ class component_pdf extends component_media_common {
 					debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
 				}
 			}//end if (!empty($related_component_text_area_tipo)) {
-
 
 		try {
 
@@ -530,7 +595,8 @@ class component_pdf extends component_media_common {
 				if (isset($dato[0])) {
 					if (!is_object($dato[0])) {
 						// bad dato
-						debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
+						debug_log(__METHOD__." ERROR. BAD COMPONENT DATO. COMPONENT DATA WILL NOT BE SAVED! ". gettype($dato[0]). ' - ' .to_string($dato), logger::ERROR);
+						dump($dato, ' dato ++++++++ '.to_string());
 					}else{
 						// update property files_info
 						$dato[0]->files_info = $files_info;
@@ -599,10 +665,10 @@ class component_pdf extends component_media_common {
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
 				return $response;
 			}else{
-				$transcription_engine = trim(shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE));
+				$transcription_engine = shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE);
 				if (empty($transcription_engine)) {
-					$response->result = 'error';
-					$response->msg 	  = "Error Processing Request pdf_automatic_transcription: daemon engine not found";
+					$response->result	= 'error';
+					$response->msg		= "Error Processing Request pdf_automatic_transcription: daemon engine not found";
 					return $response;
 				}
 			}
@@ -747,7 +813,7 @@ class component_pdf extends component_media_common {
 	public static function utf8_clean(string $string='', bool $control=false) : string {
 
 	    $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
-	    
+
 		return $string;
 	}//end utf8_clean
 
