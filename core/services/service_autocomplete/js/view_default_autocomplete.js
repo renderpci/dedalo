@@ -668,47 +668,45 @@ const render_operator_selector = function(self) {
 
 	// operator selector
 	// get the operator to use into the filter free
-	const operator	= self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
-		? self.caller.request_config_object.search.sqo_config.operator
-		: '$and'
+	const operator	= self.operator
 
-		const operator_selector = ui.create_dom_element({
-			element_type 	: 'div',
-			class_name 	 	: 'search_operators_div'
+	const operator_selector = ui.create_dom_element({
+		element_type 	: 'div',
+		class_name 	 	: 'search_operators_div'
+	})
+	//label
+		ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'css_label label',
+			inner_html		: get_label.operadores_de_busqueda || 'Search operators',
+			parent			: operator_selector,
 		})
-		//label
-			ui.create_dom_element({
-				element_type	: 'label',
-				class_name		: 'css_label label',
-				inner_html		: get_label.operadores_de_busqueda || 'Search operators',
-				parent			: operator_selector,
-			})
-			const select = ui.create_dom_element({
-				element_type	: 'select',
-				class_name		: 'operator_selector',
-				parent			: operator_selector
-			})
-			select.addEventListener('change',function(e){
-				// set the new operator selected
-				self.operator	= e.target.value
-			})
-			const option_or = ui.create_dom_element({
-				element_type	: 'option',
-				value			: '$or',
-				inner_html		: get_label.o || 'o',
-				parent			: select
-			})
-			const option_and = ui.create_dom_element({
-				element_type	: 'option',
-				value			: '$and',
-				inner_html		: get_label.y || 'y',
-				parent			: select
-			})
-			if (operator==='$or') {
-				option_or.setAttribute('selected', true)
-			}else{
-				option_and.setAttribute('selected', true)
-			}
+		const select = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'operator_selector',
+			parent			: operator_selector
+		})
+		select.addEventListener('change',function(e){
+			// set the new operator selected
+			self.operator	= e.target.value
+		})
+		const option_or = ui.create_dom_element({
+			element_type	: 'option',
+			value			: '$or',
+			inner_html		: get_label.o || 'o',
+			parent			: select
+		})
+		const option_and = ui.create_dom_element({
+			element_type	: 'option',
+			value			: '$and',
+			inner_html		: get_label.y || 'y',
+			parent			: select
+		})
+		if (operator==='$or') {
+			option_or.setAttribute('selected', true)
+		}else{
+			option_and.setAttribute('selected', true)
+		}
 
 	return operator_selector
 }//end render_operator_selector
