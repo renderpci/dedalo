@@ -2210,6 +2210,19 @@ class search {
 					$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
 					break;
 
+				case 'function':
+
+					$use_function =  $search_object->use_function ?? null;
+					if (empty($use_function)) {
+						debug_log(__METHOD__." Empty sqo property 'use_function' ".to_string(), logger::ERROR);
+					}else{
+						$sql_where .= $use_function;
+						$sql_where .= '('. $table_alias . '.datos)';
+
+						$sql_where .= $search_object->operator. ' ' .$search_object->q_parsed;
+
+					}
+					break;
 				default:
 					// undefined format case
 					debug_log(__METHOD__.' Ignored undefined search_object_format '.to_string($search_object_format), logger::ERROR);
