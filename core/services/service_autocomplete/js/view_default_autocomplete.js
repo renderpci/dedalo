@@ -271,10 +271,31 @@ const render_search_input = function(self) {
 		// event input. changes the input value fire the search
 			search_input.addEventListener('keyup', async function(){
 
+				const q = search_input.value
 				self.filter_free_nodes.map(el => {
-					el.filter_item.q = search_input.value
-					el.value = search_input.value
+					el.filter_item.q = ''
+					el.value = ''
 				})
+
+				const filter_free_nodes_len = self.filter_free_nodes.length
+
+				// ar q split iterate
+				const split_q	= self.split_q(q)
+				const ar_q		= split_q.ar_q
+				if (split_q.divisor!==false) {
+					// PROPAGATE TO FILTER FIELDS
+					for (let j = 0; j < filter_free_nodes_len; j++) {
+						if (ar_q[j]) {
+							self.filter_free_nodes[j].filter_item.q = ar_q[j]
+							self.filter_free_nodes[j].value = ar_q[j]
+						}
+					}
+				}else{
+					self.filter_free_nodes.map(el => {
+						el.filter_item.q = search_input.value
+						el.value = search_input.value
+					})
+				}
 
 				// Clear the timeout if it has already been set.
 				// This will prevent the previous task from executing
