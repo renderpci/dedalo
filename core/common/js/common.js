@@ -695,6 +695,11 @@ export const create_source = function (self, action) {
 			source.matrix_id = self.matrix_id
 		}
 
+	// data_source optional (used in time machine mode)
+		if (self.context && true===self.context.hasOwnProperty('data_source') && self.context.data_source) {
+			source.data_source = self.data_source
+		}
+
 	// caller_dataframe
 		if(self.caller && self.caller.model==='section_record'){
 			if(self.caller.caller){

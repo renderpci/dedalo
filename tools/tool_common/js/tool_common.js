@@ -541,6 +541,7 @@ tool_common.prototype.load_component = async function(options) {
 		const type			= context.type
 		const section_id	= context.section_id || null
 		const matrix_id		= context.matrix_id || null
+		const data_source	= context.data_source || null
 		const id_variant	= self.model
 
 	// component instance_options
@@ -560,6 +561,10 @@ tool_common.prototype.load_component = async function(options) {
 
 		if (matrix_id) {
 			instance_options.matrix_id = matrix_id
+		}
+
+		if (data_source) {
+			instance_options.data_source = data_source
 		}
 
 	// get instance and init

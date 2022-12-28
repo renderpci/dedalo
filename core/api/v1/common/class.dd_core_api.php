@@ -1655,20 +1655,26 @@ final class dd_core_api {
 									$section_tipo,
 									true // cache
 								);
-								if ($mode==='tm') {
+
+							// time machine matrix_id. if ($mode==='tm') {
+								if (isset($ddo_source->matrix_id)) {
 									// set matrix_id value to component to allow it search dato in
 									// matrix_time_machine component function 'get_dato' will be
 									// overwritten to get time machine dato instead the real dato
 									$element->matrix_id = $ddo_source->matrix_id;
 								}
-								// error_log("------------------------- build_json_rows ------- $tipo ----". exec_time_unit($start_time,'ms').' ms');
+
+							// data_source. Used by time machine as 'tm' to force component to load data from different sources
+								if (isset($ddo_source->data_source)) {
+									$element->data_source = $ddo_source->data_source;
+								}
 
 							// view optional
 								if (!empty($view)) {
 									$element->set_view($view);
 								}
 
-							// pagination. fix pagination vars (defined in class component_common)
+							// pagination. Fix pagination vars (defined in class component_common)
 								if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
 									$pagination = new stdClass();
 										$pagination->limit	= $rqo->sqo->limit;
@@ -1676,7 +1682,7 @@ final class dd_core_api {
 
 									$element->pagination = $pagination;
 								}
-							// set caller_dataframe information
+							// dataframe. Set caller_dataframe information
 								if(isset($caller_dataframe)){
 									$element->set_caller_dataframe($caller_dataframe);
 								}
@@ -1776,7 +1782,7 @@ final class dd_core_api {
 						$build_options = $ddo_source->build_options ?? null;
 						$element->set_build_options($build_options);
 
-					// element json
+					// element JSON
 						$get_json_options = new stdClass();
 							$get_json_options->get_context	= true;
 							$get_json_options->get_data		= true;

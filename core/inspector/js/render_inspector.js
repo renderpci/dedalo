@@ -1179,7 +1179,7 @@ export const load_component_history = async function(self, component) {
 						section_tipo	: self.section_tipo,
 						parent			: self.section_tipo,
 						label			: component.label,
-						mode			: 'tm',
+						mode			: 'list',
 						fixed_mode		: true, // preserves mode across section_record
 						view			: 'text'
 					},

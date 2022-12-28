@@ -94,6 +94,8 @@ abstract class component_common extends common {
 		public $column_obj;
 		// observers_data
 		public $observers_data;
+		// data_source . string ('tm' for time machine source data)
+		public $data_source;
 
 
 
@@ -345,7 +347,6 @@ abstract class component_common extends common {
 	*/
 	protected function __construct(string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
-
 		// tipo
 			if ( empty($tipo) ) {
 				$msg = "Component common: valid 'tipo' value is mandatory!";
@@ -586,6 +587,8 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATO
+	* Get component dato from database.
+	* To get data from other sources, set var $data_source like 'tm'
 	* @return array|null $dato
 	*/
 	protected function get_dato() {
@@ -596,18 +599,23 @@ abstract class component_common extends common {
 			}
 
 		// time machine mode case
-			if ($this->mode==='tm') {
+			if (isset($this->data_source) &&  $this->data_source==='tm') {
 
-				if (empty($this->matrix_id)) {
-					debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
-					return null;
-				}
+				// matrix_id check
+					if (empty($this->matrix_id)) {
+						debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
+						return null;
+					}
 
 				// tm dato. Note that no lang or section_id is needed, only matrix_id
-				$dato_tm = component_common::get_component_tm_dato($this->tipo, $this->section_tipo, $this->matrix_id);
+					$dato_tm = component_common::get_component_tm_dato(
+						$this->tipo,
+						$this->section_tipo,
+						$this->matrix_id
+					);
 
 				// inject dato to component
-				$this->dato_resolved = $dato_tm;
+					$this->dato_resolved = $dato_tm;
 
 				return $this->dato_resolved;
 			}
@@ -652,6 +660,7 @@ abstract class component_common extends common {
 				);
 			}
 		}
+
 
 		return $dato; # <- Se aplicará directamente el fallback de idioma para el mode list
 	}//end get_dato
@@ -737,7 +746,7 @@ abstract class component_common extends common {
 	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
-	* @return dd_grid_cell_object $value
+	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
@@ -755,9 +764,19 @@ abstract class component_common extends common {
 			}
 
 		// short vars
-			$data		= $this->get_dato();
+			$dato		= $this->get_dato();
 			$label		= $this->get_label();
 			$properties	= $this->get_properties();
+
+		// data
+			$data = empty($dato)
+				? null
+				: array_map(function($el){
+					if (is_array($el) || is_object($el)) {
+						return json_encode($el);
+					}
+					return $el;
+				}, $dato);
 
 		// fields_separator
 			$fields_separator = isset($fields_separator)
@@ -774,20 +793,20 @@ abstract class component_common extends common {
 					: ' | ');
 
 		// dd_grid_cell_object
-			$value = new dd_grid_cell_object();
-				$value->set_type('column');
-				$value->set_label($label);
-				$value->set_cell_type('text');
-				$value->set_ar_columns_obj([$column_obj]);
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_label($label);
+				$dd_grid_cell_object->set_cell_type('text');
+				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
 				if(isset($class_list)){
-					$value->set_class_list($class_list);
+					$dd_grid_cell_object->set_class_list($class_list);
 				}
-				$value->set_fields_separator($fields_separator);
-				$value->set_records_separator($records_separator);
-				$value->set_value($data);
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($data);
 
 
-		return $value;
+		return $dd_grid_cell_object;
 	}//end get_value
 
 
@@ -3451,13 +3470,23 @@ abstract class component_common extends common {
 
 		$search = search::get_instance($sqo);
 		$result = $search->search();
-			#dump($result, ' result ++ '.to_string());
 
 		$record = reset($result->ar_records);
 
 		$tm_dato = !empty($record)
 			? $record->dato
 			: [];
+
+		// check bad data (old formats not array)
+			if (!empty($tm_dato) && !is_array($tm_dato)) {
+				debug_log(__METHOD__." Bad dato found in time machine data. Making array cast to found dato: ".gettype($tm_dato)
+					.PHP_EOL
+					. to_string($tm_dato),
+					logger::ERROR
+				);
+				$tm_dato = (array)$tm_dato;
+			}
+
 
 		return $tm_dato;
 	}//end get_component_tm_dato
