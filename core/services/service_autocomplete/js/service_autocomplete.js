@@ -292,7 +292,6 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 		const search_sections 	= options.search_sections || []
 		const filter_by_list	= options.filter_by_list || null
 
-			console.log("search_sections:",search_sections);
 		if(search_sections.length ===0){
 			return null
 		}
@@ -450,6 +449,43 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 	return api_response
 }//end dedalo_engine
+
+
+
+/**
+* SPLIT_Q
+* @return array ar_q
+*/
+service_autocomplete.prototype.split_q = function(q) {
+
+	const ar_q = []
+
+	const regex =  /[^|]+/g // /"[^"]+"|'[^']+'|[^|\s]+|[^\s|]+/ug;
+	const str 	= q
+	let m;
+
+	while ((m = regex.exec(str)) !== null) {
+	    // This is necessary to avoid infinite loops with zero-width matches
+	    if (m.index === regex.lastIndex) {
+	        regex.lastIndex++;
+	    }
+
+	    // The result can be accessed through the `m`-variable.
+	    m.forEach((match, groupIndex) => {
+	        //console.log(`Found match, group ${groupIndex}: ${match}`);
+	        ar_q.push(match.trim())
+	    });
+	}
+
+	const divisor = (q.indexOf('|')!==-1) ? '|' : false
+
+	const result = {
+		ar_q 	: ar_q,
+		divisor : divisor
+	}
+
+	return result
+};//end split_q
 
 
 
