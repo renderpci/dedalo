@@ -816,7 +816,7 @@ common.prototype.load_script = async function(src) {
 
 /**
 * GET_COLUMNS
-* Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc)
+* Resolve the paths into the request_config_object with all dependencies (portal into portals, portals into sections, etc)
 * and create the columns to be render by the section or portals
 * @return array ar_columns the the specific columns to render into the list, with inverse path format.
 */
@@ -826,8 +826,8 @@ common.prototype.load_script = async function(src) {
 
 	// 	const full_ddo_map = []
 
-	// 	// // get ddo_map from the rqo_config.show, self can be a section or component_portal, and both has rqo_config
-	// 	const ddo_map = self.rqo_config.show.ddo_map
+	// 	// // get ddo_map from the request_config_object.show, self can be a section or component_portal, and both has request_config_object
+	// 	const ddo_map = self.request_config_object.show.ddo_map
 	// 	console.log("self:",self.context);
 	// 	// get the sub elements with the ddo_map, the method is recursive,
 	// 	// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
@@ -844,9 +844,11 @@ common.prototype.load_script = async function(src) {
 
 /**
 * GET_COLUMNS
-* Resolve the paths into the rqo_config with all dependencies (portal into portals, portals into sections, etc)
+* Resolve the paths into the request_config_object with all dependencies (portal into portals, portals into sections, etc)
 * and create the columns to be render by the section or portals
 * @param object context
+* @param object datum_context
+* 	optional parameter send by section, to be used to find the sort-able ddo.
 * @return array columns_map
 * 	The the specific columns to render into the list.
 */
@@ -872,6 +874,7 @@ export const get_columns_map = function(context, datum_context) {
 
 	// storage of all ddo_map in flat array, without hierarchy, to find the components easily.
 		const full_ddo_map = []
+	// set itself as ddo
 		full_ddo_map.push(context)
 
 	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create
@@ -884,9 +887,11 @@ export const get_columns_map = function(context, datum_context) {
 			// get the ddo map to be used
 			const ddo_map = (context.mode !== 'search')
 				? request_config_item.show.ddo_map
-				: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
-					? request_config_item.search.ddo_map
-					: request_config_item.show.ddo_map
+				: request_config_item.choose && request_config_item.choose.ddo_map && request_config_item.choose.ddo_map.length > 0
+					? request_config_item.choose.ddo_map
+					: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
+						? request_config_item.search.ddo_map
+						: request_config_item.show.ddo_map
 
 			// get the direct components of the caller (component or section)
 			const ar_first_level_ddo		= ddo_map.filter(item => item.parent === tipo)
@@ -894,7 +899,6 @@ export const get_columns_map = function(context, datum_context) {
 
 			// store the current component in the full ddo map
 			full_ddo_map.push(...ddo_map)
-
 			for (let j = 0; j < ar_first_level_ddo_len; j++) {
 
 				const dd_object = ar_first_level_ddo[j]
@@ -903,7 +907,7 @@ export const get_columns_map = function(context, datum_context) {
 
 				// if the ddo has a column_id and columns_maps are defined in the properties,
 				// get the column as it has defined.
-				if (dd_object.column_id && source_columns_map.length >0){
+				if (dd_object.column_id && source_columns_map.length > 0){
 
 					// column_exists. If the column has stored by previous ddo, don't touch the array,
 					// it's necessary to preserve the order of the columns_map
@@ -930,24 +934,6 @@ export const get_columns_map = function(context, datum_context) {
 				}else{
 					// if the ddo don't has column_id and the column_map is not defined in properties,
 					// create a new column with the ddo information or join all components in one column
-
-					// semantic node is a exception, it will create a column for itself,
-					// it works with different sqo than his parent portal and it's necessary always his own space
-					// to change the active sqo.
-						if(dd_object.model==='component_semantic_node'){
-
-							columns_map.push(
-								{
-									id		: dd_object.tipo,
-									label	: dd_object.tipo,
-									tipo	: dd_object.tipo,
-									model	: dd_object.model
-								}
-							)
-							dd_object.column_id = dd_object.tipo
-							continue;
-						}
-
 					switch(view){
 						// component_portal will join the components that doesn't has columns defined.
 						case 'line':
@@ -1225,8 +1211,8 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 	// 				// 	continue;
 	// 				// }
 
-	// 			// rqo_config
-	// 				const rqo_config	= (current_context && current_context.request_config)
+	// 			// request_config_object
+	// 				const request_config_object	= (current_context && current_context.request_config)
 	// 					? current_context.request_config.find(el => el.api_engine==='dedalo')
 	// 					: null
 
@@ -1234,8 +1220,8 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 
 	// 			// add sub_ddo_map
-	// 				if(rqo_config && rqo_config.show && rqo_config.show.ddo_map){
-	// 					const current_ddo_map	= rqo_config.show.ddo_map
+	// 				if(request_config_object && request_config_object.show && request_config_object.show.ddo_map){
+	// 					const current_ddo_map	= request_config_object.show.ddo_map
 	// 					const sub_ddo_map		= get_sub_ddo_map(datum, current_ddo.tipo, current_ddo_map, [])
 	// 					ar_ddo.push(...sub_ddo_map)
 	// 				}else{
@@ -1280,30 +1266,30 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 * BUILD_RQO_SHOW
 * @return object rqo
 */
-common.prototype.build_rqo_show = async function(rqo_config, action, add_show=false){
+common.prototype.build_rqo_show = async function(request_config_object, action, add_show=false){
 
 	const self = this
 
-	// clone rqo_config
-		rqo_config = clone(rqo_config)
+	// clone request_config_object
+		request_config_object = clone(request_config_object)
 
 	// local_db_data. get value if exists.
 	// Allow, for example, to return to the last paginated list preserving the user's
 	// navigation offset
 		// const saved_rqo = await data_manager.get_local_db_data(self.id, 'rqo')
 		// if(saved_rqo){
-		// 	if (rqo_config.sqo) {
+		// 	if (request_config_object.sqo) {
 		// 		let to_save = false
 		// 		saved_rqo.sqo = saved_rqo.sqo || {}
 		// 		// update saved offset if is different from received config
-		// 			if (typeof rqo_config.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==rqo_config.sqo.filter) {
-		// 				saved_rqo.sqo.filter = rqo_config.sqo.filter
+		// 			if (typeof request_config_object.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==request_config_object.sqo.filter) {
+		// 				saved_rqo.sqo.filter = request_config_object.sqo.filter
 		// 				to_save = true
 		// 				console.warn("updated filter in saved_rqo:", saved_rqo);
 		// 			}
 		// 		// update saved offset if is different from received config
-		// 			if (typeof rqo_config.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==rqo_config.sqo.offset) {
-		// 				saved_rqo.sqo.offset = rqo_config.sqo.offset
+		// 			if (typeof request_config_object.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==request_config_object.sqo.offset) {
+		// 				saved_rqo.sqo.offset = request_config_object.sqo.offset
 		// 				to_save = true
 		// 				console.warn("updated offset in saved_rqo:", saved_rqo);
 		// 			}
@@ -1324,13 +1310,13 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		const source = create_source(self, action)
 
 	// sqo_config
-		const sqo_config = rqo_config && rqo_config.show && rqo_config.show.sqo_config
-			? rqo_config.show.sqo_config
+		const sqo_config = request_config_object && request_config_object.show && request_config_object.show.sqo_config
+			? request_config_object.show.sqo_config
 			: false
 
 	// sqo with fallback to sqo_config
-		const sqo = rqo_config && rqo_config.sqo
-			? rqo_config.sqo
+		const sqo = request_config_object && request_config_object.sqo
+			? request_config_object.sqo
 			: sqo_config
 				? sqo_config
 				: {}
@@ -1357,7 +1343,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 
 	// Get the limit, offset, full count, and filter by locators.
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
-	// and finally if the rqo_config don't has sqo or sqo_config, set the default parameter to each.
+	// and finally if the request_config_object don't has sqo or sqo_config, set the default parameter to each.
 		// sqo.limit
 		if (sqo.limit===undefined) {
 			sqo.limit = (sqo_config && sqo_config.limit!==undefined)
@@ -1408,8 +1394,8 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 		}
 
 		if (add_show===true) {
-			if (rqo_config.show) {
-				rqo.show = rqo_config.show
+			if (request_config_object.show) {
+				rqo.show = request_config_object.show
 			}
 			console.warn("added rqo.show:", self.tipo, self.mode );
 		}
@@ -1431,7 +1417,7 @@ common.prototype.build_rqo_show = async function(rqo_config, action, add_show=fa
 * Used from portal to autocomplete
 * @return object rqo
 */
-common.prototype.build_rqo_search = async function(rqo_config, action){
+common.prototype.build_rqo_search = async function(request_config_object, action){
 
 	const self = this
 
@@ -1439,20 +1425,20 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		const source	= create_source(self, action);
 
 	// get the operator to use into the filter free
-		const operator	= rqo_config.search && rqo_config.search.sqo_config && rqo_config.search.sqo_config.operator
-			? rqo_config.search.sqo_config.operator
+		const operator	= request_config_object.search && request_config_object.search.sqo_config && request_config_object.search.sqo_config.operator
+			? request_config_object.search.sqo_config.operator
 			: '$or'
 
 	// sqo. Set the sqo_config into a checked variable, get the sqo_config for search or show
-		const sqo_config = rqo_config.search && rqo_config.search.sqo_config
-			? rqo_config.search.sqo_config
-			: rqo_config.show && rqo_config.show.sqo_config
-				? rqo_config.show.sqo_config
+		const sqo_config = request_config_object.search && request_config_object.search.sqo_config
+			? request_config_object.search.sqo_config
+			: request_config_object.show && request_config_object.show.sqo_config
+				? request_config_object.show.sqo_config
 				: {}
 
 	// get the ar_sections
-		const ar_sections = rqo_config.sqo && rqo_config.sqo.section_tipo
-			? rqo_config.sqo.section_tipo.map(el=>el.tipo)
+		const ar_sections = request_config_object.sqo && request_config_object.sqo.section_tipo
+			? request_config_object.sqo.section_tipo.map(el=>el.tipo)
 			: ( sqo_config.section_tipo)
 					? sqo_config.section_tipo.map(el=>el.tipo)
 					: [self.section_tipo]
@@ -1460,13 +1446,13 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 	// limit and offset
 	// check if limit and offset exist in choose, if not get from search.sqo_config, if not, get from show.sqo_config else fixed value
 		const choose_limit_default = 25
-		const limit	= rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.limit
-			? rqo_config.choose.sqo_config.limit
+		const limit	= request_config_object.choose && request_config_object.choose.sqo_config && request_config_object.choose.sqo_config.limit
+			? request_config_object.choose.sqo_config.limit
 			: (sqo_config.limit)
 				? sqo_config.limit
 				: choose_limit_default
-		const offset = rqo_config.choose && rqo_config.choose.sqo_config && rqo_config.choose.sqo_config.offset
-			? rqo_config.choose.sqo_config.offset
+		const offset = request_config_object.choose && request_config_object.choose.sqo_config && request_config_object.choose.sqo_config.offset
+			? request_config_object.choose.sqo_config.offset
 			: (sqo_config.offset)
 				? sqo_config.offset
 				: 0
@@ -1483,8 +1469,8 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 		}
 
 	// children_recursive
-		if(rqo_config.sqo.children_recursive){
-			sqo.children_recursive = rqo_config.sqo.children_recursive
+		if(request_config_object.sqo.children_recursive){
+			sqo.children_recursive = request_config_object.sqo.children_recursive
 		}
 
 
@@ -1495,10 +1481,10 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 		// create the paths for use into filter_free
 		// get the ddo_map to use for the paths in search or show or create new one with the caller
-			const search_ddo_map = rqo_config.search && rqo_config.search.ddo_map
-				? rqo_config.search.ddo_map
-				: rqo_config.show && rqo_config.show.ddo_map
-					? rqo_config.show.ddo_map
+			const search_ddo_map = request_config_object.search && request_config_object.search.ddo_map
+				? request_config_object.search.ddo_map
+				: request_config_object.show && request_config_object.show.ddo_map
+					? request_config_object.show.ddo_map
 					: [{
 						section_tipo	: self.section_tipo,
 						component_tipo	: self.tipo,
@@ -1542,18 +1528,18 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 
 	// fixed_filter
-		const fixed_filter	= rqo_config.sqo && rqo_config.sqo.fixed_filter
-			? rqo_config.sqo.fixed_filter
+		const fixed_filter	= request_config_object.sqo && request_config_object.sqo.fixed_filter
+			? request_config_object.sqo.fixed_filter
 			: false
 
 	// fixed_filter
-		if(rqo_config.sqo.fixed_children_filter){
-			sqo.fixed_children_filter = rqo_config.sqo.fixed_children_filter
+		if(request_config_object.sqo.fixed_children_filter){
+			sqo.fixed_children_filter = request_config_object.sqo.fixed_children_filter
 		}
 
 	// filter_by_list if exists
-		const filter_by_list = rqo_config.sqo && rqo_config.sqo.filter_by_list
-			? rqo_config.sqo.filter_by_list
+		const filter_by_list = request_config_object.sqo && request_config_object.sqo.filter_by_list
+			? request_config_object.sqo.filter_by_list
 			: false
 
 	// value_with_parents
@@ -1576,8 +1562,8 @@ common.prototype.build_rqo_search = async function(rqo_config, action){
 
 	// DDO_MAP
 	// get the ddo_map to show the components, if is set choose get it, if not get the search.ddo_map if not get the show.ddo_map
-		const ddo_map = rqo_config.choose && rqo_config.choose.ddo_map
-			? rqo_config.choose.ddo_map
+		const ddo_map = request_config_object.choose && request_config_object.choose.ddo_map
+			? request_config_object.choose.ddo_map
 			: search_ddo_map
 
 	// columns. get the sub elements with the ddo_map, the method is recursive,

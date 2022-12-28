@@ -2575,8 +2575,8 @@ export const ui = {
 				// note that navigate only refresh current instance content_data, not the whole page
 					self.navigate(
 						() => { // callback
-							self.rqo_config.sqo.order	= order
-							self.rqo.sqo.order			= order
+							self.request_config_object.sqo.order	= order
+							self.rqo.sqo.order						= order
 						},
 						true // bool navigation_history save
 					)

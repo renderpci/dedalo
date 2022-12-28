@@ -94,15 +94,15 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 		// specific actions.. like fix main_element for convenience
 			// const context = self.build_context()
 			// const generate_rqo = async function(){
-			// 	// rqo_config. get the rqo_config from context
-			// 	const rqo_config	= context.request_config
+			// 	// request_config_object. get the request_config_object from context
+			// 	const request_config_object	= context.request_config
 			// 		? context.request_config.find(el => el.api_engine==='dedalo')
 			// 		: {}
 
 			// 	// rqo build
 			// 	const action	= 'search'
 			// 	const add_show	= true
-			// 	const rqo = await self.build_rqo_show(rqo_config, action, add_show)
+			// 	const rqo = await self.build_rqo_show(request_config_object, action, add_show)
 
 			// 	// source (overwrite default created from tool instead section)
 			// 		rqo.source.model		= context.model

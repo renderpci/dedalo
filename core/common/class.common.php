@@ -1287,8 +1287,9 @@ abstract class common {
 				$options->get_request_config	= false;
 				if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-			$called_model = get_class($this); // get_called_class(); // static::class
-			$called_tipo  = $this->get_tipo();
+			$called_model	= get_class($this); // get_called_class(); // static::class
+			$called_tipo	= $this->get_tipo();
+			$get_data		= $options->get_data;
 
 		// cache context
 			static $resolved_get_json = [];
@@ -1338,7 +1339,7 @@ abstract class common {
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
 
-					if (strpos($called_model, 'component_')!==false && $options->get_data===true && !empty($json->data)) {
+					if (strpos($called_model, 'component_')!==false && $get_data===true && !empty($json->data)) {
 
 						$current = reset($json->data);
 							// $current->debug_time_json	= $exec_time;
@@ -1749,16 +1750,16 @@ abstract class common {
 
 		// full_ddo_map. Get the full ddo in every request_config
 			$full_ddo_map = [];
-			foreach ($request_config as $request_config_item) {
+			foreach ($request_config as $request_config_object) {
 
 				// skip empty ddo_map
-				if(empty($request_config_item->show->ddo_map)) {
-					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo) in request_config_item:".to_string($request_config_item), logger::ERROR);
+				if(empty($request_config_object->show->ddo_map)) {
+					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo) in request_config_object:".to_string($request_config_object), logger::ERROR);
 					continue;
 				}
 				// merge all ddo of all request_config
-				$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
-			}//end foreach ($request_config_dedalo as $request_config_item)
+				$full_ddo_map = array_merge($full_ddo_map, $request_config_object->show->ddo_map);
+			}//end foreach ($request_config_dedalo as $request_config_object)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
@@ -1900,41 +1901,51 @@ abstract class common {
 								// the main component has all config, his children has specific config (only his own part)
 
 									// get the component rqo to be updated with the current config
-									$component_rqo_config = $related_element->build_request_config();
-									foreach ($request_config as $request_config_item) {
+									$component_request_config = $related_element->build_request_config();
+									foreach ($request_config as $request_config_object) {
 
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
-										$api_engine			= $request_config_item->api_engine;
-										$children_show		= isset($request_config_item->show)
-											? get_children_recursive($request_config_item->show->ddo_map, $dd_object)
+										$api_engine			= $request_config_object->api_engine;
+										$children_show		= isset($request_config_object->show)
+											? get_children_recursive($request_config_object->show->ddo_map, $dd_object)
 											: null;
-										$children_search	= isset($request_config_item->search)
-											? get_children_recursive($request_config_item->search->ddo_map, $dd_object)
+										$children_search	= isset($request_config_object->search)
+											? get_children_recursive($request_config_object->search->ddo_map, $dd_object)
 											: null;
-										$children_choose	= isset($request_config_item->choose)
-											? get_children_recursive($request_config_item->choose->ddo_map, $dd_object)
+										$children_choose	= isset($request_config_object->choose)
+											? get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
 											: null;
 
 										// select the current api_engine
-										$new_rqo_config = array_find($component_rqo_config, function($el) use($api_engine){
+										$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
 											return $el->api_engine===$api_engine;
 										});
 
 										// set the ddo_map with the new config
 										if (!empty($children_show)) {
-											$new_rqo_config->show->ddo_map  = $children_show;
+											$new_request_config_object->show->ddo_map  = $children_show;
 
 										}
 										if (!empty($children_search)) {
-											$new_rqo_config->search->ddo_map  = $children_search;
+											if (empty($new_request_config_object->search)) {
+												$new_request_config_object->search = (object)[
+													'ddo_map' => []
+												];
+											}
+											$new_request_config_object->search->ddo_map  = $children_search;
 										}
 										if (!empty($children_choose)) {
-											$new_rqo_config->choose->ddo_map  = $children_choose;
+											if (empty($new_request_config_object->choose)) {
+												$new_request_config_object->choose = (object)[
+													'ddo_map' => []
+												];
+											}
+											$new_request_config_object->choose->ddo_map  = $children_choose;
 										}
 									}
 
 								// Inject the request_config inside the component
-									$related_element->request_config = $component_rqo_config;
+									$related_element->request_config = $component_request_config;
 
 								// Inject this tipo as related component from_component_tipo
 									$source_model = get_called_class();
@@ -2746,6 +2757,18 @@ abstract class common {
 								if (!isset($parsed_item->search->sqo_config->operator)) {
 									$parsed_item->search->sqo_config->operator = '$or';
 								}
+								// limit. Overwrite config by session value if exists
+								if (isset($parsed_item->search->sqo_config->limit)) {
+									// get session limit if it was defined
+									if ($model==='section') {
+										$sqo_id	= implode('_', ['section', $tipo]); // cache key sqo_id
+										$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
+											? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+											: $parsed_item->search->sqo_config->limit;
+									}else{
+										$parsed_item->sqo->limit = $parsed_item->search->sqo_config->limit;
+									}
+								}
 							}else{
 								// fallback non defined sqo_config
 								$sqo_config = new stdClass();
@@ -2776,6 +2799,17 @@ abstract class common {
 									$current_ddo_map->parent = $current_ddo_map->parent==='self'
 										? $tipo
 										: $current_ddo_map->parent;
+
+								// label. Add to all ddo_map items
+									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+
+
+								// mode
+									$current_ddo_map->mode = isset($current_ddo_map->mode)
+										? $current_ddo_map->mode
+										: ($model !== 'section'
+											? 'list'
+											: $mode);
 
 								$final_ddo_map[] = $current_ddo_map;
 							}
@@ -3068,23 +3102,23 @@ abstract class common {
 					$sqo = new stdClass();
 						$sqo->section_tipo = $ddo_section_tipo;
 
-				// request_config_item. build
-					// $request_config_item = new stdClass();
-					// 	$request_config_item->api_engine	= 'dedalo';
-					// 	$request_config_item->show			= $show;
-					// 	$request_config_item->sqo			= $sqo;
-					// 	// $request_config_item->sqo->tipo	= $tipo;
-					// 	// $request_config_item->search		= $search;
-					// 	// $request_config_item->select		= $select;
+				// request_config_object. build
+					// $request_config_object = new stdClass();
+					// 	$request_config_object->api_engine	= 'dedalo';
+					// 	$request_config_object->show			= $show;
+					// 	$request_config_object->sqo			= $sqo;
+					// 	// $request_config_object->sqo->tipo	= $tipo;
+					// 	// $request_config_object->search		= $search;
+					// 	// $request_config_object->select		= $select;
 
-					$request_config_item = new request_config_object();
-						$request_config_item->set_api_engine('dedalo');
-						$request_config_item->set_type('main');
-						$request_config_item->set_show($show);
-						$request_config_item->set_sqo($sqo);
+					$request_config_object = new request_config_object();
+						$request_config_object->set_api_engine('dedalo');
+						$request_config_object->set_type('main');
+						$request_config_object->set_show($show);
+						$request_config_object->set_sqo($sqo);
 
 				// added parsed item
-					$ar_request_query_objects[] = $request_config_item;
+					$ar_request_query_objects[] = $request_config_object;
 
 				// set var (TEMPORAL TO GIVE ACCESS FROM GET_SUB_DATA)
 					dd_core_api::$context_dd_objects = $ddo_map;

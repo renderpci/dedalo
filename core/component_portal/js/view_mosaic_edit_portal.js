@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {get_section_records} from '../../section/js/section.js'
 	// import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
@@ -81,7 +82,12 @@ view_mosaic_edit_portal.render = async function(self, options) {
 				alt_list_body.appendChild(list_header_node)
 
 			// alternative_table_view (body)
-				const alt_ar_section_record		= await self.get_ar_instances({mode:'list', columns_map:alt_columns_map, id_variant: 'table'})
+				const alt_ar_section_record		= await get_section_records({
+					caller		: self,
+					mode		: 'list',
+					columns_map	: alt_columns_map,
+					id_variant	: 'table'
+				})
 				// store to allow destroy later
 				self.ar_instances.push(...alt_ar_section_record)
 				const alternative_table_view	= await render_alternative_table_view(self, alt_ar_section_record, alt_list_body)
@@ -119,7 +125,12 @@ view_mosaic_edit_portal.render = async function(self, options) {
 				const hover_columns_map	= rebuild_columns_map(hover_columns, self, false)
 
 			// hover_view (body)
-				const hover_ar_section_record		= await self.get_ar_instances({mode:'list', columns_map:hover_columns_map, id_variant: 'hover'})
+				const hover_ar_section_record = await get_section_records({
+					caller		: self,
+					mode		: 'list',
+					columns_map	: hover_columns_map,
+					id_variant	: 'hover'
+				})
 				// store to allow destroy later
 				self.ar_instances.push(...hover_ar_section_record)
 				const hover_view	= await render_hover_view(self, hover_ar_section_record, hover_body)
@@ -137,7 +148,11 @@ view_mosaic_edit_portal.render = async function(self, options) {
 			// self.id_variant = self.id_variant
 			// 	? self.id_variant + 'alt'
 			// 	: 'alt' // temporal change of id_variant to modify section records id
-			const ar_section_record	= await self.get_ar_instances({mode:'list', columns_map:columns_map})
+			const ar_section_record	= await get_section_records({
+				caller		: self,
+				mode		: 'list',
+				columns_map	: columns_map
+			})
 			// store to allow destroy later
 			self.ar_instances.push(...ar_section_record)
 

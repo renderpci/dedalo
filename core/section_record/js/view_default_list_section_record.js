@@ -104,14 +104,14 @@ view_default_list_section_record.render = async function(self, options) {
 			}//end if (self.caller.model==='section' || self.caller.model==='time_machine')
 
 	// wrapper css
-		const css = self.caller.context.css && self.caller.context.css.section_record
-			? self.caller.context.css.section_record
-			: null
-		if (css) {
-			for(const key in css) {
-				wrapper.style[key] = css[key]
-			}
-		}
+		// const css = self.caller.context.css && self.caller.context.css.section_record
+		// 	? self.caller.context.css.section_record
+		// 	: null
+		// if (css) {
+		// 	for(const key in css) {
+		// 		wrapper.style[key] = css[key]
+		// 	}
+		// }
 
 	// content_data render_columns
 		const fragment = await get_content_data(self)
@@ -145,7 +145,6 @@ view_default_list_section_record.render = async function(self, options) {
 const get_content_data = async function(self) {
 
 	// ar_columns_instances
-		// const ar_instances = await self.get_ar_instances()
 		const ar_columns_instances	= await self.get_ar_columns_instances_list()
 		const columns_map			= await self.columns_map
 
@@ -174,7 +173,7 @@ const get_content_data = async function(self) {
 							section_id			: self.section_id,
 							row_key				: self.row_key,
 							paginated_key		: self.paginated_key,
-							offset				: self.offset,
+							// offset				: self.offset,
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
 							modification_date	: self.modification_date || null, // tm var

@@ -5,7 +5,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {when_in_viewport} from '../../common/js/events.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		// render_column_remove,
@@ -103,7 +103,10 @@ export const build_content_data = async function(self) {
 				event_manager.publish('change_search_element', self)
 		})
 
-		const ar_section_record = await self.get_ar_instances({mode:'list'})
+		const ar_section_record = await get_section_records({
+			caller	: self,
+			mode	:'list'
+		})
 
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)

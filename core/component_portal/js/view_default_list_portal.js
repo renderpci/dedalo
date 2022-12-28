@@ -4,15 +4,9 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
-	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-	// import {view_autocomplete} from './view_autocomplete.js'
-	// import {flat_column_items} from '../../common/js/common.js'
-	// import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
 
 
 
@@ -44,8 +38,9 @@ view_default_list_portal.render = async function(self, options) {
 		const children_view	= self.context.children_view || self.context.view || 'default'
 
 	// ar_section_record
-		const ar_section_record	= await self.get_ar_instances({
-			view : children_view
+		const ar_section_record	= await get_section_records({
+			caller	: self,
+			view	: children_view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)

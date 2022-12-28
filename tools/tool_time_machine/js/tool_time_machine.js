@@ -137,9 +137,9 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 				self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
-			// ddo_map for service_time_machine. Section uses is rqo_config show
+			// ddo_map for service_time_machine. Section uses is request_config_object show
 				const ddo_map = self.main_element.model==='section'
-					? self.main_element.rqo_config.show.ddo_map
+					? self.main_element.request_config_object.show.ddo_map
 					: [{
 							tipo			: self.main_element.tipo,
 							type			: self.main_element.type,

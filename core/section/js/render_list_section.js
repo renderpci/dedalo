@@ -4,13 +4,12 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {get_ar_instances} from './section.js'
 	import {
 		render_server_response_error,
 		no_records_node
@@ -55,7 +54,7 @@ render_list_section.prototype.list = async function(options) {
 	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
-			: await get_ar_instances(self)
+			: await get_section_records({caller: self})
 
 	// content_data
 		const content_data = await get_content_data(self.ar_instances, self)
@@ -181,9 +180,6 @@ render_list_section.prototype.list = async function(options) {
 */
 const get_content_data = async function(ar_section_record, self) {
 
-	// section_record instances (initiated and built)
-	// const ar_section_record = await self.get_ar_instances()
-
 	const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
@@ -280,7 +276,7 @@ render_list_section.render_column_id = function(options){
 		const self					= options.caller // object instance, usually section or portal
 		const section_id			= options.section_id
 		const section_tipo			= options.section_tipo
-		const offset				= options.offset // int . Current item offset in all result
+		const paginated_key				= options.paginated_key // int . Current item paginated_key in all result
 		// const matrix_id			= options.matrix_id
 		// const modification_date	= options.modification_date
 
@@ -296,7 +292,7 @@ render_list_section.render_column_id = function(options){
 			text_content	: section_id
 		})
 		if(SHOW_DEBUG===true) {
-			section_id_node.title = 'offset: ' + offset
+			section_id_node.title = 'paginated_key: ' + paginated_key
 		}
 
 	// buttons
@@ -523,12 +519,12 @@ render_list_section.render_column_id = function(options){
 							button_edit.addEventListener('click', function(){
 
 								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo = self.rqo_config.sqo
+									const sqo = self.request_config_object.sqo
 									// set updated filter
 									sqo.filter = self.rqo.sqo.filter
 									// reset pagination
-									sqo.limit		= 1
-									sqo.offset	= offset
+									sqo.limit	= 1
+									sqo.offset	= paginated_key
 
 								// source
 									const source = {

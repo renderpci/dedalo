@@ -42,7 +42,7 @@ export const area_thesaurus = function() {
 
 	this.filter = null
 
-	this.rqo_config
+	this.request_config_object
 	this.rqo
 
 	this.build_options = {
@@ -162,23 +162,23 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 		self.data = self.data || []
 
-	// // rqo_config
-	// 	self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+	// // request_config_object
+	// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
 	// // rqo build
-	// 	self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, 'get_data')
+	// 	self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, 'get_data')
 
 	// rqo
 		const generate_rqo = async function(){
-			// rqo_config. get the rqo_config from context
-			self.rqo_config	= (self.context && self.context.request_config)
+			// request_config_object. get the request_config_object from context
+			self.request_config_object	= (self.context && self.context.request_config)
 				? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 				: {}
 
 			// rqo build
 			const action	= 'get_data'
 			const add_show	= false
-			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
+			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
 		}
 		await generate_rqo()
 
@@ -208,12 +208,12 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				// self.dd_request.show = self.build_rqo('show', self.context.request_config, 'get_data')
 				// console.log("-----------------------self.dd_request.show", self.dd_request.show);
 
-			// // rebuild the rqo_config and rqo in the instance
-			// // rqo_config
-			// 	self.rqo_config	= self.context.request_config.find(el => el.api_engine==='dedalo')
+			// // rebuild the request_config_object and rqo in the instance
+			// // request_config_object
+			// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
 			// // rqo build
-			// 	self.rqo = await self.build_rqo_show(self.rqo_config, 'get_data')
+			// 	self.rqo = await self.build_rqo_show(self.request_config_object, 'get_data')
 				if(self.context.hierarchy_sections){
 					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
 				}

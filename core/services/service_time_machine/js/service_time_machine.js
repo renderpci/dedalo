@@ -123,13 +123,13 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		const generate_rqo = async function(){
 
 			if (self.context) {
-				// rqo_config. get the rqo_config from context
-				self.rqo_config	= self.context && self.context.request_config
+				// request_config_object. get the request_config_object from context
+				self.request_config_object	= self.context && self.context.request_config
 					? self.context.request_config.find(el => el.api_engine==='dedalo')
 					: {}
 			}else{
-				// rqo_config. get the rqo_config from request_config
-				self.rqo_config = self.request_config
+				// request_config_object. get the request_config_object from request_config
+				self.request_config_object = self.request_config
 					? self.request_config.find(el => el.api_engine==='dedalo')
 					: {}
 			}
@@ -137,7 +137,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// rqo build
 			const action	= 'search'
 			const add_show	= true
-			self.rqo = self.rqo || await self.build_rqo_show(self.rqo_config, action, add_show)
+			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
 		}
 		await generate_rqo()
 
