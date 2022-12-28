@@ -2908,6 +2908,7 @@ abstract class component_common extends common {
 
 		# JSON CASE
 		if ($json_value = json_decode($search_value)) {
+
 			if (is_array($json_value) && count($json_value)>1) {
 				$group = new stdClass();
 					$name = $operator_between;
@@ -2929,13 +2930,12 @@ abstract class component_common extends common {
 		}else{
 
 
-			$model = end($query_object->path)->modelo;
-			if ($model==='component_json' || $q_operator === '==' || strpos($query_object->q, '==')==0 ) {
+			$model = end($query_object->path)->model;
+			if ($model==='component_json' || $q_operator==='==' || (!empty($query_object->q) && strpos($query_object->q, '==')===0) ) {
 				// component json case
 
 				// $query_object->q	= str_replace('"', '\"', $search_value);
 				$ar_query_object	= $query_object;
-
 			}else{
 				// all others
 
@@ -2947,6 +2947,7 @@ abstract class component_common extends common {
 
 				# split into searchable units
 				$total_count = count($matches[0]);
+
 				if ($total_count===1) {
 
 					$current_search_value = reset($matches[0]);
@@ -2969,10 +2970,9 @@ abstract class component_common extends common {
 					}//end foreach ($matches[0] as $key => $value)
 
 					$ar_query_object = $group;
-
 				}//end if ($total_count===1) {
 			}//end if ($model==='component_json')
-		}
+		}//end if ($json_value = json_decode($search_value))
 
 
 		return $ar_query_object;
