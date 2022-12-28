@@ -6,6 +6,7 @@
 // imports
 	import {ui} from '../../../common/js/ui.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
+	import {clone} from '../../../common/js/utils/index.js'
 	import * as instances from '../../../common/js/instances.js'
 	import {get_section_records} from '../../../section/js/section.js'
 
@@ -35,35 +36,41 @@ view_default_autocomplete.render = async function (self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// autocomplete_wrapper
-		const autocomplete_wrapper = get_autocomplete_wrapper(self)
+	// content_data
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
-			return autocomplete_wrapper
+			// fix pointers
+			self.node.content_data = content_data
+			return content_data
 		}
 
 	// wrapper
-		const component_wrapper = self.component_wrapper
-		component_wrapper.appendChild(autocomplete_wrapper)
-		component_wrapper.autocomplete_wrapper = autocomplete_wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper_service_autocomplete'
+		})
+		wrapper.appendChild(content_data)
+		// fix pointers
+		wrapper.content_data = content_data
 
-	return component_wrapper
+	// fix node
+		self.node = wrapper
+
+
+	return wrapper
 }//end view_default_autocomplete
 
 
 
 /**
-* GET_autocomplete_wrapper
+* GET_CONTENT_DATA
 * Creates the DOM nodes of the service
 * @return DOM node autocomplete_wrapper
 */
-const get_autocomplete_wrapper = function(self) {
+const get_content_data = function(self) {
 
-	// search container
-		const autocomplete_wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'autocomplete_search_wrapper', // css_autocomplete_hi_search_field
-			parent			: self.wrapper
-		})
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// check there exists valid target sections before create the options and selector
 		const all_ar_section	= []
@@ -86,16 +93,16 @@ const get_autocomplete_wrapper = function(self) {
 				element_type	: 'div',
 				class_name		: 'debug',
 				inner_html		: msg,
-				parent			: autocomplete_wrapper
+				parent			: fragment
 			})
-			return autocomplete_wrapper
+			return fragment
 		}
 
 	// options container
 		const options_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'options_hidden',
-			parent			: autocomplete_wrapper
+			parent			: fragment
 		})
 
 	// source selector (Dédalo, Zenon, etc.)
@@ -116,7 +123,7 @@ const get_autocomplete_wrapper = function(self) {
 
 	// search_input
 		const search_input = render_search_input(self)
-		autocomplete_wrapper.appendChild(search_input)
+		fragment.appendChild(search_input)
 
 		// scroll to search input
 			// search_input.addEventListener('focus', function(e){
@@ -128,7 +135,7 @@ const get_autocomplete_wrapper = function(self) {
 		const button_options = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button_options button gear',
-			parent			: autocomplete_wrapper
+			parent			: fragment
 		})
 		// add listener to the select
 		button_options.addEventListener('mouseup',function(){
@@ -140,16 +147,16 @@ const get_autocomplete_wrapper = function(self) {
 			element_type	: 'ul',
 			id				: self.list_name,
 			class_name		: 'autocomplete_data',
-			parent			: autocomplete_wrapper
+			parent			: fragment
 		})
 
 	// fix main nodes pointers
-		self.autocomplete_wrapper	= autocomplete_wrapper
-		self.search_input			= search_input
-		self.datalist				= datalist
+		self.search_input		= search_input
+		self.datalist			= datalist
+		self.options_container	= options_container
 
 
-	return autocomplete_wrapper
+	return fragment
 }//end render
 
 
@@ -205,21 +212,31 @@ const render_source_selector = function(self) {
 					value			: i.toString(), // pass key as string option
 					inner_html		: label
 				})
+
 				if (search_engine===self.search_engine) {
 					swicher_source.setAttribute('selected', true)
 				}
 			}//end for (let i = 0; i < ar_search_length; i++)
 
 		// add listener to the select
-		select.addEventListener('change',function(e){
+		select.addEventListener('change', async function(e){
 			const key = e.target.value
 
-			self.request_config_object	= clone(self.context.request_config[key])
-			self.ar_search_section_tipo	= self.request_config_object.sqo.section_tipo
-			self.search_engine			= self.request_config_object.api_engine //.find((current_item)=> current_item.typo==='search_engine').value
-			// console.log('self.ar_search_section_tipo', self.ar_search_section_tipo);
-			self.destroy()
-			self.render()
+			const request_config_object = clone(self.context.request_config[key])
+
+			await self.build({
+				request_config_object: request_config_object
+			})
+			const content_data = await self.render({
+				render_level : 'content'
+			})
+
+			// clean the last list
+			while (self.node.firstChild) {
+				self.node.removeChild(self.node.firstChild)
+			}
+			self.node.appendChild(content_data)
+			self.options_container.classList.add('visible');
 		})
 
 	// set default value
@@ -248,15 +265,32 @@ const render_search_input = function(self) {
 		// search_input.setAttribute('autocomplete', 'off')
 		search_input.setAttribute('autocorrect', 'off')
 
+		// Init a timeout variable to be used below
+			let timeout = null;
+
 		// event input. changes the input value fire the search
-			search_input.addEventListener('input', async function(){
-				// check valid filters_selector
-				if (self.ar_search_section_tipo.length<1) {
-					alert('Please, select search section');
-					return
-				}
-				const api_response	= await self.autocomplete_search(this.value)
-				render_datalist(self, api_response)
+			search_input.addEventListener('keyup', async function(){
+
+				self.filter_free_nodes.map(el => {
+					el.filter_item.q = search_input.value
+					el.value = search_input.value
+				})
+
+				// Clear the timeout if it has already been set.
+				// This will prevent the previous task from executing
+				// if it has been less than <MILLISECONDS>
+			    clearTimeout(timeout);
+
+				// search fire is delayed to enable multiple simultaneous selections
+				// get final value (input events are fired one by one)
+				timeout = setTimeout(async()=>{
+
+					const api_response	= await self.autocomplete_search()
+					await render_datalist(self, api_response)
+
+					// console.log('///// fired:');
+				}, 350)
+
 			});
 
 	return search_input
@@ -289,15 +323,20 @@ const render_filters_selector = function(self) {
 			const filter_items = []
 			for (let i = 0; i < ar_sections_length; i++) {
 
-				const ddo_section		= ar_sections[i]
+				const section_tipo		= ar_sections[i]
+
+				const label_find = self.request_config_object.sqo.section_tipo.find(el=> el.tipo===section_tipo)
+				const label = label_find
+					? label_find.label
+					: ''
 				// const id				= ddo_section.tipo
 				// const request_ddo	= self.request_config_object.find(item => item.typo === 'request_ddo').value
 				// const ddo_section	= request_ddo.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
 				const datalist_item	= {
 					grouper	: 'sections',
-					id		: ddo_section.tipo,
-					value	: ddo_section,
-					label	: ddo_section.label,
+					id		: section_tipo,
+					value	: section_tipo,
+					label	: label,
 					change	: function(input_node){
 						const index = ar_sections.indexOf(input_node.dd_value)
 						if (input_node.checked===true && index===-1) {
@@ -309,7 +348,7 @@ const render_filters_selector = function(self) {
 				}
 				filter_items.push(datalist_item)
 
-				ar_id.push(ddo_section.tipo) // add to global array of id
+				ar_id.push(section_tipo) // add to global array of id
 			}
 
 			const filter_id		= self.list_name
@@ -319,7 +358,7 @@ const render_filters_selector = function(self) {
 		}
 
 	// filter_by_list . if the component caller has a filter_by_list we add the datalist of the component
-		const filter_by_list = self.request_config_object.sqo.filter_by_list//find(item => item.typo==='filter_by_list') || false
+		const filter_by_list = self.rqo_search.sqo_options.filter_by_list//find(item => item.typo==='filter_by_list') || false
 		if(filter_by_list) {
 
 			const ar_filter_by_list	= self.ar_filter_by_list
@@ -338,11 +377,12 @@ const render_filters_selector = function(self) {
 
 					const current_datalist	= component_datalist[j]
 					const id				= section +'_'+ component_tipo +'_'+ current_datalist.section_id
-					const q					= {
-						section_id			: current_datalist.value.section_id,
-						section_tipo		: current_datalist.value.section_tipo,
-						from_component_tipo	: component_tipo
-					}
+					const q					= '"'+component_tipo +'_'+ current_datalist.value.section_tipo + '_' +current_datalist.value.section_id+'"'
+					// {
+						// section_id			: current_datalist.value.section_id,
+						// section_tipo		: current_datalist.value.section_tipo,
+						// from_component_tipo	: component_tipo
+					// }
 					const path				= [{
 						section_tipo	: section,
 						component_tipo	: component_tipo
@@ -351,8 +391,10 @@ const render_filters_selector = function(self) {
 						grouper	: component_tipo,
 						id		: id,
 						value	: {
-							q		: q,
-							path	: path
+							q				: q,
+							path			: path,
+							format 			: 'function',
+							use_function	: 'relations_flat_fct_st_si'
 						},
 						label	: current_datalist.label,
 						change	: function(input_node){
@@ -510,30 +552,31 @@ const render_option_chekbox = function(self, datalist_item) {
 			}
 
 		// event change
-			input_checkbox.addEventListener('change', function(){
+			input_checkbox.addEventListener('change', async function(){
 
 				change(this) // caller callback function
 
 				update_local_storage_ar_id(this)
 
 				// force re-search with new options
-					if (self.search_input.value.length>0) {
-						if (self.search_fired===false) {
-							// search fire is delayed to enable multiple simultaneous selections
-							// get final value (input events are fired one by one)
-							setTimeout(()=>{
-								self.search_fired = true
-								self.search_input.dispatchEvent(new Event('input'))
+					const api_response	= await self.autocomplete_search()
+					render_datalist(self, api_response)
 
-								// restore state after 250 milliseconds.
-								// prevents fire multiple events when user selects 'All' option
-								// setTimeout(()=>{
-									self.search_fired = false
-								// },250)
-								console.log('///// fired:');
-							},250)
-						}
-					}
+					// if (self.search_fired===false) {
+					// 	// search fire is delayed to enable multiple simultaneous selections
+					// 	// get final value (input events are fired one by one)
+					// 	setTimeout(()=>{
+					// 		self.search_fired = true
+					// 		self.search_input.dispatchEvent(new Event('input'))
+
+					// 		// restore state after 250 milliseconds.
+					// 		// prevents fire multiple events when user selects 'All' option
+					// 		// setTimeout(()=>{
+					// 			self.search_fired = false
+					// 		// },250)
+					// 		console.log('///// fired:');
+					// 	},250)
+					// }
 			});
 
 
@@ -577,50 +620,38 @@ const render_inputs_list = function(self) {
 		class_name		: 'inputs_list' // css_autocomplete_hi_search_field
 	})
 
-	const ddo_map = self.request_config_object.show.ddo_map
-	const ddo_map_length = ddo_map.length
+	const filter_free = self.rqo_search.sqo_options.filter_free
 
-	const ar_components = []
-	for (let i = 0; i < ddo_map_length; i++) {
-		const current_ddo = ddo_map[i]
-		// check if the current ddo is a semantic node and the caller it's not a component_semantic_node,
-		//if the caller is a portal the semantic node it's necessary remove it, because the semantic node has his own sqo (it's outside of the portal sqo )
-		if(current_ddo.model==='component_semantic_node' && self.caller.model !== current_ddo.model) continue;
+	for (let operator in filter_free) {
+		const filter_group = filter_free[operator]
+		const filter_group_length = filter_group.length
 
+		for (let i = 0; i < filter_group_length; i++) {
+			const filter_item = filter_group[i]
+
+			const current_ddo = filter_item.path[filter_item.path.length-1]
+
+			const component_input = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'text',
+				parent			: inputs_list
+			})
+			const component_label = current_ddo.label.replace(/(<([^>]+)>)/ig,"");
+			component_input.setAttribute('placeholder', component_label )
+
+			component_input.filter_item = filter_item
+
+			component_input.addEventListener('change',async function () {
+				filter_item.q = component_input.value
+				const api_response	= await self.autocomplete_search()
+				render_datalist(self, api_response)
+			})
+			self.filter_free_nodes.push(component_input)
+		}
 		// check if the current ddo is a dataframe node,
 		//if the caller is a portal the dataframe it's necessary remove it, because dataframes nodes has his own sqo (it's outside of the portal sqo )
-		if(current_ddo.is_dataframe && current_ddo.is_dataframe===true ) continue;
+			//if(current_ddo.is_dataframe && current_ddo.is_dataframe===true ) continue;
 
-		// check if the current ddo has children associated, it's necessary identify the last ddo in the path chain, the last ddo is the component
-		const current_ar_valid_ddo = ddo_map.filter(item => item.parent === current_ddo.tipo)
-		if(current_ar_valid_ddo.length !== 0) continue
-
-		ar_components.push(current_ddo)
-	}
-
-	// const request_ddo = self.request_config_object.find(item => item.typo === 'request_ddo').value
-	// const sqo_length = request_ddo.length
-
-
-	// for (let i = sqo_length - 1; i >= 0; i--) {
-	// 	const item = request_ddo[i]
-	// 	if(item.type==='component' && item.typo==='ddo' && ar_components.indexOf(item.tipo)===-1){
-	// 		ar_components.push(item.tipo)
-	// 	}
-	// }
-
-	const ar_components_length = ar_components.length
-	for (let i = 0; i < ar_components_length; i++) {
-		const ddo_component = ar_components[i]
-		// const ddo_component	= request_ddo.find((item) => item.type === 'component' && item.typo === 'ddo'&& item.tipo === compoment)
-
-		const component_input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			parent			: inputs_list
-		})
-		const component_label = ddo_component.label.replace(/(<([^>]+)>)/ig,"");
-		component_input.setAttribute('placeholder', component_label )
 	}
 
 
@@ -701,12 +732,16 @@ const render_datalist = async function(self, api_response) {
 		}
 
 	// get the result from the API response
-		const result	= api_response.result
-		const data		= result.data.find(el=> el.tipo ===self.tipo && el.typo==='sections')
+		const result = api_response.result
 
+	// data. if the api doesn't send any data, do not continue, return empty datalist
+		const data = result.data.find(el=> el.tipo ===self.tipo && el.typo==='sections')
+		if(!data){
+			return datalist
+		}
 
+	// context
 		const context	= result.context
-
 
 	// get the sections that was searched
 	// const ar_search_sections = self.ar_search_section_tipo
@@ -779,7 +814,7 @@ const render_datalist = async function(self, api_response) {
 				if(add_value){
 					if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
 						const params = add_value.perform.params
-						view_default_autocomplete[add_value.perform.function](self, li_node.instance , params)
+						view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
 
 						// clean the last list
 						while (datalist.firstChild) {
@@ -975,7 +1010,6 @@ const get_last_ddo_data_value = function(current_path, value, data, recurs){
 */
 view_default_autocomplete.render_grid_choose = async function(self, selected_instance, params){
 
-
 	const grid_choose_data	= await get_grid_choose_data(self, selected_instance, params)
 	// get dd objects from the context that will be used to build the lists in correct order
 	const rqo_search 	= grid_choose_data.rqo_search
@@ -987,7 +1021,7 @@ view_default_autocomplete.render_grid_choose = async function(self, selected_ins
 			element_type	: 'div',
 			class_name		: 'grid_choose_container'
 		})
-		self.autocomplete_wrapper.appendChild(grid_choose_container)
+		self.node.appendChild(grid_choose_container)
 		self.grid_choose_container = grid_choose_container
 		// clean the last list
 			while (grid_choose_container.firstChild) {
@@ -1088,27 +1122,27 @@ view_default_autocomplete.render_grid_choose = async function(self, selected_ins
 const get_grid_choose_data = async function(self, selected_instance, params) {
 
 	// request_config
-		const request_config = self.caller.request_config.find(el => el.type === params.request_config_type)
+		const request_config = self.request_config.find(el => el.type === params.request_config_type)
 		if(!request_config){
 			console.warn("Called request_config is not defined with type: ", params.request_config_type);
 			return
 		}
-
 	// rqo
 		const rqo_search = await self.caller.build_rqo_search(request_config, 'search')
+
 		delete rqo_search.sqo_options.filter_free
 		delete rqo_search.sqo_options.filter_by_list
-		const rqo = await self.rebuild_search_query_object({
-			rqo_search		: rqo_search
-		});
-		rqo.sqo.filter_by_locators = [{
+		// const rqo = await self.rebuild_search_query_object({
+		// 	rqo_search		: rqo_search
+		// });
+		rqo_search.sqo.filter_by_locators = [{
 			section_id		: selected_instance.section_id,
 			section_tipo	: selected_instance.section_tipo
 		}]
 
 	// API read request
 		const api_response	= await data_manager.request({
-			body : rqo
+			body : rqo_search
 		})
 
 	const grid_choose_data = {
