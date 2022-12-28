@@ -59,13 +59,16 @@ render_list_component_iri.prototype.list = async function(options) {
 * @param array|null value
 * @return DocumentFragment fragment
 */
-export const render_links_list = function(value) {
+export const render_links_list = function(data) {
 
 	// DOM fragment
-		const fragment = new DocumentFragment()
+		const fragment	= new DocumentFragment()
+		const value		= data.value
 		if (!value) {
 			return fragment
 		}
+
+		const fields_separator = data.fields_separator || ', '
 
 	// values
 		const value_length = value.length
@@ -96,7 +99,7 @@ export const render_links_list = function(value) {
 				})
 				if (value[i].iri) {
 					link_node.href		= value[i].iri,
-					link_node.target	= '_blank'
+					link_node.target	= '_blank',
 					link_node.rel		= 'noreferrer'
 				}
 
@@ -105,7 +108,7 @@ export const render_links_list = function(value) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'fields_separator',
-						text_content	: self.context.fields_separator,
+						text_content	: fields_separator,
 						parent			: fragment
 					})
 				}
