@@ -96,9 +96,16 @@ service_autocomplete.prototype.build = async function(options={}) {
 		self.sqo					= {}
 		self.ar_filter_by_list		= []
 		self.ar_instances 			= []
-		self.operator				= null
 		self.list_name				= 's_'+new Date().getUTCMilliseconds()
 		self.search_fired			= false
+
+
+	// operator
+		self.operator = self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
+			? self.request_config_object.search.sqo_config.operator
+			: self.request_config_object.show && self.request_config_object.show.sqo_config && self.request_config_object.show.sqo_config.operator
+				? self.request_config_object.show.sqo_config.operator
+				: '$and'
 
 
 	// engine. get the search_engine sended or set the default value
