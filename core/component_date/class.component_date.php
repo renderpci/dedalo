@@ -1106,73 +1106,73 @@ class component_date extends component_common {
 		$ar_diffusion_values = array();
 		foreach($ar_dato as $dato) {
 
-			$ar_diffusion_values[] = self::data_item_to_value($dato, $date_mode);
+			// $ar_diffusion_values[] = self::data_item_to_value($dato, $date_mode);
 
 			// DES
-				// switch ($date_mode) {
-				// 	case 'range':
-				// 		$ar_date=array();
-				// 		// start
-				// 		if (isset($dato->start) && isset($dato->start->year)) {
-				// 			$dd_date 		= new dd_date($dato->start);
-				// 			$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-				// 			$ar_date[] 		= $timestamp;
-				// 		}
-				// 		// end
-				// 		if (isset($dato->end) && isset($dato->end->year)) {
-				// 			$dd_date 		= new dd_date($dato->end);
-				// 			$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-				// 			$ar_date[] 		= $timestamp;
-				// 		}
-				// 		$ar_diffusion_values[] = implode(',',$ar_date);
-				// 		break;
+			switch ($date_mode) {
+				case 'range':
+					$ar_date=array();
+					// start
+					if (isset($dato->start) && isset($dato->start->year)) {
+						$dd_date 		= new dd_date($dato->start);
+						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_date[] 		= $timestamp;
+					}
+					// end
+					if (isset($dato->end) && isset($dato->end->year)) {
+						$dd_date 		= new dd_date($dato->end);
+						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_date[] 		= $timestamp;
+					}
+					$ar_diffusion_values[] = implode(',',$ar_date);
+					break;
 
-				// 	case 'period':
-				// 		// Compute days
-				// 		if (isset($dato->period)) {
-				// 			# $seconds = $dato->period->time;
-				// 			# $days = ceil($seconds/3600/24);
-				// 			$ar_string_period = [];
-				// 			if (isset($dato->period->year)) {
-				// 				$ar_string_period[] = $dato->period->year .' '. label::get_label('anyos', $lang);
-				// 			}
-				// 			if (isset($dato->period->month)) {
-				// 				$ar_string_period[] = $dato->period->month .' '. label::get_label('meses', $lang);
-				// 			}
-				// 			if (isset($dato->period->day)) {
-				// 				$ar_string_period[] = $dato->period->day .' '. label::get_label('dias', $lang);
-				// 			}
-				// 			$ar_diffusion_values[] = implode(' ',$ar_string_period);
-				// 		}
-				// 		break;
+				case 'period':
+					// Compute days
+					if (isset($dato->period)) {
+						# $seconds = $dato->period->time;
+						# $days = ceil($seconds/3600/24);
+						$ar_string_period = [];
+						if (isset($dato->period->year)) {
+							$ar_string_period[] = $dato->period->year .' '. label::get_label('anyos', $lang);
+						}
+						if (isset($dato->period->month)) {
+							$ar_string_period[] = $dato->period->month .' '. label::get_label('meses', $lang);
+						}
+						if (isset($dato->period->day)) {
+							$ar_string_period[] = $dato->period->day .' '. label::get_label('dias', $lang);
+						}
+						$ar_diffusion_values[] = implode(' ',$ar_string_period);
+					}
+					break;
 
-				// 	case 'date':
-				// 		/*
-				// 			$dd_date 	= new dd_date($dato);
-				// 			if(isset($dato->day)) {
+				case 'date':
+					/*
+						$dd_date 	= new dd_date($dato);
+						if(isset($dato->day)) {
 
-				// 					$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
-				// 			}else{
-				// 					$timestamp = $dd_date->get_dd_timestamp("Y-m");
-				// 				if(isset($dato->month)) {
-				// 					}else{
-				// 							$timestamp = $dd_date->get_dd_timestamp("Y");
-				// 						}
-				// 				}
+								$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
+						}else{
+								$timestamp = $dd_date->get_dd_timestamp("Y-m");
+							if(isset($dato->month)) {
+								}else{
+										$timestamp = $dd_date->get_dd_timestamp("Y");
+									}
+							}
 
-				// 			$ar_diffusion_values[] = $timestamp;
-				// 			break;*/
+						$ar_diffusion_values[] = $timestamp;
+						break;*/
 
-				// 	default:
-				// 		$current_date = reset($dato);
-				// 		if (isset($current_date->start)) {
-				// 			$current_date = $current_date->start;
-				// 		}
-				// 		$dd_date 		 		= new dd_date($current_date);
-				// 		$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-				// 		$ar_diffusion_values[] 	= $timestamp;
-				// 		break;
-				// }
+				default:
+					$current_date = $dato;
+					if (isset($current_date->start)) {
+						$current_date = $current_date->start;
+					}
+					$dd_date 		 		= new dd_date($current_date);
+					$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+					$ar_diffusion_values[] 	= $timestamp;
+					break;
+			}
 		}//end foreach($ar_dato as $dato)
 
 		#$diffusion_value = implode('|',$ar_diffusion_values);
