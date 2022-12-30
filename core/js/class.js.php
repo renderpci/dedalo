@@ -95,15 +95,15 @@ class js {
 			js::$ar_url = array_merge(js::$ar_url_basic, js::$ar_url);
 
 
-		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
-		$ar_excepciones  		= array('component_autocomplete_ts');
-		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
+		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
+		$ar_excepciones			= array('component_autocomplete_ts');
+		$ar_loaded_models_name	= array_unique(common::$ar_loaded_models_name);
 
-		foreach($ar_loaded_modelos_name as $modelo_name) {
+		foreach($ar_loaded_models_name as $model_name) {
 
 			# Load específico del componente actual
-			if (!in_array($modelo_name, $ar_excepciones)) {
-				js::$ar_url[] 	= DEDALO_CORE_URL . '/'. $modelo_name .'/js/'. $modelo_name .'.js';
+			if (!in_array($model_name, $ar_excepciones)) {
+				js::$ar_url[] 	= DEDALO_CORE_URL . '/'. $model_name .'/js/'. $model_name .'.js';
 			}
 		}
 

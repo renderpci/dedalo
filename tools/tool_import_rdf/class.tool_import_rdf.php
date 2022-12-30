@@ -63,11 +63,11 @@ class tool_import_rdf extends tool_common {
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$translatable 	= $RecordObj_dd->get_traducible();
-		$modelo			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;
-		$component_tipo = component_common::get_instance($modelo,
+		$component_tipo = component_common::get_instance($model,
 														 $component_tipo,
 														 $section_id,
 														 'list',
@@ -542,8 +542,8 @@ class tool_import_rdf extends tool_common {
 	*/
 	public static function get_resource_macth($section_tipo, $component_tipo, $value, $filter=null) {
 
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$name			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$name		= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
@@ -561,10 +561,10 @@ class tool_import_rdf extends tool_common {
 							"lang": "'.$lang.'",
 							"path": [
 								{
-									"section_tipo": "'.$section_tipo.'",
-									"component_tipo": "'.$component_tipo.'",
-									"modelo": "'.$modelo_name.'",
-									"name": "'.$name.'"
+									"section_tipo"		: "'.$section_tipo.'",
+									"component_tipo"	: "'.$component_tipo.'",
+									"model"				: "'.$model_name.'",
+									"name"				: "'.$name.'"
 								}
 							]
 						}
@@ -609,7 +609,7 @@ class tool_import_rdf extends tool_common {
 				$section->Save();
 				$section_id	= $section->get_section_id();
 
-				if($modelo_name==='component_iri'){
+				if($model_name==='component_iri'){
 					$dato = new stdClass();
 						$dato->iri = $value;
 				}
@@ -621,7 +621,7 @@ class tool_import_rdf extends tool_common {
 			// save new value
 				$RecordObj_dd	= new RecordObj_dd($component_tipo);
 				$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-				$code_component	= component_common::get_instance($modelo_name,
+				$code_component	= component_common::get_instance($model_name,
 																 $component_tipo,
 																 $section_id,
 																 'list',
@@ -652,13 +652,13 @@ class tool_import_rdf extends tool_common {
 
 		$section_tipo	= $locator->section_tipo;
 		$section_id		= $locator->section_id;
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 		// save new value
 			$RecordObj_dd	= new RecordObj_dd($component_tipo);
 			$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
 
-			$code_component	= component_common::get_instance($modelo_name,
+			$code_component	= component_common::get_instance($model_name,
 															 $component_tipo,
 															 $section_id,
 															 'edit',
@@ -681,7 +681,7 @@ class tool_import_rdf extends tool_common {
 			// 		dump($value, ' value +-----------+ '.to_string(empty($old_data)));
 			// }
 
-			if($modelo_name==='component_iri' && !empty($old_data)){
+			if($model_name==='component_iri' && !empty($old_data)){
 
 				$new_values = $old_data;
 				foreach ($value as $current_iri_obj) {
@@ -701,7 +701,7 @@ class tool_import_rdf extends tool_common {
 			}
 
 			$relation_models = component_relation_common::get_components_with_relations();
-			if(in_array($modelo_name, $relation_models) && !empty($old_data)){
+			if(in_array($model_name, $relation_models) && !empty($old_data)){
 
 				$object_exists = locator::in_array_locator($value, $old_data, ['section_id','section_tipo']);
 

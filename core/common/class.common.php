@@ -38,9 +38,9 @@ abstract class common {
 		// permissions. int value from 0 to 3
 		public $permissions;
 
-		// ar_loaded_modelos_name. List of all components/sections model name used in current page (without duplicates). Used to determine
+		// ar_loaded_models_name. List of all components/sections model name used in current page (without duplicates). Used to determine
 		// the css and css files to load
-		static $ar_loaded_modelos_name = array();
+		static $ar_loaded_models_name = array();
 
 		// identificador_unico. UID used to set DOM elements id unique based on section_tipo, section_id, lang, mode, etc.
 		public $identificador_unico;
@@ -310,8 +310,8 @@ abstract class common {
 				// $this->matrix_table = self::get_matrix_table_from_tipo($this->tipo);
 
 			// notify : We notify the loading of the element to common
-				$modelo_name = get_called_class();
-				common::notify_load_lib_element_tipo($modelo_name, $this->mode);
+				$model_name = get_called_class();
+				common::notify_load_lib_element_tipo($model_name, $this->mode);
 
 			// bl_loaded_structure_data
 				$this->bl_loaded_structure_data = true;
@@ -347,12 +347,12 @@ abstract class common {
 			$matrix_table = 'matrix';
 
 		// model
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-			if (empty($modelo_name)) {
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			if (empty($model_name)) {
 				debug_log(__METHOD__." Current tipo ($tipo) model name is empty. Default table 'matrix' was used.".to_string(), logger::ERROR);
 			}
 
-		if ($modelo_name==='section') {
+		if ($model_name==='section') {
 
 			# SECTION CASE
 			switch (true) {
@@ -400,13 +400,13 @@ abstract class common {
 			}
 			debug_log(
 				__METHOD__
-				." Error Processing Request. Don't use non section tipo ($tipo - $modelo_name) to calculate matrix_table. Use always section_tipo "
+				." Error Processing Request. Don't use non section tipo ($tipo - $model_name) to calculate matrix_table. Use always section_tipo "
 				, logger::ERROR
 			);
 
 			// # COMPONENT CASE
 			// # Heredamos la tabla de la sección parent (si la hay)
-			// $ar_parent_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name='section', $relation_type='parent');
+			// $ar_parent_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $model_name='section', $relation_type='parent');
 			// if (isset($ar_parent_section[0])) {
 			// 	$parent_section_tipo = $ar_parent_section[0];
 			// 	$ar_related = common::get_ar_related_by_model('matrix_table', $parent_section_tipo);
@@ -445,8 +445,8 @@ abstract class common {
 		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
 		foreach ($ar_children_tables as $table_tipo) {
 			$RecordObj_dd	= new RecordObj_dd( $table_tipo );
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
-			if ($modelo_name!=='matrix_table') {
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
+			if ($model_name!=='matrix_table') {
 				continue;
 			}
 			$properties = $RecordObj_dd->get_properties();
@@ -559,9 +559,9 @@ abstract class common {
 
 			if (!is_null($section_id)) {
 				$section		= section::get_instance($section_id, $section_tipo);
-				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
+				$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
 				$component		= component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					DEDALO_HIERARCHY_LANG_TIPO,
 					$section_id,
 					'list',
@@ -617,16 +617,16 @@ abstract class common {
 	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
 	*/
-	public static function notify_load_lib_element_tipo(string $modelo_name, string $mode) : bool {
+	public static function notify_load_lib_element_tipo(string $model_name, string $mode) : bool {
 
 		#if ($mode!=='edit') {
 		#	return false;
 		#}
 
-		if (empty($modelo_name) || in_array($modelo_name, common::$ar_loaded_modelos_name)) {
+		if (empty($model_name) || in_array($model_name, common::$ar_loaded_models_name)) {
 			return false;
 		}
-		common::$ar_loaded_modelos_name[] = $modelo_name;
+		common::$ar_loaded_models_name[] = $model_name;
 
 		return true;
 	}//end notify_load_lib_element_tipo
@@ -853,10 +853,10 @@ abstract class common {
 	* GET_AR_RELATED_BY_MODEL
 	* @return array $ar_related_by_model
 	*/
-	public static function get_ar_related_by_model(string $modelo_name, string $tipo, $strict=true) : array {
+	public static function get_ar_related_by_model(string $model_name, string $tipo, $strict=true) : array {
 
 		static $ar_related_by_model_data;
-		$uid = $modelo_name.'_'.$tipo;
+		$uid = $model_name.'_'.$tipo;
 		if (isset($ar_related_by_model_data[$uid])) {
 			return $ar_related_by_model_data[$uid];
 		}
@@ -865,24 +865,24 @@ abstract class common {
 		$relaciones		= $RecordObj_dd->get_relaciones();
 
 		$ar_related_by_model=array();
-		foreach ((array)$relaciones as $relation) foreach ((array)$relation as $modelo_tipo => $current_tipo) {
+		foreach ((array)$relaciones as $relation) foreach ((array)$relation as $model_tipo => $current_tipo) {
 
-			# Calcularlo desde el modelo_tipo no es seguro, ya que el modelo de un componente pude cambiar y esto no actualiza el modelo_tipo de la relación
-			#$related_terms[$tipo] = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);	//$terminoID, $lang=NULL, $from_cache=false, $fallback=true
+			# Calcularlo desde el model_tipo no es seguro, ya que el modelo de un componente pude cambiar y esto no actualiza el model_tipo de la relación
+			#$related_terms[$tipo] = RecordObj_dd::get_termino_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);	//$terminoID, $lang=NULL, $from_cache=false, $fallback=true
 			# Calcular siempre el modelo por seguridad
-			$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+			$current_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 			if ($strict===true) {
 				// Default compare equal
-				if ($current_modelo_name===$modelo_name) {
+				if ($current_model_name===$model_name) {
 					$ar_related_by_model[] = $current_tipo;
 				}
 			}else{
-				if (strpos($current_modelo_name, $modelo_name)!==false) {
+				if (strpos($current_model_name, $model_name)!==false) {
 					$ar_related_by_model[] = $current_tipo;
 				}
 			}
 		}
-		#debug_log(__METHOD__." ar_related_by_model - modelo_name:$modelo_name - tipo:$tipo - ar_related_by_model:".json_encode($ar_related_by_model), logger::DEBUG);
+		#debug_log(__METHOD__." ar_related_by_model - modelo_name:$model_name - tipo:$tipo - ar_related_by_model:".json_encode($ar_related_by_model), logger::DEBUG);
 
 		$ar_related_by_model_data[$uid] = $ar_related_by_model;
 
@@ -914,9 +914,9 @@ abstract class common {
 							); // DEDALO_RELATION_TYPE_RECORD_TIPO
 		/*
 		$tipo 		  = 'dd427';
-		$modelo_name  = 'relation_type';
+		$model_name  = 'relation_type';
 		$relation_type= 'children';
-		$ar_allowed   = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=true);
+		$ar_allowed   = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $model_name, $relation_type, $search_exact=true);
 		*/
 
 		return (array)$ar_allowed;
@@ -2836,7 +2836,7 @@ abstract class common {
 							if ($model==='section') {
 								// section
 								$table						= common::get_matrix_table_from_tipo($tipo);
-								$ar_modelo_name_required	= [
+								$ar_model_name_required	= [
 									'component_',
 									'section_group',
 									'section_group_div',
@@ -2847,7 +2847,7 @@ abstract class common {
 								];
 								$ar_related					= section::get_ar_children_tipo_by_modelo_name_in_section(
 									$tipo,
-									$ar_modelo_name_required,
+									$ar_model_name_required,
 									true, // bool from_cache
 									true, // bool resolve_virtual
 									true, // bool recursive
@@ -2878,7 +2878,7 @@ abstract class common {
 								// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
 								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
 									$tipo,
-									['relation_list'], // array ar_modelo_name_required
+									['relation_list'], // array ar_model_name_required
 									true, // bool from_cache
 									false, // bool resolve_virtual
 									false, // bool recursive
@@ -2889,7 +2889,7 @@ abstract class common {
 								if (empty($ar_terms)) {
 									$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
 										$tipo,
-										['relation_list'], // array ar_modelo_name_required
+										['relation_list'], // array ar_model_name_required
 										true, // bool from_cache
 										true, // bool resolve_virtual
 										false, // bool recursive
@@ -3276,7 +3276,7 @@ abstract class common {
 		// 					{
 		// 						"section_tipo": "'.$section_tipo.'",
 		// 						"component_tipo": "dummy",
-		// 						"modelo": "component_section_id",
+		// 						"model": "component_section_id",
 		// 						"name": "Searching"
 		// 					}
 		// 				]');

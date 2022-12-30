@@ -143,7 +143,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 					path : [
 						{
 							component_tipo	: 'section_id',
-							modelo			: 'component_section_id',
+							model			: 'component_section_id',
 							name			: 'Dummy section id',
 							section_tipo	: [self.section_tipo]
 						}

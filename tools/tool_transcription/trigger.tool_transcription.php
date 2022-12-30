@@ -181,13 +181,15 @@ function pdf_automatic_transcription(object $json_data) : object {
 
 	#
 	# TARGET TEXT AREA
-	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($target_tipo,true);
-	$component_text_area = component_common::get_instance(	$modelo_name, //'component_text_area',
-															$target_tipo,
-															$section_id,
-															'edit',
-															DEDALO_DATA_LANG,
-															$section_tipo);
+	$model_name				= RecordObj_dd::get_modelo_name_by_tipo($target_tipo,true);
+	$component_text_area	= component_common::get_instance(
+		$model_name, //'component_text_area',
+		$target_tipo,
+		$section_id,
+		'edit',
+		DEDALO_DATA_LANG,
+		$section_tipo
+	);
 	$component_text_area->set_dato($pdf_text);
 	$component_text_area->Save(false, false);
 

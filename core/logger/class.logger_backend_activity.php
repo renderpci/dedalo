@@ -33,14 +33,14 @@ class logger_backend_activity extends logger_backend {
 
 
 	// vars
-		static $_SECTION_TIPO 		= ['tipo'=>'dd542','modelo_name'=>'section'];
-		static $_COMPONENT_IP 		= ['tipo'=>'dd544','modelo_name'=>'component_ip'];
-		static $_COMPONENT_QUIEN 	= ['tipo'=>'dd543','modelo_name'=>'component_autocomplete'];
-		static $_COMPONENT_QUE 		= ['tipo'=>'dd545','modelo_name'=>'component_input_text'];
-		static $_COMPONENT_DONDE 	= ['tipo'=>'dd546','modelo_name'=>'component_input_text'];
-		static $_COMPONENT_CUANDO 	= ['tipo'=>'dd547','modelo_name'=>'component_date'];
-		static $_COMPONENT_PROYECTOS= ['tipo'=>'dd550','modelo_name'=>'component_filter'];
-		static $_COMPONENT_DATOS 	= ['tipo'=>'dd551','modelo_name'=>'component_input_text'];
+		static $_SECTION_TIPO 		= ['tipo'=>'dd542','model_name'=>'section'];
+		static $_COMPONENT_IP 		= ['tipo'=>'dd544','model_name'=>'component_ip'];
+		static $_COMPONENT_QUIEN 	= ['tipo'=>'dd543','model_name'=>'component_autocomplete'];
+		static $_COMPONENT_QUE 		= ['tipo'=>'dd545','model_name'=>'component_input_text'];
+		static $_COMPONENT_DONDE 	= ['tipo'=>'dd546','model_name'=>'component_input_text'];
+		static $_COMPONENT_CUANDO 	= ['tipo'=>'dd547','model_name'=>'component_date'];
+		static $_COMPONENT_PROYECTOS= ['tipo'=>'dd550','model_name'=>'component_filter'];
+		static $_COMPONENT_DATOS 	= ['tipo'=>'dd551','model_name'=>'component_input_text'];
 
 	// ar_elements_activity_tipo
 		static $ar_elements_activity_tipo;

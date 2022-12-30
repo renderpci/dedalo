@@ -701,7 +701,7 @@ render_search.prototype.build_search_component = async function(parent_div, path
 				section_id		: section_id,
 				section_tipo	: last_item.section_tipo,
 				component_tipo	: last_item.component_tipo,
-				model			: last_item.modelo,
+				model			: last_item.model,
 				mode			: 'search',
 				value			: current_value || null, // value will be injected
 				q_operator		: q_operator || null,

@@ -208,16 +208,16 @@ final class dd_ts_api {
 			}
 
 		// component_relation_children
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			if ($modelo_name!=='component_relation_children') {
-				$response->msg = 'Error on create new section from parent. Invalid model: '.$modelo_name.'. Expected: "component_relation_children" ';
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			if ($model_name!=='component_relation_children') {
+				$response->msg = 'Error on create new section from parent. Invalid model: '.$model_name.'. Expected: "component_relation_children" ';
 				debug_log(__METHOD__." $response->msg ", logger::ERROR);
 				return $response;
 			}
 			$mode							= 'edit';
 			$lang							= DEDALO_DATA_NOLAN;
 			$component_relation_children	= component_common::get_instance(
-				$modelo_name,
+				$model_name,
 				$tipo,
 				$section_id,
 				$mode,
@@ -290,8 +290,8 @@ final class dd_ts_api {
 		// 		}else{
 		// 			if ($section_map->thesaurus->is_descriptor!==false) {
 		// 				$component_tipo	= $section_map->thesaurus->is_descriptor;
-		// 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		// 				$component		= component_common::get_instance($modelo_name,
+		// 				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		// 				$component		= component_common::get_instance($model_name,
 		// 																 $component_tipo,
 		// 																 $new_section_id,
 		// 																 'edit', // note mode edit autosave default value
@@ -307,8 +307,8 @@ final class dd_ts_api {
 		// 		}else{
 		// 			if ($section_map->thesaurus->is_indexable!==false) {
 		// 				$component_tipo	= $section_map->thesaurus->is_indexable;
-		// 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		// 				$component		= component_common::get_instance($modelo_name,
+		// 				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		// 				$component		= component_common::get_instance($model_name,
 		// 																 $component_tipo,
 		// 																 $new_section_id,
 		// 																 'edit', // note mode edit autosave default value
@@ -319,10 +319,10 @@ final class dd_ts_api {
 		// 		}
 
 		// 	// component_relation_children
-		// 		$modelo_name	= 'component_relation_children';
+		// 		$model_name	= 'component_relation_children';
 		// 		$mode			= 'edit';
 		// 		$lang			= DEDALO_DATA_NOLAN;
-		// 		$component_relation_children = component_common::get_instance($modelo_name,
+		// 		$component_relation_children = component_common::get_instance($model_name,
 		// 																	  $tipo,
 		// 																	  $section_id,
 		// 																	  $mode,
@@ -386,14 +386,14 @@ final class dd_ts_api {
 			$node_type		= $source->node_type;
 
 		// children . Verify that current term don't have children. If yes, stop process.
-			$modelo_name		= 'component_relation_children';
+			$model_name		= 'component_relation_children';
 			$mode				= 'edit';
 			$lang				= DEDALO_DATA_NOLAN;
-			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array($model_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 			foreach ($ar_children_tipo as $current_tipo) {
 
 				$component_relation_children = component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					$current_tipo,
 					$section_id,
 					$mode,
@@ -488,11 +488,11 @@ final class dd_ts_api {
 			}
 
 		// Add me as children of new parent
-			$modelo_name					= 'component_relation_children';
+			$model_name						= 'component_relation_children';
 			$mode							= 'edit';
 			$lang							= DEDALO_DATA_NOLAN;
 			$component_relation_children	= component_common::get_instance(
-				$modelo_name,
+				$model_name,
 				$tipo,
 				$parent_section_id,
 				$mode,

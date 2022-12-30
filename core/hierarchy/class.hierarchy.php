@@ -67,9 +67,9 @@ class hierarchy {
 
 		// active
 			$active_tipo 	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
 			$component 		= component_common::get_instance( 
-				$modelo_name,
+				$model_name,
 				$active_tipo,
 				$options->section_id,
 				'edit',
@@ -89,9 +89,9 @@ class hierarchy {
 
 		// tld
 			$tld2_tipo 		= DEDALO_HIERARCHY_TLD2_TIPO;	//'hierarchy6';
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tld2_tipo, true);
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tld2_tipo, true);
 			$component 		= component_common::get_instance( 
-				$modelo_name,
+				$model_name,
 				$tld2_tipo,
 				$options->section_id,
 				'edit',
@@ -107,9 +107,9 @@ class hierarchy {
 
 
 		// source_real_section_tipo
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,true);
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,true);
 			$component 		= component_common::get_instance( 
-				$modelo_name,
+				$model_name,
 				DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
 				$options->section_id,
 				'list',
@@ -124,8 +124,8 @@ class hierarchy {
 				$response->msg 		= 'Error on get source_real_section_tipo. Empty value (source_real_section_tipo is mandatory)';
 				return $response;
 			}
-			$real_section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($real_section_tipo, true);
-			if ($real_section_modelo_name!=='section') {
+			$real_section_model_name = RecordObj_dd::get_modelo_name_by_tipo($real_section_tipo, true);
+			if ($real_section_model_name!=='section') {
 				$response->result 	= false;
 				$response->msg 		= 'Error on get source_real_section_tipo. Invalid model (only sections tipo are valid)';
 				return $response;
@@ -135,9 +135,9 @@ class hierarchy {
 		// tipology (of hierarchy)
 
 			$hierarchy_type	= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type, true);
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type, true);
 			$component 		= component_common::get_instance( 
-				$modelo_name,
+				$model_name,
 				$hierarchy_type,
 				$options->section_id,
 				'edit',
@@ -161,9 +161,9 @@ class hierarchy {
 
 		// name
 			$name_tipo 		= DEDALO_HIERARCHY_TERM_TIPO;	//'hierarchy5';
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
 			$component 		= component_common::get_instance( 
-				$modelo_name,
+				$model_name,
 				$name_tipo,
 				$options->section_id,
 				'edit',
@@ -500,7 +500,7 @@ class hierarchy {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		$tipo 			= DEDALO_THESAURUS_TERM_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$section_id 	= 1;
 
 		# Iterate sections (normally like ts1,ts2)
@@ -510,7 +510,7 @@ class hierarchy {
 			$section->forced_create_record();
 
 			$component 		= component_common::get_instance(
-				$modelo_name,
+				$model_name,
 				$tipo,
 				$section_id,
 				'edit',
@@ -723,9 +723,9 @@ class hierarchy {
 		}
 
 		$mode ='edit';
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component		= component_common::get_instance( 
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$parent,
 			$mode,
@@ -735,7 +735,7 @@ class hierarchy {
 
 		$component->set_dato($dato);
 		$component->Save();
-		unset($modelo_name);
+		unset($model_name);
 		unset($component);
 
 		return null;
@@ -920,8 +920,8 @@ class hierarchy {
 				#{"lat":"39.462571","lon":"-0.376295","zoom":17}
 				elseif($tipo === 'altitude'){
 
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
-					$component = component_common::get_instance($modelo_name,
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
+					$component = component_common::get_instance($model_name,
 						'hierarchy31',
 						$id,
 						'edit',
@@ -937,7 +937,7 @@ class hierarchy {
 					$component_dato->alt =(int)$dato;
 					$component_alt	= self::row_to_json_obj('hierarchy31', $id, $component_dato, DEDALO_DATA_NOLAN ,$section_tipo);
 
-					unset($modelo_name);
+					unset($model_name);
 					unset($component);
 					unset($component_dato);
 					unset($component_alt);
@@ -946,8 +946,8 @@ class hierarchy {
 
 					$datos = explode(',', $dato);
 
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
-					$component = component_common::get_instance($modelo_name,
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
+					$component = component_common::get_instance($model_name,
 						'hierarchy31',
 						$id,
 						'edit',
@@ -965,7 +965,7 @@ class hierarchy {
 
 					$component_notes	= self::row_to_json_obj('hierarchy31', $id, $component_dato, DEDALO_DATA_NOLAN ,$section_tipo);
 
-					unset($modelo_name);
+					unset($model_name);
 					unset($component);
 					unset($component_dato);
 					unset($component_notes);
@@ -1386,9 +1386,9 @@ class hierarchy {
 
 		# Current tld (alpha2)
 		$tipo 			= DEDALO_HIERARCHY_TLD2_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$section_id,
 			'edit',
@@ -1408,9 +1408,9 @@ class hierarchy {
 
 		# DEDALO_HIERARCHY_TARGET_SECTION_TIPO
 		$tipo 			= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$section_id,
 			'edit',
@@ -1424,9 +1424,9 @@ class hierarchy {
 
 		# DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO
 		$tipo 			= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$section_id,
 			'edit',
@@ -1471,9 +1471,9 @@ class hierarchy {
 
 		// DEDALO_HIERARCHY_TARGET_SECTION_TIPO hierarchy53
 		$tipo 			= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$section_id,
 			'edit',
@@ -1485,9 +1485,9 @@ class hierarchy {
 
 		// DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO hierarchy58
 		$tipo 			= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$section_id,
 			'edit',
@@ -1499,9 +1499,9 @@ class hierarchy {
 
 		// DEDALO_HIERARCHY_CHILDREN_TIPO
 		$tipo 			= DEDALO_HIERARCHY_CHILDREN_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component 		= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$section_id,
 			'edit',
@@ -1554,7 +1554,7 @@ class hierarchy {
 		          {
 		            "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
 		            "component_tipo": "'.DEDALO_HIERARCHY_TARGET_SECTION_TIPO.'",
-		            "modelo": "component_input_text",
+		            "model": "component_input_text",
 		            "name": "Target thesaurus"
 		          }
 		        ]
@@ -1567,7 +1567,7 @@ class hierarchy {
 		        {
 		          "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
 		          "component_tipo": "'.DEDALO_HIERARCHY_TYPOLOGY_TIPO.'",
-		          "modelo": "component_select",
+		          "model": "component_select",
 		          "name": "Typology"
 		        }
 		      ]
@@ -1618,7 +1618,7 @@ class hierarchy {
 			          {
 			            "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
 			            "component_tipo": "'.$hierarchy_component_tipo.'",
-			            "modelo": "'.$model.'",
+			            "model": "'.$model.'",
 			            "name": "'.$model.' '.$hierarchy_component_tipo.'"
 			          }
 			        ]

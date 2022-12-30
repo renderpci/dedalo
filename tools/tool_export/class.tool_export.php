@@ -125,7 +125,7 @@ class tool_export extends tool_common {
 		*                {
 		*                    "section_tipo": "oh1",
 		*                    "component_tipo": "oh62",
-		*                    "modelo": "component_section_id",
+		*                    "model": "component_section_id",
 		*                    "name": "Id"
 		*                }
 		*            ]
@@ -404,7 +404,7 @@ class tool_export extends tool_common {
 					$new_ddo = new dd_object();
 						$new_ddo->set_tipo($child_ddo->component_tipo);
 						$new_ddo->set_section_tipo($child_ddo->section_tipo);
-						$new_ddo->set_model($child_ddo->modelo);
+						$new_ddo->set_model($child_ddo->model);
 						$new_ddo->set_parent($current_ddo->path[$key-1]->component_tipo);
 						$new_ddo->set_label($child_ddo->name);
 					// add ddo
