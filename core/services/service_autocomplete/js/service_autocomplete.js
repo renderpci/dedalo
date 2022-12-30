@@ -188,7 +188,7 @@ service_autocomplete.prototype.destroy = async function() {
 
 	const self = this
 
-	self.autocomplete_wrapper.remove()
+	self.node.remove()
 
 	event_manager.publish('destroy_'+self.id, this)
 
