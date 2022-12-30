@@ -92,11 +92,13 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 		// specific actions.. like fix main_element for convenience
 			self.diffusion_info = await self.get_diffusion_info()
 
+		 // fix value
+			self.resolve_levels = self.diffusion_info.resolve_levels || 1
+
 	} catch (error) {
 		self.error = error
 		console.error(error)
 	}
-
 
 	return common_build
 }//end build_custom
@@ -136,7 +138,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> get_diffusion_info API response:",'DEBUG',response);
+				// dd_console("-> get_diffusion_info API response:",'DEBUG',response);
 
 				const result = response.result // array of objects
 
@@ -148,25 +150,36 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 
 
 /**
-* UPDATE_CACHE
-* 	Get the llist of section components selectables to update cache
+* EXPORT
+*
+* @param object options
 * @return promise > bool
 */
-tool_diffusion.prototype.update_cache = function(ar_component_tipo) {
+tool_diffusion.prototype.export = function(options) {
 
 	const self = this
 
-	const section_tipo = self.caller.section_tipo
+	// options
+		const diffusion_element_tipo	= options.diffusion_element_tipo
+		const resolve_levels			= options.resolve_levels || self.resolve_levels
+
+		// sort vars
+		const mode						= self.caller.mode
+		const section_tipo				= self.caller.section_tipo
+		const section_id				= self.caller.section_id || null
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(arguments)
-		const source = create_source(self, 'update_cache')
+		const source = create_source(self, 'export')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			section_tipo		: section_tipo,
-			ar_component_tipo	: ar_component_tipo,
-			lang				: page_globals.dedalo_application_lang
+			section_tipo			: section_tipo,
+			section_id				: section_id,
+			mode					: mode,
+			diffusion_element_tipo	: diffusion_element_tipo,
+			resolve_levels			: resolve_levels
 		}
+		// console.log('export source:', source);
 
 	// rqo
 		const rqo = {
@@ -181,15 +194,12 @@ tool_diffusion.prototype.update_cache = function(ar_component_tipo) {
 			data_manager.request({
 				body : rqo
 			})
-			.then(function(response){
-				dd_console("-> update_cache API response:",'DEBUG',response);
-
-				const result = response.result // array of objects
-
-				resolve(result)
+			.then(function(api_response){
+				// dd_console("-> export API api_response:",'DEBUG',api_response);
+				resolve(api_response)
 			})
 		})
-}//end update_cache
+}//end export
 
 
 

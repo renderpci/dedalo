@@ -248,7 +248,13 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 				for (let i = 0; i < ddo_map_length; i++) {
 
 					// el. components / sections / areas used by the tool defined in tool_config.ddo_map
-					const el = ddo_map[i]
+						const el = ddo_map[i]
+
+					// skip caller ddo item when is section (case tool_diffusion very slow)
+						if (self.caller && self.caller.model==='section' && self.caller.tipo===el.tipo && self.caller.section_tipo===el.section_tipo) {
+							// self.ar_instances.push(self.caller)
+							continue
+						}
 
 					// lang. If is defined in properties, parse and use it, else use the tool lang
 					// taking care to do not re-parse the value
