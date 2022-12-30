@@ -71,8 +71,7 @@ const get_content_data = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// short vars
-		const section_tipo		= self.caller.section_tipo
-		const diffusion_info	= self.diffusion_info
+		const diffusion_info = self.diffusion_info
 
 
 	// section_info
@@ -119,11 +118,20 @@ const get_content_data = async function(self) {
 			parent			: resolve_levels_container
 		})
 		// resolve_levels_input
-		ui.create_dom_element({
+		const resolve_levels_node = ui.create_dom_element({
 			element_type	: 'input',
 			class_name		: 'resolve_levels_input',
-			value			: diffusion_info.resolve_levels,
+			value			: self.resolve_levels,
 			parent			: resolve_levels_container
+		})
+		resolve_levels_node.addEventListener('change', function(e) {
+			e.preventDefault()
+			// fix self levels value
+			self.resolve_levels = parseInt(this.value)
+			if (self.resolve_levels<1) {
+				self.resolve_levels	= 1
+				this.value	= 1
+			}
 		})
 		ui.create_dom_element({
 			element_type	: 'label',
@@ -141,7 +149,7 @@ const get_content_data = async function(self) {
 		const info_div = ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'info_div hide',
-			inner_html		: 'diffusion_map: ' + JSON.stringify(diffusion_info.ar_diffusion_map, null, 2),
+			inner_html		: 'diffusion_map: ' + JSON.stringify(diffusion_info.diffusion_map, null, 2),
 			parent			: diffusion_info_container
 		})
 		ui.collapse_toggle_track({
@@ -150,51 +158,39 @@ const get_content_data = async function(self) {
 			collapsed_id	: 'collapsed_tool_diffusion_info'
 		})
 
+	// publication items
+		const publication_items = render_publication_items(self)
+		fragment.appendChild(publication_items)
+
 	// info_text
 		const total = self.caller.total
-		const target = 'MySQL'
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: self.get_tool_label('publish_selected_records', total, target),
+			inner_html		: self.get_tool_label('publish_selected_records', total),
 			parent			: diffusion_info_container
 		})
 		diffusion_info_container
 
 	// buttons_container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_container',
-			parent			: fragment
-		})
+		// const buttons_container = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'buttons_container',
+		// 	parent			: fragment
+		// })
 
 	// button_apply
-		const button_apply = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'success button_apply',
-			inner_html		: 'OK',
-			parent			: buttons_container
-		})
-		button_apply.addEventListener("click", function(e){
-			e.preventDefault()
-			// selection
-				const checked_list			= options_nodes.filter(el => el.checked===true)
-				const checked_list_length	= checked_list.length
-			// empty case
-				if (checked_list_length<1) {
-					alert(get_label.seleccion_vacia || 'Empty selection');
-					return
-				}
-			// update_cache
-			if (confirm(get_label.sure || 'Sure?')) {
-				content_data.classList.add('loading')
-				const ar_component_tipo = checked_list.map(el => el.value)
-				self.update_cache(ar_component_tipo)
-				.then(function(){
-					content_data.classList.remove('loading')
-				})
-			}
-		})
+		// const button_apply = ui.create_dom_element({
+		// 	element_type	: 'button',
+		// 	class_name		: 'success button_apply',
+		// 	inner_html		: 'OK',
+		// 	parent			: buttons_container
+		// })
+		// button_apply.addEventListener('click', function(e){
+		// 	e.preventDefault()
+
+
+		// })
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -205,3 +201,157 @@ const get_content_data = async function(self) {
 }//end get_content_data
 
 
+
+/**
+* RENDER_PUBLICATION_ITEMS
+* @return DOM node publication_items
+*/
+export const render_publication_items = function(self) {
+
+	const diffusion_map = self.diffusion_info.diffusion_map
+
+	const publication_items = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'publication_items'
+	})
+
+	for(const diffusion_group_tipo in diffusion_map) {
+
+		const current_diffusion_map = diffusion_map[diffusion_group_tipo] // array
+
+		const current_diffusion_map_length = current_diffusion_map.length
+		for (let i = 0; i < current_diffusion_map_length; i++) {
+
+			const item = current_diffusion_map[i]
+
+			const current_diffusion_element_tipo = item.element_tipo
+
+			// publication_items_grid
+				const publication_items_grid = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'publication_items_grid',
+					parent			: publication_items
+				})
+
+			// name
+				const name_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: get_label.nombre || 'Name',
+					class_name		: 'label',
+					parent			: publication_items_grid
+				})
+				const name_value = ui.create_dom_element({
+					element_type	: 'div',
+					inner_html		: item.name,
+					class_name		: 'value',
+					parent			: publication_items_grid
+				})
+
+			// type
+				const type_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: get_label.tipo || 'Type',
+					class_name		: 'label',
+					parent			: publication_items_grid
+				})
+				const type_value = ui.create_dom_element({
+					element_type	: 'div',
+					inner_html		: item.class_name,
+					class_name		: 'value',
+					parent			: publication_items_grid
+				})
+
+			// diffusion_element
+				const diffusion_element_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: 'Diffusion element',
+					class_name		: 'label',
+					parent			: publication_items_grid
+				})
+				const diffusion_element_value = ui.create_dom_element({
+					element_type	: 'div',
+					inner_html		: current_diffusion_element_tipo,
+					class_name		: 'value',
+					parent			: publication_items_grid
+				})
+
+
+			// database
+				const database_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: get_label.database || 'Database',
+					class_name		: 'label',
+					parent			: publication_items_grid
+				})
+				const database_value = ui.create_dom_element({
+					element_type	: 'div',
+					inner_html		: item.database_name,
+					class_name		: 'value',
+					parent			: publication_items_grid
+				})
+
+			// container_bottom
+				const container_bottom = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'container_bottom',
+					parent			: publication_items_grid
+				})
+
+				// response_message
+					const response_message = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'response_message',
+						parent			: container_bottom
+					})
+
+				// publication_button
+					const publication_button = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'warning publication_button',
+						inner_html		: get_label.publicar || 'Publish',
+						parent			: container_bottom
+					})
+					publication_button.addEventListener('click', function(e) {
+						e.stopPropagation()
+
+						// user confirmation
+							if (!confirm(get_label.sure || 'Sure?')) {
+								return
+							}
+
+						// clean previous messages
+							response_message.classList.remove('error')
+							while (response_message.firstChild) {
+								response_message.removeChild(response_message.firstChild);
+							}
+
+						// spinner
+							const spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner',
+								parent			: container_bottom
+							})
+							publication_button.classList.add('hide')
+
+						// export
+							self.export({
+								diffusion_element_tipo : current_diffusion_element_tipo
+							})
+							.then(function(api_response){
+								console.log('api_response:', api_response);
+
+								response_message.innerHTML = api_response.msg || 'Unknown error'
+								if (api_response.result===false) {
+									response_message.classList.add('error')
+								}
+
+								spinner.remove()
+								publication_button.classList.remove('hide')
+							})
+					})
+		}//end for (let i = 0; i < current_diffusion_map_length; i++)
+	}
+
+
+	return publication_items
+}//end render_publication_items
