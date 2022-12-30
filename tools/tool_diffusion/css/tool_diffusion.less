@@ -33,7 +33,6 @@
 
 
 			.diffusion_info_container {
-				display: block;
 				padding: 1rem;
 
 				.resolve_levels_container {
@@ -70,13 +69,65 @@
 				}
 			}
 
+			// publication_items. Every section_map generates a new one
+			.publication_items {
+				padding: 1rem;
+				display: flex;
+				justify-content: center;
+
+			    .publication_items_grid {
+					background-color: #f7f6f6;
+					display: grid;
+					width: fit-content;
+					grid-template-columns: auto 1fr;
+					border-radius: 0.3rem;
+
+					.label, .value {
+						padding: 1rem;
+						padding-bottom: 0px;
+					}
+
+					.label {
+						opacity: 0.8;
+					}
+
+					.value {
+						font-weight: bold;
+					}
+
+					.container_bottom {
+						position: relative;
+						grid-column: span 2;
+						display: flex;
+						flex-wrap: wrap;
+						justify-content: center;
+						padding: 1rem;
+
+						.response_message {
+							padding: 1rem;
+							width: 100%;
+						}
+
+						.publication_button {
+							margin: 1rem;
+						}
+
+						.spinner {
+							position: relative;
+							left: auto;
+							top: auto;
+							margin-bottom: 1rem;
+						}
+
+
+					}
+				}
+			}
+
+
 			.buttons_container {
 				padding-left: 0.5rem;
 				padding-bottom: 1rem;
-
-				.button_apply {
-
-				}
 			}
 
 		}//end content_data
