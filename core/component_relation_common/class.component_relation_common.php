@@ -908,9 +908,9 @@ class component_relation_common extends component_common {
 		// 			$new_tipo			= $this->caller_dataset->component_tipo;
 		// 			$new_section_tipo	= $this->caller_dataset->section_tipo;
 		// 			$new_parent			= $this->caller_dataset->section_id;
-		// 			$new_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+		// 			$new_model_name		= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
 		// 			$new_component		= component_common::get_instance(
-		// 				$new_modelo_name,
+		// 				$new_model_name,
 		// 				$new_tipo,
 		// 				$new_parent,
 		// 				'edit',
@@ -1152,11 +1152,11 @@ class component_relation_common extends component_common {
 
 
 			# Target section data
-			$modelo_name					= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
+			$model_name						= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
 			$mode							= 'edit';
 			$lang							= DEDALO_DATA_NOLAN;
 			$component_relation_children	= component_common::get_instance(
-				$modelo_name,
+				$model_name,
 				$current_component_tipo,
 				$current_section_id,
 				$mode,
@@ -1199,7 +1199,7 @@ class component_relation_common extends component_common {
 				[0] => stdClass Object
 					(
 						[name] => Título
-						[modelo] => component_input_text
+						[model] => component_input_text
 						[section_tipo] => numisdata224
 						[component_tipo] => numisdata231
 					)
@@ -1789,9 +1789,9 @@ class component_relation_common extends component_common {
 			$f_component_tipo 	= $current_obj_value->component_tipo;
 
 			// Calculate list values of each element
-				$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+				$c_model_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
 				$current_component  = component_common::get_instance(
-					$c_modelo_name,
+					$c_model_name,
 					$f_component_tipo,
 					null,
 					'edit',
@@ -1896,8 +1896,8 @@ class component_relation_common extends component_common {
 
 					// Override label with custom component parse
 					if (isset($properties->stats_look_at) && isset($properties->valor_arguments)) {
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($properties->stats_look_at), true);
-						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
+						$model_name	= RecordObj_dd::get_modelo_name_by_tipo(reset($properties->stats_look_at), true);
+						$label		= $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
 					}
 
 					$uid = $label;
@@ -1946,7 +1946,7 @@ class component_relation_common extends component_common {
 			$path = new stdClass();
 				$path->section_tipo		= $current_item->section_tipo;
 				$path->component_tipo	= reset($component_section_id_tipo);
-				$path->modelo			= 'component_section_id';
+				$path->model			= 'component_section_id';
 				$path->name				= 'Id';
 
 			$ar_section_id = array_map(function($children){
@@ -1989,7 +1989,7 @@ class component_relation_common extends component_common {
 					{
 						"section_tipo": "'.$hierarchy_section_tipo.'",
 						"component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'",
-						"modelo": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
+						"model": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
 						"name": "Active"
 					}
 				]
@@ -2011,7 +2011,7 @@ class component_relation_common extends component_common {
 					{
 						"section_tipo": "hierarchy1",
 						"component_tipo": "hierarchy9",
-						"modelo": "component_select",
+						"model": "component_select",
 						"name": "Typology"
 					}
 				]
@@ -2158,8 +2158,8 @@ class component_relation_common extends component_common {
 
 								foreach ($component_dato as $current_section_tipo) {
 									if (!empty($current_section_tipo)) {
-										$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
-										if (!empty($section_modelo_name)) {
+										$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+										if (!empty($section_model_name)) {
 											$ar_section_tipo[] = $current_section_tipo;
 										}
 									}
@@ -2209,7 +2209,7 @@ class component_relation_common extends component_common {
 					// 		"path": [
 					// 		{
 					// 			"name": "Usable in indexing",
-					// 			"modelo": "component_radio_button",
+					// 			"model": "component_radio_button",
 					// 			"section_tipo": "hierarchy20",
 					// 			"component_tipo": "hierarchy24"
 					// 		}
@@ -2304,7 +2304,7 @@ class component_relation_common extends component_common {
 		// 	$path = [
 		// 		(object)[
 		// 			'component_tipo'	=> $component_tipo,
-		// 			'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+		// 			'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 		// 			'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 		// 			'section_tipo'		=> $section_tipo
 		// 		]
@@ -2330,7 +2330,7 @@ class component_relation_common extends component_common {
 		// 		if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
 		// 			$path[] = (object)[
 		// 				'component_tipo'	=> $this->from_component_tipo,
-		// 				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
+		// 				'model'				=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
 		// 				'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
 		// 				'section_tipo'		=> $this->from_section_tipo
 		// 			];
@@ -2339,7 +2339,7 @@ class component_relation_common extends component_common {
 		// 	// self component path
 		// 		$path[] = (object)[
 		// 			'component_tipo'	=> $component_tipo,
-		// 			'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+		// 			'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 		// 			'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 		// 			'section_tipo'		=> $section_tipo
 		// 		];
@@ -2365,7 +2365,7 @@ class component_relation_common extends component_common {
 		// 		// 		// target component
 		// 		// 		$path[] = (object)[
 		// 		// 			'component_tipo'	=> $first_item->tipo,
-		// 		// 			'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($first_item->tipo,true),
+		// 		// 			'model'				=> RecordObj_dd::get_modelo_name_by_tipo($first_item->tipo,true),
 		// 		// 			'name'				=> RecordObj_dd::get_termino_by_tipo($first_item->tipo),
 		// 		// 			// note that section_tipo is used only to give a name to the join item.
 		// 		// 			// results are not really filtered by this section_tipo

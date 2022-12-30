@@ -871,7 +871,7 @@ class diffusion_rdf extends diffusion {
 								{
 									"section_tipo": "'.$section_tipo.'",
 									"component_tipo": "dd1016",
-									"modelo": "component_select",
+									"model": "component_select",
 									"name": "Entity"
 								}
 							]
@@ -883,7 +883,7 @@ class diffusion_rdf extends diffusion {
 								{
 									"section_tipo": "'.$section_tipo.'",
 									"component_tipo": "dd1037",
-									"modelo": "component_select",
+									"model": "component_select",
 									"name": "Name"
 								}
 							]
@@ -962,8 +962,8 @@ class diffusion_rdf extends diffusion {
 
 				// Collection (Entity)
 
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($base_uri_entity->from_component_tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
+					$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($base_uri_entity->from_component_tipo,true);
+					$component 		= component_common::get_instance($model_name,
 														$base_uri_entity->from_component_tipo,
 														$section_id,
 														'list',
@@ -973,8 +973,8 @@ class diffusion_rdf extends diffusion {
 
 					if (!empty($dato_entity)) {
 						// component load
-						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$component 		= component_common::get_instance($modelo_name,
+						$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component 		= component_common::get_instance($model_name,
 															$component_tipo,
 															$dato_entity[0]->section_id,
 															'list',
@@ -1027,12 +1027,12 @@ class diffusion_rdf extends diffusion {
 			}else{
 
 				# Resolve value
-				$ct_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				if ($ct_modelo_name==='component_section_id') {
+				$ct_model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				if ($ct_model_name==='component_section_id') {
 					$value = $section_id;
 				}else{
-					$ct_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component_obj 	 = component_common::get_instance(	$ct_modelo_name,
+					$ct_model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$component_obj 	 = component_common::get_instance(	$ct_model_name,
 																		$component_tipo,
 																		$section_id,
 																		'list',
@@ -1040,7 +1040,7 @@ class diffusion_rdf extends diffusion {
 																		$section_tipo,
 																		false);
 					$dato = $component_obj->get_valor();
-						#dump($dato, ' dato ++ '.to_string( $ct_modelo_name ));
+						#dump($dato, ' dato ++ '.to_string( $ct_model_name ));
 					$value = $dato;
 				}
 				#$var_uri_string .= "$key=$value";
@@ -1112,8 +1112,8 @@ class diffusion_rdf extends diffusion {
 
 				// Collection (Entity)
 
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($configuration_entity->from_component_tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
+					$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($configuration_entity->from_component_tipo,true);
+					$component 		= component_common::get_instance($model_name,
 														$configuration_entity->from_component_tipo,
 														$section_id,
 														'list',
@@ -1123,8 +1123,8 @@ class diffusion_rdf extends diffusion {
 
 					if (!empty($dato_entity)) {
 						// component load
-						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$component 		= component_common::get_instance($modelo_name,
+						$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component 		= component_common::get_instance($model_name,
 															$component_tipo,
 															$dato_entity[0]->section_id,
 															'list',
@@ -1233,7 +1233,7 @@ class diffusion_rdf extends diffusion {
 			                    {
 			                        "section_tipo": "'.$section_tipo.'",
 			                        "component_tipo": "'.reset($component_section_id_tipo).'",
-			                        "modelo": "component_section_id",
+			                        "model": "component_section_id",
 			                        "name": "ID"
 			                    }
 			                ]
@@ -1245,7 +1245,7 @@ class diffusion_rdf extends diffusion {
 			                    {
 			                        "section_tipo": "'.$section_tipo.'",
 			                        "component_tipo": "'.reset($component_publication_tipo).'",
-			                        "modelo": "component_publication",
+			                        "model": "component_publication",
 			                        "name": "Publish"
 			                    }
 			                ]
@@ -1311,7 +1311,7 @@ class diffusion_rdf extends diffusion {
 								{
 									"section_tipo": "'.$section_tipo.'",
 									"component_tipo": "component_section_id",
-                        			"modelo": "component_section_id",
+                        			"model": "component_section_id",
 									"name": "Id"
 								}
 							]

@@ -58,8 +58,8 @@ class state extends widget_common {
 							: $current_source->section_id;
 						$source_component_tipo = $current_source->component_tipo;
 
-						$source_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
-						$source_component 	= component_common::get_instance($source_modelo_name,
+						$source_model_name	= RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
+						$source_component	= component_common::get_instance($source_model_name,
 														   $source_component_tipo,
 														   $source_section_id,
 														   'list',
@@ -227,9 +227,9 @@ class state extends widget_common {
 	*/
 	public function get_label(object $locator, string $component_tipo) : string {
 
-		$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 		$component_portal	= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$component_tipo,
 			$locator->section_id,
 			'list',
@@ -250,9 +250,9 @@ class state extends widget_common {
 	*/
 	public function get_value(object $locator, string $component_tipo) {
 
-		$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$component_portal	= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$component_tipo,
 			$locator->section_id,
 			'list',

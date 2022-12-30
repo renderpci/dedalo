@@ -32,7 +32,7 @@ class diffusion_sql extends diffusion  {
 
 		# DEFAULT CASE
 		# table in first level
-		$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name=array('table'), $relation_type='children', $search_exact=true);
+		$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name=array('table'), $relation_type='children', $search_exact=true);
 
 			# Recorremos hijos de la primera/as tabla/s
 			foreach ($ar_diffusion_table as $key => $current_table_tipo) {
@@ -40,8 +40,8 @@ class diffusion_sql extends diffusion  {
 				if(SHOW_DEBUG===true) {
 
 					# Table verify
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-					if ($modelo_name==='section') {
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+					if ($model_name==='section') {
 
 						$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);
 						#dump($ar_section,'ar_section : '.$database_tipo);
@@ -59,7 +59,7 @@ class diffusion_sql extends diffusion  {
 
 		# THESAURUS CASE
 		# table_thesaurus in first level
-		$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name='table_thesaurus', $relation_type='children', true);
+		$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name='table_thesaurus', $relation_type='children', true);
 
 			# Recorremos hijos de la primera/as tabla/s
 			foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
@@ -158,13 +158,13 @@ class diffusion_sql extends diffusion  {
 
 		foreach ($ar_table_children as $curent_children_tipo) {
 
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
 
-			if ($modelo_name==='box elements') {
+			if ($model_name==='box elements') {
 				continue;
 			}
 
-			switch ($modelo_name) {
+			switch ($model_name) {
 				/*
 				case 'table': // ESTO SE USA ????????
 					#
@@ -244,7 +244,7 @@ class diffusion_sql extends diffusion  {
 							break;
 					}//end switch (true)
 					break;
-			}//end switch modelo_name
+			}//end switch model_name
 
 		}//end foreach ($ar_table_children as $curent_children_tipo)
 		// dump($ar_table_data['ar_fields'], ' ar_table_data[ar_fields]'); // die();
@@ -366,8 +366,8 @@ class diffusion_sql extends diffusion  {
 				$RecordObj_dd 		 			= new RecordObj_dd($options->tipo);
 				$properties 				 	= $RecordObj_dd->get_propiedades(true);
 
-				$diffusion_modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
-				switch ($diffusion_modelo_name) {
+				$diffusion_model_name 			= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+				switch ($diffusion_model_name) {
 					case 'field_enum':
 						if(SHOW_DEBUG===true) {
 							if (!isset($properties->enum)) {
@@ -691,8 +691,8 @@ class diffusion_sql extends diffusion  {
 					foreach ((array)$ar_table_children as $curent_children_tipo) {
 
 						# Obtenemos el modelo de los hijos de la tabla para identificar los campos y las tablas relacionadas
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
-						if ($modelo_name==='box elements') {
+						$model_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
+						if ($model_name==='box elements') {
 							continue;
 						}
 
@@ -700,7 +700,7 @@ class diffusion_sql extends diffusion  {
 						# Si el modelo es "tabla" es un puntero a un portal, se convertirá este hijo en un campo que relacionará las dos tablas
 						#switch (true) {
 							/*
-							case ($modelo_name==='table9999') : # Pointer to portal case
+							case ($model_name==='table9999') : # Pointer to portal case
 
 								# PORTAL
 								# Tabla = portal, obtenemos del elemento 'tabla', su portal (es el término relacionado)
@@ -1101,21 +1101,21 @@ class diffusion_sql extends diffusion  {
 				#
 				# Component target
 				$related_component_tipo	= self::get_field_related_component($options->tipo);
-				$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
+				$model_name			= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
 
 				// related term info
 					$ar_field_data['related_term']  = $related_component_tipo;
-					$ar_field_data['related_model'] = $modelo_name;
+					$ar_field_data['related_model'] = $model_name;
 
 				// component
-					if($modelo_name==='relation_list') {
+					if($model_name==='relation_list') {
 
 						$current_component	= new relation_list($related_component_tipo,
 																$options->parent,
 																$options->section_tipo,
 																'list');
 					}else{
-						$current_component	= component_common::get_instance($modelo_name,
+						$current_component	= component_common::get_instance($model_name,
 																			 $related_component_tipo,
 																			 $options->parent,
 																			 'list', // Note that list have dato fallback (in section)
@@ -1133,21 +1133,21 @@ class diffusion_sql extends diffusion  {
 					$get_dato_method = $properties->get_field_value->get_dato_method;
 						#dump($get_dato_method, ' get_dato_method ++ '.to_string());
 					$dato = $current_component->{$get_dato_method}();
-						#dump($dato, ' dato ++ '.to_string($modelo_name).' - '.$get_dato_method);
+						#dump($dato, ' dato ++ '.to_string($model_name).' - '.$get_dato_method);
 				}else{
-					$dato = ($modelo_name==='relation_list')
+					$dato = ($model_name==='relation_list')
 						? $current_component->get_diffusion_dato() // use 'properties->process_dato_arguments' to filter by section or component
 						: $current_component->get_dato();
 				}
 
-				$diffusion_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+				$diffusion_model_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 
 
 				# switch cases
 				switch (true) {
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='dato'):
 						# VALOR (Unresolved data)
-						switch ($diffusion_modelo_name) {
+						switch ($diffusion_model_name) {
 							case 'field_enum':
 								foreach ((array)$dato as $current_locator) {
 									$dato = $current_locator->section_id;
@@ -1155,8 +1155,8 @@ class diffusion_sql extends diffusion  {
 								if (empty($dato) || ($dato!=='1' && $dato!=='2') ) {
 									if(!empty($dato)) {
 										#dump($dato, ' dato ++ '.to_string());
-										trigger_error("WARNING: Set enum dato to default 'No' [2] for $modelo_name : $options->tipo !. <br>Received dato:".to_string($dato) );
-										debug_log(__METHOD__." WARNING: Set enum dato to default 'No' [2] for $modelo_name : $options->tipo !. <br>Received dato:".to_string($dato), logger::WARNING);
+										trigger_error("WARNING: Set enum dato to default 'No' [2] for $model_name : $options->tipo !. <br>Received dato:".to_string($dato) );
+										debug_log(__METHOD__." WARNING: Set enum dato to default 'No' [2] for $model_name : $options->tipo !. <br>Received dato:".to_string($dato), logger::WARNING);
 									}
 									$dato = 2;	# Value 'No' default
 								}
@@ -1171,7 +1171,7 @@ class diffusion_sql extends diffusion  {
 							default:
 
 								$components_with_relations = component_relation_common::get_components_with_relations();
-								if (is_array($dato) && (in_array($modelo_name, $components_with_relations) || $modelo_name==='relation_list')) {
+								if (is_array($dato) && (in_array($model_name, $components_with_relations) || $model_name==='relation_list')) {
 									$ar_id = array();
 									foreach ($dato as $current_locator) {
 
@@ -1191,7 +1191,7 @@ class diffusion_sql extends diffusion  {
 								}
 								$ar_field_data['field_value'] = $dato;
 								break;
-						}//end switch ($diffusion_modelo_name)
+						}//end switch ($diffusion_model_name)
 						break;
 
 					case (is_object($properties) && property_exists($properties, 'process_dato')):
@@ -1291,7 +1291,7 @@ class diffusion_sql extends diffusion  {
 				#dump($diffusion_domain,'$diffusion_domain '.$this->domain." ".get_called_class());
 
 			# DATABASE :
-			$ar_diffusion_database = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain, $modelo_name='database', $relation_type='children');
+			$ar_diffusion_database = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain, $model_name='database', $relation_type='children');
 				#dump($ar_diffusion_database,'$ar_diffusion_database');
 
 			# DIFFUSION_SECTIONS : Recorremos las secciones de difusión para localizar las coincidencias con los tipos de sección de las indexaciones
@@ -1616,11 +1616,11 @@ class diffusion_sql extends diffusion  {
 							}
 
 						// model
-							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-							if (!in_array($modelo_name, $ar_components_with_references)) continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
+							$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+							if (!in_array($model_name, $ar_components_with_references)) continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
 
 						// autocomplete_hi case. Avoid more recursion after resolve component_autocomplete_hi data 2018-11-16
-							// if ($modelo_name==='component_autocomplete_hi') {
+							// if ($model_name==='component_autocomplete_hi') {
 							//  	$recursion_level = $max_recursions - 1;
 							// }
 
@@ -1632,7 +1632,7 @@ class diffusion_sql extends diffusion  {
 								continue;
 							}
 
-						// debug_log(__METHOD__." Solving recursive resolve_references on level '$options->recursion_level' tipo: '$current_component_tipo' model: '$modelo_name' label: '".RecordObj_dd::get_termino_by_tipo($current_component_tipo)."' ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
+						// debug_log(__METHOD__." Solving recursive resolve_references on level '$options->recursion_level' tipo: '$current_component_tipo' model: '$model_name' label: '".RecordObj_dd::get_termino_by_tipo($current_component_tipo)."' ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
 
 						// component's lang
 							$current_lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);
@@ -1640,7 +1640,7 @@ class diffusion_sql extends diffusion  {
 						// iterate array of section_id (from options) and group_by_section_tipo
 							foreach ((array)$options->section_id as $section_id) {
 
-								$current_component  = component_common::get_instance($modelo_name,
+								$current_component  = component_common::get_instance($model_name,
 																					 $current_component_tipo,
 																					 $section_id,
 																					 'list',
@@ -2433,9 +2433,9 @@ class diffusion_sql extends diffusion  {
 
 		$diffusion_database_name = null;
 
-		$modelo_name 	= 'database';
+		$model_name 	= 'database';
 		$relation_type 	= 'parent';
-		$ar_terminoID 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_table_tipo, $modelo_name, $relation_type, true);
+		$ar_terminoID 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_table_tipo, $model_name, $relation_type, true);
 			#dump($ar_terminoID, ' ar_terminoID ++ '.to_string($diffusion_table_tipo));
 
 		$count = count($ar_terminoID);
@@ -2446,7 +2446,7 @@ class diffusion_sql extends diffusion  {
 				$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 				break;
 			case $count>1:
-				debug_log(__METHOD__." Detected more than one related elements: $modelo_name", logger::ERROR);
+				debug_log(__METHOD__." Detected more than one related elements: $model_name", logger::ERROR);
 				break;
 			default:
 				break;
@@ -2510,7 +2510,7 @@ class diffusion_sql extends diffusion  {
 				debug_log(__METHOD__." Overrided diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
 			}
 
-		// database_alias check . $tipo, $modelo_name, $relation_type, $search_exact=false
+		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
 			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
 			if (!empty($direct_child)) {
 				$database_alias_tipo = reset($direct_child);
@@ -2569,8 +2569,8 @@ class diffusion_sql extends diffusion  {
 			$table_obj 			= new RecordObj_dd($current_table_tipo);
 			$table_properties 	= json_decode($table_obj->get_propiedades(true));
 
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-			switch ($modelo_name) {
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			switch ($model_name) {
 				case 'table':
 					# Direct relation
 					$real_table 		 = $current_table_tipo;
@@ -2661,7 +2661,7 @@ class diffusion_sql extends diffusion  {
 
 				default:
 					# Skip no accepted models
-					debug_log(__METHOD__." Skiped invalid model: $modelo_name", logger::DEBUG);
+					debug_log(__METHOD__." Skiped invalid model: $model_name", logger::DEBUG);
 					#continue;
 					break;
 			}
@@ -2861,9 +2861,9 @@ class diffusion_sql extends diffusion  {
 		$target_section_tipo = reset($dato);
 		if (!empty($target_section_tipo)) {
 
-			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='parent', $search_exact=true);
+			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database', $relation_type='parent', $search_exact=true);
 				#dump($database_element_tipo, ' database_element_tipo ++ '.to_string());
-			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $modelo_name='table', $relation_type='children', $search_exact=true);
+			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $model_name='table', $relation_type='children', $search_exact=true);
 				#dump($database_element_tables, ' database_element_tables ++ '.to_string());
 			foreach ($database_element_tables as $table_tipo) {
 				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
@@ -2891,9 +2891,9 @@ class diffusion_sql extends diffusion  {
 		$element_tipo = $options->tipo;
 		$locator 	  = reset($dato);
 		if (isset($locator->section_tipo)) {
-			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='parent', $search_exact=true);
+			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database', $relation_type='parent', $search_exact=true);
 				#dump($database_element_tipo, ' database_element_tipo ++ '.to_string());
-			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $modelo_name='table', $relation_type='children', $search_exact=true);
+			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $model_name='table', $relation_type='children', $search_exact=true);
 
 			foreach ($database_element_tables as $table_tipo) {
 				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
@@ -2920,7 +2920,7 @@ class diffusion_sql extends diffusion  {
 		$section_tipo = null;
 		/*
 		$element_tipo 		= $options->tipo;
-		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='table', $relation_type='parent', $search_exact=true);
+		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='table', $relation_type='parent', $search_exact=true);
 		$ar_section_tipo 	= common::get_ar_related_by_model('section', reset($table_element_tipo));
 		$section_tipo 	 	= reset($ar_section_tipo);
 		*/
@@ -2941,7 +2941,7 @@ class diffusion_sql extends diffusion  {
 		$terminoID = null;
 		/*
 		$element_tipo 		= $options->tipo;
-		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='table', $relation_type='parent', $search_exact=true);
+		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='table', $relation_type='parent', $search_exact=true);
 		$ar_section_tipo 	= common::get_ar_related_by_model('section', reset($table_element_tipo));
 		$section_tipo 	 	= reset($ar_section_tipo);
 		*/
@@ -3306,8 +3306,8 @@ class diffusion_sql extends diffusion  {
 				throw new Exception("Error Processing Request. Not found component tipo in locator: ".to_string($parent_locator), 1);
 			}
 
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true); // component_relation_children
-			$component 		= component_common::get_instance($modelo_name,
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true); // component_relation_children
+			$component 		= component_common::get_instance($model_name,
 															 $current_component_tipo,
 															 $parent_locator->section_id,
 															 'list',
@@ -3371,9 +3371,9 @@ class diffusion_sql extends diffusion  {
 			$component_tipo = reset($data_source);
 
 
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 		= component_common::get_instance(
-				$modelo_name,
+				$model_name,
 				$component_tipo,
 				$locator->section_id,
 				'list',
@@ -3435,10 +3435,10 @@ class diffusion_sql extends diffusion  {
 		$section_tipo 	= $options->section_tipo;
 		$ar_tipo 		= common::get_ar_related_by_model('component_portal',$diffusion_tipo);
 		$component_tipo = reset($ar_tipo);
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		if($modelo_name!=='component_portal') return null;
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		if($model_name!=='component_portal') return null;
 
-		$component 		= component_common::get_instance($modelo_name,
+		$component 		= component_common::get_instance($model_name,
 														 $component_tipo,
 														 $section_id,
 														 $mode='list',
@@ -3463,8 +3463,8 @@ class diffusion_sql extends diffusion  {
 		$fields=array();
 		foreach ($ar_terminos_relacionados as $key => $ar_value) {
 			foreach ($ar_value as $current_tipo) {
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				if (strpos($modelo_name, 'component_')!==false) {
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				if (strpos($model_name, 'component_')!==false) {
 					$fields[] = $current_tipo;
 				}
 			}
@@ -3481,12 +3481,12 @@ class diffusion_sql extends diffusion  {
 
 			foreach ($fields as $current_tipo) {
 
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
-				#if ($modelo_name==='component_section_id') {
+				#if ($model_name==='component_section_id') {
 				#	continue;
 				#}
-				$component 		= component_common::get_instance($modelo_name,
+				$component 		= component_common::get_instance($model_name,
 																 $current_tipo,
 																 $section_id,
 																 'edit',
@@ -4064,13 +4064,13 @@ class diffusion_sql extends diffusion  {
 			debug_log(__METHOD__." ERROR PROCESS_DATO_ARGUMENTS MUST BE AN OBJECT ".to_string(), logger::ERROR);
 		}
 		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
-		$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
 
 		$ar_value = [];
 		foreach ($ar_locator as $key => $locator) {
 
 			// empty check
-				if (empty($locator->section_tipo) || empty($locator->section_id) || empty($modelo_name)) {
+				if (empty($locator->section_tipo) || empty($locator->section_id) || empty($model_name)) {
 					continue;
 				}
 
@@ -4084,12 +4084,12 @@ class diffusion_sql extends diffusion  {
 				}
 
 			// component
-				$component = ($modelo_name==='relation_list')
+				$component = ($model_name==='relation_list')
 					? new relation_list($target_component_tipo,
 										$locator->section_id,
 										$locator->section_tipo,
 										'list')
-					: component_common::get_instance($modelo_name,
+					: component_common::get_instance($model_name,
 										 $target_component_tipo,
 										 $locator->section_id,
 										 'list',
@@ -4349,7 +4349,7 @@ class diffusion_sql extends diffusion  {
 
 		$reference_root_element = $diffusion_element_tipo;
 
-		// database_alias check . $tipo, $modelo_name, $relation_type, $search_exact=false
+		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
 			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
 			if (!empty($direct_child)) {
 				$database_alias_tipo = reset($direct_child);
@@ -4359,7 +4359,7 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
+		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
 		$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 			$reference_root_element, // database tipo
 			'table', // modelo_name
@@ -4378,8 +4378,8 @@ class diffusion_sql extends diffusion  {
 
 		foreach ($ar_table_tipo as $current_table_tipo) {
 
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-			switch ($modelo_name) {
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			switch ($model_name) {
 				case 'table_alias':
 					# First try section (thesaurus needed)
 					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);

@@ -238,7 +238,7 @@ const rebuild_columns_map = async function(self) {
 				// because section_id is a direct column in search
 				component_tipo	: 'section_id',
 				// optional. Just added for aesthetics
-				modelo			: 'component_section_id',
+				model			: 'component_section_id',
 				name			: 'ID',
 				section_tipo	: self.section_tipo
 			}],

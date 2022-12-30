@@ -40,9 +40,9 @@
 
 					#
 					# COMPONENT PORTAL (calculate when in edit normally)	
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_referenced_tipo,true);
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_referenced_tipo,true);
 					$component 	 = component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$component_referenced_tipo,
 						$parent,
 						'list',

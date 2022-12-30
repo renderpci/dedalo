@@ -826,14 +826,14 @@ class component_text_area extends component_common {
 	*/
 	public function delete_tag_from_all_langs(string $tag_id, string $tag_type) : array {
 
-		$modelo_name		= get_class($this);
+		$model_name		= get_class($this);
 		$component_ar_langs	= (array)$this->get_component_ar_langs();
 
 		$ar_langs_changed = array();
 		foreach ($component_ar_langs as $current_lang) {
 
 			$component_text_area = component_common::get_instance(
-				$modelo_name, // component_text_area
+				$model_name, // component_text_area
 				$this->tipo,
 				$this->parent,
 				$this->mode,
@@ -1376,15 +1376,15 @@ class component_text_area extends component_common {
 			$diffusion_obj->columns['fragment']	= $fragment_info[0];
 
 			# RELATED
-			$current_related_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($rel_locator_obj->component_tipo, $modelo_name='component_', $relation_type='termino_relacionado');
+			$current_related_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($rel_locator_obj->component_tipo, $model_name='component_', $relation_type='termino_relacionado');
 
 			# No related term is present
 			if(empty($current_related_tipo[0])) return $diffusion_obj;
 
 			$current_related_tipo = $current_related_tipo[0];
-			$related_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
+			$related_model_name  = RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
 
-			switch ($related_modelo_name) {
+			switch ($related_model_name) {
 
 				case 'component_av':
 
@@ -1400,7 +1400,7 @@ class component_text_area extends component_common {
 					$duracion_tc	= OptimizeTC::seg2tc($duracion_secs);
 
 					$diffusion_obj->columns['related_tipo']	= $current_related_tipo;
-					$diffusion_obj->columns['related']		= $related_modelo_name;
+					$diffusion_obj->columns['related']		= $related_model_name;
 					$diffusion_obj->columns['tc_in']		= $tc_in;
 					$diffusion_obj->columns['tc_out']		= $tc_out;
 					$diffusion_obj->columns['duracion_tc']	= $duracion_tc;
@@ -1409,7 +1409,7 @@ class component_text_area extends component_common {
 
 					#$component_av   = new component_av($current_related_tipo, $this->get_parent(), 'edit');
 					$component_av   = component_common::get_instance(
-						$related_modelo_name,
+						$related_model_name,
 						$current_related_tipo,
 						$this->get_parent(),
 						'list',
@@ -1431,7 +1431,7 @@ class component_text_area extends component_common {
 					break;
 
 				default:
-					throw new Exception("Error Processing Request. Current related $related_modelo_name is not valid. Please configure textarea for this media ", 1);
+					throw new Exception("Error Processing Request. Current related $related_model_name is not valid. Please configure textarea for this media ", 1);
 			}
 		}
 
@@ -1640,9 +1640,9 @@ class component_text_area extends component_common {
 			$current_state			= $obj_value->state;
 			$current_tag_id			= !empty($obj_value->tag_id) ? $obj_value->tag_id : 1;
 
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 			$component		= component_common::get_instance(
-				$modelo_name,
+				$model_name,
 				$current_component_tipo,
 				$current_section_id,
 				'list',
@@ -1749,9 +1749,9 @@ class component_text_area extends component_common {
 
 		foreach ($ar_tipos as $key => $tipo) {
 
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component		= component_common::get_instance(
-				$modelo_name,
+				$model_name,
 				$tipo,
 				$locator->section_id,
 				'list',

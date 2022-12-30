@@ -59,10 +59,10 @@
 				$fields=array();
 				foreach ($ar_terminos_relacionados as $key => $ar_value) {
 
-					$modelo 	 = key($ar_value);
-					$tipo 		 = $ar_value[$modelo];
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					if ($modelo_name==='section') {
+					$model		= key($ar_value);
+					$tipo		= $ar_value[$model];
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					if ($model_name==='section') {
 						$section_tipo = $tipo;
 						$matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
 					}else{
@@ -86,9 +86,9 @@
 			$strQuery_select='';
 			foreach ($fields as $current_tipo) {
 
-				#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				#if (strpos($modelo_name,'component_')===false) {
-				#	debug_log(__METHOD__." Skipped  $current_tipo - $modelo_name ".to_string(), logger::DEBUG);
+				#$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				#if (strpos($model_name,'component_')===false) {
+				#	debug_log(__METHOD__." Skipped  $current_tipo - $model_name ".to_string(), logger::DEBUG);
 				#	continue;
 				#}
 
@@ -197,8 +197,8 @@
 			foreach ($ar_terminos_relacionados as $key => $ar_value) {
 				foreach ($ar_value as $current_tipo) {
 
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					if (strpos($modelo_name, 'component_')!==false) {
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					if (strpos($model_name, 'component_')!==false) {
 						$fields[] = $current_tipo;
 					}
 				}
@@ -224,9 +224,9 @@
 
 			foreach ($fields as $current_tipo) {
 
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$component 		= component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					$current_tipo,
 					$section_id,
 					'list',
@@ -241,7 +241,7 @@
 					$item->section_tipo 		= $section_tipo;
 					$item->from_section_tipo 	= $this->section_tipo;
 					$item->from_component_tipo 	= $this->tipo;
-					$item->model 				= $modelo_name;
+					$item->model 				= $model_name;
 					$item->value 				= $current_value_export;
 
 				$ar_resolved[] = $item;
@@ -297,8 +297,8 @@
 						foreach ($ar_terminos_relacionados as $key => $ar_value) {
 							foreach ($ar_value as $current_tipo) {
 
-								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-								if (strpos($modelo_name, 'component_')!==false) {
+								$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+								if (strpos($model_name, 'component_')!==false) {
 									$fields[] = $current_tipo;
 								}
 							}
@@ -319,9 +319,9 @@
 
 						foreach ($fields as $current_tipo) {
 
-							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-							$component		= component_common::get_instance(
-								$modelo_name,
+							$model_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$component	= component_common::get_instance(
+								$model_name,
 								$current_tipo,
 								$section_id,
 								'list',

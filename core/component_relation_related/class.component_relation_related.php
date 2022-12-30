@@ -76,9 +76,9 @@ class component_relation_related extends component_relation_common {
 		if ($ar_related_terms===false) {
 			// $ar_related_terms = $this->RecordObj_dd->get_relaciones();
 			// $ar_componets_related = array();
-			// foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
-			// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-			// 	if ($modelo_name!=='section'){
+			// foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $model => $component_tipo) {
+			// 	$model_name = RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
+			// 	if ($model_name!=='section'){
 			// 		$ar_componets_related[] = $component_tipo;
 			// 	}
 			// }
@@ -294,7 +294,7 @@ class component_relation_related extends component_relation_common {
 
 		# References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
-			#$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true); // get_class();
+			#$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true); // get_class();
 			$ref_component 	= component_common::get_instance(
 				'component_relation_related',
 				$locator->from_component_tipo,
@@ -385,7 +385,7 @@ class component_relation_related extends component_relation_common {
 		# Path
 		$base_path = new stdClass();
 			$base_path->name 			= $this->label;
-			$base_path->modelo 			= get_class($this);
+			$base_path->model 			= get_class($this);
 			$base_path->section_tipo 	= $this->section_tipo;
 			$base_path->component_tipo 	= $this->tipo;
 
@@ -456,15 +456,15 @@ class component_relation_related extends component_relation_common {
 		//
 		// 	$search_fields = array();
 		// 	foreach ($ar_terminos_relacionados as $key => $c_tipo) {
-		// 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
-		// 		if ($modelo_name==='section') continue;
+		// 		$model_name = RecordObj_dd::get_model_name_by_tipo($c_tipo,true);
+		// 		if ($model_name==='section') continue;
 		//
 		// 		$field = new stdClass();
 		// 			$field->section_tipo 	= $target_section_tipo;
 		// 			$field->component_tipo 	= $c_tipo;
 		//
 		// 		# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc..
-		// 		if(in_array($modelo_name, component_relation_common::get_components_with_relations())) {
+		// 		if(in_array($model_name, component_relation_common::get_components_with_relations())) {
 		// 			$field->search 	= $this->get_search_fields($c_tipo);
 		// 		}
 		//
@@ -593,14 +593,14 @@ class component_relation_related extends component_relation_common {
 			// self component path
 			(object)[
 				'component_tipo'	=> $component_tipo,
-				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+				'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 				'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			],
 			// thesaurus langs (component_input_text hierarchy25, section_tipo lg-1)
 			(object)[
 				'component_tipo'	=> DEDALO_THESAURUS_TERM_TIPO,
-				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_TERM_TIPO,true),
+				'model'				=> RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_TERM_TIPO,true),
 				'name'				=> RecordObj_dd::get_termino_by_tipo(DEDALO_THESAURUS_TERM_TIPO),
 				'section_tipo'		=> $section_tipo
 			]

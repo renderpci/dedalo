@@ -116,9 +116,9 @@
 				# PORTAL ROWS
 				$component_target_tipo = $current_component_tipo;
 
-					$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
+					$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
 					$component_portal = component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$current_component_tipo,
 						$parent,
 						$mode,
@@ -140,9 +140,9 @@
 					$locator_section_tipo = $first_locator->section_tipo;
 					$locator_section_id   = $first_locator->section_id;
 
-					$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($date_in_component_tipo,true); // Expected component date
+					$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($date_in_component_tipo,true); // Expected component date
 					$component_date_in= component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$date_in_component_tipo,
 						$locator_section_id,
 						$mode,
@@ -170,9 +170,9 @@
 					$locator_section_tipo = $last_locator->section_tipo;
 					$locator_section_id   = $last_locator->section_id;
 
-					$modelo_name 	    = RecordObj_dd::get_modelo_name_by_tipo($date_out_component_tipo,true); // Expected component date
+					$model_name 	    = RecordObj_dd::get_modelo_name_by_tipo($date_out_component_tipo,true); // Expected component date
 					$component_date_out = component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$date_out_component_tipo,
 						$locator_section_id,
 						$mode,
@@ -215,9 +215,9 @@
 					$locator_section_id   = $current_locator->section_id;
 
 					# Date in
-					$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($date_in_component_tipo,true); // Expected component date
+					$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($date_in_component_tipo,true); // Expected component date
 					$component_date_in= component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$date_in_component_tipo,
 						$locator_section_id,
 						$mode,
@@ -235,9 +235,9 @@
 					$ar_dates_all[]= $date_in;
 
 					# Date out
-					$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($date_out_component_tipo,true); // Expected component date
+					$model_name 	   = RecordObj_dd::get_modelo_name_by_tipo($date_out_component_tipo,true); // Expected component date
 					$component_date_out= component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$date_out_component_tipo,
 						$locator_section_id,
 						$mode,

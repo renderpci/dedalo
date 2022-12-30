@@ -69,7 +69,7 @@
       },
       "info": {
         "label": "Fecha de creación",
-        "modelo": "component_date"
+        "model": "component_date"
       }
     },
     "dd201": {
@@ -90,7 +90,7 @@
       },
       "info": {
         "label": "Fecha de modificación",
-        "modelo": "component_date"
+        "model": "component_date"
       }
     },
     "dd612": {
@@ -104,7 +104,7 @@
       },
       "info": {
         "label": "Descripción",
-        "modelo": "component_text_area"
+        "model": "component_text_area"
       }
     },
     "dd799": {
@@ -118,7 +118,7 @@
       },
       "info": {
         "label": "Etiqueta",
-        "modelo": "component_input_text"
+        "model": "component_input_text"
       }
     },
     "dd1326": {
@@ -129,7 +129,7 @@
       },
       "info": {
         "label": "Nombre de la herramienta",
-        "modelo": "component_input_text"
+        "model": "component_input_text"
       }
     },
     "dd1327": {
@@ -140,7 +140,7 @@
       },
       "info": {
         "label": "Versión",
-        "modelo": "component_input_text"
+        "model": "component_input_text"
       }
     },
     "dd1328": {
@@ -151,7 +151,7 @@
       },
       "info": {
         "label": "Versión Dédalo mínima",
-        "modelo": "component_input_text"
+        "model": "component_input_text"
       }
     },
     "dd1372": {

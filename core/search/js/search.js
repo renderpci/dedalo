@@ -471,7 +471,7 @@ search.prototype.build = async function(){
 	// 	calculate_component_path.push({
 	// 		section_tipo 	: component_context.section_tipo,
 	// 		component_tipo 	: component_context.tipo,
-	// 		modelo  		: component_context.model,
+	// 		model  			: component_context.model,
 	// 		name  			: component_context.label.replace(/<[^>]+>/g, '')
 	// 	})
 

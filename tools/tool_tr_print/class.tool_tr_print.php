@@ -168,11 +168,11 @@ class tool_tr_print extends tool_common {
 		# Actually rsc35
 		$related_component_av_tipo = $this->component_obj->get_related_component_av_tipo();
 
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($related_component_av_tipo,true);
+		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($related_component_av_tipo,true);
 		$parent			= $this->component_obj->get_parent();
 		$section_tipo	= $this->component_obj->get_section_tipo();
 		$component_av	= component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$related_component_av_tipo,
 			$parent,
 			'list',
@@ -316,12 +316,12 @@ class tool_tr_print extends tool_common {
 			$tr_data->ID = $parent;
 
 		# source lang
-			$modelo_name 			= 'component_select_lang';
-			$ar_related 			= common::get_ar_related_by_model( $modelo_name, $tipo );
+			$model_name 			= 'component_select_lang';
+			$ar_related 			= common::get_ar_related_by_model( $model_name, $tipo );
 			if (isset($ar_related[0])) {
 				$component_select_lang 	= $ar_related[0];
 				#dump($component_select_lang, ' $component_select_lang ++ '.to_string());
-				$component 	 = component_common::get_instance($modelo_name,
+				$component 	 = component_common::get_instance($model_name,
 															  $component_select_lang,
 															  $parent,
 															  'edit',
@@ -336,9 +336,9 @@ class tool_tr_print extends tool_common {
 
 
 		# date
-			$current_tipo= 'rsc44';
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // 'component_date';
-			$component 	 = component_common::get_instance($modelo_name,
+			$current_tipo	= 'rsc44';
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // 'component_date';
+			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
 														  'edit',
@@ -353,9 +353,9 @@ class tool_tr_print extends tool_common {
 			$tr_data->date = $value;
 
 		# municipality
-			$current_tipo= 'rsc46';
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_autocomplete_ts
-			$component 	 = component_common::get_instance($modelo_name,
+			$current_tipo	= 'rsc46';
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_autocomplete_ts
+			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
 														  'edit',
@@ -365,9 +365,9 @@ class tool_tr_print extends tool_common {
 			$tr_data->municipality = $value;
 
 		# code
-			$current_tipo= 'rsc21';
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_autocomplete_ts
-			$component 	 = component_common::get_instance($modelo_name,
+			$current_tipo	= 'rsc21';
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_autocomplete_ts
+			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
 														  'edit',
@@ -377,9 +377,9 @@ class tool_tr_print extends tool_common {
 			$tr_data->code = $value;
 
 		# posterframe
-			$current_tipo= 'rsc35';
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_autocomplete_ts
-			$component 	 = component_common::get_instance($modelo_name,
+			$current_tipo	= 'rsc35';
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_autocomplete_ts
+			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
 														  'edit',
@@ -423,9 +423,9 @@ class tool_tr_print extends tool_common {
 			if ($current_section_tipo==='oh1') {
 
 				# Informants
-					$current_tipo= 'oh24';
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_portal
-					$component 	 = component_common::get_instance($modelo_name,
+					$current_tipo	= 'oh24';
+					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_portal
+					$component		= component_common::get_instance($model_name,
 																  $current_tipo,
 																  $current_section_id,
 																  'edit',
@@ -459,9 +459,9 @@ class tool_tr_print extends tool_common {
 		foreach ($ar_locators as $current_locator) {
 
 			# name
-				$current_tipo= 'rsc85';
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_input_text
-				$component 	 = component_common::get_instance($modelo_name,
+				$current_tipo	= 'rsc85';
+				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_input_text
+				$component		= component_common::get_instance($model_name,
 															  $current_tipo,
 															  $current_locator->section_id,
 															  'edit',
@@ -470,9 +470,9 @@ class tool_tr_print extends tool_common {
 				$name = $component->get_valor();
 
 			# surname
-				$current_tipo= 'rsc86';
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_input_text
-				$component 	 = component_common::get_instance($modelo_name,
+				$current_tipo	= 'rsc86';
+				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_input_text
+				$component		= component_common::get_instance($model_name,
 															  $current_tipo,
 															  $current_locator->section_id,
 															  'edit',

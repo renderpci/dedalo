@@ -240,10 +240,10 @@ class tools_register {
 				            "q_operator": "=",
 				            "path": [
 				               {
-				                  "section_tipo": "'.$section_tipo.'",
-				                  "component_tipo": "'.self::$tipo_tool_name.'",
-				                  "modelo": "component_input_text",
-				                  "name": "Tool name"
+									"section_tipo"		: "'.$section_tipo.'",
+									"component_tipo"	: "'.self::$tipo_tool_name.'",
+									"model"				: "component_input_text",
+									"name"				: "Tool name"
 				               }
 				            ],
 				            "type": "jsonb"
@@ -626,10 +626,10 @@ class tools_register {
 								"q_operator": "=",
 								"path": [
 								   {
-									  "section_tipo": "'.$section_tools_reg_tipo.'",
-									  "component_tipo": "'.$component_tipo_tool_name.'",
-									  "modelo": "component_input_text",
-									  "name": "Tool name"
+										"section_tipo"		: "'.$section_tools_reg_tipo.'",
+										"component_tipo"	: "'.$component_tipo_tool_name.'",
+										"model"				: "component_input_text",
+										"name"				: "Tool name"
 								   }
 								],
 								"type": "jsonb"

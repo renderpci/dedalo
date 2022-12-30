@@ -31,8 +31,8 @@ function change_all_timecodes(object $json_data) : object {
 		}
 
 
-	$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-	$component_obj 	 = component_common::get_instance($modelo_name,
+	$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+	$component_obj 	 = component_common::get_instance($model_name,
 													  $component_tipo,
 													  $section_id,
 													  'edit',

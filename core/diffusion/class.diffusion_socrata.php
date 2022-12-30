@@ -220,12 +220,12 @@ class diffusion_socrata extends diffusion  {
 
 		$ar_diffusion_sections = array();
 
-		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
+		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
 		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', false);
 		foreach ($tables as $current_table_tipo) {
 
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-			switch ($modelo_name) {
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			switch ($model_name) {
 				case 'table_alias':
 					# First try section (thesaurus needed)
 					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);

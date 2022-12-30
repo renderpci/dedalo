@@ -551,7 +551,7 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html	: get_label.modelo || 'Model',
+			inner_html		: get_label.modelo || 'Model',
 			parent			: fragment
 		})
 		// value

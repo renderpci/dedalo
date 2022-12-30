@@ -150,13 +150,13 @@ class calculation extends widget_common {
 						$var_name		=  $current_component->var_name;
 						$options		=  isset($current_component->options) ? $current_component->options : null;
 						$component		= new RecordObj_dd($component_tipo);
-						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$lang			= ($component->get_traducible()==='no')
 							? DEDALO_DATA_NOLAN
 							: DEDALO_DATA_LANG;
 
 						$current_component = component_common::get_instance(
-							$modelo_name,
+							$model_name,
 							$component_tipo,
 							$section_id,
 							'edit',
@@ -174,7 +174,7 @@ class calculation extends widget_common {
 							$var_name		= $current_component->var_name;
 							$options		=  isset($current_component->options) ? $current_component->options : null;
 							$component		= new RecordObj_dd($component_tipo);
-							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 							$lang			= ($component->get_traducible()==='no')
 								? DEDALO_DATA_NOLAN
 								: DEDALO_DATA_LANG;
@@ -198,7 +198,7 @@ class calculation extends widget_common {
 							$var_name		= $current_component->var_name;
 							$options		=  isset($current_component->options) ? $current_component->options : null;
 							$component		= new RecordObj_dd($component_tipo);
-							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 							$lang			= ($component->get_traducible()==='no')
 								? DEDALO_DATA_NOLAN
 								: DEDALO_DATA_LANG;
@@ -233,10 +233,10 @@ class calculation extends widget_common {
 
 					// Component (component_json) where is stored source data, a json search_query_object
 						$component			= new RecordObj_dd($component_tipo);
-						$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$lang				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 						$current_component	= component_common::get_instance(
-							$modelo_name,
+							$model_name,
 							$component_tipo,
 							$this->section_id,
 							'edit',
@@ -393,11 +393,11 @@ class calculation extends widget_common {
 
 		$current_section_tipo	= $search_options->section_tipo;
 		$current_tipo			= $search_options->component_tipo;
-		$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+		$model_name				= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
-		$RecordObj_dd	= new RecordObj_dd($current_tipo);
-		$traducible		= $RecordObj_dd->get_traducible();
-		$lang			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$RecordObj_dd			= new RecordObj_dd($current_tipo);
+		$traducible				= $RecordObj_dd->get_traducible();
+		$lang					= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		# section_id filter
 		$section_id_filter = '';
@@ -408,7 +408,7 @@ class calculation extends widget_common {
 				"q": "'.$search_options->section_id.'",
                 "path": [
                     {
-                        "modelo": "component_section_id"
+                        "model": "component_section_id"
                     }
                 ],
                 "component_path": [
@@ -433,7 +433,7 @@ class calculation extends widget_common {
 		                    {
 		                        "section_tipo": "'.$current_section_tipo.'",
 		                        "component_tipo": "'.$current_tipo.'",
-		                        "modelo": "'.$modelo_name.'",
+		                        "model": "'.$model_name.'",
 		                        "name": "Sum",
 		                        "lang": "'.$lang.'"
 		                    }
@@ -447,7 +447,7 @@ class calculation extends widget_common {
 		                {
 		                    "section_tipo": "'.$current_section_tipo.'",
 		                    "component_tipo": "'.$current_tipo.'",
-		                    "modelo": "'.$modelo_name.'",
+		                    "model": "'.$model_name.'",
 		                    "name": "Sum",
 		                    "selector": "dato",
 		                    "lang": "'.$lang.'"

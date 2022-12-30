@@ -178,10 +178,10 @@ abstract class label {
 		$terminoID = null;
 
 
-		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
-			#dump($ar_terminoID_by_modelo_name,'$ar_terminoID_by_modelo_name',"label: label ");
+		$ar_term_id_by_model_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
+			#dump($ar_term_id_by_model_name,'$ar_term_id_by_model_name',"label: label ");
 
-		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
+		foreach ($ar_term_id_by_model_name as $current_terminoID) {
 
 			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
 			$properties		= $RecordObj_dd->get_properties();
@@ -200,7 +200,7 @@ abstract class label {
 		}
 
 		if(SHOW_DEBUG===true) {
-			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
+			#error_log("Calculated labels ".count($ar_term_id_by_model_name));
 			debug_log(__METHOD__." Total  ".exec_time_unit($start_time,'ms').' ms');
 		}
 

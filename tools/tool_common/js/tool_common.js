@@ -747,6 +747,7 @@ const view_modal = async function(options) {
 					// custom actions
 					tool_instance.on_close_actions('modal')
 				}else{
+
 					caller.refresh()
 					tool_instance.destroy(true, true, true)
 				}
