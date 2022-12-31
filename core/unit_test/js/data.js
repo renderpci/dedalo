@@ -57,7 +57,6 @@
 		return [result]
 	}
 
-	// export const custom_locator() {
 	export const custom_locator = function() {
 		const section_tipo			= arguments[0][0]
 		const section_id			= arguments[0][1]
@@ -229,6 +228,7 @@
 			value			: random_number(10000) || 1,
 			section_tipo	: "oh1"
 		}]
+
 		return result
 	}
 
