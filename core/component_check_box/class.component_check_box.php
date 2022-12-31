@@ -88,7 +88,7 @@ class component_check_box extends component_relation_common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$diffusion_value = $this->get_valor($lang);
+		$diffusion_value = $this->get_valor($lang, 'string');
 		$diffusion_value = !empty($diffusion_value)
 			? strip_tags($diffusion_value)
 			: null;

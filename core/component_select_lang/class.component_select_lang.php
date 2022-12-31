@@ -267,6 +267,28 @@ class component_select_lang extends component_relation_common {
 
 
 	/**
+	* GET_VALUE_CODE
+	* Returns the value lang code like 'lg-cat'
+	* Used in diffusion to get the av file lang for example
+	* @return string $code | null
+	*/
+	public function get_value_code() {
+
+		$dato = $this->get_dato();
+
+		if (empty($dato)) {
+			return null;
+		}
+
+		$locator	= reset($dato);
+		$code		= lang::get_code_from_locator($locator);
+
+		return (string)$code;
+	}//end get_value_code
+
+
+
+	/**
 	* GET_SORTABLE
 	* @return bool
 	* 	Default is true. Override when component is sortable

@@ -33,7 +33,7 @@
 
 		// dato iterate	and resolve each locator
 			$ar_valor = array();
-			foreach ($dato as $key => $current_locator) {
+			foreach ($dato as $current_locator) {
 
 				// current_valor array|null
 				$current_valor = component_relation_common::get_locator_value(
@@ -42,9 +42,12 @@
 					$show_parents, // bool show_parents
 					null // array|null ar_components_related
 				);
-
-				$current_locator_string				= json_encode($current_locator);
-				$ar_valor[$current_locator_string]	= $current_valor;
+				if (!empty($current_valor)) {
+					$current_valor = implode($fields_separator, $current_valor);
+				}
+				// $current_locator_string				= json_encode($current_locator);
+				// $ar_valor[$current_locator_string]	= $current_valor;
+				$ar_valor[]								= $current_valor;
 			}//end foreach ($dato as $key => $current_locator)
 
 		// set value based on format
@@ -85,11 +88,13 @@
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function ($lang=DEDALO_DATA_LANG, $option_obj=null) {
+	$_get_diffusion_value = function ($lang=DEDALO_DATA_LANG, $option_obj=null) : ?string {
+
+		$diffusion_value = null;
 
 		// separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$separator = ' - ';
@@ -104,7 +109,6 @@
 
 			// default case
 			$diffusion_value = $this->get_valor($lang, 'string', $separator);
-
 		}else{
 
 			// properties options defined
@@ -126,7 +130,9 @@
 									$show_parents, // bool show_parents
 									null // array|null ar_components_related
 								);
-								$ar_diffusion_value[] = $current_value;
+								if (!empty($current_value)) {
+									$ar_diffusion_value[] = implode($separator, $current_value);
+								}
 
 							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
@@ -160,10 +166,16 @@
 								false, // bool show_parents
 								null // array|null ar_components_related
 							);
-							$locator_terms[] = $current_value;
+							if (!empty($current_value)) {
+								$locator_terms[] = implode(', ', $current_value);
+							}
 
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-							$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+							$ar_parents = component_relation_parent::get_parents_recursive(
+								$current_locator->section_id,
+								$current_locator->section_tipo,
+								true
+							);
 
 						// iterate parents
 							$stopped	= false;
@@ -181,7 +193,14 @@
 
 								// parent_end_by_model. Uses a model as last valid parent
 									if(isset($value->parent_end_by_model)){
-										$ar_tipo   = section::get_ar_children_tipo_by_modelo_name_in_section($parent_locator->section_tipo,['component_relation_model'],true, true, true, true);
+										$ar_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+											$parent_locator->section_tipo,
+											['component_relation_model'],
+											true,
+											true,
+											true,
+											true
+										);
 										$component = component_common::get_instance(
 											'component_relation_model',
 											$ar_tipo[0],
@@ -200,7 +219,11 @@
 										}
 									}
 
-									$term = ts_object::get_term_by_locator($parent_locator, $lang, $from_cache=true);
+									$term = ts_object::get_term_by_locator(
+										$parent_locator,
+										$lang,
+										true // bool from_cache
+									);
 									if (!empty($term)) {
 										$ar_terms[] = $term;
 									}
@@ -234,13 +257,15 @@
 
 				}//end if ($key==='custom_parents')
 			}//end foreach ($option_obj as $key => $value)
-		}
+		}//end if (empty($option_obj))
 
 		// clean untranslated tags (<mark>)
-			$diffusion_value = strip_tags($diffusion_value);
+			$diffusion_value = !empty($diffusion_value)
+				? strip_tags($diffusion_value)
+				: '';
 
 
-		return (string)$diffusion_value;
+		return $diffusion_value;
 	};//end get_diffusion_value
 
 

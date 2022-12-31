@@ -549,6 +549,58 @@ class ts_object {
 
 
 	/**
+	* GET_TERM_DATO_BY_LOCATOR
+	*
+	* @return array $final_value
+	*	Default is bool false
+	*/
+	public static function get_term_dato_by_locator(object $locator) : ?array {
+
+		// check valid object
+			if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
+				if(SHOW_DEBUG===true) {
+					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
+					debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+				}
+				return null;
+			}
+
+		$section_map 	= section::get_section_map($locator->section_tipo);
+		$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+
+		$ar_tipo 		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+		$section_id 	= $locator->section_id;
+		$section_tipo 	= $locator->section_tipo;
+
+		$ar_value = [];
+		foreach ($ar_tipo as $tipo) {
+
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato = (array)$component->get_dato();
+
+			if (!empty($dato)) {
+				$ar_value = array_merge($ar_value, $dato);
+			}
+		}//end foreach ($ar_tipo as $tipo) {
+
+		// final value
+			$final_value = $ar_value;
+
+
+		return $final_value;
+	}//end get_term_dato_by_locator
+
+
+
+	/**
 	* GET_TERM_BY_LOCATOR
 	* Resolve locator to string value to show in list etc.
 	* @param object $locator
@@ -597,16 +649,16 @@ class ts_object {
 
 					$parent			= $locator->section_id;
 					$section_tipo	= $locator->section_tipo;
-					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					// debug
 						// if(SHOW_DEBUG===true) {
 						// 	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						// 	if ($real_modelo_name!==$modelo_name) {
-						// 		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
+						// 	if ($real_modelo_name!==$model) {
+						// 		trigger_error("Error. modelo_name of component $tipo must be $model. $#real_modelo_name is defined");#
 						// 	}
 						// }
 					$component = component_common::get_instance(
-						$modelo_name,
+						$model,
 						$tipo,
 						$parent,
 						'edit',

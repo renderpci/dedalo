@@ -540,7 +540,9 @@ class component_iri extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* If index var is received, return dato element corresponding to this index if exists
-	* @return string|null $valor
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 

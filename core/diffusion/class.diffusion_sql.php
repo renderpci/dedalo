@@ -186,7 +186,7 @@ class diffusion_sql extends diffusion  {
 					#
 					# FIELD
 					$RecordObj_dd 	= new RecordObj_dd($curent_children_tipo);
-					$properties 	= json_decode($RecordObj_dd->get_propiedades(true));
+					$properties 	= $RecordObj_dd->get_propiedades(true);
 						#dump($properties, ' properties');
 
 					switch (true) {
@@ -568,8 +568,8 @@ class diffusion_sql extends diffusion  {
 		$ar_data=array();
 		$i=0;
 		$ar_portal_records=array();
-		$skip_publication_state_check = isset($_SESSION['dedalo4']['config']['skip_publication_state_check'])
-			? (int)$_SESSION['dedalo4']['config']['skip_publication_state_check']
+		$skip_publication_state_check = isset($_SESSION['dedalo']['config']['skip_publication_state_check'])
+			? (int)$_SESSION['dedalo']['config']['skip_publication_state_check']
 			: 0;
 
 		# Records iteration
@@ -1554,7 +1554,6 @@ class diffusion_sql extends diffusion  {
 			// cache . update
 				$ar_resolved_static[] = $resolved_static_key;
 
-
 		// thesaurus parent auto publication. If current record is from a thesaurus section,
 		// recursive parents are publised too (20-05-2020) .
 		// Allow publish only used terms and parents path for large thesaurus sections like toponyms
@@ -1586,8 +1585,8 @@ class diffusion_sql extends diffusion  {
 		#
 		# REFERENCES
 			$recursion_level	= (int)$options->recursion_level;
-			$max_recursions		= isset($_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
-				? $_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
+			$max_recursions		= isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
+				? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
 				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
 
@@ -1626,7 +1625,7 @@ class diffusion_sql extends diffusion  {
 
 						// skip resolve components with dato external (portals)
 							$RecordObj_dd					= new RecordObj_dd($current_component_tipo);
-							$current_component_properties	= $RecordObj_dd->get_properties(true);
+							$current_component_properties	= $RecordObj_dd->get_propiedades(true);
 							if (isset($current_component_properties->source->mode) && $current_component_properties->source->mode==='external') {
 								debug_log(__METHOD__." Skipped component with external source mode: ".to_string($current_component_tipo), logger::DEBUG);
 								continue;
@@ -1640,13 +1639,15 @@ class diffusion_sql extends diffusion  {
 						// iterate array of section_id (from options) and group_by_section_tipo
 							foreach ((array)$options->section_id as $section_id) {
 
-								$current_component  = component_common::get_instance($modelo_name,
-																					 $current_component_tipo,
-																					 $section_id,
-																					 'list',
-																					 $current_lang,
-																					 $options->section_tipo,
-																					 false);
+								$current_component  = component_common::get_instance(
+									$modelo_name,
+									 $current_component_tipo,
+									 $section_id,
+									 'list',
+									 $current_lang,
+									 $options->section_tipo,
+									 false
+								);
 								$current_dato = $current_component->get_dato();
 
 								foreach ((array)$current_dato as $current_locator) {
@@ -1713,7 +1714,6 @@ class diffusion_sql extends diffusion  {
 					#$ar_section_tipo_resolved = array_merge($ar_section_tipo_resolved, $ar_uniques);
 					#debug_log(__METHOD__." ar_section_tipo_resolved ".to_string($ar_section_tipo_resolved), logger::ERROR);
 			}//end if ($resolve_references===true)
-
 
 		// $this->ar_published_records = $ar_resolved_static;
 
@@ -2567,7 +2567,7 @@ class diffusion_sql extends diffusion  {
 
 			# Propiedades
 			$table_obj 			= new RecordObj_dd($current_table_tipo);
-			$table_properties 	= json_decode($table_obj->get_propiedades(true));
+			$table_properties 	= $table_obj->get_propiedades(true);
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
 			switch ($modelo_name) {
@@ -2623,7 +2623,7 @@ class diffusion_sql extends diffusion  {
 						if (empty($table_properties)) {
 							# Try with real table when alias is empty
 							$table_obj 			= new RecordObj_dd($real_table);
-							$table_properties 	= json_decode($table_obj->get_propiedades(true));
+							$table_properties 	= $table_obj->get_propiedades(true);
 						}
 						$data = new stdClass();
 							$data->table			= $real_table;
@@ -2710,7 +2710,7 @@ class diffusion_sql extends diffusion  {
 
 		$thesaurus_data = new stdClass();
 
-		$ar_diffusion_map = self::get_ar_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
+		$diffusion_map = self::get_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
 			#dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string($options->section_tipo));
 
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();
@@ -3005,16 +3005,16 @@ class diffusion_sql extends diffusion  {
 
 				$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
 
-				$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'] ?? 0;
+				$current_skip_publication_state_check = $_SESSION['dedalo']['config']['skip_publication_state_check'] ?? 0;
 
 				# Set temporally to skip and force parent publication
-				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
+				$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 
 				tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
 				debug_log(__METHOD__." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) ".to_string(), logger::DEBUG);
 
 				# Restore previous skip_publication_state_check state
-				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
+				$_SESSION['dedalo']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
 
 			}else{
 				#debug_log(__METHOD__." ============ NOT Triggered tool_diffusion::export_record dato: ".to_string($dato), logger::ERROR);
@@ -3335,7 +3335,7 @@ class diffusion_sql extends diffusion  {
 
 		$ar_section_id = array();
 
-		$current_version = (array)tool_administration::get_current_version_in_db();
+		$current_version = get_current_version_in_db();
 
 		//prior to 4.8 dato : 49:2
 		if($current_version[0] <= 4 && $current_version[1] <= 8) {
@@ -4333,6 +4333,7 @@ class diffusion_sql extends diffusion  {
 				$value 	 = $dd_date->get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true);
 				break;
 		}
+
 
 		return $value;
 	}//end split_date_range

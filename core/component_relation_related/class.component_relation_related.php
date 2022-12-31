@@ -65,42 +65,42 @@ class component_relation_related extends component_relation_common {
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
-	* @return string | null $valor
+	* @return array|string|null $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
+	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false ) {
 
-		$request_config = $this->get_request_config_object();
-		$show = $request_config->show;
+		// lang never must be DEDALO_DATA_NOLAN
+			if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
+
+		// request_config
+			$request_config	= $this->get_request_config_object();
+			$show			= $request_config->show;
 
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain specific 'valor' form component
-		if ($ar_related_terms===false) {
-			// $ar_related_terms = $this->RecordObj_dd->get_relaciones();
-			// $ar_componets_related = array();
-			// foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
-			// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-			// 	if ($modelo_name!=='section'){
-			// 		$ar_componets_related[] = $component_tipo;
-			// 	}
+			// if ($ar_related_terms===false) {
+			// 	// $ar_related_terms = $this->RecordObj_dd->get_relaciones();
+			// 	// $ar_componets_related = array();
+			// 	// foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
+			// 	// 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+			// 	// 	if ($modelo_name!=='section'){
+			// 	// 		$ar_componets_related[] = $component_tipo;
+			// 	// 	}
+			// 	// }
+			// 	$ar_componets_related = $show->ddo_map;
+			// }else{
+			// 	$ar_componets_related = (array)$ar_related_terms;
 			// }
+			$ar_componets_related =($ar_related_terms===false)
+				? array_map(function($el){
+					return $el->tipo;
+				  }, $show->ddo_map)
+				: $ar_related_terms;
 
-			$ar_componets_related = $show->ddo_map;
-
-
-		}else{
-			$ar_componets_related = (array)$ar_related_terms;
-		}
-
-		# lang never must be DEDALO_DATA_NOLAN
-		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
-
-		$dato				= $this->get_dato();
-		$properties			= $this->get_properties();
+		$dato				= $this->get_dato() ?? [];
 		$fields_separator	= (isset($show->fields_separator)) ?  $show->fields_separator : ' | ';
 		$ar_values			= array();
 
-		foreach ((array)$dato as $key => $current_locator) {
-
-			$current_locator_json = json_encode($current_locator);
+		foreach ((array)$dato as $current_locator) {
 
 			// current_ar_value array|null
 			$current_ar_value = self::get_locator_value(
@@ -112,6 +112,8 @@ class component_relation_related extends component_relation_common {
 			$current_value = !empty($current_ar_value)
 				? implode($fields_separator, $current_ar_value)
 				: $current_ar_value; // null case
+
+			$current_locator_json = json_encode($current_locator);
 			$ar_values[$current_locator_json] = $current_value;
 		}//end if (!empty($dato))
 
@@ -494,15 +496,20 @@ class component_relation_related extends component_relation_common {
 		# $dato_with_references = $this->get_dato_with_references();
 		# 	dump($dato_with_references, ' dato_with_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
 
-		$diffusion_value = $this->get_valor($lang, $format='array');
+		$valor = $this->get_valor(
+			$lang,  // string lang
+			'array' // string format array|string
+		);
 
 		// calculated references
 		$calculated_references = $this->get_calculated_references();
 
 		if (empty($option_obj)) {
 
-			$diffusion_value = implode($separator, $diffusion_value);
-			$diffusion_value = strip_tags($diffusion_value, $separator);
+			$diffusion_value	= implode($separator, $valor);
+			$diffusion_value	= !empty($diffusion_value)
+				? strip_tags($diffusion_value, $separator)
+				: '';
 
 			if (!empty($calculated_references)) {
 				$ar_references = [];
@@ -512,9 +519,9 @@ class component_relation_related extends component_relation_common {
 				if (!empty($diffusion_value)) {
 					$diffusion_value .= $separator;
 				}
+				// append ar_references
 				$diffusion_value .= implode($separator, $ar_references);
 			}
-
 		}else{
 
 			$ar_terms = [];
@@ -525,8 +532,8 @@ class component_relation_related extends component_relation_common {
 
 					$fields_separator 	= $this->get_fields_separator();
 
-					if (!empty($diffusion_value)) {
-						$array_values = array_values($diffusion_value);
+					if (!empty($valor)) {
+						$array_values = array_values($valor);
 						foreach ($array_values as $key => $current_term) {
 							$ar_terms[] = explode($fields_separator, $current_term);
 						}
@@ -539,7 +546,6 @@ class component_relation_related extends component_relation_common {
 					}
 
 					// append whole or part of results when no empty
-
 					if (!empty($ar_terms)) {
 						$final_term = [];
 						foreach ($ar_terms as $term) {
@@ -553,13 +559,13 @@ class component_relation_related extends component_relation_common {
 								}
 							}
 							$final_term[] = implode($fields_separator, $term);
-
+						}
+						if (!empty($final_term)) {
+							$diffusion_value = implode($separator, $final_term);
 						}
 					}
 				}
 			}
-			$diffusion_value = implode($separator, $final_term);
-			// $diffusion_value = strip_tags($diffusion_value, $separator);
 		}
 
 

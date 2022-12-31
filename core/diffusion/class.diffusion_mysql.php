@@ -28,21 +28,26 @@ class diffusion_mysql extends diffusion_sql  {
 	* @return db resource
 	*/
 	public static function get_conn($database_name) {
-		return DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
-										 MYSQL_DEDALO_USERNAME_CONN,
-										 MYSQL_DEDALO_PASSWORD_CONN,
-										 $database_name,
-										 MYSQL_DEDALO_DB_PORT_CONN,
-										 MYSQL_DEDALO_SOCKET_CONN);
+		return DBi::_getConnection_mysql(
+			MYSQL_DEDALO_HOSTNAME_CONN,
+			MYSQL_DEDALO_USERNAME_CONN,
+			MYSQL_DEDALO_PASSWORD_CONN,
+			$database_name,
+			MYSQL_DEDALO_DB_PORT_CONN,
+			MYSQL_DEDALO_SOCKET_CONN
+		);
 	}//end get_conn
 
 
 
 	/**
 	* EXEC_MYSQL_QUERY
-	* @return
+	* Returns false on failure. For successful queries which produce a result set, such as
+	* SELECT, SHOW, DESCRIBE or EXPLAIN, mysqli_query() will return a mysqli_result object.
+	* For other successful queries, mysqli_query() will return true.
+	* @return object|resource
 	*/
-	public static function exec_mysql_query($sql, $table_name=null, $database_name=false, $multi_query=false) {
+	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) {
 
 		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
 
@@ -51,30 +56,29 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 
 		$mysql_conn = self::get_conn($database_name);
-		# Set as class static var
-		#self::$mysql_conn;
 
-		#error_log("++++++++++ sql 1 : ".$sql);
+		// debug
+			// error_log("++++++++++ sql 1 : ".$sql);
 
-		if ($multi_query===true) {
-			$result = $mysql_conn->multi_query( $sql );
-		}else{
-			$result = $mysql_conn->query( $sql );
-		}
+		// result
+		$result = ($multi_query===true)
+			? $mysql_conn->multi_query( $sql )
+			: $mysql_conn->query( $sql );
 
-		if (!$result) {
-			#debug_log(__METHOD__." Skipped (key:$key) db_data value for database: $database_name : ".to_string($mysql_conn->error), logger::WARNING);
-			if(SHOW_DEBUG===true) {
-				#dump( $mysql_conn->error, "error".to_string() );
-				error_log("++++++++++ SQL ERROR QUERY : ".$sql);
-				$query_clean = trim($sql);
-				error_log("error_log sql: ".$sql);
-				dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
-				#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
-			}
-			$msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
-			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-			#die();
+		if ($result===false || !empty($mysql_conn->error)) {
+			// debug_log(__METHOD__." ERROR for database: $database_name : error: ".to_string($mysql_conn->error), logger::ERROR);
+			// if(SHOW_DEBUG===true) {
+			// 	#dump( $mysql_conn->error, "error".to_string() );
+			// 	// error_log("++++++++++ SQL ERROR QUERY : ".$sql);
+			// 	// error_log("error_log sql: ".$sql);
+			// 	dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
+			// 	#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
+			// }
+			// $msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
+			debug_log(
+				__METHOD__.' INFO: Data skipped in SQL table : '. $table_name .' , error: '. $mysql_conn->error,
+				logger::ERROR
+			);
 		}
 		#$mysql_conn->close();
 
@@ -93,7 +97,6 @@ class diffusion_mysql extends diffusion_sql  {
 	* Build MySQL query string for create table request and exec query
 	* Called by trigger (trigger.diffusion_xx_web.php) to exec sql code
 	* @param array $table_data
-	* @return string $sql_query . Prepared sql query to exec
 	* @see trigger.diffusion_ [ENTITY] _web.php
 	* Format example:
 	* (
@@ -107,14 +110,14 @@ class diffusion_mysql extends diffusion_sql  {
     *                [field_options] => 12
     *            )   ..
     * )
+    * @return bool true
 	*/
-	public static function create_table(array $table_data, $drop=true) {
-		#dump($table_data, ' table_data'); die();
+	public static function create_table(array $table_data, bool $drop=true) : bool {
 
-		$database_name 	= $table_data['database_name'];	# nombre base de datos
-		$table_name 	= $table_data['table_name'];	# nombre tabla
-		$ar_fields 		= $table_data['ar_fields'];		# campos de la tabla
-		$engine 		= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
+		$database_name	= $table_data['database_name'];	# nombre base de datos
+		$table_name		= $table_data['table_name'];	# nombre tabla
+		$ar_fields		= $table_data['ar_fields'];		# campos de la tabla
+		$engine			= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
 		$table_type		= $table_data['table_type'];	# table type: default | tm
 
 		#
@@ -126,7 +129,6 @@ class diffusion_mysql extends diffusion_sql  {
 				# EXEC SINGLE QUERY TO DATABASE
 				$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
 			}
-
 
 		#
 		# CREATE
@@ -150,8 +152,12 @@ class diffusion_mysql extends diffusion_sql  {
 			#
 			# EXEC SINGLE QUERY TO DATABASE
 			$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
+			if ($result===false) {
+				debug_log(__METHOD__." Error on created new table $database_name.$table_name ".to_string($sql_query), logger::ERROR);
+			}else{
+				debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
+			}
 
-			debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
 
 		return true;
 	}//end create_table
@@ -164,7 +170,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* 	ALTER TABLE `audiovisual` ADD `pepe` text COLLATE 'utf8_unicode_ci' NULL;
 	* @return bool true
 	*/
-	public static function add_column($field_name, $tipo, $table_name, $database_name) {
+	public static function add_column(string $field_name, string $tipo, string $table_name, string $database_name) : bool {
 
 		$typology = $field_name==='section_id' ||  $field_name==='lang'
 			? $field_name
@@ -181,7 +187,12 @@ class diffusion_mysql extends diffusion_sql  {
 		$field_coment	= $field_ar_data['field_coment'];
 
 		// build_field_insert_sql($field_name, $field_type, $field_options=null , $field_coment='', $pref='field_')
-		$column_sql = self::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment);
+		$column_sql = self::build_field_insert_sql(
+			$field_name, // string field_name
+			$field_type, // string field_type
+			$field_options,
+			$field_coment // string field_coment
+		);
 		// sample result: "`subtitles` text COLLATE utf8_unicode_ci COMMENT 'Id - rsc175'"
 
 		// index_sql
@@ -201,9 +212,16 @@ class diffusion_mysql extends diffusion_sql  {
 		$sql_query = 'ALTER TABLE `'.$table_name.'` ADD '.$column_sql .', '.$index_sql .';';
 
 		// exec single query to database
-		$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
-
-		debug_log(__METHOD__." Created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::WARNING);
+		$result = self::exec_mysql_query(
+			$sql_query,
+			$table_name,
+			$database_name
+		);
+		if ($result===false) {
+			debug_log(__METHOD__." Erroro on created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::ERROR);
+		}else{
+			debug_log(__METHOD__." Created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::WARNING);
+		}
 
 
 		return true;
@@ -231,15 +249,16 @@ class diffusion_mysql extends diffusion_sql  {
 	* )
 	* @return bool true
 	*/
-	public static function insert_data($ar_table, $database_name) {
+	public static function insert_data(array $ar_table, string $database_name) : bool {
 
 		// Empty fields check
 			if (empty($ar_table['ar_fields'])) {
 				if(SHOW_DEBUG===true) {
+					// throw new Exception("Error Processing Request. Table ".$ar_table['table_name']." don't have fields !", 1);
+					debug_log(__METHOD__." Error Processing Request. Table ".$ar_table['table_name']." don't have fields ! ".to_string(), logger::ERROR);
 					dump($ar_table, ' ar_table  don\'t have fields database_name:'.$database_name);
-					throw new Exception("Error Processing Request. Table ".$ar_table['table_name']." don't have fields !", 1);
 				}
-				return null;
+				return false;
 			}
 
 		// short vars
@@ -262,7 +281,7 @@ class diffusion_mysql extends diffusion_sql  {
 							# Open values group
 							$current_line = '(';
 
-								# FIELD ID : Autoincrement null
+								# FIELD ID : Auto increment null
 								$current_line .= "NULL,";
 
 								# FIELDS : Normal fields
@@ -284,10 +303,14 @@ class diffusion_mysql extends diffusion_sql  {
 					}//end foreach ($ar_table as $key => $ar_values)
 
 				// insert sql:
-					$sql_query_line .= "\nINSERT INTO `$database_name`.`$table_name` VALUES " . implode("\n", $ar_values_line);
+					$sql_query_line = "\nINSERT INTO `$database_name`.`$table_name` VALUES " . implode("\n", $ar_values_line);
 
 				// exec single query to database
-					$result = self::exec_mysql_query( $sql_query_line, $table_name, $database_name );
+					$result = self::exec_mysql_query(
+						$sql_query_line,
+						$table_name,
+						$database_name
+					);
 
 				debug_log(__METHOD__." Exec chunk query $chunk_key of $n_ar_chunk (max. $max_insert_chunk of total $n_ar_fields) to $table_name ".to_string($result), logger::DEBUG);
 			}//end foreach ($ar_chunk as $key => $current_ar_fields) {
@@ -302,42 +325,43 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
-	* exec_mysql_multi_query
+	* EXEC_MYSQL_MULTI_QUERY
 	* @param string $sql_query
 	* @return resource $result
-	*//*
-	public static function exec_mysql_multi_query__DEPECATED($sql_query) {
-
-		$db = DBi::_getConnection_mysql();
-
-		# Escapa el query para evitar problemas con apótrofes etc..
-		#$result_a  = $db->real_escape_string($sql_query);
-			#dump($result,'result');
-
-		# Multiquery : Como usamos más de una línea de sentencias sql, usaremos 'multi_query' en lugar de 'query'
-		$result = $db->multi_query( $sql_query );
-
-
-		if (SHOW_DEBUG) {
-			#error_log("INFO: Ejecutado código sql : $sql_query");
-		}
-
-		# NEXT RESULT : desbloquea la conexión para la siguiente petición (multi_query)
-		$db->next_result();
-
-		return $result;
-	}//end multi
 	*/
+		// public static function exec_mysql_multi_query__DEPECATED($sql_query) {
+
+		// 	$db = DBi::_getConnection_mysql();
+
+		// 	# Escapa el query para evitar problemas con apótrofes etc..
+		// 	#$result_a  = $db->real_escape_string($sql_query);
+		// 		#dump($result,'result');
+
+		// 	# Multiquery : Como usamos más de una línea de sentencias sql, usaremos 'multi_query' en lugar de 'query'
+		// 	$result = $db->multi_query( $sql_query );
+
+
+		// 	if (SHOW_DEBUG) {
+		// 		#error_log("INFO: Ejecutado código sql : $sql_query");
+		// 	}
+
+		// 	# NEXT RESULT : desbloquea la conexión para la siguiente petición (multi_query)
+		// 	$db->next_result();
+
+		// 	return $result;
+		// }//end multi
+
 
 
 
 	/**
 	* GENERATE_KEYS
+	*
+	* @see diffusion_mysql::create_table
 	* @param array $ar_fields
 	* @return string $sql_query
-	* @see diffusion_mysql::create_table
 	*/
-	private static function generate_keys($ar_fields, $table_type='default') {
+	private static function generate_keys(array $ar_fields, string $table_type='default') : string {
 
 		$sql_query 	= '';
 		$pref 		= 'field_';
@@ -348,14 +372,14 @@ class diffusion_mysql extends diffusion_sql  {
 
 		#
 		# KEYS
-		$i=1;foreach ($ar_fields as $key => $ar_data) {
+		$i=1;foreach ($ar_fields as $ar_data) {
 
-			$field_name		= $ar_data['field_name'];
-			$field_type		= $ar_data['field_type'];
-			$field_options	= $ar_data['field_options'];
+			$field_name			= $ar_data['field_name'];
+			$field_type			= $ar_data['field_type'];
+			// $field_options	= $ar_data['field_options'];
 
 
-			if ($field_name==='tld' ) $is_thesaurus = true;
+			if ($field_name==='tld') $is_thesaurus = true;
 
 			switch (true) {
 
@@ -399,7 +423,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* @return string $sql_query
 	* @see diffusion_mysql::create_table
 	*/
-	private static function generate_fields($ar_fields) {
+	private static function generate_fields(array $ar_fields) : string {
 
 		$ar_sentences = [];
 		foreach ($ar_fields as $key => $field_ar_data) {
@@ -427,7 +451,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* Creates a SQL sentence of field (column) based on type
 	* @return string $sql_query
 	*/
-	public static function build_field_insert_sql($field_name, $field_type, $field_options=null , $field_coment='', $pref='field_') {
+	public static function build_field_insert_sql(string $field_name, string $field_type, $field_options=null , string $field_coment='', string $pref='field_') : string {
 
 		$sql_query = '';
 
@@ -500,7 +524,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* Insert / Update one MySQL row (one for lang)
 	* @return object $response
 	*/
-	public static function save_record( $request_options ) {
+	public static function save_record( $request_options ) : OBJECT {
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		$response = new stdClass();
@@ -539,7 +563,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 					// table do not exists case. Create a new one
 
-					# Call to diffusion to optain fields for generate the table
+					# Call to diffusion to obtain fields for generate the table
 					#if ($typology==='thesaurus') {
 					#	$ts_options = new stdClass();
 					#		$ts_options->table_name = $table_name;
@@ -658,11 +682,16 @@ class diffusion_mysql extends diffusion_sql  {
 
 							$strQuery_tm = "INSERT INTO `$database_name`.`tm_{$table_name}` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
 
-							$result = self::exec_mysql_query( $strQuery_tm, 'tm_'.$table_name, $database_name );
-							if (!$result) {
+							$result = self::exec_mysql_query(
+								$strQuery_tm,
+								'tm_'.$table_name,
+								$database_name
+							);
+							if ($result===false) {
 								#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
 								$response->result = false;
-								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
+								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error ".DBi::_getConnection_mysql()->error;
+								debug_log(__METHOD__." $response->msg ", logger::ERROR);
 								return (object)$response;
 							}
 						}
@@ -671,13 +700,21 @@ class diffusion_mysql extends diffusion_sql  {
 						$strQuery = "INSERT INTO `$database_name`.`$table_name` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
 
 					// exec query
-						$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
-						if (!$result) {
+						$result = self::exec_mysql_query(
+							$strQuery,
+							$table_name,
+							$database_name
+						);
+						if ($result===false) {
 							#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
+							debug_log(__METHOD__." Error on insert MySQL data ". DBi::_getConnection_mysql()->error, logger::ERROR);
+
 							$response->result = false;
 							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
 							return (object)$response;
 						}
+
+
 
 						$response->msg[] = "Inserted record section_id:$section_id, table:$table_name, lang:$lang";
 				}//end foreach ($ar_fields as $lang => $fields) iterate langs
@@ -716,7 +753,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$strQuery	= "DESCRIBE $table_name ;";
 		$result		= self::exec_mysql_query( $strQuery, $table_name, $database_name );
-		if (!$result) {
+		if ($result===false) {
 			return $real_table_fields;
 		}
 
@@ -858,7 +895,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$result = $sql_options->conn->query($strQuery);
 
-		if (!$result) {
+		if ($result===false) {
 			if(SHOW_DEBUG===true) {
 				dump($strQuery, $sql_options->conn->error );
 				throw new Exception("Error Processing Request", 1);
@@ -906,9 +943,10 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* TABLE_EXITS
+	* Check if target table already exists
 	* @return bool
 	*/
-	public static function table_exits($database_name, $table_name) {
+	public static function table_exits(string $database_name, string $table_name) : bool {
 
 		$table_exits = false;
 
@@ -919,9 +957,9 @@ class diffusion_mysql extends diffusion_sql  {
 		(table_schema = '$database_name' OR table_catalog = '$database_name')
 		AND table_name = '$table_name'
 		";
-		#$result  = DBi::_getConnection_mysql()->query( $strQuery );
-		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
-		if (!$result) {
+		$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+		if ($result===false) {
+			debug_log(__METHOD__." Error on get table_exits from information_schema.tables: ".to_string($strQuery), logger::ERROR);
 			return false;
 		}
 
@@ -999,7 +1037,7 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );
-			if (!$result) {
+			if ($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error));
 				}

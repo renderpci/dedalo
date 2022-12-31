@@ -161,7 +161,7 @@ class component_geolocation extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*
@@ -169,9 +169,16 @@ class component_geolocation extends component_common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$dato 			 = $this->get_dato();
-		$diffusion_value = !empty($dato)
-			? json_encode($dato)
+		$diffusion_value = null;
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return $diffusion_value;
+		}
+
+		$value = is_array($dato) ? reset($dato) : $dato;
+		$diffusion_value = !empty($value)
+			? json_encode($value)
 			: null;
 
 		return $diffusion_value;

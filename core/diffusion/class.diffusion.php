@@ -19,6 +19,8 @@ abstract class diffusion  {
 		public static $publication_first_user_tipo  = 'dd1224';
 		public static $publication_last_user_tipo  	= 'dd1225';
 
+		public $ar_records;
+
 
 
 	/**
@@ -84,7 +86,7 @@ abstract class diffusion  {
 				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
 				foreach ($ar_childrens as $current_children) {
 
-				 	$RecordObj_dd = new RecordObj_dd($current_children);
+					$RecordObj_dd = new RecordObj_dd($current_children);
 					$properties  = $RecordObj_dd->get_propiedades(true);
 						#dump($properties, ' properties '.$current_children);
 
@@ -108,19 +110,19 @@ abstract class diffusion  {
 
 	/**
 	* GET_AR_DIFFUSION_MAP
-	* Get and set ar_diffusion_map of current domain ($this->domain)
+	* Get and set diffusion_map of current domain ($this->domain)
 	* @param string $diffusion_domain_name . Like 'aup'
 	* @return object $entity_diffusion_tables
 	*/
-	public static function get_ar_diffusion_map( $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) {
+	public static function get_diffusion_map( $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : object {
 
-		static $ar_diffusion_map;
+		// cache
+			static $diffusion_map;
+			if (isset($diffusion_map)) {
+				return $diffusion_map;
+			}
 
-		if (isset($ar_diffusion_map)) {
-			return $ar_diffusion_map;
-		}
-
-		$ar_diffusion_map = new stdClass();
+		$diffusion_map = new stdClass();
 
 		#
 		# DIFFUSION DOMAIN
@@ -136,7 +138,7 @@ abstract class diffusion  {
 		}
 		if (!isset($diffusion_domain_tipo)) {
 			debug_log(__METHOD__." Not found diffusion_domain_tipo for diffusion_domain: ".to_string($diffusion_domain_name), logger::WARNING);
-			return $ar_diffusion_map; // Not found entity name as diffusion domain
+			return $diffusion_map; // Not found entity name as diffusion domain
 		}
 
 		#
@@ -146,7 +148,7 @@ abstract class diffusion  {
 			#dump($ar_diffusion_element_tipo, ' ar_diffusion_element_tipo ++ '.to_string());
 		foreach ($ar_diffusion_group as $diffusion_group_tipo) {
 
-			$ar_diffusion_map->{$diffusion_group_tipo} = array();
+			$diffusion_map->{$diffusion_group_tipo} = array();
 
 			#
 			# DIFFUSION_ELEMENT
@@ -208,14 +210,14 @@ abstract class diffusion  {
 					$data->database_name	= $diffusion_database_name;
 					$data->database_tipo	= $diffusion_database_tipo;
 
-				$ar_diffusion_map->{$diffusion_group_tipo}[] = $data;
+				$diffusion_map->{$diffusion_group_tipo}[] = $data;
 
 			}#foreach ($ar_diffusion_element_tipo as $element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
-		#dump($ar_diffusion_map, ' ar_diffusion_map by diffusion_group_tipo ++ '.to_string());
+		#dump($diffusion_map, ' diffusion_map by diffusion_group_tipo ++ '.to_string());
 
-		return (object)$ar_diffusion_map;
+		return (object)$diffusion_map;
 	}//end get_ar_diffusion_map
 
 
@@ -226,15 +228,15 @@ abstract class diffusion  {
 	*/
 	public static function get_ar_diffusion_map_elements( $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) {
 
-		$ar_diffusion_map = self::get_ar_diffusion_map($diffusion_domain_name);
+		$diffusion_map = self::get_diffusion_map($diffusion_domain_name);
 
 		# Get only diffusion_elements, ignore groups
-		$ar_diffusion_map_elements=array();
-		foreach ($ar_diffusion_map as $ar_value) foreach ($ar_value as $group_tipo => $obj_value) {
-			$ar_diffusion_map_elements[$obj_value->element_tipo] = $obj_value;
+		$diffusion_map_elements=array();
+		foreach ($diffusion_map as $ar_value) foreach ($ar_value as $group_tipo => $obj_value) {
+			$diffusion_map_elements[$obj_value->element_tipo] = $obj_value;
 		}
 
-		return $ar_diffusion_map_elements;
+		return $diffusion_map_elements;
 	}//end get_ar_diffusion_map_elements
 
 
@@ -476,24 +478,24 @@ abstract class diffusion  {
 
 		# Ref. $options
 		# [typology] =>
-	    # [value] =>
-	    # [tipo] => mdcat2447
-	    # [component_tipo] => mdcat1536
-	    # [section_id] => 1
-	    # [lang] => lg-fra
-	    # [section_tipo] => mdcat597
-	    # [caler_id] => 3
-	    # [properties] => stdClass Object
-	    #     (
-	    #         [varchar] => 1024
-	    #         [process_dato] => diffusion_sql::resolve_value
-	    #         [process_dato_arguments] => stdClass Object
-	    #             (
-	    #                 [target_component_tipo] => rsc92
-	    #                 [component_method] => map_locator_to_term_id
-	    #             )
-	    #     )
-	    # [diffusion_element_tipo] => mdcat353
+		# [value] =>
+		# [tipo] => mdcat2447
+		# [component_tipo] => mdcat1536
+		# [section_id] => 1
+		# [lang] => lg-fra
+		# [section_tipo] => mdcat597
+		# [caler_id] => 3
+		# [properties] => stdClass Object
+		#     (
+		#         [varchar] => 1024
+		#         [process_dato] => diffusion_sql::resolve_value
+		#         [process_dato_arguments] => stdClass Object
+		#             (
+		#                 [target_component_tipo] => rsc92
+		#                 [component_method] => map_locator_to_term_id
+		#             )
+		#     )
+		# [diffusion_element_tipo] => mdcat353
 
 		$process_dato_arguments = (object)$options->properties->process_dato_arguments;
 		$method 				= $process_dato_arguments->component_method;
@@ -585,7 +587,7 @@ abstract class diffusion  {
 	*/
 	public static function map_section_id_to_subtitles_url($options, $dato) {
 
-		require_once(DEDALO_CORE_PATH . '/tools/tool_subtitles/class.subtitles.php');
+		require_once(DEDALO_SHARED_PATH . '/class.subtitles.php');
 
 		$section_id 	= (int)$dato;
 		$lang 			= $options->lang;
@@ -626,20 +628,20 @@ abstract class diffusion  {
 
 		// Response (from imagemagick)
 			# [0] => 617
-		    # [1] => 849
-		    # [2] => 2
-		    # [3] => width="617" height="849"
-		    # [bits] => 8
-		    # [channels] => 3
-		    # [mime] => image/jpeg
+			# [1] => 849
+			# [2] => 2
+			# [3] => width="617" height="849"
+			# [bits] => 8
+			# [channels] => 3
+			# [mime] => image/jpeg
 
 		// image_info object
-		    $image_info = new stdClass();
-		    	$image_info->width  	= $image_dimensions[0];
-		    	$image_info->height 	= $image_dimensions[1];
-		    	$image_info->bits   	= $image_dimensions['bits'];
-		    	$image_info->channels  	= $image_dimensions['channels'];
-		    	$image_info->mime  		= $image_dimensions['mime'];
+			$image_info = new stdClass();
+				$image_info->width  	= $image_dimensions[0];
+				$image_info->height 	= $image_dimensions[1];
+				$image_info->bits   	= $image_dimensions['bits'];
+				$image_info->channels  	= $image_dimensions['channels'];
+				$image_info->mime  		= $image_dimensions['mime'];
 
 
 		return $image_info;
@@ -779,7 +781,7 @@ abstract class diffusion  {
 					$options->section_tipo
 				);
 				$ar_indexations = $component->get_component_indexations(); # DEDALO_RELATION_TYPE_INDEX_TIPO dd96
-					#dump($ar_indexations, ' ar_indexations ++ '." section_id: $options->section_id - lang: $options->lang - dato:".$component->get_dato());
+					// dump($ar_indexations, ' ar_indexations +++++++++++++++++++++++++++++++ '." section_id: $options->section_id - lang: $options->lang - dato:";
 
 				if (!empty($ar_indexations)) {
 					foreach ($ar_indexations as $current_locator) {
@@ -797,12 +799,25 @@ abstract class diffusion  {
 							# 	[from_section_tipo] => ts1
 							# 	[from_section_id] => 29
 							# }
+						// v6 locator
+							// {
+							//	"type": "dd96",
+							//	"tag_id": "1",
+							//	"section_id": "16",
+							//	"section_tipo": "dc1",
+							//	"section_top_id": "3",
+							//	"section_top_tipo": "oh1",
+							//	"tag_component_tipo": "rsc36",
+							//	"from_component_tipo": "rsc860"
+							// }
 
 						$options_update_record = new stdClass();
-							$options_update_record->section_tipo 			= $current_locator->from_section_tipo;
-							$options_update_record->section_id 	 			= $current_locator->from_section_id;
-							$options_update_record->recursion_level 		= 0;
-							$options_update_record->diffusion_element_tipo 	= $options->diffusion_element_tipo;
+							// $options_update_record->section_tipo			= $current_locator->from_section_tipo;
+							// $options_update_record->section_id			= $current_locator->from_section_id;
+							$options_update_record->section_tipo			= $current_locator->section_tipo;
+							$options_update_record->section_id				= $current_locator->section_id;
+							$options_update_record->recursion_level			= 0;
+							$options_update_record->diffusion_element_tipo	= $options->diffusion_element_tipo;
 
 						$ar_found = array_filter(diffusion::$update_record_actions, function($item) use($options_update_record){
 							return ($item->section_tipo===$options_update_record->section_tipo && $item->section_id===$options_update_record->section_id);
