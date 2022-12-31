@@ -125,6 +125,40 @@ export const set_context_vars = function(self) {
 				}
 			});
 
+
+		// show_interface. object . Defines useful view custom properties to take control
+		// of some common component behaviors
+		// if show_interface is defined in properties used the definition, else use this default
+			const default_show_interface = {
+				read_only 			: false, // bool false
+				save_animation		: true, // bool false
+				// buttons_container	: true, // bool false
+				value_buttons		: true,  // bool false
+				button_add			: true, // bool false
+				button_link			: true, // bool false
+				tools				: true, // bool false
+				button_external		: false, // bool false
+				button_tree			: false, // bool false
+				show_autocomplete 	: true // bool false
+			}
+			// set the instance show_interface
+
+			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
+				? default_show_interface
+				: (()=>{
+					const new_show_interface = (self.context.properties.show_interface)
+						? self.context.properties.show_interface
+						: self.request_config_object.show.interface
+					// add missing keys
+					for (const [key, value] of Object.entries(default_show_interface)) {
+						if (new_show_interface[key]===undefined) {
+							new_show_interface[key] = value
+						}
+					}
+
+					return new_show_interface
+				  })()
+
 		// getters
 			// const ar_getters = [
 			// 	'type',
@@ -1862,7 +1896,7 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 	// 							const path = {
 	// 								section_tipo	: section_tipo,
 	// 								component_tipo	: item,
-	// 								modelo			: ddo.model
+	// 								model			: ddo.model
 	// 							}
 	// 							ar_paths.push(path)
 	// 						}
@@ -2408,7 +2442,7 @@ common.prototype.calculate_component_path = function(component_context, path) {
 	calculate_component_path.push({
 		section_tipo	: component_context.section_tipo,
 		component_tipo	: component_context.tipo,
-		modelo			: component_context.model,
+		model			: component_context.model,
 		name			: component_context.label.replace(/<[^>]+>/g, '')
 	})
 

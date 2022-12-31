@@ -160,7 +160,7 @@ component_text_area.prototype.init = async function(options) {
 					const caller	= options.caller
 
 				// read_only case
-					if (self.view_properties.read_only===true) {
+					if (self.show_interface.read_only===true) {
 						return
 					}
 

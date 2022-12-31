@@ -200,7 +200,7 @@ const get_input_element = (i, current_value, self) => {
 					toolbar			: toolbar, // array of strings like ['bold','italic']
 					custom_buttons	: get_custom_buttons(self, current_service_text_editor, i),
 					custom_events	: get_custom_events(self, i, current_service_text_editor),
-					read_only		: self.view_properties.read_only || false
+					read_only		: self.show_interface.read_only || false
 				}
 
 			// init editor
@@ -230,7 +230,7 @@ const get_input_element = (i, current_value, self) => {
 
 
 	// user click in the wrapper and init the editor. When it's not read only
-		if (self.view_properties.read_only!==true) {
+		if (self.show_interface.read_only!==true) {
 
 			const auto_init_editor = self.auto_init_editor!==undefined
 				? self.auto_init_editor
@@ -273,7 +273,7 @@ const get_input_element = (i, current_value, self) => {
 					}, 25)
 				}
 			}
-		}//end if (self.view_properties.read_only!==true)
+		}//end if (self.show_interface.read_only!==true)
 
 
 	return content_value
