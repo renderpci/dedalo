@@ -25,7 +25,7 @@
 		on_dragstart_mosaic,
 		on_dragover,
 		on_dragleave,
-		on_dragend,
+		// on_dragend,
 		on_drop
 	} from './drag_and_drop.js'
 
@@ -156,7 +156,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 			// store to allow destroy later
 			self.ar_instances.push(...ar_section_record)
 
-			const content_data		= await get_content_data(self, ar_section_record)
+			const content_data = await get_content_data(self, ar_section_record)
 
 		// (!) No need to add the nodes here. On user mouseover/click, they will be added
 		// alt_list_body . Prepend hidden node into content_data to allow refresh on render_level 'content'
