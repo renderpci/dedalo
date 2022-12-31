@@ -183,6 +183,24 @@ component_portal.prototype.init = async function(options) {
 						}
 					})
 			}//end fn_initiator_link
+		// deactivate_component. Observes current component deactivation event
+			self.events_tokens.push(
+				event_manager.subscribe('deactivate_component', fn_deactivate_component)
+			)
+			function fn_deactivate_component(component) {
+				if (component.id===self.id) {
+					console.log('self.autocomplete_active:', self.autocomplete_active);
+					if(self.autocomplete_active===true){
+						self.autocomplete.destroy(
+							true, // bool delete_self
+							true, // bool delete_dependencies
+							true // bool remove_dom
+						)
+						self.autocomplete_active	= false
+						self.autocomplete			= null
+					}
+				}
+			}
 
 
 
@@ -396,11 +414,15 @@ component_portal.prototype.build = async function(autoload=false) {
 				}
 
 			// autocomplete destroy. change the autocomplete service to false and deactivates it
-				if(self.autocomplete && self.autocomplete_active===true){
-					self.autocomplete.destroy()
-					self.autocomplete_active = false
-					self.autocomplete 		 = null
-				}
+				// if(self.autocomplete && self.autocomplete_active===true){
+				// 	self.autocomplete.destroy(
+				// 		true, // bool delete_self
+				// 		true, // bool delete_dependencies
+				// 		true // bool remove_dom
+				// 	)
+				// 	self.autocomplete_active	= false
+				// 	self.autocomplete			= null
+				// }
 		}else if(self.mode==='search') {
 
 			// active / prepare the autocomplete in search mode
@@ -490,24 +512,6 @@ component_portal.prototype.build = async function(autoload=false) {
 
 	return true
 }//end component_portal.prototype.build
-
-
-
-/**
-* DEACTIVATE
-* Custom deactivate function triggered after ui.deactivate has finish
-*/
-component_portal.prototype.deactivate = function() {
-
-	// service autocomplete remove if active
-		if(self.autocomplete_active===true){
-			self.autocomplete.destroy()
-			self.autocomplete_active = false
-			self.autocomplete = null
-		}
-
-	return true
-}//end deactivate
 
 
 
