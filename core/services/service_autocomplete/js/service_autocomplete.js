@@ -7,7 +7,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
-	import {get_columns_map} from '../../../common/js/common.js'
+	import {common, get_columns_map} from '../../../common/js/common.js'
 	import {view_default_autocomplete} from './view_default_autocomplete.js'
 
 
@@ -20,7 +20,27 @@
 */
 export const service_autocomplete = function() {
 
+	this.id				= null
+	this.model			= null
+	this.mode			= null
+	this.lang			= null
+	this.node			= null
+	this.ar_instances	= null
+	this.status			= null
+	this.events_tokens	= []
+	this.type			= null
+	this.caller			= null
 }//end service_autocomplete
+
+
+
+/**
+* COMMON FUNCTIONS
+* extend config functions from common
+*/
+// prototypes assign
+	// life-cycle
+	service_autocomplete.prototype.destroy		= common.prototype.destroy
 
 
 
@@ -35,13 +55,14 @@ service_autocomplete.prototype.init = async function(options) {
 	const self = this
 
 	// options
-		self.caller				= options.caller
-		self.view				= options.view || 'text'
-		self.children_view		= options.children_view || null
-		self.properties			= options.properties || {}
-		self.tipo				= options.tipo
-		self.section_tipo		= options.section_tipo
-		self.request_config		= clone(options.request_config)
+		self.caller			= options.caller
+		self.view			= options.view || 'text'
+		self.children_view	= options.children_view || null
+		self.properties		= options.properties || {}
+		self.tipo			= options.tipo
+		self.section_tipo	= options.section_tipo
+		self.request_config	= clone(options.request_config)
+		self.id_variant		= options.id_variant || self.model
 
 	// set properties
 		self.model					= 'service_autocomplete'
@@ -58,16 +79,20 @@ service_autocomplete.prototype.init = async function(options) {
 		}
 		self.filter_free_nodes = []
 
-	self.node = null
+	self.node			= null
+	self.ar_instances	= [];
 
 	// event keys
 		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
 		function fn_service_autocomplete_keys(e) {
 			self.service_autocomplete_keys(e)
 		}
-		event_manager.subscribe('destroy_'+self.id, ()=>{
-			document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
-		})
+		// event_manager.subscribe('destroy_'+self.id, ()=>{
+		// 	document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
+		// })
+
+	// status update
+	self.status = 'initiated'
 
 	return true
 }//end init
@@ -76,8 +101,7 @@ service_autocomplete.prototype.init = async function(options) {
 
 /**
 * BUILD
-*
-* @param object options
+* @param object options = {}
 * @return bool
 */
 service_autocomplete.prototype.build = async function(options={}) {
@@ -99,14 +123,12 @@ service_autocomplete.prototype.build = async function(options={}) {
 		self.list_name				= 's_'+new Date().getUTCMilliseconds()
 		self.search_fired			= false
 
-
 	// operator
 		self.operator = self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
 			? self.request_config_object.search.sqo_config.operator
 			: self.request_config_object.show && self.request_config_object.show.sqo_config && self.request_config_object.show.sqo_config.operator
 				? self.request_config_object.show.sqo_config.operator
 				: '$and'
-
 
 	// engine. get the search_engine sended or set the default value
 		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
@@ -184,19 +206,19 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 * DESTROY
 * @return bool
 */
-service_autocomplete.prototype.destroy = async function() {
+	// service_autocomplete.prototype.destroy = async function() {
 
-	const self = this
+	// 	const self = this
 
-	self.node.remove()
+	// 	self.node.remove()
 
-	event_manager.publish('destroy_'+self.id, this)
+	// 	event_manager.publish('destroy_'+self.id, this)
 
-	// status update
-	self.status = 'destroyed'
+	// 	// status update
+	// 	self.status = 'destroyed'
 
-	return true
-}//end destroy
+	// 	return true
+	// }//end destroy
 
 
 
