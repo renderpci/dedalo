@@ -91,6 +91,7 @@ class component_relation_related extends component_relation_common {
 					return $el->tipo;
 				  }, $show->ddo_map)
 				: $ar_related_terms;
+		}
 
 		$dato				= $this->get_dato() ?? [];
 		$fields_separator	= (isset($show->fields_separator)) ?  $show->fields_separator : ' | ';
