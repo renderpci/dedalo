@@ -77,8 +77,13 @@ export const common_render = async function(self, options) {
 		self.columns_map = columns_map
 
 	// ar_section_record. section_record instances (initialized and built)
-		const ar_section_record	= await get_section_records({caller:self})
-		self.ar_instances		= ar_section_record
+		const ar_section_record	= await get_section_records({
+			caller : self,
+			mode : 'tm',
+			view : 'line'
+		})
+		// store to allow destroy later
+		self.ar_instances.push(...ar_section_record)
 
 	// content_data
 		const content_data = await get_content_data(ar_section_record, self)
@@ -167,14 +172,15 @@ export const get_content_data = async function(ar_section_record, self) {
 		if (ar_section_record_length===0) {
 
 			// no records found case
+
 			const no_records_found_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'no_records',
 				inner_html		: get_label.no_records || 'No records found'
 			})
 			fragment.appendChild(no_records_found_node)
-
 		}else{
+
 			// rows
 
 			// parallel render

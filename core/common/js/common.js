@@ -695,8 +695,9 @@ export const create_source = function (self, action) {
 			source.matrix_id = self.matrix_id
 		}
 
-	// data_source optional (used in time machine mode)
-		if (self.context && true===self.context.hasOwnProperty('data_source') && self.context.data_source) {
+	// data_source optional (used in time machine mode). data_source='tm'
+		// if (self.context && true===self.context.hasOwnProperty('data_source') && self.context.data_source) {
+		if (self.data_source) {
 			source.data_source = self.data_source
 		}
 
@@ -1397,7 +1398,7 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 			if (request_config_object.show) {
 				rqo.show = request_config_object.show
 			}
-			console.warn("added rqo.show:", self.tipo, self.mode );
+			// console.warn("added rqo.show:", self.tipo, self.mode, rqo.show);
 		}
 
 	// set_local_db_data updated rqo

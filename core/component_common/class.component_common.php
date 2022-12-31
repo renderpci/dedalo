@@ -599,8 +599,9 @@ abstract class component_common extends common {
 				return $this->dato_resolved;
 			}
 
-		// time machine mode case
-			if (isset($this->data_source) &&  $this->data_source==='tm') {
+		// time machine mode case. data_source='tm'
+			if (isset($this->data_source) && $this->data_source==='tm') {
+			// if ($this->mode==='tm') {
 
 				// matrix_id check
 					if (empty($this->matrix_id)) {
