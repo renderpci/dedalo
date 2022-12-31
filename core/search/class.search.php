@@ -96,7 +96,6 @@ class search {
 		// $search_class = (isset($search_query_object->mode) && $search_query_object->mode==='tm') ? 'search_tm' : 'search';
 
 		$mode = $search_query_object->mode ?? null;
-
 		switch ($mode) {
 			case 'tm':
 				$search_class = 'search_tm';
@@ -248,6 +247,7 @@ class search {
 	* SEARCH
 	* Exec a SQL query search against the database
 	* @return object $records_data
+	* { ar_records : [], }
 	*/
 	public function search() : object {
 		$start_time=start_time();
@@ -260,7 +260,8 @@ class search {
 
 		$result	= JSON_RecordObj_matrix::search_free($sql_query);
 		if ($result===false) {
-			trigger_error("Error Processing Request : Sorry cannot execute search_free non resource query: ".PHP_EOL."<hr> $sql_query");
+			// trigger_error("Error Processing Request : Sorry cannot execute search_free non resource query: ".PHP_EOL."<hr> $sql_query");
+			debug_log(__METHOD__." Error Processing Request : Sorry cannot execute search_free non resource query: ".PHP_EOL."<hr> $sql_query ".to_string(), logger::ERROR);
 			$records_data = new stdClass();
 				$records_data->ar_records = [];
 			return $records_data;
@@ -303,17 +304,19 @@ class search {
 					$property_name 	= 'relations_' . $table_alias;
 					#$field_value 	= $ar_relations_cache_solved[$property_name]; // Full relations data
 					//if (isset($ar_relations_cache_solved[$property_name])) {
-						$current_relations_cache_solved = $ar_relations_cache_solved[$property_name];
-						$field_value = self::get_filtered_relations($current_relations_cache_solved, $component_tipo); // Filtered by from_component_tipo
+						$current_relations_cache_solved	= $ar_relations_cache_solved[$property_name];
+						$field_value					= self::get_filtered_relations(
+							$current_relations_cache_solved,
+							$component_tipo
+						); // Filtered by from_component_tipo
 					//}
 					# Add property
 					$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
-						? json_decode($field_value)
+						? json_encode($field_value)
 						: $field_value;
 				}
 			}
 			#debug_log(__METHOD__." row ".to_string($row), logger::DEBUG);
-
 			$ar_records[] = $row;
 		}
 
@@ -322,11 +325,11 @@ class search {
 				$ar_row_children = [];
 				foreach ($ar_records as $row) {
 					$row_children 	 = component_relation_children::get_children(
-						$row->section_id,
-						$row->section_tipo,
-						$component_tipo=null,
-						$recursive=true,
-						$is_recursion=false
+						$row->section_id, // string section_id
+						$row->section_tipo, // string section_tipo
+						null, // string|null component_tipo
+						true, // bool recursive
+						false // bool is_recursion
 					);
 
 					$ar_row_children = array_merge($ar_row_children, $row_children);
@@ -365,7 +368,7 @@ class search {
 		// full_count DEPRECATED DON'T USE IT
 			if ($this->search_query_object->full_count===true) {
 				# Exec a count query
-				# Converts json search_query_object to sql query string
+				# Converts JSON search_query_object to SQL query string
 				$full_count_sql_query	= $this->parse_search_query_object( $full_count=true );
 				$full_count_result		= JSON_RecordObj_matrix::search_free($full_count_sql_query);
 				$row_count				= pg_fetch_assoc($full_count_result);
@@ -398,7 +401,7 @@ class search {
 					return $section_tipo .' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 				}, $ar_sections);
 
-				debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
+				// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 				// debug_log(__METHOD__." SQL QUERY EXEC TIME (".implode(',', $ar_sections)."): ".round(start_time()-$start_time,3).' '. str_repeat('-', 50) .PHP_EOL. to_string($sql_query), logger::DEBUG);
 
 				// debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);

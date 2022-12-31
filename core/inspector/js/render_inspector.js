@@ -1171,7 +1171,7 @@ export const load_component_history = async function(self, component) {
 					'where' // where dd546
 				],
 				ddo_map				: [
-					{ // selected component
+					{ 	// selected component
 						typo			: 'ddo',
 						type			: 'component',
 						model			: component.model,

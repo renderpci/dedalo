@@ -2692,7 +2692,6 @@ class section extends common {
 					) {
 
 					debug_log(__METHOD__." Invalid relations locator is received. ".to_string($current_relation), logger::ERROR);
-
 					throw new Exception("Error Processing Request. !! FOUNDED BAD FORMAT RELATION LOCATOR IN SECTION_RELATION DATA: (type:".gettype($current_relation).") ".to_string($current_relation), 1);
 				}
 				#if ($remove_previous_of_current_type && $current_relation->type===$current_type) {
@@ -3214,10 +3213,9 @@ class section extends common {
 					$tipo			= $db_record->tipo;
 					$dato			= $db_record->dato;
 
-
 				// empty tipo case catch
 					if (empty($tipo)) {
-						debug_log(__METHOD__." Empty tipo was received ! . db_record: ".PHP_EOL.to_string($db_record), logger::ERROR);
+						debug_log(__METHOD__." Empty tipo was received ! . db_record: ".PHP_EOL.to_string($db_record), logger::WARNING);
 						continue;
 					}
 
