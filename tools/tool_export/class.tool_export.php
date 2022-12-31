@@ -284,7 +284,8 @@ class tool_export extends tool_common {
 					$section_grid = new dd_grid_cell_object();
 						$section_grid->set_type('column');
 						// $section_grid->set_label($ar_ddo_map[$i]->label);
-						$section_grid->set_ar_columns_obj($column_obj);
+						$section_grid->set_ar_columns_obj($column_obj); // note that only one column is expected here !
+						// $section_grid->set_column_obj($column_obj);
 						$section_grid->set_render_label(true);
 						$section_grid->set_class_list('caption section');
 						$section_grid->set_cell_type('header');
