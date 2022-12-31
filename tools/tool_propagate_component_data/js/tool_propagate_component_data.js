@@ -6,7 +6,7 @@
 // import needed modules
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
@@ -35,6 +35,7 @@ export const tool_propagate_component_data = function () {
 	this.caller			= null
 
 	this.component_list = null
+	this.component_to_propagate
 
 
 	return true
@@ -90,13 +91,43 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-
 	// specific actions.. like fix main_element for convenience
 		// main_element. Set and config
-		const main_element_ddo		= self.tool_config.ddo_map.find(el => el.role==="main_element")
+		const main_element_ddo			= self.tool_config.ddo_map.find(el => el.role==="main_element")
 		self.main_element				= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
-		self.main_element.permissions	= 1 // set as read only
 
+		const instance_options = {
+			// datum			: self.main_element.datum,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: 'tmp',
+			model			: self.main_element.model,
+			mode			: self.main_element.mode,
+			tipo			: self.main_element.tipo,
+			lang			: self.main_element.lang,
+			type			: self.main_element.type,
+			context			: self.main_element.context,
+			id_variant		: 'propagate_'+new Date().getUTCMilliseconds(),
+			standalone		: true,
+			caller			: self
+		}
+
+		self.component_to_propagate			= await get_instance(instance_options)
+		await self.component_to_propagate.build(true)
+		self.component_to_propagate.datum			= self.main_element.datum
+		self.component_to_propagate.data			= self.main_element.data
+		self.component_to_propagate.data.section_id	='tmp'
+		// change the show_interface to add link and add buttons
+		self.component_to_propagate.show_interface.button_add	= true
+		self.component_to_propagate.show_interface.button_link	= true
+		// self.component_to_propagate.db_data.value = {}
+
+		self.component_to_propagate.changed_data = [Object.freeze({
+			action	: 'set_data',
+			value	: self.main_element.data.value || []
+		})]
+
+		self.component_to_propagate.save()
+			console.log("self.component_to_propagate.show_interface:------------------------<>",self.component_to_propagate.data);
 
 	return common_build
 }//end build_custom
@@ -115,21 +146,23 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 	const self = this
 
 	// short vars
-		const section_tipo		= self.main_element.section_tipo
-		const section_id		= self.main_element.section_id
-		const component_tipo	= self.main_element.tipo
-		const lang				= self.main_element.lang
+		const section_tipo			= self.main_element.section_tipo
+		const section_id			= self.main_element.section_id
+		const component_tipo		= self.main_element.tipo
+		const lang					= self.main_element.lang
+		const propagate_data_value	= self.component_to_propagate.data.value
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(arguments)
 		const source = create_source(self, 'propagate_component_data')
 		// add the necessary arguments used in the given function
 		source.arguments = {
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			component_tipo	: component_tipo,
-			action			: action,
-			lang			: lang
+			section_tipo			: section_tipo,
+			section_id				: section_id,
+			component_tipo			: component_tipo,
+			action					: action,
+			lang					: lang,
+			propagate_data_value	: propagate_data_value
 		}
 
 	// rqo
@@ -167,7 +200,7 @@ tool_propagate_component_data.prototype.on_close_actions = async function(open_a
 	const self = this
 
 	if (open_as==='modal') {
-		// self.caller.refresh() // never refresh caller (component_json)
+		self.caller.refresh() // never refresh caller (component_json)
 		self.destroy(true, true, true)
 	}
 
