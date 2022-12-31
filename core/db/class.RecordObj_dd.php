@@ -25,7 +25,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $filtroTerminos ;
 
 	# OPTIONAL ESPECIFIC LOADS
-	#protected $ar_recursive_childrens_of_this	= array();
+	protected $ar_recursive_childrens_of_this	= array();
 	#protected $ar_parents_cache				= array();
 	#protected $ar_reels_of_this				= array();
 
@@ -188,7 +188,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_PROPERTIES
 	* Return the value of property 'properties', stored as JSONB in table column 'properties'
 	* Values expected in 'properties' are always JSON.
-	
+
 	* @return object|array|null $properties_parsed
 	*/
 	public function get_properties() {
