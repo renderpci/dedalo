@@ -146,11 +146,12 @@ abstract class DBi {
 		$socket=MYSQL_DEDALO_SOCKET_CONN
 		) : object|false {
 
-		static $mysqli;
 
-		if(isset($mysqli)) {
-			return($mysqli);
-		}
+		// cache
+			static $mysqli;
+			if(isset($mysqli)) {
+				return($mysqli);
+			}
 
 		/*
 			$mysqli = new mysqli($host, $user, $password, $database, $port);
@@ -163,11 +164,10 @@ abstract class DBi {
 			return $mysqli;
 			*/
 
-		# Oculta el mensaje 'MySQL extension is deprecated & will be removed in the future of PHP' cuando se usa con PHP >=5
-		# error_reporting(E_ERROR | E_PARSE);
-
 		// You should enable error reporting for mysqli before attempting to make a connection
+		// @see https://www.php.net/manual/en/mysqli-driver.report-mode.php
 			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+			// mysqli_report(MYSQLI_REPORT_ALL ^ MYSQLI_REPORT_STRICT);
 
 		// INIT
 			// $mysqli = mysqli_init();
@@ -199,9 +199,16 @@ abstract class DBi {
 		}
 
 		// UTF8 : Change character set to utf8mb4
-		if (!$mysqli->set_charset("utf8mb4")) {
-			printf("Error loading character set utf8mb4: %s\n", $mysqli->error);
+		if (!$mysqli->set_charset('utf8mb4')) {
+			// printf("Error loading character set utf8mb4: %s\n", $mysqli->error);
+			debug_log(__METHOD__." Error loading character set utf8mb4: ".to_string($mysqli->error), logger::DEBUG);
 		}
+
+		// errors
+			// $errno = mysqli_connect_errno();
+			// $error = mysqli_connect_error();
+			// 	dump($errno, '$errno ++ '.to_string());
+			// 	dump($error, '$error ++ '.to_string());
 
 
 		return $mysqli;
