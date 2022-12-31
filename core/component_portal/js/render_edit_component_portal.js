@@ -698,37 +698,6 @@ export const get_buttons = (self) => {
 				parent			: buttons_container
 			})
 
-		// Default source external buttons configuration,
-		// if show.interface is defined in properties used the definition, else use this default
-		const default_interface = (self.context.properties.source?.mode==='external')
-			? {
-				button_add		: false,
-				button_link		: false,
-				tools			: false,
-				button_external	: true,
-				button_tree		: false
-			}
-			: {
-				button_add		: true,
-				button_link		: true,
-				tools			: true,
-				button_external	: false,
-				button_tree		: false
-			}
-		const show_interface = (!self.request_config_object.show.interface)
-			? default_interface
-			: (()=>{
-				const new_show_interface = self.request_config_object.show.interface
-				// add missing keys
-				for (const [key, value] of Object.entries(default_interface)) {
-					if (new_show_interface[key]===undefined) {
-						new_show_interface[key] = value
-					}
-				}
-
-				return new_show_interface
-			  })()
-
 		// button_update_data_external
 			if( self.show_interface.button_external === true){
 
