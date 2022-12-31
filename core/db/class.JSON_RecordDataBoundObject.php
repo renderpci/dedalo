@@ -85,18 +85,21 @@ abstract class JSON_RecordDataBoundObject {
 			// section_tipo. Verify section_tipo
 			if( empty($this->section_tipo) ) {
 				// throw new Exception(__METHOD__.' Error: section_tipo is mandatory to load data', 1);
-				trigger_error(__METHOD__.' Error: section_tipo is mandatory to load data');
+				// trigger_error(__METHOD__.' Error: section_tipo is mandatory to load data');
+				debug_log(__METHOD__." Error: section_tipo is mandatory to load data ".to_string(), logger::ERROR);
 				return false;
 			}
 			# section_tipo. Safe tipo test. Check valid section_tipo for safety
 			if (!$section_tipo = safe_tipo($this->section_tipo)) {
 				// throw new Exception(__METHOD__.' Error: Bad tipo '.htmlentities($this->section_tipo), 1);
-				trigger_error(__METHOD__.' Error: Bad section_tipo: '.htmlentities($this->section_tipo));
+				// trigger_error(__METHOD__.' Error: Bad section_tipo: '.htmlentities($this->section_tipo));
+				debug_log(__METHOD__." Error: Bad section_tipo: ".to_string($this->section_tipo), logger::ERROR);
 				return false;
 			}
 			// section_id. Not load if $this->section_id is not set
 			if( empty($this->section_id) ) {
-				trigger_error(__METHOD__." Warning: Trying to load without section_id. section_tipo: ($this->section_tipo)");
+				// trigger_error(__METHOD__." Warning: Trying to load without section_id. section_tipo: ($this->section_tipo)");
+				debug_log(__METHOD__."  Warning: Trying to load without section_id. section_tipo: ($this->section_tipo) ".to_string(), logger::ERROR);
 				return false;
 			}
 
@@ -128,9 +131,9 @@ abstract class JSON_RecordDataBoundObject {
 			// pg_query
 				$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
 				if ($result===false) {
-					trigger_error("Error Processing Request Load");
+					debug_log(__METHOD__." Error Processing Request Load ".to_string($strQuery).' '.PHP_EOL. pg_last_error(DBi::_getConnection()), logger::ERROR);
 					if(SHOW_DEBUG===true) {
-						throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
+						// throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
 					}
 				}
 
@@ -218,7 +221,7 @@ abstract class JSON_RecordDataBoundObject {
 
 		# SECTION_TIPO. Check valid section_tipo for safety
 		if (!$section_tipo = safe_tipo($this->section_tipo)) {
-			trigger_error("Stop Save Bad tipo ".htmlentities($this->section_tipo));
+			debug_log(__METHOD__." Stop Save Bad tipo  ".to_string($this->section_tipo), logger::ERROR);
 			// return false;
 			return null;
 		}
@@ -254,12 +257,12 @@ abstract class JSON_RecordDataBoundObject {
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, $params);
 			if($result===false) {
 
+				debug_log(__METHOD__." Error Processing Save Update Request ".pg_last_error(DBi::_getConnection()), logger::ERROR);
+
 				// error case
 					if(SHOW_DEBUG===true) {
 						dump($datos, "strQuery:$strQuery, section_id:$section_id, section_tipo:$section_tipo");
-						throw new Exception("Error Processing Save Update Request ". pg_last_error(DBi::_getConnection()), 1);
-					}else{
-						trigger_error("Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved");
+						// throw new Exception("Error Processing Save Update Request ". pg_last_error(DBi::_getConnection()), 1);
 					}
 
 				// return false; // "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
@@ -279,9 +282,13 @@ abstract class JSON_RecordDataBoundObject {
 				}
 
 			// test 3-5-2022
-				$id = pg_fetch_result($result, 0, 'id');
+				$numrows = pg_num_rows($result);
+				$id = $numrows>0
+					? pg_fetch_result($result, 0, 'id')
+					: false;
 				// error case
 					if ($id===false) {
+						debug_log(__METHOD__." Error Processing Request: " .PHP_EOL. pg_last_error(DBi::_getConnection()), logger::ERROR);
 						if(SHOW_DEBUG===true) {
 							$debug_strQuery = preg_replace_callback(
 								'/\$(\d+)\b/',
@@ -291,9 +298,7 @@ abstract class JSON_RecordDataBoundObject {
 								$strQuery
 							);
 							dump($result, ' Save result ++ '.$section_id .PHP_EOL. to_string($debug_strQuery));
-							throw new Exception("Error Processing Request: " .PHP_EOL. pg_last_error(DBi::_getConnection()), 1);
-						}else{
-							trigger_error("Error Processing Request. " .PHP_EOL. pg_last_error(DBi::_getConnection()));
+							// throw new Exception("Error Processing Request: " .PHP_EOL. pg_last_error(DBi::_getConnection()), 1);
 						}
 						// return false;
 						return null;
@@ -302,7 +307,8 @@ abstract class JSON_RecordDataBoundObject {
 					if (!isset($this->ID)) {
 						$this->ID = $id;
 					}elseif($this->ID!=$id) {
-						throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
+						debug_log(__METHOD__.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id, logger::ERROR);
+						// throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
 					}
 
 				// Return always current existing or updated id
@@ -323,11 +329,10 @@ abstract class JSON_RecordDataBoundObject {
 					// Return sequence auto created section_id
 					$section_id = pg_fetch_result($result,0,'section_id');
 					if ($section_id===false) {
+						debug_log(__METHOD__.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id, logger::ERROR);
 						if(SHOW_DEBUG===true) {
 							dump(null, "strQuery : ".PHP_EOL.to_string($strQuery));
-							throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
-						}else{
-							trigger_error('Error Processing Request strQuery:' . PHP_EOL . $strQuery);
+							// throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
 						}
 						// return false;
 						return null;
@@ -340,7 +345,7 @@ abstract class JSON_RecordDataBoundObject {
 
 					if(empty($section_id) || empty($section_tipo)) {
 						#throw new Exception("Error Processing Request. section_id and section_tipo", 1);
-						error_log("Error Processing Request. section_id:$section_id and section_tipo:$section_tipo, table:$this->strTableName - $this->ID");
+						debug_log(__METHOD__." Error Processing Request. section_id:$section_id and section_tipo:$section_tipo, table:$this->strTableName - $this->ID", logger::ERROR);
 					}
 
 					# Insert record datos and receive a new id
@@ -348,11 +353,10 @@ abstract class JSON_RecordDataBoundObject {
 
 					$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $datos ));
 					if($result===false) {
+						debug_log(__METHOD__." Error Processing Save Insert Request (2) error: ". pg_last_error(DBi::_getConnection()), logger::ERROR);
 						if(SHOW_DEBUG===true) {
 							dump($strQuery,"strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));
-							throw new Exception("Error Processing Save Insert Request (2) error: ". pg_last_error(DBi::_getConnection()), 1);;
-						}else{
-							trigger_error("Error: sorry an error ocurred on INSERT record. Data is not saved. ".pg_last_error(DBi::_getConnection()));
+							// throw new Exception("Error Processing Save Insert Request (2) error: ". pg_last_error(DBi::_getConnection()), 1);;
 						}
 						// return false;
 						return null;
@@ -360,11 +364,10 @@ abstract class JSON_RecordDataBoundObject {
 
 					$id = pg_fetch_result($result,0,'id');
 					if ($id===false) {
+						debug_log(__METHOD__."Error Processing Request: ".pg_last_error(DBi::_getConnection()), logger::ERROR);
 						if(SHOW_DEBUG===true) {
 							dump($strQuery,"strQuery");
-							throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
-						}else{
-							trigger_error("Error Processing Request. ".pg_last_error(DBi::_getConnection()));
+							// throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
 						}
 						// return false;
 						return null;
@@ -634,11 +637,10 @@ abstract class JSON_RecordDataBoundObject {
 
 			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error(DBi::_getConnection()));
 			if ($result===false) {
+				debug_log(__METHOD__." Error Processing Request . ".pg_last_error(DBi::_getConnection()), logger::ERROR);
 				if(SHOW_DEBUG===true) {
 					dump(pg_last_error(DBi::_getConnection()), ' pg_last_error(DBi::_getConnection()) ++ '.to_string($strQuery));
-					throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
-				}else{
-					trigger_error("Error on DB query");
+					// throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
 				}
 				return [];
 			}
@@ -781,17 +783,18 @@ abstract class JSON_RecordDataBoundObject {
 				# Check valid section_tipo for safety
 				# Safe tipo test
 				if (!$section_tipo = safe_tipo($this->section_tipo)) {
-					die("Bad tipo ".htmlentities($this->section_tipo));
+					// die("Bad tipo ".htmlentities($this->section_tipo));
+					debug_log(__METHOD__." Bad tipo ".to_string($this->section_tipo), logger::ERROR);
 				}
 
-				$strQuery 	= 'DELETE FROM "'. $this->strTableName .'" WHERE "section_id" = $1 AND "section_tipo" = $2';
-				$result 	= pg_query_params( DBi::_getConnection(), $strQuery, array($section_id, $section_tipo) );
-
+				$strQuery	= 'DELETE FROM "'. $this->strTableName .'" WHERE "section_id" = $1 AND "section_tipo" = $2';
+				$result		= pg_query_params( DBi::_getConnection(), $strQuery, array($section_id, $section_tipo) );
 				if($result===false) {
-					echo "Error: sorry an error ocurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted";
+					// echo "Error: sorry an error occurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted";
+					debug_log(__METHOD__." Error Processing Request (result==false): an error occurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted", logger::ERROR);
 					if(SHOW_DEBUG===true) {
 						dump($strQuery,"Delete strQuery");
-						throw new Exception("Error Processing Request (result==false): an error ocurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted", 1);
+						// throw new Exception("Error Processing Request (result==false): an error occurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted", 1);
 					}
 				}
 			}
