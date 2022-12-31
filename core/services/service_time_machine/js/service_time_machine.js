@@ -20,19 +20,16 @@
 */
 export const service_time_machine = function () {
 
-	this.id					= null
-	this.model				= null
-	this.mode				= null
-	this.lang				= null
-	this.node				= null
-	this.ar_instances		= null
-	this.status				= null
-	this.events_tokens		= []
-	this.type				= null
-
-	this.caller				= null
-
-	return true
+	this.id				= null
+	this.model			= null
+	this.mode			= null
+	this.lang			= null
+	this.node			= null
+	this.ar_instances	= null
+	this.status			= null
+	this.events_tokens	= []
+	this.type			= null
+	this.caller			= null
 }//end service_time_machine
 
 
