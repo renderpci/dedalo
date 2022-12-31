@@ -22,7 +22,7 @@
 		width: 100%;
 		// width: calc(100% - 2rem);
 		min-width: 20rem;
-		z-index: 4;
+		// z-index: 4;
 
 		// hide wrapper_service_autocomplete when parent element .component_portal is not .active
 		// .wrapper_component:not(.active) & {
@@ -146,17 +146,15 @@
 			display: block;
 		}
 
-		>ul.autocomplete_data {
+		// ul autocomplete_data
+		>.autocomplete_data {
 			// padding-top: 0.5em;
 
-			>li {
+			// li autocomplete_data_li
+			>.autocomplete_data_li {
 				border-top: 0.07em solid #cdcdcd;
 				cursor: pointer;
 				padding: 0.5em;
-
-				&:first-child {
-				  border-top: 0px;
-				}
 
 				&.selected {
 					// background-color: darken(@service_bg_color, 7%);
@@ -168,10 +166,23 @@
 					// background-color: #d7d7d7;
 				}
 
-				>span {
-					padding-right: 0.5em;
-					pointer-events: none;
+				&:first-child {
+				  border-top: 0px;
 				}
+
+				>.section_record {
+					pointer-events: none;
+
+					.column {
+						outline: none;
+					}
+				}
+
+
+				// >span {
+				// 	padding-right: 0.5em;
+				// 	pointer-events: none;
+				// }
 			}
 		}
 	}

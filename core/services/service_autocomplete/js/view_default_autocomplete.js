@@ -763,7 +763,7 @@ const render_datalist = async function(self, api_response) {
 		}
 
 	// context
-		const context	= result.context
+		// const context	= result.context
 
 	// get the sections that was searched
 	// const ar_search_sections = self.ar_search_section_tipo
@@ -776,7 +776,7 @@ const render_datalist = async function(self, api_response) {
 		? rqo_search.show.fields_separator
 		: ' | '
 
-	const columns = rqo_search.show.columns
+	// const columns = rqo_search.show.columns
 
 	// get the ar_locator founded in sections
 	// const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
@@ -798,10 +798,7 @@ const render_datalist = async function(self, api_response) {
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-	// iterate the sections
-	// for (const current_locator of ar_locator) {
-
-
+	// iterate the section_records
 	for (let i = 0; i < ar_section_record.length; i++) {
 
 		const current_section_record = ar_section_record[i]
@@ -815,6 +812,7 @@ const render_datalist = async function(self, api_response) {
 		const li_node = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'autocomplete_data_li',
+			title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
 			parent			: datalist
 		})
 		li_node.locator = locator
@@ -842,8 +840,6 @@ const render_datalist = async function(self, api_response) {
 						while (datalist.firstChild) {
 							datalist.removeChild(datalist.firstChild)
 						}
-
-
 					}else{
 						console.warn('Function sent is not defined to be exec by service autocomplete:', self.add_value);
 					}
@@ -970,14 +966,14 @@ const render_datalist = async function(self, api_response) {
 			// }// end if of check current_dd_info
 
 		// debug
-			if(SHOW_DEBUG===true) {
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'attenuated',
-					inner_html		: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
-					parent			: li_node
-				});
-			}
+			// if(SHOW_DEBUG===true) {
+			// 	ui.create_dom_element({
+			// 		element_type	: 'span',
+			// 		class_name		: 'attenuated',
+			// 		inner_html		: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
+			// 		parent			: li_node
+			// 	});
+			// }
 	}// end for of current_section (section_tipo)
 
 	return datalist
@@ -994,7 +990,8 @@ const render_datalist = async function(self, api_response) {
  * @param array data
  * @return ddo object current_element_data
  * */
-const get_last_ddo_data_value = function(current_path, value, data, recurs){
+const get_last_ddo_data_value = function(current_path, value, data) {
+
 	// check the path length sent, the first loop is the full path, but it is changed with the check data
 	const current_path_length = current_path.length
 	for (let i = 0; i < value.length; i++) {
@@ -1030,7 +1027,7 @@ const get_last_ddo_data_value = function(current_path, value, data, recurs){
 * @param object api_response
 * @return DOM node datalist
 */
-view_default_autocomplete.render_grid_choose = async function(self, selected_instance, params){
+view_default_autocomplete.render_grid_choose = async function(self, selected_instance, params) {
 
 	const grid_choose_data	= await get_grid_choose_data(self, selected_instance, params)
 	// get dd objects from the context that will be used to build the lists in correct order
@@ -1168,13 +1165,10 @@ const get_grid_choose_data = async function(self, selected_instance, params) {
 		})
 
 	const grid_choose_data = {
-		rqo_search 	: rqo_search,
+		rqo_search	: rqo_search,
 		data		: api_response.result.data,
-		context 	: api_response.result.context
+		context		: api_response.result.context
 	}
 
 	return grid_choose_data
 }//end get_grid_choose_data
-
-
-
