@@ -172,6 +172,7 @@
 	};//end get_valor
 
 
+
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
@@ -262,11 +263,11 @@
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return $diffusion_value
+	* @return string|array|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value =  function ( $lang=null ) {
+	$_get_diffusion_value =  function ( $lang=null , ?object $option_obj=null) { //  ?string
 
 		$diffusion_value = null;
 
@@ -274,20 +275,23 @@
 		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
 		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
 		$diffusion_properties = $this->get_diffusion_properties();
-
 		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
-
 		switch ($data_to_be_used) {
 
 			case 'valor_list':
-				$diffusion_value = $this->get_valor( $lang, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used );
+				$diffusion_value = $this->get_valor(
+					$lang,
+					'string', // string format
+					', ', // string fields_separator
+					'<br>', // string records_separator
+					false, // array|bool ar_related_terms
+					$data_to_be_used // array data_to_be_used
+				);
 				break;
 
 			case 'valor':
 				$dato = $this->get_dato();
-				if (empty($dato)) {
-					$diffusion_value = null;
-				}else{
+				if (!empty($dato)) {
 					// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
 					// terminos_relacionados . Obtenemos los terminos relacionados del componente actual
 						$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
@@ -378,15 +382,8 @@
 					}
 				}
 				break;
-		}
+		}//end switch ($data_to_be_used)
 
 
 		return $diffusion_value;
 	};//end get_diffusion_value
-
-
-
-
-
-
-

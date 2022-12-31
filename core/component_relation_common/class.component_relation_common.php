@@ -1334,6 +1334,7 @@ class component_relation_common extends component_common {
 	}//end get_diffusion_value
 
 
+
 	/**
 	* GET_DIFFUSION_VALUE_TERM_ID
 	* @return string json_encoded array

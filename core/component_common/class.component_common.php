@@ -96,7 +96,8 @@ abstract class component_common extends common {
 		public $observers_data;
 		// data_source . string ('tm' for time machine source data)
 		public $data_source;
-
+		// fields_separator. Default separator between fields
+		public $fields_separator = ' | ';
 
 
 	/**

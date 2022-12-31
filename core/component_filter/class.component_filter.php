@@ -787,10 +787,15 @@ class component_filter extends component_relation_common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
+		$diffusion_value = null;
+
 		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return $diffusion_value;
+		}
 
 		$ar_label = [];
-		foreach ((array)$dato as $key => $locator) {
+		foreach ((array)$dato as $locator) {
 			$label = ts_object::get_term_by_locator($locator, $lang, true);
 			if (!empty($label)) {
 				$label = strip_tags(trim($label));
@@ -800,9 +805,9 @@ class component_filter extends component_relation_common {
 			}
 		}
 
-		$diffusion_value = empty($ar_label)
-			? null
-			: implode(' | ', $ar_label);
+		$diffusion_value = !empty($ar_label)
+			? implode(' | ', $ar_label)
+			: null;
 
 
 		return $diffusion_value;

@@ -148,14 +148,19 @@ class component_input_text extends component_common {
 
 		if ($index==='all') {
 			$ar = array();
-			foreach ($dato as $key => $value) {
-				$value = trim($value);
+			foreach ($dato as $value) {
+
+				if (is_string($value)) {
+					$value = trim($value);
+				}
+
 				if (!empty($value)) {
 					$ar[] = $value;
 				}
 			}
 			if (count($ar)>0) {
-				$valor = implode(',',$ar);
+				// $valor = implode(',',$ar);
+				$valor = implode(' | ', $ar);
 			}
 		}else{
 			$index = (int)$index;

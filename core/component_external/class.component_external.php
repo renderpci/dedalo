@@ -247,12 +247,14 @@ class component_external extends component_common {
 	* GET_VALOR
 	* Return array dato as comma separated elements string by default
 	* If index var is received, return dato element corresponding to this index if exists
-	* @return string $valor
+	* @return string|null $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
 
 		$dato  = $this->get_dato();
-		$valor = $dato;
+		$valor = is_array($dato)
+			? reset($dato)
+			: '';
 
 		return (string)$valor;
 	}//end get_valor

@@ -1094,14 +1094,16 @@ class component_date extends component_common {
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
+		$diffusion_value = null;
+
 		// ar_dato
 			$ar_dato = $this->get_dato();
 			if(empty($ar_dato)){
-				return null;
+				return $diffusion_value;
 			}
 
-		$diffusion_value	= '';
-		$date_mode			= $this->get_date_mode();
+		// date mode
+			$date_mode = $this->get_date_mode();
 
 		$ar_diffusion_values = array();
 		foreach($ar_dato as $dato) {
@@ -1186,6 +1188,7 @@ class component_date extends component_common {
 		if (empty($diffusion_value)) {
 			$diffusion_value = null;
 		}
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value

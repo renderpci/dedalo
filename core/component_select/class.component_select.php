@@ -88,9 +88,9 @@ class component_select extends component_relation_common {
 
 	/**
 	* GET_DIFFUSION_DATO
-	* @return array|null $diffusion_value
+	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_dato() : ?array {
+	public function get_diffusion_dato() : ?string {
 
 		$dato = $this->get_dato();
 

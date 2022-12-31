@@ -504,7 +504,7 @@ class component_portal extends component_relation_common {
 		// $_get_valor = Closure::bind($_get_valor, $this);
 		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> '
 
-		$valor =  Closure::bind($_get_valor, $this)($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor');
+		$valor =  Closure::bind($_get_valor, $this)($lang, $format, $fields_separator, $records_separator, $ar_related_terms, $data_to_be_used);
 
 		return $valor;
 	}//end get_valor
@@ -527,7 +527,7 @@ class component_portal extends component_relation_common {
 		include $path;
 
 		// $_get_valor_export = Closure::bind($_get_valor_export, $this);
-		$valor =  Closure::bind($_get_valor_export, $this)( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null );
+		$valor =  Closure::bind($_get_valor_export, $this)( $valor, $lang, $quotes, $add_id );
 
 		return $valor;
 	}//end get_valor_export
@@ -536,23 +536,27 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
+	*
 	* @return string|null $diffusion_value
 	*/
-	// public function get_diffusion_value( $lang=DEDALO_DATA_LANG, $option_obj=null ) {
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
 
 		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
-		if ($legacy_model==='component_portal') {
-			return 'unavailable';
-		}
+		// if ($legacy_model==='component_portal') {
+		// 	return 'unavailable';
+		// }
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;
 
 		// $_get_diffusion_value = Closure::bind($_get_diffusion_value, $this);
-		$valor =  Closure::bind($_get_diffusion_value, $this)( $lang=DEDALO_DATA_LANG, $option_obj=null );
+		$valor = Closure::bind($_get_diffusion_value, $this)( $lang, $option_obj );
 
-		$diffusion_value = $valor;
+		$diffusion_value = (is_array($valor))
+			? json_encode($valor)
+			: $valor;
+
+
 		return $diffusion_value;
 	}//end get_diffusion_value
 
