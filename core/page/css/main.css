@@ -6203,7 +6203,6 @@ dd-modal .footer.distribute {
   top: 100%;
   width: 100%;
   min-width: 20rem;
-  z-index: 4;
 }
 .wrapper_service_autocomplete > .options_hidden {
   display: none;
@@ -6297,23 +6296,25 @@ dd-modal .footer.distribute {
 .wrapper_service_autocomplete > .visible {
   display: block;
 }
-.wrapper_service_autocomplete > ul.autocomplete_data > li {
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li {
   border-top: 0.07em solid #cdcdcd;
   cursor: pointer;
   padding: 0.5em;
 }
-.wrapper_service_autocomplete > ul.autocomplete_data > li:first-child {
-  border-top: 0px;
-}
-.wrapper_service_autocomplete > ul.autocomplete_data > li.selected {
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li.selected {
   background-color: #d7d7d7;
 }
-.wrapper_service_autocomplete > ul.autocomplete_data > li:active {
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li:active {
   background-color: #c56607;
 }
-.wrapper_service_autocomplete > ul.autocomplete_data > li > span {
-  padding-right: 0.5em;
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li:first-child {
+  border-top: 0px;
+}
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record {
   pointer-events: none;
+}
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record .column {
+  outline: none;
 }
 .attenuated {
   opacity: 0.5;

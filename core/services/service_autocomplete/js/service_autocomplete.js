@@ -158,11 +158,13 @@ service_autocomplete.prototype.build = async function(options={}) {
 * @return bool true
 */
 service_autocomplete.prototype.service_autocomplete_keys = function(e) {
+	e.stopPropagation()
 
 	const self = this
 
 	// down arrow
 	if(e.which === 40) {
+		e.preventDefault()
 
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
@@ -179,6 +181,7 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 	}
 	// up arrow
 	else if (e.which === 38) {
+		e.preventDefault()
 
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
@@ -190,6 +193,7 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 	}
 	// enter
 	else if (e.which === 13) {
+		e.preventDefault()
 
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
