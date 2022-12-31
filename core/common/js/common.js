@@ -142,7 +142,6 @@ export const set_context_vars = function(self) {
 				show_autocomplete 	: true // bool false
 			}
 			// set the instance show_interface
-
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
 				? default_show_interface
 				: (()=>{

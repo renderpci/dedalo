@@ -883,7 +883,7 @@ export const get_buttons = (self) => {
 export const activate_autocomplete = async function(self, wrapper) {
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
-		if(self.context.properties.source?.mode==='external') {
+		if(self.context.properties.source?.mode==='external' && !self.request_config_object?.show?.interface) {
 			self.show_interface.show_autocomplete		= false
 		}// end if external
 
