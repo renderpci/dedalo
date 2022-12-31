@@ -109,7 +109,7 @@ const get_content_data = async function(self) {
 		})
 
 	// component caller
-		self.main_element.render()
+		self.component_to_propagate.render()
 		.then(function(component_node){
 			components_list_container.appendChild(component_node)
 		})
@@ -137,6 +137,28 @@ const get_content_data = async function(self) {
 			element_type	: 'div',
 			class_name		: 'response_text',
 			parent			: buttons_container
+		})
+
+
+	// button_replace
+		const button_replace = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning add button_replace',
+			// inner_html	: get_label.tool_do_add || 'Add',
+			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
+			parent			: buttons_container
+		})
+		button_replace.addEventListener("click", function(e){
+			e.preventDefault()
+			// propagate_component_data
+			if (confirm(get_label.sure || 'Sure?')) {
+				content_data.classList.add('loading')
+				self.propagate_component_data('replace')
+				.then(function(response){
+					content_data.classList.remove('loading')
+					response_text.innerHTML = response.msg
+				})
+			}
 		})
 
 	// button_add

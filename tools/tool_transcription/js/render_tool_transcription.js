@@ -529,7 +529,7 @@ const render_status = async function(self) {
 		if (self.status_user_component) {
 			self.status_user_component.context.view	= 'mini'
 			self.status_user_component.is_inside_tool = true
-			self.status_user_component.view_properties.disable_save_animation = true
+			self.status_user_component.show_interface.save_animation = false
 			const status_user_node = await self.status_user_component.render()
 			fragment.appendChild(status_user_node)
 		}
@@ -538,7 +538,7 @@ const render_status = async function(self) {
 		if (self.status_admin_component) {
 			self.status_admin_component.context.view = 'mini'
 			self.status_admin_component.is_inside_tool = true
-			self.status_admin_component.view_properties.disable_save_animation = true
+			self.status_admin_component.show_interface.save_animation = false
 			const status_admin_node	= await self.status_admin_component.render()
 			fragment.appendChild(status_admin_node)
 		}
