@@ -1610,6 +1610,11 @@ final class dd_core_api {
 								debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
 							}
 
+						// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
+							if (isset($ddo_source->data_source)) {
+								$element->data_source = $ddo_source->data_source;
+							}
+
 					// }else if ($model==='area_thesaurus'){
 						// IN PROCESS TO IMPLEMENT
 						// // area_thesaurus
@@ -1656,7 +1661,8 @@ final class dd_core_api {
 									true // cache
 								);
 
-							// time machine matrix_id. if ($mode==='tm') {
+							// time machine matrix_id.
+								// if ($mode==='tm') {
 								if (isset($ddo_source->matrix_id)) {
 									// set matrix_id value to component to allow it search dato in
 									// matrix_time_machine component function 'get_dato' will be
@@ -1664,7 +1670,7 @@ final class dd_core_api {
 									$element->matrix_id = $ddo_source->matrix_id;
 								}
 
-							// data_source. Used by time machine as 'tm' to force component to load data from different sources
+							// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
 								if (isset($ddo_source->data_source)) {
 									$element->data_source = $ddo_source->data_source;
 								}

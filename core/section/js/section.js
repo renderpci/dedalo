@@ -755,10 +755,12 @@ export const get_section_records = async function(options){
 				}
 
 			// time machine options
-				if (mode==='tm') {
-					instance_options.matrix_id = (self.model==='section')
-						? locator.matrix_id
-						: self.matrix_id
+				if (self.model==='service_time_machine') {
+					instance_options.matrix_id = locator.matrix_id || self.matrix_id
+					// // instance_options.matrix_id = (self.model==='section')
+					// instance_options.matrix_id = (self.model==='service_time_machine')
+					// 	? locator.matrix_id
+					// 	: self.matrix_id
 					instance_options.modification_date	= locator.timestamp || null
 				}
 
