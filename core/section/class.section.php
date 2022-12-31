@@ -106,6 +106,7 @@ class section extends common {
 
 		// check valid tipo
 			if (empty($tipo)) {
+				debug_log(__METHOD__." Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode ".to_string(), logger::ERROR);
 				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 			}
 
@@ -793,9 +794,9 @@ class section extends common {
 				$JSON_RecordObj_matrix->set_datos($section_dato);
 				$saved_id_matrix		= $JSON_RecordObj_matrix->Save( $options );
 				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
-					trigger_error("Error on trying save->update record. Nothing is saved!");
+					debug_log(__METHOD__." Error on trying save->update record. Nothing is saved! ".to_string(), logger::ERROR);
 					if(SHOW_DEBUG===true) {
-						throw new Exception("Error Processing Request. Returned id_matrix on save (update) section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
+						// throw new Exception("Section: Error Processing Request. Returned id_matrix on save (update) section is mandatory. Received id_matrix: ".to_string($saved_id_matrix), 1);
 					}
 				}
 
@@ -915,9 +916,9 @@ class section extends common {
 					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
 					if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
-						trigger_error("Error on trying save->insert record. Nothing is saved!");
+						debug_log(__METHOD__." Error on trying save->insert record. Nothing is saved! ".to_string($save_options), logger::ERROR);
 						if(SHOW_DEBUG===true) {
-							throw new Exception("Error Processing Request. Returned id_matrix on save section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
+							// throw new Exception("Error Processing Request. Returned id_matrix on save section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
 						}
 					}
 
@@ -1224,6 +1225,7 @@ class section extends common {
 						$id_time_machine = (int)$ar_id_time_machine[0];
 					}
 					if ($id_time_machine<1) {
+						debug_log(__METHOD__." Error Processing Request. id_time_machine is empty ".to_string(), logger::ERROR);
 						throw new Exception("Error Processing Request. id_time_machine is empty", 1);
 					}
 					# Update time machine record
@@ -1233,11 +1235,11 @@ class section extends common {
 					$tm_save = (int)$RecordObj_time_machine->Save();			// Expected int id_time_machine returned if all is ok
 					# Verify time machine is updated properly before delete this section
 					if ($tm_save!==$id_time_machine) {
+						debug_log(__METHOD__." ERROR: Failed save update data for time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (2) ".to_string(), logger::ERROR);
 						# Something failed in time machine save
 						if(SHOW_DEBUG===true) {
 							dump($tm_save, " tm_save is distinct: tm_save:$tm_save - id_time_machine:$id_time_machine");
 						}
-						trigger_error("ERROR: Failed save update data for time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (2)");
 						return false;
 					}
 					$dato_time_machine 	= $RecordObj_time_machine->get_dato();
@@ -1249,11 +1251,12 @@ class section extends common {
 
 					// check time machine dato
 						if ($dato_time_machine != $dato_section) {
+							debug_log(__METHOD__." ERROR: Failed compare data of time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (3) ".to_string(), logger::ERROR);
 							if(SHOW_DEBUG===true) {
 								dump($dato_time_machine,"SHOW_DEBUG COMPARE ERROR dato_time_machine");
 								dump($dato_section,"SHOW_DEBUG COMPARE ERROR dato_section");
 							}
-							throw new Exception("ERROR: Failed compare data of time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (3)", 1);
+							// throw new Exception("ERROR: Failed compare data of time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (3)", 1);
 							return false;
 						}
 
@@ -1585,14 +1588,18 @@ class section extends common {
 				}
 				if (!isset($ar_tipo_exclude_elements[0])) {
 					#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
-					error_log("Warning. exclude_elements of section $original_tipo not found (1)");
+					// error_log("Warning. exclude_elements of section $original_tipo not found (1)");
+					debug_log(__METHOD__." Warning. exclude_elements of section $original_tipo not found (1) ".to_string(), logger::WARNING);
 				}else{
 
-					$tipo_exclude_elements = $ar_tipo_exclude_elements[0];
+					$tipo_exclude_elements					= $ar_tipo_exclude_elements[0];
+					$ar_terminos_relacionados_to_exclude	= RecordObj_dd::get_ar_terminos_relacionados(
+						$tipo_exclude_elements,
+						false, // bool cache
+						true // bool simple
+					);
 
-					$ar_terminos_relacionados_to_exclude = RecordObj_dd::get_ar_terminos_relacionados($tipo_exclude_elements, $cache=false, $simple=true);
-
-					foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
+					foreach ($ar_terminos_relacionados_to_exclude as $component_tipo) {
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 						if($modelo_name==='section_group') {
