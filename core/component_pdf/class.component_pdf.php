@@ -34,9 +34,9 @@ class component_pdf extends component_media_common {
 		if (isset($properties->additional_path)) {
 
 			$component_tipo		= $properties->additional_path;
-			$component_modelo	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component			= component_common::get_instance(
-				$component_modelo,
+				$component_model,
 				$component_tipo,
 				$this->get_section_id(),
 				'edit',

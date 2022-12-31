@@ -150,14 +150,14 @@ class search_tm extends search {
 		// 		$last_item 		 	 = end($path);
 		// 		$component_tipo 	 = $last_item->component_tipo;
 		// 		$column_alias 		 = $component_tipo;
-		// 		$modelo_name 		 = $last_item->modelo;
+		// 		$model_name 		 = $last_item->modelo;
 		// 		$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
 		// 		$component_path 	 = implode(',', $select_object->component_path);
 		// 		#>>\'{components,'.$component_tipo.',valor_list,'.$select_object->lang.'}\' as '.$column_alias;
 
 		// 		$sql_select 	 = '';
 
-		// 		if ($modelo_name==='component_section_id') {
+		// 		if ($model_name==='component_section_id') {
 
 		// 			$sql_select .= $table_alias.'.section_id';
 		// 			$sql_select .= ' as '.$column_alias;

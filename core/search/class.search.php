@@ -505,7 +505,7 @@ class search {
 			          {
 			            "section_tipo": "'.$row_value->section_tipo.'",
 			            "component_tipo": "section_id",
-			            "modelo": "component_section_id",
+			            "model": "component_section_id",
 			            "name": "Id"
 			          }
 			        ]
@@ -636,8 +636,8 @@ class search {
 			}
 
 		// call to component to resolve each select sentence (are different results depends of the component)
-		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$select_object	= $modelo_name::get_select_query2($select_object);
+		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$select_object	= $model_name::get_select_query2($select_object);
 
 
 		return $select_object;
@@ -699,10 +699,10 @@ class search {
 					$path				= $search_object->path;
 					$search_component	= end($path);
 					// model (with fallback if not exists)
-					if (!isset($search_component->modelo)) {
-						$search_component->modelo = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
+					if (!isset($search_component->model)) {
+						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
 					}
-					$model_name			= $search_component->modelo;
+					$model_name			= $search_component->model;
 					$ar_query_object	= $model_name::get_search_query($search_object);
 				}
 
@@ -1159,7 +1159,7 @@ class search {
 					$last_item			= end($path);
 					$component_tipo		= $last_item->component_tipo;
 					$column_alias		= $component_tipo;
-					$modelo_name		= $last_item->modelo;
+					$model_name			= $last_item->model;
 					$select_object_type	= isset($select_object->type) ? $select_object->type : 'string';
 					#$apply_distinct	= isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
 					$apply_distinct		= (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
@@ -1169,7 +1169,7 @@ class search {
 
 					$sql_select = '';
 
-					if ($modelo_name==='component_section_id' || $modelo_name === 'section_id') {
+					if ($model_name==='component_section_id' || $model_name === 'section_id') {
 
 						$sql_select .= $table_alias.'.section_id';
 						$sql_select .= ' as '.$column_alias;
@@ -1835,7 +1835,7 @@ class search {
 					$ar_values = !property_exists($search_object,'path') ? reset($search_object) : $search_object;
 					foreach ($ar_values as $vkey => $vvalue) {
 						if (!is_object($vvalue)) continue;
-						if ($vvalue->path[0]->modelo==='component_portal') {
+						if ($vvalue->path[0]->model==='component_portal') {
 							$is_portal_linked = true;
 						}else{
 							$is_portal_linked = false;
@@ -2098,8 +2098,8 @@ class search {
 						$component_path_data	= end($path);
 						$component_tipo			= $component_path_data->component_tipo;
 						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-						$modelo_name			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
+						$model_name				= $component_path_data->model; //RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
 
 					if($search_object_unaccent===true) {
@@ -2180,8 +2180,8 @@ class search {
 						$component_path_data	= end($path);
 						$component_tipo			= $component_path_data->component_tipo;
 						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-						$modelo_name			= $component_path_data->modelo; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($modelo_name)."\n";
+						$model_name				= $component_path_data->model; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
 					$safe_operator = $search_object->operator;
 					$sql_where .= 'jsonb_typeof('.$table_alias.'.datos#>\'{'.$component_path.'}\')'.$safe_operator.$search_object->q_parsed;
@@ -2378,7 +2378,7 @@ class search {
 		// Add first level always
 			$current_path = new stdClass();
 				$current_path->name				= strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
-				$current_path->modelo			= $term_model;
+				$current_path->model			= $term_model;
 				$current_path->section_tipo		= $section_tipo;
 				$current_path->component_tipo	= $tipo;
 			$path[] = $current_path;
@@ -2397,8 +2397,8 @@ class search {
 					if ($related_tipo!==false) {
 
 						$current_tipo	= $related_tipo;
-						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						if (strpos($modelo_name,'component')===0) {
+						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						if (strpos($model_name,'component')===0) {
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
 							foreach ($ar_path as $key => $value) {
@@ -2411,8 +2411,8 @@ class search {
 						foreach ($ar_terminos_relacionados as $key => $current_tipo) {
 
 							// Use only first related tipo
-							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-							if (strpos($modelo_name,'component')!==0) continue;
+							$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							if (strpos($model_name,'component')!==0) continue;
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
 							foreach ($ar_path as $key => $value) {
@@ -2879,8 +2879,8 @@ class search {
 			$locator_public_true->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
 			$locator_public_true->set_from_component_tipo($public_component_tipo);
 
-		#$name_component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($name_component_tipo,true);
-		#$json_component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($json_component_tipo,true);
+		#$name_component_model_name = RecordObj_dd::get_modelo_name_by_tipo($name_component_tipo,true);
+		#$json_component_model_name = RecordObj_dd::get_modelo_name_by_tipo($json_component_tipo,true);
 
 		$filter = '';
 		if (!empty($target_section_tipo) ) {
@@ -3034,10 +3034,10 @@ class search {
 
 		#
 		# FILTER. COMPONENT_JSON
-			$tipo			= 'dd625'; // component_json
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance(
-				$modelo_name,
+			$tipo		= 'dd625'; // component_json
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model_name,
 				$tipo,
 				$preset_id,
 				'edit',
@@ -3050,10 +3050,10 @@ class search {
 
 		#
 		# SECTION_TIPO
-			$tipo			= 'dd642'; // component_input_text
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance(
-				$modelo_name,
+			$tipo		= 'dd642'; // component_input_text
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model_name,
 				$tipo,
 				$preset_id,
 				'edit',
@@ -3066,10 +3066,10 @@ class search {
 
 		#
 		# USER
-			$tipo			= 'dd654'; // component_select
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance(
-				$modelo_name,
+			$tipo		= 'dd654'; // component_select
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model_name,
 				$tipo,
 				$preset_id,
 				'edit',
@@ -3123,7 +3123,7 @@ class search {
 			$path = new stdClass();
 				$path->section_tipo		= $section_tipo;
 				$path->component_tipo	= $current_tipo;
-				$path->modelo			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$path->model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$path->name				= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG , true, true);
 
 			$current_element = new stdClass();
@@ -3236,13 +3236,13 @@ class search {
 	*	  {
 	*		  "section_tipo": "oh1",
 	*		  "component_tipo": "oh25",
-	*		  "modelo": "component_portal",
+	*		  "model": "component_portal",
 	*		  "name": "Audiovisual"
 	*	  },
 	*	  {
 	*		  "section_tipo": "rsc167",
 	*		  "component_tipo": "rsc25",
-	*		  "modelo": "component_select",
+	*		  "model": "component_select",
 	*		  "name": "Collection \/ archive"
 	*	  }
 	*  ],

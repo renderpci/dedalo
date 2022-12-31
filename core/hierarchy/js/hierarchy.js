@@ -75,7 +75,7 @@ var hierarchy = new function() {
 				if (hierarchy53) {
 					component_common.load_component_by_wrapper_id( hierarchy53.id );
 				}
-				// Target section modelo tipo (like ts2)
+				// Target section model tipo (like ts2)
 				let hierarchy58 = document.querySelector('.wrap_component[data-tipo="hierarchy58"]')
 				if (hierarchy58) {
 					component_common.load_component_by_wrapper_id( hierarchy58.id );

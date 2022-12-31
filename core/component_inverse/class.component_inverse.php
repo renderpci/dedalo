@@ -181,12 +181,12 @@ class component_inverse extends component_common {
 		$ar_related = $this->RecordObj_dd->get_relaciones();
 		foreach ($ar_related as $key => $value) {
 			$current_tipo = reset($value);
-			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				//dump($modelo_name, ' modelo_name ++ '.to_string());
-			if ($modelo_name!=='section') {
+			$model_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				//dump($model_name, ' model_name ++ '.to_string());
+			if ($model_name!=='section') {
 				# Components
 				$component = component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					$current_tipo,
 					$locator->from_section_id,
 					'list',

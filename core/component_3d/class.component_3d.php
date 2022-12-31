@@ -940,9 +940,9 @@ class component_3d extends component_media_common {
 					$current_section_id  = $this->get_parent();
 					$target_section_tipo = $this->get_section_tipo();
 
-					$modelo_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename, true);
-					$component_target_filename		= component_common::get_instance(
-						$modelo_name_target_filename, // model
+					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename, true);
+					$component_target_filename	= component_common::get_instance(
+						$model_name_target_filename, // model
 						$properties->target_filename, // tipo
 						$current_section_id, // seciton_id
 						'edit', // mode

@@ -68,24 +68,24 @@ if ($mode=='generate_records_diapositivas') {
 
 		# COMPONENT : Filtro
 		$component_tipo 		= $component_filter_tipo;	#'rsc28';	//"dd364";
-		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-		$current_component 	= component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo); # Already saves default project when load in edit mode
+		$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$current_component 	= component_common::get_instance($model_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo); # Already saves default project when load in edit mode
 		# Already saves default project when load in edit mode
 		if(SHOW_DEBUG) {
-			#dump($component_dato, " component_dato $component_tipo ".to_string($modelo_name));
-			#echo "Saved $modelo_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
+			#dump($component_dato, " component_dato $component_tipo ".to_string($model_name));
+			#echo "Saved $model_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
 		}
 
 		# COMPONENT : codigo
 		$component_tipo 		= $component_codigo_tipo;	#'rsc28';	//"dd364";
 		$component_dato 		= $current_section_id;
-		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-		$current_component 	= component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+		$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$current_component 	= component_common::get_instance($model_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		$current_component->set_dato($component_dato);
 		$current_component->Save();
 		if(SHOW_DEBUG) {
-			#dump($component_dato, " component_dato $component_tipo ".to_string($modelo_name));
-			#echo "Saved $modelo_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
+			#dump($component_dato, " component_dato $component_tipo ".to_string($model_name));
+			#echo "Saved $model_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
 		}
 
 
@@ -95,14 +95,14 @@ if ($mode=='generate_records_diapositivas') {
 			$locator->set_section_tipo('mupreva261');
 			$locator->set_section_id(5);
 		$component_dato 		= $locator;
-		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-		$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+		$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$current_component 		= component_common::get_instance($model_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		#$current_component 		= new component_filter($component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		$current_component->set_dato($component_dato);
 		$current_component->Save();
 		if(SHOW_DEBUG) {
-			#dump($component_dato, " component_dato $component_tipo ".to_string($modelo_name));
-			#echo "Saved $modelo_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
+			#dump($component_dato, " component_dato $component_tipo ".to_string($model_name));
+			#echo "Saved $model_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
 		}
 
 
@@ -112,14 +112,14 @@ if ($mode=='generate_records_diapositivas') {
 			$locator->set_section_tipo('mupreva221');
 			$locator->set_section_id(1);
 		$component_dato 		= $locator;
-		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-		$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+		$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$current_component 		= component_common::get_instance($model_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		#$current_component 	= new component_filter($component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		$current_component->set_dato($component_dato);
 		$current_component->Save();
 		if(SHOW_DEBUG) {
-			#dump($component_dato, " component_dato $component_tipo ".to_string($modelo_name));
-			#echo "Saved $modelo_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
+			#dump($component_dato, " component_dato $component_tipo ".to_string($model_name));
+			#echo "Saved $model_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
 		}
 
 
@@ -172,13 +172,13 @@ if ($mode=='generate_records_restauracion') {
 		# COMPONENT : Filtro
 		$component_tipo 		= $component_filter_tipo;	#'rsc28';	//"dd364";
 		$component_dato 		= array("1"=>"2");			# section_id del proyecto 'Catalogación' component_filter
-		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-		$current_component 	= component_common::get_instance($modelo_name, $component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+		$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$current_component 	= component_common::get_instance($model_name, $component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		$current_component->set_dato($component_dato);
 		$current_component->Save();
 		if(SHOW_DEBUG) {
-			#dump($component_dato, " component_dato $component_tipo ".to_string($modelo_name));
-			#echo "Saved $modelo_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
+			#dump($component_dato, " component_dato $component_tipo ".to_string($model_name));
+			#echo "Saved $model_name $component_tipo $section_id (section ".$section_tipo." : $section_id) ".json_encode($component_dato);
 		}
 		*/
 	}
@@ -237,16 +237,16 @@ if ($mode=='renum_digital') {
 		#
 		# IMAGEN IDENTIFICATIVA
 			$component_tipo   	= MUPREVA_COMPONENT_PORTAL_IMAGEN_IDENTIFICATIVA;
-			$modelo_name 	  	= 'component_portal';
-			$component_portal 	= component_common::get_instance($modelo_name, $component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_GALERIA);
+			$model_name 	  	= 'component_portal';
+			$component_portal 	= component_common::get_instance($model_name, $component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_GALERIA);
 			$imagen_identificativa_dato = $component_portal->get_dato();
 
 
 		#
 		# IMAGENES ADICIONALES
 			$component_tipo   	= MUPREVA_COMPONENT_PORTAL_IMAGENES_ADICIONALES;
-			$modelo_name 	  	= 'component_portal';
-			$component_portal 	= component_common::get_instance($modelo_name, $component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_GALERIA);
+			$model_name 	  	= 'component_portal';
+			$component_portal 	= component_common::get_instance($model_name, $component_tipo, $current_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_GALERIA);
 			$imagenes_adicionales_dato 	= $component_portal->get_dato();
 
 
@@ -264,8 +264,8 @@ if ($mode=='renum_digital') {
 				# CÓDIGO : Ejemplo: de '73' a '73-1'
 				# Modifica el código alçctual del recurso a la nueva numeración
 				$component_tipo 	= MUPREVA_COMPONENT_TIPO_CODIGO;
-				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$current_component 	= component_common::get_instance($modelo_name, $component_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
+				$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$current_component 	= component_common::get_instance($model_name, $component_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
 				$component_dato 	= $current_component->get_dato();
 				if( strpos($component_dato, '-')===false ) { // evita volver a renombrar código
 					$component_dato 	= (string)$current_section_id .'-'.$i ; // Es igual al section id-$i
@@ -282,8 +282,8 @@ if ($mode=='renum_digital') {
 				# IMAGEN
 				# Calcula todos los posibles ficheros de a mover/renombrar (en todas las calidades)
 				$component_tipo 	= MUPREVA_COMPONENT_TIPO_IMAGEN;
-				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$component_image 	= component_common::get_instance($modelo_name, $component_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
+				$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component_image 	= component_common::get_instance($model_name, $component_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
 				$ar_quality 		= DEDALO_IMAGE_AR_QUALITY;
 				foreach ($ar_quality as $quality) {
 					$file_path = $component_image->get_image_path($quality);
@@ -296,8 +296,8 @@ if ($mode=='renum_digital') {
 				/* INNECESARIO YA QUE NO CAMBIA
 				$path_tipo 				= MUPREVA_COMPONENT_TIPO_DIRECTORIO;	// 'rsc33';	//"dd1110";
 				$component_dato 		= (string)$additional_path;
-				$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($path_tipo,true);
-				$current_component 		= component_common::get_instance($modelo_name, $path_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
+				$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($path_tipo,true);
+				$current_component 		= component_common::get_instance($model_name, $path_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
 				$current_component->set_dato($component_dato);
 				$current_component->Save();
 				*/
@@ -307,8 +307,8 @@ if ($mode=='renum_digital') {
 				# Modifica el nombre del fichero usando el nuevo valor de 'código' de esta ficha
 				$file_name_tipo 		= MUPREVA_COMPONENT_TIPO_NOMBRE_FICHERO;	//'rsc34';	//"dd851";
 				$component_dato 		= (string)$codigo;
-				$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($file_name_tipo,true);
-				$current_component 		= component_common::get_instance($modelo_name, $file_name_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
+				$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($file_name_tipo,true);
+				$current_component 		= component_common::get_instance($model_name, $file_name_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
 				$current_component->set_dato($component_dato);
 				$current_component->Save();
 
@@ -318,8 +318,8 @@ if ($mode=='renum_digital') {
 				# UPDATED IMAGE COMPONENT
 				# Calcula los nuevos nombres de los ficheros (en todas las calidades) después de actualizar el campo MUPREVA_COMPONENT_TIPO_NOMBRE_FICHERO
 				$component_tipo 	= MUPREVA_COMPONENT_TIPO_IMAGEN;
-				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$component_image 	= new $modelo_name($component_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
+				$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component_image 	= new $model_name($component_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
 
 				foreach ($ar_source as $quality => $file_path) {
 					if (!file_exists($file_path)) continue;

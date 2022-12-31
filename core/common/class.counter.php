@@ -202,9 +202,9 @@ abstract class counter {
 			$section_tipo 		= $rows['tipo'];
 			$counter_section_id = (int)$rows['dato'];
 
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
-			if ($modelo_name!=='section') {
-				debug_log(__METHOD__." Counter row with tipo: $section_tipo is a $modelo_name . Only sections can use counters. Fix ASAP ".to_string(), logger::ERROR);
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+			if ($model_name!=='section') {
+				debug_log(__METHOD__." Counter row with tipo: $section_tipo is a $model_name . Only sections can use counters. Fix ASAP ".to_string(), logger::ERROR);
 				continue;
 			}
 

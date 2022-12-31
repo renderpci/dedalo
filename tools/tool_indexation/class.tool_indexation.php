@@ -165,8 +165,8 @@ class tool_indexation extends tool_common {
 		// 		// 		$current_section_tipo 	 = $pseudo_locator->from_section_tipo;
 		// 		// 		$current_section_id   	 = $pseudo_locator->from_section_id;
 
-		// 		// 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-		// 		// 		$component 		= component_common::get_instance($modelo_name,
+		// 		// 		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+		// 		// 		$component 		= component_common::get_instance($model_name,
 		// 		// 														 $current_component_tipo,
 		// 		// 														 $current_section_id,
 		// 		// 														 'edit',
@@ -176,7 +176,7 @@ class tool_indexation extends tool_common {
 		// 		// 		$component->remove_locator( $current_locator );
 		// 		// 		$component->Save();
 
-		// 		// 		debug_log(__METHOD__." Deleted inverse relation in $modelo_name - $current_section_tipo - $current_component_tipo - $current_section_id - ".json_encode($pseudo_locator), logger::DEBUG);
+		// 		// 		debug_log(__METHOD__." Deleted inverse relation in $model_name - $current_section_tipo - $current_component_tipo - $current_section_id - ".json_encode($pseudo_locator), logger::DEBUG);
 
 		// 		// 		$response->msg[] = "Deleted locator: ".json_encode($pseudo_locator);
 		// 		// 	}//end oreach ($ar_locators as $current_locator)

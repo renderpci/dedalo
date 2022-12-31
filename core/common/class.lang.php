@@ -231,9 +231,9 @@ class lang {
 
 		$section_tipo = DEDALO_LANGS_SECTION_TIPO;
 
-			# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
-			$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);
-			if ($section_modelo_name!=='section') {
+			# Test section tipo and model_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
+			$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);
+			if ($section_model_name!=='section') {
 
 				$section_id = (int)$locator->section_id;
 				switch ($section_id) {
@@ -259,10 +259,10 @@ class lang {
 			}
 
 		$tipo 			 = DEDALO_THESAURUS_CODE_TIPO;
-		$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+		$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 		$parent 		 = $locator->section_id;
 		$component 		 = component_common::get_instance(
-			$modelo_name,
+			$model_name,
 			$tipo,
 			$parent,
 			'edit',

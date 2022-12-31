@@ -455,16 +455,16 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 							$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 							$filter_locator->set_from_component_tipo($component_tipo);
 						$component_dato 		= [$filter_locator];
-						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); //'component_filter';
-						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+						$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); //'component_filter';
+						$current_component 		= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
 						$current_component->Save();
 
 						# CÓDIGO : Tipo '73-1'
 						$component_tipo 		= RESOURCE_COMPONENT_TIPO_CODE;
 						$component_dato 		= (string)$codigo;
-						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+						$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$current_component 		= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
 						$current_component->Save();
 					}
@@ -472,32 +472,32 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					# CÓDIGO ANTERIOR : Tipo '00281_01_Empuries_Colgante_AD_ORIG.JPG'
 					$component_tipo 		= RESOURCE_COMPONENT_TIPO_CODE_OLD; 	//'rsc22'; 	//"dd345";
 					$component_dato 		= (string)$image_name;
-					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+					$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$current_component 		= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 					$current_component->set_dato($component_dato);
 					$current_component->Save();
 
 					# PATH . Directorio tipo '/23000/23100'
 					$path_tipo 				= RESOURCE_COMPONENT_TIPO_DIRECTORY;	// 'rsc33';	//"dd1110";
 					$component_dato 		= (string)$additional_path;
-					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($path_tipo,true);
-					$current_component 		= component_common::get_instance($modelo_name, $path_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+					$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($path_tipo,true);
+					$current_component 		= component_common::get_instance($model_name, $path_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 					$current_component->set_dato($component_dato);
 					$current_component->Save();
 
 					# FILE NAME . nombre del fichero Tipo '73-1'
 					$file_name_tipo 		= RESOURCE_COMPONENT_TIPO_FILENAME;	//'rsc34';	//"dd851";
 					$component_dato 		= (string)$codigo;
-					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($file_name_tipo,true);
-					$current_component 		= component_common::get_instance($modelo_name, $file_name_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+					$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($file_name_tipo,true);
+					$current_component 		= component_common::get_instance($model_name, $file_name_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 					$current_component->set_dato($component_dato);
 					$current_component->Save();
 
 					/*
 					# IMAGE. (Auto save when is called first time)
 					$component_tipo 		= RESOURCE_COMPONENT_TIPO_IMAGE; //'rsc29'; 	//"dd750";
-					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+					$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$current_component 		= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 					*/
 
 
@@ -510,8 +510,8 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					if (!empty($options->author)) {
 						$component_tipo 		= RESOURCE_COMPONENT_TIPO_AUTHOR; 	//'rsc52';  # component_autocomplete (Media recursos : Fotógrafo)
 						$component_dato 		= json_decode($author); # IMPORTANTE: Fotógrafo es un objeto locator codificado como string json que viene del request del formulario
-						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+						$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$current_component 		= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
 						$current_component->Save();
 					}
@@ -521,8 +521,8 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					if (!empty($options->codigo_anterior)) {
 						$component_tipo 		= "rsc22";  # component_input_text
 						$component_dato 		= trim($codigo_anterior);
-						$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+						$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$current_component 		= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 						$current_component->set_dato($component_dato);
 						$current_component->Save();
 					}
@@ -549,8 +549,8 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 							$dd_date 			= new dd_date();
 
 							$component_tipo 	= RESOURCE_COMPONENT_DATE_CAPTURE; //'rsc44';  # component_date (Media recursos : Fecha de captación)
-							$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-							$current_component 	= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+							$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$current_component 	= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 
 							$original_dato 		= (string)$DateTimeOriginal;
 
@@ -726,8 +726,8 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 				# Save now image for get proper thumb image in valor_list
 				$component_tipo 		= RESOURCE_COMPONENT_TIPO_IMAGE;	//'rsc29'; 	//"dd750";
 				$component_dato 		= null;
-				$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$current_component 		= component_common::get_instance($modelo_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
+				$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$current_component 		= component_common::get_instance($model_name, $component_tipo, $recurso_section_id, 'edit', DEDALO_DATA_NOLAN, RESOURCE_SECTION_TIPO);
 				$current_component->Save();
 
 
@@ -747,13 +747,13 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 
 				# Vemos si ya está incluida de una importación anterior
 				$component_tipo   = MAIN_PORTAL_IDENTIFY_IMAGE;
-				$modelo_name 	  = 'component_portal';
-				$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
+				$model_name 	  = 'component_portal';
+				$component_portal = component_common::get_instance($model_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 				$component_dato1  = $component_portal->get_dato();
 
 				$component_tipo   = MAIN_PORTAL_ADITIONAL_IMAGES;
-				$modelo_name 	  = 'component_portal';
-				$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
+				$model_name 	  = 'component_portal';
+				$component_portal = component_common::get_instance($model_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 				$component_dato2  = $component_portal->get_dato();
 
 				$ar_locators = array_merge( (array)$component_dato1, (array)$component_dato2 );
@@ -769,12 +769,12 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					# DOCUMENTACIÓN ASOCIADA -> IMAGEN IDENTIFICATIVA  (PORTAL)
 					# COMPONENT : portal de Documemntación asociada / imagenes 'dd1125'
 					$component_tipo   = MAIN_PORTAL_IDENTIFY_IMAGE;	//'mupreva17';	//"dd1125";
-					$modelo_name 	  = 'component_portal';
+					$model_name 	  = 'component_portal';
 					# Locator
 					$locator = new locator();
 						$locator->set_section_id($recurso_section_id);
 						$locator->set_section_tipo(RESOURCE_SECTION_TIPO);
-					$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
+					$component_portal = component_common::get_instance($model_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 					$component_portal->add_locator($locator);
 					$component_dato = $component_portal->get_dato();
 					$component_portal->Save();
@@ -786,12 +786,12 @@ if(!function_exists('process_folder')){ function process_folder( $request_option
 					# DOCUMENTACIÓN ASOCIADA -> IMÁGENES  (PORTAL)
 					# COMPONENT : portal de Documemntación asociada / imagenes 'dd1125'
 					$component_tipo   = MAIN_PORTAL_ADITIONAL_IMAGES;	//'mupreva17';	//"dd1125";
-					$modelo_name 	  = 'component_portal';
+					$model_name 	  = 'component_portal';
 					# Locator
 					$locator = new locator();
 						$locator->set_section_id($recurso_section_id);
 						$locator->set_section_tipo(RESOURCE_SECTION_TIPO);
-					$component_portal = component_common::get_instance($modelo_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
+					$component_portal = component_common::get_instance($model_name, $component_tipo, $section_general_id, 'edit', DEDALO_DATA_NOLAN, MAIN_SECTION_TIPO);
 					$component_portal->add_locator($locator);
 					$component_dato = $component_portal->get_dato();
 					$component_portal->Save();

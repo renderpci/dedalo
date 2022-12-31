@@ -138,9 +138,9 @@ class component_semantic_node extends component_relation_common {
 		$portal_section_id		= $this->get_parent_section_id();
 
 		// portal update
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo,true);
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo,true);
 			$component = component_common::get_instance( 
-				$modelo_name,
+				$model_name,
 				$portal_tipo,
 				$portal_section_id,
 				'list',

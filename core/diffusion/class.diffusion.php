@@ -54,7 +54,7 @@ abstract class diffusion  {
 	public static function get_diffusion_domains() {
 
 		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(DEDALO_DIFFUSION_TIPO,
-																						$modelo_name='diffusion_domain',
+																						$model_name='diffusion_domain',
 																						$relation_type='children');
 		return $diffusion_domains;
 	}//end get_diffusion_domains
@@ -96,7 +96,7 @@ abstract class diffusion  {
 				}
 
 				/* OLD WORLD
-				$my_diffusion_domain = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, $modelo_name=$caller_class_name, $relation_type='children');
+				$my_diffusion_domain = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, $model_name=$caller_class_name, $relation_type='children');
 					dump($my_diffusion_domain, "current_name:$current_name - diffusion_domain_name:$diffusion_domain_name - caller_class_name:$caller_class_name");
 
 				return (array)$my_diffusion_domain;
@@ -144,7 +144,7 @@ abstract class diffusion  {
 		#
 		# DIFFUSION_GROUP
 		# Search inside current diffusion_domain and iterate all diffusion_group
-		$ar_diffusion_group = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain_tipo, $modelo_name='diffusion_group', $relation_type='children', $search_exact=true);
+		$ar_diffusion_group = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain_tipo, $model_name='diffusion_group', $relation_type='children', $search_exact=true);
 			#dump($ar_diffusion_element_tipo, ' ar_diffusion_element_tipo ++ '.to_string());
 		foreach ($ar_diffusion_group as $diffusion_group_tipo) {
 
@@ -156,7 +156,7 @@ abstract class diffusion  {
 			$ar_diffusion_elements = [];
 
 			// 1 get the diffusion element alias
-			$ar_diffusion_element_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element_alias', $relation_type='children', $search_exact=true);
+			$ar_diffusion_element_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $model_name='diffusion_element_alias', $relation_type='children', $search_exact=true);
 
 			if(!empty($ar_diffusion_element_alias_tipo)){
 				foreach ($ar_diffusion_element_alias_tipo as $element_alias) {
@@ -165,7 +165,7 @@ abstract class diffusion  {
 				}
 			}
 			// 2 get direct diffusion element
-			$direct_diffusion_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $modelo_name='diffusion_element', $relation_type='children', $search_exact=true);
+			$direct_diffusion_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $model_name='diffusion_element', $relation_type='children', $search_exact=true);
 
 			// 3 mix to final array of diffusion_elements
 			$ar_diffusion_element_tipo = !empty($ar_diffusion_elements)
@@ -180,7 +180,7 @@ abstract class diffusion  {
 				$name					= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 				# Database of current diffusion element
-				$ar_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='children', $search_exact=true);
+				$ar_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database', $relation_type='children', $search_exact=true);
 
 				$diffusion_database_tipo = !empty($ar_children)
 					? reset($ar_children)
@@ -188,7 +188,7 @@ abstract class diffusion  {
 
 				// database_alias case try
 					if (empty($diffusion_database_tipo)) {
-						$ar_children			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database_alias', $relation_type='children', $search_exact=true);
+						$ar_children			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database_alias', $relation_type='children', $search_exact=true);
 						$database_alias_tipo	= reset($ar_children);
 						$ar_real_database_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', false);
 
@@ -373,9 +373,9 @@ abstract class diffusion  {
 		// Component
 			$ar_related 		= common::get_ar_related_by_model('component_', $tipo, $strict=false);
 			$component_tipo 	= reset($ar_related); //RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true)[0];
-			$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			#$real_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
-			$current_component 	= component_common::get_instance($modelo_name,
+			$current_component 	= component_common::get_instance($model_name,
 																 $component_tipo,
 																 $section_id,
 																 'list', // Note that 'list' mode have dato fallback (in section)
@@ -394,7 +394,7 @@ abstract class diffusion  {
 		# switch cases
 			switch (true) {
 
-				case ($modelo_name==='component_publication'):
+				case ($model_name==='component_publication'):
 					$field_value = (isset($dato[0]->section_id) && (int)$dato[0]->section_id===NUMERICAL_MATRIX_VALUE_YES) ? true : false;
 					break;
 
@@ -503,7 +503,7 @@ abstract class diffusion  {
 
 
 		$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 		$section_id = !empty($options->section_id)
 			? $options->section_id
@@ -515,7 +515,7 @@ abstract class diffusion  {
 			array_unshift($custom_arguments, $options->lang);
 		}
 
-		$component 		= component_common::get_instance($modelo_name,
+		$component 		= component_common::get_instance($model_name,
 														 $component_tipo,
 														 $section_id,
 														 'list',
@@ -616,8 +616,8 @@ abstract class diffusion  {
 		$locator = $dato;
 
 		// component image
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-			$component 	 = component_common::get_instance($modelo_name,
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
+			$component 	 = component_common::get_instance($model_name,
 														  $locator->component_tipo,
 														  $locator->section_id,
 														  'list',
@@ -1004,9 +1004,9 @@ abstract class diffusion  {
 
 		// first . component publication first. save if not exist
 			// date
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
+				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
 				$component 		= component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					$publication_first_tipo,
 					$section_id,
 					'list',
@@ -1025,9 +1025,9 @@ abstract class diffusion  {
 			// user
 				if (isset($save_first)) {
 
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
+					$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
 					$component 		= component_common::get_instance(
-						$modelo_name,
+						$model_name,
 						$publication_first_user_tipo,
 						$section_id,
 						'list',
@@ -1049,9 +1049,9 @@ abstract class diffusion  {
 
 		// last . publication last. save updated date always
 			// date
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
+				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
 				$component 		= component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					$publication_last_tipo,
 					$section_id,
 					'list',
@@ -1065,9 +1065,9 @@ abstract class diffusion  {
 				$component->Save();
 
 			// user
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
+				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
 				$component 		= component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					$publication_last_user_tipo,
 					$section_id,
 					'list',

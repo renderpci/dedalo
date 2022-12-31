@@ -193,12 +193,12 @@ class update {
 	/**
 	* COMPONENTS_UPDATE
 	* Iterate ALL structure sections and search components to update based on their model
-	* @param string $modelo_name
+	* @param string $model_name
 	* @param array $current_version
 	* @param array $update_version
 	* @return bool
 	*/
-	public static function components_update(string $modelo_name, array $current_version, array $update_version) : bool {
+	public static function components_update(string $model_name, array $current_version, array $update_version) : bool {
 
 		# Existing db tables
 		# Gets array of all db tables
@@ -210,7 +210,7 @@ class update {
 			# Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
 			if($current_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 				# component_ip, component_autocomplete, component_autocomplete_ts, component_date, component_input_text, component_filter
-				if ($modelo_name==='component_filter' || $modelo_name==='component_autocomplete' || $modelo_name==='component_ip') {
+				if ($model_name==='component_filter' || $model_name==='component_autocomplete' || $model_name==='component_ip') {
 					# Do the update
 				}else{
 					# Skip update
@@ -286,10 +286,10 @@ class update {
 
 			#
 			# SECTION COMPONENTS
-			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
+			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $model_name, 'children_recursive', $search_exact=true);
 			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
 				$current_section_tipo,
-				[$modelo_name],
+				[$model_name],
 				$from_cache=true,
 				$resolve_virtual=true,
 				$recursive=true,
@@ -297,13 +297,13 @@ class update {
 			);
 			if (empty($ar_component_tipo)) {
 				# Skip empty components sections
-				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $modelo_name) ".to_string(), logger::WARNING);
+				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $model_name) ".to_string(), logger::WARNING);
 				continue;
 			}
 
 			# Notify to log to know script state
 			$n_components = count($ar_component_tipo);
-			debug_log(__METHOD__." Updating components of section: $current_section_tipo (records: $n_rows, components $modelo_name: $n_components) Total: ". ($n_rows*$n_components), logger::WARNING);
+			debug_log(__METHOD__." Updating components of section: $current_section_tipo (records: $n_rows, components $model_name: $n_components) Total: ". ($n_rows*$n_components), logger::WARNING);
 
 			$i=0; $tm=0;
 			// Iterate database resource directly to minimize memory requirements on large arrays
@@ -322,7 +322,7 @@ class update {
 						#
 						# COMPONENT . Update component dato
 						$component = component_common::get_instance(
-							$modelo_name,
+							$model_name,
 							$current_component_tipo,
 							$section_id,
 							'update',
@@ -343,7 +343,7 @@ class update {
 							$update_options->section_tipo	= $current_section_tipo;
 							$update_options->context		= 'update_component_dato';
 
-						$response = $modelo_name::update_dato_version($update_options);
+						$response = $model_name::update_dato_version($update_options);
 						switch ((int)$response->result) {
 							case 0:
 								// skip all updates of current component because don't have update to this version
@@ -385,12 +385,12 @@ class update {
 							$update_options->dato_unchanged = $dato_unchanged;
 							$update_options->context 		= 'update_time_machine_dato';
 
-							$response 		= $modelo_name::update_dato_version($update_options);
-							#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
+							$response 		= $model_name::update_dato_version($update_options);
+							#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 							if($response->result === 1){
 								$current_time_machine_obj->set_dato($response->new_dato);
 								$current_time_machine_obj->Save();
-								#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$modelo_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
+								#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$model_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
 								$tm++;
 								#$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm'] = (int)$tm;
 								#echo $response->msg;

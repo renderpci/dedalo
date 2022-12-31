@@ -94,16 +94,16 @@ class relation_list extends common {
 					$ar_context[] = $current_id;
 
 				//get the columns of the @context
-				$ar_modelo_name_required = array('relation_list');
+				$ar_model_name_required = array('relation_list');
 				$resolve_virtual 		 = false;
 
 				// Locate relation_list element in current section (virtual ot not)
-				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 
 				// If not found children, try resolving real section
 				if (empty($ar_children)) {
 					$resolve_virtual = true;
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 				}// end if (empty($ar_children))
 
 
@@ -179,15 +179,15 @@ class relation_list extends common {
 		if(!empty($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
-					$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
+					$model_name			= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
 					$current_component	= component_common::get_instance(
-																		$modelo_name,
-																		$tipo,
-																		$section_id,
-																		'list',
-																		DEDALO_DATA_LANG,
-																		$section_tipo
-																		);
+						$model_name,
+						$tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$section_tipo
+					);
 					$value = $current_component->get_valor();
 
 					$component_object = new stdClass;
