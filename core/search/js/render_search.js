@@ -173,7 +173,6 @@ render_search.prototype.render_base = function() {
 				const menu_wrapper = document.querySelector('.menu_wrapper')
 				if (menu_wrapper) {
 					const menu_height = menu_wrapper.offsetHeight
-					console.log('menu_height:', menu_height);
 					search_container_selection.style.top = (menu_height + 1) + 'px'
 				}
 			}
