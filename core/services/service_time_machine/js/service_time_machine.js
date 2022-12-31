@@ -69,6 +69,8 @@ service_time_machine.prototype.init = async function(options) {
 
 	self.caller			= options.caller || null
 
+	self.ar_instances	= [];
+
 	self.config			= options.config || {}
 
 	self.id_variant		= options.id_variant || self.model
@@ -76,6 +78,8 @@ service_time_machine.prototype.init = async function(options) {
 	self.datum			= options.datum || null
 	self.context		= options.context
 	self.data			= options.data
+
+	self.data_source	= 'tm';
 
 	self.type			= 'tm'
 	self.node			= null
@@ -144,7 +148,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 	// load data if is not already received as option
 		if (autoload===true) {
 
-			// get context and data
+			// API request. Get context and data
 				const api_response = await data_manager.request({
 					body : self.rqo
 				})
