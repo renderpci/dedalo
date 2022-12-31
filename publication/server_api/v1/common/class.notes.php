@@ -54,12 +54,12 @@ abstract class notes {
 		$key_locator = 7;
 		$key_id 	 = 4;
 		$component_tipo = DEDALO_NOTES_TEXT_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		foreach ($matches[$key_locator] as $key => $locator) {
 			$locator = str_replace('\'', '"', $locator);
 			$locator = json_decode($locator);
 
-			$component 		= component_common::get_instance($modelo_name,
+			$component 		= component_common::get_instance($model_name,
 															 $component_tipo,
 															 $locator->section_id,
 															 'list',

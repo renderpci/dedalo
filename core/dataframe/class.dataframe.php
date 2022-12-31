@@ -71,9 +71,9 @@ class dataframe extends common {
 		$mode 				= $this->mode;
 		foreach ($ar_component_tipo as $current_component_tipo) {
 
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-			$component_obj  = component_common::get_instance(
-				$modelo_name,
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+			$component_obj	= component_common::get_instance(
+				$model_name,
 				$current_component_tipo,
 				$this->caller_section_id,
 				$mode,
@@ -102,7 +102,7 @@ class dataframe extends common {
 			}
 
 			# Notify
-			#common::notify_load_lib_element_tipo($modelo_name, $this->mode);
+			#common::notify_load_lib_element_tipo($model_name, $this->mode);
 
 
 			$ar_component_obj[] = $component_obj;

@@ -42,9 +42,9 @@
 
 				$ar_related_terms = $this->RecordObj_dd->get_relaciones();
 
-				foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-					if ($modelo_name!=='section'){
+				foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $model => $component_tipo) {
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					if ($model_name!=='section'){
 						$ar_componets_related[] = $component_tipo;
 					}
 				}
@@ -80,9 +80,9 @@
 			$ar_current_value=array();
 			foreach ($ar_componets_related as $component_tipo) {
 
-				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				$current_component = component_common::get_instance(
-					$modelo_name,
+					$model_name,
 					$component_tipo,
 					$current_locator->section_id,
 					'list',
@@ -116,9 +116,9 @@
 				if ($search_list_add!==false) {
 					$ar_dd_value = [];
 					foreach ($search_list_add as $add_tipo) {
-						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
+						$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
 						$component 		= component_common::get_instance(
-							$modelo_name,
+							$model_name,
 							$add_tipo,
 							$current_locator->section_id,
 							'list',

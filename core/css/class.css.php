@@ -81,11 +81,11 @@ class css {
 		// 		}
 
 
-		// 	# Recorremos los componentes usados por modeloID es decir: root=dd117, etc..
+		// 	# Recorremos los componentes usados por modeloID es decir: root=dd117, etc..
 		// 	$ar_url_elements 		= array();
 		// 	$ar_excepciones 		= array('component_autocomplete_ts');
-		// 	$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
-		// 	foreach($ar_loaded_modelos_name as $modelo_name) {
+		// 	$ar_loaded_models_name = array_unique(common::$ar_loaded_models_name);
+		// 	foreach($ar_loaded_models_name as $modelo_name) {
 		// 		# Load específico del componente actual
 		// 		if (!in_array($modelo_name, $ar_excepciones)) {
 		// 			$ar_url_elements[]	= DEDALO_CORE_URL . '/'. $modelo_name .'/css/'. $modelo_name .'.css';

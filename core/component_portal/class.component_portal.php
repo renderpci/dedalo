@@ -589,7 +589,7 @@ class component_portal extends component_relation_common {
 			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
 				$path[] = (object)[
 					'component_tipo'	=> $this->from_component_tipo,
-					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
+					'model'				=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
 					'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				];
@@ -598,7 +598,7 @@ class component_portal extends component_relation_common {
 		// self component path
 			$path[] = (object)[
 				'component_tipo'	=> $component_tipo,
-				'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+				'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 				'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			];
@@ -627,7 +627,7 @@ class component_portal extends component_relation_common {
 					// target component
 					$path[] = (object)[
 						'component_tipo'	=> $first_item->tipo,
-						'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($first_item->tipo,true),
+						'model'				=> RecordObj_dd::get_modelo_name_by_tipo($first_item->tipo,true),
 						'name'				=> RecordObj_dd::get_termino_by_tipo($first_item->tipo),
 						// note that section_tipo is used only to give a name to the join item.
 						// results are not really filtered by this section_tipo

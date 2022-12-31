@@ -74,10 +74,10 @@ final class dd_component_text_area_api {
 		// tags_index. indexing_component. Remove locators with the tag_id given
 			// $properties					= $component_text_area->get_properties();
 			// $tags_index					= $properties->tags_index;
-			// $indexing_component_tipo	= $tags_index->tipo;
+			// $indexing_component_tipo		= $tags_index->tipo;
 			// $indexing_section_tipo		= $tags_index->section_tipo==='self' ? $section_tipo : $tags_index->section_tipo;
-			// $indexing_section_id		= $tags_index->section_id==='self' ? $section_id : $tags_index->section_id;
-			// $indexing_model_name		= RecordObj_dd::get_modelo_name_by_tipo($indexing_component_tipo,true);
+			// $indexing_section_id			= $tags_index->section_id==='self' ? $section_id : $tags_index->section_id;
+			// $indexing_model_name			= RecordObj_dd::get_modelo_name_by_tipo($indexing_component_tipo,true);
 			// $indexing_lang				= common::get_element_lang($indexing_component_tipo, DEDALO_DATA_LANG);
 			// $indexing_component			= component_common::get_instance(
 			// 	$indexing_model_name,

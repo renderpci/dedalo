@@ -53,7 +53,7 @@ define('DEDALO_SECTION_LAYOUT_PUBLIC_TIPO'				, 'dd30'); // TIPO of section layo
 define('DEDALO_MEDIA_COLLECTION_TIPO'					, 'rsc25'); // TIPO of the collection component that contain the data of the collection, that can will used to make he path to the media
 
 // Models
-define('MODELO_SECTION'									, 'dd6');
+define('SECTION_MODEL'									, 'dd6');
 
 // State
 define('DEDALO_STATE_GENERAL_SECTION_ID'				, '1');

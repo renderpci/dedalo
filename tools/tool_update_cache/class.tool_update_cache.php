@@ -124,7 +124,7 @@ class tool_update_cache extends tool_common {
 		# All section components
 			$related_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
 				$section_tipo, // section_tipo
-				['component_'], // ar_modelo_name_required
+				['component_'], // ar_model_name_required
 				true, // from_cache
 				true, // resolve_virtual
 				true, // recursive

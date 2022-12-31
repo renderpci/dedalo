@@ -36,7 +36,7 @@
 								"path": [
 									{
 										"name": "Usable in indexing",
-										"modelo": "component_radio_button",
+										"model": "component_radio_button",
 										"section_tipo": "hierarchy20",
 										"component_tipo": "hierarchy24"
 									}

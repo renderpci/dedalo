@@ -114,7 +114,7 @@ const get_content_data_edit = async function(self) {
 				})
 
 		// source component
-			self.main_element.view_properties.read_only = true
+			self.main_element.show_interface.read_only = true
 			const source_component_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'source_component_container',
@@ -433,7 +433,7 @@ export const add_component = async (self, component_container, lang) => {
 	// source lang lock
 		if (lang===self.source_lang || component_container.classList.contains('source_component_container')) {
 			// node.classList.add('disabled_component')
-			component.view_properties.read_only = true
+			component.show_interface.read_only = true
 		}
 
 	// clean container before append
@@ -466,7 +466,7 @@ const render_status = async function(self) {
 		if (self.status_user_component) {
 			self.status_user_component.context.view	= 'mini'
 			self.status_user_component.is_inside_tool = true
-			self.status_user_component.view_properties.disable_save_animation = true
+			self.status_user_component.show_interface.save_animation = false
 			const status_user_node = await self.status_user_component.render()
 			fragment.appendChild(status_user_node)
 		}
@@ -475,7 +475,7 @@ const render_status = async function(self) {
 		if (self.status_admin_component) {
 			self.status_admin_component.context.view = 'mini'
 			self.status_admin_component.is_inside_tool = true
-			self.status_admin_component.view_properties.disable_save_animation = true
+			self.status_admin_component.show_interface.save_animation = false
 			const status_admin_node	= await self.status_admin_component.render()
 			fragment.appendChild(status_admin_node)
 		}

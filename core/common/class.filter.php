@@ -278,10 +278,10 @@ abstract class filter {
 
 		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
 
-			$modelo_name	= 'component_filter_records';
-			$tipo			= DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO;
-			$component		= component_common::get_instance(
-				$modelo_name,
+			$model_name	= 'component_filter_records';
+			$tipo		= DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO;
+			$component	= component_common::get_instance(
+				$model_name,
 				$tipo,
 				$user_id,
 				'list',

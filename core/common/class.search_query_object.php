@@ -164,7 +164,7 @@ class search_query_object {
 	*				{
 	*					"section_tipo": "oh1",
 	*					"component_tipo": "oh62",
-	*					"modelo": "component_section_id",
+	*					"model": "component_section_id",
 	*					"name": "Id"
 	*				}
 	*			]
@@ -193,7 +193,7 @@ class search_query_object {
 	*    "path": [
 	*        {
 	*            "name": "Publication",
-	*            "modelo": "component_publication",
+	*            "model": "component_publication",
 	*            "section_tipo": "oh1",
 	*            "component_tipo": "oh32"
 	*        }
@@ -279,7 +279,7 @@ class search_query_object {
 	*        "path": [
 	*            {
 	*                "name": "Code",
-	*                "modelo": "component_input_text",
+	*                "model": "component_input_text",
 	*                "section_tipo": "oh1",
 	*                "component_tipo": "oh14"
 	*            }

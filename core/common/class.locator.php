@@ -496,11 +496,12 @@ class locator extends stdClass {
 	* GET_KEY_IN_ARRAY_LOCATOR
 	* @return mixed bool | int $key_founded
 	*/
-	public static function get_key_in_array_locator(object $locator, array $ar_locator, array $ar_properties=['section_id','section_tipo']) : bool {
+	public static function get_key_in_array_locator(object $locator, array $ar_locator, array $ar_properties=['section_id','section_tipo']) {
 		$key_founded = false;
 
 		foreach ((array)$ar_locator as $key => $current_locator) {
 			$result = self::compare_locators( $locator, $current_locator, $ar_properties );
+
 			if($result===true) {
 				$key_founded = $key;
 				break;

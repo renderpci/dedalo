@@ -1326,7 +1326,7 @@ class component_date extends component_common {
 				// self component path
 				(object)[
 					'component_tipo'	=> $component_tipo,
-					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+					'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 					'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 					'section_tipo'		=> $section_tipo,
 					// 'column'			=> "jsonb_path_query(datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
@@ -1344,7 +1344,7 @@ class component_date extends component_common {
 				// array_unshift($path, ...$pre_path);
 				array_unshift($path, (object)[
 					'component_tipo'	=> $this->from_component_tipo,
-					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
+					'model'				=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
 					'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				]);

@@ -11,8 +11,8 @@ require_once( DEDALO_CONFIG_PATH.'/config.php');
 	# REFERENCED_SECTION_TIPO
 	$ar_terminos_relacionados =	RecordObj_dd::get_ar_terminos_relacionados($author_tipo, $cache=false, $simple=true);
 	foreach ($ar_terminos_relacionados as $current_tipo) {
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
-		if ($modelo_name=='section') {
+		$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+		if ($model_name=='section') {
 			$referenced_section_tipo = $current_tipo;
 			break;
 		}
@@ -20,9 +20,9 @@ require_once( DEDALO_CONFIG_PATH.'/config.php');
 
 
 
-	$modelo_name	= 'component_autocomplete';
+	$model_name	= 'component_autocomplete';
 	$component		= component_common::get_instance(
-		$modelo_name,
+		$model_name,
 		$author_tipo,
 		null,
 		'list',

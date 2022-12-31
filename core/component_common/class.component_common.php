@@ -235,14 +235,14 @@ abstract class component_common extends common {
 				// section_tipo format check
 					if (!empty($section_tipo)) {
 						# Verify modelo_name is section
-						$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
-						if ($section_modelo_name!=='section') {
-							dump($section_tipo," Verify modelo_name is section: section_modelo_name: $section_modelo_name");
-							if (empty($section_modelo_name)) {
+						$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+						if ($section_model_name!=='section') {
+							dump($section_tipo," Verify modelo_name is section: section_model_name: $section_model_name");
+							if (empty($section_model_name)) {
 								$msg = "Error. Current section ($section_tipo) does not exists or model is missing. Please fix structure ASAP";
 								throw new Exception($msg, 1);
 							}
-							throw new Exception("Error Processing Request. Trying to use: $section_modelo_name ($section_tipo) as section. Verified modelo is: $section_modelo_name", 1);
+							throw new Exception("Error Processing Request. Trying to use: $section_model_name ($section_tipo) as section. Verified modelo is: $section_model_name", 1);
 						}
 						# Verify this section is a invalid resource call
 						$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
@@ -264,12 +264,12 @@ abstract class component_common extends common {
 								# skip verification
 							}else{
 								# Verify this section is from current component tipo
-								$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
-								if (!isset($ar_terminoID_by_modelo_name[0])) {
-									debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_modelo_name), logger::ERROR);
+								$ar_terminoID_by_model_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
+								if (!isset($ar_terminoID_by_model_name[0])) {
+									debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_model_name), logger::ERROR);
 									throw new Exception("Error Processing Request", 1);
 								}
-								$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
+								$calculated_section_tipo = $ar_terminoID_by_model_name[0];
 								$real_section 			 = section::get_section_real_tipo_static($section_tipo);
 								$is_real 				 = $real_section===$section_tipo ? true : false;
 								if ( $is_real && $section_tipo!==$calculated_section_tipo && $mode!=='search' && SHOW_DEBUG===true) {
@@ -1763,7 +1763,6 @@ abstract class component_common extends common {
 			$search_query_object->select = $query_select;
 			$search_query_object->allow_sub_select_by_id = false;
 
-
 		// Search
 			$search = search::get_instance($search_query_object);
 			// include_negative values to include root user in list
@@ -2845,7 +2844,7 @@ abstract class component_common extends common {
 			// 		[0] => stdClass Object
 			// 			(
 			// 				[name] => Título
-			// 				[modelo] => component_input_text
+			// 				[model] => component_input_text
 			// 				[section_tipo] => numisdata224
 			// 				[component_tipo] => numisdata231
 			// 			)
@@ -3528,7 +3527,7 @@ abstract class component_common extends common {
 				// array_unshift($path, ...$pre_path);
 				array_unshift($path, (object)[
 					'component_tipo'	=> $this->from_component_tipo,
-					'modelo'			=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
+					'model'				=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
 					'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				]);

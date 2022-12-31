@@ -10,7 +10,7 @@ class area extends area_common  {
 	static $ar_ts_children_all_areas_hierarchized;
 
 	# CHILDREN AREAS CRITERION
-	static $ar_children_include_modelo_name = array('area','section','section_tool');
+	static $ar_children_include_model_name = array('area','section','section_tool');
 	static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
 
 
@@ -138,11 +138,11 @@ class area extends area_common  {
 				$children_terminoID = $ar_ts_childrens[$i];
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$modelo			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
 				$visible		= $RecordObj_dd->get_visible();
 
 				# Test if model is accepted or not (more restrictive)
-				if( $visible!=='no' && in_array($modelo, area::$ar_children_include_modelo_name) && !in_array($modelo, area::$ar_children_exclude_modelo_name) ) {
+				if( $visible!=='no' && in_array($model, area::$ar_children_include_model_name) && !in_array($model, area::$ar_children_exclude_modelo_name) ) {
 
 					$ar_children_areas_recursive[] = $children_terminoID;
 						//
@@ -290,11 +290,11 @@ class area extends area_common  {
 				$children_terminoID = $ar_ts_children[$i];
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$modelo 		= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
 				$visible		= $RecordObj_dd->get_visible();
 
 				# Test if modelo name is accepted or not (more restrictive)
-				if( $visible!=='no' && in_array($modelo, $this->ar_children_include_modelo_name) && !in_array($modelo, $this->ar_children_exclude_modelo_name) ) {
+				if( $visible!=='no' && in_array($model, $this->ar_children_include_model_name) && !in_array($model, $this->ar_children_exclude_modelo_name) ) {
 
 					$ar_temp = $this->get_ar_ts_children_areas_recursive($children_terminoID);
 

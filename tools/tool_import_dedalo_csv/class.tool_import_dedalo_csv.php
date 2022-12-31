@@ -500,12 +500,12 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 
 				// component
-					$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 					$mode			= 'list';
 					$RecordObj_dd	= new RecordObj_dd($component_tipo);
 					$traducible		= $RecordObj_dd->get_traducible()==='si' ? true : false;
 					$lang			= $traducible===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-					$component		= component_common::get_instance( $modelo_name,
+					$component		= component_common::get_instance( $model_name,
 																	  $component_tipo,
 																	  $section_id,
 																	  $mode,
@@ -576,19 +576,19 @@ class tool_import_dedalo_csv extends tool_common {
 							$component->set_dato( $v_value );
 							$component->Save();
 						}else{
-							debug_log(__METHOD__." ERROR ON IMPORT VALUE FROM $modelo_name [$component_tipo] - VALUE: ".to_string($value), logger::ERROR);
+							debug_log(__METHOD__." ERROR ON IMPORT VALUE FROM $model_name [$component_tipo] - VALUE: ".to_string($value), logger::ERROR);
 						}
 					}
 				}else{
 					// Inverse locators
-					if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete') {
+					if ($model_name==='component_portal' || $model_name==='component_autocomplete') {
 						// This is ONLY for add INVERSE LOCATORS. NOT for save dato !!
 						if(!empty($value)) {
 							foreach ((array)$value as $pkey => $current_locator) {
 								if (!empty($current_locator->section_tipo) && !empty($current_locator->section_id))	{
 									$component->add_locator($current_locator);
 								}else{
-									debug_log(__METHOD__." ERROR ON ADD_LOCATOR TO $modelo_name tipo:$component_tipo, $section_tipo:$section_tipo. locator type:".gettype($current_locator).", SKIPPED EMPTY OR BAD LOCATOR: ".to_string($current_locator), logger::ERROR);
+									debug_log(__METHOD__." ERROR ON ADD_LOCATOR TO $model_name tipo:$component_tipo, $section_tipo:$section_tipo. locator type:".gettype($current_locator).", SKIPPED EMPTY OR BAD LOCATOR: ".to_string($current_locator), logger::ERROR);
 								}
 							}
 						}//end if(!empty($value))
@@ -679,7 +679,7 @@ class tool_import_dedalo_csv extends tool_common {
 		// ar_component_tipo
 			$ar_possible_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
 				$section_tipo, // section_tipo
-				['component_'], // ar_modelo_name
+				['component_'], // ar_model_name
 				true, // from_cache
 				true, // resolve_virtual
 				true, // recursive
@@ -718,11 +718,11 @@ class tool_import_dedalo_csv extends tool_common {
 			) continue;
 
 			if (!in_array($component_tipo, $ar_possible_component_tipo)) {
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				// return "Sorry, component tipo: $component_tipo (model: $modelo_name) not found in section: $section_tipo";
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				// return "Sorry, component tipo: $component_tipo (model: $model_name) not found in section: $section_tipo";
 
 				$response->result = false;
-				$response->msg	= "Sorry, component tipo: $component_tipo (model: $modelo_name) not found in section: $section_tipo";
+				$response->msg	= "Sorry, component tipo: $component_tipo (model: $model_name) not found in section: $section_tipo";
 				return $response;
 			}
 
@@ -915,7 +915,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 			$components_list = section::get_ar_children_tipo_by_modelo_name_in_section(
 				$section_tipo, // section_tipo
-				['component'], // ar_modelo_name_required
+				['component'], // ar_model_name_required
 				true, // from_cache
 				true, // resolve_virtual
 				true, // recursive

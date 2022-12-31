@@ -397,7 +397,7 @@ class layout_map {
 					'path'	=> [(object)[
 						'section_tipo'		=> $preset_section_tipo,
 						'component_tipo'	=> 'dd1242',
-						'modelo'			=> 'component_input_text',
+						'model'			=> 'component_input_text',
 						'name'				=> 'Tipo'
 					]]
 				],
@@ -406,7 +406,7 @@ class layout_map {
 					'path'	=> [(object)[
 						'section_tipo'		=> $preset_section_tipo,
 						'component_tipo'	=> 'dd642',
-						'modelo'			=> 'component_input_text',
+						'model'			=> 'component_input_text',
 						'name'				=> 'Section tipo'
 					]]
 				],
@@ -415,7 +415,7 @@ class layout_map {
 				// 	'path'	=> [(object)[
 				// 		'section_tipo'		=> $preset_section_tipo,
 				// 		'component_tipo'	=> 'dd654',
-				// 		'modelo'			=> 'component_select',
+				// 		'model'				=> 'component_select',
 				// 		'name'				=> 'User'
 				// 	]]
 				// ],
@@ -424,7 +424,7 @@ class layout_map {
 					'path'	=> [(object)[
 						'section_tipo'		=> $preset_section_tipo,
 						'component_tipo'	=> 'dd1246',
-						'modelo'			=> 'component_input_text',
+						'model'			=> 'component_input_text',
 						'name'				=> 'Mode'
 					]]
 				]
@@ -438,7 +438,7 @@ class layout_map {
 						(object)[
 							'section_tipo'		=> $preset_section_tipo,
 							'component_tipo'	=> 'dd1247',
-							'modelo'			=> 'component_input_text',
+							'model'			=> 'component_input_text',
 							'name'				=> 'view'
 						]
 					]
@@ -461,7 +461,7 @@ class layout_map {
 				// 			(object)[
 				// 				'section_tipo' 	=> $preset_section_tipo,
 				// 				'component_tipo'=> $component_json_tipo,
-				// 				'modelo' 		=> 'component_json',
+				// 				'model' 		=> 'component_json',
 				// 				'name'			=> 'JSON Data'
 				// 			]
 				// 		],

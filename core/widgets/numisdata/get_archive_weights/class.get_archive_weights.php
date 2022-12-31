@@ -37,8 +37,8 @@ class get_archive_weights extends widget_common {
 			#
 			# PORTAL ROWS
 
-				$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
-				$component_portal = component_common::get_instance($modelo_name,
+				$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
+				$component_portal = component_common::get_instance($model_name,
 																   $current_component_tipo,
 																   $section_id,
 																   'list',
@@ -96,8 +96,8 @@ class get_archive_weights extends widget_common {
 					$section_id 	= $current_locator->section_id;
 					$section_tipo 	= $current_locator->section_tipo;
 
-					$used_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_used,true); // Expected portal
-					$used 				= component_common::get_instance($used_modelo_name,
+					$used_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_used,true); // Expected portal
+					$used 				= component_common::get_instance($used_model_name,
 																   $component_tipo_used,
 																   $section_id,
 																   'list',
@@ -110,8 +110,8 @@ class get_archive_weights extends widget_common {
 					if (empty($used_dato) || $used_dato[0]->section_id==='2') continue;
 
 					//weights
-					$data_weights_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_weights,true); // Expected portal
-					$data_weights				= component_common::get_instance($data_weights_modelo_name,
+					$data_weights_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_weights,true); // Expected portal
+					$data_weights				= component_common::get_instance($data_weights_model_name,
 																   $component_tipo_data_weights,
 																   $section_id,
 																   'list',
@@ -125,8 +125,8 @@ class get_archive_weights extends widget_common {
 					}
 
 					//diameter
-					$data_diameter_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_diameter,true); // Expected portal
-					$data_diameter				= component_common::get_instance($data_diameter_modelo_name,
+					$data_diameter_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_diameter,true); // Expected portal
+					$data_diameter				= component_common::get_instance($data_diameter_model_name,
 																   $component_tipo_data_diameter,
 																   $section_id,
 																   'list',

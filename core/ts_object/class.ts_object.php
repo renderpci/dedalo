@@ -79,12 +79,12 @@ class ts_object {
 
 		// Elements are stored in current section > section_list_thesaurus
 		// Search element in current section
-			$ar_modelo_name_required = array('section_list_thesaurus');
+			$ar_model_name_required = array('section_list_thesaurus');
 
 		// Search in current section
 			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section(
 				$section_tipo, // tipo
-				$ar_modelo_name_required, // ar_modelo_name_required
+				$ar_model_name_required, // ar_modelo_name_required
 				true, // from_cache
 				false, // resolve_virtual
 				false, // recursive
@@ -105,7 +105,7 @@ class ts_object {
 				if ($section_tipo!==$section_real_tipo) {
 					$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section(
 						$section_real_tipo,
-						$ar_modelo_name_required,
+						$ar_model_name_required,
 						true, // from_cache
 						false, // resolve_virtual
 						false, // recursive
@@ -254,25 +254,27 @@ class ts_object {
 				$element_obj->type	= $render_vars->type;
 				$element_obj->tipo	= $element_tipo;
 
-				$modelo_name			= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+				$model_name				= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 				// $legacy_model_name	= RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
 				$lang					= common::get_element_lang($element_tipo, $data_lang=DEDALO_DATA_LANG);
-				$component				= component_common::get_instance($modelo_name,
-																		 $element_tipo,
-																		 $this->section_id,
-																		 'list_thesaurus',
-																		 $lang,
-																		 $this->section_tipo);
+				$component				= component_common::get_instance(
+					$model_name,
+					$element_tipo,
+					$this->section_id,
+					'list_thesaurus',
+					$lang,
+					$this->section_tipo
+				);
 				$dato = $component->get_dato();
-				if ($modelo_name==='component_autocomplete_hi' || $modelo_name==='component_portal') {
+				if ($model_name==='component_autocomplete_hi' || $model_name==='component_portal') {
 
 					$dato = $component->get_valor();
 
-				}else if ($modelo_name==='component_input_text') {
+				}else if ($model_name==='component_input_text') {
 
 					$dato = $component->get_valor();
 
-				}else if ($modelo_name==='component_relation_related') {
+				}else if ($model_name==='component_relation_related') {
 
 					# Add inverse related (bidirectional only)
 					# dump($dato, ' dato ++ '.to_string($element_tipo));
@@ -284,7 +286,7 @@ class ts_object {
 						$dato = array_merge($dato, $component_rel);
 					}
 
-				}else if ($modelo_name==='component_svg'){
+				}else if ($model_name==='component_svg'){
 
 					# file exists check
 					$file_path	= $component->get_file_path();
@@ -297,7 +299,7 @@ class ts_object {
 
 
 				#if ($element_tipo==='hierarchy25') {
-				#	debug_log(__METHOD__." dato $modelo_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
+				#	debug_log(__METHOD__." dato $model_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
 				#}
 
 				#if (isset($ar_elements[$k_element_tipo])) {
@@ -313,14 +315,14 @@ class ts_object {
 						# term Is traducible and uses lang fallback here
 						// $value, $tipo, $parent, $mode, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null
 						if (empty($dato)) {
-							$modelo_name_term 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+							$model_name_term 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 							$element_value 		= component_common::extract_component_value_fallback($component);
 						}else{
 							$element_value = $dato;
 						}
 						$element_obj->value = $element_value;
 							#dump($element_obj->value, '$element_obj->value ++ '.to_string( $element_tipo));
-							#debug_log(__METHOD__." dato $modelo_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
+							#debug_log(__METHOD__." dato $model_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
 							#debug_log(__METHOD__." element_obj->value $element_tipo ".to_string($dato).' - '.DEDALO_DATA_LANG, logger::DEBUG);
 						break;
 
@@ -347,7 +349,7 @@ class ts_object {
 						// dato check
 							if(empty($dato)) continue 2; // Skip empty icon value links
 
-						if ($modelo_name==='component_relation_index' || $modelo_name==='component_relation_struct') {
+						if ($model_name==='component_relation_index' || $model_name==='component_relation_struct') {
 							#dump($dato, ' dato ++ '.to_string($element_tipo));
 							$total = count($dato);
 							$element_obj->value .= ':' . $total;
@@ -417,8 +419,8 @@ class ts_object {
 			}
 
 			$component_tipo	= $section_map->thesaurus->is_descriptor;
-			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance($modelo_name,
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance($model_name,
 															 $component_tipo,
 															 $current_locator->section_id,
 															 'list',
@@ -461,8 +463,8 @@ class ts_object {
 		}
 
 		$component_tipo = $section_map->thesaurus->is_indexable;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$component 	 	= component_common::get_instance($modelo_name,
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component 	 	= component_common::get_instance($model_name,
 														 $component_tipo,
 														 $section_id,
 														 'list',
@@ -502,8 +504,8 @@ class ts_object {
 
 		// 		$component_tipo = $section_map['thesaurus']->is_descriptor;
 
-		// 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		// 		$component 	 = component_common::get_instance($modelo_name,
+		// 		$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		// 		$component 	 = component_common::get_instance($model_name,
 		// 													  $component_tipo,
 		// 													  $current_locator->section_id,
 		// 													  'list',
@@ -649,16 +651,16 @@ class ts_object {
 
 					$parent			= $locator->section_id;
 					$section_tipo	= $locator->section_tipo;
-					$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					// debug
 						// if(SHOW_DEBUG===true) {
-						// 	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						// 	if ($real_modelo_name!==$model) {
-						// 		trigger_error("Error. modelo_name of component $tipo must be $model. $#real_modelo_name is defined");#
+						// 	$real_model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						// 	if ($real_model_name!==$model_name) {
+						// 		trigger_error("Error. modelo_name of component $tipo must be $model_name. $#real_model_name is defined");#
 						// 	}
 						// }
 					$component = component_common::get_instance(
-						$model,
+						$model_name,
 						$tipo,
 						$parent,
 						'edit',
@@ -688,7 +690,6 @@ class ts_object {
 					#}
 					#
 					#if (empty($valor)) {
-
 						$dato_full = $component->get_dato_full();
 						# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
 						$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
