@@ -23,37 +23,39 @@ class tool_propagate_component_data extends tool_common {
 
 		// options
 			$options = new stdClass();
-				$options->section_tipo		= null;
-				$options->section_id		= null;
-				$options->component_tipo	= null;
-				$options->action			= null; // add | delete
-				$options->lang				= null;
+				$options->section_tipo			= null;
+				$options->section_id			= null;
+				$options->component_tipo		= null;
+				$options->action				= null; // add | delete
+				$options->lang					= null;
+				$options->propagate_data_value	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// short vars
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
-			$component_tipo	= $options->component_tipo;
-			$action			= $options->action;
-			$lang			= $options->lang;
+			$section_tipo			= $options->section_tipo;
+			$section_id				= $options->section_id;
+			$component_tipo			= $options->component_tipo;
+			$action					= $options->action;
+			$lang					= $options->lang;
+			$propagate_data_value	= $options->propagate_data_value;
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$with_relations	= in_array($model, component_relation_common::get_components_with_relations());
 
+
 		// source component
-			$source_component = component_common::get_instance(
-				$model,
-				$component_tipo,
-				$section_id,
-				'list',
-				$lang,
-				$section_tipo
-			);
-			$source_dato = $source_component->get_dato();
-			if (empty($source_dato)) {
+			// $source_component = component_common::get_instance(
+			// 	$model,
+			// 	$component_tipo,
+			// 	$section_id,
+			// 	'list',
+			// 	$lang,
+			// 	$section_tipo
+			// );
+			// $source_dato = $source_component->get_dato();
+			if (empty($propagate_data_value)) {
 				$response->msg .= ' Empty dato! Ignored action '.$action;
 				return $response;
 			}
-
 		// Disable logging activity and time machine # !IMPORTANT
 			// logger_backend_activity::$enable_log = false;
 			// RecordObj_time_machine::$save_time_machine_version = false;
@@ -77,10 +79,10 @@ class tool_propagate_component_data extends tool_common {
 
 				// section_id
 					$current_section_id	= $row->section_id;
-					if ($current_section_id==$section_id) {
-						// skip self component
-						continue;
-					}
+					// if ($current_section_id==$section_id) {
+					// 	// skip self component
+					// 	continue;
+					// }
 
 				// current component
 					$current_component	= component_common::get_instance(
@@ -95,34 +97,51 @@ class tool_propagate_component_data extends tool_common {
 
 				// final_dato. Build final_dato based on action type
 					$final_dato = $current_dato;
+					$save = true;
 					switch ($action) {
+
+						case 'replace':
+
+							$final_dato = $propagate_data_value;
+							$save = true;
+
+							break;
+
 						case 'delete':
 
-							foreach ((array)$source_dato as $current_value) {
+							foreach ((array)$propagate_data_value as $current_value) {
 
 								$key = ($with_relations===true)
 									? locator::get_key_in_array_locator($current_value, $final_dato, $ar_properties=['section_tipo','section_id'])
 									: array_search($current_value, $final_dato);
-
 								if (false!==$key) {
 									unset($final_dato[$key]);
 								}
 							}
 							$final_dato = array_values($final_dato);
+
+							$save = ($final_dato!==$current_dato)
+								? true
+								: false ;
 							break;
 
 						case 'add':
 
-							foreach ((array)$source_dato as $current_value) {
+							foreach ((array)$propagate_data_value as $current_value) {
 								if (!in_array($current_value, $final_dato)) {
 									$final_dato[] = $current_value;
 								}
 							}
+
+							$save = ($final_dato!==$current_dato)
+								? true
+								: false;
+
 							break;
 					}
 
 				// set and save changes
-					if ($final_dato!==$current_dato) {
+					if ($save) {
 						$current_component->set_dato($final_dato);
 						$current_component->Save();
 
