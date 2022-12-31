@@ -159,10 +159,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	*		}
 	*	]
 	* }
-	* @return int $id
+	* @return int|null $id
 	* 	Matrix id from target table record
 	*/
-	public function Save( object $save_options=null ) : int {
+	public function Save( object $save_options=null ) : ?int {
 		$start_time = start_time();
 
 		// test_can_save
@@ -191,7 +191,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		$id = parent::Save($save_options);
 
 		// debug
-			if(SHOW_DEBUG===true) {
+			if (is_null($id)) {
+				debug_log(__METHOD__." Error on save record  ($this->matrix_table - $this->section_tipo - $this->section_id)".to_string(), logger::ERROR);
+			}else{
 				debug_log(__METHOD__." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
 			}
 
