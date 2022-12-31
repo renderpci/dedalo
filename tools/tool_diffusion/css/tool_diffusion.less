@@ -8,6 +8,9 @@
 @import '../../../core/page/css/layout/vars.less';
 
 
+@base_color : #8aa364;
+
+
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -80,7 +83,11 @@
 					display: grid;
 					width: fit-content;
 					grid-template-columns: auto 1fr;
-					border-radius: 0.3rem;
+					border-radius: 0.5rem;
+					margin-left: 0.5rem;
+					margin-right: 0.5rem;
+					border: 1px solid lighten(@base_color, 10%);
+					padding: 1rem;
 
 					.label, .value {
 						padding: 1rem;
@@ -102,6 +109,7 @@
 						flex-wrap: wrap;
 						justify-content: center;
 						padding: 1rem;
+						padding-bottom: 0px;
 
 						.response_message {
 							padding: 1rem;
@@ -110,6 +118,8 @@
 
 						.publication_button {
 							margin: 1rem;
+							background-color: @base_color;
+							border-color: darken(@base_color, 5%);
 						}
 
 						.spinner {
@@ -137,5 +147,5 @@
 
 // modal header tool modification
 	.tool_header.tool_diffusion {
-		background-color: #8aa364;
+		background-color: @base_color;
 	}
