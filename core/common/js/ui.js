@@ -880,8 +880,8 @@ export const ui = {
 		*/
 		exec_save_successfully_animation : (self) => {
 
-			// disable_save_animation from self.view_properties
-				if (self.view_properties && self.view_properties.disable_save_animation===true) {
+			// save_animation from self.show_interface
+				if (self.show_interface.save_animation===false) {
 					return Promise.resolve(false)
 				}
 
@@ -2552,7 +2552,7 @@ export const ui = {
 					//        "path": [
 					//            {
 					//                "name": "Code",
-					//                "modelo": "component_input_text",
+					//                "model": "component_input_text",
 					//                "section_tipo": "oh1",
 					//                "component_tipo": "oh14"
 					//            }

@@ -675,17 +675,17 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool		= self.caller && self.caller.type==='tool'
+		const is_inside_tool = self.caller && self.caller.type==='tool'
 		const target_section		= self.target_section
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant
 			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-		if (is_inside_tool===true){
-			// fragment
-				const fragment = new DocumentFragment()
-			return fragment
-		}
+		// if (is_inside_tool===true){
+		// 	// fragment
+		// 		const fragment = new DocumentFragment()
+		// 	return fragment
+		// }
 
 		// buttons container
 			const buttons_container = ui.component.build_buttons_container(self)
@@ -730,7 +730,7 @@ export const get_buttons = (self) => {
 			  })()
 
 		// button_update_data_external
-			if( show_interface.button_external === true){
+			if( self.show_interface.button_external === true){
 
 				// button_update data external
 					const button_update_data_external = ui.create_dom_element({
@@ -753,7 +753,7 @@ export const get_buttons = (self) => {
 			}//end button external
 
 	// button_add
-		if( show_interface.button_add === true){
+		if( self.show_interface.button_add === true){
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
@@ -802,7 +802,7 @@ export const get_buttons = (self) => {
 		}//end button_add
 
 	// button_link
-		if( show_interface.button_link === true){
+		if( self.show_interface.button_link === true){
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button link',
@@ -879,7 +879,7 @@ export const get_buttons = (self) => {
 		}//end button_link
 
 	// button tree terms selector
-		if( show_interface.button_tree === true){
+		if( self.show_interface.button_tree === true){
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button gear',
@@ -892,7 +892,7 @@ export const get_buttons = (self) => {
 		}//end button_external
 
 	// buttons tools
-		if( show_interface.tools === true){
+		if( self.show_interface.tools === true){
 			if (!is_inside_tool && self.mode==='edit') {
 				ui.add_tools(self, buttons_fold)
 			}
@@ -912,19 +912,13 @@ export const get_buttons = (self) => {
 * @return bool
 */
 export const activate_autocomplete = async function(self, wrapper) {
-
-	const show_interface = ( typeof self.request_config_object.show.interface?.show_autocomplete ==='undefined' )
-		? { show_autocomplete : true }
-		: self.request_config_object.show.interface
-
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
-		if( typeof self.request_config_object.show.interface?.show_autocomplete ==='undefined'
-			 && self.context.properties.source?.mode==='external') {
-			show_interface.show_autocomplete		= false
+		if(self.context.properties.source?.mode==='external') {
+			self.show_interface.show_autocomplete		= false
 		}// end if external
 
-	if( show_interface.show_autocomplete === true
+	if( self.show_interface.show_autocomplete === true
 		&& self.autocomplete!==false
 		&& self.autocomplete_active!==undefined
 		&& self.autocomplete_active===false ){
