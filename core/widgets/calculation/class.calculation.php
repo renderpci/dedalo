@@ -11,8 +11,8 @@ class calculation extends widget_common {
 	/**
 	* GET_DATO
 	* @param array ipo
-	* can be configurate with need of the widget
-	* for standard calculations data_souce need to be configurated with two params:
+	* can be configured with need of the widget
+	* for standard calculations data_souce need to be configured with two params:
 	* 	@param object $input
 	* 	indicate the way to get the data from sections and components
 	* 	data will be calculated before apply the logic
@@ -21,9 +21,9 @@ class calculation extends widget_common {
 	* 	@param object $process
 	* 	indicate the where can find the method to be used for calculate the data
 	* 	file indicate the file with the functions
-	* 	fn indicate the funtion name inside the file
+	* 	fn indicate the function name inside the file
 	* 	options are params that will be send to the function with the result data
-	* 	example of structure config for calcultaion widget with the logic parameters
+	* 	example of structure config for calculation widget with the logic parameters
 	* 	@param array $output
 	* 	the output format to be parse to html, every object will be a span node
 	* 	with label_before, data, label_after
@@ -602,7 +602,7 @@ class calculation extends widget_common {
 	*/
 	private function resolve_logic(object $process, $data) {
 		// path to the file with the functions, defined in structure
-		$file 	= DEDALO_EXTRAS_PATH . $process->file;
+		$file 	= DEDALO_WIDGETS_PATH . $process->file;
 		// function name, defined in structure
 		$fn		= $process->fn;
 		// merge the process->options defined in structure and the pre-procesed data
@@ -617,7 +617,7 @@ class calculation extends widget_common {
 			default:
 				// stringify the arguments
 				$arg	= json_encode($arg);
-				// escape the json slashes, " will be convert to \" it's necesary because the call will be inside a " string
+				// escape the json slashes, " will be convert to \" it's necessary because the call will be inside a " string
 				$arg	= addslashes($arg);
 				// escape the total arguments string, \' will be added at begin and end
 				$arg	= escapeshellarg($arg);

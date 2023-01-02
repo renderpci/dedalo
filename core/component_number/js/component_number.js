@@ -64,16 +64,56 @@ export const component_number = function(){
 	component_number.prototype.change_mode			= component_common.prototype.change_mode
 
 
+/**
+* GET_FORMAT_NUMBER
+* Get number formatted as properties say int || float.
+* By default the number is a int
+* When float is defined, it say the resolution of the decimals; float:2
+* Example with int: input 85,35 | output 85
+* Example with float:2 : input 85.3568 | output 85.36
+* @return number
+*/
+const get_format_number = function ( self, number ) {
+
+	const type = self.context.properties.type || 'int'
+
+	const format_number = (type.float)
+		? number.toFixed(type.float )
+		: number.toFixed();
+
+	return Number( format_number )
+}//end get_format_number
+
 
 /**
 * FIX_NUMBER_FORMAT
 * Force unified number format.
+* Format used is floating point ( , used in Spanish or other languages are avoided, only . will be valid for decimals)
 * Example: Change 17,2 to 17.2
 * @return number
 */
 component_number.prototype.fix_number_format = function( number ) {
 
-	const new_number = number.replace(/,/g, ".");
+	const self = this
+	const fixed_number = number.replace(/,/g, ".");
+	const new_number = get_format_number(self, Number(fixed_number) )
 
 	return Number(new_number)
+}//end fix_number_format
+
+
+component_number.prototype.get_steps = function() {
+
+	const self = this
+	const type = self.context.properties.type || 'int'
+
+	const base = 0
+
+	const string_steps = (type.float)
+		? base.toFixed( type.float -1 )
+		: base.toFixed();
+
+	const steps = string_steps+'1'
+
+	return Number(steps)
 }//end fix_number_format

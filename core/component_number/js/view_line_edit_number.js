@@ -4,11 +4,10 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data_edit
+		keyup_handler,
+		remove_handler
 	} from './render_edit_component_number.js'
 
 
@@ -55,3 +54,64 @@ view_line_edit_number.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
+
+
+/**
+* GET_CONTENT_DATA_EDIT
+* @return DOM node content_data
+*/
+const get_content_data_edit = function(self) {
+
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
+
+	// build values
+		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
+			const content_value = get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set pointers
+			content_data[i] = content_value
+		}
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+/**
+* GET_CONTENT_VALUE
+* @return DOM element content_value
+*/
+const get_content_value = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'number',
+			class_name		: 'input_value',
+			value			: current_value,
+			parent			: content_value
+		})
+		input.step = self.get_steps()
+		input.addEventListener('keyup', function(e) {
+			// page unload event
+				keyup_handler(e, i, self)
+		})//end keyup
+
+	return content_value
+}//end get_content_value
+
