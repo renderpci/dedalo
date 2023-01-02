@@ -17,7 +17,7 @@
 *	dom element options.target_div (Target dom element on new data will be added)
 *	array path (Cumulative array of component path objects)
 *
-* @return promise bool
+* @return bool
 */
 export const render_components_list = function(options) {
 	// console.log("render_components_list options:", options);
@@ -73,7 +73,6 @@ export const render_components_list = function(options) {
 				// section title bar
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
-					// class_name	: "search_section_bar_label",
 					class_name		: "section_bar_label",
 					inner_html		: element.label,
 					parent			: list_container
@@ -81,9 +80,9 @@ export const render_components_list = function(options) {
 				if (path.length===0) {
 					section_bar.classList.add('close_hide')
 				}
-				section_bar.addEventListener("click", function(){
-					if (target_div.classList.contains("target_list_container")) {
-						target_div.innerHTML = ""
+				section_bar.addEventListener('click', function(){
+					if (target_div.classList.contains('target_list_container')) {
+						target_div.innerHTML = ''
 					}
 				})
 				break;
@@ -98,18 +97,17 @@ export const render_components_list = function(options) {
 				ui.create_dom_element({
 					element_type	: 'li',
 					parent			: section_group,
-					// class_name	: "search_section_group_label",
-					class_name		: "section_group_label",
+					class_name		: 'section_group_label',
 					inner_html		: element.label
 				})
 				break;
 
 			default:
-				// Calculated path (from dom position)
+				// Calculated path (from DOM position)
 				const calculated_component_path = self.calculate_component_path( element, path )
 
-				// const class_names	= "search_component_label element_draggable"
-				const class_names		= "component_label element_draggable"
+				// const class_names	= 'search_component_label element_draggable'
+				const class_names		= 'component_label element_draggable'
 				const is_draggable		= true
 				// if (element.model==="component_portal") {
 				// 	// Autocompletes only
@@ -121,27 +119,29 @@ export const render_components_list = function(options) {
 				// 	is_draggable 		= false
 				// }
 
-				const section_id	= self.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
-				const component		= ui.create_dom_element({
-					element_type	: 'li',
-					parent			: section_group,
-					class_name		: class_names,
-					inner_html		: element.label,
-					draggable		: is_draggable,
-					data_set		: {
-						path			: JSON.stringify(calculated_component_path),
-						tipo			: element.tipo,
-						section_tipo	: element.section_tipo,
-						section_id		: section_id
-					}
-				})
+				const section_id = self.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
+
+				// component node
+					const component		= ui.create_dom_element({
+						element_type	: 'li',
+						parent			: section_group,
+						class_name		: class_names,
+						inner_html		: element.label,
+						draggable		: is_draggable,
+						data_set		: {
+							path			: JSON.stringify(calculated_component_path),
+							tipo			: element.tipo,
+							section_tipo	: element.section_tipo,
+							section_id		: section_id
+						}
+					})
 					component.ddo	= element
 					component.path	= calculated_component_path
-				// if (element.model!=="component_portal"){
+
+				// drag events
 					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
 					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-					component.addEventListener('drop',function(e){self.on_drop(this,e)})
-				// }
+					// component.addEventListener('drop',function(e){self.on_drop(this,e)})
 
 				// Portals and autocomplete only
 				// Pointer to open "children" target section (portals and autocompletes)
@@ -152,7 +152,7 @@ export const render_components_list = function(options) {
 
 						// Event on click load "children" section inside target_list_container recursively
 						const target_section = element.target_section_tipo[0] // Select first only
-						component.addEventListener("click", async function(){
+						component.addEventListener('click', async function(){
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
 									section_tipo : target_section
@@ -166,7 +166,7 @@ export const render_components_list = function(options) {
 									section_elements	: current_section_elements
 								})
 							// Reset active in current wrap
-								const ar_active_now	= await list_container.querySelectorAll("li.active")
+								const ar_active_now	= await list_container.querySelectorAll('li.active')
 								const len			= ar_active_now.length
 								for (let i = len - 1; i >= 0; i--) {
 									ar_active_now[i].classList.remove('active');
@@ -186,5 +186,3 @@ export const render_components_list = function(options) {
 
 	return true
 }//end render_components_list
-
-
