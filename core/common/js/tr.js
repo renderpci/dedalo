@@ -80,7 +80,7 @@ export const tr = {
 
 			// PAGE (pdf) [page-n-1--1-data:[1]:data]
 			case 'page' :
-				reg_ex = /(\[(page)-([a-z])-([0-9]{1,6})-([-0-9]{0,22})-(data:(.*?):data)?\])/g;
+				reg_ex = /(\[(page)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
 				break;
 
 			// PERSON (transcription spoken person) like [person-a-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
