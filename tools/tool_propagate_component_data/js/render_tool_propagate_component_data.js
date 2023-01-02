@@ -160,6 +160,15 @@ const get_content_data = async function(self) {
 				})
 			}
 		})
+	// use_current_data_check
+		const use_current_data_check = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			class_name		: 'checkbox use_current_data_check',
+			// inner_html	: get_label.tool_do_add || 'Add',
+			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
+			parent			: buttons_container
+		})
 
 	// button_add
 		const button_add = ui.create_dom_element({

@@ -52,10 +52,10 @@ class tool_propagate_component_data extends tool_common {
 			// 	$section_tipo
 			// );
 			// $source_dato = $source_component->get_dato();
-			if (empty($propagate_data_value)) {
-				$response->msg .= ' Empty dato! Ignored action '.$action;
-				return $response;
-			}
+			// if (empty($propagate_data_value)) {
+			// 	$response->msg .= ' Empty dato! Ignored action '.$action;
+			// 	return $response;
+			// }
 		// Disable logging activity and time machine # !IMPORTANT
 			// logger_backend_activity::$enable_log = false;
 			// RecordObj_time_machine::$save_time_machine_version = false;
