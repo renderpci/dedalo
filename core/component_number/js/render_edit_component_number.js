@@ -102,33 +102,11 @@ const get_content_value = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
-		input.addEventListener('change', function() {
-
-			const safe_value = (this.value.length>0)
-				? self.fix_number_format(this.value)
-				: null
-
-			// change data
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				key		: i,
-				value	: safe_value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-		})//end change
 		input.addEventListener('keyup', function(e) {
 			// page unload event
-				if (e.key!=='Enter') {
-					const key				= i
-					const original_value	= self.db_data.value[key]
-					const new_value			= this.value
-					// set_before_unload (bool)
-					set_before_unload(new_value!==original_value)
-				}
+			keyup_handler(e, i, self)
 		})//end keyup
+		input.step = self.get_steps()
 
 	// button remove
 		const mode				= self.mode
@@ -227,3 +205,86 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* KEYUP_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+export const keyup_handler = function(e, key, self) {
+	e.preventDefault()
+
+	// Enter key force to save changes
+		if (e.key==='Enter') {
+
+			// force to save current input if changed
+				const changed_data = self.data.changed_data || []
+				// change_value (save data)
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+		}else{
+
+			const safe_value = (e.target.value.length>0)
+				? self.fix_number_format(e.target.value)
+				: null
+
+			e.target.value = safe_value
+
+			// change data
+				const changed_data_item = Object.freeze({
+					action	: 'update',
+					key		: key,
+					value	: safe_value || ''
+				})
+
+			// fix instance changed_data
+				self.set_changed_data(changed_data_item)
+		}
+
+
+	return true
+}//end keyup_handler
+
+
+
+/**
+* REMOVE_HANDLER
+* Handle button remove actions
+* @param DOM  node input
+* @param int key
+* @param object self
+* @return promise response
+*/
+export const remove_handler = function(input, key, self) {
+
+	// force possible input change before remove
+		document.activeElement.blur()
+
+	// value
+		const current_value = input.value ? input.value : null
+
+	// changed_data
+		const changed_data = [Object.freeze({
+			action	: 'remove',
+			key		: key,
+			value	: null
+		})]
+
+	// change_value. Returns a promise that is resolved on api response is done
+		const response = self.change_value({
+			changed_data	: changed_data,
+			label			: current_value,
+			refresh			: true
+		})
+
+
+	return response
+}//end remove_handler
