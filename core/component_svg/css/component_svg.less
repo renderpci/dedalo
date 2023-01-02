@@ -36,4 +36,27 @@
 			}
 		}
 	}//end .view_default
+
+	&.view_line {
+		img {
+			height: 1em;
+		}
+	}
+
+	// with suffix _mini like 'component_text_area_mini'
+	&_mini {
+		// prevent index images height exceed text height
+		img {
+			height: 1em;
+		}
+	}
+
+	&.view_text {
+		height: 1em;
+	}
+
+	// img .svg.view_text
+	.svg.view_text {
+		height: 1em;
+	}
 }//end .component_svg

@@ -29,9 +29,17 @@
 	}//end .view_default
 
 	&.view_line {
-		>.content_data {
 
-			>.content_value {
+	}
+
+	&.view_line {
+		&.edit {
+			display: inline;
+			margin: 0px;
+			padding: 0px;
+			>.content_data {
+				padding: 0px;
+				position: relative;
 
 				.button.hidden_button {
 					display: none;

@@ -32,7 +32,7 @@ view_text_list_pdf.render = async function(self, options) {
 
 		const image_node = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'view_' + self.view,
+			class_name		: 'component_pdf view_' + self.view,
 			src				: url
 		})
 

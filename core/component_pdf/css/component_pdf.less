@@ -7,7 +7,7 @@
 
 	@color_grey_viewer: #3f3f3f;
 
-	&.view_default {
+	&.view_default, &.view_viewer  {
 
 		>.content_data {
 			min-height: @media_min_height;
@@ -78,5 +78,9 @@
 		.content_data {
 			height: 100vh;
 		}
+	}
+
+	&.view_text {
+		height: @view_text_height;
 	}
 }//end .component_pdf

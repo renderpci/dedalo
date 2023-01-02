@@ -8,7 +8,12 @@
 	@color_blue_sea: #aad3df;
 	@elements_over_z_index : 1000;
 
-	&.view_default {
+	// shared
+	.leaflet_map {
+		background-color: @color_blue_sea;
+	}
+
+	&.view_default, &.view_line {
 		//@elements_over_z_index : 1000;
 
 		>.content_data {
@@ -221,4 +226,15 @@
 			display: none !important;
 		}
 	}//end .view_default
+
+
+	&.view_line {
+		&.edit {
+			height: 30.5rem;
+
+			>.content_data {
+				height: 100% !important;
+			}
+		}
+	}
 }//end .component_geolocation

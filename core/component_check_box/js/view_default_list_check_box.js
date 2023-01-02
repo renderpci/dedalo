@@ -21,11 +21,11 @@ export const view_default_list_check_box = function() {
 
 
 /**
-* LIST
-* Render node for use in list
+* RENDER
+* Render node for use in this view
 * @return DOM node wrapper
 */
-view_default_list_check_box.render = async function(self, options) {
+view_default_list_check_box.render = async function(self) {
 
 	// short vars
 		const data			= self.data || {}
@@ -47,4 +47,4 @@ view_default_list_check_box.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
