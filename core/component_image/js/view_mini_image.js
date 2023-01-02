@@ -43,7 +43,7 @@ view_mini_image.render = function(self, options) {
 	// image
 		ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: self.view,
+			class_name		: 'view_' + self.view,
 			src				: url,
 			parent			: wrapper
 		})

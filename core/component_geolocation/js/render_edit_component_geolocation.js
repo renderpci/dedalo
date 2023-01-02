@@ -41,6 +41,7 @@ render_edit_component_geolocation.prototype.edit = async function(options) {
 		// case 'text':
 		// 	return view_text_geolocation.render(self, options)
 
+		case 'line':
 		case 'default':
 		default:
 			return view_default_edit_geolocation.render(self, options)

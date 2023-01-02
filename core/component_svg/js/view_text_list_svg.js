@@ -14,7 +14,7 @@
 
 
 /**
-* VIEW_text_LIST_SVG
+* VIEW_TEXT_LIST_SVG
 * Manage the components logic and appearance in client side
 */
 export const view_text_list_svg = function() {
@@ -44,7 +44,7 @@ view_text_list_svg.render = function(self, options) {
 	// image
 		const image_node = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'svg view_' + self.view,
+			class_name		: 'component_svg svg view_' + self.view,
 			src				: url
 		})
 

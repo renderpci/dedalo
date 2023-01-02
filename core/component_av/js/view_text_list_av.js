@@ -10,7 +10,7 @@
 
 
 /**
-* VIEW_text_LIST_AV
+* VIEW_TEXT_LIST_AV
 * Manages the component's logic and appearance in client side
 */
 export const view_text_list_av = function() {
@@ -37,7 +37,7 @@ view_text_list_av.render = async function(self) {
 	// image
 		const image_node = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'view_' + self.view,
+			class_name		: 'component_av view_' + self.view,
 			src				: url
 		})
 

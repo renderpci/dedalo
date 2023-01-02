@@ -6,7 +6,25 @@
 .component_image {
 	// background-color: #d2baf6;
 
-	&.view_default {
+	// shared quality_selector
+	.quality_selector {
+		height: 1.25rem;
+		width: 5rem;
+		margin: 0px;
+		padding: 0px;
+		position: absolute;
+		top: 0.5rem;
+		right: 1rem;
+		font-size: 0.9rem;
+		border: none;
+		outline: none;
+
+		.fullscreen& {
+			width: auto !important;
+		}
+	}
+
+	&.view_default, &.view_line {
 
 		>.content_data {
 			// Note that height is always the media min height (27em)
@@ -30,19 +48,6 @@
 
 				>.quality_selector {
 					height: 1.25rem;
-					width: 5rem;
-					margin: 0px;
-					padding: 0px;
-					position: absolute;
-					top: 0.5rem;
-					right: 1rem;
-					font-size: 0.9rem;
-					border: none;
-					outline: none;
-
-					.fullscreen& {
-						width: auto !important;
-					}
 				}
 
 				// object image
@@ -91,7 +96,17 @@
 				.fn_add_mask('vector_editor.svg');
 			}
 		}//end .buttons_container
+
+		&.list {
+			height: @view_line_height; // 5rem;
+		}
 	}//end .view_default
+
+	&.view_line {
+		&.list {
+			height: @view_line_height; // 5rem;
+		}
+	}
 
 	&.list {
 		img {
@@ -149,6 +164,19 @@
 				margin: 0;
 			}
 		}
+	}
+
+	// with suffix _mini like 'component_date_mini'
+	&_mini {
+		display: inline-block;
+		height: @view_mini_height; // 2rem
+		>img {
+			height: 100%;
+		}
+	}
+
+	&.view_text {
+		height: @view_text_height; // 1.5rem;
 	}
 }//end .component_image
 

@@ -369,7 +369,7 @@ export const ui = {
 
 
 		/**
-		* build_button_exit_edit
+		* BUILD_BUTTON_EXIT_EDIT
 		* @param object options = {}
 		* @return DOM node content_data
 		*/
@@ -407,7 +407,7 @@ export const ui = {
 			})
 
 			return button_close_node;
-		},// end build_button_exit_edit
+		},//end build_button_exit_edit
 
 
 

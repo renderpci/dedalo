@@ -812,6 +812,7 @@ li .reset_input select {
 .error {
   background-color: red !important;
   transition: background-color 0.3s ease;
+  color: white;
 }
 .alert {
   height: min-content;
@@ -3166,6 +3167,7 @@ dd-modal .wrapper_component > .top > select.mono,
   outline: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  appearance: none;
   text-indent: 1px;
   text-overflow: '';
   /* text-align: right; */
@@ -6219,6 +6221,7 @@ dd-modal .footer.distribute {
 }
 .wrapper_service_autocomplete > .options_hidden > .source_selector select {
   -webkit-appearance: caret;
+  appearance: caret;
   background-color: transparent;
   color: #ffff;
   outline: none;
@@ -8078,6 +8081,44 @@ dd-modal .footer.distribute {
 .fullscreen.component_av .quality_selector {
   width: auto !important;
 }
+.component_av .av_control_buttons {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 0.75rem;
+  padding-top: 0.75rem;
+}
+.component_av .av_control_buttons > button {
+  height: 2rem;
+  text-align: center;
+  margin-bottom: 0.25rem;
+  margin-top: 0.25rem;
+}
+.component_av .av_control_buttons > button:before {
+  margin: 0px;
+}
+.component_av .av_control_buttons > button:last-of-type {
+  margin-right: 0px;
+}
+.component_av .av_control_buttons .smpte {
+  color: #fd7f26;
+  padding: 0px;
+  margin-left: 1rem;
+  margin-right: 1rem;
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 1.65rem;
+  width: auto;
+  height: 1em;
+  display: inline-block;
+  vertical-align: baseline;
+  text-shadow: 1px 2px 2px #b9b9b9;
+}
+.component_av.view_default.list,
+.component_av.view_player.list {
+  height: 5rem;
+}
 .component_av.view_default.view_player,
 .component_av.view_player.view_player {
   box-shadow: none;
@@ -8139,51 +8180,23 @@ dd-modal .footer.distribute {
   opacity: 1;
   z-index: 1;
 }
+.component_av.view_line.list {
+  height: 5rem;
+}
+.component_av.view_line .content_value {
+  text-align: center;
+}
 .component_av.list img {
   cursor: zoom-in;
 }
-.component_av .av_control_buttons {
-  display: flex;
-  flex-wrap: wrap;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  padding-bottom: 0.75rem;
-  padding-top: 0.75rem;
-}
-.component_av .av_control_buttons > button {
-  height: 2rem;
-  text-align: center;
-  margin-bottom: 0.25rem;
-  margin-top: 0.25rem;
-}
-.component_av .av_control_buttons > button:before {
-  margin: 0px;
-}
-.component_av .av_control_buttons > button:last-of-type {
-  margin-right: 0px;
-}
-.component_av .av_control_buttons .smpte {
-  color: #fd7f26;
-  padding: 0px;
-  margin-left: 1rem;
-  margin-right: 1rem;
-  font-family: Verdana, Geneva, sans-serif;
-  font-size: 1.65rem;
-  width: auto;
-  height: 1em;
-  display: inline-block;
-  vertical-align: baseline;
-  text-shadow: 1px 2px 2px #b9b9b9;
-}
 .component_av.viewer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-color: #000000;
   position: absolute;
   width: 100%;
   height: 100%;
-  background-color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .component_av.viewer > .content_data {
   height: unset;
@@ -8208,6 +8221,12 @@ dd-modal .footer.distribute {
   height: 1.5em;
   width: 1.5em;
   margin: unset;
+}
+.component_av_mini img {
+  height: 2rem;
+}
+.component_av.view_text {
+  height: 2rem;
 }
 /**
 * component_check_box
@@ -8234,7 +8253,8 @@ dd-modal .footer.distribute {
   display: contents;
 }
 .component_check_box.view_line.edit > .content_data {
-  display: contents;
+  position: relative;
+  padding: 0px;
 }
 .component_check_box.view_line.edit > .content_data > .content_value {
   display: contents;
@@ -8374,6 +8394,14 @@ dd-modal .footer.distribute {
 .component_date.search .button.calendar {
   cursor: default;
 }
+.component_date.view_line.edit {
+  display: inline-block;
+  margin: 0px;
+  padding: 0px;
+}
+.component_date.view_line.edit > .content_data {
+  padding: 0px;
+}
 /**
 * component_email
 *
@@ -8390,7 +8418,16 @@ dd-modal .footer.distribute {
 .component_email.view_default > .content_data > .content_value .button.email {
   right: 2rem;
 }
-.component_email.view_line > .content_data > .content_value .button.hidden_button {
+.component_email.view_line.edit {
+  display: inline;
+  margin: 0px;
+  padding: 0px;
+}
+.component_email.view_line.edit > .content_data {
+  padding: 0px;
+  position: relative;
+}
+.component_email.view_line.edit > .content_data .button.hidden_button {
   display: none;
 }
 /**
@@ -8504,7 +8541,11 @@ dd-modal .footer.distribute {
 *
 * Included from main.less file
 */
-.component_geolocation.view_default {
+.component_geolocation .leaflet_map {
+  background-color: #aad3df;
+}
+.component_geolocation.view_default,
+.component_geolocation.view_line {
   /* FIELDS
 		-------------------------------------------------- */
   /* altitude
@@ -8514,34 +8555,42 @@ dd-modal .footer.distribute {
   /* MAP FULL SCREEN
 		-------------------------------------------------- */
 }
-.component_geolocation.view_default > .content_data {
+.component_geolocation.view_default > .content_data,
+.component_geolocation.view_line > .content_data {
   height: calc(100% - 1.5rem);
   min-height: 495px;
   flex-direction: column;
   z-index: 0;
 }
-.component_geolocation.view_default > .content_data > .content_value {
+.component_geolocation.view_default > .content_data > .content_value,
+.component_geolocation.view_line > .content_data > .content_value {
   flex: 1 1 auto;
   flex-direction: column;
   background-color: #aad3df;
 }
-.component_geolocation.view_default > .content_data > .content_value > .map_inputs {
+.component_geolocation.view_default > .content_data > .content_value > .map_inputs,
+.component_geolocation.view_line > .content_data > .content_value > .map_inputs {
   display: flex;
 }
-.component_geolocation.view_default > .content_data > .content_value > .map_inputs > label {
+.component_geolocation.view_default > .content_data > .content_value > .map_inputs > label,
+.component_geolocation.view_line > .content_data > .content_value > .map_inputs > label {
   margin-right: 0.5rem;
 }
-.component_geolocation.view_default > .content_data > .content_value > .map_inputs > input {
+.component_geolocation.view_default > .content_data > .content_value > .map_inputs > input,
+.component_geolocation.view_line > .content_data > .content_value > .map_inputs > input {
   width: 7rem;
   text-align: center;
 }
-.component_geolocation.view_default > .content_data > .content_value > .map_inputs > input.zoom {
+.component_geolocation.view_default > .content_data > .content_value > .map_inputs > input.zoom,
+.component_geolocation.view_line > .content_data > .content_value > .map_inputs > input.zoom {
   width: 2rem;
 }
-.component_geolocation.view_default > .content_data > .content_value > .map_inputs > input.altitude {
+.component_geolocation.view_default > .content_data > .content_value > .map_inputs > input.altitude,
+.component_geolocation.view_line > .content_data > .content_value > .map_inputs > input.altitude {
   width: 2.5rem;
 }
-.component_geolocation.view_default > .content_data .leaflet_map.leaflet-container {
+.component_geolocation.view_default > .content_data .leaflet_map.leaflet-container,
+.component_geolocation.view_line > .content_data .leaflet_map.leaflet-container {
   position: relative;
   width: 100%;
   height: 100%;
@@ -8553,16 +8602,19 @@ dd-modal .footer.distribute {
   background-color: #aad3df;
   max-height: 100%;
 }
-.component_geolocation.view_default > .content_data .leaflet_map.leaflet-container .leaflet-control-zoom a {
+.component_geolocation.view_default > .content_data .leaflet_map.leaflet-container .leaflet-control-zoom a,
+.component_geolocation.view_line > .content_data .leaflet_map.leaflet-container .leaflet-control-zoom a {
   font-size: initial !important;
   font-weight: bold;
 }
-.component_geolocation.view_default .geolocation_text {
+.component_geolocation.view_default .geolocation_text,
+.component_geolocation.view_line .geolocation_text {
   font-size: 14px;
   top: 2px;
   margin-right: 5px;
 }
-.component_geolocation.view_default .map_inputs {
+.component_geolocation.view_default .map_inputs,
+.component_geolocation.view_line .map_inputs {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -8586,31 +8638,38 @@ dd-modal .footer.distribute {
   background-clip: padding-box;
   color: #b9b9b9;
 }
-.component_geolocation.view_default .map_inputs span:not(:nth-of-type(1)) {
+.component_geolocation.view_default .map_inputs span:not(:nth-of-type(1)),
+.component_geolocation.view_line .map_inputs span:not(:nth-of-type(1)) {
   padding-left: 5px;
 }
-.component_geolocation.view_default .map_inputs input[name="zoom"] {
+.component_geolocation.view_default .map_inputs input[name="zoom"],
+.component_geolocation.view_line .map_inputs input[name="zoom"] {
   width: 28px;
   text-align: center;
 }
-.component_geolocation.view_default .map_inputs input {
+.component_geolocation.view_default .map_inputs input,
+.component_geolocation.view_line .map_inputs input {
   margin-left: 3px;
 }
-.component_geolocation.view_default .map_inputs .input_altitude {
+.component_geolocation.view_default .map_inputs .input_altitude,
+.component_geolocation.view_line .map_inputs .input_altitude {
   width: 28px;
   text-align: center;
 }
-.component_geolocation.view_default .map_inputs .map_save {
+.component_geolocation.view_default .map_inputs .map_save,
+.component_geolocation.view_line .map_inputs .map_save {
   padding: 3px;
   padding-bottom: 3px;
   border-left: 1px solid;
   border-right: 1px solid;
   border-color: #333333;
 }
-.component_geolocation.view_default .map_inputs .map_save:active {
+.component_geolocation.view_default .map_inputs .map_save:active,
+.component_geolocation.view_line .map_inputs .map_save:active {
   color: #fe8000;
 }
-.component_geolocation.view_default .map_inputs .map_reload {
+.component_geolocation.view_default .map_inputs .map_reload,
+.component_geolocation.view_line .map_inputs .map_reload {
   background-color: #000000;
   cursor: pointer;
   display: inline-flex;
@@ -8636,31 +8695,39 @@ dd-modal .footer.distribute {
   width: 1.2em;
   height: 1.2em;
 }
-.component_geolocation.view_default .map_inputs .map_reload:hover {
+.component_geolocation.view_default .map_inputs .map_reload:hover,
+.component_geolocation.view_line .map_inputs .map_reload:hover {
   opacity: 1 !important;
 }
-.component_geolocation.view_default .map_inputs .map_reload:active {
+.component_geolocation.view_default .map_inputs .map_reload:active,
+.component_geolocation.view_line .map_inputs .map_reload:active {
   opacity: 0.4 !important;
 }
-.buttons_container .component_geolocation.view_default .map_inputs .map_reload {
+.buttons_container .component_geolocation.view_default .map_inputs .map_reload,
+.buttons_container .component_geolocation.view_line .map_inputs .map_reload {
   background-color: #ffffff;
   margin-top: 0px;
 }
-.component_geolocation.view_default .map_inputs .map_reload.white {
+.component_geolocation.view_default .map_inputs .map_reload.white,
+.component_geolocation.view_line .map_inputs .map_reload.white {
   background-color: #ffffff !important;
 }
-.component_geolocation.view_default .map_inputs .map_reload.grey {
+.component_geolocation.view_default .map_inputs .map_reload.grey,
+.component_geolocation.view_line .map_inputs .map_reload.grey {
   background-color: #949494;
   opacity: 0.5;
 }
-.component_geolocation.view_default .map_inputs .map_reload:hover {
+.component_geolocation.view_default .map_inputs .map_reload:hover,
+.component_geolocation.view_line .map_inputs .map_reload:hover {
   opacity: 1;
 }
-.component_geolocation.view_default .map_inputs .map_reload:active {
+.component_geolocation.view_default .map_inputs .map_reload:active,
+.component_geolocation.view_line .map_inputs .map_reload:active {
   opacity: 1;
   background: #fe8000;
 }
-.component_geolocation.view_default .map_inputs .map_point {
+.component_geolocation.view_default .map_inputs .map_point,
+.component_geolocation.view_line .map_inputs .map_point {
   background-color: #000000;
   cursor: pointer;
   display: inline-flex;
@@ -8686,76 +8753,82 @@ dd-modal .footer.distribute {
   width: 1.2em;
   height: 1.2em;
 }
-.component_geolocation.view_default .map_inputs .map_point:hover {
+.component_geolocation.view_default .map_inputs .map_point:hover,
+.component_geolocation.view_line .map_inputs .map_point:hover {
   opacity: 1 !important;
 }
-.component_geolocation.view_default .map_inputs .map_point:active {
+.component_geolocation.view_default .map_inputs .map_point:active,
+.component_geolocation.view_line .map_inputs .map_point:active {
   opacity: 0.4 !important;
 }
-.buttons_container .component_geolocation.view_default .map_inputs .map_point {
+.buttons_container .component_geolocation.view_default .map_inputs .map_point,
+.buttons_container .component_geolocation.view_line .map_inputs .map_point {
   background-color: #ffffff;
   margin-top: 0px;
 }
-.component_geolocation.view_default .map_inputs .map_point.white {
+.component_geolocation.view_default .map_inputs .map_point.white,
+.component_geolocation.view_line .map_inputs .map_point.white {
   background-color: #ffffff !important;
 }
-.component_geolocation.view_default .map_inputs .map_point.grey {
+.component_geolocation.view_default .map_inputs .map_point.grey,
+.component_geolocation.view_line .map_inputs .map_point.grey {
   background-color: #949494;
   opacity: 0.5;
 }
-.component_geolocation.view_default .map_inputs .map_point:hover {
+.component_geolocation.view_default .map_inputs .map_point:hover,
+.component_geolocation.view_line .map_inputs .map_point:hover {
   opacity: 1;
 }
-.component_geolocation.view_default .map_inputs .map_point:active {
+.component_geolocation.view_default .map_inputs .map_point:active,
+.component_geolocation.view_line .map_inputs .map_point:active {
   opacity: 1;
   background: #fe8000;
 }
-.component_geolocation.view_default .leaflet_map_player {
+.component_geolocation.view_default .leaflet_map_player,
+.component_geolocation.view_line .leaflet_map_player {
   padding: 0px;
   margin: 0px;
   position: relative;
   margin-top: 5px;
 }
-.component_geolocation.view_default .leaflet_map_player .content_data {
+.component_geolocation.view_default .leaflet_map_player .content_data,
+.component_geolocation.view_line .leaflet_map_player .content_data {
   width: 100%;
   height: 100%;
   margin: 0px;
   padding: 0px;
 }
-.component_geolocation.view_default .leaflet_map_player .leaflet_map {
+.component_geolocation.view_default .leaflet_map_player .leaflet_map,
+.component_geolocation.view_line .leaflet_map_player .leaflet_map {
   min-height: 605px;
 }
 .component_geolocation.view_default .leaflet-top,
-.component_geolocation.view_default .leaflet-bottom {
+.component_geolocation.view_line .leaflet-top,
+.component_geolocation.view_default .leaflet-bottom,
+.component_geolocation.view_line .leaflet-bottom {
   /* bajamos el z-index (1000 por defecto), a 100 para evitar problemas */
   z-index: 1000;
 }
-.component_geolocation.view_default .leaflet-control-layers {
+.component_geolocation.view_default .leaflet-control-layers,
+.component_geolocation.view_line .leaflet-control-layers {
   z-index: 1000;
 }
-.component_geolocation.view_default .leaflet-draw-draw-circle {
+.component_geolocation.view_default .leaflet-draw-draw-circle,
+.component_geolocation.view_line .leaflet-draw-draw-circle {
   display: none !important;
+}
+.component_geolocation.view_line.edit {
+  height: 30.5rem;
+}
+.component_geolocation.view_line.edit > .content_data {
+  height: 100% !important;
 }
 /**
 * component_image
 *
 * Included from main.less file
 */
-.component_image.view_default > .content_data {
-  height: 392px;
-  display: table;
-}
-.component_image.view_default > .content_data > .content_value {
-  height: inherit;
-  width: inherit;
-  background-color: #f0f0f0;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-.component_image.view_default > .content_data > .content_value > .quality_selector {
+.component_image .quality_selector {
   height: 1.25rem;
   width: 5rem;
   margin: 0px;
@@ -8767,33 +8840,59 @@ dd-modal .footer.distribute {
   border: none;
   outline: none;
 }
-.fullscreen.component_image.view_default > .content_data > .content_value > .quality_selector {
+.fullscreen.component_image .quality_selector {
   width: auto !important;
 }
-.component_image.view_default > .content_data > .content_value .image {
+.component_image.view_default > .content_data,
+.component_image.view_line > .content_data {
+  height: 392px;
+  display: table;
+}
+.component_image.view_default > .content_data > .content_value,
+.component_image.view_line > .content_data > .content_value {
+  height: inherit;
+  width: inherit;
+  background-color: #f0f0f0;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.component_image.view_default > .content_data > .content_value > .quality_selector,
+.component_image.view_line > .content_data > .content_value > .quality_selector {
+  height: 1.25rem;
+}
+.component_image.view_default > .content_data > .content_value .image,
+.component_image.view_line > .content_data > .content_value .image {
   height: 100%;
   max-height: 100%;
   max-width: 100%;
 }
-.component_image.view_default > .content_data > .content_value .image:focus {
+.component_image.view_default > .content_data > .content_value .image:focus,
+.component_image.view_line > .content_data > .content_value .image:focus {
   outline-offset: -1px;
   outline: 1px solid #3b87fd;
   box-shadow: 0px 0px 10px #3b87fd;
   opacity: 1;
   z-index: 1;
 }
-.component_image.view_default > .content_data > .content_value .image body {
+.component_image.view_default > .content_data > .content_value .image body,
+.component_image.view_line > .content_data > .content_value .image body {
   display: flex;
   overflow: hidden;
   justify-content: center;
 }
-.component_image.view_default > .content_data > .content_value canvas {
+.component_image.view_default > .content_data > .content_value canvas,
+.component_image.view_line > .content_data > .content_value canvas {
   background-color: #f5f5f5;
 }
-.component_image.view_default > .content_data > .content_value .canvas[resize] {
+.component_image.view_default > .content_data > .content_value .canvas[resize],
+.component_image.view_line > .content_data > .content_value .canvas[resize] {
   height: 100%;
 }
-.component_image.view_default > .buttons_container .vector_editor {
+.component_image.view_default > .buttons_container .vector_editor,
+.component_image.view_line > .buttons_container .vector_editor {
   -webkit-mask-image: url('../../themes/default/icons/vector_editor.svg');
   mask-image: url('../../themes/default/icons/vector_editor.svg');
   -webkit-mask-size: contain;
@@ -8802,6 +8901,13 @@ dd-modal .footer.distribute {
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
+}
+.component_image.view_default.list,
+.component_image.view_line.list {
+  height: 5rem;
+}
+.component_image.view_line.list {
+  height: 5rem;
 }
 .component_image.list img {
   cursor: zoom-in;
@@ -8844,6 +8950,16 @@ dd-modal .footer.distribute {
   height: 100%;
   padding: 0;
   margin: 0;
+}
+.component_image_mini {
+  display: inline-block;
+  height: 2rem;
+}
+.component_image_mini > img {
+  height: 100%;
+}
+.component_image.view_text {
+  height: 1.5rem;
 }
 .vector_editor_tools {
   background-color: #f78a1c;
@@ -9116,6 +9232,9 @@ dd-modal .footer.distribute {
   top: 0.5em;
   z-index: 1;
 }
+.component_input_text.view_line .content_data {
+  display: contents;
+}
 /**
 * view_default_input_text
 *
@@ -9173,6 +9292,9 @@ dd-modal .footer.distribute {
 .component_iri.view_default > .content_data > .content_value > .button.remove {
   right: 2rem;
 }
+.component_iri.view_line > .content_data {
+  display: contents;
+}
 .component_iri.view_line > .content_data > .content_value {
   flex-wrap: wrap;
 }
@@ -9194,6 +9316,26 @@ dd-modal .footer.distribute {
 *
 * Included from main.less file
 */
+.component_json .button_save {
+  display: none;
+  position: absolute;
+  right: 0px;
+  top: 0px;
+  z-index: 1;
+  height: 36px;
+}
+.component_json .button_save:before {
+  background-color: #2e6cd0;
+}
+.component_json .button_save.warning {
+  display: flex;
+  background-color: #e8e0e1;
+  border: 1px solid #d32535;
+  color: #dc3545;
+}
+.component_json .button_save.warning:before {
+  background-color: #dc3545 !important;
+}
 .component_json.view_default > .content_data {
   min-height: 392px;
 }
@@ -9202,26 +9344,6 @@ dd-modal .footer.distribute {
   width: 100%;
   position: relative;
   z-index: 0;
-}
-.component_json.view_default > .content_data > .content_value > .button_save {
-  display: none;
-  position: absolute;
-  right: 0px;
-  top: 0px;
-  z-index: 1;
-  height: 36px;
-}
-.component_json.view_default > .content_data > .content_value > .button_save:before {
-  background-color: #2e6cd0;
-}
-.component_json.view_default > .content_data > .content_value > .button_save.warning {
-  display: flex;
-  background-color: #e8e0e1;
-  border: 1px solid #d32535;
-  color: #dc3545;
-}
-.component_json.view_default > .content_data > .content_value > .button_save.warning:before {
-  background-color: #dc3545 !important;
 }
 .component_json.search > .content_data > .q_operator {
   width: 3rem;
@@ -9252,6 +9374,12 @@ dd-modal .footer.distribute {
   top: 0.5em;
   z-index: 1;
 }
+.component_number.view_line {
+  position: relative;
+}
+.component_number.view_line > .content_data {
+  display: contents;
+}
 /**
 * component_password
 *
@@ -9262,24 +9390,28 @@ dd-modal .footer.distribute {
 *
 * Included from main.less file
 */
-.component_pdf.view_default > .content_data {
+.component_pdf.view_default > .content_data,
+.component_pdf.view_viewer > .content_data {
   min-height: 392px;
   max-height: inherit;
 }
-.component_pdf.view_default > .content_data > .content_value {
+.component_pdf.view_default > .content_data > .content_value,
+.component_pdf.view_viewer > .content_data > .content_value {
   width: 100%;
   height: 100%;
   resize: vertical;
   overflow: auto;
 }
-.component_pdf.view_default > .content_data > .content_value > .pdf_viewer_frame {
+.component_pdf.view_default > .content_data > .content_value > .pdf_viewer_frame,
+.component_pdf.view_viewer > .content_data > .content_value > .pdf_viewer_frame {
   display: block;
   height: calc(100% - 30px);
   width: 100%;
   border-right: 1px solid #3f3f3f;
   background-color: #3f3f3f;
 }
-.component_pdf.view_default > .content_data > .content_value > .fields {
+.component_pdf.view_default > .content_data > .content_value > .fields,
+.component_pdf.view_viewer > .content_data > .content_value > .fields {
   height: 30px;
   flex: 0 0 100%;
   background-color: #3f3f3f;
@@ -9291,11 +9423,13 @@ dd-modal .footer.distribute {
   font-size: 1em;
   width: 100%;
 }
-.component_pdf.view_default > .content_data > .content_value > .fields span {
+.component_pdf.view_default > .content_data > .content_value > .fields span,
+.component_pdf.view_viewer > .content_data > .content_value > .fields span {
   color: white;
   text-transform: capitalize;
 }
-.component_pdf.view_default > .content_data > .content_value > .fields input {
+.component_pdf.view_default > .content_data > .content_value > .fields input,
+.component_pdf.view_viewer > .content_data > .content_value > .fields input {
   width: 5em;
   margin-left: 1em;
   text-align: center;
@@ -9311,6 +9445,9 @@ dd-modal .footer.distribute {
 }
 .component_pdf.view_viewer .content_data {
   height: 100vh;
+}
+.component_pdf.view_text {
+  height: 1.5rem;
 }
 /**
 * component_portal
@@ -10393,6 +10530,18 @@ dd-modal .footer.distribute {
   max-width: 100%;
   object-fit: contain;
   object-position: center;
+}
+.component_svg.view_line img {
+  height: 1em;
+}
+.component_svg_mini img {
+  height: 1em;
+}
+.component_svg.view_text {
+  height: 1em;
+}
+.component_svg .svg.view_text {
+  height: 1em;
 }
 /**
 * component_text_area
