@@ -17,6 +17,7 @@
 	import {view_tree_edit_portal} from './view_tree_edit_portal.js'
 	import {view_mosaic_edit_portal} from './view_mosaic_edit_portal.js'
 	import {view_indexation_edit_portal} from './view_indexation_edit_portal.js'
+	import {view_content_edit_portal} from './view_content_edit_portal.js'
 	import {view_text_list_portal} from './view_text_list_portal.js'
 	import {
 		on_dragstart,
@@ -78,6 +79,11 @@ render_edit_component_portal.prototype.edit = async function(options) {
 			case 'indexation':
 				return view_indexation_edit_portal.render(self, options)
 				break;
+
+			case 'content':
+				return view_content_edit_portal.render(self, options)
+				break;
+
 
 			default:
 				return view_default_edit_portal.render(self, options)
