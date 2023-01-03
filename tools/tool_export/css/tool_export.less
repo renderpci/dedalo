@@ -5,6 +5,9 @@
 */
 
 
+@tool_color : #7152a5;
+
+
 
 // wrapper
 	.wrapper_tool.tool_export {
@@ -27,33 +30,88 @@
 				}//end components_list_container
 
 			// export_components_container. User dragged component list (at right)
-				>.export_components_container {
+				>.user_selection_list {
 					background-color: #ffffff;
 					padding: 1em;
 					padding-top: 0;
 					border-left: 1px solid #bbbbbb;
 					border-right: 1px solid #bbb;
+					position: relative;
 
-					>h1.list_title {
+					&.dragover {
+						outline: 1px solid @tool_color;
+					}
 
+					>.list_title {
+						font-weight: bold;
+						padding-top: 0.5rem;
 					}
 
 					>.export_component {
 						display: flex;
+						width: 100%;
+						position: relative;
 						justify-content: space-between;
 						background-color: #faf9f9;
 						align-items: center;
-						margin-bottom: 1px;
+						margin: 0px;
 						list-style: none;
-						padding-left: 0.5em;
+						padding: 0px;
+						padding-left: 0.75rem;
+						border-left: 1px solid #f78a1c;
+						border-bottom: 1px solid #f2f2f2ee;
+						transition: padding 275ms;
+
+						&.displaced {
+							padding-top: 2rem;
+							border: none;
+						}
 
 						&:hover {
-							background-color: #b0c8f0;
-							color: white !important;
+							cursor: move;
+						}
+
+						&:active {
+							background-color: lighten(@tool_color, 5%);
+							color: #ffffff;
 
 							>.button {
-								color: white !important;
+								background-color: #ffffff;
 							}
+						}
+
+						&.active {
+							animation: active_animation 0.5s ease-out;
+
+							@keyframes active_animation {
+								0%  {
+									background-color: lighten(@tool_color, 5%);
+									color: #ffffff;
+								}
+								65%  {
+									color: #ffffff;
+								}
+								100% {
+									background-color: #faf9f9;
+									color: unset;
+								}
+							}
+						}
+
+
+						>.component_label {
+							width: 100%;
+							padding: 0.33rem;
+						}
+
+						&.dragging {
+							opacity: 0.2;
+							width: auto;
+						}
+
+						&.dragover {
+							opacity: 0.5;
+							pointer-events: none;
 						}
 					}
 				}
@@ -95,5 +153,5 @@
 
 // header tool_export modal modification
 	.tool_header.tool_export {
-		background-color: #7152a5;
+		background-color: @tool_color;
 	}
