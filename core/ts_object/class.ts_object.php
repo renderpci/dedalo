@@ -326,14 +326,16 @@ class ts_object {
 							#debug_log(__METHOD__." element_obj->value $element_tipo ".to_string($dato).' - '.DEDALO_DATA_LANG, logger::DEBUG);
 						break;
 
-					case ($element_obj->type==='icon'):
+					}else if ($model_name==='component_svg'){
 
-						if($render_vars->icon==='CH') {
-							continue 2;
-						}
+						# file exists check
+						$file_path	= $component->get_path();
+						$file_url	= (file_exists($file_path)===true)
+							? $component->get_url() . '?' . start_time()
+							: '';
 
-						// ND element can change term value when 'esdecriptor' value is 'no' (locator of 'no')
-							if($render_vars->icon==='ND') {
+						$dato = $file_url;
+					}
 								#debug_log(__METHOD__." children_data->ar_elements ".to_string($children_data->ar_elements), logger::DEBUG);
 								#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
 								if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
