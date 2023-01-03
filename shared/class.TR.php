@@ -132,7 +132,7 @@ abstract class TR {
 				if ($id) {
 					$string = "\[page-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
 				}else{
-					$string = "(\[(page)-([a-z])-([0-9]{1,6})-([-0-9]{0,22})-(data:(.*?):data)?\])";
+					$string = "(\[(page)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
 				}
 				break;
 

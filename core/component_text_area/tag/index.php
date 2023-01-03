@@ -107,7 +107,7 @@ $text = strip_tags($text, '');
 			$pattern 		= "/\[(page)-([a-z])-([0-9]{1,6})-(.{0,22})?\]/";
 			$text_original 	= $text;
 			preg_match_all($pattern, $text, $matches);
-			$text			= $matches[4][0]; //$matches[3][0]
+			$text			= $matches[3][0]; //$matches[3][0]
 			$state 			= $matches[2][0];
 			$imgBase 		= $tag_image_dir."/page-{$state}-x2.png";
 			break;
