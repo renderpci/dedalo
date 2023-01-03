@@ -9,6 +9,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {when_in_dom} from '../../../core/common/js/events.js'
 
 
 
@@ -75,7 +76,7 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// components_list_container
+	// components_list_container (left side)
 		const components_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'components_list_container',
@@ -87,7 +88,6 @@ const get_content_data_edit = async function(self) {
 			// 	class_name		: 'search_section_container target_container',
 			// 	parent			: components_list_container
 			// })
-
 		// components_list. render section component list [left]
 			const section_elements = await self.get_section_elements_context({
 				section_tipo : self.target_section_tipo
@@ -99,27 +99,28 @@ const get_content_data_edit = async function(self) {
 				path				: [],
 				section_elements	: section_elements
 			})
-			console.log("get_content_data_edit self.components_list:",self.components_list);
+			// console.log("get_content_data_edit self.components_list:",self.components_list);
 
-	// export_components_container
-		const export_components_container = ui.create_dom_element({
+	// user_selection_list (right side)
+		const user_selection_list = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'export_components_container',
+			class_name		: 'user_selection_list',
 			parent			: fragment
 		})
+		// user_selection_list drag and drop events
+		user_selection_list.addEventListener('dragover',function(e){self.on_dragover(this,e)})
+		user_selection_list.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
+		// user_selection_list.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
+		user_selection_list.addEventListener('drop',function(e){self.on_drop(this,e)})
+
 		// title
-			const list_title = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'h1',
 				class_name		: 'list_title',
 				inner_html		: get_label.elementos_activos || 'Active elements',
-				parent			: export_components_container
+				parent			: user_selection_list
 			})
-		// drag and drop events
-			export_components_container.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
-			export_components_container.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-			export_components_container.addEventListener('drop',function(e){self.on_drop(this,e)})
-			export_components_container.addEventListener('dragover',function(e){self.on_dragover(this,e)})
-			export_components_container.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
+
 		// read saved ddo in local DB and restore elements if found
 			const id = 'tool_export_config'
 			data_manager.get_local_db_data(
@@ -132,8 +133,10 @@ const get_content_data_edit = async function(self) {
 					// call for each saved ddo
 					for (let i = 0; i < response.value[target_section_tipo].length; i++) {
 						const ddo = response.value[target_section_tipo][i]
-						self.build_export_component(export_components_container, ddo.path, ddo)
-						.then(()=>{
+						self.build_export_component(ddo)
+						.then((export_component_node)=>{
+							// add DOM node
+							user_selection_list.appendChild(export_component_node)
 							// Update the ddo_export
 							self.ar_ddo_to_export.push(ddo)
 						})
@@ -141,6 +144,8 @@ const get_content_data_edit = async function(self) {
 					if(SHOW_DEBUG===true) {
 						console.log(`Added saved local db ${target_section_tipo} ddo items:`, response.value[target_section_tipo]);
 					}
+				}else{
+					console.error('Something was wrong were get_local_db_data '+ id)
 				}
 			})
 
@@ -324,7 +329,6 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 
-
 	// grid data container
 		const export_data = ui.create_dom_element({
 			element_type	: 'div',
@@ -337,7 +341,6 @@ const get_content_data_edit = async function(self) {
 		content_data.appendChild(fragment)
 
 
-
 	return content_data
 }//end get_content_data_edit
 
@@ -345,51 +348,44 @@ const get_content_data_edit = async function(self) {
 
 /**
 * BUILD_EXPORT_COMPONENT
-* Creates and place export_component
-* @param DOM node parent_div
-* @param array path
+* Creates export_component DOM item
 * @param object ddo
 * @return DOM node export_component
 */
-render_tool_export.prototype.build_export_component = async function(parent_div, path, ddo) {
+render_tool_export.prototype.build_export_component = async function(ddo) {
+	console.log('build_export_component ddo:', ddo);
 
 	const self = this
 
 	// short vars
-		const last_item		= path[path.length-1]
-		const first_item	= path[0]
+		const path = ddo.path
 
 	// export_component container. Create DOM element before load html from trigger
 		const export_component = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'export_component',
-			parent			: parent_div
-			// data_set		: {
-			// 	path		: path_plain,
-			// 	// section_id	: section_id
-			// }
+			class_name		: 'export_component'
 		})
+		export_component.ddo = ddo
+		do_sortable(export_component, self)
 
-	// component_label
-		ui.create_dom_element({
-			element_type	: 'li',
-			class_name		: 'component_label',
-			inner_html		: ddo.label,
-			parent			: export_component,
-			data_set		: {
-				path			: path,
-				tipo			: ddo.tipo,
-				section_tipo	: ddo.section_tipo,
-			}
-		})
+		// export_component component_label
+			const label = path.map((el)=>{
+				return el.name
+			}).join(' > ')
+			ui.create_dom_element({
+				element_type	: 'li',
+				class_name		: 'component_label',
+				inner_html		: label,
+				parent			: export_component
+			})
 
 	// button close
 		const export_component_button_close = ui.create_dom_element({
 			element_type	: 'span',
 			parent			: export_component,
-			class_name		: "button close"
+			class_name		: 'button close'
 		})
-		export_component_button_close.addEventListener('click',function(e) {
+		export_component_button_close.addEventListener('click', function(e) {
 			e.stopPropagation()
 
 			// remove search box and content (component) from dom
@@ -436,16 +432,16 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 		})
 
 	// label component source if exists
-		if (first_item!==last_item) {
-			// console.log("first_item:",first_item);
-			const label_add = parent_div.querySelector('span.label_add')
-			if (label_add) {
-				label_add.innerHTML = first_item.name +' '+ label_add.innerHTML
-			}
-		}
+		// if (first_item!==last_item) {
+		// 	console.log("first_item:",first_item);
+		// 	const label_add = parent_div.querySelector('span.label_add')
+		// 	if (label_add) {
+		// 		label_add.innerHTML = first_item.name +' '+ label_add.innerHTML
+		// 	}
+		// }
 
 	// show hidden parent container
-		parent_div.classList.remove('hide')
+		// parent_div.classList.remove('hide')
 
 	// store ddo in local DB
 		const id = 'tool_export_config'
@@ -485,3 +481,129 @@ render_tool_export.prototype.build_export_component = async function(parent_div,
 
 	return export_component
 }//end build_export_component
+
+
+
+/**
+* DO_SORTABLE
+* Add drag and drop features to the element
+* @param DOM node element
+* @return void
+*/
+const do_sortable = function(element, self) {
+
+	// sortable
+		element.draggable = true
+
+	// reset all items
+		function reset() {
+			const element_children_length = element.parentNode.children.length
+			for (let i = 0; i < element_children_length; i++) {
+				const item = element.parentNode.children[i]
+				if (item.classList.contains('displaced')) {
+					item.classList.remove('displaced')
+				}
+			}
+		}
+
+	// events fired on the draggable target
+
+		// drag start. Fix dragged element to recover later
+			element.addEventListener('dragstart', (event) => {
+				event.stopPropagation()
+
+				reset()
+
+				element.classList.add('dragging');
+
+				// fix dragged element
+					self.dragged = element
+
+				// dataTransfer
+					const data = {
+						drag_type : 'sort'
+					}
+					// event.dataTransfer.effectAllowed = 'move';
+					event.dataTransfer.dropEffect = 'move';
+					event.dataTransfer.setData(
+						'text/plain',
+						JSON.stringify(data)
+					)
+			});
+
+		// drag end
+			element.addEventListener('dragend', (event) => {
+				reset()
+				// reset the dragging style
+				event.target.classList.remove('dragging');
+			});
+
+	//  events fired on the drop targets
+
+		// drag enter - add displaced padding
+			element.addEventListener('dragenter', (event) => {
+				event.preventDefault();
+
+				reset()
+
+				element.classList.add('displaced')
+			});
+
+		// on drop
+			element.addEventListener('drop', (event) => {
+				event.preventDefault();
+				event.stopPropagation()
+
+				reset()
+
+				// data transfer
+					const data			= event.dataTransfer.getData('text/plain');// element that move
+					const parsed_data	= JSON.parse(data)
+					// console.log('[sort] parsed_data.drag_type:', parsed_data);
+
+				if (parsed_data.drag_type==='sort') {
+
+					// sort case
+
+					// place drag item
+					const dragged = self.dragged
+					element.parentNode.insertBefore(dragged, element)
+
+					dragged.classList.add('active')
+
+				}else if (parsed_data.drag_type==='add') {
+
+					// add case
+
+					// short vars
+						const path	= parsed_data.path
+						const ddo	= parsed_data.ddo
+
+					// rebuild ddo
+						const new_ddo = {
+							id				: ddo.section_tipo +'_'+ ddo.tipo +'_list_'+ ddo.lang,
+							tipo			: ddo.tipo,
+							section_tipo	: ddo.section_tipo,
+							model			: ddo.model,
+							parent			: ddo.parent,
+							lang			: ddo.lang,
+							mode			: ddo.mode,
+							label			: ddo.label,
+							path			: path // full path from current section replaces ddo single path
+						}
+
+					// Build component html
+					self.build_export_component(new_ddo)
+					.then((export_component_node)=>{
+
+						// add DOM node
+						element.parentNode.insertBefore(export_component_node, element)
+
+						export_component_node.classList.add('active')
+
+						// Update the ddo_export
+						self.ar_ddo_to_export.push(new_ddo)
+					})
+				}
+			});
+}//end do_sortable
