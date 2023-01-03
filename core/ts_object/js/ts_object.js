@@ -618,7 +618,7 @@ export const ts_object = new function() {
 
 
 			function build_ts_line(child_data, indexations_container_id) {
-	console.log("child_data:------------------------<>",child_data);
+
 				const fragment = new DocumentFragment()
 
 				// LIST_THESAURUS_ELEMENTS
