@@ -212,11 +212,14 @@ class tool_export extends tool_common {
 			// take the columns
 			$columns_count = $ar_row_value->ar_column_count;
 
+			// current_ar_columns_obj
+			$current_ar_columns_obj = $ar_row_value->ar_columns_obj;
+
 			$row_grid = new dd_grid_cell_object();
 				$row_grid->set_type('row');
 				$row_grid->set_row_count($row_count);
 				$row_grid->set_column_count($columns_count);
-				$row_grid->set_ar_columns_obj($ar_row_value->ar_columns_obj);
+				$row_grid->set_ar_columns_obj($current_ar_columns_obj);
 				// $row_grid->set_class_list($row_class_list);
 				// $row_grid->set_render_label($row_render_label);
 				$row_grid->set_value($ar_row_value->ar_cells);

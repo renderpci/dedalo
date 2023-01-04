@@ -1,11 +1,11 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
+/*eslint no-unused-vars: "error"*/
+
 
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
@@ -23,41 +23,44 @@ export const view_csv_dd_grid = function() {
 
 /**
 * RENDER
-* Render node for use in table
-* @return DOM node wrapper
+* Render a full csv_string form rows and columns
+* Note that result is not a node in this render case
+* @param object self
+* @return string csv_string
 */
-view_csv_dd_grid.render = function(self, options) {
+view_csv_dd_grid.render = function(self) {
+
+	// reset instance node
+		self.node = null
+
+	// separators
+		self.row_separator		= '\n'
+		self.column_separator	= '\t'
 
 	// data
 		const data = self.data
 
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'table',
-			class_name		: `wrapper_dd_grid ${self.tipo} ${self.mode} view_${self.view}`
-		})
-
 	// grid. Value as string
-		const grid = get_table_nodes(data, self.data_format)
-		wrapper.appendChild(grid)
+		const csv_string = build_csv_string(data, self.data_format)
 
 
-	return wrapper
+	return csv_string
 }//end render
 
 
 
 /**
-* GET_TABLE_NODES
+* BUILD_CSV_STRING
 * @param array data
-* 	Array of objects; full data sent by the server with all information.
-* @return DocumentFragment
-* 	Node with the table
+* 	array of objects; full data sent by the server with all information.
+* @return string csv_string
 */
-const get_table_nodes = function(data, data_format) {
+const build_csv_string = function(data) {
 
-	// the root node
-	const fragment = new DocumentFragment()
+	const row_separator		= self.row_separator
+	const column_separator	= self.column_separator
+
+	const rows = []
 
 	// First row;
 	// get the columns form the first row of the data, it content the columns map with all columns calculated in the server for all data,
@@ -66,39 +69,41 @@ const get_table_nodes = function(data, data_format) {
 	// every profession of every informant will create his own columns as: profession ; profession|1 ; etc
 	// the first row has all columns, direct columns and calculated columns (from section_ids rows)
 	// ar_columns_obj will be the map of the columns, used for create the header of the table and for extract the data and fill the empty values.
-	const ar_columns		= data[0].value
-	const ar_columns_obj	= ar_columns.map(item => item.column_obj)
+		const ar_columns		= data[0].value
+		const ar_columns_obj	= data[0].value.map(item => item.ar_columns_obj)
 
-	// build the header
+	// header. build the header
 	// get every column to create the header of the table, get the node and add to the root node
-	const column_labels = [];
-	const ar_columns_len = ar_columns.length
-	for (let i = 0; i < ar_columns_len; i++) {
-		const column = ar_columns[i]
-		const column_cell = get_table_columns(column)
-		const node_len = column_cell.length
-		for (let j = 0; j < node_len; j++) {
-			column_labels.push(column_cell)
-		}
-	}
+		const header_items = []
+		const ar_columns_len = ar_columns.length
+		for (let i = 0; i < ar_columns_len; i++) {
+			const column		= ar_columns[i]
+			const column_items	= get_table_columns(column)
 
-	// build the rows, row 0 are the columns that is not used here
+			header_items.push( ...column_items )
+		}
+		rows.push(
+			header_items.join(column_separator)
+		)
+
+	// rows. build the rows, row 0 are the columns that is not used here
 	// get every row with data, the first row is the header, and it begins at 1 row to calculate the cells
 	// the top row doesn't create node, because it will be created by the get_portal_rows() to be compatible between flat row or portal rows
-	const data_len = data.length
-	for (let i = 1; i < data_len; i++) {
-		// the current row
-		const row_data = data[i]
-		const nodes = get_portal_rows(row_data, ar_columns_obj)
-		fragment.appendChild(nodes)
-	}
+		const data_len = data.length
+		for (let i = 1; i < data_len; i++) {
+			// the current row
+			const row_data = data[i]
+			const row_items = get_portal_rows(row_data, ar_columns_obj)
 
-	// rows_nodes
-	const rows_nodes = get_portal_rows(data, ar_columns_obj)
+			rows.push( ...row_items )
+		}
+
+	// csv_string . Join all as final string
+		const csv_string = rows.join(row_separator)
 
 
-	return fragment
-}//end get_table_nodes
+	return csv_string
+}//end build_csv_string
 
 
 
@@ -114,30 +119,35 @@ const get_table_nodes = function(data, data_format) {
 * @param array ar_columns_obj
 * 	array of objects, the column map with all columns to be matched with the data
 *
-* @return DOM DocumentFragment
-* 	Node with the tr of the table
+* @return array portal_rows
 */
 const get_portal_rows = function(row, ar_columns_obj) {
 
-	const fragment = new DocumentFragment()
+	const column_separator	= self.column_separator //("\t")
+
+	const portal_rows = []
 
 	// get the total rows will be created
 	// the top row has the total rows that is collected for every component, in a portal has two locators and other portal has 5 locators the amount of rows will be 5
 	const data_len = row.row_count
-
 	for (let row_key = 0; row_key < data_len; row_key++) {
 
 		// get the columns data
 		const column_data = row.value
+
 		// create the node
-		const row_node = get_row_container()
-		fragment.appendChild(row_node)
+		// const row_line = [] // get_row_container()
+		// portal_rows.push(row_node)
+
 		// process the data column to get the cells
-		const nodes = get_columns(column_data, ar_columns_obj, row_key)
-		row_node.appendChild(nodes)
+		const row_columns = get_columns(column_data, ar_columns_obj, row_key)
+		portal_rows.push(
+			row_columns.join(column_separator)
+		)
 	}
 
-	return fragment
+
+	return portal_rows
 }// end get_portal_rows
 
 
@@ -155,12 +165,11 @@ const get_portal_rows = function(row, ar_columns_obj) {
 * 	array of object; the column map with all columns to be matched with the data
 * @param int parent_row_key
 * 	the current position of the row to be used to match with the portal data
-* @return DocumentFragment
-* 	node with the td of the table
+* @return array columns
 */
 const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 
-	const fragment = new DocumentFragment()
+	const columns = []
 
 	// first we loop all map columns, independently of the data
 	const column_len = ar_columns_obj.length
@@ -183,7 +192,7 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 			const column_nodes = get_table_columns(column_value)
 			const node_len = column_nodes.length
 			for (let j = 0; j < node_len; j++) {
-				fragment.appendChild(column_nodes[j])
+				columns.push(column_nodes[j])
 			}
 		// else if the column is a portal column, it could has rows (the portal rows) or could be colum_portal, that has the column with the information.
 		// in the second case, the column of the portal, this column content the other components columns and if the sub component is a relation component it is created by the section_id in the portal
@@ -205,20 +214,21 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 						class_list		: 'empty_value'
 					  }]
 				const sub_portal_nodes = get_columns(sub_values, current_ar_columns_obj, parent_row_key)
-				fragment.appendChild(sub_portal_nodes)
+				// fragment.appendChild(sub_portal_nodes)
+				columns.push(...sub_portal_nodes)
 
 			// else, the column don't has rows and is section_id column (portal inside portal doesn't create rows, it only create columns)
 			}else{
 				const current_ar_columns_obj = [column]
 				const sub_nodes = get_columns(sub_portal_values, current_ar_columns_obj, parent_row_key)
-				fragment.appendChild(sub_nodes)
+				// fragment.appendChild(sub_nodes)
+				columns.push(...sub_nodes)
 			}
 		}
 	}
 
-	return fragment
+	return columns
 }// end get_columns
-
 
 
 
@@ -227,20 +237,20 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 * Use the column_data to create the right node
 * @param object current_data
 * 	The full column data
-* @return array column_nodes
+* @return array column_items
 */
 const get_table_columns = function(current_data) {
 
 	// const data_len = data.length
 
-	const column_nodes = []
+	const column_items = []
 
 	if (current_data && current_data.type) {
 
 		// label head
 			// if(current_data.type==='column' && current_data.render_label){
 			// 	const label_node = get_header_column(current_data)
-			// 	column_nodes.push(label_node)
+			// 	column_items.push(label_node)
 			// }
 
 		// column
@@ -249,37 +259,33 @@ const get_table_columns = function(current_data) {
 				switch(current_data.cell_type) {
 					case 'header':
 						const header_node = get_header_column(current_data)
-						column_nodes.push(header_node)
+						column_items.push(header_node)
 						break;
+
 					case 'av':
 						const av_node = get_av_column(current_data)
-						column_nodes.push(av_node)
+						column_items.push(av_node)
 						break;
 
 					case 'img':
 						const img_node = get_img_column(current_data)
-						column_nodes.push(img_node)
-						break;
-
-					case 'button':
-						const button_node = get_button_column(current_data)
-						column_nodes.push(button_node)
+						column_items.push(img_node)
 						break;
 
 					case 'json':
 						const json_node = get_json_column(current_data)
-						column_nodes.push(json_node)
+						column_items.push(json_node)
 						break;
 
 					case 'section_id':
 						const section_id_node = get_section_id_column(current_data)
-						column_nodes.push(section_id_node)
+						column_items.push(section_id_node)
 						break;
 
 					case 'text':
 					default:
 						const column_node = get_text_column(current_data)
-						column_nodes.push(column_node)
+						column_items.push(column_node)
 						break;
 				}//end switch(current_data.cell_type)
 			}// end if(current_data.type==='column' && current_data.cell_type)
@@ -290,10 +296,11 @@ const get_table_columns = function(current_data) {
 			value : ''
 		}
 		const empty_node = get_text_column(empty_data)
-		column_nodes.push(empty_node)
+		column_items.push(empty_node)
 	}
 
-	return column_nodes
+
+	return column_items
 }//end get_table_columns
 
 
@@ -303,28 +310,30 @@ const get_table_columns = function(current_data) {
 * @param object
 * @return DOM node div_container (div)
 */
-const get_row_container = function() {
+	// const get_row_container = function() {
 
-	const row_container = '\n'
+	// 	const row_container = '\n'
 
-	return row_container
-}//end get_row_container
+	// 	return row_container
+	// }//end get_row_container
 
 
 
 /**
 * GET_HEADER_COLUMN
 * @param object current_data
-* @return DOM node label_node
-* 	Label
+* @return string value
 */
 const get_header_column = function(current_data) {
 
-	const ar_labels		= current_data.column_obj.ar_labels || []
+	const ar_labels		= current_data.ar_columns_obj.ar_labels || []
 	const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
-	const label_node	= '"' + even_labels.join(' | ') + '"'
+	const label			= even_labels.join(' | ')
 
-	return label_node
+	// value
+		const value = label
+
+	return value
 }//end get_header_column
 
 
@@ -332,25 +341,18 @@ const get_header_column = function(current_data) {
 /**
 * GET_TEXT_COLUMN
 * @param object current_data
-* @return DOM node text_node
+* @return string value
 */
 const get_text_column = function(current_data) {
-	// console.log("---> get_text_column current_data.value:", current_data.value);
-
-	const class_list = current_data.class_list || ''
 
 	const text = current_data.value && Array.isArray(current_data.value)
 		? current_data.value.join(' ')
 		: (current_data.value || '')
 
-	const text_node = ui.create_dom_element({
-		// id			: current_data.id,
-		element_type	: 'td',
-		class_name		: class_list,
-		inner_html		: text
-	})
+	// value
+		const value = text
 
-	return text_node
+	return value
 }//end get_text_column
 
 
@@ -358,30 +360,18 @@ const get_text_column = function(current_data) {
 /**
 * GET_AV_COLUMN
 * @param object current_data
-* @return DOM node av_node
+* @return string value
 */
 const get_av_column = function(current_data) {
-
-	const class_list = current_data.class_list || ''
-
-	const av_node = ui.create_dom_element({
-		// id			: current_data.id,
-		element_type	: 'td'
-	})
 
 	// url
 		const posterframe_url	= current_data.value[0].posterframe_url
 		const url				= posterframe_url
 
-	// image
-		ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: class_list,
-			src				: url,
-			parent			: av_node
-		})
+	// value
+		const value = url
 
-	return av_node
+	return value
 }//end get_av_column
 
 
@@ -389,90 +379,34 @@ const get_av_column = function(current_data) {
 /**
 * GET_IMG_COLUMN
 * @param object current_data
-* @return DOM node image_node
+* @return string value
 */
 const get_img_column = function(current_data) {
 
-	const class_list = current_data.class_list || ''
-
-	const image_node = ui.create_dom_element({
-		// id			: current_data.id,
-		element_type	: 'td'
-	})
-
 	// url
 		const url = current_data.value[0]
-	// image
-		ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: class_list,
-			src				: url,
-			parent			: image_node
-		})
 
-	return image_node
+	// value
+		const value = url
+
+	return value
 }//end get_img_column
-
-
-
-/**
-* GET_BUTTON_COLUMN
-* @param object current_data
-* @return DOM node bbutton_node
-*/
-const get_button_column = function(current_data) {
-
-	const value			= current_data.value[0]
-	const class_list	= value.class_list || ''
-
-	const button_node = ui.create_dom_element({
-		// id			: current_data.id,
-		element_type	: 'td'
-	})
-
-	// image
-		const button = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: class_list,
-			parent			: button_node
-		})
-
-	// event
-		if (value.action && value.action.event) {
-
-			button.addEventListener(value.action.event, async (e)=>{
-				const options			= value.action.options
-				options.button_caller	= e.target
-
-				const module = await import (value.action.module_path)
-				module[value.action.method](options)
-			})
-		}
-
-	return button_node
-}//end get_button_column
 
 
 
 /**
 * GET_JSON_COLUMN
 * @param object current_data
-* @return DOM node text_json
+* @return string value
 */
 const get_json_column = function(current_data) {
 
-	const class_list = current_data.class_list || ''
-
-	const text_json = ui.create_dom_element({
-		// id			: current_data.id,
-		element_type	: 'td',
-		class_name		: class_list,
-		inner_html		: (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
+	// value
+		const value = (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
 			? ''
 			: JSON.stringify(current_data.value)
-	})
 
-	return text_json
+	return value
 }//end get_json_column
 
 
@@ -480,18 +414,12 @@ const get_json_column = function(current_data) {
 /**
 * GET_SECTION_ID_COLUMN
 * @param object current_data
-* @return DOM node text_node (span)
+* @return string value
 */
 const get_section_id_column = function(current_data) {
 
-	const class_list = current_data.class_list || ''
+	// value
+		const value = current_data.value
 
-	const section_id_node = ui.create_dom_element({
-		// id			: current_data.id,
-		element_type	: 'td',
-		class_name		: class_list,
-		inner_html		: current_data.value
-	})
-
-	return section_id_node
+	return value
 }//end get_section_id_column

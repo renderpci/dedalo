@@ -246,10 +246,12 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_AR_COLUMNS_OBJ
-	* @param array $value
+	* (!) Note that despite the name, could contain one or various items
+	* Usually is array, but in some cases (like tool_export use) not
+	* @param array|object $value
 	* @return void
 	*/
-	public function set_ar_columns_obj(array $value) : void {
+	public function set_ar_columns_obj(array|object $value) : void {
 		$this->ar_columns_obj = $value;
 	}//end set_ar_columns_obj
 

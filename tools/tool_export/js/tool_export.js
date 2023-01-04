@@ -2,6 +2,7 @@
 /*eslint no-undef: "error"*/
 
 
+
 // import
 	import {clone} from '../../../core/common/js/utils/index.js'
 	// import {data_manager} from '../../../core/common/js/data_manager.js'
@@ -113,6 +114,7 @@ tool_export.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload
 */
 tool_export.prototype.build = async function(autoload=false) {
 
@@ -141,8 +143,10 @@ tool_export.prototype.build = async function(autoload=false) {
 
 /**
 * GET_SECTION_ID
+* @return string
 */
 tool_export.prototype.get_section_id = function() {
+
 	const self		= this
 	self.section_id	= ++self.section_id
 
@@ -221,12 +225,12 @@ tool_export.prototype.get_export_grid = async function(options) {
 * GET_EXPORT_CSV
 * Load the export grid data
 */
-tool_export.prototype.get_export_csv = async function (options) {
+tool_export.prototype.get_export_csv = async function () {
 
 	const self = this
 
 	// dd_grid
-	const dd_grid = await instances.get_instance({
+	const new_dd_grid = await instances.get_instance({
 		model			: 'dd_grid',
 		section_tipo	: self.caller.section_tipo,
 		// section_id	: section_id,
@@ -235,16 +239,30 @@ tool_export.prototype.get_export_csv = async function (options) {
 		view			: 'csv',
 		lang			: page_globals.dedalo_data_lang,
 		// data_format	: data_format,
-		// rqo			: rqo
+		rqo				: self.rqo,
+		id_variant 		: 'csv_'
 	})
+console.log('self.data:---------------------------<>', self);
 
-	return dd_grid
+	if (self.data) {
+		new_dd_grid.data = self.data
+		await new_dd_grid.build(false)
+	}else{
+
+		await new_dd_grid.build(true)
+	}
+
+	const csv_string = await new_dd_grid.render()
+
+	return csv_string
 }//end get_export_csv
 
 
 
 /**
-* GET_EXPORT_XSL : load the export grid data and convert to XLS format
+* GET_EXPORT_XSL
+* Load the export grid data and convert to XLS format
+* @param object options
 */
 tool_export.prototype.get_export_xsl = async function (options) {
 
@@ -256,7 +274,6 @@ tool_export.prototype.get_export_xsl = async function (options) {
 	// XLSX.utils.book_append_sheet(workbook, ws1, "Sheet1");
  	// 	// const workbook = XLSX.read(table, {type:'string'});
 	// XLSX.writeFile(workbook, 'out.csv' );
-
 
 
 	const table		= options.export_data.firstChild //.outerHTML

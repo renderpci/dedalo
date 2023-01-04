@@ -68,17 +68,20 @@ const get_table_nodes = function(data, data_format) {
 	// the first row has all columns, direct columns and calculated columns (from section_ids rows)
 	// ar_columns_obj will be the map of the columns, used for create the header of the table and for extract the data and fill the empty values.
 		const ar_columns		= data[0].value
-		const ar_columns_obj	= ar_columns.map(item => item.column_obj)
+		// const ar_columns_obj	= ar_columns.map(item => item.column_obj)
+		const ar_columns_obj	= data[0].value.map(item => item.ar_columns_obj)
 
 	// build the header
 	// get every column to create the header of the table, get the node and add to the root node
+		// tr row
+		const row_header_node	= get_row_container('row_header')
+		fragment.appendChild(row_header_node)
+		// td columns
 		const ar_columns_len = ar_columns.length
-		const row_header_node = get_row_container()
-			fragment.appendChild(row_header_node)
 		for (let i = 0; i < ar_columns_len; i++) {
-			const column = ar_columns[i]
-			const column_nodes = get_table_columns(column)
-			const node_len = column_nodes.length
+			const column		= ar_columns[i]
+			const column_nodes	= get_table_columns(column)
+			const node_len		= column_nodes.length
 			for (let j = 0; j < node_len; j++) {
 				row_header_node.appendChild(column_nodes[j])
 			}
@@ -284,14 +287,14 @@ const get_table_columns = function(current_data) {
 
 /**
 * GET_DIV_CONTAINER
-* @param object
-* @return DOM node div_container (div)
+* @param string class_name
+* @return DOM node row_container
 */
-const get_row_container = function() {
+const get_row_container = function(class_name=null) {
 
 	const row_container = ui.create_dom_element({
-		element_type	: 'tr'
-		// class_name	: class_list
+		element_type	: 'tr',
+		class_name		: class_name
 	})
 
 	return row_container
@@ -306,10 +309,9 @@ const get_row_container = function() {
 */
 const get_header_column = function(current_data) {
 
-	const ar_labels		= current_data.column_obj.ar_labels || []
+	const ar_labels		= current_data.ar_columns_obj.ar_labels || []
 	const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
 	const label_node 	= ui.create_dom_element({
-		// id			: current_data.id,
 		element_type	: 'th',
 		inner_html		:  even_labels.join(' | ')
 	})
