@@ -41,7 +41,7 @@ view_csv_dd_grid.render = function(self) {
 		const data = self.data
 
 	// grid. Value as string
-		const csv_string = build_csv_string(data, self.data_format)
+		const csv_string = build_csv_string(self, data)
 
 
 	return csv_string
@@ -55,10 +55,11 @@ view_csv_dd_grid.render = function(self) {
 * 	array of objects; full data sent by the server with all information.
 * @return string csv_string
 */
-const build_csv_string = function(data) {
+const build_csv_string = function(self, data) {
 
 	const row_separator		= self.row_separator
 	const column_separator	= self.column_separator
+
 
 	const rows = []
 
@@ -93,7 +94,7 @@ const build_csv_string = function(data) {
 		for (let i = 1; i < data_len; i++) {
 			// the current row
 			const row_data = data[i]
-			const row_items = get_portal_rows(row_data, ar_columns_obj)
+			const row_items = get_portal_rows(self, row_data, ar_columns_obj)
 
 			rows.push( ...row_items )
 		}
@@ -121,7 +122,7 @@ const build_csv_string = function(data) {
 *
 * @return array portal_rows
 */
-const get_portal_rows = function(row, ar_columns_obj) {
+const get_portal_rows = function(self, row, ar_columns_obj) {
 
 	const column_separator	= self.column_separator //("\t")
 
