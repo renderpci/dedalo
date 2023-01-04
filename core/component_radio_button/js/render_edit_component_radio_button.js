@@ -11,6 +11,7 @@
 	import {view_line_edit_radio_button} from './view_line_edit_radio_button.js'
 
 
+
 /**
 * RENDER_EDIT_COMPONENT_RADIO_BUTTON
 * Manage the components logic and appearance in client side
@@ -25,7 +26,8 @@ export const render_edit_component_radio_button = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node
+* @param object options
+* @return DOM node|null
 */
 render_edit_component_radio_button.prototype.edit = async function(options) {
 
@@ -52,6 +54,7 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return DOM node content_data
 */
 export const get_content_data_edit = function(self) {
@@ -107,35 +110,6 @@ const get_input_element_edit = (i, datalist_item, self) => {
 			element_type	: 'div',
 			class_name		: 'content_value'
 		})
-
-	// label
-		const input_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'label',
-			inner_html		: label,
-			parent			: content_value
-		})
-
-	// input radio button
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'radio',
-			name			: self.id,
-		})
-		input_label.prepend(input)
-		input.addEventListener('change', function() {
-
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				key		: 0,
-				value	: datalist_value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-		})//end change event
-
 		content_value.addEventListener('mousedown', function(e) {
 			if (e.altKey===true) {
 				e.stopPropagation()
@@ -163,6 +137,34 @@ const get_input_element_edit = (i, datalist_item, self) => {
 			}
 		})
 
+	// label
+		const input_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'label',
+			inner_html		: label,
+			parent			: content_value
+		})
+
+	// input radio button
+		const input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'radio',
+			name			: self.id
+		})
+		input_label.prepend(input)
+		input.addEventListener('change', function() {
+
+			const changed_data = [Object.freeze({
+				action	: 'update',
+				key		: 0,
+				value	: datalist_value
+			})]
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+		})//end change event
+
 	// checked input set on match
 		for (let j = 0; j < value_length; j++) {
 			if (value[j] && datalist_value &&
@@ -187,8 +189,7 @@ const get_input_element_edit = (i, datalist_item, self) => {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool	= self.is_inside_tool
-		const mode				= self.mode
+		const is_inside_tool = self.is_inside_tool
 
 	// document fragment
 		const fragment = new DocumentFragment()

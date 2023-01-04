@@ -263,10 +263,9 @@ service_autocomplete.prototype.render = async function(options={}) {
 
 /**
 * AUTOCOMPLETE_SEARCH
-* @param string search_value
 * @return promise
 */
-service_autocomplete.prototype.autocomplete_search = function(search_value) {
+service_autocomplete.prototype.autocomplete_search = function() {
 
 	const self = this
 
@@ -293,10 +292,6 @@ service_autocomplete.prototype.autocomplete_search = function(search_value) {
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
 		const js_promise = self[engine]()
 
-		js_promise.then(()=>{
-			console.log('js_promise:', js_promise);
-		})
-
 
 	return js_promise
 }//end autocomplete_search
@@ -306,8 +301,8 @@ service_autocomplete.prototype.autocomplete_search = function(search_value) {
 /**
 * REBUILD_SEARCH_QUERY_OBJECT
 * Re-combines filter by fields and by sections in one search_query_object
-* @param string q
-* @return bool
+* @param object options
+* @return object rqo_search
 */
 service_autocomplete.prototype.rebuild_search_query_object = async function(options) {
 
@@ -315,28 +310,26 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 
 	// options
 		const rqo_search		= options.rqo_search
-		const search_sections 	= options.search_sections || []
+		const search_sections	= options.search_sections || []
 		const filter_by_list	= options.filter_by_list || null
 
-		if(search_sections.length ===0){
+	// no section selected case
+		if(search_sections.length===0){
 			return null
 		}
 
 		const sqo_options	= rqo_search.sqo_options
 		const fixed_filter	= sqo_options.fixed_filter //self.request_config_object.find((current_item)=> current_item.typo==='fixed_filter')
 		const filter_free	= sqo_options.filter_free	//self.request_config_object.find((current_item)=> current_item.typo==='filter_free')
-		// const operador		= sqo_options.operador
+		// const operador	= sqo_options.operador
 
-		const sqo				= rqo_search.sqo
-		// sqo.section_tipo 		= search_sections || sqo.section_tipo
+		const sqo			= rqo_search.sqo
+		// sqo.section_tipo	= search_sections || sqo.section_tipo
 
 	// delete the sqo_options to the final rqo_options
 		delete rqo_search.sqo_options
 
-		if(SHOW_DEBUG===true) {
-			// console.log('sqo_options:', sqo_options);
-		}
-
+	// sqo filter
 		sqo.filter = {
 			$and : []
 		}
@@ -379,7 +372,6 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 
 			sqo.filter.$and.push(filter_free_parse)
 
-
 		// fixed_filter
 			if (fixed_filter) {
 				for (let i = 0; i < fixed_filter.length; i++) {
@@ -393,16 +385,8 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 				})
 			}
 
-
 	// allow_sub_select_by_id set to false to allow select deep fields
 		sqo.allow_sub_select_by_id = true
-
-	// Debug
-		if(SHOW_DEBUG===true) {
-			//console.log('... sqo:',sqo, JSON.stringify(sqo));
-			//console.log('... sqo filter:',sqo.filter);
-			//if(typeof clean_filter!=='undefined') console.log('+++ rebuild_sqo final clean_filter ',clean_filter);
-		}
 
 
 	return rqo_search
@@ -412,7 +396,6 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 
 /**
 * DEDALO_ENGINE
-* @param object options
 * @return promise api_response
 */
 service_autocomplete.prototype.dedalo_engine = async function() {
@@ -421,7 +404,6 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 	// search_query_object base stored in wrapper dataset
 		const rqo_search	= await clone(self.rqo_search)
-
 
 		// const rqo_search			= clone(original_rqo_search)
 		// self.rqo_search			= rqo_search
@@ -454,7 +436,6 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 	// const rqo = await options.rqo
 		rqo.prevent_lock = true
-
 
 	// verify source is in list mode to allow lang fallback
 		const source	= rqo.source

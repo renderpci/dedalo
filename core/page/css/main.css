@@ -10226,21 +10226,24 @@ dd-modal .footer.distribute {
 *
 * Included from main.less file
 */
-.component_radio_button.view_default.edit > .content_data > .content_value {
+.component_radio_button.edit > .content_data > .content_value {
   display: inline-block;
   margin-right: 0.5rem;
   width: auto;
 }
-.component_radio_button.view_default.edit > .content_data > .content_value > .label {
+.component_radio_button.edit > .content_data > .content_value > .label {
   padding-top: 0.33rem;
   padding-bottom: 0.33rem;
   padding-right: 0.5rem;
   display: flex;
   cursor: pointer;
 }
-.component_radio_button.view_default.edit > .content_data > .content_value > .label > input {
+.component_radio_button.edit > .content_data > .content_value > .label > input {
   margin-right: 0.25rem;
   cursor: pointer;
+}
+.component_radio_button.view_line {
+  display: block;
 }
 .component_radio_button.search > .content_data > .q_operator {
   width: 3rem;
