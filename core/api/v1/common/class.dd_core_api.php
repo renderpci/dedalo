@@ -1362,11 +1362,11 @@ final class dd_core_api {
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get all components of current section (used in section search filter)
-	* @param object $json_data
-	*	array $json_data->ar_section_tipo
+	* @param object $options
+	*	array $options->ar_section_tipo
 	* @return object $response
 	*/
-	public static function get_section_elements_context(object $json_data) : object {
+	public static function get_section_elements_context(object $options) : object {
 
 		session_write_close();
 
@@ -1375,15 +1375,24 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		// json_data
-			$ar_section_tipo	= (array)$json_data->ar_section_tipo;
-			$context_type		= $json_data->context_type;
+		// options
+			$ar_section_tipo		= (array)$options->ar_section_tipo;
+			$context_type			= $options->context_type;
+			$ar_components_exclude	= $options->ar_components_exclude ?? null;
 
-		// filtered_components
-			$filtered_components = common::get_section_elements_context((object)[
+		// section_elements_context_options
+			$section_elements_context_options = (object)[
 				'ar_section_tipo'	=> $ar_section_tipo,
 				'context_type'		=> $context_type
-			]);
+			];
+			if (isset($ar_components_exclude)) {
+				$section_elements_context_options->ar_components_exclude = $ar_components_exclude;
+			}
+
+		// filtered_components
+			$filtered_components = common::get_section_elements_context(
+				$section_elements_context_options
+			);
 
 		// response
 			$response->result	= $filtered_components;

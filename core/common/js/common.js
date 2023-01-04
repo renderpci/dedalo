@@ -2379,7 +2379,8 @@ common.prototype.get_section_elements_context = async function(options) {
 	const self = this
 
 	// section_tipo (string|array)
-		const section_tipo = options.section_tipo
+		const section_tipo			= options.section_tipo
+		const ar_components_exclude	= options.ar_components_exclude
 
 	// components
 		const get_components = async () => {
@@ -2392,9 +2393,10 @@ common.prototype.get_section_elements_context = async function(options) {
 				// load data
 					const api_response = await data_manager.request({
 						body : {
-							action			: 'get_section_elements_context',
-							context_type	: 'simple',
-							ar_section_tipo	: section_tipo
+							action					: 'get_section_elements_context',
+							context_type			: 'simple',
+							ar_section_tipo			: section_tipo,
+							ar_components_exclude	: ar_components_exclude
 						}
 					})
 
