@@ -196,6 +196,54 @@ section.prototype.init = async function(options) {
 			}//end fn_create_new_section
 
 
+			// duplicate_section_ event
+			self.events_tokens.push(
+				event_manager.subscribe('duplicate_section_' + self.id, fn_duplicate_section)
+			)
+			async function fn_duplicate_section( options ) {
+
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return false
+				}
+
+				// data_manager. create
+				const rqo = {
+					action	: 'duplicate',
+					source	: {
+						section_tipo	: options.section_tipo,
+						section_id		: options.section_id,
+					}
+				}
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				if (api_response.result && api_response.result>0) {
+
+					const section_id = api_response.result
+
+					const source = create_source(self, 'search')
+						  source.section_id	= section_id
+						  source.mode		= 'edit'
+
+					const sqo = {
+						mode				: self.mode,
+						section_tipo		: [{tipo:self.section_tipo}],
+						filter_by_locators	: [{
+							section_tipo	: self.section_tipo,
+							section_id		: section_id
+						}],
+						limit				: 1,
+						offset				: 0
+					}
+					// launch event 'user_navigation' that page is watching
+					event_manager.publish('user_navigation', {
+						source	: source,
+						sqo		: sqo
+					})
+				}
+			}//end fn_duplicate_section
+
+
 		// delete_section_ event. (!) Moved to self button delete in render_section_list
 			// self.events_tokens.push(
 			// 	event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
