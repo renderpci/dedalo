@@ -128,6 +128,9 @@
 
 				// Update the ddo_export list
 				self.ar_ddo_to_export.push(new_ddo)
+
+				// save local db data
+				update_local_db_data(self)
 			})
 
 
