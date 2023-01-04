@@ -84,7 +84,6 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				return view_content_edit_portal.render(self, options)
 				break;
 
-
 			default:
 				return view_default_edit_portal.render(self, options)
 				break;
