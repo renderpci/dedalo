@@ -381,7 +381,7 @@ class component_relation_common extends component_common {
 				//if the component it's a relation component check if the component has sub_columns_division (it could have been set by the previous loop)
 				// if true, add the locator position to the column_path
 				if(isset($this->sub_columns_divison) && $this->sub_columns_divison===true && $current_key>0){
-					$current_path	= $current_path.'|'.$current_key;
+					$current_path = $current_path.'|'.$current_key;
 				}
 				// create the new column obj id getting the previous id and add the new path
 				// it will set to the column_obj for the next loop
