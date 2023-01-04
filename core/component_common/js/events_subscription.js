@@ -55,7 +55,7 @@ export const events_subscription = function(self) {
 				self.update_data_value(changed_data_item)
 				self.refresh({
 					build_autoload	: self.mode==='edit'
-						? false
+						? true // false (changed to true because problems detected in unit_test)
 						: true,
 					render_level	: self.mode==='edit'
 						? 'content'
