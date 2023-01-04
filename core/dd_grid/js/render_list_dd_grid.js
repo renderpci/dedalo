@@ -82,9 +82,13 @@ export const get_text_column = function(data_item, use_fallback) {
 		? value.join(' ')
 		: ''
 
+	const add_style = value_string.length>0
+		? ''
+		: ' empty'
+
 	const text_node = ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: class_list,
+		class_name		: class_list + add_style,
 		inner_html		: value_string
 	})
 

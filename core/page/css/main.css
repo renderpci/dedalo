@@ -11021,6 +11021,13 @@ ul.widget_av_duration .tab_content {
   padding: 0.25rem;
   padding-bottom: 0px;
 }
+.wrapper_widget.descriptors > .content_data > .values_container > .widget_item.descriptors > .descriptors_list_container > .wrapper_dd_grid .column {
+  outline: none;
+  display: block;
+}
+.wrapper_widget.descriptors > .content_data > .values_container > .widget_item.descriptors > .descriptors_list_container > .wrapper_dd_grid .column .empty {
+  display: contents;
+}
 /* WIDGET_DESCRIPTORS LIST
 ------------------------------------------------ */
 .descriptors_button {
