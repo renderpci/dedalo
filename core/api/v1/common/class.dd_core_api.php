@@ -570,6 +570,54 @@ final class dd_core_api {
 
 
 	/**
+	* DUPLICATE
+	* duplicate a section record of given section tipo and section_id
+	* and returns the new section_id assigned by the counter
+	* @param object $json_data
+	* sample:
+	* {
+	*    "action": "duplicate ",
+	*    "source": {
+	*        "section_tipo": "oh1"
+	* 		"section_id": "2"
+	*    }
+	* }
+	* @return array $result
+	*/
+	public static function duplicate (object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
+
+		// short vars
+			$source			= $rqo->source;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+
+		// section_tipo
+			if (empty($section_tipo)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
+				return $response;
+			}
+
+		// section
+		// section duplicate current.Returns the section_id created
+			$section	= section::get_instance($section_id, $section_tipo);
+			$section_id	= $section->duplicate_current_section();
+
+
+		$response->result	= $section_id;
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+
+		return $response;
+	}//end duplicate
+
+
+
+	/**
 	* DELETE
 	* Removes one or more section records from database
 	* If sqo is received, it will be used to search target sections,

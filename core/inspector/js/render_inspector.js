@@ -168,6 +168,24 @@ const get_content_data = function(self) {
 					})
 				})
 			}
+		// button_duplicate . Call API to duplicate current record
+		// use th section_button_new, if it's defined user can create or duplicate the section
+			if (section_button_new) {
+				const button_duplicate = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light duplicate',
+					title			: section_button_new.label || "Duplicate",
+					parent			: buttons_container
+				})
+				button_duplicate.addEventListener('click', (e) => {
+					e.stopPropagation()
+					event_manager.publish('duplicate_section_' + self.caller.id, {
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						caller			: self.caller // section
+					})
+				})
+			}
 
 	// element_info
 		const element_info = render_element_info(self)
