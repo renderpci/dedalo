@@ -1,4 +1,5 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-unused-vars: "error"*/
+/*global get_label, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
 
@@ -9,7 +10,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {when_in_dom} from '../../../core/common/js/events.js'
+	// import {when_in_dom} from '../../../core/common/js/events.js'
 
 
 
@@ -155,35 +156,40 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_config',
 			parent			: fragment
 		})
+
 		// records info
 			const records_info = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'records_info',
 				parent			: export_buttons_config
 			})
-				const section_label = ui.create_dom_element({
-					element_type	: 'h1',
-					class_name		: 'section_label',
-					inner_html		: self.caller.label,
-					parent			: export_buttons_config
-				})
-				const total_records_label = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'total_records',
-					inner_html		: get_label.total_records + ': ',
-					parent			: export_buttons_config
-				})
-				const total_records = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'total_records',
-					inner_html		: self.caller.total,
-					parent			: total_records_label
-				})
-		// export format
+			const section_label = ui.create_dom_element({
+				element_type	: 'h1',
+				class_name		: 'section_label',
+				inner_html		: self.caller.label,
+				parent			: export_buttons_config
+			})
+			const total_records_label = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'total_records',
+				inner_html		: (get_label.total_records || 'Total records:') + ': ',
+				parent			: export_buttons_config
+			})
+			const total_records = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'total_records',
+				parent			: total_records_label
+			})
+			self.caller.total()
+			.then(function(response){
+				total_records.insertAdjacentHTML('afterbegin', response)
+			})
+
+		// data_format
 			const data_format = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'records_info',
-				inner_html		: get_label.formato,
+				class_name		: 'data_format',
+				inner_html		: (get_label.formato || 'Format'),
 				parent			: export_buttons_config
 			})
 			// select
@@ -192,63 +198,79 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'select_data_format_export',
 					parent			: data_format
 				})
-					const select_option_standard= ui.create_dom_element({
-						element_type	: 'option',
-						inner_html		: get_label.estandar || 'standard',
-						value			: 'standard',
-						parent			: select_data_format_export
-					})
-					const select_option_html= ui.create_dom_element({
-						element_type	: 'option',
-						inner_html		: get_label.html || 'HTML',
-						value			: 'html',
-						parent			: select_data_format_export
-					})
-					const select_option_breakdown= ui.create_dom_element({
-						element_type	: 'option',
-						inner_html		: get_label.desglose || 'breakdown',
-						value			: 'breakdown',
-						parent			: select_data_format_export
-					})
-					const select_option_breakdown_html = ui.create_dom_element({
-						element_type	: 'option',
-						inner_html		: (get_label.desglose || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
-						value			: 'breakdown_html',
-						parent			: select_data_format_export
-					})
-					const select_option_dedalo = ui.create_dom_element({
-						element_type	: 'option',
-						inner_html		: 'Dédalo (Raw)',
-						value			: 'dedalo',
-						parent			: select_data_format_export
-					})
-		// button export
+				// select_option_standard
+				ui.create_dom_element({
+					element_type	: 'option',
+					inner_html		: get_label.estandar || 'standard',
+					value			: 'standard',
+					parent			: select_data_format_export
+				})
+				// select_option_html
+				ui.create_dom_element({
+					element_type	: 'option',
+					inner_html		: get_label.html || 'HTML',
+					value			: 'html',
+					parent			: select_data_format_export
+				})
+				// select_option_breakdown
+				ui.create_dom_element({
+					element_type	: 'option',
+					inner_html		: get_label.desglose || 'breakdown',
+					value			: 'breakdown',
+					parent			: select_data_format_export
+				})
+				// select_option_breakdown_html
+				ui.create_dom_element({
+					element_type	: 'option',
+					inner_html		: (get_label.desglose || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
+					value			: 'breakdown_html',
+					parent			: select_data_format_export
+				})
+				// select_option_dedalo
+				ui.create_dom_element({
+					element_type	: 'option',
+					inner_html		: 'Dédalo (Raw)',
+					value			: 'dedalo',
+					parent			: select_data_format_export
+				})
+
+		// button_export
 			const button_export = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button_export success',
 				inner_html		: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
-			button_export.addEventListener('click', async function() {
-
+			button_export.addEventListener('click', function() {
 				// clean target_div
 					while (export_data.hasChildNodes()) {
 						export_data.removeChild(export_data.lastChild);
 					}
 				// export_grid API call
-				self.data_format = select_data_format_export.value
+					self.data_format = select_data_format_export.value
 
-				const export_grid_options = {
-					data_format			: self.data_format,
-					ar_ddo_to_export	: self.ar_ddo_to_export,
-				}
-				self.get_export_grid(export_grid_options)
-				.then(function(dd_grid_export_node){
-					if (dd_grid_export_node) {
-						export_data.appendChild(dd_grid_export_node)
-						export_data.scrollIntoView(true)
+				// sort ar_ddo_to_export by DOM items position
+					// const ar_ddo_to_export_sorted = []
+					// const element_children_length = user_selection_list.children.length
+					// for (let i = 0; i < element_children_length; i++) {
+					// 	const item = user_selection_list.children[i]
+					// 	if (item.ddo) {
+					// 		ar_ddo_to_export_sorted.push(item.ddo)
+					// 	}
+					// }
+
+				// export_grid
+					const export_grid_options = {
+						data_format			: self.data_format,
+						ar_ddo_to_export	: self.ar_ddo_to_export
 					}
-				})
+					self.get_export_grid(export_grid_options)
+					.then(function(dd_grid_export_node){
+						if (dd_grid_export_node) {
+							export_data.appendChild(dd_grid_export_node)
+							export_data.scrollIntoView(true)
+						}
+					})
 			})
 
 	// export_buttons_options
@@ -257,6 +279,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_options',
 			parent			: fragment
 		})
+		// csv. button_export_csv
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
@@ -265,24 +288,32 @@ const get_content_data_edit = async function(self) {
 			})
 			button_export_csv.addEventListener('click', async function() {
 
-				const options = {
-					data_format			: select_data_format_export.value,
-					ar_ddo_to_export	: self.ar_ddo_to_export,
-					export_data			: export_data,
-				}
-				const dd_grid_expot_csv = await self.get_export_csv(options)
+				// const options = {
+					// data_format			: select_data_format_export.value,
+					// ar_ddo_to_export	: self.ar_ddo_to_export,
+					// export_data			: export_data,
+				// }
+				// const dd_grid_expot_csv = await self.get_export_csv(options)
+
+				// const csv_string = await self.get_export_csv()
+
+				const dd_grid = self.ar_instances.find(el => el.model==='dd_grid')
+				dd_grid.view = 'csv'
+				dd_grid.status = 'built'
+				const csv_string = await dd_grid.render()
 
 				// Download it
 					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.csv';
 					const link		= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(dd_grid_expot_csv));
+					link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
 					link.setAttribute('download', filename);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
 			})
+		// excel
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
@@ -353,7 +384,6 @@ const get_content_data_edit = async function(self) {
 * @return DOM node export_component
 */
 render_tool_export.prototype.build_export_component = async function(ddo) {
-	console.log('build_export_component ddo:', ddo);
 
 	const self = this
 
@@ -567,9 +597,22 @@ const do_sortable = function(element, self) {
 
 					// place drag item
 					const dragged = self.dragged
-					element.parentNode.insertBefore(dragged, element)
+					if(element.parentNode.lastChild===element) {
+						element.parentNode.appendChild(dragged)
+					}else{
+						element.parentNode.insertBefore(dragged, element)
+					}
 
 					dragged.classList.add('active')
+
+					// Update the ddo_export. Move to the new array position
+						const from_index	= self.ar_ddo_to_export.findIndex(el => el.id===dragged.ddo.id)
+						const to_index		= [...element.parentNode.children].indexOf(dragged) -1 // exclude title node
+						console.log('from_index to:', from_index,'to',to_index);
+						// remove
+						const item_moving = self.ar_ddo_to_export.splice(from_index, 1)[0];
+						// add
+						self.ar_ddo_to_export.splice(to_index, 0, item_moving);
 
 				}else if (parsed_data.drag_type==='add') {
 
@@ -592,6 +635,13 @@ const do_sortable = function(element, self) {
 							path			: path // full path from current section replaces ddo single path
 						}
 
+					// exists
+						const found = self.ar_ddo_to_export.find(el => el.id===new_ddo.id)
+						if (found) {
+							console.log('Ignored already included item ddo:', found);
+							return
+						}
+
 					// Build component html
 					self.build_export_component(new_ddo)
 					.then((export_component_node)=>{
@@ -607,3 +657,6 @@ const do_sortable = function(element, self) {
 				}
 			});
 }//end do_sortable
+
+
+

@@ -62,6 +62,26 @@
 						border-bottom: 1px solid #f2f2f2ee;
 						transition: padding 275ms;
 
+						&:last-of-type {
+							// background-color: #f2e797;
+
+							&:after {
+								content: " ";
+								display: block;
+								height: 4rem;
+								width: 100%;
+								// background-color: #ece294;
+								position: absolute;
+								top: 1.7rem;
+								left: 0;
+								// opacity: 0;
+							}
+
+							&.displaced:after {
+								top: 3.66rem;
+							}
+						}
+
 						&.displaced {
 							padding-top: 2rem;
 							border: none;
@@ -121,7 +141,28 @@
 					padding: 1em;
 					padding-top: 0;
 
-					h1 {
+					>.records_info {
+						background-color: #7ee4f2;
+					}
+
+					>.section_label {
+						font-weight: 400;
+					}
+
+					>.total_records {
+
+					}
+
+					>.data_format {
+						padding-top: 1rem;
+    					padding-bottom: 1rem;
+
+						>.select_data_format_export {
+
+						}
+					}
+
+					>.button_export {
 
 					}
 				}
@@ -139,6 +180,12 @@
 					grid-column-end: 4;
 					margin-top: 1em;
 					min-height: 40vh;
+
+					.row_header {
+						>th {
+							background-color: @tool_color;
+						}
+					}
 				}
 		}
 

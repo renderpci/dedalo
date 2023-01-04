@@ -101,27 +101,34 @@
 				path			: path // full path from current section replaces ddo single path
 			}
 
-		// Build component html
-		self.build_export_component(new_ddo)
-		.then((export_component_node)=>{
-
-			const export_components_container = container
-
-			// add DOM node
-			export_components_container.appendChild(export_component_node)
-
-			// reset
-			const element_children_length = export_components_container.children.length
-			for (let i = 0; i < element_children_length; i++) {
-				const item = export_components_container.children[i]
-				if (item.classList.contains('displaced')) {
-					item.classList.remove('displaced')
-				}
+		// exists
+			const found = self.ar_ddo_to_export.find(el => el.id===new_ddo.id)
+			if (found) {
+				console.log('Ignored already included item ddo:', found);
+				return
 			}
 
-			// Update the ddo_export
-			self.ar_ddo_to_export.push(new_ddo)
-		})
+		// Build component html
+			self.build_export_component(new_ddo)
+			.then((export_component_node)=>{
+
+				const user_selection_list = container
+
+				// add DOM node
+				user_selection_list.appendChild(export_component_node)
+
+				// reset
+				const element_children_length = user_selection_list.children.length
+				for (let i = 0; i < element_children_length; i++) {
+					const item = user_selection_list.children[i]
+					if (item.classList.contains('displaced')) {
+						item.classList.remove('displaced')
+					}
+				}
+
+				// Update the ddo_export list
+				self.ar_ddo_to_export.push(new_ddo)
+			})
 
 
 		return true
