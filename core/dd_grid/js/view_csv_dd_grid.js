@@ -60,7 +60,6 @@ const build_csv_string = function(self, data) {
 	const row_separator		= self.row_separator
 	const column_separator	= self.column_separator
 
-
 	const rows = []
 
 	// First row;
@@ -368,6 +367,8 @@ const get_av_column = function(current_data) {
 	// url
 		const posterframe_url	= current_data.value[0].posterframe_url
 		const url				= posterframe_url
+			? window.location.origin + posterframe_url
+			: ''
 
 	// value
 		const value = url
@@ -384,8 +385,10 @@ const get_av_column = function(current_data) {
 */
 const get_img_column = function(current_data) {
 
-	// url
+	// url (absolute)
 		const url = current_data.value[0]
+			? window.location.origin + current_data.value[0]
+			: ''
 
 	// value
 		const value = url
