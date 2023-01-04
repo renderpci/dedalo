@@ -265,7 +265,6 @@ class tool_export extends tool_common {
 		$ar_section_rows_count[] = array_sum($rows_max_count);
 		// take the maximum number of columns (the columns can has 1, 2, 55 columns and we need the highest value, 55)
 		$ar_section_columns_count = sizeof($ar_columns_obj) ?? 0;
-
 		// build the header labels
 			for ($i=0; $i < $ar_section_columns_count; $i++) {
 
@@ -275,10 +274,19 @@ class tool_export extends tool_common {
 				$column_labels		= [];
 				$column_tipos_len	= sizeof($column_tipos)-1;
 				foreach ($column_tipos as $column_key => $column_tipo) {
-					$column_label = RecordObj_dd::get_termino_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
-					$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
-						? $column_label.' '.$column_path[1]+1
-						: $column_label;
+					// set the column name, if the format is Dédalo use the $tipo and section_id
+					// for standard format use the name
+					if($this->data_format==='dedalo'){
+						$model_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo);
+						$column_labels[] = ($model_name === 'component_section_id')
+							? 'section_id'
+							: $column_tipo;
+					}else{
+						$column_label = RecordObj_dd::get_termino_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
+						$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
+							? $column_label.' '.$column_path[1]+1
+							: $column_label;
+					}
 				}
 				$column_obj->ar_labels	= $column_labels;
 				$column_obj->label_tipo	= end($column_tipos);
