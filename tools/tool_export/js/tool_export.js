@@ -5,7 +5,7 @@
 
 // import
 	import {clone} from '../../../core/common/js/utils/index.js'
-	// import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import * as instances from '../../../core/common/js/instances.js'
@@ -325,3 +325,68 @@ tool_export.prototype.on_close_actions = async function(open_as) {
 
 	return true
 }//end on_close_actions
+
+
+
+/**
+* UPDATE_LOCAL_DB_DATA
+* Read and replaces the tool_export_config data portion from current section
+* Saves the updated value read from self.ar_ddo_to_export
+* @return bool
+*/
+tool_export.prototype.update_local_db_data = async function() {
+
+	const self = this
+
+	// target_section_tipo. Used to create a object property key different for each section
+	const target_section_tipo = self.target_section_tipo[0]
+
+	// get_local_db_data
+	const id		= 'tool_export_config'
+	const response	= await data_manager.get_local_db_data(
+		id,
+		'data'
+	)
+
+	// tool_export_config. Current section tool_export_config (fallback to basic object)
+	const tool_export_config = response && response.value
+		? response.value
+		: {
+			[target_section_tipo] : []
+		  }
+
+	// update current key only and save whole object
+		tool_export_config[target_section_tipo] = self.ar_ddo_to_export
+
+	// save
+		const cache_data = {
+			id		: 'tool_export_config',
+			value	: tool_export_config
+		}
+		await data_manager.set_local_db_data(
+			cache_data,
+			'data'
+		)
+
+	// check if already exists current target section_tipo config ddo
+		// const found = tool_export_config[target_section_tipo]
+		// 	? tool_export_config[target_section_tipo].find(el => el.id===ddo.id)
+		// 	: undefined
+
+	// if not exists current ddo (as expected), add it to local database using current target section_tipo as key
+		// if (!found) {
+		// 	tool_export_config[target_section_tipo] = tool_export_config[target_section_tipo] || []
+		// 	tool_export_config[target_section_tipo].push(ddo)
+		// 	// save
+		// 	const cache_data = {
+		// 		id		: 'tool_export_config',
+		// 		value	: tool_export_config
+		// 	}
+		// 	data_manager.set_local_db_data(
+		// 		cache_data,
+		// 		'data'
+		// 	)
+		// }
+
+	return true
+}//end update_local_db_data

@@ -146,7 +146,7 @@ const get_content_data_edit = async function(self) {
 						})
 					}
 					if(SHOW_DEBUG===true) {
-						console.log(`Added saved local db ${target_section_tipo} ddo items:`, response.value[target_section_tipo]);
+						console.log(`Added ddo items from saved local db ${target_section_tipo}. Items:`, response.value[target_section_tipo]);
 					}
 				}else{
 					console.error('Something was wrong were get_local_db_data '+ id)
@@ -421,47 +421,15 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 		export_component_button_close.addEventListener('click', function(e) {
 			e.stopPropagation()
 
-			// remove search box and content (component) from dom
+			// remove search box and content (component) from DOM
 			export_component.parentNode.removeChild(export_component)
+
 			// delete the ddo from the array to export ddos
 			const delete_ddo_index = self.ar_ddo_to_export.findIndex( el => el.id === ddo.id )
 			self.ar_ddo_to_export.splice(delete_ddo_index, 1)
-			// console.log("self.ar_ddo_to_export:",self.ar_ddo_to_export);
-			const id = 'tool_export_config'
-			data_manager.get_local_db_data(
-				id,
-				'data'
-			)
-			.then(function(response){
-				// target_section_tipo. Used to create a object property key different for each section
-				const target_section_tipo	= self.target_section_tipo[0]
-				// tool_export_config. Current section tool_export_config (fallback to basic object)
-				const tool_export_config	= response && response.value
-					? response.value
-					: false
 
-				const section_config = tool_export_config && tool_export_config[target_section_tipo]
-					? tool_export_config[target_section_tipo]
-					: false
-				// check if already exists current target section_tipo config ddo
-				const compnent_ddo_index = section_config
-					? section_config.map(el => el.id).indexOf(ddo.id)//find(el => el.id===ddo.id)
-					: undefined
-				// if exists current ddo (as expected because it has a close button and need to be in the loca database), remove it from local database using current target section_tipo as key
-				if (compnent_ddo_index) {
-					// remove it
-						tool_export_config[target_section_tipo].splice(compnent_ddo_index, 1)
-					// save the result to the local database
-					const cache_data = {
-						id		: 'tool_export_config',
-						value	: tool_export_config
-					}
-					data_manager.set_local_db_data(
-						cache_data,
-						'data'
-					)
-				}
-			})
+			// save local db data
+			self.update_local_db_data()
 		})
 
 	// label component source if exists
@@ -477,39 +445,6 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 		// parent_div.classList.remove('hide')
 
 	// store ddo in local DB
-		const id = 'tool_export_config'
-		data_manager.get_local_db_data(
-			id,
-			'data'
-		)
-		.then(function(response){
-			// target_section_tipo. Used to create a object property key different for each section
-			const target_section_tipo	= self.target_section_tipo[0]
-			// tool_export_config. Current section tool_export_config (fallback to basic object)
-			const tool_export_config	= response && response.value
-				? response.value
-				: {
-					[target_section_tipo] : []
-				  }
-			// check if already exists current target section_tipo config ddo
-			const found = tool_export_config[target_section_tipo]
-				? tool_export_config[target_section_tipo].find(el => el.id===ddo.id)
-				: undefined
-			// if not exists current ddo (as expected), add it to local database using current target section_tipo as key
-			if (!found) {
-				tool_export_config[target_section_tipo] = tool_export_config[target_section_tipo] || []
-				tool_export_config[target_section_tipo].push(ddo)
-				// save
-				const cache_data = {
-					id		: 'tool_export_config',
-					value	: tool_export_config
-				}
-				data_manager.set_local_db_data(
-					cache_data,
-					'data'
-				)
-			}
-		})
 
 
 	return export_component
@@ -611,11 +546,13 @@ const do_sortable = function(element, self) {
 					// Update the ddo_export. Move to the new array position
 						const from_index	= self.ar_ddo_to_export.findIndex(el => el.id===dragged.ddo.id)
 						const to_index		= [...element.parentNode.children].indexOf(dragged) -1 // exclude title node
-						console.log('from_index to:', from_index,'to',to_index);
 						// remove
-						const item_moving = self.ar_ddo_to_export.splice(from_index, 1)[0];
+						const item_moving_ddo = self.ar_ddo_to_export.splice(from_index, 1)[0];
 						// add
-						self.ar_ddo_to_export.splice(to_index, 0, item_moving);
+						self.ar_ddo_to_export.splice(to_index, 0, item_moving_ddo);
+
+						// save local db data
+						self.update_local_db_data()
 
 				}else if (parsed_data.drag_type==='add') {
 
@@ -654,12 +591,15 @@ const do_sortable = function(element, self) {
 
 						export_component_node.classList.add('active')
 
-						// Update the ddo_export
-						self.ar_ddo_to_export.push(new_ddo)
+						// Add ddo in the current position
+						// self.ar_ddo_to_export.push(new_ddo)
+						const to_index = [...element.parentNode.children].indexOf(export_component_node) -1 // exclude title node
+						// add
+						self.ar_ddo_to_export.splice(to_index, 0, export_component_node.ddo);
+
+						// save local db data
+						self.update_local_db_data()
 					})
 				}
 			});
 }//end do_sortable
-
-
-
