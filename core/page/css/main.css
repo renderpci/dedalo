@@ -930,7 +930,6 @@ li .reset_input select {
 }
 .note {
   font-size: 75%;
-  opacity: 0.65;
   vertical-align: bottom;
 }
 .link {
@@ -6102,6 +6101,10 @@ dd-modal .footer.distribute {
   object-fit: contain;
   object-position: center;
 }
+.wrapper_dd_grid.view_table td.text_column img {
+  max-height: 1rem;
+  vertical-align: text-bottom;
+}
 .wrapper_dd_grid.view_mini > img {
   width: 100%;
   max-width: 100%;
@@ -9435,9 +9438,6 @@ dd-modal .footer.distribute {
 }
 .component_number.view_line > .content_data > .content_value input[type=number] {
   -moz-appearance: textfield;
-}
-.component_number.view_line > .content_data > .content_value > .input_value {
-  text-align: center;
 }
 /**
 * component_password
