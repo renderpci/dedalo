@@ -329,7 +329,7 @@ abstract class JSON_RecordDataBoundObject {
 					// Return sequence auto created section_id
 					$section_id = pg_fetch_result($result,0,'section_id');
 					if ($section_id===false) {
-						debug_log(__METHOD__.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id, logger::ERROR);
+						debug_log(__METHOD__.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' ', logger::ERROR);
 						if(SHOW_DEBUG===true) {
 							dump(null, "strQuery : ".PHP_EOL.to_string($strQuery));
 							// throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);

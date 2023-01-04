@@ -142,12 +142,12 @@ const get_portal_rows = function(row, ar_columns_obj){
 * @param column_data; array of objects; full data with the columns to be processed, in the recursion it could be a part of this data to be processed
 * @param ar_columns_object; array of object; the column map with all columns to be matched with the data
 * @param parent_row_key; int; the current position of the row to be used to match with the portal data
-* @return DOM node with the td of the table
 * the columns has the information of the components
 * is the component is a final component it will create a node
 * if the component is a relation component, portals, it could has other rows or portal columns with "sub-columns" of the final components
 * in the case of column has rows, extract the row with parent_row_key and star again
 * in the case of the column of a portal, extract his value and star again
+* @return DOM node with the td of the table
 */
 const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 
@@ -329,7 +329,7 @@ const get_header_column = function(current_data) {
 const get_text_column = function(current_data) {
 	// console.log("---> get_text_column current_data.value:", current_data.value);
 
-	const class_list = current_data.class_list || ''
+	const class_list = current_data.class_list || 'text_column'
 
 	const value = current_data.value && Array.isArray(current_data.value)
 		? current_data.value.join(' ')
