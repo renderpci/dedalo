@@ -366,7 +366,7 @@ section.prototype.build = async function(autoload=false) {
 					// const response	= clone(api_response)
 					// const exec_time	= (performance.now()-t0).toFixed(3)
 					// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
-					console.log('api_response:', api_response);
+					// console.log('section build api_response:', api_response);
 				}
 				if (!api_response || !api_response.result) {
 					self.running_with_errors = [
@@ -451,6 +451,7 @@ section.prototype.build = async function(autoload=false) {
 							})
 							.then(function(api_count_response){
 								self.total = api_count_response.result.total
+								console.log('api_count_response:', api_count_response);
 								resolve(self.total)
 							})
 						})
