@@ -35,7 +35,7 @@ view_csv_dd_grid.render = function(self) {
 
 	// separators
 		self.row_separator		= '\n'
-		self.column_separator	= '\t'
+		self.column_separator	= ';'
 
 	// data
 		const data = self.data
@@ -80,7 +80,10 @@ const build_csv_string = function(self, data) {
 			const column		= ar_columns[i]
 			const column_items	= get_table_columns(column)
 
-			header_items.push( ...column_items )
+			const header_csv = column_items.map(item => {
+				return '"'+item.toString().replace('"', '""') +'"'
+			})
+			header_items.push( ...header_csv )
 		}
 		rows.push(
 			header_items.join(column_separator)
@@ -123,7 +126,7 @@ const build_csv_string = function(self, data) {
 */
 const get_portal_rows = function(self, row, ar_columns_obj) {
 
-	const column_separator	= self.column_separator //("\t")
+	const column_separator	= self.column_separator
 
 	const portal_rows = []
 
@@ -141,8 +144,13 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 
 		// process the data column to get the cells
 		const row_columns = get_columns(column_data, ar_columns_obj, row_key)
+
+		const row_csv = row_columns.map(item => {
+				return '"'+item.toString().replace('"', '""') +'"'
+		})
+
 		portal_rows.push(
-			row_columns.join(column_separator)
+			row_csv.join(column_separator)
 		)
 	}
 

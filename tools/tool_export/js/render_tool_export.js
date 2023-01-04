@@ -290,16 +290,6 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_csv.addEventListener('click', async function() {
-
-				// const options = {
-					// data_format			: select_data_format_export.value,
-					// ar_ddo_to_export	: self.ar_ddo_to_export,
-					// export_data			: export_data,
-				// }
-				// const dd_grid_expot_csv = await self.get_export_csv(options)
-
-				// const csv_string = await self.get_export_csv()
-
 				const dd_grid = self.ar_instances.find(el => el.model==='dd_grid')
 				dd_grid.view = 'csv'
 				dd_grid.status = 'built'
@@ -316,6 +306,32 @@ const get_content_data_edit = async function(self) {
 					link.click();
 					document.body.removeChild(link);
 			})
+
+		// tsv. button_export_tsv
+			const button_export_tsv = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success',
+				inner_html		: (get_label.descargar || 'Export') + ' tsv',
+				parent			: export_buttons_options
+			})
+			button_export_tsv.addEventListener('click', async function() {
+				const dd_grid = self.ar_instances.find(el => el.model==='dd_grid')
+				dd_grid.view = 'tsv'
+				dd_grid.status = 'built'
+				const tsv_string = await dd_grid.render()
+
+				// Download it
+					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.tsv';
+					const link		= document.createElement('a');
+					link.style.display = 'none';
+					link.setAttribute('target', '_blank');
+					link.setAttribute('href', 'data	:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
+					link.setAttribute('download', filename);
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+			})
+
 		// excel
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
