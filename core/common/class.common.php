@@ -3537,18 +3537,17 @@ abstract class common {
 	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get list of all components available for current section using get_context_simple
 	* Used to build search presets in filter
-	* @param array $request_options
+	* @param object $request_options
 	* @return array $context
 	*/
-	public static function get_section_elements_context(object $request_options) : array {
-		$start_time = start_time();
+	public static function get_section_elements_context(object $options) : array {
 
-		$options = new stdClass();
-			$options->context_type				= 'simple';
-			$options->ar_section_tipo			= null;
-			$options->path						= [];
-			$options->ar_tipo_exclude_elements	= false;
-			$options->ar_components_exclude		= [
+		// options
+			$context_type				= $options->context_type ?? 'simple';
+			$ar_section_tipo			= $options->ar_section_tipo ?? null;
+			$path						= $options->path ?? [];
+			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
+			$ar_components_exclude		= $options->ar_components_exclude ?? [
 				'component_password',
 				// 'component_filter_records',
 				'component_image',
@@ -3567,21 +3566,12 @@ abstract class common {
 				'component_semantic_node',
 				'section_tab'
 			];
-			$options->ar_include_elements		= [
+			$ar_include_elements		= $options->ar_include_elements ?? [
 				'component',
 				'section_group',
 				'section_group_div',
 				'section_tab'
 			];
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// options set
-			$context_type				= $options->context_type;
-			$ar_section_tipo			= $options->ar_section_tipo;
-			$path						= $options->path;
-			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements;
-			$ar_components_exclude		= $options->ar_components_exclude;
-			$ar_include_elements		= $options->ar_include_elements;
 
 		// common section info
 			$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
@@ -3594,7 +3584,7 @@ abstract class common {
 
 		// Manage multiple sections
 		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
-		$resolved_section = [];
+		// $resolved_section = [];
 		$context = [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 			// $section_real_tipo = section::get_section_real_tipo_static($section_tipo);
@@ -3615,9 +3605,14 @@ abstract class common {
 
 			// $section_tipo = $section_real_tipo;
 			//create the section instance and get the context_simple
-				$dd_section = section::get_instance(null, $section_tipo, $mode='list', $cache=true);
+				$dd_section = section::get_instance(
+					null, // string|null section_tipo
+					$section_tipo, // string section_tipo
+					'list', // string list
+					true // bool cache
+				);
 
-			// element json
+			// element JSON
 				// 	$get_json_options = new stdClass();
 				// 		$get_json_options->get_context 		= true;
 				// 		$get_json_options->context_type 	= $context_type;
@@ -3626,8 +3621,13 @@ abstract class common {
 
 			// item context add to context
 				// $item_context	= $element_json->context;
-				$item_context	= [$dd_section->get_structure_context_simple($section_permisions, $add_rqo=false)];
-				$context		= array_merge($context, $item_context);
+				$item_context	= [
+					$dd_section->get_structure_context_simple(
+						$section_permisions,
+						false // bool add_rqo
+					)
+				];
+				$context = array_merge($context, $item_context);
 
 			// section children
 				$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section(
@@ -3686,29 +3686,30 @@ abstract class common {
 
 					// grouper case
 					case (in_array($model, common::$groupers)):
-
 						$grouper_model	= ($model==='section_group_div') ? 'section_group' : $model;
-						$element		= new $model($element_tipo, $section_tipo, 'list');
+						$element		= new $grouper_model($element_tipo, $section_tipo, 'list');
 						break;
 
 					// others case
 					default:
-
 						debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$element_tipo' ".to_string(), logger::WARNING);
 						break;
 				}//end switch (true)
 
-				// // element json
-				// 	$get_json_options = new stdClass();
-				// 		$get_json_options->get_context 		= true;
-				// 		$get_json_options->context_type 	= $context_type;
-				// 		$get_json_options->get_data 		= false;
-				// 	$element_json = $element->get_json($get_json_options);
+				// element JSON
+					// 	$get_json_options = new stdClass();
+					// 		$get_json_options->get_context 		= true;
+					// 		$get_json_options->context_type 	= $context_type;
+					// 		$get_json_options->get_data 		= false;
+					// 	$element_json = $element->get_json($get_json_options);
 
-				// // item context simple
-				// 	$item_context = $element_json->context;
-
-				$item_context = [$element->get_structure_context_simple($section_permisions, $add_rqo=false)];
+				// item context simple
+				$item_context = [
+					$element->get_structure_context_simple(
+						$section_permisions,
+						false // bool add_rqo
+					)
+				];
 
 				// target section tipo add
 					if ($model==='component_portal') {
@@ -3728,7 +3729,6 @@ abstract class common {
 					$context = array_merge($context, $item_context);
 
 			}//end foreach ($ar_elements as $element_tipo)
-
 		}//end foreach ((array)$ar_section_tipo as $section_tipo)
 
 

@@ -65,7 +65,7 @@ class tool_export extends tool_common {
 	* @param object options
 	* @return void
 	*/
-	public function setup(object $options) : void {
+	protected function setup(object $options) : void {
 
 		// options
 			$data_format	= $options->data_format;
@@ -181,7 +181,7 @@ class tool_export extends tool_common {
 	* BUILD_EXPORT_GRID
 	* @return array
 	*/
-	public function build_export_grid() : array {
+	protected function build_export_grid() : array {
 
 		$ar_ddo_map	= $this->ar_ddo_map;
 		$records	= $this->get_records();
@@ -318,7 +318,7 @@ class tool_export extends tool_common {
 	* GET_RECORDS
 	* @return array $this->ar_records
 	*/
-	public function get_records() : array {
+	protected function get_records() : array {
 
 		// empty records case
 			if (!empty($this->ar_records)) {
@@ -361,7 +361,7 @@ class tool_export extends tool_common {
 	*
 	* @return object $value
 	*/
-	public function get_value(array $ar_ddo, object $locator) {
+	protected function get_value(array $ar_ddo, object $locator) {
 
 		$ar_cells		= [];
 		$ar_row_count	= [];

@@ -91,7 +91,10 @@ const get_content_data_edit = async function(self) {
 			// })
 		// components_list. render section component list [left]
 			const section_elements = await self.get_section_elements_context({
-				section_tipo : self.target_section_tipo
+				section_tipo			: self.target_section_tipo,
+				ar_components_exclude	: [
+					'component_password'
+				]
 			})
 			render_components_list({
 				self				: self,
