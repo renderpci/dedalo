@@ -2137,7 +2137,7 @@ export const ui = {
 					: options.footer // DOM node
 				: null
 			const size				= options.size || 'normal' // string size='normal'
-			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page')
+			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page') || document.body
 			const remove_overlay	= options.remove_overlay || false
 
 		// page_y_offset. Current window scroll position (used to restore later)
