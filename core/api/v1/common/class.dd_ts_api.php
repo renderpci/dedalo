@@ -389,7 +389,7 @@ final class dd_ts_api {
 			$model_name		= 'component_relation_children';
 			$mode				= 'edit';
 			$lang				= DEDALO_DATA_NOLAN;
-			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array($model_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+			$ar_children_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_tipo, array($model_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 			foreach ($ar_children_tipo as $current_tipo) {
 
 				$component_relation_children = component_common::get_instance(

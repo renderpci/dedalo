@@ -2845,7 +2845,7 @@ abstract class common {
 									// 'section_group_relation',
 									// 'section_group_portal',
 								];
-								$ar_related					= section::get_ar_children_tipo_by_modelo_name_in_section(
+								$ar_related					= section::get_ar_children_tipo_by_model_name_in_section(
 									$tipo,
 									$ar_model_name_required,
 									true, // bool from_cache
@@ -2876,7 +2876,7 @@ abstract class common {
 						case 'related_list':
 							if ($model==='section') {
 								// Try to find in the virtual section if it has defined the relation_list (relation_list could had its own relation_list)
-								$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
+								$ar_terms = section::get_ar_children_tipo_by_model_name_in_section(
 									$tipo,
 									['relation_list'], // array ar_model_name_required
 									true, // bool from_cache
@@ -2887,7 +2887,7 @@ abstract class common {
 
 								// If not found children, try resolving real section
 								if (empty($ar_terms)) {
-									$ar_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
+									$ar_terms = section::get_ar_children_tipo_by_model_name_in_section(
 										$tipo,
 										['relation_list'], // array ar_model_name_required
 										true, // bool from_cache
@@ -3630,7 +3630,7 @@ abstract class common {
 				$context = array_merge($context, $item_context);
 
 			// section children
-				$ar_elements = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$ar_elements = section::get_ar_children_tipo_by_model_name_in_section(
 					$section_tipo, // section_tipo
 					$ar_include_elements, // ar_include_elements
 					true, // from_cache

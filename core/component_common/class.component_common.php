@@ -236,10 +236,10 @@ abstract class component_common extends common {
 					}
 				// section_tipo format check
 					if (!empty($section_tipo)) {
-						# Verify modelo_name is section
+						# Verify model_name is section
 						$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
 						if ($section_model_name!=='section') {
-							dump($section_tipo," Verify modelo_name is section: section_model_name: $section_model_name");
+							dump($section_tipo," Verify model_name is section: section_model_name: $section_model_name");
 							if (empty($section_model_name)) {
 								$msg = "Error. Current section ($section_tipo) does not exists or model is missing. Please fix structure ASAP";
 								throw new Exception($msg, 1);
@@ -268,7 +268,7 @@ abstract class component_common extends common {
 								# Verify this section is from current component tipo
 								$ar_terminoID_by_model_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
 								if (!isset($ar_terminoID_by_model_name[0])) {
-									debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_model_name), logger::ERROR);
+									debug_log(__METHOD__." ar_terminoID_by_model_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_model_name), logger::ERROR);
 									throw new Exception("Error Processing Request", 1);
 								}
 								$calculated_section_tipo = $ar_terminoID_by_model_name[0];
@@ -970,9 +970,9 @@ abstract class component_common extends common {
 			// 	$new_tipo			= $this->caller_dataset->component_tipo;
 			// 	$new_section_tipo	= $this->caller_dataset->section_tipo;
 			// 	$new_section_id		= $this->caller_dataset->section_id;
-			// 	$new_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+			// 	$new_model_name	= RecordObj_dd::get_model_name_by_tipo($new_tipo, true);
 			// 	$new_component		= component_common::get_instance(
-			// 		$new_modelo_name,
+			// 		$new_model_name,
 			// 		$new_tipo,
 			// 		$new_section_id,
 			// 		'edit',
@@ -1272,49 +1272,50 @@ abstract class component_common extends common {
 		// ar_data. Collect all observer components data
 		// with all locators collected by the different methods, it will create the observable components to be updated.
 			$ar_data = [];
-			foreach ($ar_section as $current_section) {
-				// create the observer component that will be update
-				$component = component_common::get_instance(
-					$component_name,
-					$observer->component_tipo,
-					$current_section->section_id,
-					'list',
-					DEDALO_DATA_LANG,
-					$current_section->section_tipo
-				);
-				// get the specific event function in preferences to be fired (instead the default get_dato)
-				if(isset($current_observer->server->perform)){
+			if(!empty($ar_section )){
+				foreach ($ar_section as $current_section) {
+					// create the observer component that will be update
+					$component = component_common::get_instance(
+						$component_name,
+						$observer->component_tipo,
+						$current_section->section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$current_section->section_tipo
+					);
+					// get the specific event function in preferences to be fired (instead the default get_dato)
+					if(isset($current_observer->server->perform)){
 
-					$function			= $current_observer->server->perform->function;
-					$params_definition	= $current_observer->server->perform->params ?? [];
-					$params = is_array($params_definition)
-						? $params_definition
-						: [$params_definition];
-					call_user_func_array(array($component, $function), $params);
+						$function			= $current_observer->server->perform->function;
+						$params_definition	= $current_observer->server->perform->params ?? [];
+						$params = is_array($params_definition)
+							? $params_definition
+							: [$params_definition];
+						call_user_func_array(array($component, $function), $params);
 
-				}else{
+					}else{
 
-					// force to update the dato of the observer component
-					$dato = $component->get_dato();
+						// force to update the dato of the observer component
+						$dato = $component->get_dato();
 
-					$component->observable_dato = ($component_name === 'component_relation_related')
-						? $component->get_dato_with_references()
-						: $dato;
+						$component->observable_dato = ($component_name === 'component_relation_related')
+							? $component->get_dato_with_references()
+							: $dato;
 
-					// save the new dato into the database, this will be used for search into components calculations of info's
-					$component->Save();
-				}
+						// save the new dato into the database, this will be used for search into components calculations of info's
+						$component->Save();
+					}
 
-				// only will be send the result of the observer component to the current section_tipo and section_id,
-				// this section is the section that user is changed and need to be update width the new data
-				// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
-				if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
-					// get the JSON of the component to send with the save of the observable component data
-					$component_json = $component->get_json();
-					$ar_data = array_merge($ar_data, $component_json->data);
-				}
-			}//end foreach ($ar_section as $current_section)
-
+					// only will be send the result of the observer component to the current section_tipo and section_id,
+					// this section is the section that user is changed and need to be update width the new data
+					// the sections that are not the current user changed / viewed will be save but don't return the result to the client.
+					if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
+						// get the JSON of the component to send with the save of the observable component data
+						$component_json = $component->get_json();
+						$ar_data = array_merge($ar_data, $component_json->data);
+					}
+				}//end foreach ($ar_section as $current_section)
+			}// end if(!empty($ar_section ))
 		return $ar_data;
 	}//end update_observers_dato
 

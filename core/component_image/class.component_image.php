@@ -267,7 +267,7 @@ class component_image extends component_media_common {
 	* @param string $quality optional default (bool)false
 	* @return string $image_path
 	*/
-	public function get_image_path(?string $quality) : ?string {
+	public function get_image_path(string $quality=null) : ?string {
 
 		if(empty($quality)) {
 			$quality = $this->get_quality();

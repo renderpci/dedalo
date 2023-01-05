@@ -98,12 +98,12 @@ class relation_list extends common {
 				$resolve_virtual 		 = false;
 
 				// Locate relation_list element in current section (virtual ot not)
-				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+				$ar_children = section::get_ar_children_tipo_by_model_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 
 				// If not found children, try resolving real section
 				if (empty($ar_children)) {
 					$resolve_virtual = true;
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+					$ar_children = section::get_ar_children_tipo_by_model_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 				}// end if (empty($ar_children))
 
 

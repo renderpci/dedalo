@@ -293,7 +293,7 @@ class tool_posterframe extends tool_common {
 		$result = null;
 
 		// portals_tipo in section
-			$ar_portals_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_portals_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo,
 				['component_portal'],
 				$from_cache=true,

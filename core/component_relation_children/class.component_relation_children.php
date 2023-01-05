@@ -180,7 +180,7 @@ class component_relation_children extends component_relation_common {
 		# Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
 		# $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false
 			if (empty($component_tipo)) {
-				$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
+				$ar_tipos = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
 				$component_tipo = reset($ar_tipos);
 			}
 

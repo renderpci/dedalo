@@ -193,7 +193,7 @@
 
 								// parent_end_by_model. Uses a model as last valid parent
 									if(isset($value->parent_end_by_model)){
-										$ar_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+										$ar_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 											$parent_locator->section_tipo,
 											['component_relation_model'],
 											true,
