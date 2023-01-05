@@ -500,21 +500,22 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 
 				// component
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 					$mode			= 'list';
 					$RecordObj_dd	= new RecordObj_dd($component_tipo);
-					$traducible		= $RecordObj_dd->get_traducible()==='si' ? true : false;
-					$lang			= $traducible===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-					$component		= component_common::get_instance( $model_name,
-																	  $component_tipo,
-																	  $section_id,
-																	  $mode,
-																	  $lang,
-																	  $section_tipo,
-																	  false);
-
-					$propiedades		= $RecordObj_dd->get_propiedades(true);
-					$with_lang_versions	= isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;
+					$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
+					$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+					$component		= component_common::get_instance(
+						$model_name,
+						$component_tipo,
+						$section_id,
+						$mode,
+						$lang,
+						$section_tipo,
+						false
+					);
+					$properties			= $RecordObj_dd->get_properties(true);
+					$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
 				# Configure component
 					# DIFFUSION_INFO
