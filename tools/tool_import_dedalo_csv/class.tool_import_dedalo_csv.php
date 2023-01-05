@@ -96,6 +96,7 @@ class tool_import_dedalo_csv extends tool_common {
 							if (strpos($value,'[')===0 || strpos($value,'{')===0) {
 
 								$test = json_decode($value);
+
 								if ($test===null) {
 									debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
 
@@ -129,8 +130,8 @@ class tool_import_dedalo_csv extends tool_common {
 						'n_columns'				=> $n_columns,
 						'file_info'				=> $file_info,
 						'ar_columns_map'		=> $ar_columns_map,
-						'sample_data'			=> '$sample_data',
-						'sample_data_errors'	=> '$sample_data_errors'
+						'sample_data'			=> $sample_data,
+						'sample_data_errors'	=> $sample_data_errors
 					];
 
 					$files_info[] = $item;
@@ -338,8 +339,9 @@ class tool_import_dedalo_csv extends tool_common {
 				$modified_date		= reset($modified_date);
 
 		# Iterate rows
-			$created_rows=array();
-			$updated_rows=array();
+			$created_rows	= [];
+			$updated_rows	= [];
+			$failed_rows	= [];
 
 		# sort ar_csv_data by section_id (first column)
 			# uasort($ar_csv_data, function($a, $b) {
@@ -546,29 +548,37 @@ class tool_import_dedalo_csv extends tool_common {
 						}else{
 							// log JSON conversion error
 							debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
+
+							$failed = new stdClass();
+								$failed->section_id		= $section_id;
+								$failed->data			= stripslashes( $value );
+								$failed->component_tipo	= $component->get_tipo();
+								$failed->msg			= 'IGNORED: malformed data '. $error;
+							$failed_rows[] = $failed;
+							continue 1;
 						}
 					}
 					# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);
 
 				// dataframe. Checks value contains dataframe or dato keys
 					if (is_object($value)) {
-						# Dataframe
-						if (property_exists($value, 'dataframe')) {
-							foreach ((array)$value->dataframe as $dtkey => $current_dt_locator) {
-								$current_from_key 	= $current_dt_locator->from_key;
-								$current_type 		= $current_dt_locator->type;
-								$component->update_dataframe_element($current_dt_locator, $current_from_key, $current_type); //$ar_locator, $from_key, $type
-								debug_log(__METHOD__." Added dataframe locator [$current_from_key,$current_type] ".to_string($current_dt_locator), logger::DEBUG);
-							}
-						}
+						// # Dataframe
+						// if (property_exists($value, 'dataframe')) {
+						// 	foreach ((array)$value->dataframe as $dtkey => $current_dt_locator) {
+						// 		$current_from_key 	= $current_dt_locator->from_key;
+						// 		$current_type 		= $current_dt_locator->type;
+						// 		$component->update_dataframe_element($current_dt_locator, $current_from_key, $current_type); //$ar_locator, $from_key, $type
+						// 		debug_log(__METHOD__." Added dataframe locator [$current_from_key,$current_type] ".to_string($current_dt_locator), logger::DEBUG);
+						// 	}
+						// }
 						# Dato
 						if (property_exists($value, 'dato')) {
 							$value = $value->dato;
 						}
 					}
 
-				# Elements 'translatables' can be formatted as json values like {"lg-eng":"My value","lg-spa":"Mi valor"}
-				if (($traducible===true || $with_lang_versions===true) && is_object($value)) {
+				# Elements 'translatable' can be formatted as json values like {"lg-eng":"My value","lg-spa":"Mi valor"}
+				if (($translate===true || $with_lang_versions===true) && is_object($value)) {
 					debug_log(__METHOD__." Parsing multilanguaje value [$component_tipo - $section_tipo - $section_id]: ".to_string($value), logger::DEBUG);
 					foreach ($value as $v_key => $v_value) {
 
@@ -581,15 +591,24 @@ class tool_import_dedalo_csv extends tool_common {
 						}
 					}
 				}else{
-					// Inverse locators
-					if ($model_name==='component_portal' || $model_name==='component_autocomplete') {
-						// This is ONLY for add INVERSE LOCATORS. NOT for save dato !!
+
+					$related_conponents = component_relation_common::get_components_with_relations();
+					if (in_array($model_name, $related_conponents)){ // $model_name==='component_portal' || $model_name==='component_autocomplete') {
+						// check every locator to be valid!!
 						if(!empty($value)) {
 							foreach ((array)$value as $pkey => $current_locator) {
-								if (!empty($current_locator->section_tipo) && !empty($current_locator->section_id))	{
-									$component->add_locator($current_locator);
-								}else{
-									debug_log(__METHOD__." ERROR ON ADD_LOCATOR TO $model_name tipo:$component_tipo, $section_tipo:$section_tipo. locator type:".gettype($current_locator).", SKIPPED EMPTY OR BAD LOCATOR: ".to_string($current_locator), logger::ERROR);
+								if (empty($current_locator->section_tipo) || empty($current_locator->section_id))	{
+
+									$error = empty($current_locator->section_id)
+										? 'section_id is not valid'
+										: 'section_tipo is not valid';
+									$failed = new stdClass();
+										$failed->section_id		= $section_id;
+										$failed->data			= $current_locator;
+										$failed->component_tipo	= $component->get_tipo();
+										$failed->msg			= 'IGNORED: malformed locator '. $error;
+									$failed_rows[] = $failed;
+									continue 2;
 								}
 							}
 						}//end if(!empty($value))
@@ -641,9 +660,10 @@ class tool_import_dedalo_csv extends tool_common {
 		// response
 			if (!empty($updated_rows) || !empty($created_rows)) {
 				$response->result		= true;
-				$response->msg			= 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows);
+				$response->msg			= 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows).' - failed:'.count($failed_rows);
 				$response->created_rows	= $created_rows;
 				$response->updated_rows	= $updated_rows;
+				$response->failed_rows	= $failed_rows;
 			}
 			$response->time = exec_time_unit($start_time,'ms');
 
