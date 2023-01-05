@@ -668,7 +668,7 @@ abstract class diffusion  {
 		}
 
 		// Locate component_publication in current section
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
 			$section_tipo, // string section_tipo
 			['component_publication'], // array ar_modelo_name_required
 			true, // bool from_cache
@@ -704,7 +704,7 @@ abstract class diffusion  {
 
 		$component_publication_tipo = false;
 
-		// section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
+		// section::get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
 
 		foreach ($ar_fields_tipo as $curent_children_tipo) {
 

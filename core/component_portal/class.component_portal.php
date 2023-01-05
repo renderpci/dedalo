@@ -314,7 +314,7 @@ class component_portal extends component_relation_common {
 		}else{
 			// $section		= section::get_instance($section_id, $section_tipo);
 			$ar_search_model	= ['component_filter'];
-			$ar_children_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_children_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // section_tipo
 				$ar_search_model,
 				true, // bool from_cache

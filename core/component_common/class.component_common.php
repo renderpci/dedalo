@@ -236,10 +236,10 @@ abstract class component_common extends common {
 					}
 				// section_tipo format check
 					if (!empty($section_tipo)) {
-						# Verify modelo_name is section
+						# Verify model_name is section
 						$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
 						if ($section_model_name!=='section') {
-							dump($section_tipo," Verify modelo_name is section: section_model_name: $section_model_name");
+							dump($section_tipo," Verify model_name is section: section_model_name: $section_model_name");
 							if (empty($section_model_name)) {
 								$msg = "Error. Current section ($section_tipo) does not exists or model is missing. Please fix structure ASAP";
 								throw new Exception($msg, 1);
@@ -268,7 +268,7 @@ abstract class component_common extends common {
 								# Verify this section is from current component tipo
 								$ar_terminoID_by_model_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
 								if (!isset($ar_terminoID_by_model_name[0])) {
-									debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_model_name), logger::ERROR);
+									debug_log(__METHOD__." ar_terminoID_by_model_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_model_name), logger::ERROR);
 									throw new Exception("Error Processing Request", 1);
 								}
 								$calculated_section_tipo = $ar_terminoID_by_model_name[0];
@@ -970,9 +970,9 @@ abstract class component_common extends common {
 			// 	$new_tipo			= $this->caller_dataset->component_tipo;
 			// 	$new_section_tipo	= $this->caller_dataset->section_tipo;
 			// 	$new_section_id		= $this->caller_dataset->section_id;
-			// 	$new_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
+			// 	$new_model_name	= RecordObj_dd::get_model_name_by_tipo($new_tipo, true);
 			// 	$new_component		= component_common::get_instance(
-			// 		$new_modelo_name,
+			// 		$new_model_name,
 			// 		$new_tipo,
 			// 		$new_section_id,
 			// 		'edit',

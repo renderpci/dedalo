@@ -1934,7 +1934,7 @@ class component_relation_common extends component_common {
 			$recursive = (bool)$current_item->recursive;
 			# Get children
 			$ar_children = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $recursive);
-			$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 				$current_item->section_tipo,
 				['component_section_id'],
 				true, // bool resolve virtual

@@ -287,7 +287,7 @@ class update {
 			#
 			# SECTION COMPONENTS
 			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $model_name, 'children_recursive', $search_exact=true);
-			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 				$current_section_tipo,
 				[$model_name],
 				$from_cache=true,
