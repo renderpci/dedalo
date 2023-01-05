@@ -293,8 +293,12 @@ class tool_import_files extends tool_common {
 					$component->Save();
 
 				// generate the svg file
-					$svg_string_node		= $component->create_default_svg_string_node();
-					$create_svg_file_result	= $component->create_svg_file($svg_string_node);
+					$svg_string_node = $component->create_default_svg_string_node(); // return string|null
+					if (empty($svg_string_node)) {
+						debug_log(__METHOD__." File not found on create_default_svg_string_node. Ignored 'create_svg_file' ".to_string(), logger::ERROR);
+					}else{
+						$create_svg_file_result	= $component->create_svg_file($svg_string_node);
+					}
 
 				// remove original image after import
 					unlink(	$source_full_path );
