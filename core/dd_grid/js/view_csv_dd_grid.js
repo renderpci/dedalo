@@ -81,7 +81,7 @@ const build_csv_string = function(self, data) {
 			const column_items	= get_table_columns(column)
 
 			const header_csv = column_items.map(item => {
-				return '"'+item.toString().replace('"', '""') +'"'
+				return '"'+item.toString().replace(/\"/g, '""') +'"'
 			})
 			header_items.push( ...header_csv )
 		}
@@ -146,7 +146,7 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 		const row_columns = get_columns(column_data, ar_columns_obj, row_key)
 
 		const row_csv = row_columns.map(item => {
-				return '"'+item.toString().replace('"', '""') +'"'
+			return '"'+item.toString().replace(/\"/g, '""') +'"'
 		})
 
 		portal_rows.push(
