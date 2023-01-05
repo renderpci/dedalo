@@ -1601,7 +1601,7 @@ class diffusion_sql extends diffusion  {
 					$ar_components_with_references = array( 'component_portal',
 															'component_autocomplete',
 															'component_autocomplete_hi'); #component_relation_common::get_components_with_relations(); # Using modelo name
-					$ar_section_components = section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, $ar_components_with_references, $from_cache=true, $resolve_virtual=true);
+					$ar_section_components = section::get_ar_children_tipo_by_model_name_in_section($options->section_tipo, $ar_components_with_references, $from_cache=true, $resolve_virtual=true);
 					sort($ar_section_components, SORT_NATURAL);	// always sort components_with_references
 
 				// Iterate founded components with relations. get references from components dato

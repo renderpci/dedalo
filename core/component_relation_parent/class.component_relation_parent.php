@@ -313,7 +313,7 @@ class component_relation_parent extends component_relation_common {
 		// 		$model = 'component_relation_children';
 
 		// 	# Resolve children component tipo from children_section_tipo
-		// 	$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo, # section tipo
+		// 	$ar_children_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(	$children_section_tipo, # section tipo
 		// 																							[$model], # ar model name
 		// 																							true, # from_cache
 		// 																							true, # resolve_virtual
@@ -452,7 +452,7 @@ class component_relation_parent extends component_relation_common {
 				$ar_resolved = [];
 				foreach ($hierarchy_sections as $children_section_tipo) {
 					# Resolve children component tipo from children_section_tipo
-					$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo,
+					$ar_children_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(	$children_section_tipo,
 																											[$model_name],
 																											true, # from_cache
 																											true, # resolve_virtual
@@ -504,7 +504,7 @@ class component_relation_parent extends component_relation_common {
 			/*
 				# Locate current section component parent tipo
 				$ar_model_name_required = array('component_relation_parent');
-				$ar_children_tipo 	 	 = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+				$ar_children_tipo 	 	 = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 				$component_parent_tipo 	 = reset($ar_children_tipo);
 				# Calculate current target component_relation_children_tipo from structure
 				$from_component_tipo 	 = component_relation_parent::get_component_relation_children_tipo($component_parent_tipo);
@@ -1107,7 +1107,7 @@ class component_relation_parent extends component_relation_common {
 			$model_name = 'component_relation_children';
 			foreach ($hierarchy_sections as $children_section_tipo) {
 				# Resolve children component tipo from children_section_tipo
-				$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$ar_children_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 					$children_section_tipo, // string $section_tipo
 					[$model_name], // array $ar_model_name_required
 					true, // bool from_cache

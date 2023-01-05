@@ -420,7 +420,7 @@ class hierarchy {
 		}else{
 
 			// target real section section_list
-				$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($real_section_tipo, ['section_list'], $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=true);
+				$ar_section_list = section::get_ar_children_tipo_by_model_name_in_section($real_section_tipo, ['section_list'], $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=true);
 				if (!empty($ar_section_list[0])) {
 					$section_list_tipo			= $ar_section_list[0];
 					$RecordObj_dd				= new RecordObj_dd($section_list_tipo);
@@ -604,7 +604,7 @@ class hierarchy {
 			# Security access
 			# Components inside section
 			$real_section = section::get_section_real_tipo_static( $current_section_tipo );
-			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
 				$real_section,
 				$ar_modelo_name_required=array('component','button','section_group'),
 				$from_cache=true,
@@ -1324,7 +1324,7 @@ class hierarchy {
 		$ar_modelo_name_required = array('section_map');
 
 		// Search in current section
-		$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo,
+		$ar_children  = section::get_ar_children_tipo_by_model_name_in_section($section_tipo,
 																				$ar_modelo_name_required,
 																				$from_cache=true,
 																				$resolve_virtual=false,
@@ -1334,7 +1334,7 @@ class hierarchy {
 		if (!isset($ar_children[0])) {
 			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 			if ($section_tipo!==$section_real_tipo) {
-				$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo,
+				$ar_children  = section::get_ar_children_tipo_by_model_name_in_section($section_real_tipo,
 																				$ar_modelo_name_required,
 																				$from_cache=true,
 																				$resolve_virtual=false,

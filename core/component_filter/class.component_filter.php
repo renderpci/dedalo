@@ -189,7 +189,7 @@ class component_filter extends component_relation_common {
 			}
 		}
 
-		$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section('component_portal');
+		$ar_children_objects = $section->get_ar_children_objects_by_model_name_in_section('component_portal');
 			#dump($ar_children_objects,"ar_children_objects");
 		foreach ($ar_children_objects as $component_portal) {
 			if (!empty($component_portal->dato)) {

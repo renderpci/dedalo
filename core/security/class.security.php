@@ -428,7 +428,7 @@ class security {
 
 				# Components inside section
 				$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
-				$ar_children	= section::get_ar_children_tipo_by_modelo_name_in_section(
+				$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
 					$real_section, // section_tipo
 					['component','button','section_group'], // ar_model_name_required
 					true, // from_cache
