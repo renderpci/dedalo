@@ -173,9 +173,6 @@ const get_content_data = async function(self) {
 				// import
 					self.import_files(files, time_machine_save)
 					.then(function(response){
-						if (response.debug && response.debug.rqo) {
-							response.debug.rqo = JSON.parse(response.debug.rqo)
-						}
 
 						const result_len = response.result.length
 
@@ -214,6 +211,46 @@ const get_content_data = async function(self) {
 								})
 
 								if(current_rensponse.result){
+
+									// failed_rows
+									if(current_rensponse.failed_rows.length>0){
+
+										const failed_rows = current_rensponse.failed_rows
+
+										const headder = ui.create_dom_element({
+											element_type	: 'div',
+											class_name 		: 'headder',
+											parent			: result_info_container
+										})
+										// const created_nodes = current_rensponse.created_rows.map(el => '<span>'+el+',</span>')
+											const created_label = ui.create_dom_element({
+												element_type	: 'div',
+												class_name 		: 'label',
+												inner_html		: get_label.failed || 'Failed' + ':',
+												parent			: headder
+											})
+											const failed_rows_len = failed_rows.length
+											for (let i = 0; i < failed_rows_len; i++) {
+												const failed = failed_rows[i]
+
+												const failed_id = ui.create_dom_element({
+													element_type	: 'div',
+													class_name 		: 'failed_container error',
+													inner_html		: failed.section_id +' | '+failed.component_tipo + ' | ' +failed.msg,
+													parent			: result_info_container
+												})
+
+												const failed_data= ui.create_dom_element({
+													element_type	: 'div',
+													class_name 		: 'failed_data_container error',
+													inner_html		: JSON.stringify( failed.data ),
+													parent			: result_info_container
+												})
+
+
+											}
+
+									}
 
 									if(current_rensponse.created_rows.length>0){
 
