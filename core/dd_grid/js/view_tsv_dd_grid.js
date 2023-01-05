@@ -11,13 +11,13 @@
 
 
 /**
-* VIEW_CSV_DD_GRID
+* VIEW_TSV_DD_GRID
 * Manage the components logic and appearance in client side
 */
-export const view_csv_dd_grid = function() {
+export const view_tsv_dd_grid = function() {
 
 	return true
-}//end view_csv_dd_grid
+}//end view_tsv_dd_grid
 
 
 
@@ -28,14 +28,14 @@ export const view_csv_dd_grid = function() {
 * @param object self
 * @return string csv_string
 */
-view_csv_dd_grid.render = function(self) {
+view_tsv_dd_grid.render = function(self) {
 
 	// reset instance node
 		self.node = null
 
 	// separators
 		self.row_separator		= '\n'
-		self.column_separator	= ';'
+		self.column_separator	= '\t'
 
 	// data
 		const data = self.data
@@ -80,10 +80,7 @@ const build_csv_string = function(self, data) {
 			const column		= ar_columns[i]
 			const column_items	= get_table_columns(column)
 
-			const header_csv = column_items.map(item => {
-				return '"'+item.toString().replace('"', '""') +'"'
-			})
-			header_items.push( ...header_csv )
+			header_items.push( ...column_items )
 		}
 		rows.push(
 			header_items.join(column_separator)
@@ -126,7 +123,7 @@ const build_csv_string = function(self, data) {
 */
 const get_portal_rows = function(self, row, ar_columns_obj) {
 
-	const column_separator	= self.column_separator
+	const column_separator	= self.column_separator //("\t")
 
 	const portal_rows = []
 
@@ -144,13 +141,8 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 
 		// process the data column to get the cells
 		const row_columns = get_columns(column_data, ar_columns_obj, row_key)
-
-		const row_csv = row_columns.map(item => {
-				return '"'+item.toString().replace('"', '""') +'"'
-		})
-
 		portal_rows.push(
-			row_csv.join(column_separator)
+			row_columns.join(column_separator)
 		)
 	}
 
