@@ -191,7 +191,8 @@ const get_value_element = (i, data, self, current_ipo) => {
 					tipo			: ipo_input_paths.component_tipo,
 					section_tipo	: ipo_input_paths.section_tipo,
 					id				: id_el.value,
-					mode			: 'viewer',
+					mode			: 'edit',
+					view			: 'viewer',
 					menu			: false
 				}
 				const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
