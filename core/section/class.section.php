@@ -1421,7 +1421,7 @@ class section extends common {
 	* @return $ar_section_obj
 	*	Array of objects (usually components) filtered by model_name_required with parent = current section id matrix
 	*/
-	public function get_ar_children_objects_by_modelo_name_in_section(string $model_name_required, bool $resolve_virtual=true) : array {
+	public function get_ar_children_objects_by_model_name_in_section(string $model_name_required, bool $resolve_virtual=true) : array {
 
 		$ar_section_obj = [];
 
@@ -1520,7 +1520,7 @@ class section extends common {
 
 
 		return $ar_section_obj;
-	}//end get_ar_children_objects_by_modelo_name_in_section
+	}//end get_ar_children_objects_by_model_name_in_section
 
 
 
@@ -1804,7 +1804,7 @@ class section extends common {
 	*/
 	public function get_button(string $model_name) : ?object {
 
-		$ar_buttons = (array)$this->get_ar_children_objects_by_modelo_name_in_section($model_name,false);
+		$ar_buttons = (array)$this->get_ar_children_objects_by_model_name_in_section($model_name,false);
 		foreach ($ar_buttons as $current_button_object) {
 			return $current_button_object;	# Only first element
 		}
