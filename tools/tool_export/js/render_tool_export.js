@@ -188,7 +188,7 @@ const get_content_data_edit = async function(self) {
 				total_records.insertAdjacentHTML('afterbegin', response)
 			})
 
-		// data_format
+		// data_format selectors
 			const data_format = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'data_format',
@@ -270,6 +270,14 @@ const get_content_data_edit = async function(self) {
 					// 	}
 					// }
 
+				// spinner
+					button_export.classList.add('hide')
+					const spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner',
+						parent			: export_buttons_config
+					})
+
 				// export_grid
 					const export_grid_options = {
 						data_format			: self.data_format,
@@ -282,6 +290,9 @@ const get_content_data_edit = async function(self) {
 						export_data_container.appendChild(dd_grid_export_node)
 						export_data_container.scrollIntoView(true)
 					}
+
+					button_export.classList.remove('hide')
+					spinner.remove()
 			})
 
 	// download_buttons_options
@@ -290,6 +301,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_options',
 			parent			: fragment
 		})
+
 		// csv. button_export_csv
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
@@ -344,7 +356,7 @@ const get_content_data_edit = async function(self) {
 					document.body.removeChild(link);
 			})
 
-		// excel
+		// excel. button_export Excel
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
@@ -365,6 +377,7 @@ const get_content_data_edit = async function(self) {
 					document.body.removeChild(link);
 			})
 
+		// html. button export html
 			const button_export_html = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
@@ -384,11 +397,16 @@ const get_content_data_edit = async function(self) {
 					link.click();
 					document.body.removeChild(link);
 			})
+
+		// print. button export print
 			const button_export_print = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
 				inner_html		: get_label.imprimir || 'Print',
 				parent			: export_buttons_options
+			})
+			button_export_print.addEventListener('click', function(e) {
+				console.log('e:', e);
 			})
 
 	// grid data container

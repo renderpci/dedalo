@@ -10537,41 +10537,45 @@ dd-modal .footer.distribute {
 .component_select_lang > .content_data > .content_value .show_on_active {
   margin-left: 0.5rem;
 }
-.component_select.edit.view_mini,
-.component_select_lang.edit.view_mini {
+.component_select.view_mini.edit,
+.component_select_lang.view_mini.edit {
   background-color: transparent;
   outline: none;
   color: unset;
   box-shadow: none;
   display: flex;
 }
-.component_select.edit.view_mini:after,
-.component_select_lang.edit.view_mini:after {
+.component_select.view_mini.edit:after,
+.component_select_lang.view_mini.edit:after {
   display: none;
 }
-.component_select.edit.view_mini .buttons_container,
-.component_select_lang.edit.view_mini .buttons_container,
-.component_select.edit.view_mini .developer_info,
-.component_select_lang.edit.view_mini .developer_info,
-.component_select.edit.view_mini .show_on_active,
-.component_select_lang.edit.view_mini .show_on_active {
+.component_select.view_mini.edit .buttons_container,
+.component_select_lang.view_mini.edit .buttons_container,
+.component_select.view_mini.edit .developer_info,
+.component_select_lang.view_mini.edit .developer_info,
+.component_select.view_mini.edit .show_on_active,
+.component_select_lang.view_mini.edit .show_on_active {
   display: none !important;
 }
-.component_select.edit.view_mini .label,
-.component_select_lang.edit.view_mini .label {
+.component_select.view_mini.edit .label,
+.component_select_lang.view_mini.edit .label {
   flex: 1 0 auto;
   padding-left: 0px;
   padding-right: 0px;
 }
-.component_select.edit.view_mini .content_data,
-.component_select_lang.edit.view_mini .content_data {
+.component_select.view_mini.edit .content_data,
+.component_select_lang.view_mini.edit .content_data {
   padding-top: 0px;
   padding-bottom: 0px;
   padding-right: 0px;
 }
-.component_select.edit.view_mini .content_data .select,
-.component_select_lang.edit.view_mini .content_data .select {
+.component_select.view_mini.edit .content_data .select,
+.component_select_lang.view_mini.edit .content_data .select {
   width: auto;
+}
+.component_select.view_line,
+.component_select_lang.view_line {
+  display: inline-block;
 }
 /**
 * component_select_lang
@@ -10588,17 +10592,17 @@ dd-modal .footer.distribute {
 *
 * Included from main.less file
 */
-.component_svg.view_default > .content_data {
+.component_svg.view_default.edit > .content_data {
   height: 392px;
   width: 100%;
   display: contents;
 }
-.component_svg.view_default > .content_data > .content_value {
+.component_svg.view_default.edit > .content_data > .content_value {
   justify-content: center;
   width: 100%;
   display: flex;
 }
-.component_svg.view_default > .content_data > .content_value > .image.svg_element {
+.component_svg.view_default.edit > .content_data > .content_value > .image.svg_element {
   padding: 0px;
   height: 100%;
   max-height: 100%;
@@ -10606,17 +10610,31 @@ dd-modal .footer.distribute {
   object-fit: contain;
   object-position: center;
 }
-.component_svg.view_line img {
-  height: 1em;
+.component_svg.view_default.list img {
+  height: 5rem;
+}
+.component_svg.view_line.list {
+  height: 1.5rem;
+}
+.component_svg.view_line.edit {
+  max-height: 15rem;
+  display: block;
+}
+.component_svg.view_line.edit img {
+  height: 100%;
+  max-height: 15rem;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 .component_svg_mini img {
-  height: 1em;
+  height: 1.5rem;
 }
 .component_svg.view_text {
-  height: 1em;
+  height: 1.5rem;
 }
 .component_svg .svg.view_text {
-  height: 1em;
+  height: 1.5rem;
 }
 /**
 * component_text_area
