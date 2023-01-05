@@ -201,6 +201,13 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'select_data_format_export',
 					parent			: data_format
 				})
+				select_data_format_export.addEventListener('change', function() {
+					// fix value
+					self.data_format = select_data_format_export.value
+				})
+				// fix default value
+				self.data_format = 'standard'
+
 				// select_option_standard
 				ui.create_dom_element({
 					element_type	: 'option',
@@ -244,13 +251,14 @@ const get_content_data_edit = async function(self) {
 				inner_html		: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
-			button_export.addEventListener('click', function() {
+			button_export.addEventListener('click', async function() {
 				// clean target_div
-					while (export_data.hasChildNodes()) {
-						export_data.removeChild(export_data.lastChild);
+					while (export_data_container.hasChildNodes()) {
+						export_data_container.removeChild(export_data_container.lastChild);
 					}
+
 				// export_grid API call
-					self.data_format = select_data_format_export.value
+					// self.data_format = select_data_format_export.value
 
 				// sort ar_ddo_to_export by DOM items position
 					// const ar_ddo_to_export_sorted = []
@@ -265,18 +273,18 @@ const get_content_data_edit = async function(self) {
 				// export_grid
 					const export_grid_options = {
 						data_format			: self.data_format,
-						ar_ddo_to_export	: self.ar_ddo_to_export
+						ar_ddo_to_export	: self.ar_ddo_to_export,
+						view				: 'table'
 					}
-					self.get_export_grid(export_grid_options)
-					.then(function(dd_grid_export_node){
-						if (dd_grid_export_node) {
-							export_data.appendChild(dd_grid_export_node)
-							export_data.scrollIntoView(true)
-						}
-					})
+					const dd_grid				= await self.get_export_grid(export_grid_options)
+					const dd_grid_export_node	= await dd_grid.render()
+					if (dd_grid_export_node) {
+						export_data_container.appendChild(dd_grid_export_node)
+						export_data_container.scrollIntoView(true)
+					}
 			})
 
-	// export_buttons_options
+	// download_buttons_options
 		const export_buttons_options = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'export_buttons_options',
@@ -290,10 +298,12 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_csv.addEventListener('click', async function() {
-				const dd_grid = self.ar_instances.find(el => el.model==='dd_grid')
-				dd_grid.view = 'csv'
-				dd_grid.status = 'built'
-				const csv_string = await dd_grid.render()
+
+				// dd_grid
+					const dd_grid		= self.dd_grid // self.ar_instances.find(el => el.model==='dd_grid')
+					dd_grid.view		= 'csv'
+					await dd_grid.build(false)
+					const csv_string	= await dd_grid.render()
 
 				// Download it
 					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.csv';
@@ -315,10 +325,12 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_tsv.addEventListener('click', async function() {
-				const dd_grid = self.ar_instances.find(el => el.model==='dd_grid')
-				dd_grid.view = 'tsv'
-				dd_grid.status = 'built'
-				const tsv_string = await dd_grid.render()
+
+				// dd_grid
+					const dd_grid		= self.dd_grid // self.ar_instances.find(el => el.model==='dd_grid')
+					dd_grid.view		= 'tsv'
+					await dd_grid.build(false)
+					const tsv_string	= await dd_grid.render()
 
 				// Download it
 					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.tsv';
@@ -346,7 +358,7 @@ const get_content_data_edit = async function(self) {
 					const link		= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data.innerHTML);
+					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
 					link.setAttribute('download', filename);
 					document.body.appendChild(link);
 					link.click();
@@ -366,7 +378,7 @@ const get_content_data_edit = async function(self) {
 					const link		= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data.innerHTML);
+					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
 					link.setAttribute('download', filename);
 					document.body.appendChild(link);
 					link.click();
@@ -380,9 +392,9 @@ const get_content_data_edit = async function(self) {
 			})
 
 	// grid data container
-		const export_data = ui.create_dom_element({
+		const export_data_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'export_data',
+			class_name		: 'export_data_container',
 			parent			: fragment
 		})
 

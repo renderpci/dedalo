@@ -166,6 +166,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 	// options
 		const data_format		= options.data_format
 		const ar_ddo_to_export	= options.ar_ddo_to_export
+		const view				= options.view || 'table'
 
 	// sqo
 		const sqo = clone(self.sqo)
@@ -190,33 +191,59 @@ tool_export.prototype.get_export_grid = async function(options) {
 			action	: 'tool_request',
 			source	: source
 		}
-
-	// delete previous instances
-		const previous_dd_grid = self.ar_instances.find(el => el.model === 'dd_grid')
-		if(previous_dd_grid){
-			await previous_dd_grid.destroy()
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+		if (!api_response.result) {
+			console.error('Error:', api_response.msg || 'Unknown error on API tool_request');
 		}
 
-	// dd_grid
-		const dd_grid = await instances.get_instance({
+	// already exists dd_grid
+		if (self.dd_grid) {
+			// inject data
+			self.dd_grid.data = api_response.result
+			// reset view
+			self.dd_grid.view = view
+			// build
+			await self.dd_grid.build(false)
+			// reset node
+			self.dd_grid.node = null
+			// return instance ready to render
+			return self.dd_grid
+		}
+
+	// delete previous instances
+		// const previous_dd_grid = self.ar_instances.find(el => el.model === 'dd_grid')
+		// if(previous_dd_grid){
+		// 	await previous_dd_grid.destroy()
+		// }
+
+	// dd_grid. Init instance
+		const dd_grid = self.dd_grid || await instances.get_instance({
 			model			: 'dd_grid',
 			section_tipo	: self.caller.section_tipo,
-			// section_id	: section_id,
 			tipo			: self.caller.section_tipo,
 			mode			: 'list',
-			view			: 'table',
+			view			: view, // 'table',
 			lang			: page_globals.dedalo_data_lang,
-			data_format		: data_format,
-			rqo				: rqo
+			data			: api_response.result
 		})
 
-	// render dd_grid
-		await dd_grid.build(true)
-		const dd_grid_node = await dd_grid.render()
+	// build. Do not autoload
+		await dd_grid.build(false)
 
+	// fix dd_grid
+		self.dd_grid = dd_grid
+
+	// ar_instances. Add/replaces current dd_grid instance. (Will be removed on destroy)
+		// const found_index = self.ar_instances.findIndex(el => el.model==='dd_grid')
+		// if (found_index > -1) {
+		// 	self.ar_instances.splice(found_index, 1)
+		// }
 		self.ar_instances.push(dd_grid)
 
-	return dd_grid_node
+
+	return dd_grid
 }//end get_export_grid
 
 
@@ -225,37 +252,37 @@ tool_export.prototype.get_export_grid = async function(options) {
 * GET_EXPORT_CSV
 * Load the export grid data
 */
-tool_export.prototype.get_export_csv = async function () {
+	// tool_export.prototype.get_export_csv = async function () {
 
-	const self = this
+	// 	const self = this
 
-	// dd_grid
-	const new_dd_grid = await instances.get_instance({
-		model			: 'dd_grid',
-		section_tipo	: self.caller.section_tipo,
-		// section_id	: section_id,
-		tipo			: self.caller.section_tipo,
-		mode			: 'list',
-		view			: 'csv',
-		lang			: page_globals.dedalo_data_lang,
-		// data_format	: data_format,
-		rqo				: self.rqo,
-		id_variant 		: 'csv_'
-	})
-console.log('self.data:---------------------------<>', self);
+	// 	// dd_grid
+	// 	const new_dd_grid = await instances.get_instance({
+	// 		model			: 'dd_grid',
+	// 		section_tipo	: self.caller.section_tipo,
+	// 		// section_id	: section_id,
+	// 		tipo			: self.caller.section_tipo,
+	// 		mode			: 'list',
+	// 		view			: 'csv',
+	// 		lang			: page_globals.dedalo_data_lang,
+	// 		// data_format	: data_format,
+	// 		rqo				: self.rqo,
+	// 		id_variant 		: 'csv_'
+	// 	})
+	// console.log('self.data:---------------------------<>', self);
 
-	if (self.data) {
-		new_dd_grid.data = self.data
-		await new_dd_grid.build(false)
-	}else{
+	// 	if (self.data) {
+	// 		new_dd_grid.data = self.data
+	// 		await new_dd_grid.build(false)
+	// 	}else{
 
-		await new_dd_grid.build(true)
-	}
+	// 		await new_dd_grid.build(true)
+	// 	}
 
-	const csv_string = await new_dd_grid.render()
+	// 	const csv_string = await new_dd_grid.render()
 
-	return csv_string
-}//end get_export_csv
+	// 	return csv_string
+	// }//end get_export_csv
 
 
 
