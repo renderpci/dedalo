@@ -698,7 +698,7 @@ class tool_import_files extends tool_common {
 								// component_filter. Propagate the project to the media section, that will be the target_section_tipo
 									if($model==='component_filter'){
 										// get the component_filter of the target_ddo section_tipo
-										$ar_children_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+										$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 											$target_ddo_component->section_tipo,
 											[$model],
 											true,

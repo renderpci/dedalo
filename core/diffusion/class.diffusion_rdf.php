@@ -1212,8 +1212,8 @@ class diffusion_rdf extends diffusion {
 	public static function get_to_publish_rows($section_tipo, $ar_section_id) {
 
 		# Resolve component_publication_tipo
-		$component_publication_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_publication'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-		$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_section_id'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+		$component_publication_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_publication'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+		$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_section_id'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 
 
 	        $q = implode(',', (array)$ar_section_id);

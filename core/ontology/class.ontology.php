@@ -328,10 +328,10 @@ class ontology {
 
 				# Real section
 				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
-				$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+				$ar_ts_childrens = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
 
 				# Virtual section too is necessary (buttons specifics)
-				$ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
+				$ar_ts_childrens_v	= section::get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
 				$ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
 				break;
 

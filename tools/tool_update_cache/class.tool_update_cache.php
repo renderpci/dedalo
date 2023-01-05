@@ -122,7 +122,7 @@ class tool_update_cache extends tool_common {
 			$lang			= $options->lang;
 
 		# All section components
-			$related_terms = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$related_terms = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // section_tipo
 				['component_'], // ar_model_name_required
 				true, // from_cache
@@ -133,7 +133,7 @@ class tool_update_cache extends tool_common {
 			);
 
 		// Only section list defined components
-			// $ar_section_list_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['section_list'], true);
+			// $ar_section_list_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['section_list'], true);
 			// if (!isset($section_list_tipo[0])) {
 			// 	// throw new Exception("Error Processing Request. Section list not found for $section_tipo", 1);
 			// 	$msg = " Error Processing Request. Section list not found for section_tipo: $section_tipo";

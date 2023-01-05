@@ -1007,7 +1007,7 @@ class section extends common {
 					# DEFAULT PROJECT FOR CREATE STANDARD SECTIONS
 					# When a section record is created, it is auto assigned the default project (defined in config DEDALO_DEFAULT_PROJECT)
 					# when the section has a 'component_filter' defined
-					$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$ar_tipo_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_real_tipo,
 						['component_filter'],
 						true, // from_cache
@@ -1056,7 +1056,7 @@ class section extends common {
 
 
 				// component state defaults set. Set default values on component_state when is present
-					$ar_component_state = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$ar_component_state = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_real_tipo, // section_tipo
 						['component_state'], // ar_model_name_required
 						true, // from_cache
@@ -1126,7 +1126,7 @@ class section extends common {
 				case 'delete_data' :
 
 					# CHILDREN : Calculate components children of current section
-					$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_tipo ,
 						['component_'],
 						true, // from_cache
@@ -1535,7 +1535,7 @@ class section extends common {
 	*	Name of desired filtered model array. You can use partial name like 'component_' (string position search is made it)
 	* @return array $section_ar_children_tipo
 	*/
-	public static function get_ar_children_tipo_by_modelo_name_in_section(
+	public static function get_ar_children_tipo_by_model_name_in_section(
 			string $section_tipo,
 			array $ar_model_name_required,
 			bool $from_cache=true,
@@ -1684,7 +1684,7 @@ class section extends common {
 
 
 		return $section_ar_children_tipo;
-	}//end get_ar_children_tipo_by_modelo_name_in_section
+	}//end get_ar_children_tipo_by_model_name_in_section
 
 
 
@@ -1740,7 +1740,7 @@ class section extends common {
 			// ar_excluded_tipo. Exclude elements of layout edit
 			// vars: $section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false
 				$ar_excluded_tipo			= false;
-				$ar_exclude_elements_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section(
+				$ar_exclude_elements_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
 					$this->tipo, // section_tipo
 					['exclude_elements'], // ar_model_name_required
 					true // from_cache
@@ -1753,7 +1753,7 @@ class section extends common {
 				}
 
 			// real section
-				$children_real_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$children_real_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 					$section_real_tipo, // section_tipo
 					['button_'], // ar_model_name_required
 					true, // from_cache
@@ -1764,7 +1764,7 @@ class section extends common {
 				);
 
 			// virtual section. Add the specific buttons of the virtual section, if the virtual have buttons add to the list.
-				$children_virtual_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$children_virtual_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 					$this->tipo, // section_tipo
 					['button_'], // ar_model_name_required
 					true, // from_cache
@@ -1779,7 +1779,7 @@ class section extends common {
 		}else{
 
 			// if the section is a real section, add the buttons directly
-			$ar_buttons_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_buttons_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 				$this->tipo, // section_tipo
 				['button_'], // ar_model_name_required
 				true, // from_cache
@@ -2156,7 +2156,7 @@ class section extends common {
 		// $ar_model_name_required = [$model_name];
 
 		// Locate children element in current section (virtual ot not)
-		$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section(
+		$ar_childrens = section::get_ar_children_tipo_by_model_name_in_section(
 			$current_section_tipo,
 			$ar_model_name_required, // ar_model_name_required
 			$from_cache=true,
@@ -2168,7 +2168,7 @@ class section extends common {
 		// If not found children, try resolving real section
 		if (empty($ar_childrens)) {
 			$resolve_virtual = true;
-			$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_childrens = section::get_ar_children_tipo_by_model_name_in_section(
 				$current_section_tipo,
 				$ar_model_name_required,
 				$from_cache=true,
@@ -2855,7 +2855,7 @@ class section extends common {
 		$resolve_virtual			= false;
 
 		// Locate section_map element in current section (virtual or not)
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
 			$section_tipo,
 			$ar_model_name_required,
 			$from_cache=true,
@@ -2867,7 +2867,7 @@ class section extends common {
 		// If not found children, try resolving real section
 		if (empty($ar_children)) {
 			$resolve_virtual = true;
-			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo,
 				$ar_model_name_required,
 				$from_cache=true,
@@ -3778,7 +3778,7 @@ class section extends common {
 
 			// inherits from father if exists
 				// component_relation_parent find
-				$ar_parent_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
+				$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
 				if (!empty($ar_parent_tipo)) {
 					// calls to current section as child from another sections
 					$parents_data = component_relation_parent::get_parents($this->get_section_id(), $section_tipo);

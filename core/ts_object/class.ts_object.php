@@ -82,7 +82,7 @@ class ts_object {
 			$ar_model_name_required = array('section_list_thesaurus');
 
 		// Search in current section
-			$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section(
+			$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // tipo
 				$ar_model_name_required, // ar_modelo_name_required
 				true, // from_cache
@@ -103,7 +103,7 @@ class ts_object {
 			if (empty($ar_properties)) {
 				$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 				if ($section_tipo!==$section_real_tipo) {
-					$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section(
+					$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_real_tipo,
 						$ar_model_name_required,
 						true, // from_cache
@@ -769,7 +769,7 @@ class ts_object {
 					$tipo = DEDALO_THESAURUS_BUTTON_NEW_TIPO;
 					$permissions = common::get_permissions($this->section_tipo,$tipo);
 				}else{
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+					$ar_children = section::get_ar_children_tipo_by_model_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
 					# dump($ar_children, ' ar_children ++ '.to_string());
 					if (isset($ar_children[0])) {
 						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
@@ -786,7 +786,7 @@ class ts_object {
 					$tipo = DEDALO_THESAURUS_BUTTON_DELETE_TIPO;
 					$permissions = common::get_permissions($this->section_tipo,$tipo);
 				}else{
-					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
+					$ar_children = section::get_ar_children_tipo_by_model_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
 					# dump($ar_children, ' ar_children ++ '.to_string());
 					if (isset($ar_children[0])) {
 						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
@@ -796,7 +796,7 @@ class ts_object {
 				}
 				break;
 			default:
-				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(
+				$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
 					$this->section_tipo,
 					[$element_name], // ar_model_name
 					$from_cache=true,
