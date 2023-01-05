@@ -98,6 +98,8 @@ abstract class component_common extends common {
 		public $data_source;
 		// fields_separator. Default separator between fields
 		public $fields_separator = ' | ';
+		// save_to_database, used for controlled if the component save his data to database. bool. default: true.
+		public $save_to_database;
 
 
 	/**
