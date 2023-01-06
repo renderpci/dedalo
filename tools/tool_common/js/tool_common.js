@@ -256,6 +256,11 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							continue
 						}
 
+					//skip autoload false.
+						if(el.autoload===false){
+							continue
+						}
+
 					// lang. If is defined in properties, parse and use it, else use the tool lang
 					// taking care to do not re-parse the value
 						const current_el_lang = el.lang
