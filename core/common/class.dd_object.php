@@ -668,6 +668,19 @@ class dd_object extends stdClass {
 
 
 
+	/**
+	* SET_ROLE
+	* Used by tools
+	* @param string $value
+	* @return void
+	*/
+	public function set_role(string $value) : void {
+
+		$this->role = $value;
+	}//end set_role
+
+
+
 
 	/**
 	* COMPARE_DDO
