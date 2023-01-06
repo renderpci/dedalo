@@ -9956,6 +9956,10 @@ dd-modal .footer.distribute {
   margin-left: 0rem;
   padding-right: 0.5rem;
 }
+.component_portal.view_line.edit,
+.portal.view_line.edit {
+  display: block;
+}
 .component_portal.view_line.edit > .content_data,
 .portal.view_line.edit > .content_data {
   display: flex;
@@ -10195,6 +10199,9 @@ dd-modal .footer.distribute {
 .component_publication.view_default {
   box-shadow: none;
 }
+.component_publication.view_line {
+  display: inline-block;
+}
 .component_publication.view_line > .content_data > .content_value {
   margin: 0.25rem;
 }
@@ -10295,6 +10302,9 @@ dd-modal .footer.distribute {
   top: 0.5em;
   z-index: 1;
 }
+.component_relation_model.view_line {
+  display: block;
+}
 /**
 * component_relation_parent
 *
@@ -10349,12 +10359,14 @@ dd-modal .footer.distribute {
 *
 * Included from main.less file
 */
-.component_security_access.view_default.edit > .content_data {
+.component_security_access.view_default.edit > .content_data,
+.component_security_access.view_line.edit > .content_data {
   display: block;
   min-height: 12rem;
   pointer-events: unset !important;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root {
+.component_security_access.view_default.edit > .content_data > .tree_root,
+.component_security_access.view_line.edit > .content_data > .tree_root {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
@@ -10362,11 +10374,13 @@ dd-modal .footer.distribute {
   max-height: inherit;
   font-size: 13px;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .ul_item {
+.component_security_access.view_default.edit > .content_data > .tree_root .ul_item,
+.component_security_access.view_line.edit > .content_data > .tree_root .ul_item {
   width: 100%;
   display: block;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item {
   display: flex;
   flex: 1 1 50%;
   flex-wrap: wrap;
@@ -10375,27 +10389,32 @@ dd-modal .footer.distribute {
   max-height: inherit;
   margin-left: 1.5rem;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item.permissions {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item.permissions,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item.permissions {
   color: #676767;
   font-weight: 300;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item.permissions > .radio_buttons_container {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item.permissions > .radio_buttons_container,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item.permissions > .radio_buttons_container {
   margin-left: 1.25rem;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item.grouper {
   flex-wrap: wrap;
   padding-bottom: 0.25em;
   margin-left: 0px;
   padding: 0px;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper li {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper li,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item.grouper li {
   flex: 0 0 100%;
   padding: 0.25em;
   width: 100%;
   height: inherit;
   font-size: 0.9em;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper > .grouper_label {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper > .grouper_label,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item.grouper > .grouper_label {
   width: auto;
   padding-left: 0px;
   padding-top: 0.25em;
@@ -10404,34 +10423,41 @@ dd-modal .footer.distribute {
   opacity: 0.7;
   font-size: 0.8em;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper input {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item.grouper input,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item.grouper input {
   vertical-align: text-top;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item input {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item input,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item input {
   margin-right: 0.33em;
   cursor: pointer;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .li_item > input.q_operator {
+.component_security_access.view_default.edit > .content_data > .tree_root .li_item > input.q_operator,
+.component_security_access.view_line.edit > .content_data > .tree_root .li_item > input.q_operator {
   width: 3em;
   text-align: center;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root > .li_item {
+.component_security_access.view_default.edit > .content_data > .tree_root > .li_item,
+.component_security_access.view_line.edit > .content_data > .tree_root > .li_item {
   position: relative;
   flex: 1 1 100%;
   align-items: baseline;
   z-index: 0;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .area_label {
+.component_security_access.view_default.edit > .content_data > .tree_root .area_label,
+.component_security_access.view_line.edit > .content_data > .tree_root .area_label {
   position: relative;
   padding: 0.22rem;
   padding-left: 0px;
   line-height: 1.1rem;
   vertical-align: bottom;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .area_label.component {
+.component_security_access.view_default.edit > .content_data > .tree_root .area_label.component,
+.component_security_access.view_line.edit > .content_data > .tree_root .area_label.component {
   color: orange;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .area_label .info_text {
+.component_security_access.view_default.edit > .content_data > .tree_root .area_label .info_text,
+.component_security_access.view_line.edit > .content_data > .tree_root .area_label .info_text {
   color: #999999;
   padding-left: 0.5rem;
   padding-right: 0.25rem;
@@ -10439,19 +10465,25 @@ dd-modal .footer.distribute {
   font-size: 14px;
 }
 .component_security_access.view_default.edit > .content_data > .tree_root .radio_buttons_container,
-.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global {
+.component_security_access.view_line.edit > .content_data > .tree_root .radio_buttons_container,
+.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global,
+.component_security_access.view_line.edit > .content_data > .tree_root .permissions_global {
   display: flex;
   align-items: center;
   margin-right: 0.5rem;
   margin-left: 0.5rem;
 }
 .component_security_access.view_default.edit > .content_data > .tree_root .radio_buttons_container label,
-.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label {
+.component_security_access.view_line.edit > .content_data > .tree_root .radio_buttons_container label,
+.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label,
+.component_security_access.view_line.edit > .content_data > .tree_root .permissions_global label {
   display: block;
   margin-right: 0.25rem;
 }
 .component_security_access.view_default.edit > .content_data > .tree_root .radio_buttons_container label input,
-.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input {
+.component_security_access.view_line.edit > .content_data > .tree_root .radio_buttons_container label input,
+.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input,
+.component_security_access.view_line.edit > .content_data > .tree_root .permissions_global label input {
   margin-right: 0.25rem;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -10468,36 +10500,47 @@ dd-modal .footer.distribute {
   /* appearance for checked radiobutton */
 }
 .component_security_access.view_default.edit > .content_data > .tree_root .radio_buttons_container label input:checked,
-.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input:checked {
+.component_security_access.view_line.edit > .content_data > .tree_root .radio_buttons_container label input:checked,
+.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input:checked,
+.component_security_access.view_line.edit > .content_data > .tree_root .permissions_global label input:checked {
   background-color: #4dbb4a;
 }
 .component_security_access.view_default.edit > .content_data > .tree_root .radio_buttons_container label input:checked.val_0,
-.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input:checked.val_0 {
+.component_security_access.view_line.edit > .content_data > .tree_root .radio_buttons_container label input:checked.val_0,
+.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input:checked.val_0,
+.component_security_access.view_line.edit > .content_data > .tree_root .permissions_global label input:checked.val_0 {
   background-color: #f16053;
 }
 .component_security_access.view_default.edit > .content_data > .tree_root .radio_buttons_container label input:checked.val_1,
-.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input:checked.val_1 {
+.component_security_access.view_line.edit > .content_data > .tree_root .radio_buttons_container label input:checked.val_1,
+.component_security_access.view_default.edit > .content_data > .tree_root .permissions_global label input:checked.val_1,
+.component_security_access.view_line.edit > .content_data > .tree_root .permissions_global label input:checked.val_1 {
   background-color: #f8b544;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .icon_arrow {
+.component_security_access.view_default.edit > .content_data > .tree_root .icon_arrow,
+.component_security_access.view_line.edit > .content_data > .tree_root .icon_arrow {
   margin-right: 1.5rem;
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .icon_arrow:after {
+.component_security_access.view_default.edit > .content_data > .tree_root .icon_arrow:after,
+.component_security_access.view_line.edit > .content_data > .tree_root .icon_arrow:after {
   background-color: #0075ff;
   right: -1.45rem;
   height: 1.2rem;
   transform: rotate(270deg);
 }
-.component_security_access.view_default.edit > .content_data > .tree_root .icon_arrow.up:after {
+.component_security_access.view_default.edit > .content_data > .tree_root .icon_arrow.up:after,
+.component_security_access.view_line.edit > .content_data > .tree_root .icon_arrow.up:after {
   transform: rotate(360deg);
   opacity: 0.5;
 }
-.component_security_access.view_default.edit > .buttons_container .button_save {
+.component_security_access.view_default.edit > .buttons_container .button_save,
+.component_security_access.view_line.edit > .buttons_container .button_save {
   position: absolute;
   right: 3px;
   top: 33px;
 }
-.component_security_access.view_default.list > span {
+.component_security_access.view_default.list > span,
+.component_security_access.view_line.list > span {
   display: block;
   max-height: 10rem;
   overflow: auto;
@@ -10592,15 +10635,18 @@ dd-modal .footer.distribute {
 *
 * Included from main.less file
 */
-.component_svg.view_default.edit > .content_data {
+.component_svg.view_default.edit {
   height: 392px;
+}
+.component_svg.view_default.edit > .content_data {
+  height: inherit;
   width: 100%;
-  display: contents;
 }
 .component_svg.view_default.edit > .content_data > .content_value {
   justify-content: center;
   width: 100%;
   display: flex;
+  height: 100%;
 }
 .component_svg.view_default.edit > .content_data > .content_value > .image.svg_element {
   padding: 0px;
