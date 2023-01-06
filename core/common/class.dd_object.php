@@ -656,6 +656,20 @@ class dd_object extends stdClass {
 
 
 	/**
+	* SET_AUTOLOAD
+	* Used by tools
+	* @param bool $value
+	* @return void
+	*/
+	public function set_autoload(bool $value) : void {
+
+		$this->autoload = $value;
+	}//end set_autoload
+
+
+
+
+	/**
 	* COMPARE_DDO
 	* @param object $ddo1
 	* @param object $ddo2
