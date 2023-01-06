@@ -38,7 +38,7 @@ view_table_dd_grid.render = function(self, options) {
 		})
 
 	// grid. Value as string
-		const grid = get_table_nodes(data, self.data_format)
+		const grid = get_table_nodes(data)
 		wrapper.appendChild(grid)
 
 
@@ -51,11 +51,10 @@ view_table_dd_grid.render = function(self, options) {
 * GET_TABLE_NODES
 * @param array data
 * 	array of objects; full data sent by the server with all information.
-* @param object data_format
 * @return DocumentFragment
 * 	DOM node with the table
 */
-const get_table_nodes = function(data, data_format) {
+const get_table_nodes = function(data) {
 
 	// the root node
 		const fragment = new DocumentFragment()
