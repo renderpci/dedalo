@@ -270,7 +270,7 @@ const get_content_data_edit = async function(self) {
 					// 	}
 					// }
 
-				// spinner
+				// spinner add
 					button_export.classList.add('hide')
 					const spinner = ui.create_dom_element({
 						element_type	: 'div',
@@ -291,6 +291,7 @@ const get_content_data_edit = async function(self) {
 						export_data_container.scrollIntoView(true)
 					}
 
+				// spinner remove
 					button_export.classList.remove('hide')
 					spinner.remove()
 			})
