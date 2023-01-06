@@ -140,6 +140,7 @@
 				>.export_buttons_config {
 					padding: 1em;
 					padding-top: 0;
+					position: relative;
 
 					>.records_info {
 						background-color: #7ee4f2;
@@ -158,12 +159,19 @@
     					padding-bottom: 1rem;
 
 						>.select_data_format_export {
-
+							margin-top: 1rem;
+							margin-bottom: 1rem;
 						}
 					}
 
 					>.button_export {
+						width: calc(100% - 1rem);
+						margin-left: 0;
+					}
 
+					.spinner {
+						top: 1rem;
+						position: relative;
 					}
 				}
 
@@ -174,12 +182,13 @@
 					margin-top: 1em;
 				}
 
-			// export_data. Grid / table of result record values to save
-				>.export_data {
+			// export_data_container. Grid / table of result record values to save
+				>.export_data_container {
 					grid-column-start: 1;
 					grid-column-end: 4;
 					margin-top: 1em;
 					min-height: 40vh;
+					overflow-x: auto;
 
 					.row_header {
 						>th {

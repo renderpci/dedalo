@@ -192,7 +192,7 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 				type			: 'column',
 				cell_type		: 'text',
 				value			: '',
-				class_list		:'empty_value'
+				class_list		: 'empty_value'
 			  }
 		// if the column is the last column with data, identify by cell_type property, render the node
 		if(column_value && column_value.type === 'column' && column_value.cell_type){
