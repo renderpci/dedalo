@@ -1,0 +1,158 @@
+{
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "inf": "Fecha de creación [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 5,
+              "hour": 18,
+              "time": 65021249199,
+              "year": 2023,
+              "month": 1,
+              "minute": 6,
+              "second": 39
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "inf": "Fecha de modificación [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 5,
+              "hour": 19,
+              "time": 65021253563,
+              "year": 2023,
+              "month": 1,
+              "minute": 19,
+              "second": 23
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "inf": "Descripción [component_text_area]",
+      "dato": {
+        "lg-eng": [
+          "<p>Transcription of legends, countermarks of numismatic objects.</p>"
+        ],
+        "lg-spa": [
+          "<p>&nbsp;</p><p>Transcripción de legendas, contramarcas de objetos numismáticos.</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Etiqueta [component_input_text]",
+      "dato": {
+        "lg-eng": [
+          "Epigtraphy descriptions"
+        ],
+        "lg-spa": [
+          "Descripciones epigráficas"
+        ]
+      }
+    },
+    "dd1326": {
+      "inf": "Nombre de la herramienta [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_numisdata_epigraphy"
+        ]
+      }
+    },
+    "dd1327": {
+      "inf": "Versión [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "2.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "inf": "Versión Dédalo mínima [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "6.0.0"
+        ]
+      }
+    },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1362": {
+      "inf": "Dev info [component_text_area]",
+      "dato": {
+        "lg-nolan": [
+          "<p>Used to do transciptions of numismatics objects with ephigraphy.</p><p>Use epigraphy thesaurus to get the glyphs and it can combine into text_area components with Unicode text.</p>"
+        ]
+      }
+    }
+  },
+  "section_id": 4,
+  "created_date": "2023-01-05 18:06:39",
+  "section_tipo": "dd1340",
+  "modified_date": "2023-01-05 19:19:23",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": -1
+}
