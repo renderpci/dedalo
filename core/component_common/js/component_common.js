@@ -571,7 +571,10 @@ component_common.prototype.save = async function(changed_data) {
 		// event save_ . Dispatch event specific by id_base (usually observed by component properties 'observe' definition)
 			event_manager.publish(
 				'save_'+ self.id_base,
-				{}
+				{
+					instance		: self,
+					api_response	: response
+				}
 			)
 
 		// remove active
