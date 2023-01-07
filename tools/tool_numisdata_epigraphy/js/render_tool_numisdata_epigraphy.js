@@ -319,7 +319,6 @@ const get_content_data_edit = async function(self) {
 						name	: 'reverse_symbol_text'
 					})
 
-
 		// marks nodes
 			const marks_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -329,6 +328,33 @@ const get_content_data_edit = async function(self) {
 
 				const mark_node = await self.mark.render()
 				marks_container.appendChild(mark_node)
+				self.events_tokens.push(
+					event_manager.subscribe('save_'+ self.mark.id_base, update_mark)
+				)
+				function update_mark(options) {
+					update_text_nodes({
+						caller	: self.mark,
+						node	: mark_text_container,
+						role	: 'mark_text',
+						name	: 'mark_text'
+					})
+				}
+				const marks_text_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'portal_container desings_container',
+					parent 			: right_container
+				})
+					const mark_text_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'text_container mark_text_container',
+						parent 			: marks_text_container
+					})
+					update_text_nodes({
+						caller	: self.mark,
+						node	: mark_text_container,
+						role	: 'mark_text',
+						name	: 'mark_text'
+					})
 
  		// edges nodes
 			const edges_container = ui.create_dom_element({
@@ -339,10 +365,48 @@ const get_content_data_edit = async function(self) {
 
 				const edge_desing_node = await self.edge_desing.render()
 				edges_container.appendChild(edge_desing_node)
+				self.events_tokens.push(
+					event_manager.subscribe('save_'+ self.edge_desing.id_base, update_obverse_edge)
+				)
+				function update_obverse_edge() {
+					update_text_nodes({
+						caller	: self.edge_desing,
+						node	: edge_desing_text_container,
+						role	: 'desing_text',
+						name	: 'edge_desing_text'
+					})
+				}
 
 				const edge_legend_node = await self.edge_legend.render()
 				edges_container.appendChild(edge_legend_node)
-
+				self.events_tokens.push(
+					event_manager.subscribe('save_'+ self.edge_legend.id_base, update_reverse_edge)
+				)
+				function update_reverse_edge() {
+					update_text_nodes({
+						caller	: self.edge_legend,
+						node	: edge_legend_text_container,
+						role	: 'legend_text',
+						name	: 'edge_legend_text'
+					})
+				}
+				const edges_text_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'portal_container edges_container',
+					parent 			: right_container
+				})
+					const edge_desing_text_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'text_container edge_desing_text_container',
+						parent 			: edges_text_container
+					})
+					const edge_legend_text_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'text_container edge_legend_text_container',
+						parent 			: edges_text_container
+					})
+					update_obverse_edge()
+					update_reverse_edge()
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
