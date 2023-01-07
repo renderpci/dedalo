@@ -83,6 +83,9 @@ component_common.prototype.init = async function(options) {
 	// active. Active status (true|false) is set by ui.component.activate/deactivate
 		self.active = false
 
+	// properties
+		self.properties = options.properties
+
 	// pagination info
 		// self.pagination = (self.data && self.data.pagination)
 		// 	? self.data.pagination

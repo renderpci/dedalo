@@ -2458,14 +2458,16 @@ abstract class common {
 					else{
 						// sometimes the portals don't has section_list defined.
 						// In these cases get the properties from the current tipo
-						$RecordObj_dd	= new RecordObj_dd($tipo);
-						$properties		= $RecordObj_dd->get_properties();
+						// $RecordObj_dd	= new RecordObj_dd($tipo);
+						// $properties		= $RecordObj_dd->get_properties();
+						$properties			= $this->get_properties();
 					}
 					break;
 				default:
 					// edit mode or components without section_list defined (other than portals or sections)
-					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$properties		= $RecordObj_dd->get_properties();
+					// $RecordObj_dd	= new RecordObj_dd($tipo);
+					// $properties		= $RecordObj_dd->get_properties();
+					$properties			= $this->get_properties();
 					break;
 			}
 

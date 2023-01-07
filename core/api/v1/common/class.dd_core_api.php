@@ -1568,6 +1568,7 @@ final class dd_core_api {
 			$tipo				= $ddo_source->tipo ?? null;
 			$model				= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
+			$properties			= $ddo_source->properties ?? null;
 
 		// sqo (search_query_object)
 			// If empty, we look at the session, and if not exists, we will create a new one with default values
@@ -1735,6 +1736,11 @@ final class dd_core_api {
 							// view optional
 								if (!empty($view)) {
 									$element->set_view($view);
+								}
+
+							// properties optional
+								if (!empty($properties)){
+									$element->set_properties($properties);
 								}
 
 							// pagination. Fix pagination vars (defined in class component_common)
