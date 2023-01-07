@@ -100,8 +100,10 @@ tool_common.prototype.init = async function(options) {
 						// set current tool as caller
 							self.caller.caller = self
 
-						// build
-							await self.caller.build(true)
+						if(caller_ddo.model!=='section'){
+							// build
+								await self.caller.build(true)
+						}
 
 						// set tool_config
 							self.tool_config = tool_config
