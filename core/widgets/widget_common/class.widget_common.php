@@ -25,9 +25,6 @@ class widget_common {
 		$this->section_id	= $options->section_id;
 		$this->lang			= $options->lang;
 		$this->ipo			= $options->ipo;
-
-
-		return true;
 	}//end __construct
 
 
@@ -39,12 +36,12 @@ class widget_common {
 	* @return object $instance
 	* The "widget" instance.
 	* $options = {
-	*		widget_name 	: string, with the class name
-	*		path			: string, with the path to the class of the widget,
-	*		ipo				: Input-Process-Output; array with objects with the config defined in the ontology
-	*		section_tipo 	: string, $tipo
-	*		section_id 		: int in string format || null (for list mode)
-	* 		lang			: string
+	*	widget_name 	: string, with the class name
+	*	path			: string, with the path to the class of the widget,
+	*	ipo				: Input-Process-Output; array with objects with the config defined in the ontology
+	*	section_tipo 	: string, $tipo
+	*	section_id 		: int in string format || null (for list mode)
+	* 	lang			: string
 	* }
 	*/
 	public static function get_instance(object $options) : object {

@@ -9,6 +9,10 @@ class component_info extends component_common {
 
 
 
+	public $widget_lang;
+	public $widget_mode;
+
+
 	/**
 	* GET_DATO
 	* @return array|null $dato
@@ -60,12 +64,14 @@ class component_info extends component_common {
 	* GET_VALOR
 	* @return string $valor
 	*/
-	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) {
+	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) : string {
 
 		$this->widget_lang = $widget_lang;
 
 		$valor = $this->get_html();
-		$valor = strip_tags($valor);
+		$valor = !empty($valor)
+			? strip_tags($valor)
+			: $valor;
 
 		return $valor;
 	}//end get_valor
