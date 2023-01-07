@@ -344,7 +344,7 @@ common.prototype.render = async function (options={}) {
 						// replaces DOM node if the node exist,
 						// ex: when it's called by event that need change data in component (update_data event)
 						// and the component need to be rendered in full as in list mode
-						if(self.node) {
+						if(self.node && node) {
 							// DES
 								// const parent = self.node.parentNode
 								// if (!parent) {
@@ -358,7 +358,14 @@ common.prototype.render = async function (options={}) {
 								// 	// )
 								// 	self.node.replaceWith(node);
 								// }
-							self.node.replaceWith(node);
+							if (self.node.nodeType !== Node.ELEMENT_NODE) {
+								// console.log('self.node:', self.node);
+								// console.log('self.node.nodeType:', self.node.nodeType);
+								// console.log('node:', node);
+								console.warn('Ignored node replacement for: non ELEMENT_NODE', self.node.nodeType);
+							}else{
+								self.node.replaceWith(node);
+							}
 						}
 						// set pointers. Update instance node pointer
 						self.node = node

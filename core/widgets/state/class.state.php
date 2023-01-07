@@ -59,12 +59,14 @@ class state extends widget_common {
 						$source_component_tipo = $current_source->component_tipo;
 
 						$source_model_name	= RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
-						$source_component	= component_common::get_instance($source_model_name,
-														   $source_component_tipo,
-														   $source_section_id,
-														   'list',
-														   DEDALO_DATA_LANG,
-														   $source_section_tipo);
+						$source_component	= component_common::get_instance(
+							$source_model_name,
+							$source_component_tipo,
+							$source_section_id,
+							'list',
+							DEDALO_DATA_LANG,
+							$source_section_tipo
+						);
 						$source_dato = $source_component->get_dato();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
 						$locator = reset($source_dato);
@@ -82,27 +84,29 @@ class state extends widget_common {
 				$result = [];
 				foreach ($ar_paths as $path) {
 					// get the last path, this will be the component the call to the list (select / radio_button)
-					$last_path		= end($path);
+					$last_path = end($path);
 
 					// change the section_tipo in the path when the caller is inside a virtual section_tipo as resources sections.
 					foreach ($path as $current_path) {
-						$current_path->section_tipo = ($current_path->section_tipo === 'self') ? $section_tipo : $current_path->section_tipo;
+						$current_path->section_tipo = ($current_path->section_tipo === 'self')
+							? $section_tipo
+							: $current_path->section_tipo;
 					}
 
 					// resolve the path with all levels and get the data of the final component.
 					$data_with_path = search::get_data_with_path($path, $ar_locator);
 
 					// $data_with_path has all locators of every level of the path, we need select the last component of the path
-					// this last compoment that has the usable locators for state
+					// this last component that has the usable locators for state
 					$path_result = array_find($data_with_path, function($item) use($last_path){
 						return $item->path->component_tipo === $last_path->component_tipo;
 					});
 					// get the section pointed by the last component_tipo
 					// the section_tipo is the list of values of the state
-					$component_tipo = $last_path->component_tipo;
-					$ar_section = common::get_ar_related_by_model('section', $component_tipo);
-					$section = reset($ar_section);
-					// check if the compoment (select, radio_button, etc) is translatable
+					$component_tipo	= $last_path->component_tipo;
+					$ar_section		= common::get_ar_related_by_model('section', $component_tipo);
+					$section		= reset($ar_section);
+					// check if the component (select, radio_button, etc) is translatable
 					// if yes, the locator will has lang associate to it, else the locator don't has lang and it will identificate as 'lg-nolan'
 					$RecordObj_dd = new RecordObj_dd($component_tipo);
 					$translatable = $RecordObj_dd->get_traducible();
@@ -113,14 +117,14 @@ class state extends widget_common {
 						$current_result = new stdClass();
 							$label_component = ($section==='dd501') ? 'dd503' :'dd185';
 
-							$current_result->label 		= $this->get_label($locator, $label_component);
-							$current_result->value 		= 0;
+							$current_result->label		= $this->get_label($locator, $label_component);
+							$current_result->value		= 0;
 							$current_result->locator	= null;
-							$current_result->lang 		= $translatable === 'si' ? null : 'lg-nolan';
+							$current_result->lang		= $translatable === 'si' ? null : 'lg-nolan';
 							$current_result->id			= $last_path->var_name;
 							$current_result->column		= ($section==='dd501') ? 'state' :'situation';
-							$current_result->type 		= 'detail';
-							$current_result->n 			= $translatable==='si' ? count($project_langs) : 1;
+							$current_result->type		= 'detail';
+							$current_result->n			= $translatable==='si' ? count($project_langs) : 1;
 						$result[] = $current_result;
 					}
 
@@ -129,17 +133,18 @@ class state extends widget_common {
 
 						$current_result = new stdClass();
 						switch ($locator->section_tipo) {
-							// Status, the list contoled by users
+							// Status, the list controlled by users
 							case 'dd174':
 								$situation_value = $this->get_value($locator,'dd92');
+
 								$current_result->id			= $last_path->var_name;
-								$current_result->lang 		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
-								$current_result->value 		= $situation_value;
+								$current_result->lang		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
+								$current_result->value		= $situation_value;
 								$current_result->locator	= $locator;
 								$current_result->column		= 'situation';
-								$current_result->type 		= 'detail';
-								// $current_result->label 	= $this->get_label($locator,'dd185');
-								$current_result->n 			= $translatable==='si' ? count($project_langs) : 1;
+								$current_result->type		= 'detail';
+								// $current_result->label	= $this->get_label($locator,'dd185');
+								$current_result->n			= $translatable==='si' ? count($project_langs) : 1;
 								break;
 
 							// Status, the list controled by admins
@@ -147,13 +152,13 @@ class state extends widget_common {
 								$state_value = $this->get_value($locator,'dd83');
 
 								$current_result->id			= $last_path->var_name;
-								$current_result->lang 		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
-								$current_result->value 		= $state_value;
+								$current_result->lang		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
+								$current_result->value		= $state_value;
 								$current_result->locator	= $locator;
 								$current_result->column		= 'state';
-								$current_result->type 		= 'detail';
-								// $current_result->label 	= $this->get_label($locator,'dd503');
-								$current_result->n 			= $translatable==='si' ? count($project_langs) : 1;
+								$current_result->type		= 'detail';
+								// $current_result->label	= $this->get_label($locator,'dd503');
+								$current_result->n			= $translatable==='si' ? count($project_langs) : 1;
 								break;
 						}
 						// add all item to $result
@@ -173,23 +178,24 @@ class state extends widget_common {
 
 					// create the final item for every column to set the final data.
 					foreach ($found as $item) {
+
 						$current_data = new stdClass();
-							$current_data->widget 	= get_class($this);
-							$current_data->key  	= $key;
-							$current_data->id 		= $item->id;
-							$current_data->lang 	= $item->lang;
-							$current_data->value 	= $item->value;
-							$current_data->locator 	= $item->locator;
-							$current_data->column 	= $item->column;
+							$current_data->widget	= get_class($this);
+							$current_data->key		= $key;
+							$current_data->id		= $item->id;
+							$current_data->lang		= $item->lang;
+							$current_data->value	= $item->value;
+							$current_data->locator	= $item->locator;
+							$current_data->column	= $item->column;
 							$current_data->type		= $item->type;
 
 						// sum for totals of every column and row
 						// n: total languages, used for get the % done
 							$current_total = $ar_sum[$item->column]->total ?? 0;
 							$ar_sum[$item->column] = (object)[
-								'total'  	=> $current_total += (int)$item->value,
-								'n'			=> $item->n,
-								'id' 		=> $item->id
+								'total'	=> $current_total += (int)$item->value,
+								'n'		=> $item->n,
+								'id'	=> $item->id
 							];
 						// set the final data to the widget
 						$dato[] = $current_data;
@@ -203,13 +209,13 @@ class state extends widget_common {
 						$total = round(($value->total / $value->n)/$items, 2);
 						// create the total item
 						$total_result = new stdClass();
-							$total_result->widget 	= get_class($this);
-							$total_result->key  	= $key;
+							$total_result->widget	= get_class($this);
+							$total_result->key		= $key;
 							$total_result->id		= $value->id;
-							$total_result->lang 	= 'lg-nolan';
-							$total_result->value 	= $total;
+							$total_result->lang		= 'lg-nolan';
+							$total_result->value	= $total;
 							$total_result->column	= $column;
-							$total_result->type 	= 'total';
+							$total_result->type		= 'total';
 						$dato[] = $total_result;
 					}
 				}
@@ -223,6 +229,8 @@ class state extends widget_common {
 
 	/**
 	* GET_LABEL
+	* @param object $locator
+	* @param string $component_tipo
 	* @return string
 	*/
 	public function get_label(object $locator, string $component_tipo) : string {
@@ -246,9 +254,13 @@ class state extends widget_common {
 
 	/**
 	* GET_VALUE
-	* @return int
+	* Get component data
+	* @param object $locator
+	* @param string $component_tipo
+	* 	Usually component_number 'dd92', (Value %) or 'dd83'
+	* @return float $value
 	*/
-	public function get_value(object $locator, string $component_tipo) {
+	public function get_value(object $locator, string $component_tipo) : float {
 
 		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$component_portal	= component_common::get_instance(
@@ -270,7 +282,7 @@ class state extends widget_common {
 
 	/**
 	* GET_DATA_LIST
-	* @return array objects
+	* @return array $data_list
 	*/
 	public function get_data_list() : array {
 
@@ -280,9 +292,9 @@ class state extends widget_common {
 		// every state has a ipo that come from structure (input, process , output), state don't use process.
 		foreach ($ipo as $key => $current_ipo) {
 
-			$input 		= $current_ipo->input;
+			$input = $current_ipo->input;
 			// get the paths to the source data
-			$ar_paths 	= $input->paths;
+			$ar_paths = $input->paths;
 
 			// every path has a object with the component and section to locate the final component
 			foreach ($ar_paths as $path) {
@@ -292,19 +304,21 @@ class state extends widget_common {
 				$component_tipo = $last_path->component_tipo;
 				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				// create the component without any section_id, we only want the list fo values.
-				$component = component_common::get_instance($model_name,
-															$component_tipo,
-															null,
-															'list',
-															DEDALO_DATA_NOLAN,
-															$section_tipo);
+				$component = component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					null,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 
 				// get the list of values
 				$ar_list_of_values = $component->get_ar_list_of_values();
 				// format the list with the widget name and the array key of the ipo
 				$list = array_map(function($item) use($key){
-					$item->widget 	= get_class($this);
-					$item->key  	= $key;
+					$item->widget	= get_class($this);
+					$item->key		= $key;
 					return $item;
 				}, $ar_list_of_values->result);
 
