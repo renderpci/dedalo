@@ -626,7 +626,7 @@ component_common.prototype.set_value = function(value) {
 *	new_data contains fresh calculated data of saved component
 * @return bool true
 */
-component_common.prototype.update_datum = async function(new_data) {
+component_common.prototype.update_datum = function(new_data) {
 
 	const self = this
 
