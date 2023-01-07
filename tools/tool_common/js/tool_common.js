@@ -453,7 +453,7 @@ tool_common.prototype.render = async function(options={}) {
 /**
 * LOAD_DEFAULT_DDO_MAP ---> (!) NO USADA EN NINGÚN SITIO !
 */
-const load_default_ddo_map = async function() {
+// const load_default_ddo_map = async function() {
 
 	const self = this
 
