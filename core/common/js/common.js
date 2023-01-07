@@ -744,6 +744,12 @@ export const create_source = function (self, action) {
 			}
 		}
 
+	// properties
+		if (self.properties) {
+			source.properties = self.properties
+		}
+
+
 	return source
 }//end create_source
 

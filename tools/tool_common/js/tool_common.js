@@ -322,7 +322,8 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							section_id		: el.section_id,
 							lang			: current_el_lang,
 							type			: el.type,
-							context			: context,
+							properties 		: el.properties || null,
+							// context			: context,
 							id_variant		: self.model,  // id_variant prevents id conflicts
 							caller			: self // set tool as caller of the component :-)
 						}
