@@ -69,13 +69,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 5,
-              "hour": 19,
-              "time": 65021253563,
+              "day": 7,
+              "hour": 20,
+              "time": 65021429438,
               "year": 2023,
               "month": 1,
-              "minute": 19,
-              "second": 23
+              "minute": 10,
+              "second": 38
             }
           }
         ]
@@ -145,12 +145,56 @@
           "<p>Used to do transciptions of numismatics objects with ephigraphy.</p><p>Use epigraphy thesaurus to get the glyphs and it can combine into text_area components with Unicode text.</p>"
         ]
       }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-spa",
+              "name": "used_in",
+              "value": "Usado en"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "used_in",
+              "value": "Usat a"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "used_in",
+              "value": "Used in"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "used_in",
+              "value": "Benutzt in"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "used_in",
+              "value": "Usato in"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "used_in",
+              "value": "Utilisé dans"
+            },
+            {
+              "lang": "lg-por",
+              "name": "used_in",
+              "value": "Usado em"
+            }
+          ]
+        ]
+      }
     }
   },
   "section_id": 4,
   "created_date": "2023-01-05 18:06:39",
   "section_tipo": "dd1340",
-  "modified_date": "2023-01-05 19:19:23",
+  "modified_date": "2023-01-07 20:10:38",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
