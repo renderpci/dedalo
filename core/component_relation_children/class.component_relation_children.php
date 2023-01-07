@@ -33,8 +33,12 @@ class component_relation_children extends component_relation_common {
 		}
 
 		$ar_valor = array();
-		foreach ((array)$dato as $key => $current_locator) {
-			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
+		foreach ((array)$dato as $current_locator) {
+			$ar_valor[] = ts_object::get_term_by_locator(
+				$current_locator,
+				$lang,
+				true // bool from_cache
+			);
 		}
 
 		# Set component valor
@@ -180,7 +184,15 @@ class component_relation_children extends component_relation_common {
 		# Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
 		# $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false
 			if (empty($component_tipo)) {
-				$ar_tipos = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
+				$ar_tipos = section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo, // string section_tipo
+					[get_called_class()], // array ar_model_name_required
+					true, // bool from_cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true, // bool search_exact
+					false // bool|array ar_tipo_exclude_elements
+				);
 				$component_tipo = reset($ar_tipos);
 			}
 
@@ -192,7 +204,7 @@ class component_relation_children extends component_relation_common {
 				'list',
 				DEDALO_DATA_LANG,
 				$section_tipo,
-				false
+				false // bool cache
 			);
 			$dato = $component->get_dato();
 
@@ -210,8 +222,17 @@ class component_relation_children extends component_relation_common {
 					# Set as resolved to avoid loops
 					$locators_resolved[] = $section_id .'_'. $section_tipo;
 
-					foreach ((array)$dato as $key => $current_locator) {
-						$ar_children_recursive = array_merge($ar_children_recursive, self::get_children($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive, $is_recursion=true));
+					foreach ((array)$dato as $current_locator) {
+						$ar_children_recursive = array_merge(
+							$ar_children_recursive,
+							self::get_children(
+								$current_locator->section_id,
+								$current_locator->section_tipo,
+								$component_tipo,
+								$recursive,
+								$is_recursion=true
+							)
+						);
 					}
 				}
 			}
