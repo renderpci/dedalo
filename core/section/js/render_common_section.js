@@ -37,7 +37,7 @@ render_common_section.prototype.delete_record = (options) => {
 		const sqo			= options.sqo
 
 	// short vars
-		const total	= section.total
+		const total			= section.total
 		const label 		= section.label || section_tipo
 
 		const id_label 		= section_id

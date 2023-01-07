@@ -147,10 +147,10 @@ const get_content_data_edit = async function(self) {
 				)
 				function update_obverse_legend(options) {
 					update_text_nodes({
-						caller	: self.obverse_legend,
-						node	: obverse_legend_text_container,
-						role	: 'legend_text',
-						name	: 'obverse_legend_text'
+						caller		: self.obverse_legend,
+						node		: obverse_legend_text_container,
+						role		: 'legend_text',
+						name		: 'obverse_legend_text',
 					})
 				}
 
@@ -177,23 +177,16 @@ const get_content_data_edit = async function(self) {
 						class_name 		: 'text_container obverse_legend_text_container',
 						parent 			: legends_text_container
 					})
+
 					const reverse_legend_text_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name 		: 'text_container reverse_legend_text_container',
 						parent 			: legends_text_container
 					})
-					update_text_nodes({
-						caller	: self.obverse_legend,
-						node	: obverse_legend_text_container,
-						role	: 'legend_text',
-						name	: 'obverse_legend_text'
-					})
-					update_text_nodes({
-						caller	: self.reverse_legend,
-						node	: reverse_legend_text_container,
-						role	: 'legend_text',
-						name	: 'reverse_legend_text'
-					})
+
+				// first load of the text data
+					update_obverse_legend()
+					update_reverse_legend()
 
 		// Designs nodes
 			const desings_container = ui.create_dom_element({
@@ -244,18 +237,9 @@ const get_content_data_edit = async function(self) {
 						class_name 		: 'text_container reverse_desing_text_container',
 						parent 			: desings_text_container
 					})
-					update_text_nodes({
-						caller	: self.obverse_desing,
-						node	: obverse_desing_text_container,
-						role	: 'desing_text',
-						name	: 'obverse_desing_text'
-					})
-					update_text_nodes({
-						caller	: self.reverse_desing,
-						node	: reverse_desing_text_container,
-						role	: 'desing_text',
-						name	: 'reverse_desing_text'
-					})
+				// first load of the text data
+					update_obverse_desing()
+					update_reverse_desing()
 
 		// symbols nodes
 			const symbols_container = ui.create_dom_element({
@@ -306,18 +290,9 @@ const get_content_data_edit = async function(self) {
 						class_name 		: 'text_container reverse_symbol_text_container',
 						parent 			: symbols_text_container
 					})
-					update_text_nodes({
-						caller	: self.obverse_symbol,
-						node	: obverse_symbol_text_container,
-						role	: 'desing_text',
-						name	: 'obverse_symbol_text'
-					})
-					update_text_nodes({
-						caller	: self.reverse_symbol,
-						node	: reverse_symbol_text_container,
-						role	: 'desing_text',
-						name	: 'reverse_symbol_text'
-					})
+				// first load of the text data
+					update_obverse_symbol()
+					update_reverse_symbol()
 
 		// marks nodes
 			const marks_container = ui.create_dom_element({
@@ -349,12 +324,8 @@ const get_content_data_edit = async function(self) {
 						class_name 		: 'text_container mark_text_container',
 						parent 			: marks_text_container
 					})
-					update_text_nodes({
-						caller	: self.mark,
-						node	: mark_text_container,
-						role	: 'mark_text',
-						name	: 'mark_text'
-					})
+				// first load of the text data
+					update_mark()
 
  		// edges nodes
 			const edges_container = ui.create_dom_element({
