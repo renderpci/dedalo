@@ -7,10 +7,10 @@
 	/**
 	* GET VALOR
 	* Get resolved string representation of current values (locators)
-	* @return string | null
+	* @return string|null $valor
 	*/
 	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
-		$start_time = start_time();
+		// $start_time = start_time();
 
 		$options = new stdClass();
 			$options->lang				= $lang;
@@ -157,7 +157,7 @@
 			return (object)$valor_from_ar_locators;
 		};//end get_valor_from_ar_locators
 
-		$valor_from_ar_locators 	= $get_valor_from_ar_locators($options);
+		$valor_from_ar_locators = $get_valor_from_ar_locators($options);
 
 		if(SHOW_DEBUG===true) {
 			#$total_list_time = round(start_time()-$start_time,3);
@@ -175,7 +175,7 @@
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
@@ -206,10 +206,10 @@
 			}
 
 		$ar_resolved=array();
-		foreach( (array)$dato as $key => $value) {
+		foreach( (array)$dato as $value) {
 
-			$section_tipo 	= $value->section_tipo;
-			$section_id 	= $value->section_id;
+			$section_tipo	= $value->section_tipo;
+			$section_id		= $value->section_id;
 
 			// always add section_id
 				$item = new stdClass();
@@ -248,10 +248,9 @@
 				$ar_resolved[] = $item;
 			}
 		}//end foreach( (array)$dato as $key => $value)
-		#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
 
 		$valor_export = $ar_resolved;
-		#dump($valor_export, ' valor_export ++ '.to_string($this->tipo));
+
 
 		return $valor_export;
 	};//end get_valor_export
