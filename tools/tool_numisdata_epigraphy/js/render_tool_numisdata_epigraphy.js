@@ -120,8 +120,8 @@ const get_content_data_edit = async function(self) {
 					const count_node = ui.create_dom_element({
 						element_type	: 'span',
 						class_name 		: 'count',
-						inner_html 		: result_relations.total,
-						parent 			: node
+						inner_html 		: self.get_tool_label('used_in') +': '+result_relations.total,
+						parent 			: new_text_node
 					})
 				}
 			}// end if(data)
