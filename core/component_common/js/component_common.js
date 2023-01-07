@@ -528,9 +528,6 @@ component_common.prototype.save = async function(changed_data) {
 				}
 				self.data = data || {}
 
-			// datum. Update datum (centralized update datum call)
-				await self.update_datum(result.data)
-
 			// db_data. Updates db_data
 				if (self.model!=='component_password') {
 					self.db_data = self.db_data
@@ -559,7 +556,8 @@ component_common.prototype.save = async function(changed_data) {
 				if (self.node && self.node.classList.contains('modified')) {
 					self.node.classList.remove('modified')
 				}
-			}
+
+		}//end else
 
 		// event save. Dispatch save event general
 			event_manager.publish(
