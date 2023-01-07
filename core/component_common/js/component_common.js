@@ -691,6 +691,7 @@ component_common.prototype.update_datum = function(new_data) {
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
 		// It's necessary update the data in all components (self, observers), not only the caller.
 			const ar_instances = instances.get_all_instances()
+
 			/* OLD WAY MONO
 				for (let i = new_data_length - 1; i >= 0; i--) {
 					const data_item = new_data[i]
@@ -709,7 +710,7 @@ component_common.prototype.update_datum = function(new_data) {
 
 				const data_item			= new_data[i]
 				// console.log("data_item:",data_item);
-				// console.log("ar_instances:",ar_instances);
+
 				const current_instances	= ar_instances.filter(el =>
 					el.tipo===data_item.tipo &&
 					el.section_tipo===data_item.section_tipo &&
@@ -721,6 +722,7 @@ component_common.prototype.update_datum = function(new_data) {
 					// add
 					for (let j = 0; j < instances_length; j++) {
 						const inst		= current_instances[j]
+						if(inst.id === self.id) continue
 						// inst.data	= self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
 						inst.data		= self.datum.data.find(el =>
 							el.tipo===inst.tipo &&
