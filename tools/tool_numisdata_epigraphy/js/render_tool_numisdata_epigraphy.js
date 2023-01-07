@@ -48,9 +48,9 @@ render_tool_numisdata_epigraphy.prototype.edit = async function(options={render_
 			content_data : content_data
 		})
 
-	// transcription_options are the buttons to get access to other tools (buttons in the header)
-		const tanscription_options = await render_header_options(self, content_data)
-		wrapper.tool_buttons_container.appendChild(tanscription_options)
+	// // transcription_options are the buttons to get access to other tools (buttons in the header)
+	// 	const tanscription_options = await render_header_options(self, content_data)
+	// 	wrapper.tool_buttons_container.appendChild(tanscription_options)
 
 	// // status, render the status components for users and admins to control the process of the tool
 	// 	const status_container = await render_status(self)
