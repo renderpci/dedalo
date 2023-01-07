@@ -191,34 +191,40 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 * Get the list of related sections with the actual resource
 * @return object datum
 */
-tool_numisdata_epigraphy.prototype.load_relation_list = async function(ddo) {
+tool_numisdata_epigraphy.prototype.get_relations = async function(options) {
 
 	const self = this
 
+	const data	= options.data
+	const role	= options.role
+	const name	= options.name
+	const count = options.count || true
+
+	// const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
+
 	const source = {
 		action			: 'related_search',
-		model			: ddo.model,
-		tipo			: ddo.tipo,
-		section_tipo	: ddo.section_tipo,
-		section_id		: ddo.section_id,
-		lang			: ddo.lang,
+		model			: 'section',
+		tipo			: data.section_tipo,
+		section_tipo	: data.section_tipo,
+		section_id		: data.section_id,
+		lang			: page_globals.dedalo_data_lang,
 		mode			: 'related_list'
 	}
 
 	const sqo = {
 		section_tipo		: ['all'],
 		mode				: 'related',
-		// limit				: 1,
-		offset				: 0,
-		full_count			: false,
 		filter_by_locators	: [{
-			section_tipo	: ddo.section_tipo,
-			section_id		: ddo.section_id
+			section_tipo	: data.section_tipo,
+			section_id		: data.section_id
 		}]
 	}
 
 	const rqo = {
-		action	: 'read',
+		action	: (count)
+			? 'count'
+			: 'read',
 		source	: source,
 		sqo		: sqo
 	}
