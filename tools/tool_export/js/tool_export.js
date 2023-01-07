@@ -88,6 +88,9 @@ tool_export.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
+	// build the section that call, it's necessary to build the rqo
+		await self.caller.build(true)
+
 	// set the self specific vars not defined by the generic init (in tool_common)
 		self.lang	= options.lang // from page_globals.dedalo_data_lang
 		self.langs	= page_globals.dedalo_projects_default_langs
