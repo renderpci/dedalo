@@ -128,27 +128,6 @@ const get_content_data_edit = async function(self) {
 				class_name 		: 'coins_container',
 				parent 			: right_container
 			})
-			// const ddo_coins = self.tool_config.ddo_map.find(el => el.role==='coins')
-
-			// self.coins.context.properties = ddo_coins.properties
-			// self.coins.rqo.sqo.limit = 1
-			// self.coins.rqo.sqo.offset = 0
-			// self.coins.rqo.source.properties = ddo_coins.properties
-			// // self.coins.data = []
-			// // self.coins.datum.data = []
-			// // self.coins.ar_instances = []
-			// self.coins.data.pagination.limit = 1
-			// self.coins.data.pagination.offset = 0
-			// self.coins.request_config_object.show.sqo_config.limit = 1
-			// self.coins.request_config_object.sqo.limit = 1
-			// self.coins.update_pagination_values('update')
-
-			// self.coins.paginator.build(true)
-
-			// const api_response = await data_manager.request({
-			// 		body : self.coins.rqo
-			// })
-
 
 			// await self.coins.build(true)
 			const coins_node = await self.coins.render()
@@ -287,57 +266,59 @@ const get_content_data_edit = async function(self) {
 
 				const obverse_symbol_node = await self.obverse_symbol.render()
 				symbols_container.appendChild(obverse_symbol_node)
+				self.events_tokens.push(
+					event_manager.subscribe('save_'+ self.obverse_symbol.id_base, update_obverse_symbol)
+				)
+				function update_obverse_symbol(options) {
+					update_text_nodes({
+						caller	: self.obverse_symbol,
+						node	: obverse_symbol_text_container,
+						role	: 'desing_text',
+						name	: 'obverse_symbol_text'
+					})
+				}
 
 				const reverse_symbol_node = await self.reverse_symbol.render()
 				symbols_container.appendChild(reverse_symbol_node)
-
-
-				const symbol_text_container = ui.create_dom_element({
+				self.events_tokens.push(
+					event_manager.subscribe('save_'+ self.reverse_symbol.id_base, update_reverse_symbol)
+				)
+				function update_reverse_symbol(options) {
+					update_text_nodes({
+						caller	: self.reverse_symbol,
+						node	: reverse_symbol_text_container,
+						role	: 'desing_text',
+						name	: 'reverse_symbol_text'
+					})
+				}
+				const symbols_text_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'portal_container symbol_container',
+					class_name 		: 'portal_container desings_container',
 					parent 			: right_container
 				})
-
 					const obverse_symbol_text_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name 		: 'text_container obverse_symbol_text_container',
-						parent 			: symbol_text_container
+						parent 			: symbols_text_container
 					})
 					const reverse_symbol_text_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name 		: 'text_container reverse_symbol_text_container',
-						parent 			: symbol_text_container
+						parent 			: symbols_text_container
+					})
+					update_text_nodes({
+						caller	: self.obverse_symbol,
+						node	: obverse_symbol_text_container,
+						role	: 'desing_text',
+						name	: 'obverse_symbol_text'
+					})
+					update_text_nodes({
+						caller	: self.reverse_symbol,
+						node	: reverse_symbol_text_container,
+						role	: 'desing_text',
+						name	: 'reverse_symbol_text'
 					})
 
-					if(self.obverse_symbol.data && self.obverse_symbol.data.value){
-						const value = self.obverse_symbol.data.value
-						const value_len = value.length
-						for (let i = 0; i < value_len; i++) {
-							const current_value = value[i]
-							const obverse_symbol_text = await self.get_component({
-								data : current_value,
-								role : 'symbol_text',
-								name : 'obverse_symbol_text',
-							})
-							const obverse_symbol_text_node = await obverse_symbol_text.render()
-							obverse_symbol_text_container.appendChild(obverse_symbol_text_node)
-						}
-					}
-
-					if(self.reverse_symbol.data && self.reverse_symbol.data.value){
-						const value = self.reverse_symbol.data.value
-						const value_len = value.length
-						for (let i = 0; i < value_len; i++) {
-							const current_value = value[i]
-							const reverse_symbol_text = await self.get_component({
-								data : current_value,
-								role : 'symbol_text',
-								name : 'reverse_symbol_text',
-							})
-							const reverse_symbol_text_node = await reverse_symbol_text.render()
-							reverse_symbol_text_container.appendChild(reverse_desing_text_node)
-						}
-					}
 
 		// marks nodes
 			const marks_container = ui.create_dom_element({
