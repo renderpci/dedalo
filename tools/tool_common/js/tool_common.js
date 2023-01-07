@@ -450,78 +450,78 @@ tool_common.prototype.render = async function(options={}) {
 
 
 
-/**
-* LOAD_DEFAULT_DDO_MAP ---> (!) NO USADA EN NINGÚN SITIO !
-*/
+// /**
+// * LOAD_DEFAULT_DDO_MAP ---> (!) NO USADA EN NINGÚN SITIO !
+// */
 // const load_default_ddo_map = async function() {
 
-	const self = this
+// 	const self = this
 
-	const ar_promises		= []
-	const ddo_map			= self.tool_config.ddo_map || []
-	const ddo_map_length	= ddo_map.length
-	for (let i = 0; i < ddo_map_length; i++) {
+// 	const ar_promises		= []
+// 	const ddo_map			= self.tool_config.ddo_map || []
+// 	const ddo_map_length	= ddo_map.length
+// 	for (let i = 0; i < ddo_map_length; i++) {
 
-		const el = ddo_map[i]
+// 		const el = ddo_map[i]
 
-		ar_promises.push( new Promise(async (resolve) => {
+// 		ar_promises.push( new Promise(async (resolve) => {
 
-			// context. In is not given get from caller or request to the API
-				const context = el.context
-					? el.context
-					: await (async function(){
-						// caller context
-						const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
-						if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
-							// get context from available caller
-							return caller_context
-						}
-						// resolve whole context from API (init event observer problem..)
-						// const api_response	= await data_manager.get_element_context(el)
-						// return api_response.result[0]
-						return {}
-					  })()
+// 			// context. In is not given get from caller or request to the API
+// 				const context = el.context
+// 					? el.context
+// 					: await (async function(){
+// 						// caller context
+// 						const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
+// 						if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
+// 							// get context from available caller
+// 							return caller_context
+// 						}
+// 						// resolve whole context from API (init event observer problem..)
+// 						// const api_response	= await data_manager.get_element_context(el)
+// 						// return api_response.result[0]
+// 						return {}
+// 					  })()
 
-			// generic try
-				// const element_instance = load_component_generic({
-				// 	self				: self,
-				// 	context				: context,
-				// 	to_delete_instances	: null
-				// })
-				// resolve(element_instance)
+// 			// generic try
+// 				// const element_instance = load_component_generic({
+// 				// 	self				: self,
+// 				// 	context				: context,
+// 				// 	to_delete_instances	: null
+// 				// })
+// 				// resolve(element_instance)
 
-			const element_options = {
-				model			: el.model,
-				mode			: el.mode,
-				tipo			: el.tipo,
-				section_tipo	: el.section_tipo,
-				section_id		: el.section_id,
-				lang			: self.lang,
-				type			: el.type,
-				context			: context,
-				id_variant		: self.model,  // id_variant prevents id conflicts
-				caller			: self // set tool as caller of the component :-)
-			}
-			// init and build instance
-				get_instance(element_options) // load and init
-				.then(function(element_instance){
-					const load_data = el.model.indexOf('component')!==-1
-					element_instance.build( load_data ) // build, loading data
-					.then(function(){
-						resolve(element_instance)
-					})
-				})
-		}))
-	}//end for (let i = 0; i < ddo_map.length; i++)
+// 			const element_options = {
+// 				model			: el.model,
+// 				mode			: el.mode,
+// 				tipo			: el.tipo,
+// 				section_tipo	: el.section_tipo,
+// 				section_id		: el.section_id,
+// 				lang			: self.lang,
+// 				type			: el.type,
+// 				context			: context,
+// 				id_variant		: self.model,  // id_variant prevents id conflicts
+// 				caller			: self // set tool as caller of the component :-)
+// 			}
+// 			// init and build instance
+// 				get_instance(element_options) // load and init
+// 				.then(function(element_instance){
+// 					const load_data = el.model.indexOf('component')!==-1
+// 					element_instance.build( load_data ) // build, loading data
+// 					.then(function(){
+// 						resolve(element_instance)
+// 					})
+// 				})
+// 		}))
+// 	}//end for (let i = 0; i < ddo_map.length; i++)
 
-	// set on finish
-	await Promise.all(ar_promises).then((ar_instances) => {
-		// dd_console(`ar_instances`, 'DEBUG', ar_instances)
-		self.ar_instances = ar_instances
-	})
+// 	// set on finish
+// 	await Promise.all(ar_promises).then((ar_instances) => {
+// 		// dd_console(`ar_instances`, 'DEBUG', ar_instances)
+// 		self.ar_instances = ar_instances
+// 	})
 
-	return true
-}//end load_default_ddo_map
+// 	return true
+// }//end load_default_ddo_map
 
 
 
