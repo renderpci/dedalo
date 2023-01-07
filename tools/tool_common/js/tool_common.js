@@ -279,9 +279,9 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							}
 
 						// context. If not provided, it is obtained from the caller or requested from the API
-							const context = el.context
-								? el.context
-								: null
+							// const context = el.context
+							// 	? el.context
+							// 	: null
 
 								// await (async function(){
 
@@ -566,7 +566,7 @@ tool_common.prototype.load_component = async function(options) {
 			lang			: lang,
 			section_lang	: section_lang,
 			type			: type,
-			context			: context,
+			// context			: context,
 			id_variant		: id_variant, // id_variant prevents id conflicts
 			caller			: self // set current tool as component caller (to check if component is inside tool or not)
 		}
