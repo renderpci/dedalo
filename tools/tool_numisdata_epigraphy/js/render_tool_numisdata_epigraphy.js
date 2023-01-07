@@ -88,10 +88,11 @@ const get_content_data_edit = async function(self) {
 	// common update nodes function, use for autocompletes to generate the target text_areas
 		const update_text_nodes = async function (options){
 			// options
-			const caller	= options.caller
-			const node		= options.node
-			const role		= options.role
-			const name		= options.name
+			const caller		= options.caller
+			const node			= options.node
+			const role			= options.role
+			const name			= options.name
+
 			// clean the text container
 			while (node.firstChild) {
 				node.removeChild(node.firstChild);
@@ -109,10 +110,22 @@ const get_content_data_edit = async function(self) {
 					})
 					const new_text_node = await new_component.render()
 					node.appendChild(new_text_node)
-				}
-			}
 
-		}
+					const result_relations = await self.get_relations({
+						data : current_value,
+						role : role,
+						name : name,
+						count: true
+					})
+					const count_node = ui.create_dom_element({
+						element_type	: 'span',
+						class_name 		: 'count',
+						inner_html 		: result_relations.total,
+						parent 			: node
+					})
+				}
+			}// end if(data)
+		}// end update_text_nodes()
 
 
 	// right_container
