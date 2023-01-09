@@ -542,21 +542,18 @@ tool_common.prototype.load_component = async function(options) {
 	const self = this
 
 	// options
-		const context				= clone(options.context)
-		const to_delete_instances	= options.to_delete_instances
-
-	// short vars
-		const model			= context.model
-		const mode			= context.mode
-		const tipo			= context.tipo
-		const section_tipo	= context.section_tipo
-		const section_lang	= context.section_lang
-		const lang			= context.lang
-		const type			= context.type
-		const section_id	= context.section_id || null
-		const matrix_id		= context.matrix_id || null
-		const data_source	= context.data_source || null
+		const model			= options.model
+		const mode			= options.mode
+		const tipo			= options.tipo
+		const section_tipo	= options.section_tipo
+		const section_lang	= options.section_lang
+		const lang			= options.lang
+		const type			= options.type
+		const section_id	= options.section_id || null
+		const matrix_id		= options.matrix_id || null
+		const data_source	= options.data_source || null
 		const id_variant	= self.model
+		const to_delete_instances	= options.to_delete_instances
 
 	// component instance_options
 		const instance_options = {
@@ -568,7 +565,6 @@ tool_common.prototype.load_component = async function(options) {
 			lang			: lang,
 			section_lang	: section_lang,
 			type			: type,
-			// context			: context,
 			id_variant		: id_variant, // id_variant prevents id conflicts
 			caller			: self // set current tool as component caller (to check if component is inside tool or not)
 		}

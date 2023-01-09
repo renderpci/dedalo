@@ -215,23 +215,18 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 	// to_delete_instances. Select instances with same tipo and property matrix_id not empty
 		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_element.tipo && el.matrix_id)
 
-	// context (clone and edit)
-		const context = Object.assign(clone(self.main_element.context), {
-			lang		: lang,
-			mode		: 'edit', // mode,
-			section_id	: self.main_element.section_id,
-			matrix_id	: matrix_id,
-			data_source	: 'tm'
+	// instance_options (clone and edit)
+		const instance_options = Object.assign(clone(self.main_element.context), {
+			lang				: lang,
+			mode				: 'edit', // mode,
+			section_id			: self.main_element.section_id,
+			matrix_id			: matrix_id,
+			data_source			: 'tm',
+			to_delete_instances	: to_delete_instances // array of instances to delete after create the new on
 		})
 
-	// options
-		const options = {
-			context				: context,
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new on
-		}
-
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
 
 
 	return component_instance

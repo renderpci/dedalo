@@ -92,11 +92,6 @@ component_input_text.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await component_common.prototype.init.call(self, options);
 
-	// self.context.fields_separator
-		// if (!self.context.fields_separator) {
-		// 	self.context.fields_separator = ', '
-		// }
-
 	return common_init
 }//end  init
 
