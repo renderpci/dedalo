@@ -89,7 +89,6 @@ component_pdf.prototype.build = async function(autoload=false) {
 
 
 
-
 /**
 * GO_TO_PAGE
 * called by the click into the tag (in component_text_area)
