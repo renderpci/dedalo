@@ -32,6 +32,7 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 	// view
 		const view	= self.context.view || 'default'
 
+
 	switch(view) {
 
 		case 'mini':
