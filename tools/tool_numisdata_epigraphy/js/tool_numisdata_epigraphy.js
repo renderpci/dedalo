@@ -169,6 +169,11 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 	// call generic common tool build
 		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
 
+	// set auto_init_editor if the ddo has his definition
+		if(ddo.auto_init_editor){
+			component_instance.auto_init_editor = ddo.auto_init_editor
+		}
+
 	// fix instance (overwrite)
 		self[name] = component_instance
 
