@@ -66,42 +66,55 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			// value_container.innerHTML = value
 
-		// load dependencies
-			const load_promises = []
+		if(typeof ckeditor ==='undefined'){
 
-		// load ckeditor js file
-			const ckeditor_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/ckeditor.js'
-			load_promises.push(
-				common.prototype.load_script(ckeditor_file)
-			)
+			// load dependencies
+				const load_promises = []
 
-		// load and set JSON langs file
-			load_promises.push(
-				new Promise(function(resolve){
-					data_manager.request({
-						url		: '../common/js/lang.json',
-						method	: 'GET'
+			// load ckeditor js file
+				const ckeditor_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/ckeditor.js'
+				load_promises.push(
+					common.prototype.load_script(ckeditor_file)
+				)
+			// load and set JSON langs file
+				load_promises.push(
+					new Promise(function(resolve){
+						data_manager.request({
+							url		: '../common/js/lang.json',
+							method	: 'GET'
+						})
+						.then(function(response){
+							// set json_langs
+							self.json_langs = response
+							resolve(response)
+						})
 					})
-					.then(function(response){
-						// set json_langs
-						self.json_langs = response
-						resolve(response)
-					})
-				})
-			)
-			await Promise.all(load_promises)
-
-	// init ckeditor (InlineEditor|ddEditor)
-		switch(editor_class) {
-			case 'InlineEditor':
-				await self.create_InlineEditor(editor_config)
-				break;
-
-			case 'ddEditor':
-			default:
-				await self.create_ddEditor(editor_config)
-				break;
+				)
+				await Promise.all(load_promises)
 		}
+
+		// create
+			const create = async function (){
+				// init ckeditor (InlineEditor|ddEditor)
+				switch(editor_class) {
+					case 'InlineEditor':
+						await self.create_InlineEditor(editor_config)
+						break;
+
+					case 'ddEditor':
+					default:
+						await self.create_ddEditor(editor_config)
+						break;
+				}
+			}
+
+		// try lo create every x milliseconds (editor parse takes time...)
+			const waitCKEDITOR = setInterval(async function() {
+				if ( typeof ckeditor !=='undefined' ) {
+					clearInterval(waitCKEDITOR);
+					await create()
+				}
+			}, 50);
 
 
 		return true

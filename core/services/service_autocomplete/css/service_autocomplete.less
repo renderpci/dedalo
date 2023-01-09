@@ -193,6 +193,7 @@
 	}
 
 	.grid_choose_container {
+		position: relative;
 		background-color: #ffffff;
 		width: calc(100% - 1px);
 		min-height: 5rem;
@@ -203,6 +204,16 @@
 		padding-top: 0.5rem;
 		max-height: 38rem;
 		overflow: auto;
+
+		.close {
+			position: absolute;
+			display: block;
+			right: 0.5rem;
+			top: 0.5rem;
+			cursor: pointer;
+			width: 1.4rem;
+			height: 1.4rem;
+		}
 
 		.selected_instance_node {
 			grid-column: span 2;
@@ -216,6 +227,10 @@
 			padding-top: 0.5rem;
 			padding-bottom: 0.5rem;
 			border-bottom: 1px solid #e7e6e6;
+
+			.column {
+				outline: none;
+			}
 		}
 
 		>.wrapper_component {
@@ -240,6 +255,7 @@
 	// .autocomplete_data_li:hover{
 	// 	background-color: #aaa;
 	// }
+
 
 
 
