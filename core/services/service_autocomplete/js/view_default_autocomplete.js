@@ -820,7 +820,7 @@ const render_datalist = async function(self, api_response) {
 		li_node.appendChild(section_record_node)
 
 		// click event. When the user do click in one row send the data to the caller_instance for save it.
-		li_node.addEventListener('click', function(e){
+		li_node.addEventListener('click', async function(e){
 			e.stopPropagation()
 			const value = this.locator
 
@@ -833,8 +833,12 @@ const render_datalist = async function(self, api_response) {
 				// caller is refreshed after add value
 				if(add_value){
 					if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
-						const params = add_value.perform.params
-						view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
+						const params	= add_value.perform.params
+						const grid_node	= await view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
+						if(!self.node.grid_choose_container){
+							self.node.grid_choose_container = grid_node
+							document.body.appendChild(self.node.grid_choose_container)
+						}
 
 						// clean the last list
 						while (datalist.firstChild) {
@@ -1024,10 +1028,12 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 /**
 * RENDER_GRID_CHOOSE to choose it by user
 * Render result data as DOM grid nodes and place it into self.grid_choose container
-* @param object api_response
-* @return DOM node datalist
+* @param object self
+* @param object selected_instance,
+* @param object params
+* @return DOM node grid_choose_container
 */
-view_default_autocomplete.render_grid_choose = async function(self, selected_instance, params) {
+view_default_autocomplete.render_grid_choose = async function( self, selected_instance, params ) {
 
 	const grid_choose_data	= await get_grid_choose_data(self, selected_instance, params)
 	// get dd objects from the context that will be used to build the lists in correct order
@@ -1036,21 +1042,37 @@ view_default_autocomplete.render_grid_choose = async function(self, selected_ins
 	const context 		= grid_choose_data.context
 
 	// grid_choose_container
-		const grid_choose_container = self.grid_choose_container  || ui.create_dom_element({
+		const grid_choose_container = document.getElementById('choose_container') || ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'grid_choose_container'
+			id				: 'choose_container'
 		})
-		self.node.appendChild(grid_choose_container)
-		self.grid_choose_container = grid_choose_container
+		grid_choose_container.classList.add('grid_choose_container')
+		// self.node.appendChild(grid_choose_container)
+		// self.node.grid_choose_container = grid_choose_container
 		// clean the last list
 			while (grid_choose_container.firstChild) {
 				grid_choose_container.removeChild(grid_choose_container.firstChild)
 			}
 
-	// selected_instance
+	// button_close
+		const button_close = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button close',
+			parent			: grid_choose_container
+		})
+		button_close.addEventListener('click', function(e) {
+			e.stopPropagation()
+			// grid_choose_container.remove()
+			while (grid_choose_container.firstChild) {
+				grid_choose_container.removeChild(grid_choose_container.firstChild)
+			}
+		})
+
+	// selected_instance (grid label at top)
 		const selected_instance_node = await selected_instance.render()
 		selected_instance_node.classList.add('selected_instance_node')
 		grid_choose_container.appendChild(selected_instance_node)
+		console.log('selected_instance_node:', selected_instance_node);
 
 	// get the sections that was searched
 	const ar_search_sections = rqo_search.sqo.section_tipo
@@ -1130,6 +1152,8 @@ view_default_autocomplete.render_grid_choose = async function(self, selected_ins
 					grid_choose_container.appendChild(node)
 			}//end for ddo_item
 	}//end for (const current_locator of ar_locator)
+
+	return grid_choose_container
 }//end render_grid_choose
 
 
