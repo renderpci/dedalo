@@ -153,7 +153,7 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 
 	const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
 
-	const context	= {
+	const instance_options	= {
 		model			: ddo.model,
 		mode 			: ddo.mode,
 		tipo			: ddo.tipo,
@@ -162,17 +162,9 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 		type			: ddo.type || 'component',
 		lang 			: (typeof ddo.translatable!=='undefined' && ddo.translatable===false)
 			? page_globals.dedalo_data_nolan // lg-nolan
-			: page_globals.dedalo_data_lang
+			: page_globals.dedalo_data_lang,
+		to_delete_instances	: self.ar_instances.filter(el => el===self[name])
 	}
-
-	// to_delete_instances. Select current self.epigraphy
-		const to_delete_instances = self.ar_instances.filter(el => el===self[name])
-
-	// instance_options
-		const instance_options = {
-			context				: context, // reference context ...
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-		}
 
 	// call generic common tool build
 		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
