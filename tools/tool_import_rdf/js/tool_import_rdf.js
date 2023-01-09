@@ -102,21 +102,16 @@ tool_import_rdf.prototype.load_component = async function(lang) {
 	// to_delete_instances. Select instances with different lang to main_element
 		const to_delete_instances = self.ar_instances.filter(el => el.lang!==self.main_element.lang)
 
-	// context (clone and edit)
-		const context = Object.assign(clone(self.main_element.context),{
+	// instance_options (clone and edit)
+		const instance_options = Object.assign(clone(self.main_element.context),{
 			lang		: lang,
 			mode		: 'edit',
-			section_id	: self.main_element.section_id
+			section_id	: self.main_element.section_id,
+			to_delete_instances	: to_delete_instances
 		})
 
-	// options
-		const options = {
-			context				: context,
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-		}
-
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
+		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
 
 
 	return component_instance
