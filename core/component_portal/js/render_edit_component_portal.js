@@ -57,6 +57,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 	// view
 		const view	= self.context.view
 
+
 	// wrapper
 		switch(view) {
 
@@ -85,6 +86,14 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				break;
 
 			default:
+				// dynamic try
+					const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
+					if (render_view) {
+						const path			= render_view.path || './' + render_view.render +'.js'
+						const render_method	= await import (path)
+						return render_method[render_view.render].render(self, options)
+					}
+
 				return view_default_edit_portal.render(self, options)
 				break;
 		}
