@@ -1078,8 +1078,10 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 				grid_choose_container.style.top		= top + 'px'
 			}
 
-	// label. From path: section_record > service_autocomplete > component_portal
-		const label = selected_instance.caller.caller.label
+	// label. From section_record node
+		const label = selected_instance.node
+			? selected_instance.node.firstChild.innerHTML
+			: ''
 
 	// header
 		const header = ui.create_dom_element({
