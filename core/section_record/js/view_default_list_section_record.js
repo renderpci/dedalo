@@ -582,7 +582,8 @@ const render_column_node = function(component_instance, self, ar_instances){
 		class_name		: 'column column_' + column_id + ' column_' + model,
 		id				: `col_${column_id}`
 	})
-	// column_node.id = column_id
+	// set the id to the node, it used to be selected to mach column and instances.
+	column_node.id = column_id
 
 	// column_responsive mobile add-ons
 		if (self.caller.model==='section') {
