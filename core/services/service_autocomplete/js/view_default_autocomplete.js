@@ -1036,10 +1036,12 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 
 
 /**
-* RENDER_GRID_CHOOSE to choose it by user
-* Render result data as DOM grid nodes and place it into self.grid_choose container
+* RENDER_GRID_CHOOSE
+* Render result data as DOM grid nodes and place it into document body as
+* float draggable div preserving position across calls
 * @param object self
-* @param object selected_instance,
+* @param object selected_instance
+* 	Current section_record
 * @param object params
 * @return DOM node grid_choose_container
 */
@@ -1052,39 +1054,123 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 	const context 		= grid_choose_data.context
 
 	// grid_choose_container
-		const grid_choose_container = document.getElementById('choose_container')
+		const current_container		= document.getElementById('choose_container')
+		const grid_choose_container	= current_container
 			|| ui.create_dom_element({
 				element_type	: 'div',
 				id				: 'choose_container',
-				class_name		: 'grid_choose_container'
+				class_name		: 'grid_choose_container draggable'
 			})
-			// self.node.appendChild(grid_choose_container)
-			// self.node.grid_choose_container = grid_choose_container
 
 		// clean the last list
 			while (grid_choose_container.firstChild) {
 				grid_choose_container.removeChild(grid_choose_container.firstChild)
 			}
 
+		// service node reference. Set bellow autocomplete search box when is created (once)
+			if (!current_container) {
+				const reference_node	= self.datalist
+				const rect				= reference_node.getBoundingClientRect();
+				const top				= rect.top   + window.scrollY
+				const left				= rect.left + window.scrollX
+				// set coordinates. Same as datalist position
+				grid_choose_container.style.left	= left + 'px'
+				grid_choose_container.style.top		= top + 'px'
+			}
+
+	// label. From path: section_record > service_autocomplete > component_portal
+		const label = selected_instance.caller.caller.label
+
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'grid_choose_header text_unselectable dragger',
+			inner_html		: label,
+			parent			: grid_choose_container
+		});
+		// drag move set
+		(function(){
+			let x, y, target, margin_left, margin_top = null
+			// header is the drag area
+			header.addEventListener('mousedown', function(e) {
+
+				const path = e.composedPath();
+
+				let clickedDragger = false;
+				for(let i = 0; path[i] !== document; i++) {
+
+					if (path[i].classList.contains('dragger')) {
+						// dragger is clicked (header)
+						clickedDragger = true;
+					}
+					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
+						// draggable is set (all modal-content)
+						target = path[i];
+						target.classList.add('dragging');
+						x = e.clientX - target.style.left.slice(0, -2);
+						y = e.clientY - target.style.top.slice(0, -2);
+
+						// this is calculated once, every time that user clicks on header
+						// to get the whole container margin and use it as position offset
+						const compStyles	= window.getComputedStyle(target);
+						margin_left			= parseInt(compStyles.getPropertyValue('margin-left'))
+						margin_top			= parseInt(compStyles.getPropertyValue('margin-top'))
+
+						return;
+					}
+				}
+			});
+
+			document.addEventListener('mouseup', function() {
+				// if (target !== null) {
+				if (target) {
+					target.classList.remove('dragging');
+				}
+				target = null;
+			});
+
+			document.addEventListener('mousemove', function(e) {
+
+				// no target case (mouse position changes but target is null or undefined)
+					if (!target) {
+						return;
+					}
+
+				// re-position element based on mouse position
+					target.style.left	= e.clientX - x + 'px';
+					target.style.top	= e.clientY - y + 'px';
+
+				// limit boundaries. take care of initial margin offset
+					const pRect		= target.parentElement.getBoundingClientRect();
+					const tgtRect	= target.getBoundingClientRect();
+					if (tgtRect.left < pRect.left) {
+						target.style.left = (0 - margin_left) + 'px';
+					}
+					if (tgtRect.top < pRect.top) {
+						target.style.top = (0 - margin_top) + 'px';
+					}
+					if (tgtRect.right > (pRect.right)) {
+						target.style.left = (pRect.width - tgtRect.width - margin_left) + 'px';
+					}
+					if (tgtRect.bottom > (pRect.bottom)) {
+						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
+					}
+			});
+		})();
+
 	// button_close
 		const button_close = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button close',
-			parent			: grid_choose_container
+			class_name		: 'button close white',
+			parent			: header
 		})
 		button_close.addEventListener('click', function(e) {
 			e.stopPropagation()
-			// grid_choose_container.remove()
 			while (grid_choose_container.firstChild) {
 				grid_choose_container.removeChild(grid_choose_container.firstChild)
 			}
+			grid_choose_container.remove()
 		})
-
-	// selected_instance (grid label at top)
-		const selected_instance_node = await selected_instance.render()
-		selected_instance_node.classList.add('selected_instance_node')
-		grid_choose_container.appendChild(selected_instance_node)
-		console.log('selected_instance_node:', selected_instance_node);
 
 	// ar_search_sections. get the sections that was searched
 		const ar_search_sections = rqo_search.sqo.section_tipo
