@@ -183,6 +183,7 @@ component_portal.prototype.init = async function(options) {
 						}
 					})
 			}//end fn_initiator_link
+
 		// deactivate_component. Observes current component deactivation event
 			self.events_tokens.push(
 				event_manager.subscribe('deactivate_component', fn_deactivate_component)
@@ -202,7 +203,73 @@ component_portal.prototype.init = async function(options) {
 				}
 			}
 
-
+	// render views
+		// definition of the render views that could used.
+		// if tools or other components could add specific views dynamically
+		// {
+		// 		view	: 'default',
+		// 		mode	: 'edit',
+		// 		render	: 'view_default_edit_portal'
+		// 		path 	: './view_default_edit_portal.js'
+		// }
+		self.render_views = [
+			{
+				view	: 'text',
+				mode	: 'edit',
+				render	: 'view_text_list_portal'
+			},
+			{
+				view	: 'line',
+				mode	: 'edit',
+				render	: 'view_line_edit_portal'
+			},
+			{
+				view	: 'tree',
+				mode	: 'edit',
+				render	: 'view_tree_edit_portal'
+			},
+			{
+				view	: 'mosaic',
+				mode	: 'edit',
+				render	: 'view_mosaic_edit_portal'
+			},
+			{
+				view	: 'indexation',
+				mode	: 'edit',
+				render	: 'view_indexation_edit_portal'
+			},
+			{
+				view	: 'content',
+				mode	: 'edit',
+				render	: 'view_content_edit_portal'
+			},
+			{
+				view	: 'default',
+				mode	: 'edit',
+				render	: 'view_default_edit_portal',
+				path 	: './view_default_edit_portal.js'
+			},
+			{
+				view	: 'line',
+				mode	: 'list',
+				render	: 'view_line_list_portal'
+			},
+			{
+				view	: 'mini',
+				mode	: 'list',
+				render	: 'view_mini_portal'
+			},
+			{
+				view	: 'text',
+				mode	: 'list',
+				render	: 'view_text_list_portal'
+			},
+			{
+				view	: 'default',
+				mode	: 'list',
+				render	: 'view_default_list_portal'
+			}
+		]
 
 	return common_init
 }//end init

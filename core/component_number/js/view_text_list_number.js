@@ -31,7 +31,9 @@ view_text_list_number.render = async function(self, options) {
 		const data = self.data
 
 	// Value as string
-		const value_string = data.value.join(self.context.fields_separator)
+		const value_string = (data.value)
+			? data.value.join(self.context.fields_separator)
+			: ''
 
 	const text_node = document.createTextNode(value_string)
 
