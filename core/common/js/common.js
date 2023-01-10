@@ -981,9 +981,9 @@ export const get_columns_map = function(context, datum_context) {
 				}else{
 					// if the ddo don't has column_id and the column_map is not defined in properties,
 					// create a new column with the ddo information or join all components in one column
-					switch(view){
+					switch(true){
 						// component_portal will join the components that doesn't has columns defined.
-						case 'line':
+						case view && view==='line':
 
 							// find if the general column was created, if not create new one with the tipo
 							// of the component_portal to include all components.
@@ -1009,7 +1009,7 @@ export const get_columns_map = function(context, datum_context) {
 							break;
 						// in the mosaic case add the in_mosaic: true or false to create the mosaic and
 						// the alternative table with all ddo
-						case 'mosaic':
+						case view && view.indexOf('mosaic') !== -1 :
 							dd_object.in_mosaic = dd_object.in_mosaic
 								? true
 								: false
@@ -1038,6 +1038,7 @@ export const get_columns_map = function(context, datum_context) {
 									model	: dd_object.model
 								}
 							)
+
 							dd_object.column_id = dd_object.tipo
 							break;
 					}//end switch
