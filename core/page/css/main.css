@@ -3060,6 +3060,12 @@ input:-moz-placeholder {
 .error.wrapper_component.player > .label {
   color: white !important;
 }
+.wrapper_component.edit > .label.move_top,
+.wrapper_component.search > .label.move_top,
+.wrapper_component.player > .label.move_top {
+  margin-top: -2rem;
+  background-color: white;
+}
 .wrapper_component.edit .button_exit_edit,
 .wrapper_component.search .button_exit_edit,
 .wrapper_component.player .button_exit_edit {
