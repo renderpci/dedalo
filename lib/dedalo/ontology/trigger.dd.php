@@ -222,9 +222,13 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
 		if ($modelo_name==='diffusion_element') {
 			if (defined('MYSQL_DEDALO_HOSTNAME_CONN') && defined('MYSQL_DEDALO_USERNAME_CONN') && defined('MYSQL_DEDALO_PASSWORD_CONN')) {
-				// Update schema data always
-				$publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
-				debug_log("trigger_dd.edit_ts -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
+				if (DEDALO_ENTITY==='master') {
+					debug_log(__METHOD__." Ignored Publication schema save on master ! ".to_string(), logger::WARNING);
+				}else{
+					// Update schema data always
+					$publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
+					debug_log("trigger_dd.edit_ts -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
+				}
 			}
 		}
 
