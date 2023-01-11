@@ -246,9 +246,22 @@ class area_development extends area_common {
 						// skip tool common
 						if ($tool_name==='tool_common') return null;
 						// check file register is ready
-						if(!$register_row = file_get_contents($path.'/register.json')) {
+						if(!$register_contents = file_get_contents($path.'/register.json')) {
+							debug_log(__METHOD__." Invalid register.json file from tool ".to_string($tool_name), logger::ERROR);
 							$tool_name .= ' <danger>(!) Invalid register.json file from tool</danger>';
+						}else{
+							// compare register.json file. WORKING HERE (!)
+							$ar_tool_info	= tool_common::get_client_registered_tools([$tool_name]);
+							if(isset($ar_tool_info[0])) {
+								$tool_info = $ar_tool_info[0];
+								// dump($tool_info, ' tool_info ++ '.to_string($tool_name));
+								// dump($register_contents, ' register_contents ++ '.to_string());
+							}else{
+								debug_log(__METHOD__." Tool '$tool_name' not found in client_registered_tools.".to_string(), logger::WARNING);
+								$tool_name .= ' <danger>(!) Not registered tool</danger>';
+							}
 						}
+
 						return $tool_name;
 					}
 				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));

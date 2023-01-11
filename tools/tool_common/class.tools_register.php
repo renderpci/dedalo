@@ -888,6 +888,7 @@ class tools_register {
 }//end class tools_register
 
 
+
 /*
 DBi::_getConnection();
 include('class.RecordObj_dd_edit.php');
