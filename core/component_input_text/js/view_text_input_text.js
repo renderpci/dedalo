@@ -21,11 +21,11 @@ export const view_text_input_text = function() {
 
 /**
 * RENDER
-* get_raw_string
+* Creates a text node with the string value
 * Output component value to use as raw text
 * @return DOM text node text_node
 */
-view_text_input_text.render = async function(self, options) {
+view_text_input_text.render = async function(self) {
 
 	// short vars
 		const data				= self.data
