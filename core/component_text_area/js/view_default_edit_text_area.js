@@ -56,6 +56,22 @@ view_default_edit_text_area.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+	// label custom style based on activate/deactivate events
+		event_manager.subscribe('activate_component', fn_activate_component)
+		function fn_activate_component(component) {
+			if (component.id===self.id) {
+				wrapper.label.classList.add('move_top')
+			}
+		}
+		event_manager.subscribe('deactivate_component', fn_deactivate_component)
+		function fn_deactivate_component(component) {
+			if (component.id===self.id) {
+				if(wrapper.label.classList.contains('move_top')) {
+					wrapper.label.classList.remove('move_top')
+				}
+			}
+		}
+
 	// fix editor height. This guarantees that content_data grow to the maximum possible height
 		// when_in_viewport(wrapper, ()=> {
 		// 	const wrapper_height	= wrapper.offsetHeight
@@ -254,23 +270,23 @@ const get_input_element = (i, current_value, self) => {
 
 				content_value.addEventListener('click', fn_click_init)
 				function fn_click_init(e) {
+					e.stopPropagation()
+
 					value_container.classList.add('loading')
-					// use timeout only to force real async execution
-					setTimeout(function(){
-						// init editor on user click
-						init_current_service_text_editor()
-						.then(function(service_editor) {
-							if (self.context.view === 'html_text') {
-								service_editor.editor.focus()
-								// service_editor.value_container.classList.remove('loading')
-							}else{
-								// trigger service_editor click action (show toolbar and focus it)
-								service_editor.click(e)
-							}
-						})
-						// once only. Remove event to prevent duplicates
-						content_value.removeEventListener('click', fn_click_init)
-					}, 25)
+
+					// init editor on user click
+					init_current_service_text_editor()
+					.then(function(service_editor) {
+						if (self.context.view === 'html_text') {
+							service_editor.editor.focus()
+							// service_editor.value_container.classList.remove('loading')
+						}else{
+							// trigger service_editor click action (show toolbar and focus it)
+							service_editor.click(e)
+						}
+					})
+					// once only. Remove event to prevent duplicates
+					content_value.removeEventListener('click', fn_click_init)
 				}
 			}
 		}//end if (self.show_interface.read_only!==true)
@@ -278,6 +294,7 @@ const get_input_element = (i, current_value, self) => {
 
 	return content_value
 }//end get_input_element
+
 
 
 /**

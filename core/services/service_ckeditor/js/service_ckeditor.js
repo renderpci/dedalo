@@ -7,7 +7,7 @@
 	// import {event_manager} from '../../../common/js/event_manager.js'
 	// import {ui} from '../../../common/js/ui.js'
 	import {common} from '../../../common/js/common.js'
-	import {set_before_unload} from '../../../common/js/events.js';
+	// import {set_before_unload} from '../../../common/js/events.js';
 	import {clone} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
@@ -40,7 +40,8 @@ export const service_ckeditor = function() {
 	* Editor load the core and common commands and plugins from ckEditor but Dédalo will not use the ckEditor user interface
 	* the interface is created inside the toolbar_container with custom icons and functionalities
 	* @param object options
-	* @return promise js_promise
+	* @return promise
+	*  	object ckeditor
 	*/
 	this.init = async function(options) {
 
@@ -66,34 +67,36 @@ export const service_ckeditor = function() {
 		// add component_text_area value
 			// value_container.innerHTML = value
 
-		if(typeof ckeditor ==='undefined'){
+		// load ckeditor files if not already loaded
+			if(typeof ckeditor==='undefined'){
 
-			// load dependencies
-				const load_promises = []
+				// load dependencies
+					const load_promises = []
 
-			// load ckeditor js file
-				const ckeditor_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/ckeditor.js'
-				load_promises.push(
-					common.prototype.load_script(ckeditor_file)
-				)
-			// load and set JSON langs file
-				load_promises.push(
-					new Promise(function(resolve){
-						data_manager.request({
-							url		: '../common/js/lang.json',
-							method	: 'GET'
+				// load ckeditor JS file
+					const ckeditor_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/ckeditor.js'
+					load_promises.push(
+						common.prototype.load_script(ckeditor_file)
+					)
+
+				// load and set JSON langs file
+					load_promises.push(
+						new Promise(function(resolve){
+							data_manager.request({
+								url		: '../common/js/lang.json',
+								method	: 'GET'
+							})
+							.then(function(response){
+								// set json_langs
+								self.json_langs = response
+								resolve(response)
+							})
 						})
-						.then(function(response){
-							// set json_langs
-							self.json_langs = response
-							resolve(response)
-						})
-					})
-				)
-				await Promise.all(load_promises)
-		}
+					)
+					await Promise.all(load_promises)
+			}
 
-		// create
+		// create editor (ddEditor|InlineEditor)
 			const create = async function (){
 				// init ckeditor (InlineEditor|ddEditor)
 				switch(editor_class) {
@@ -108,16 +111,18 @@ export const service_ckeditor = function() {
 				}
 			}
 
-		// try lo create every x milliseconds (editor parse takes time...)
-			const waitCKEDITOR = setInterval(async function() {
+		return new Promise(function(resolve){
+			// try lo create every x milliseconds (editor parse takes time...)
+			const wait_ckeditor = setInterval(async function() {
 				if ( typeof ckeditor !=='undefined' ) {
-					clearInterval(waitCKEDITOR);
-					await create()
+					clearInterval(wait_ckeditor);
+
+					const current_editor = await create()
+
+					resolve(current_editor)
 				}
 			}, 50);
-
-
-		return true
+		})
 	}//end init
 
 
@@ -297,162 +302,155 @@ export const service_ckeditor = function() {
 	* @return promise
 	* 	Resolve editor
 	*/
-	this.create_ddEditor = function(editor_config) {
+	this.create_ddEditor = async function(editor_config) {
 
 		const self = this
 
-		return new Promise(function(resolve){
-
-			// editor.
-			// ddEditor is created from lib ckeditor source using webpack.
-			// See source and webpack config files
-			// ckEditor is initiated without user interface
-			ckeditor.ddEditor.create( self.value_container, {
+		// editor
+		// ddEditor is created from lib ckeditor source using webpack.
+		// See source and webpack config files
+		// ckEditor is initiated without user interface
+			const editor = await ckeditor.ddEditor.create( self.value_container, {
 				// initialData: value
 			})
-			.then( editor => {
 
-				// fix the instance
-					self.editor = editor
+		// fix the instance
+			self.editor = editor
 
-				// focus
-					// editor.ui.focusTracker.on( 'change:isFocused', ( evt, data, isFocused ) => {
-					//     console.log( `The editor is focused: ${ isFocused }.` );
-					// } );
+		// focus
+			// editor.ui.focusTracker.on( 'change:isFocused', ( evt, data, isFocused ) => {
+			//     console.log( `The editor is focused: ${ isFocused }.` );
+			// } );
 
-				// build toolbar
-					self.build_toolbar(editor_config);
+		// build toolbar
+			self.build_toolbar(editor_config);
 
-				// setup_events
-					self.setup_events(editor_config);
+		// setup_events
+			self.setup_events(editor_config);
 
-				// read_only
-					if(editor_config.read_only) {
-						editor.enableReadOnlyMode( 'read_only_ mode' );
+		// read_only
+			if(editor_config.read_only) {
+				editor.enableReadOnlyMode( 'read_only_ mode' );
+			}
+
+		// setup_button_reference
+			self.setup_button_reference();
+
+		// drag and drop control
+			// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
+			// the drop event doesn't has any effect in the final position of the drop,
+			// the final check position is fired in the clipboardInput event.
+			editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
+
+				// target is undefined unless a existing element is focus on paste or drop
+				// In this cases, no more check area necessary. Stop here
+					if (!data.target) {
+						return
 					}
 
-				// setup_button_reference
-					self.setup_button_reference();
+				// if()
 
-				// Drag and Drop control
-					// Control the drop action to move the caret outside of the img node when the target is a img node (dd_tag)
-					// the drop event doesn't has any effect in the final position of the drop,
-					// the final check position is fired in the clipboardInput event.
-					editor.editing.view.document.on( 'clipboardInput', ( evt, data ) => {
+				// check the target name of the element (expected a image)
+				if(data.target.name==='img'){
+					editor.editing.view.change((writer) => {
+						// create new position at start and end of the target
+						// use the target parent because the img is wrapped inside a span
+						// the parent span has other position of the image and it's necessary avoid the parent position
+						const start = writer.createPositionAt(
+							data.target.parent,
+							"after"
+						);
+						const end = writer.createPositionAt(
+							data.target.parent,
+							"after"
+						);
+						// create the range of the new position
+						const range = writer.createRange(start, end);
 
-						// target is undefined unless a existing element is focus on paste or drop
-						// In this cases, no more check area necessary. Stop here
-							if (!data.target) {
-								return
-							}
-
-						// if()
-
-						// check the target name of the element (expected a image)
-						if(data.target.name==='img'){
-							editor.editing.view.change((writer) => {
-								// create new position at start and end of the target
-								// use the target parent because the img is wrapped inside a span
-								// the parent span has other position of the image and it's necessary avoid the parent position
-								const start = writer.createPositionAt(
-									data.target.parent,
-									"after"
-								);
-								const end = writer.createPositionAt(
-									data.target.parent,
-									"after"
-								);
-								// create the range of the new position
-								const range = writer.createRange(start, end);
-
-								// it's not necessary change the range to model range
-								// comment this code
-									// writer.setSelection( range );
-									// transform to the model_range
-									// const model_range = editor.editing.mapper.toModelRange( range )
-									// editor.model.change( writer => writer.setSelection( model_range ) );
-									// data.targetRanges = [ editor.editing.mapper.toViewRange( model_range ) ];
-								// set new range to the targetRanges of the data
-								// it will use to calculate the drop position when will insertContect()
-								data.targetRanges = [ range ];
-							});
-						}
-					}, { priority: 'high' } );
-
-				// Active this drop event listeners to change the visual effect, but any of them will change the result
-					// editor.editing.view.document.on( 'drop', ( evt, data ) => {
-					// }, { priority: 'high' } );
-
-					// editor.editing.view.document.on( 'dragover', ( evt, data ) => {
-
-					// 	if(data.target.name === 'img'){
-					// 		evt.stop();
-					// 		//Stop the default event action.
-					// 		data.preventDefault();
-					// 	}
-					// }, { priority: 'high' } );
-
-					// editor.editing.view.document.on( 'dragenter', ( evt, data ) => {
-
-					// 	if(data.target.name === 'img'){
-
-					// 		evt.stop();
-					// 		//Stop the default event action.
-					// 		data.preventDefault();
-					// 	}
-					// }, { priority: 'high' } );
-
-				// init editor status changes to track isDirty value
-					self.init_status_changes()
-
-				// remove original value container
-					self.value_container.remove()
-
-				// click event
-					self.click = function(e) {
-						e.stopPropagation()
-						e.preventDefault()
-
-						self.toolbar_container.classList.remove('hide')
-						editor.editing.view.focus()
-
-						document.body.addEventListener('mouseup', fn_remove)
-						// value_container.remove()
-					}
-
-				// add custom class to the root element of the editor
-					editor.editing.view.change( writer => {
-						writer.addClass( 'editor_container', editor.editing.view.document.getRoot() );
+						// it's not necessary change the range to model range
+						// comment this code
+							// writer.setSelection( range );
+							// transform to the model_range
+							// const model_range = editor.editing.mapper.toModelRange( range )
+							// editor.model.change( writer => writer.setSelection( model_range ) );
+							// data.targetRanges = [ editor.editing.mapper.toViewRange( model_range ) ];
+						// set new range to the targetRanges of the data
+						// it will use to calculate the drop position when will insertContect()
+						data.targetRanges = [ range ];
 					});
+				}
+			}, { priority: 'high' } );
 
-				// toolbar toggle event
-					// show toolbar_container on user mousedown
-					// removes the toolbar_container when user click outside
-					const node = self.toolbar_container.parentNode
-					node.addEventListener('mousedown', function() {
-						// remove the hide class to show the toolbar
-						self.toolbar_container.classList.remove('hide')
-						document.body.addEventListener('mouseup', fn_remove)
-					})
-					function fn_remove(e) {
-						if (e.target!==node) {
-							const path	= e.composedPath()
-							const found	= path.find(el => el===node)
-							if (!found) {
-								self.toolbar_container.classList.add('hide')
-								document.body.removeEventListener("mouseup", fn_remove)
-							}
-						}
-					}
+		// Active this drop event listeners to change the visual effect, but any of them will change the result
+			// editor.editing.view.document.on( 'drop', ( evt, data ) => {
+			// }, { priority: 'high' } );
 
+			// editor.editing.view.document.on( 'dragover', ( evt, data ) => {
 
-				resolve(editor)
-			})
-			.catch( error => {
-				console.error( 'Oops, something went wrong!' );
-				console.error( error );
+			// 	if(data.target.name === 'img'){
+			// 		evt.stop();
+			// 		//Stop the default event action.
+			// 		data.preventDefault();
+			// 	}
+			// }, { priority: 'high' } );
+
+			// editor.editing.view.document.on( 'dragenter', ( evt, data ) => {
+
+			// 	if(data.target.name === 'img'){
+
+			// 		evt.stop();
+			// 		//Stop the default event action.
+			// 		data.preventDefault();
+			// 	}
+			// }, { priority: 'high' } );
+
+		// init editor status changes to track isDirty value
+			self.init_status_changes()
+
+		// remove original value container
+			if (self.value_container) {
+				self.value_container.remove()
+			}
+
+		// click event
+			self.click = function(e) {
+				e.stopPropagation()
+				e.preventDefault()
+
+				self.toolbar_container.classList.remove('hide')
+				editor.editing.view.focus()
+
+				document.body.addEventListener('mouseup', fn_remove)
+				// value_container.remove()
+			}
+
+		// add custom class to the root element of the editor
+			editor.editing.view.change( writer => {
+				writer.addClass( 'editor_container', editor.editing.view.document.getRoot() );
 			});
-		})
+
+		// toolbar toggle event
+			// show toolbar_container on user mousedown
+			// removes the toolbar_container when user click outside
+			const node = self.toolbar_container.parentNode
+			node.addEventListener('mousedown', function() {
+				// remove the class 'hide' to show the toolbar
+				self.toolbar_container.classList.remove('hide')
+				document.body.addEventListener('mouseup', fn_remove)
+			})
+			function fn_remove(e) {
+				if (e.target!==node) {
+					const path	= e.composedPath()
+					const found	= path.find(el => el===node)
+					if (!found) {
+						self.toolbar_container.classList.add('hide')
+						document.body.removeEventListener("mouseup", fn_remove)
+					}
+				}
+			}
+
+
+		return editor
 	}//end create_ddEditor
 
 
