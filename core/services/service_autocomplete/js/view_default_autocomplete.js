@@ -147,6 +147,10 @@ const get_content_data = function(self) {
 			class_name		: 'autocomplete_data',
 			parent			: fragment
 		})
+		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
+		function fn_service_autocomplete_keys(e) {
+			self.service_autocomplete_keys(e)
+		}
 
 	// fix main nodes pointers
 		self.search_input		= search_input
@@ -269,49 +273,54 @@ const render_search_input = function(self) {
 			let timeout = null;
 
 		// event input. changes the input value fire the search
-			search_input.addEventListener('keyup', async function(){
+			search_input.addEventListener('keyup', async function(e){
 
-				const q = search_input.value
-				self.filter_free_nodes.map(el => {
-					el.filter_item.q = ''
-					el.value = ''
-				})
+				// arrow keys
+					if(e.which===40 || e.which===38 || e.which===13){
+						return
+					}
+
+				// q
+					const q = search_input.value
+					self.filter_free_nodes.map(el => {
+						el.filter_item.q = ''
+						el.value = ''
+					})
 
 				const filter_free_nodes_len = self.filter_free_nodes.length
 
 				// ar q split iterate
-				const split_q	= self.split_q(q)
-				const ar_q		= split_q.ar_q
-				if (split_q.divisor!==false) {
-					// PROPAGATE TO FILTER FIELDS
-					for (let j = 0; j < filter_free_nodes_len; j++) {
-						if (ar_q[j]) {
-							self.filter_free_nodes[j].filter_item.q = ar_q[j]
-							self.filter_free_nodes[j].value = ar_q[j]
+					const split_q	= self.split_q(q)
+					const ar_q		= split_q.ar_q
+					if (split_q.divisor!==false) {
+						// PROPAGATE TO FILTER FIELDS
+						for (let j = 0; j < filter_free_nodes_len; j++) {
+							if (ar_q[j]) {
+								self.filter_free_nodes[j].filter_item.q = ar_q[j]
+								self.filter_free_nodes[j].value = ar_q[j]
+							}
 						}
+					}else{
+						self.filter_free_nodes.map(el => {
+							el.filter_item.q = search_input.value
+							el.value = search_input.value
+						})
 					}
-				}else{
-					self.filter_free_nodes.map(el => {
-						el.filter_item.q = search_input.value
-						el.value = search_input.value
-					})
-				}
 
 				// Clear the timeout if it has already been set.
 				// This will prevent the previous task from executing
 				// if it has been less than <MILLISECONDS>
-			    clearTimeout(timeout);
+			    	clearTimeout(timeout);
 
 				// search fire is delayed to enable multiple simultaneous selections
 				// get final value (input events are fired one by one)
-				timeout = setTimeout(async()=>{
+					timeout = setTimeout(async()=>{
 
-					const api_response	= await self.autocomplete_search()
-					await render_datalist(self, api_response)
+						const api_response	= await self.autocomplete_search()
+						await render_datalist(self, api_response)
 
-					// console.log('///// fired:');
-				}, 350)
-
+						// console.log('///// fired:');
+					}, 350)
 			});
 
 	return search_input
@@ -1053,11 +1062,13 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 */
 view_default_autocomplete.render_grid_choose = async function( self, selected_instance, params ) {
 
-	const grid_choose_data	= await get_grid_choose_data(self, selected_instance, params)
+	// data from API
+		const grid_choose_data = await get_grid_choose_data(self, selected_instance, params)
+
 	// get dd objects from the context that will be used to build the lists in correct order
-	const rqo_search 	= grid_choose_data.rqo_search
-	const data			= grid_choose_data.data
-	const context 		= grid_choose_data.context
+		const rqo_search	= grid_choose_data.rqo_search
+		const data			= grid_choose_data.data
+		const context		= grid_choose_data.context
 
 	// grid_choose_container
 		const current_container		= document.getElementById('choose_container')
@@ -1077,8 +1088,8 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			if (!current_container) {
 				const reference_node	= self.datalist
 				const rect				= reference_node.getBoundingClientRect();
-				const top				= rect.top   + window.scrollY
-				const left				= rect.left + window.scrollX
+				const top				= rect.top  + window.scrollY + 20
+				const left				= rect.left + window.scrollX + 20
 				// set coordinates. Same as datalist position
 				grid_choose_container.style.left	= left + 'px'
 				grid_choose_container.style.top		= top + 'px'
@@ -1178,10 +1189,13 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 				grid_choose_container.removeChild(grid_choose_container.firstChild)
 			}
 			grid_choose_container.remove()
+			if (self.node && self.node.grid_choose_container) {
+				delete self.node.grid_choose_container
+			}
 		})
 
 	// ar_search_sections. get the sections that was searched
-		const ar_search_sections = rqo_search.sqo.section_tipo
+		// const ar_search_sections = rqo_search.sqo.section_tipo
 
 	// columns
 		const columns = rqo_search.show.columns
@@ -1193,12 +1207,12 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 	// iterate the sections
 		for (const current_locator of ar_locator) {
 
-			const section_tipo	= current_locator.section_tipo
-			const section_id	= current_locator.section_id
+			// const section_tipo	= current_locator.section_tipo
+			// const section_id	= current_locator.section_id
 
 			// get data that mach with the current section from the global data sent by the API
 			// get the full row with all items in the ddo that mach with the section_id
-			const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
+			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
 
 			// grid_item
 				// const grid_item = ui.create_dom_element({
@@ -1261,6 +1275,7 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 						grid_choose_container.appendChild(node)
 				}//end for ddo_item
 		}//end for (const current_locator of ar_locator)
+
 
 	return grid_choose_container
 }//end render_grid_choose
