@@ -292,6 +292,9 @@ service_autocomplete.prototype.autocomplete_search = function() {
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
 		const js_promise = self[engine]()
 
+	// debug
+		// console.log('autocomplete_search js_promise >>', js_promise );
+
 
 	return js_promise
 }//end autocomplete_search

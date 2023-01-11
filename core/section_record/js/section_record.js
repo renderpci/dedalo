@@ -76,46 +76,45 @@ export const section_record = function() {
 * @return bool true
 */
 section_record.prototype.init = async function(options) {
-
+console.log('options:', options);
 	const self = this
 
 	// options vars
-	self.model				= options.model
-	self.tipo				= options.tipo
-	self.section_tipo		= options.section_tipo
-	self.section_id			= options.section_id
-	self.mode				= options.mode
-	self.lang				= options.lang
-	self.node				= null
-	self.columns_map		= options.columns_map
+	self.model						= options.model
+	self.tipo						= options.tipo
+	self.section_tipo				= options.section_tipo
+	self.section_id					= options.section_id
+	self.mode						= options.mode
+	self.lang						= options.lang
+	self.id_variant					= options.id_variant
+	self.node						= null
+	self.columns_map				= options.columns_map
 
-	self.datum				= options.datum
-	self.context			= options.context
+	self.datum						= options.datum
+	self.context					= options.context
 	// fields_separator
 	self.context.fields_separator	= self.context.fields_separator || ' + '
 	self.context.view				= self.context.view || 'line'
-	// self.data			= options.data
-	self.paginated_key		= options.paginated_key
-	self.row_key			= options.row_key
+	// self.data					= options.data
+	self.paginated_key				= options.paginated_key
+	self.row_key					= options.row_key
 
-	self.events_tokens		= []
-	self.ar_instances		= []
+	self.events_tokens				= []
+	self.ar_instances				= []
 
-	self.type				= self.model
-	self.label				= null
+	self.type						= self.model
+	self.label						= null
 
-	self.caller				= options.caller || null
+	self.caller						= options.caller || null
 
-	self.matrix_id			= options.matrix_id || null
-	self.column_id			= options.column_id
+	self.matrix_id					= options.matrix_id || null
+	self.column_id					= options.column_id
 
-	self.modification_date	= options.modification_date || null
+	self.modification_date			= options.modification_date || null
 
-	self.offset				= options.offset
+	self.offset						= options.offset
 
-	self.locator			= options.locator
-
-
+	self.locator					= options.locator
 
 	// events subscription
 		// event active (when user focus in dom)
