@@ -76,7 +76,7 @@ export const section_record = function() {
 * @return bool true
 */
 section_record.prototype.init = async function(options) {
-console.log('options:', options);
+
 	const self = this
 
 	// options vars
