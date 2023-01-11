@@ -19,7 +19,9 @@ class tool_common {
 
 	/**
 	* __CONSTRUCT
-	* @return bool true
+	* @param string|int $section_id
+	* @param string $section_tipo
+	* @return void
 	*/
 	public function __construct($section_id, string $section_tipo) {
 
@@ -29,8 +31,6 @@ class tool_common {
 		//set
 		$this->section_tipo	= $section_tipo;
 		$this->section_id	= $section_id;
-
-		return true;
 	}//end __construct
 
 
@@ -64,14 +64,14 @@ class tool_common {
 
 	/**
 	* GET_CONTEXT
-	* Parse a tool context
+	* Parse the tool context
 	* @return dd_object $dd_object
 	*/
 	public function get_context() : dd_object {
 
 		// check valid name
 			if ($this->name==='tool_common') {
-				throw new Exception("Error. Tool name is wrong. Check your tool call using toll model", 1);
+				throw new Exception("Error. Tool name is wrong. Check your tool call using tool model", 1);
 			}
 
 		// tool name. Fixed on construct
@@ -289,7 +289,7 @@ class tool_common {
 	* GET_REGISTERED_TOOLS
 	* Get the full or filtered list data of current registered tools in database
 	*
-	* @param array $ar_tools
+	* @param array|null $ar_tools = null
 	* 	If defined, is used as filter list for tool names
 	* @return array $registered_tools
 	*/
@@ -378,7 +378,6 @@ class tool_common {
 				$registered_tools[] = $current_value;
 			}//end foreach ($client_registered_tools_records as $record)
 
-
 		// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
 		// write_session_value('registered_tools', $registered_tools);
 
@@ -390,8 +389,9 @@ class tool_common {
 
 	/**
 	* GET_CONFIG
-	* Get all tools and filter them matching tool_name given
-	* @return object | null
+	* Get given tool config if isset
+	* @param string $tool_name
+	* @return object|null $config
 	*/
 	public static function get_config(string $tool_name) : ?object {
 
@@ -552,12 +552,12 @@ class tool_common {
 
 
 	/**
-	* CALL_COMPONENT_METHOD
+	* CALL_COMPONENT_METHOD (NOT USED AT THE MOMENT)
 	* Call component method
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function call_component_method(object $request_options) : object {
+	public static function call_component_method(object $options) : object {
 
 		// Working here... (!)
 
@@ -566,20 +566,11 @@ class tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->component_tipo	= null;
-				$options->section_id		= null;
-				$options->section_tipo		= null;
-				$options->method			= null;
-				$options->method_arguments	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
-			$tipo				= $options->tipo;
-			$section_tipo		= $options->section_tipo;
-			$section_id			= $options->section_id;
-			$method				= $options->method;
-			$method_arguments	= $options->method_arguments;
+			$tipo				= $options->tipo ?? null;
+			$section_id			= $options->section_id ?? null;
+			$section_tipo		= $options->section_tipo ?? null;
+			$method				= $options->method ?? null;
+			$method_arguments	= $options->method_arguments ?? null;
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -597,7 +588,7 @@ class tool_common {
 					$call_result = $component->{$method}($method_arguments);
 
 				// response
-					$result = isset($call_result->result)
+					$response->result = isset($call_result->result)
 						? $call_result->result
 						: $call_result;
 					$response->msg = isset($call_result->msg)
@@ -651,7 +642,7 @@ class tool_common {
 						}
 						$user_profile_id		= (int)$user_profile->section_id;
 						$security_tools_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
-						$component	= component_common::get_instance(
+						$component				= component_common::get_instance(
 							$security_tools_model,
 							DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
 							$user_profile_id,
