@@ -797,12 +797,12 @@ const render_datalist = async function(self, api_response) {
 		const ar_section_record	= await get_section_records({
 			caller				: self,
 			mode				: 'list',
+			view				: 'default',
 			datum				: result,
 			value				: data.value,
 			request_config		: [self.rqo_search],
 			columns_map			: self.columns_map,
-			fields_separator	: fields_separator,
-			id_variant 			: new Date().getUTCMilliseconds()
+			fields_separator	: fields_separator
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
@@ -811,7 +811,13 @@ const render_datalist = async function(self, api_response) {
 		for (let i = 0; i < ar_section_record.length; i++) {
 
 			const current_section_record = ar_section_record[i]
-			const locator = current_section_record.locator
+
+			// locator
+				const locator = current_section_record.locator
+
+			// id_variant add to force unique components before render
+				current_section_record.id_variant = locator.section_tipo + '_' + locator.section_id
+
 			// get data that mach with the current section from the global data sent by the API
 			// get the full row with all items in the ddo that mach with the section_id
 			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
