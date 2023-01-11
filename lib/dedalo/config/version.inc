@@ -2813,6 +2813,8 @@
 		Fixed tool_diffusion error were databases did not locate databases alias
 		Changed deprecated PHP method 'utf8_encode' to mb_convert_encoding alternative on read_csv_file_as_array method (tool_common)
 		Cleanup Ontology code
+		Updated label 'procesando_media_en_background' in tool_av_versions trigger
+		Fixed component_json error when no value is available from component. Now, null is returned instead of error
 
 
 	[/HISTORY]
@@ -2844,7 +2846,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-01-2023T17:30:00');
+	define('DEDALO_BUILD'	, '11-01-2023T17:52:00');
 
 
 
