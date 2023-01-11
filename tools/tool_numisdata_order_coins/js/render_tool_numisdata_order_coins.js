@@ -1,0 +1,340 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
+// imports
+	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {ui} from '../../../core/common/js/ui.js'
+	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
+	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
+	import {open_tool} from '../../tool_common/js/tool_common.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
+
+
+
+/**
+* RENDER_tool_numisdata_order_coins
+* Manages the component's logic and appearance in client side
+*/
+export const render_tool_numisdata_order_coins = function() {
+
+	return true
+}//end render_tool_numisdata_order_coins
+
+
+
+/**
+* EDIT
+* Render node
+* @return DOM node
+*/
+render_tool_numisdata_order_coins.prototype.edit = async function(options={render_level:'full'}) {
+
+	const self = this
+
+	// render level
+		const render_level = options.render_level || 'full'
+
+	// content_data
+		const content_data = await get_content_data_edit(self)
+		if (render_level==='content') {
+			return content_data
+		}
+
+	// wrapper. ui build_edit returns component wrapper
+		const wrapper = ui.tool.build_wrapper_edit(self, {
+			content_data : content_data
+		})
+
+	// transcription_options are the buttons to get access to other tools (buttons in the header)
+		const header_options_node = await render_header_options(self, content_data)
+		wrapper.tool_buttons_container.appendChild(header_options_node)
+
+
+	// render_activity_info are the information of the activity as "Save"
+		const activity_info = render_activity_info(self)
+		wrapper.activity_info_container.appendChild(activity_info)
+
+		self.node = wrapper
+		// set pointers
+		wrapper.content_data = content_data
+
+	return wrapper
+}//end render_tool_numisdata_order_coins
+
+
+
+/**
+* GET_CONTENT_DATA_EDIT
+* @return DOM node content_data
+*/
+const get_content_data_edit = async function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// left_container
+		const left_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'left_container',
+			parent			: fragment
+		})
+
+	// component_epigraphy. render another node of component caller and append to container
+
+		self.coins.render_views.push(
+			{
+				view	: 'coins_mosaic',
+				mode	: 'edit',
+				render	: 'view_coins_mosaic_portal',
+				path 	: '../../../tools/tool_numisdata_order_coins/js/view_coins_mosaic_portal.js'
+			}
+		)
+
+		const coins_node = await self.coins.render()
+		left_container.appendChild(coins_node)
+
+
+	// right_container
+		const right_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'right_container',
+			parent 			: fragment
+		})
+
+		// Coins
+			const coins_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'coins_container',
+				parent 			: right_container
+			})
+
+			await self.coins.build(true)
+			const ordered_coins_node = await self.ordered_coins.render()
+			coins_container.appendChild(ordered_coins_node)
+
+
+	// content_data
+		const content_data = ui.tool.build_content_data(self)
+		content_data.appendChild(fragment)
+		// save the pointers of the content_data nodes, to used by the buttons to access to the components
+		content_data.left_container		= left_container
+		content_data.right_container	= right_container
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+
+/**
+* RENDER_HEADER_OPTIONS
+* This is used to build a optional buttons inside the header
+* @return DOM node fragment
+*/
+const render_header_options = async function(self, content_data) {
+
+	const fragment = new DocumentFragment()
+
+	const order_by_label = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'tool_button order_by light',
+		text_content	: self.get_tool_label('order_by') || 'Order by:',
+		parent			: fragment
+	})
+
+	const order_by_weight = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'tool_button order_by_weight light',
+		text_content	: self.get_tool_label('weight') || 'Weight',
+		parent			: fragment
+	})
+
+	order_by_weight.addEventListener('mouseup', ()=>{
+		order_by_diameter.classList.remove('active')
+		order_by({
+			button_node	: order_by_weight,
+			tipo		: 'numisdata133'
+		})
+
+	})
+
+	const order_by_diameter = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'tool_button order_by_diameter light',
+		text_content	: self.get_tool_label('diameter') || 'Diameter',
+		parent			: fragment
+	})
+
+	order_by_diameter.addEventListener('mouseup', ()=>{
+		order_by_weight.classList.remove('active')
+		order_by({
+			button_node	: order_by_diameter,
+			tipo		: 'numisdata135'
+		})
+	})
+
+	// order_by, get data and order by components or by section_id
+	const order_by = async function (options) {
+		//options
+		const button_node	= options.button_node
+		const tipo			= options.tipo
+
+		const left_container = self.node.content_data.left_container
+
+		// clean the coins container
+			while (left_container.firstChild) {
+				left_container.removeChild(left_container.firstChild);
+			}
+
+		button_node.classList.toggle('active')
+
+		const data			= self.coins.data
+		const order_data_value = []
+		// if the button is active order by the component
+		// else order by id (reorder the original data)
+		if(button_node.classList.contains('active')){
+			const weight_data	= self.coins.datum.data.filter(el => el.tipo === tipo)
+			const order_weight	= weight_data.sort(function(a, b) {
+				//check if the values are valid if not set null
+				const a_value = a.value && a.value[0] ? a.value[0] : null
+				const b_value = b.value && b.value[0] ? b.value[0] : null
+				// order null values to end and lower data first ---> 0.1, 0.5, 1, 8, null
+				return (a_value === null) - (b_value === null) || a_value - b_value;
+			});
+			// use the component order (diameter or weight) and apply to data of the coins portal data
+			const weight_data_len = weight_data.length
+			for (let i = 0; i < weight_data_len; i++) {
+				const section_id	= weight_data[i].section_id
+				const value_order	= data.value.find(el=>el.section_id === section_id)
+				order_data_value.push(value_order)
+			}
+		}else{
+			// order by original section_id
+			const order_data	= data.value.sort(function(a, b) {
+				return a.section_id - b.section_id;
+			});
+
+			order_data_value.push(...order_data)
+		}
+		// set the order data to the component build and render it and append to the left container
+		self.coins.data.value = order_data_value
+		await self.coins.build(false)
+		const coins_node = await self.coins.render()
+		left_container.appendChild(coins_node)
+	}
+
+
+	const set_original_button = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'tool_button set_original light',
+		text_content	: self.get_tool_label('original_copy') || 'Original / Copy',
+		parent			: fragment
+	})
+	set_original_button.addEventListener('mouseup', async ()=>{
+		const left_container = self.node.content_data.left_container
+
+		const input_original_nodes	= left_container.querySelectorAll('input.input_original')
+		const input_copy_nodes		= left_container.querySelectorAll('input.input_copy')
+
+		const ar_original = []
+		const input_original_nodes_len = input_original_nodes.length
+
+		for (let i = input_original_nodes_len - 1; i >= 0; i--) {
+			if(input_original_nodes[i].checked){
+				ar_original.push(input_original_nodes[i])
+			}
+		}
+
+		const ar_copies	= []
+		const input_copy_nodes_len = input_copy_nodes.length
+		for (let i = input_copy_nodes_len - 1; i >= 0; i--) {
+			if(input_copy_nodes[i].checked){
+				ar_copies.push(input_copy_nodes[i])
+			}
+		}
+		self.set_original_copy({
+			ar_original	: ar_original,
+			ar_copies	: ar_copies
+		})
+
+	})
+
+
+
+	return fragment
+}//end render_header_options
+
+
+
+/**
+* RENDER_STATUS
+* Render the status components to get control of the process of the tool
+* the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
+* @param object self
+* 	instance of current tool
+* @return DOM node fragment
+*/
+const render_status = async function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// status_user_component
+		if (self.status_user_component) {
+			self.status_user_component.context.view	= 'mini'
+			self.status_user_component.is_inside_tool = true
+			self.status_user_component.show_interface.save_animation = false
+			const status_user_node = await self.status_user_component.render()
+			fragment.appendChild(status_user_node)
+		}
+
+	// status_admin_component
+		if (self.status_admin_component) {
+			self.status_admin_component.context.view = 'mini'
+			self.status_admin_component.is_inside_tool = true
+			self.status_admin_component.show_interface.save_animation = false
+			const status_admin_node	= await self.status_admin_component.render()
+			fragment.appendChild(status_admin_node)
+		}
+
+
+	return fragment
+}//end render_status
+
+
+
+/**
+* RENDER_ACTIVITY_INFO
+* This is used to build a optional buttons inside the header
+* @param object self
+* 	instance of current tool
+* @return DOM node activity_info_body
+*/
+const render_activity_info = function(self) {
+
+	// activity alert
+		const activity_info_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'activity_info_body'
+		})
+
+	// event save
+		self.events_tokens.push(
+			event_manager.subscribe('save', fn_saved)
+		)
+		function fn_saved(options) {
+
+			// recived options contains an object with instance and api_response
+			const node_info_options = Object.assign(options,{
+				container : activity_info_body
+			})
+
+			// render notification node
+			const node_info = render_node_info(node_info_options)
+			activity_info_body.prepend(node_info)
+		}
+
+
+	return activity_info_body
+}//end render_activity_info
