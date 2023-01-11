@@ -29,7 +29,7 @@ class tool_diffusion {
 
 
 
-	/** 
+	/**
 	* GET_HTML
 	* @return string
 	*/
@@ -46,22 +46,22 @@ class tool_diffusion {
 	* @return array Formated array as prefix => name
 	*/
 	public function get_ar_thesaurus_tables() {
-	
+
 		$ar_tables = (array)$this->options->ar_tables;
 			#dump($ar_tables, ' ar_tables ++ '.to_string());
-		
+
 		$ar_thesaurus_tables = array();
 		$i=0;foreach ($ar_tables['prefijo'] as $key => $prefix) {
 
 			if (isset($ar_tables['tipo'][$i-1]) && $ar_tables['tipo'][$i] != $ar_tables['tipo'][$i-1]) { // separator
-				$ar_thesaurus_tables[$prefix.'_'.$ar_tables['tipo'][$i]] = 'separator';				
+				$ar_thesaurus_tables[$prefix.'_'.$ar_tables['tipo'][$i]] = 'separator';
 			}
-			
+
 			# Do not include langs never
 			if ($prefix!='lg') {
 				$ar_thesaurus_tables[$prefix] = $ar_tables['nombre'][$i];
 			}
-			
+
 		$i++;}
 		#dump($ar_thesaurus_tables, ' ar_thesaurus_tables ++ '.to_string());
 
@@ -82,14 +82,14 @@ class tool_diffusion {
 	public static function export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true, $ar_records=[]) {
 
 		$start_time = start_time();
-		
+
 		$response = new stdClass();
 			$response->result = false;
 			$response->msg 	  = 'Error on export_record '.$section_tipo;
-		
+
 
 		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
-			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($diffusion_element_tipo)); die();	
+			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($diffusion_element_tipo)); die();
 
 			if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
 				debug_log(__METHOD__." Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map ".to_string($ar_diffusion_map_elements), logger::ERROR);
@@ -106,8 +106,8 @@ class tool_diffusion {
 		$diffusion_class_name = $obj_diffusion_element->class_name;
 
 		require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
-			#dump($diffusion_class_name, '$diffusion_class_name ++ '.to_string()); die();		
-		
+			#dump($diffusion_class_name, '$diffusion_class_name ++ '.to_string()); die();
+
 		$options = new stdClass();
 			$options->section_tipo 			= (string)$section_tipo;
 			$options->section_id   			= (int)$section_id;
@@ -127,13 +127,13 @@ class tool_diffusion {
 				? $_SESSION['dedalo4']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
 				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
-			$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully. Levels: ".$max_recursions."</span>",$section_id);			
+			$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully. Levels: ".$max_recursions."</span>",$section_id);
 		}else{
 			$response->result = false;
-			$response->msg = "Error. Error on publish record $section_id";			
+			$response->msg = "Error. Error on publish record $section_id";
 		}
-	
-		// Add especific msg		
+
+		// Add especific msg
 			if (isset($update_record_result->msg)) {
 				$update_record_result_msg = array_reduce((array)$update_record_result->msg, function($carry, $item){
 					if (!empty($item)) {
@@ -152,7 +152,7 @@ class tool_diffusion {
 				$memory_usage = memory_get_usage();
 			}
 			$response->msg .= " <span>Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ". $memory_usage ."</span>";
-		}				
+		}
 
 		return (object)$response;
 	}//end export_record
@@ -161,20 +161,20 @@ class tool_diffusion {
 
 	/**
 	* EXPORT_THESAURUS
-	* @return 
+	* @return
 	*/
 	public static function export_thesaurus($ar_prefix, $diffusion_element_tipo) {
-	
+
 		$start_time = start_time();
-		
+
 		$response = new stdClass();
 			$response->result = false;
 			$response->msg 	  = '';
-		
+
 
 		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($diffusion_element_tipo)); die();
-	
+
 
 		if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
 			debug_log(__METHOD__." Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map ".to_string($ar_diffusion_map_elements), logger::ERROR);
@@ -192,13 +192,13 @@ class tool_diffusion {
 
 		include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
 			#dump($diffusion_class_name, '$diffusion_class_name ++ '.to_string());
-		
+
 		$msg=array();
 		$updated=0;
 		foreach ((array)$ar_prefix as $prefix) {
-			
+
 			$diffusion = new $diffusion_class_name();
-			
+
 			$options = new stdClass();
 				$options->section_tipo  		 = $prefix;
 				$options->diffusion_element_tipo = $diffusion_element_tipo;
@@ -216,16 +216,16 @@ class tool_diffusion {
 					dump($update_record_result, ' update_record_result ++ '.to_string());;
 				}
 			}
-		}//end foreach ($ar_prefix as $prefix) {	
-		
+		}//end foreach ($ar_prefix as $prefix) {
+
 
 		if ($updated>0) {
 			$response->result = true;
-			$response->msg .= implode('<br>', $msg);			
+			$response->msg .= implode('<br>', $msg);
 		}else{
 			$response->result = false;
 			$response->msg .= "Error. Error on publish tesaurus. ".implode('<br>', $msg);
-		}			
+		}
 
 
 		if(SHOW_DEBUG===true) {
@@ -234,9 +234,9 @@ class tool_diffusion {
 				$memory_usage = bcdiv(memory_get_usage(), 1048576, 3);
 			}else{
 				$memory_usage = memory_get_usage();
-			}				
+			}
 			$response->msg .= " <span>Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ".$memory_usage."</span>";
-		}				
+		}
 
 		return (object)$response;
 	}//end export_thesaurus
@@ -245,7 +245,7 @@ class tool_diffusion {
 
 	/**
 	* DIFFUSION_COMPLETE_DUMP
-	* @return 
+	* @return
 	*/
 	public static function diffusion_complete_dump() {
 
@@ -254,7 +254,7 @@ class tool_diffusion {
 			$response->msg 		= '';
 
 		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements();
-			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string()); die();		
+			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string()); die();
 
 		$ar_de_result=array();
 		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $value_obj) {
@@ -266,9 +266,9 @@ class tool_diffusion {
 
 			$diffusion 	= new $class_name;
 			$de_result 	= $diffusion->diffusion_complete_dump( $diffusion_element_tipo, $resolve_references=true );
-			
+
 			#$response->msg .= isset($de_result->msg) ? "<br>".$de_result->msg : '';
-			
+
 			// let GC do the memory job
 			time_nanosleep(0, 10000000); // 10 ms
 
@@ -289,16 +289,16 @@ class tool_diffusion {
 	* @return bool true/false
 	*/
 	public static function have_section_diffusion($section_tipo, $ar_diffusion_map_elements=null) {
-		
+
 		$have_section_diffusion = false;
-		
+
 		if (is_null($ar_diffusion_map_elements)) {
 			# calculate all
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 		}
 		// dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo).' - DEDALO_DIFFUSION_DOMAIN:'.DEDALO_DIFFUSION_DOMAIN);
 		foreach ($ar_diffusion_map_elements as $diffusion_group_tipo => $obj_value) {
-			
+
 			$diffusion_element_tipo = $obj_value->element_tipo;
 
 			$ar_related = self::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $obj_value->class_name);
@@ -319,7 +319,7 @@ class tool_diffusion {
 	* @return array $ar_diffusion_sections
 	*/
 	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $class_name) {
-	
+
 		if(SHOW_DEVELOPER!==true) {
 			if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
 				return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
@@ -329,7 +329,7 @@ class tool_diffusion {
 		include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
 
 		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
-	
+
 		# Store in session
 		$_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
 

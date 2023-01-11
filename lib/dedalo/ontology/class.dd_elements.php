@@ -618,11 +618,6 @@ class dd_elements {
 	*/
 	protected static function renderDiv_properties(string $terminoID, $properties) : string {
 		$add_class='';
-		// $ob = json_decode($properties);
-		// if($ob === null) {
-		// 	// $ob is null because the json cannot be decoded
-		// 	$add_class = 'json_bad_alert';
-		// }
 
 		$properties_text = !empty($properties)
 			? json_encode($properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)

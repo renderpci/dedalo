@@ -4230,7 +4230,7 @@ abstract class component_common extends common {
 		}else{
 
 			$model = end($query_object->path)->modelo;
-			if ($model==='component_json' || $q_operator === '==' || (!empty($query_object->q) && strpos($query_object->q, '==')===0) ) {
+			if ($model==='component_json' || $q_operator==='==' || (!empty($query_object->q) && strpos($query_object->q, '==')===0) ) {
 				// component json case
 
 				// $query_object->q	= str_replace('"', '\"', $search_value);

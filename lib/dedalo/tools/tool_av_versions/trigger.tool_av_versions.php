@@ -47,18 +47,19 @@ if($mode=='generate_version') {
 
 	$reelID		= $video_id ;
 	$quality 	= $target_quality ;
-			
+
 	# AVObj
-	$AVObj		= new AVObj($reelID, $source_quality); 
+	$AVObj		= new AVObj($reelID, $source_quality);
 	#dump($AVObj, ' $AVObj ++ '.to_string());die();
-	
+
 	# Ffmpeg
 	$Ffmpeg			= new Ffmpeg();
 	$setting_name	= $Ffmpeg->get_setting_name_from_quality($AVObj, $target_quality);
+	debug_log(__METHOD__." setting_name ".to_string($setting_name), logger::DEBUG);
 
 	if(SHOW_DEBUG) {
 		#die("N3 STOP setting_name:$setting_name - reelID:$reelID, quality:$quality");	#dump($setting_name,'setting_name'); die($setting_name);
-	}		
+	}
 
 	$render			= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
 
@@ -67,30 +68,30 @@ if($mode=='generate_version') {
 	$tipo 	= $ar[0];
 
 
-	
+
 	# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-	logger::$obj['activity']->log_message(
-		'NEW VERSION',
-		logger::INFO,
-		$tipo,
-		NULL,
-		array(	"msg"				=> "Generated av file",
-				"tipo"				=> $tipo,
-				"parent"			=> $parent,
-				"top_id"			=> TOP_ID,
-				"top_tipo"			=> TOP_TIPO,				
-				"video_id" 			=> $video_id,
-				"quality" 			=> $quality,
-				"source_quality" 	=> $source_quality
-			)
-	);
-	
-	
+		logger::$obj['activity']->log_message(
+			'NEW VERSION',
+			logger::INFO,
+			$tipo,
+			NULL,
+			array(	"msg"				=> "Generated av file",
+					"tipo"				=> $tipo,
+					"parent"			=> $parent,
+					"top_id"			=> TOP_ID,
+					"top_tipo"			=> TOP_TIPO,
+					"video_id" 			=> $video_id,
+					"quality" 			=> $quality,
+					"source_quality" 	=> $source_quality
+				)
+		);
+
+
 	// $html = "Processing media in background (target quality: $quality - setting: $setting_name). You can continue working" ;
 	$html = sprintf(label::get_label('procesando_media_en_background')." [setting:$setting_name] ",$quality);
 	if(SHOW_DEBUG) {
 		$html .= "<div class=\"debug_info\">Debug Command response: $render </div>" ;
-	}	
+	}
 
 	print $html;
 	die();
@@ -105,7 +106,7 @@ if($mode=='conform_header') {
 
 	if (empty($quality)) {
 		throw new Exception("Error Processing Request. Few vars! (quality)", 1);
-	}	
+	}
 	if (empty($video_id) || strlen($video_id)<4) {
 		throw new Exception("Error Processing Request. Few vars! (video_id)", 1);
 	}
@@ -118,10 +119,10 @@ if($mode=='conform_header') {
 
 	$reelID		= $video_id ;
 	#$quality 	= $target_quality ;
-			
+
 	# AVObj
 	$AVObj		= new AVObj($reelID, $quality);
-	
+
 	# Ffmpeg
 	$Ffmpeg		= new Ffmpeg();
 	$result		= $Ffmpeg->conform_header($AVObj);
@@ -136,7 +137,7 @@ if($mode=='conform_header') {
 	$ar 	= explode('-', $video_id);
 	$tipo 	= $ar[0];
 
-	
+
 	# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 	logger::$obj['activity']->log_message(
 		'NEW VERSION',
@@ -147,17 +148,17 @@ if($mode=='conform_header') {
 				"tipo"				=> $tipo,
 				"parent"			=> $parent,
 				"top_id"			=> TOP_ID,
-				"top_tipo"			=> TOP_TIPO,				
+				"top_tipo"			=> TOP_TIPO,
 				"video_id" 			=> $video_id,
 				"quality" 			=> $quality
 			)
 	);
-	
+
 	// MSG: "Processing media in background (target quality: $quality). You can continue working" ;
 	$html = sprintf(label::get_label('procesando_media_en_background'),$quality);
 	if(SHOW_DEBUG) {
 		$html .= "\n<div class=\"debug_info\">Debug Command response: $result </div>" ;
-	}	
+	}
 
 	print $html;
 	exit();
@@ -171,7 +172,7 @@ if($mode=='conform_header') {
 * DELETE VERSION
 */
 if($mode=='delete_version') {
-	
+
 	if (empty($video_id) || strlen($video_id)<4) {
 		throw new Exception("Error Processing Request. Few vars! (video_id)", 1);
 	}
@@ -190,49 +191,49 @@ if($mode=='delete_version') {
 
 
 	$reelID		= $video_id ;
-	
-	$AVObj 				= new AVObj($reelID, $quality);		
+
+	$AVObj 				= new AVObj($reelID, $quality);
 	$folder_path		= $AVObj->get_media_path_abs(); # incluye / final
 	$folder_path_del	= $folder_path . 'deleted/';
 	#$file				= $folder_path . $reelID . '.' . $AVObj->get_extension();
 	$file 				= $file_path;
-	
+
 	if(file_exists($file)) {
-		
+
 		try{
 
 			/**
 			* NOTE
 			* @see component_av->remove_component_media_files
 			*/
-			
-			# delete folder exists ?	
+
+			# delete folder exists ?
 			if( !is_dir($folder_path_del) ) {
 			$create_dir 	= mkdir($folder_path_del, 0777,true);
 			if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied . The files are not deleted") ;
 			}
-			
+
 			# delete folder set permissions
 			$wantedPerms 	= 0777;
 			$actualPerms 	= fileperms($folder_path_del);
 			if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
-			
+
 			# move / rename file
 			$file_base_name = pathinfo($file, PATHINFO_BASENAME); // Like rsc15_rsc78_45.mov._original
 			$file_ext 		= pathinfo($file, PATHINFO_EXTENSION);// Like mov
 			$target_name 	= $folder_path_del . "/$file_base_name" . '_deleted_' . date("Y-m-dHi") . '.' . $file_ext;
 
-			if(!rename($file, $target_name)){				
+			if(!rename($file, $target_name)){
 				throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 			}
-			
+
 			# DELETE TEMP SH FILE
-			$tmp_file		= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$reelID.'.sh';	
+			$tmp_file		= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$reelID.'.sh';
 			if(file_exists($tmp_file)) {
 			$del_sh			= unlink($tmp_file);
 			if(!$del_sh) 	throw new Exception(" Error on delete temp file . Temp file is not deleted");
 			}
-			
+
 			# DELETE POSTERFRAME IF MEDIA DELETED IS QUALITY DEFAULT
 			if($quality==$AVObj->get_quality_default()) {
 				$poster_file	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER ."/posterframe/{$reelID}.jpg";
@@ -244,8 +245,8 @@ if($mode=='delete_version') {
 
 			/*
 			# DELETE DB HEADERR_DATA OF CURRENT QUALITY
-			$RecordObj_reels		= new RecordObj_reels($reelID);	
-			$RecordObj_reels->delete_quality_in_header_data($quality);			
+			$RecordObj_reels		= new RecordObj_reels($reelID);
+			$RecordObj_reels->delete_quality_in_header_data($quality);
 
 			# SAVE OBJ TO DB
 			$RecordObj_reels->Save();
@@ -255,14 +256,14 @@ if($mode=='delete_version') {
 			$ar 	= explode('-', $video_id);
 			$tipo 	= $ar[0];
 
-			
+
 			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'DELETE FILE',
 				logger::INFO,
 				$tipo,
 				NULL,
-				array(	"msg"				=> "Deleted av file (file is renamed and moved to delete folder)",						
+				array(	"msg"				=> "Deleted av file (file is renamed and moved to delete folder)",
 						"tipo"				=> $tipo,
 						"parent"			=> $parent,
 						"top_id"			=> TOP_ID,
@@ -271,14 +272,14 @@ if($mode=='delete_version') {
 						"quality" 			=> $quality
 					)
 			);
-			
+
 			echo "File ". $reelID . '.' . $AVObj->get_extension() . " deleted ! "  ;
-			
+
 		} catch (Exception $e) {
 			echo 'Exception: ',  $e->getMessage(), "\n";
 		}
-	}		
-	exit();	
+	}
+	exit();
 }#END DELETE
 
 
@@ -304,12 +305,12 @@ if($mode=='file_exists') {
 
 	if(file_exists($file_name)) {
 
-		try {	
+		try {
 			$size		= @filesize($file_name) ;
 			if(!$size)	throw new Exception('Unknow size!') ;
 
 			$size_kb		= round($size / 1024) ;
-		
+
 			if($size_kb <= 1024) {
 				$file_size 	= $size_kb . ' KB' ;
 			}else{
@@ -318,8 +319,8 @@ if($mode=='file_exists') {
 		} catch (Exception $e) {
 			if(SHOW_DEBUG)
 			echo '',  $e->getMessage(), "\n";
-			#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;			
-		}			
+			#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
+		}
 	}
 	#dump($file_name, "file_size $file_size");
 	print $file_size;
@@ -351,13 +352,13 @@ if($mode=='download_file') {
 		throw new Exception("Error Processing Request. Few vars! (section_tipo)", 1);
 	}
 
-	
+
 
 	# AVOBJ
 	$reelID = $video_id;
 	$AVObj = new AVObj($reelID, $quality);
 
-	
+
 	#
 	# EXTENSION
 	if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
@@ -380,7 +381,7 @@ if($mode=='download_file') {
 
 	# LIB DOWNLOAD PREPARE
 	# VARS FOR LIB 'donwload.php'
-	$base_dir			= $AVObj->get_media_path_abs();	 #$AVObj->get_media_path(); 	
+	$base_dir			= $AVObj->get_media_path_abs();	 #$AVObj->get_media_path();
 	$allowed_referrer	= DEDALO_HOST;
 	# Local real file name
 	$file_name			= $AVObj->get_name() . '.' . $extension;
@@ -404,7 +405,7 @@ if($mode=='download_file') {
 														 $section_tipo);
 	$propiedades = $component_image->get_propiedades();
 	if (isset($propiedades->target_filename)) {
-		
+
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename, true);
 		$component 		= component_common::get_instance($modelo_name,
 														 $propiedades->target_filename,
@@ -442,7 +443,7 @@ if($mode=='download_file') {
 	# unlock session allows continue brosing
 	session_write_close();
 
-	# LOAD LIB 
+	# LOAD LIB
 	$page = DEDALO_LIB_BASE_PATH . '/media_engine/lib/download.php';
 	require_once($page);
 
@@ -455,7 +456,7 @@ if($mode=='download_file') {
 * DONWLOAD_FRAGMENT
 */
 if($mode=='download_fragment') {
-	
+
 	if (empty($video_id) || strlen($video_id)<4) {
 		die("Error: video_id is not defined!");
 	}
@@ -492,7 +493,7 @@ if($mode=='download_fragment') {
 	$Ffmpeg				= new Ffmpeg();
 	$command_response	= $Ffmpeg->build_fragment($AVObj, $tc_in, $tc_out, $target_filename, $watermark);
 		#dump($command_response,'$command_response');
-	
+
 	# Extract tipo from video_id like dd732-1.mp4 => dd732
 	$ar 	= explode('-', $video_id);
 	$tipo 	= $ar[0];
@@ -504,11 +505,11 @@ if($mode=='download_fragment') {
 		$tipo,
 		NULL,
 		#array("msg"=>"Downloaded av fragment file $video_id - quality $quality - tc_in:$tc_in : tc_out:$tc_out - tag_id:$tag_id - filename:$target_filename")
-		array(	"msg"				=> "Downloaded av fragment",				
+		array(	"msg"				=> "Downloaded av fragment",
 				"tipo"				=> $tipo,
 				"parent"			=> $parent,
 				"top_id"			=> $top_id,
-				"top_tipo"			=> $top_tipo,				
+				"top_tipo"			=> $top_tipo,
 				"video_id" 			=> $video_id,
 				"quality" 			=> $quality,
 				"tc_in" 			=> $tc_in,
@@ -520,7 +521,7 @@ if($mode=='download_fragment') {
 	if(!empty($command_response)) {
 		# LIB DOWNLOAD PREPARE
 		# VARS FOR LIB 'donwload.php'
-		$base_dir			= $AVObj->get_media_path_abs().'/fragments';	 #$AVObj->get_media_path(); 	
+		$base_dir			= $AVObj->get_media_path_abs().'/fragments';	 #$AVObj->get_media_path();
 		$allowed_referrer	= DEDALO_HOST;
 		$file_name			= $AVObj->get_name() .'-'. $tag_id .'.'. $AVObj->get_extension();
 		$file_name_showed	= $file_name ;
@@ -528,7 +529,7 @@ if($mode=='download_fragment') {
 		# unlock session allows continue brosing
 		session_write_close();
 
-		# LOAD LIB 
+		# LOAD LIB
 		$page = DEDALO_LIB_BASE_PATH . '/media_engine/lib/download.php';
 		require_once($page);
 
