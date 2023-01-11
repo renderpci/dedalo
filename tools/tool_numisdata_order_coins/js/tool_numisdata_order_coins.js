@@ -127,53 +127,6 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 
 
 
-/**
-* GET_COMPONENT
-* Load transcriptions component (text area) configured with the given lang
-* @param string lang
-* Create / recover and build a instance of current component in the desired lang
-* @return object instance
-*/
-tool_numisdata_order_coins.prototype.get_component = async function(options) {
-
-	const self = this
-
-	const data	= options.data
-	const role	= options.role
-	const name	= options.name
-
-	const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
-
-	const instance_options	= {
-		model			: ddo.model,
-		mode 			: ddo.mode,
-		tipo			: ddo.tipo,
-		section_tipo	: data.section_tipo,
-		section_id		: data.section_id,
-		type			: ddo.type || 'component',
-		lang 			: (typeof ddo.translatable!=='undefined' && ddo.translatable===false)
-			? page_globals.dedalo_data_nolan // lg-nolan
-			: page_globals.dedalo_data_lang,
-		to_delete_instances	: self.ar_instances.filter(el => el===self[name])
-	}
-
-	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
-
-	// set auto_init_editor if the ddo has his definition
-		if(ddo.auto_init_editor){
-			component_instance.auto_init_editor = ddo.auto_init_editor
-		}
-
-	// fix instance (overwrite)
-		self[name] = component_instance
-
-
-	return component_instance
-}//end get_component
-
-
-
 
 /**
 * SET_ORIGINAL_COPY

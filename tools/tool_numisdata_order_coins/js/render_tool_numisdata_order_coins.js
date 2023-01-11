@@ -10,7 +10,6 @@
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
 	import {open_tool} from '../../tool_common/js/tool_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 
