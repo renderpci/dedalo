@@ -88,7 +88,7 @@ if($mode=='generate_version') {
 
 
 	// $html = "Processing media in background (target quality: $quality - setting: $setting_name). You can continue working" ;
-	$html = sprintf(label::get_label('procesando_media_en_background')." [setting:$setting_name] ",$quality);
+	$html = label::get_label('procesando_media_en_background') . " [setting:$setting_name]";
 	if(SHOW_DEBUG) {
 		$html .= "<div class=\"debug_info\">Debug Command response: $render </div>" ;
 	}
