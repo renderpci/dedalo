@@ -606,10 +606,44 @@ class component_autocomplete_hi extends component_relation_common {
 				return null;
 			}
 
-		if (empty($option_obj)) {
+		if (empty($option_obj) || isset($option_obj->check_publishable)) {
 
 			// default case
-			$diffusion_value = $this->get_valor($lang, 'string', $separator);
+			// $diffusion_value = $this->get_valor($lang, 'string', $separator);
+
+			// lang never must be DEDALO_DATA_NOLAN
+				if ($lang===DEDALO_DATA_NOLAN) {
+					$lang = DEDALO_DATA_LANG; // Force current lang as lang
+				}
+
+			// properties
+				$propiedades	= $this->get_propiedades();
+				$show_parents	= (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
+
+			// dato iterate	and resolve each locator
+				$ar_value = [];
+				foreach ($dato as $key => $current_locator) {
+
+					// check_publishable
+					if (isset($option_obj->check_publishable) && $option_obj->check_publishable===true) {
+						$current_is_publicable = diffusion::get_is_publicable($current_locator);
+						if ($current_is_publicable!==true) {
+							// debug_log(__METHOD__." +++ Skip locator non publishable ".to_string($current_locator), logger::ERROR);
+							continue;
+						}
+					}
+
+					$current_value = component_relation_common::get_locator_value(
+						$current_locator,
+						$lang,
+						$show_parents
+					);
+
+					$ar_value[] = $current_value;
+				}//end foreach ($dato as $key => $current_locator)
+
+			// set value based on format
+				$diffusion_value = implode($separator, $ar_value);
 
 		}else{
 
@@ -736,7 +770,9 @@ class component_autocomplete_hi extends component_relation_common {
 		}
 
 		// clean untranslated tags (<mark>)
-			$diffusion_value = strip_tags($diffusion_value);
+			if (!empty($diffusion_value)) {
+				$diffusion_value = strip_tags($diffusion_value);
+			}
 
 
 		return (string)$diffusion_value;
