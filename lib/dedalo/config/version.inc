@@ -2805,7 +2805,14 @@
 	Released version 5.9.3
 		Valencia 14-12-2022T14:28:00
 		Fixed search parse_search_query_object error were count fails where JOIN is used inside window frame query
-
+		Valencia 11-01-2023T17:30:00
+		Fixed compatibility issues (tool_upload and ffmpeg class)
+		Added component_autocomplete diffusion value control of 'is publishable'
+		Added limit concurrent uploads to tool_import_files_dcnav
+		Added limit concurrent uploads to tool_import_files
+		Fixed tool_diffusion error were databases did not locate databases alias
+		Changed deprecated PHP method 'utf8_encode' to mb_convert_encoding alternative on read_csv_file_as_array method (tool_common)
+		Cleanup Ontology code
 
 
 	[/HISTORY]
@@ -2837,7 +2844,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-12-2022T14:28:00');
+	define('DEDALO_BUILD'	, '11-01-2023T17:30:00');
 
 
 
