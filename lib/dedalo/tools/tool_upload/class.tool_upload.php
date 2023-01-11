@@ -39,7 +39,7 @@ class tool_upload extends tool_common {
 	/**
 	* UPLOAD_FILE
 	* @param $quality string
-	* @return $html string
+	* @return object $response
 	*/
 	public function upload_file( $quality ) {
 
@@ -54,95 +54,100 @@ class tool_upload extends tool_common {
 		# Current component name
 		$component_name = get_class( $this->component_obj );
 
-		# VARS : Fix
-		switch ($component_name) {
-			case 'component_av' :
-					$SID 					= $this->component_obj->get_video_id();
-					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/' . $quality;
-					$this->component_obj->set_quality($quality);
-					$folder_path			= $this->component_obj->get_target_dir();
-						#dump($folder_path,'$folder_path'); die();
-					$current_extension 		= DEDALO_AV_EXTENSION;
-					$ar_allowed_extensions 	= unserialize(DEDALO_AV_EXTENSIONS_SUPPORTED);
-					break;
-			case 'component_image' :
-					$SID 					= $this->component_obj->get_image_id();
-					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . '/' . $quality;
-					$this->component_obj->set_quality($quality);
-					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
-						#dump($folder_path,'$folder_path'); die();
-					$current_extension 		= DEDALO_IMAGE_EXTENSION;
-					$ar_allowed_extensions 	= unserialize(DEDALO_IMAGE_EXTENSIONS_SUPPORTED);
-					break;
-			case 'component_svg' :
-					$SID 					= $this->component_obj->get_svg_id();
-					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
-						#dump($folder_path,'$folder_path'); die();
-					$current_extension 		= DEDALO_SVG_EXTENSION;
-					$ar_allowed_extensions 	= unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED);
-					break;
-			case 'component_pdf' :
-					$SID 					= $this->component_obj->get_pdf_id();
-					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . '/' . $quality;
-					$this->component_obj->set_quality($quality);
-					$folder_path			= $this->component_obj->get_target_dir();
-						#dump($folder_path,'$folder_path'); die();
-					$current_extension 		= DEDALO_PDF_EXTENSION;
-					$ar_allowed_extensions 	= unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED);
-					break;
-		}
+		// main vars : Fix
+			switch ($component_name) {
+				case 'component_av' :
+						$SID					= $this->component_obj->get_video_id();
+						#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/' . $quality;
+						$this->component_obj->set_quality($quality);
+						$folder_path			= $this->component_obj->get_target_dir();
+						$current_extension		= DEDALO_AV_EXTENSION;
+						$ar_allowed_extensions	= unserialize(DEDALO_AV_EXTENSIONS_SUPPORTED);
+						break;
+				case 'component_image' :
+						$SID 					= $this->component_obj->get_image_id();
+						#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . '/' . $quality;
+						$this->component_obj->set_quality($quality);
+						$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
+							#dump($folder_path,'$folder_path'); die();
+						$current_extension 		= DEDALO_IMAGE_EXTENSION;
+						$ar_allowed_extensions 	= unserialize(DEDALO_IMAGE_EXTENSIONS_SUPPORTED);
+						break;
+				case 'component_svg' :
+						$SID 					= $this->component_obj->get_svg_id();
+						$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
+							#dump($folder_path,'$folder_path'); die();
+						$current_extension 		= DEDALO_SVG_EXTENSION;
+						$ar_allowed_extensions 	= unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED);
+						break;
+				case 'component_pdf' :
+						$SID 					= $this->component_obj->get_pdf_id();
+						#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . '/' . $quality;
+						$this->component_obj->set_quality($quality);
+						$folder_path			= $this->component_obj->get_target_dir();
+							#dump($folder_path,'$folder_path'); die();
+						$current_extension 		= DEDALO_PDF_EXTENSION;
+						$ar_allowed_extensions 	= unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED);
+						break;
+			}
+
+		// main vars : check
+			if(!$SID) {
+				$response->result	= false;
+				$response->html		= 'Error SID not defined (1)';
+				return $response;
+			}
+			if(!$quality) {
+				$response->result	= false;
+				$response->html		= 'Error: quality not defined (1)';
+				return $response;
+			}
 
 
+		// verificamos si el archivo es válido
+			$f_name 		= $_FILES["fileToUpload"]['name'];
+			$f_type 		= $_FILES["fileToUpload"]['type'];
+			$f_temp_name	= $_FILES["fileToUpload"]['tmp_name'];
+			$f_size			= $_FILES["fileToUpload"]['size'];
+			$f_error		= $_FILES["fileToUpload"]['error'];
+			$f_error_text 	= tool_upload::error_number_to_text($f_error);
+			$f_extension 	= strtolower(pathinfo($f_name, PATHINFO_EXTENSION));
 
-		# VARS : Verify
-		if(!$SID) 		exit('Error SID not defined (1)');
-		if(!$quality) 	exit('Error: quality not defined (1)');
+		// file_obj f_name fix
+			$this->file_obj->f_name = $f_name;
 
-			#dump($_FILES["fileToUpload"],'$_FILES["fileToUpload"]');
+		// extensions : validate extension file
+			$is_valid_extension = $this->validate_extension( $f_extension, $ar_allowed_extensions );
+			if ($is_valid_extension !== true) {
+				return (string)$is_valid_extension; // msg html
+			}
 
-		# VERIFICAMOS SI EL ARCHIVO ES VÁLIDO
-		$f_name 		= $_FILES["fileToUpload"]['name'];
-		$f_type 		= $_FILES["fileToUpload"]['type'];
-		$f_temp_name	= $_FILES["fileToUpload"]['tmp_name'];
-		$f_size			= $_FILES["fileToUpload"]['size'];
-		$f_error		= $_FILES["fileToUpload"]['error'];
-		$f_error_text 	= tool_upload::error_number_to_text($f_error);
-		$f_extension 	= strtolower(pathinfo($f_name, PATHINFO_EXTENSION));
-			//dump($f_extension,'$f_extension for '.$f_temp_name.' - '.$f_name);
-
-		$this->file_obj->f_name 	 = $f_name;
-
-		# EXTENSIONS : Validate extension file
-		$is_valid_extension = $this->validate_extension( $f_extension, $ar_allowed_extensions );
-		if ($is_valid_extension !== true) {
-			return (string)$is_valid_extension; // msg html
-		}
-
-		# NOMBRE_ARCHIVO : Nombre final del archivo
-		$nombre_archivo = $SID . '.' . $f_extension ;
+		// nombre_archivo : nombre final del archivo
+			$nombre_archivo = $SID . '.' . $f_extension ;
 
 		# LOG UPLOAD BEGINS
 			$tipo 			= $this->component_obj->get_tipo();
 			$parent 		= $this->component_obj->get_parent();
 			$file_size_mb 	= round( ($f_size/1024)/1024 , 2 );
 
-			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'UPLOAD',
-				logger::INFO,
-				$tipo,
-				NULL,
-				array(	"msg"				=> "Upload file start",
-						"tipo"				=> $tipo,
-						"parent"			=> $parent,
-						"top_id"			=> TOP_ID,
-						"top_tipo"			=> TOP_TIPO,
-						"component_name" 	=> $component_name,
-						"quality" 			=> $quality,
-						"file_name" 		=> $nombre_archivo,
-						"file_size_mb" 		=> $file_size_mb
-					)
-			);
+			// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'UPLOAD',
+					logger::INFO,
+					$tipo,
+					NULL,
+					[
+						'msg'				=> 'Upload file start',
+						'tipo'				=> $tipo,
+						'parent'			=> $parent,
+						'top_id'			=> TOP_ID,
+						'top_tipo'			=> TOP_TIPO,
+						'component_name' 	=> $component_name,
+						'quality' 			=> $quality,
+						'file_name' 		=> $nombre_archivo,
+						'file_size_mb' 		=> $file_size_mb
+					]
+				);
 
 
 		# Verificamos que NO hay ya un fichero anterior con ese nombre. Si lo hay, lo renombramos y movemos a deleted files
@@ -160,7 +165,7 @@ class tool_upload extends tool_common {
 		# Move temp uploaded file to final dir
 		if(file_exists($f_temp_name)) {
 
-			$fileUploadOK =0;
+			$fileUploadOK = 0;
 
 			#If the file is a .zip (DVD) create the folder and copy the VIDEO_TS and AUDIO_TS to the destination folder.
 			if($f_extension === 'zip'){
@@ -227,10 +232,8 @@ class tool_upload extends tool_common {
 			trigger_error($msg);
 			exit($msg);
 		}
-		//dump($fileUploadOK, ' fileUploadOK'.to_string());
 
-
-		$html ='';
+		$html = '';
 
 		#
 		# ERROR : FILE NOT FOUND
@@ -256,25 +259,26 @@ class tool_upload extends tool_common {
 
 			$time_sec 	= exec_time_unit($start_time,'sec');
 
-			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'UPLOAD',
-				logger::INFO,
-				$tipo,
-				NULL,
-				array(	"msg"				=> "Error on upload file",
-						"tipo"				=> $tipo,
-						"parent"			=> $parent,
-						"top_id"			=> TOP_ID,
-						"top_tipo"			=> TOP_TIPO,
-						"component_name" 	=> $component_name,
-						"quality" 			=> $quality,
-						"file_name" 		=> $nombre_archivo,
-						"file_size_mb" 		=> $file_size_mb,
-						"time_sec" 			=> $time_sec,
-						"f_error"			=> $f_error
-					)
-			);
+			// logger activity : que(action normalized like 'load edit'), log level(default 'logger::info'), tipo(like 'dd120'), datos(array of related info)
+				logger::$obj['activity']->log_message(
+					'UPLOAD',
+					logger::INFO,
+					$tipo,
+					NULL,
+					[
+						'msg'				=> 'Error on upload file',
+						'tipo'				=> $tipo,
+						'parent'			=> $parent,
+						'top_id'			=> TOP_ID,
+						'top_tipo'			=> TOP_TIPO,
+						'component_name'	=> $component_name,
+						'quality'			=> $quality,
+						'file_name'			=> $nombre_archivo,
+						'file_size_mb'		=> $file_size_mb,
+						'time_sec'			=> $time_sec,
+						'f_error'			=> $f_error
+					]
+				);
 
 		#
 		# OK : FILE FOUND
@@ -335,34 +339,35 @@ class tool_upload extends tool_common {
 
 			$time_sec 	= exec_time_unit($start_time,'sec');
 
-			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'UPLOAD COMPLETE',
-				logger::INFO,
-				$tipo,
-				NULL,
-				array(	"msg"				=> "Upload file complete",
-						"tipo"				=> $tipo,
-						"parent"			=> $parent,
-						"top_id"			=> TOP_ID,
-						"top_tipo"			=> TOP_TIPO,
-						"component_name" 	=> $component_name,
-						"quality" 			=> $quality,
-						"file_name" 		=> $nombre_archivo,
-						"file_size_mb" 		=> $file_size_mb,
-						"time_sec" 			=> $time_sec,
-						"f_error"			=> $f_error
-					)
-			);
+			// logger activity : que(action normalized like 'load edit'), log level(default 'logger::info'), tipo(like 'dd120'), datos(array of related info)
+				logger::$obj['activity']->log_message(
+					'UPLOAD COMPLETE',
+					logger::INFO,
+					$tipo,
+					NULL,
+					array(	"msg"				=> "Upload file complete",
+							"tipo"				=> $tipo,
+							"parent"			=> $parent,
+							"top_id"			=> TOP_ID,
+							"top_tipo"			=> TOP_TIPO,
+							"component_name" 	=> $component_name,
+							"quality" 			=> $quality,
+							"file_name" 		=> $nombre_archivo,
+							"file_size_mb" 		=> $file_size_mb,
+							"time_sec" 			=> $time_sec,
+							"f_error"			=> $f_error
+						)
+				);
 		}
 
-		# Save component refresh 'valor_list'
-		$this->component_obj->Save();
+		// Save component refresh 'valor_list'
+			$this->component_obj->Save();
 
 		$response->html = $html;
 
+
 		return $response;
-	}#end upload_file
+	}//end upload_file
 
 
 
