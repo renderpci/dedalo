@@ -361,12 +361,17 @@ class tool_diffusion {
 				return $response;
 			}
 
-		$class_name   = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;		
+		$class_name   = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;
 
 		switch ($class_name) {
 			case 'diffusion_mysql':
-				// RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=false)
-				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database', 'children', true);
+				// databases
+				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$diffusion_element_tipo, // string tipo
+					'database', // string modelo_name
+					'children', // string relation_type
+					false // bool search_exact switch between 'database' or contains 'database' like 'database_alias'
+				);
 				if (isset($databases[0])) {
 					// Loads parent class diffusion
 					include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
@@ -375,9 +380,9 @@ class tool_diffusion {
 					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );
 				}else{
 					$response->msg .= " Database not found in structure for diffusion element: '$diffusion_element_tipo' ";
-				}				
+				}
 				break;
-			
+
 			default:
 				# Nothing to do
 				$response->result = true;
