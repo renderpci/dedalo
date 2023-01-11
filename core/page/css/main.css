@@ -3065,6 +3065,7 @@ input:-moz-placeholder {
 .wrapper_component.player > .label.move_top {
   margin-top: -2rem;
   background-color: white;
+  height: 2rem;
 }
 .wrapper_component.edit .button_exit_edit,
 .wrapper_component.search .button_exit_edit,
@@ -6351,6 +6352,9 @@ dd-modal .footer.distribute {
 }
 .wrapper_service_autocomplete > .visible {
   display: block;
+}
+.wrapper_service_autocomplete > .autocomplete_data {
+  z-index: 5;
 }
 .wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li {
   border-top: 0.07em solid #cdcdcd;

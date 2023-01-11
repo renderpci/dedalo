@@ -83,10 +83,10 @@ service_autocomplete.prototype.init = async function(options) {
 	self.ar_instances	= [];
 
 	// event keys
-		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
-		function fn_service_autocomplete_keys(e) {
-			self.service_autocomplete_keys(e)
-		}
+		// document.addEventListener('keydown', fn_service_autocomplete_keys, false)
+		// function fn_service_autocomplete_keys(e) {
+		// 	self.service_autocomplete_keys(e)
+		// }
 		// event_manager.subscribe('destroy_'+self.id, ()=>{
 		// 	document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 		// })
