@@ -1895,6 +1895,11 @@ abstract class common {
 									$related_element->pagination->limit = $dd_object->limit;
 								}
 
+								// data_source inherit
+									// if (isset($this->data_source)) {
+									// 	$related_element->data_source = $this->data_source;
+									// }
+
 								// virtual request_config, create new request config to be injected to the current_ddo.
 								// the current component has the configuration to all children components,
 								// and it's necessary calculate the new request_config that will be use in the next loop
