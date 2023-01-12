@@ -182,10 +182,20 @@ class component_relation_common extends component_common {
 	*/
 	public function get_dato_full() {
 
-		// load. Load matrix data and set this->dato
+		if(isset($this->dato_resolved)) {
+
+			// dato_resolved. Already resolved case
+
+			$dato_full = $this->dato_resolved;
+
+		}else{
+
+			// load. Load matrix data and set this->dato
 			$this->load_component_dato();
 
-		$dato_full = $this->dato_full;
+			$dato_full = $this->dato_full;
+		}
+
 
 		return $dato_full;
 	}//end get_dato_full
