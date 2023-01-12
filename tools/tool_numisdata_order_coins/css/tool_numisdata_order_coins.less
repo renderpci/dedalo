@@ -133,6 +133,22 @@
 				.wrapper_component {
 					box-shadow	:none;
 					color		: #353535;
+
+					.column.dragover{
+						outline: 2px dashed orange;
+					}
+					.column.drop_ordered_coins {
+						animation-duration: 1s;
+						animation-name: outline_to_green;
+						@keyframes outline_to_green {
+							from {
+								outline: 2px dashed green;
+							}
+							to {
+								outline: 2px dashed transparent;
+							}
+						}
+					}
 				}
 			}
 
