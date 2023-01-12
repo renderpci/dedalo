@@ -19,7 +19,6 @@
 		on_dragstart_mosaic,
 		on_dragover,
 		on_dragleave,
-		// on_dragend,
 		on_drop
 	} from '../../../core/component_portal/js/drag_and_drop.js'
 
