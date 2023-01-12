@@ -3221,6 +3221,17 @@ abstract class component_common extends common {
 
 			// updates given value selected by key in dato
 			case 'insert':
+				$dato[] = $changed_data->value;
+
+				$this->set_dato($dato);
+
+				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
+				$this->observable_dato = (get_called_class() === 'component_relation_related')
+					? $this->get_dato_with_references()
+					: $changed_data->value;
+
+				break;
+
 			case 'update':
 				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
 				if( isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato) ) {
