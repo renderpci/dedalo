@@ -358,8 +358,9 @@ const get_ordered_coins = async function(self){
 	const ordered_coins_node = await self.ordered_coins.render()
 	coins_container.appendChild(ordered_coins_node)
 
+	// listen the portal refreshed in other window ans assign the drop events to refreshed nodes
 	self.events_tokens.push(
-		event_manager.subscribe('save_'+ self.ordered_coins.id_base, assing_drop)
+		event_manager.subscribe('window_bur_'+ self.ordered_coins.id, assing_drop)
 	)
 	function assing_drop(options) {
 
