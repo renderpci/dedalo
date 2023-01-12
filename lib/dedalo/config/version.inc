@@ -2815,6 +2815,8 @@
 		Cleanup Ontology code
 		Updated label 'procesando_media_en_background' in tool_av_versions trigger
 		Fixed component_json error when no value is available from component. Now, null is returned instead of error
+		Valencia 12-01-2023T10:48:00
+		Removed unnecessary 'htmlspecialchars' conversion in tool_export that cause html chars into csv files
 
 
 	[/HISTORY]
@@ -2846,7 +2848,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-01-2023T17:52:00');
+	define('DEDALO_BUILD'	, '12-01-2023T10:48:00');
 
 
 
