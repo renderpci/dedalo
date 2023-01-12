@@ -219,7 +219,7 @@ const render_header_options = async function(self, content_data) {
 	const set_original_button = ui.create_dom_element({
 		element_type	: 'button',
 		class_name		: 'tool_button set_original light',
-		text_content	: self.get_tool_label('original_copy') || 'Original / Copy',
+		text_content	: self.get_tool_label('original_copy') || 'Set Original / Copy',
 		parent			: fragment
 	})
 	set_original_button.addEventListener('mouseup', async ()=>{

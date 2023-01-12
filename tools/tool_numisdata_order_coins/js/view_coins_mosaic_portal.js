@@ -444,6 +444,8 @@ const render_column_original_copy = function(options){
 	// DocumentFragment
 	const fragment = new DocumentFragment()
 
+	const tool_caller = options.caller.caller
+	console.log("tool_caller:",tool_caller);
 	const locator = options.locator
 
 	const discard_data		= options.caller.datum.data.find(item => item.section_id === locator.section_id && item.tipo === 'numisdata157')
@@ -491,7 +493,7 @@ const render_column_original_copy = function(options){
 					element_type	: 'label',
 					for 			: 'original_' + locator.section_id,
 					class_name		: original_class_name,
-					text_content	: get_label.original || 'Original',
+					text_content	: tool_caller.get_tool_label('original') || 'Original',
 					parent			: radio_button_contaniner
 				})
 				original_label.addEventListener('mouseup',()=>{
@@ -523,7 +525,7 @@ const render_column_original_copy = function(options){
 					element_type	: 'label',
 					for 			: 'copy_'+ locator.section_id,
 					class_name		: copy_class_name,
-					text_content	: get_label.copy || 'Copy',
+					text_content	: tool_caller.get_tool_label('copy') || 'Copy',
 					parent			: radio_button_contaniner
 				})
 				copy_label.addEventListener('mouseup',()=>{
@@ -549,7 +551,7 @@ const render_column_original_copy = function(options){
 				})
 				const checkbox_snap_label  = ui.create_dom_element({
 					element_type	: 'label',
-					text_content 	: get_label.snap || 'Snap',
+					text_content 	: tool_caller.get_tool_label('snap') || 'Snap',
 					parent			: snap_item
 				})
 				checkbox_snap_label.setAttribute('for','checkbox_snap_' + locator.section_id)
