@@ -59,6 +59,7 @@ render_tool_numisdata_order_coins.prototype.edit = async function(options={rende
 		self.node = wrapper
 		// set pointers
 		wrapper.content_data = content_data
+		get_ordered_coins(self)
 
 	return wrapper
 }//end render_tool_numisdata_order_coins
@@ -101,17 +102,6 @@ const get_content_data_edit = async function(self) {
 			class_name 		: 'right_container',
 			parent 			: fragment
 		})
-
-		// Coins
-			const coins_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name 		: 'coins_container',
-				parent 			: right_container
-			})
-
-			await self.coins.build(true)
-			const ordered_coins_node = await self.ordered_coins.render()
-			coins_container.appendChild(ordered_coins_node)
 
 
 	// content_data
