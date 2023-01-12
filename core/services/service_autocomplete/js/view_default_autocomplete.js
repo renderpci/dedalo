@@ -270,7 +270,7 @@ const render_search_input = function(self) {
 		search_input.setAttribute('autocorrect', 'off')
 
 		// Init a timeout variable to be used below
-			let timeout = null;
+			let timeout = null
 
 		// event input. changes the input value fire the search
 			search_input.addEventListener('keyup', async function(e){
@@ -279,6 +279,19 @@ const render_search_input = function(self) {
 					if(e.which===40 || e.which===38 || e.which===13){
 						return
 					}
+
+				// class searching (remove icon magnifying glass)
+					search_input.classList.add('searching')
+				// spinner
+					const prev_spinner = search_input.parentNode.querySelector('.spinner')
+					if(prev_spinner){
+						prev_spinner.remove()
+					}
+					const spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner'
+					})
+					search_input.parentNode.insertBefore(spinner, search_input.nextSibling);
 
 				// q
 					const q = search_input.value
@@ -319,7 +332,10 @@ const render_search_input = function(self) {
 						const api_response	= await self.autocomplete_search()
 						await render_datalist(self, api_response)
 
-						// console.log('///// fired:');
+						// class searching
+							search_input.classList.remove('searching')
+						// spinner remove
+							spinner.remove()
 					}, 350)
 			});
 

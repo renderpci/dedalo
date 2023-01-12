@@ -131,7 +131,7 @@
 
 		>input.autocomplete_input {
 			background: #ffffff url('../../themes/default/icons/search.svg');
-			background-position: bottom 6px right 10px;
+			background-position: bottom 6px right 8px;
 			background-repeat: no-repeat;
 			background-size: auto 60%;
 			margin: 0.5em;
@@ -141,6 +141,19 @@
 			&:focus {
 				box-shadow: none;
 			}
+
+			&.searching {
+				background-image: none;
+			}
+		}
+
+		.spinner {
+			right: 3rem;
+			top: 0.6rem;
+			height: 1.75rem;
+			width: 1.75rem;
+			left: unset;
+			border-width: 3px;
 		}
 
 		>.visible {
