@@ -338,3 +338,69 @@ const render_activity_info = function(self) {
 
 	return activity_info_body
 }//end render_activity_info
+
+/**
+* DROP
+* This is used to build the ordered coins node ans assign the drop
+* @param object self
+* 	instance of current tool
+*/
+const drop = function (options) {
+
+	const self			= options.self
+	const ar_drop_nodes = self.ordered_coins.node.querySelectorAll('.column_numisdata9')
+
+
+	const drop_zones_len = ar_drop_nodes.length
+
+	for (let i = drop_zones_len - 1; i >= 0; i--) {
+
+		const current_node = ar_drop_nodes[i]
+
+		// dragover event
+			current_node.addEventListener('dragover',function(e){
+				e.preventDefault()
+				e.stopPropagation()
+				e.dataTransfer.dropEffect = 'move'
+				// css
+					current_node.classList.add('dragover')
+					current_node.classList.remove('drop')
+			},false)
+
+			// dragleave event
+				current_node.addEventListener('dragleave',function(e){
+					e.preventDefault()
+					e.stopPropagation()
+					e.dataTransfer.dropEffect = 'move'
+					// css
+						current_node.classList.remove('dragover')
+				},false)
+
+			// drop event
+				current_node.addEventListener('drop', function(e){
+					e.preventDefault()
+					e.stopPropagation()
+
+					// css
+						current_node.classList.remove('dragover')
+						current_node.classList.add('drop_ordered_coins')
+
+					// data_transfer
+						const data	= e.dataTransfer.getData('text/plain');// element that's move
+
+					// the drag element will sent the data of the original position, the source_key
+						const data_parse = JSON.parse(data)
+
+					// assign element to target portal
+						const change = self.assign_element({
+							caller 	: current_node.component_instance,
+							locator : data_parse.locator
+						}).then( response =>{
+
+							get_ordered_coins(self)
+							}
+						)
+				},false)
+	}// end for (let i = drop_zones_len - 1; i >= 0; i--)
+
+}// end drop
