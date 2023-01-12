@@ -382,6 +382,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 							// add to the ddo to the column
 								ar_column_ddo.push(current_ddo)
+
 							// current_data. get the component data to assign to it and create the instance
 								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 
@@ -518,7 +519,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				el.section_tipo===section_tipo // match section_tipo
 				) {
 
-				if (el.matrix_id) {
+				if (el.matrix_id && matrix_id) {
 					// console.error("match matrix_id:", el.matrix_id);
 					return parseInt(el.matrix_id)===parseInt(matrix_id)
 				}
@@ -541,6 +542,9 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 
 	// undefined case. If the current item don't has data will be instantiated with the current section_id
 		if(!component_data) {
+			// console.log('returning auto empty data for ddo:', ddo);
+			// console.log('self.datum.data:', self.datum.data);
+
 			// empty component data build
 			return {
 				tipo			: ddo.tipo,
