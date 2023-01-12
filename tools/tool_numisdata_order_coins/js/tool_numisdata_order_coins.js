@@ -126,6 +126,34 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 }//end build_custom
 
 
+/**
+* ASSIGN_ELEMENT
+* Set the original and copy properties to discard component
+* @param locator object
+* @param ar_copies array of nodes
+* @return change object api_response
+*/
+tool_numisdata_order_coins.prototype.assign_element = function(options){
+
+	const self = this
+
+	const locator	= options.locator
+	const caller	= options.caller
+
+	const changed_data = [{
+		action	: 'insert',
+		value	: locator
+	}]
+	// change_value (save data)
+	const change =  caller.change_value({
+		changed_data	: changed_data,
+		refresh			: false
+	})
+
+	return change
+}//end assign_element
+
+
 
 
 /**
