@@ -169,10 +169,12 @@ export const render_column_id = function(options){
 					width	: 1280,
 					height	: 740
 				})
-				new_window.addEventListener('blur', function() {
-					self.refresh({
+				new_window.addEventListener('blur', async function() {
+					await self.refresh({
 						build_autoload : true
 					})
+					// fire window_bur event
+					event_manager.publish('window_bur_'+self.id, self)
 				})
 
 			// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
