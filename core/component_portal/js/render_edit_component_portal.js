@@ -895,13 +895,14 @@ export const get_buttons = (self) => {
 * @return bool
 */
 export const activate_autocomplete = async function(self, wrapper) {
+
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
 		if(self.context.properties.source?.mode==='external' && !self.request_config_object?.show?.interface) {
-			self.show_interface.show_autocomplete		= false
-		}// end if external
+			self.show_interface.show_autocomplete = false
+		}//end if external
 
-	if( self.show_interface.show_autocomplete === true
+	if( self.show_interface.show_autocomplete===true
 		&& self.autocomplete!==false
 		&& self.autocomplete_active!==undefined
 		&& self.autocomplete_active===false ){
@@ -920,7 +921,7 @@ export const activate_autocomplete = async function(self, wrapper) {
 		const autocomplete_node = await self.autocomplete.render()
 		wrapper.appendChild(autocomplete_node)
 		self.autocomplete_active = true
-		// self.autocomplete.search_input.focus()
+		self.autocomplete.search_input.focus({preventScroll:true});
 	}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
 
 	return true

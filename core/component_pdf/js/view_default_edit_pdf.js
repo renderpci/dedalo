@@ -167,7 +167,7 @@ const get_content_value = function(i, current_value, self) {
 
 		// webviewerloaded event. When the standard html of pdf.js is loaded, it is possible to get the library and set the PDF file
 			top.document.addEventListener('webviewerloaded', fn_webviewerloaded, false)
-			async function fn_webviewerloaded(e) {
+			async function fn_webviewerloaded() {
 				// console.log("webviewerloaded e:",e);
 
 				// shadow.addEventListener('load', (e) =>{
@@ -183,13 +183,18 @@ const get_content_value = function(i, current_value, self) {
 
 				// options
 					const pdf_viewer_options = await iframe.contentWindow['PDFViewerApplicationOptions'];
-					// remove the first page / default page of the library
-					pdf_viewer_options.set('defaultUrl', '');
-					// set correct locale
-					pdf_viewer_options.set('locale', locale_code);
+					if (pdf_viewer_options) {
+						// remove the first page / default page of the library
+						pdf_viewer_options.set('defaultUrl', '');
+						// set correct locale
+						pdf_viewer_options.set('locale', locale_code);
+					}
 
 				// pdf_viewer
 					self.pdf_viewer = await iframe.contentWindow['PDFViewerApplication'];
+					if (!self.pdf_viewer) {
+						return
+					}
 
 				// console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions);
 				// console.log("/// pdf_url:",pdf_url);

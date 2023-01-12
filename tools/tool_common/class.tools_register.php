@@ -18,13 +18,14 @@ class tools_register {
 	static $section_tools_config_tipo		= 'dd996';
 	static $tipo_affeted_models				= 'dd1330';
 	static $tipo_properties					= 'dd1335';
+	static $tools_configuration				= 'dd999'; // tools Configuration component_json
 
 
 
 	/**
 	* IMPORT_TOOLS
-	* Read all dedalo dir 'tools' subfolders and extract property 'ontology' from all 'register.json' files
-	* Remove all previous values in database about tld 'tool' and insert safe renumerated all new structure terms
+	* Read all dedalo dir 'tools' sub-folders and extract property 'ontology' from all 'register.json' files
+	* Remove all previous values in database about tld 'tool' and insert safe re-numerated all new structure terms
 	* from imported ontologies
 	* @return array $info_file_processed
 	*	Array of objects
@@ -273,7 +274,7 @@ class tools_register {
 	* @param object $current_info_object
 	*	Full dedalo section data object from one record
 	* @return object $tool_object
-	*	Simple and human readable json object to use with components, sections, areas..
+	*	Simple and human readable JSON object to use with components, sections, areas..
 	*/
 	public static function create_simple_tool_object(string $section_tipo, int $section_id) : object {
 
@@ -561,7 +562,9 @@ class tools_register {
 
 	/**
 	* RENUMERATE_TERM_ID
-	* @return object $ontology
+	* @param array $ontology
+	* @param int $counter
+	* @return array $ontology
 	*/
 	public static function renumerate_term_id(array $ontology, &$counter) : array {
 
@@ -594,13 +597,15 @@ class tools_register {
 
 	/**
 	* CREATE_TOOL_CONFIG
-	* @return bool true
+	* @param string $tool_name
+	* @return bool
 	*/
 	public static function create_tool_config(string $tool_name) : bool {
 
 		// section
 			$section_tools_config_tipo	= self::$section_tools_config_tipo; // 'dd996';
 			$component_tipo_tool_name	= self::$tipo_tool_name; // 'dd1326';
+			$tools_configuration		= self::$tools_configuration; // 'dd999'
 
 		// search by tool name. (!) Note that section_tipo is dd996 (Tools configuration) a virtual of 'dd73'
 			$tool_by_name = self::get_tool_by_name($tool_name, $section_tools_config_tipo);
@@ -651,23 +656,25 @@ class tools_register {
 
 					$reg_section = section::get_instance($reg_record->section_id, $reg_record->section_tipo);
 					$reg_section->set_dato($reg_record->datos);
-					// get the default config un the register
-					$component_tipo		= 'dd999';
+					// get the default config of the register
+					$component_tipo		= $tools_configuration; // 'dd999';
 					$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$reg_component		= component_common::get_instance($component_model,
-																		 $component_tipo,
-																		 $reg_record->section_id,
-																		 'list',
-																		 DEDALO_DATA_NOLAN,
-																		 $section_tools_reg_tipo);
+					$reg_component		= component_common::get_instance(
+						$component_model,
+						$component_tipo,
+						$reg_record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tools_reg_tipo
+					);
 					$reg_dato = $reg_component->get_dato();
 					if(empty($reg_dato)) return false;
 
-					// create the config conponent in the config section
+					// create the config component in the config section
 					$config_section = section::get_instance(null, $section_tools_config_tipo);
 					$config_section->forced_create_record();
 
-					$config_component = component_common::get_instance( 
+					$config_component = component_common::get_instance(
 						$component_model,
 						$component_tipo,
 						$config_section->get_section_id(),
@@ -725,56 +732,63 @@ class tools_register {
 	*/
 	public static function get_all_config_tool() : array {
 
-		$sqo_config_tool_active = json_decode('{
-			"section_tipo": "dd996",
-			"limit": 0,
-			"filter": null,
-			"full_count": false
-		}');
+		// short vars
+			$section_tools_config_tipo	= self::$section_tools_config_tipo; // 'dd996'
+			$name_tipo					= self::$tipo_tool_name; // 'dd1326';
+			$config_tipo				= self::$tools_configuration; // 'dd999' tools Configuration component_json
 
-		$config_search	= search::get_instance($sqo_config_tool_active);
-		$config_result	= $config_search->search();
-		$ar_records		= $config_result->ar_records ?? [];
-		$name_tipo		= self::$tipo_tool_name; // 'dd1326';
-		$config_tipo	= 'dd999';
-		$ar_config		= array_map(function($record) use($name_tipo, $config_tipo){
+		// sqo_config_tool_active
+			$sqo_config_tool_active = json_decode('{
+				"section_tipo": "'.$section_tools_config_tipo.'",
+				"limit": 0,
+				"filter": null,
+				"full_count": false
+			}');
 
-			$section = section::get_instance($record->section_id, $record->section_tipo);
-			$section->set_dato($record->datos);
+		// search
+			$config_search	= search::get_instance($sqo_config_tool_active);
+			$config_result	= $config_search->search();
+			$ar_records		= $config_result->ar_records ?? [];
 
-			// name
-				$model		= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
-				$component	= component_common::get_instance(
-					$model,
-					$name_tipo,
-					$record->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$record->section_tipo
-				);
-				$dato	= $component->get_dato();
-				$name	= reset($dato);
+		// map result as ar_config
+			$ar_config = array_map(function($record) use($name_tipo, $config_tipo){
 
-			// config
-				$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
-				$component	= component_common::get_instance(
-					$model,
-					$config_tipo,
-					$record->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$record->section_tipo
-				);
-				$dato	= $component->get_dato();
-				$config	= reset($dato);
+				$section = section::get_instance($record->section_id, $record->section_tipo);
+				$section->set_dato($record->datos);
 
-			$value = (object)[
-				'name'		=> $name,
-				'config'	=> $config
-			];
+				// name
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
+					$component	= component_common::get_instance(
+						$model,
+						$name_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$dato	= $component->get_dato();
+					$name	= reset($dato);
 
-			return $value;
-		}, $ar_records);
+				// config
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
+					$component	= component_common::get_instance(
+						$model,
+						$config_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$dato	= $component->get_dato();
+					$config	= reset($dato);
+
+				$value = (object)[
+					'name'		=> $name,
+					'config'	=> $config
+				];
+
+				return $value;
+			}, $ar_records);
 
 
 		return $ar_config;
@@ -872,6 +886,7 @@ class tools_register {
 
 
 }//end class tools_register
+
 
 
 /*

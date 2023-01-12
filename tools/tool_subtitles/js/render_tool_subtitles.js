@@ -526,10 +526,7 @@ const render_subtitles = async function(self) {
 
 
 	return fragment
-};//end render_subtitles
-
-
-
+}//end render_subtitles
 
 
 
