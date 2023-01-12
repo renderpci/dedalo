@@ -618,7 +618,13 @@ abstract class component_common extends common {
 						$this->matrix_id
 					);
 
-				// inject dato to component
+					// fix dato
+					$this->dato = $dato_tm;
+
+					// set as already loaded to prevent load again
+					$this->bl_loaded_matrix_data = true;
+
+					// inject dato to component
 					$this->dato_resolved = $dato_tm;
 
 				return $this->dato_resolved;
@@ -664,7 +670,6 @@ abstract class component_common extends common {
 				);
 			}
 		}
-
 
 		return $dato; # <- Se aplicará directamente el fallback de idioma para el mode list
 	}//end get_dato

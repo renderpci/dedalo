@@ -83,10 +83,10 @@ service_autocomplete.prototype.init = async function(options) {
 	self.ar_instances	= [];
 
 	// event keys
-		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
-		function fn_service_autocomplete_keys(e) {
-			self.service_autocomplete_keys(e)
-		}
+		// document.addEventListener('keydown', fn_service_autocomplete_keys, false)
+		// function fn_service_autocomplete_keys(e) {
+		// 	self.service_autocomplete_keys(e)
+		// }
 		// event_manager.subscribe('destroy_'+self.id, ()=>{
 		// 	document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 		// })
@@ -291,6 +291,9 @@ service_autocomplete.prototype.autocomplete_search = function() {
 
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
 		const js_promise = self[engine]()
+
+	// debug
+		// console.log('autocomplete_search js_promise >>', js_promise );
 
 
 	return js_promise
