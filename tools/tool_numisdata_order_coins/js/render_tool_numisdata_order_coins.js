@@ -339,6 +339,57 @@ const render_activity_info = function(self) {
 	return activity_info_body
 }//end render_activity_info
 
+
+/**
+* GET_ORDERED_COINS
+* This is used to build the ordered coins node ans assign the drop
+* @param object self
+* 	instance of current tool
+* @return DOM node activity_info_body
+*/
+const get_ordered_coins = async function(self){
+
+	const right_container = self.node.content_data.right_container
+
+	// clean the coins container
+		while (right_container.firstChild) {
+			right_container.removeChild(right_container.firstChild);
+		}
+
+	// Coins
+		const coins_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'coins_container',
+			parent 			: right_container
+		})
+
+	await self.ordered_coins.destroy(false, true, true) // instance=false, delete_dependencies=true, remove_dom=true
+	await self.ordered_coins.build(true)
+	const ordered_coins_node = await self.ordered_coins.render()
+	coins_container.appendChild(ordered_coins_node)
+
+	self.events_tokens.push(
+		event_manager.subscribe('save_'+ self.ordered_coins.id_base, assing_drop)
+	)
+	function assing_drop(options) {
+
+		drop({
+			self : self
+		})
+	}
+
+
+	drop({
+		self : self
+	})
+
+
+}//end get_ordered_coins
+
+
+
+
+
 /**
 * DROP
 * This is used to build the ordered coins node ans assign the drop
