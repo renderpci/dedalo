@@ -81,6 +81,8 @@ class tool_export extends tool_common {
 
 	/**
 	* GET_RECORDS
+	* @param array $layout_map
+	* 	Array of tipo
 	* @return array|null
 	*/
 	public function get_records( $layout_map ) {
@@ -177,7 +179,7 @@ class tool_export extends tool_common {
 
 		if (is_null($ar_records)) {
 			// Calculate records when not are already received
-			$ar_records = $this->get_records();
+			$ar_records = $this->get_records([]);
 		}
 
 		$ar_records_deep_resolved=array();
@@ -190,7 +192,6 @@ class tool_export extends tool_common {
 		// dump($ar_records_deep_resolved, ' $ar_records_deep_resolved ++ '.to_string());
 		#$memory_usage = dd_memory_usage();
 		#dump($memory_usage, ' memory_usage deep_resolve_row ++ '.to_string());
-
 
 		// breakdown
 			$breakdown = ($this->data_format==='breakdown' || $this->data_format==='breakdown_html') ? true : false;
@@ -355,7 +356,9 @@ class tool_export extends tool_common {
 													// Output: &lt;Il &eacute;tait une fois un &ecirc;tre&gt;
 													// echo htmlspecialchars('<Il était une fois un être>.');
 													// Output: &lt;Il était une fois un être&gt;.
-												$cvvalue = htmlspecialchars($cvvalue);
+												if(!empty($cvvalue)) {
+													// $cvvalue = htmlspecialchars($cvvalue);
+												}
 											}
 
 											$ar_columns_keys[] = [
@@ -385,7 +388,9 @@ class tool_export extends tool_common {
 												// Output: &lt;Il &eacute;tait une fois un &ecirc;tre&gt;
 												// echo htmlspecialchars('<Il était une fois un être>.');
 												// Output: &lt;Il était une fois un être&gt;.
-											$current_value = htmlspecialchars($current_value);
+											if (!empty($current_value)) {
+												// $current_value = htmlspecialchars($current_value);
+											}
 										}
 
 									// safe format with quotes etc

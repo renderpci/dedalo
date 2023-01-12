@@ -198,7 +198,7 @@ class search_development2 {
 	/**
 	* SEARCH
 	* Exec a sql query search against the database
-	* @return array $result_table
+	* @return object $records_data
 	*/
 	public function search() {
 
