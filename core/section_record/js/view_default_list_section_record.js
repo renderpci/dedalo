@@ -221,6 +221,7 @@ const get_content_data = async function(self) {
 									reject(false)
 									return
 								}
+
 								resolve(true)
 							}).catch((errorMsg) => {
 								// error occurred case
@@ -251,7 +252,7 @@ const get_content_data = async function(self) {
 
 							// column. If column already exists, place the component node into the column.
 							// Else, creates a new column and place it into the fragment
-							const found_node	= ar_column_nodes.find(el => el.id === current_instance.column_id)
+							const found_node	= ar_column_nodes.find(el => el.column_id === current_instance.column_id)
 							const column_node	= found_node
 								? found_node
 								: (()=>{
@@ -583,7 +584,8 @@ const render_column_node = function(component_instance, self, ar_instances){
 		id				: `col_${column_id}`
 	})
 	// set the id to the node, it used to be selected to mach column and instances.
-	column_node.id = column_id
+	column_node.column_id			= column_id
+	column_node.component_instance	= component_instance
 
 	// column_responsive mobile add-ons
 		if (self.caller.model==='section') {
