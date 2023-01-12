@@ -135,7 +135,28 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 			// fix main_element for convenience
 				const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
-				self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+
+			// section case. (!) note that section is not loaded traumatically from tool common build
+				if (main_element_ddo.model==='section') {
+					const element_options = {
+						model			: main_element_ddo.model,
+						mode			: main_element_ddo.mode,
+						tipo			: main_element_ddo.tipo,
+						section_tipo	: main_element_ddo.section_tipo,
+						section_id		: main_element_ddo.section_id,
+						lang			: main_element_ddo.lang,
+						type			: main_element_ddo.type,
+						properties 		: main_element_ddo.properties || null,
+						id_variant		: self.model,  // id_variant prevents id conflicts
+						caller			: self // set tool as caller of the element :-)
+					}
+					const instance = await get_instance(element_options) // load and init
+					await instance.build(true)
+					self.ar_instances.push(instance)
+				}
+
+			// fix main_element
+				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 			// ddo_map for service_time_machine. Section uses is request_config_object show
 				const ddo_map = self.main_element.model==='section'
