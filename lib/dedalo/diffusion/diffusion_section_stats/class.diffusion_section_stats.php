@@ -45,7 +45,7 @@ class diffusion_section_stats extends diffusion {
 		$this->fecha = $fecha;
 
 
-		$this->domain = 'dedalo';		
+		$this->domain = 'dedalo';
 
 		return true;
 	}//end __construct
@@ -437,7 +437,7 @@ class diffusion_section_stats extends diffusion {
 						$options_search_from_user->limit		= '';
 						$options_search_from_user->order_by		= 'count';
 						$options_search_from_user->filter_custom= $filter_custom;
-						
+
 						// $section_rows 	= search::get_records_data($options_search_from_user);
 							#dump($section_rows,'$section_rows');
 						$section_rows 	= new stdClass();
@@ -986,7 +986,7 @@ class diffusion_section_stats extends diffusion {
 	*/
 	static function sort_elements_by_x($a, $b) {
 		if($a->x == $b->x){ return 0 ; }
-		
+
 		return ($a->x < $b->x) ? -1 : 1;
 	}//end sort_elements_by_x
 
@@ -994,7 +994,7 @@ class diffusion_section_stats extends diffusion {
 
 	/**
 	* GET_INTERVAL_RAW_ACTIVITY_DATA
-	* Search records on table "matrix_activity" and creates an array of 
+	* Search records on table "matrix_activity" and creates an array of
 	* objects with all user actions summarized by action type in the given date range
 	* @param int $user_id
 	* @param string $date_in
@@ -1005,23 +1005,23 @@ class diffusion_section_stats extends diffusion {
 	* @return array $totals_data
 	*/
 	public static function get_interval_raw_activity_data($user_id, $date_in, $date_out) {
-		
+
 		// tipos
 			$what_tipo	= logger_backend_activity::$_COMPONENT_QUE['tipo'];		// expected dd545
 			$where_tipo	= logger_backend_activity::$_COMPONENT_DONDE['tipo'];	// expected dd546
-			$when_tipo	= logger_backend_activity::$_COMPONENT_CUANDO['tipo'];	// expected dd547	
+			$when_tipo	= logger_backend_activity::$_COMPONENT_CUANDO['tipo'];	// expected dd547
 
 		// base objects
 			$what_obj		= new stdClass();
 			$where_obj		= new stdClass();
 			$when_obj		= new stdClass();
 			$publish_obj	= new stdClass();
-		
+
 		// matrix_activity. Get data from current user in range
 			$strQuery = '
 				SELECT *
 				FROM "matrix_activity"
-				WHERE 
+				WHERE
 				"date" between \''.$date_in.'\' and \''.$date_out.'\'
 				AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				ORDER BY id ASC
@@ -1112,7 +1112,7 @@ class diffusion_section_stats extends diffusion {
 									$publish_obj->{$_section_tipo} = isset($publish_obj->{$_section_tipo})
 										? $publish_obj->{$_section_tipo} + 1
 										: 1;
-								}	
+								}
 							}
 							break;
 						case ($key==='dd271' || $key==='dd1224' || $key==='dd1225'): // first publish, first publish user, last publish user
@@ -1137,11 +1137,11 @@ class diffusion_section_stats extends diffusion {
 
 					$dd_date	= new dd_date();
 					$date_value	= $dd_date->get_date_from_timestamp( $key );
-					$hour		= $date_value->hour; 
+					$hour		= $date_value->hour;
 
 					$when_obj->{$hour} = isset($when_obj->{$hour})
 						? $when_obj->{$hour} + 1
-						: 1; 
+						: 1;
 				}
 
 			// update old activity data cases
@@ -1149,10 +1149,10 @@ class diffusion_section_stats extends diffusion {
 					// note that '$datos' is already modified
 					tool_administration::update_activity_data($row, $datos);
 				}
-			
+
 		}//end while ($rows = pg_fetch_assoc($result))
 
-		
+
 		// merge and verticalize data to store it
 			$totals_data = [];
 			foreach ($what_obj as $key => $value) {
@@ -1205,7 +1205,7 @@ class diffusion_section_stats extends diffusion {
 	*	Optional. Ex. 12
 	* @param unt $day
 	*	Optional. Ex. 30
-	* 
+	*
 	* @return int section_id
 	*	The section id created on save
 	*/
@@ -1217,7 +1217,7 @@ class diffusion_section_stats extends diffusion {
 				debug_log(__METHOD__." ERROR. YOU MUST UPDATE YOUR DATA VERSION TO ".json_encode($required_version)." OR LATER! ".to_string(), logger::ERROR);
 				return false;
 			}
-		
+
 		// creates a new section
 			$section_tipo	= USER_ACTIVITY_SECTION_TIPO; // 'dd1521';
 			$section		= section::get_instance(null, $section_tipo, 'edit', false);
@@ -1240,7 +1240,7 @@ class diffusion_section_stats extends diffusion {
 					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 					$locator->set_section_id($value);
 					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				
+
 				$data = [$locator];
 				$component->set_dato($data);
 				$component->Save();
@@ -1260,7 +1260,7 @@ class diffusion_section_stats extends diffusion {
 				$component->Save();
 			})(USER_ACTIVITY_TYPE_TIPO, $type); // dd1531
 
-		// date 
+		// date
 			(function($tipo, $year, $month, $day) use($section_tipo, $section_id){
 				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component	= component_common::get_instance($model,
@@ -1275,7 +1275,7 @@ class diffusion_section_stats extends diffusion {
 					$date->day		= $day;
 
 				$dd_date = new dd_date($date);
-				
+
 				$data = new stdClass();
 					$data->start = $dd_date;
 
@@ -1295,8 +1295,8 @@ class diffusion_section_stats extends diffusion {
 				$data = $value;
 				$component->set_dato($data);
 				$component->Save();
-			})(USER_ACTIVITY_TOTALS_TIPO, $totals_data); // dd1523		
-		
+			})(USER_ACTIVITY_TOTALS_TIPO, $totals_data); // dd1523
+
 
 		return $section_id;
 	}//end save_user_activity
@@ -1341,7 +1341,7 @@ class diffusion_section_stats extends diffusion {
 		// time vars
 			$today		= new DateTime();
 			$yesterday	= new DateTime(); $yesterday->modify('-1 day'); // or $yesterday->sub(new DateInterval('P1D'));
-			
+
 		// get last saved user activity stats
 			$sqo = json_decode('{
 			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
@@ -1411,7 +1411,7 @@ class diffusion_section_stats extends diffusion {
 				  })($ar_records[0])
 				: '';
 
-		// do not include today at any time because it is not complete yet			
+		// do not include today at any time because it is not complete yet
 			$activity_filter_beginning .= ' AND date < \''.$today->format("Y-m-d").'\'';
 
 		// last activity record of current user
@@ -1435,7 +1435,7 @@ class diffusion_section_stats extends diffusion {
 				$response->msg .= 'Skip. Not computable result found for user '.$user_id;
 				return $response;
 			}
-			
+
 			// dd date object
 				$dd_date	= new dd_date();
 				$date_value	= $dd_date->get_date_from_timestamp( $row->date );
@@ -1446,7 +1446,7 @@ class diffusion_section_stats extends diffusion {
 				}
 
 		// iterate from the beginning, in steps of a day
-			$begin	= new DateTime($row->date);			
+			$begin	= new DateTime($row->date);
 			$end	= $today; // $yesterday; // remember not to include today because it is not finished yet
 
 			// by day
@@ -1461,14 +1461,14 @@ class diffusion_section_stats extends diffusion {
 						$i_clon		= clone $i;
 						$i_clon->modify('+1 day');
 						$date_out	= $i_clon->format("Y-m-d");
-					
-					$totals_data = diffusion_section_stats::get_interval_raw_activity_data($user_id, $date_in, $date_out);					
+
+					$totals_data = diffusion_section_stats::get_interval_raw_activity_data($user_id, $date_in, $date_out);
 
 					// if not empty totals_data, add
 					if (count($totals_data)>0) {
 
 						$result = diffusion_section_stats::save_user_activity($totals_data, $user_id, $type='day', $i->format("Y"), $i->format("m"), $i->format("d"));
-						
+
 						$updated_days[] = (object)[
 							'user'	=> $user_id,
 							'date'	=> $i->format("Y-m-d")
@@ -1476,11 +1476,11 @@ class diffusion_section_stats extends diffusion {
 					}
 				}
 
-		// debug info			
+		// debug info
 			$memory		= tools::get_memory_usage();
 			$total_time	= exec_time_unit($start_time,'ms').' ms';
 			debug_log(__METHOD__." -> updated_days:  ".to_string($updated_days)." - memory: $memory - total_time: $total_time", logger::DEBUG);
-		
+
 		$response->result	= $updated_days;
 		$response->msg		= 'Ok. Request done. ';
 
@@ -1535,7 +1535,7 @@ class diffusion_section_stats extends diffusion {
 			        ]
 			      }'
 				: '';
-		
+
 		// get all user activity records from user_activity_section in the range
 			$sqo = json_decode('{
 			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
@@ -1543,7 +1543,7 @@ class diffusion_section_stats extends diffusion {
 			  "offset": 0,
 			  "select": [],
 			  "filter": {
-			    "$and": [			      
+			    "$and": [
 			      {
 	                "q": "{\"start\":{\"op\":null,\"day\":'.$dd_date_in->day.',\"month\":'.$dd_date_in->month.',\"year\":'.$dd_date_in->year.',\"time\":'.$dd_date_in->time.'}}",
 	                "q_operator": ">",
@@ -1585,15 +1585,15 @@ class diffusion_section_stats extends diffusion {
 			    }
 			  ]
 			}');
-			
+
 			# Search records
 			$search_development2	= new search_development2($sqo);
 			$search_result			= $search_development2->search();
-			$ar_records				= $search_result->ar_records;			
+			$ar_records				= $search_result->ar_records;
 			if (empty($ar_records)) {
 				return false;
 			}
-			
+
 		// add selectors
 			$add_who_data		= true;
 			$add_what_data		= true;
@@ -1616,7 +1616,7 @@ class diffusion_section_stats extends diffusion {
 			$publish_data_obj	= new stdClass();
 
 			// add all hours to preserve holes
-				for ($i=0; $i < 24; $i++) { 
+				for ($i=0; $i < 24; $i++) {
 					$when_data_obj->{$i} = (object)[
 						'key'	=> $i,
 						'label'	=> str_pad($i, 2, '0', STR_PAD_LEFT),
@@ -1626,12 +1626,12 @@ class diffusion_section_stats extends diffusion {
 
 			// who: exclude section info tipos to avoid fake totals
 				// $ar_exclude_tipos = [
-				// 	'dd200', // Created by user 
+				// 	'dd200', // Created by user
 				// 	'dd199', // Creation date
-				// 	'dd197', // Modified by user 
+				// 	'dd197', // Modified by user
 				// 	'dd201', // Modification date
 				// 	'dd271', // First publication
-				// 	'dd1223', // Last publication 
+				// 	'dd1223', // Last publication
 				// 	'dd1224', // First publication user
 				// 	'dd1225' //  Last publication user
 				// ];
@@ -1640,7 +1640,7 @@ class diffusion_section_stats extends diffusion {
 
 				$datos	= json_decode($row->datos);
 				$totals	= json_decode($datos->components->{USER_ACTIVITY_TOTALS_TIPO}->dato->{DEDALO_DATA_NOLAN});
-								
+
 				// who
 				if ($add_who_data===true) {
 					// user
@@ -1706,7 +1706,7 @@ class diffusion_section_stats extends diffusion {
 						// dump($where_totals, ' where_totals ++ '.to_string());
 					// add data
 						foreach ($where_totals as $item) {
-							
+
 							$item_key = $item->tipo;
 							if (isset($where_data_obj->{$item_key})) {
 								$where_data_obj->{$item_key}->value += $item->value;
@@ -1714,7 +1714,7 @@ class diffusion_section_stats extends diffusion {
 								$where_data_obj->{$item_key} = new stdClass();
 									$where_data_obj->{$item_key}->key	= $item->tipo;
 									$where_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
-									$where_data_obj->{$item_key}->value	= $item->value;	
+									$where_data_obj->{$item_key}->value	= $item->value;
 							}
 						}
 				}
@@ -1735,7 +1735,7 @@ class diffusion_section_stats extends diffusion {
 								$when_data_obj->{$item_key} = new stdClass();
 									$when_data_obj->{$item_key}->key	= $item->hour;
 									$when_data_obj->{$item_key}->label	= str_pad($item->hour, 2, '0', STR_PAD_LEFT);
-									$when_data_obj->{$item_key}->value	= $item->value;	
+									$when_data_obj->{$item_key}->value	= $item->value;
 							}
 						}
 				}
@@ -1755,7 +1755,7 @@ class diffusion_section_stats extends diffusion {
 								$publish_data_obj->{$item_key} = new stdClass();
 									$publish_data_obj->{$item_key}->key		= $item->tipo;
 									$publish_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
-									$publish_data_obj->{$item_key}->value	= $item->value;	
+									$publish_data_obj->{$item_key}->value	= $item->value;
 							}
 						}
 				}
@@ -1780,7 +1780,7 @@ class diffusion_section_stats extends diffusion {
 			}
 
 		// sort
-			$cmp_label = function($_a, $_b) {			
+			$cmp_label = function($_a, $_b) {
 				$a = $_a->label;
 				$b = $_b->label;
 
@@ -1790,7 +1790,7 @@ class diffusion_section_stats extends diffusion {
 			    return ($a < $b) ? -1 : 1;
 			};
 			usort($when_data, $cmp_label);
-		
+
 		$totals = new stdClass();
 			$totals->who		= $who_data;
 			$totals->what		= $what_data;
@@ -1808,7 +1808,7 @@ class diffusion_section_stats extends diffusion {
 	* @return array $ar_js_obj
 	*/
 	public static function parse_totals_for_js($totals, $tipo=USER_ACTIVITY_SECTION_TIPO) {
-		
+
 		$ar_js_obj = [];
 
 		// who

@@ -1,7 +1,7 @@
 <?php
 
 	# CONTROLLER
-	
+
 	$widget_name			= $this->widget_name;
 	$modo					= $this->component_info->get_modo();
 	$section_id				= $this->component_info->get_parent();
@@ -19,7 +19,7 @@
 	# CSS / JS MAIN FILES
 	css::$ar_url[] = NVD3_URL_CSS;
 	css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/diffusion_section_stats/css/diffusion_section_stats.css";
-	
+
 	js::$ar_url[]  = D3_URL_JS;
 	js::$ar_url[]  = NVD3_URL_JS;
 	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/diffusion/diffusion_section_stats/js/diffusion_section_stats.js";
@@ -60,18 +60,23 @@
 		// }
 
 	// data
-		$date_in	= '2000-01-01';
+		$date_in	= $_REQUEST['date_in'] ?? '2000-01-01';
 		$today		= new DateTime();
-		$date_out	= $today->format("Y-m-d");
+		$date_out	= $_REQUEST['date_out'] ?? $today->format("Y-m-d");
 		$user_id	= $section_id;
 		$lang		= DEDALO_DATA_LANG;
 		$totals		= diffusion_section_stats::cross_users_range_data($date_in, $date_out, $user_id, $lang);
-	
+
 	if (!$totals || !is_object($totals)) {
 		debug_log(__METHOD__." UNABLE TO GET CROSS_USERS_RANGE_DATA FOR USER $user_id - totals: ".to_string($totals), logger::ERROR);
-		echo 'No user activity data is available.';
+
+		// form
+			include 'form.phtml';
+
+		echo '<div class="error">No user activity data is available for that period.</div>';
+
 		return null;
-	}	
+	}
 
 	// parse_totals_for_js
 		$ar_js_obj = diffusion_section_stats::parse_totals_for_js($totals);
@@ -81,10 +86,11 @@
 			$dato->totals = $totals;
 		$this->set_dato($dato);
 
+	// form
+		include 'form.phtml';
+
 	// html. note that here, we use the same html script as diffusion_section_stats. No need for specific HTML
-		$page_html = DEDALO_LIB_BASE_PATH . '/diffusion/diffusion_section_stats/html/diffusion_section_stats_graphics.phtml';	
+		$page_html = DEDALO_LIB_BASE_PATH . '/diffusion/diffusion_section_stats/html/diffusion_section_stats_graphics.phtml';
 		if( !include($page_html) ) {
 			echo "<div class=\"error\">Invalid widget mode 1 $modo</div>";
 		}
-
-					

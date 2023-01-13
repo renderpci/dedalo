@@ -1,0 +1,132 @@
+<?php
+
+	$date_in_human	= date("d-m-Y", strtotime($date_in));
+	$date_out_human	= date("d-m-Y", strtotime($date_out));
+
+?>
+<div id="user_activity_form"></div>
+<script>
+
+// form
+	const form = common.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'user_activity_form_container',
+		parent			: document.getElementById('user_activity_form')
+	})
+	// date_in
+	const date_in = common.create_dom_element({
+		element_type	: 'input',
+		type			: 'text',
+		class_name		: 'date date_in',
+		value			: '<?php echo $date_in_human ?>',
+		parent			: form
+	})
+	date_in.addEventListener('click', function(e) {
+		component_date.activate_datepicker(this)
+	})
+
+	// to label
+	common.create_dom_element({
+		element_type	: 'span',
+		inner_html		: get_label.a || 'To',
+		parent			: form
+	})
+	// date_out
+	const date_out = common.create_dom_element({
+		element_type	: 'input',
+		type			: 'text',
+		class_name		: 'date date_out',
+		value			: '<?php echo $date_out_human ?>',
+		parent			: form
+	})
+	date_out.addEventListener('click', function(e) {
+		component_date.activate_datepicker(this)
+	})
+
+	// apply
+	const apply = common.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'date_apply',
+		inner_html		: get_label.aplicar || 'Apply',
+		parent			: form
+	})
+	apply.addEventListener('click', function(e) {
+		e.preventDefault()
+
+		// function format(inputDate) {
+		// 	let date, month, year;
+
+		// 	date	= inputDate.getDate();
+		// 	month	= inputDate.getMonth() + 1;
+		// 	year	= inputDate.getFullYear();
+
+		// 	date = date
+		// 		.toString()
+		// 		.padStart(2, '0');
+
+		// 	month = month
+		// 		.toString()
+		// 		.padStart(2, '0');
+
+		// 	return `${date}-${month}-${year}`;
+		// }
+
+		// function format(date) {
+		// 	// const date			= new Date(human_date);
+		// 	const getYear		= date.toLocaleString("default", { year: "numeric" });
+		// 	const getMonth		= date.toLocaleString("default", { month: "2-digit" });
+		// 	const getDay		= date.toLocaleString("default", { day: "2-digit" });
+		// 	const dateFormat	= getYear + "-" + getMonth + "-" + getDay
+
+		// 	return dateFormat
+		// }
+
+		function format(value) {
+
+			const beats = value.split('-')
+
+			const day	= beats[0].padStart(2, '0');
+			const month	= beats[1].padStart(2, '0');
+			const year	= beats[2].padStart(4, '0');
+
+			const timestamp = year + '-' + month + '-' + day
+
+			return timestamp
+		}
+
+		const date_in_format	= format(date_in.value);
+		const date_out_format	= format(date_out.value);
+
+		// console.log('date_in_format:', date_in_format);
+		// console.log('date_out_format:', date_out_format);
+
+		// url_vars
+			const url_vars = get_current_url_vars()
+			url_vars.date_in	= date_in_format
+			url_vars.date_out	= date_out_format
+
+		const baseurl = window.location.origin+window.location.pathname
+
+		// window.location.href
+			const new_url = baseurl + '?' + build_url_arguments_from_vars(url_vars)
+
+		// go to url
+			window.location.href = new_url
+	})
+
+// scroll on page load
+	window.addEventListener('load', function(e) {
+
+		const url_vars = get_current_url_vars();
+		if (url_vars.date_in) {
+			const element = document.getElementById('user_activity_form')
+			when_in_dom(element, function(){
+				const y = element.getBoundingClientRect().top + window.scrollY - 83;
+				window.scroll({
+					top: y,
+					// behavior: 'smooth'
+				});
+			})
+		}
+	})
+</script>
