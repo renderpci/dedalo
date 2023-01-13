@@ -210,6 +210,7 @@ class section extends common {
 						throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
 					};
 				}
+				debug_log(__METHOD__." section_id <1 is not allowed . section_id: ".to_string($this->section_id), logger::ERROR);
 				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
 			}
 
@@ -234,46 +235,53 @@ class section extends common {
 
 		// data is not loaded. Load once
 			if($this->bl_loaded_matrix_data!==true) {
-				// dataframe case, the section doesn't has his own data in DDBB
-				if ($this->source==='caller_section' && !empty($this->caller_dataframe)) {
-					// create the section of the caller
-					$caller_section	= section::get_instance(
-						$this->caller_dataframe->section_id,
-						$this->caller_dataframe->section_tipo,
-						$this->mode,
-						true
-					);
-					// get the data of the caller section from database
-					$caller_dato	= $caller_section->get_dato();
 
-					$new_section_dato = new stdClass();
-					$section_id_key = (int)$this->section_id;
-					// get the data with matching the section_id of the current section with the section_id_key of the data of the caller
+				// dataframe case, the section doesn't has his own data in DDBB
+				if (   $this->source==='caller_section'
+					&& !empty($this->caller_dataframe)
+					&& strpos($this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'
+					) {
+
+					// create the section of the caller
+						$caller_section	= section::get_instance(
+							$this->caller_dataframe->section_id,
+							$this->caller_dataframe->section_tipo,
+							$this->mode,
+							true // bool cache
+						);
+
+					// get the data of the caller section from database
+						$caller_dato = $caller_section->get_dato();
+
+					// relations. Get the data with matching the section_id of the current section with the section_id_key of the data of the caller
 					// section_id === section_id_key
 					// 4 === 4
-					$filtered_relations = $new_section_dato->relations  = array_filter($caller_dato->relations, function($el) use ($section_id_key){
-						return isset($el->section_id_key) && $el->section_id_key===$section_id_key;
-					});
-					// create the final data with filtered values and empty components (literals are not compatible for now)
-					$new_section_dato->relations  = array_values($filtered_relations);
-					$new_section_dato->components = new stdClass();
+						$section_id_key		= (int)$this->section_id;
+						$filtered_relations	= array_filter($caller_dato->relations, function($el) use ($section_id_key){
+							return isset($el->section_id_key) && $el->section_id_key===$section_id_key;
+						});
+
+					// dato. Create the final data with filtered values and empty components (literals are not compatible for now)
+						$new_section_dato = new stdClass();
+							$new_section_dato->relations	= array_values($filtered_relations);
+							$new_section_dato->components	= new stdClass();
 
 					$dato = $new_section_dato;
 
 				}else{
 
-					// if virtual section have section_tipo "real" in properties, change the tipo of the section to the real
+					// tipo. If virtual section have section_tipo "real" in properties, change the tipo of the section to the real
 						$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
 							? $this->get_section_real_tipo()
 							: $this->tipo;
 
-					$section_tipo			= $this->tipo;
-					$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
-					$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
+					// JSON_RecordObj_matrix
+						$section_tipo			= $this->tipo;
+						$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
+						$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
 
-				// load dato from db
-					$dato = $JSON_RecordObj_matrix->get_dato();
-					// dump(null, ' dato from DB ++ ->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->->-> '.to_string($this->tipo.'-'.$this->section_id.'-'. RecordObj_dd::get_termino_by_tipo($this->tipo) ));
+					// load dato from db
+						$dato = $JSON_RecordObj_matrix->get_dato();
 				}
 
 				// fix dato (force object)
@@ -2219,7 +2227,7 @@ class section extends common {
 	* GET_RESOURCE_ALL_SECTION_RECORDS_UNFILTERED
 	* @param string $section_tipo
 	* @param string $select = 'section_id'
-	* @return resource $result
+	* @return resource|PgSql\Result $result
 	*/
 	public static function get_resource_all_section_records_unfiltered( string $section_tipo, string $select='section_id' ) {
 
