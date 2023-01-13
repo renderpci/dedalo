@@ -69,13 +69,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 9,
-              "hour": 12,
-              "time": 65021575449,
+              "day": 12,
+              "hour": 17,
+              "time": 65021852808,
               "year": 2023,
               "month": 1,
-              "minute": 44,
-              "second": 9
+              "minute": 46,
+              "second": 48
             }
           }
         ]
@@ -346,6 +346,76 @@
               "lang": "lg-ita",
               "name": "types",
               "value": "Tipo"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "diameter",
+              "value": "Diametro"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "diameter",
+              "value": "Diameter"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "diameter",
+              "value": "Diameter"
+            },
+            {
+              "lang": "lg-por",
+              "name": "diameter",
+              "value": "Diâmetro"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "diameter",
+              "value": "Diamètre"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "diameter",
+              "value": "Durchmesser"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "diameter",
+              "value": "Diametro"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "original_copy",
+              "value": "Set Original / Copy"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "original_copy",
+              "value": "Imposta originale/copia"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "original_copy",
+              "value": "Original/Kopie einlegen"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "original_copy",
+              "value": "Définir l'original/la copie"
+            },
+            {
+              "lang": "lg-por",
+              "name": "original_copy",
+              "value": "Definir original/cópia"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "original_copy",
+              "value": "Establir original/còpia"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "original_copy",
+              "value": "Establezer original /copia"
             }
           ]
         ]
@@ -355,7 +425,7 @@
   "section_id": 5,
   "created_date": "2023-01-09 11:53:00",
   "section_tipo": "dd1340",
-  "modified_date": "2023-01-09 12:44:09",
+  "modified_date": "2023-01-12 17:46:48",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
