@@ -10,6 +10,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* CLASS VARS
+	* @var
 	*/
 		# relation_type (set in constructor).
 		# Defines type used in section relation locators to set own locator type
@@ -42,6 +43,11 @@ class component_relation_common extends component_common {
 
 		// sub_columns_divison
 		protected $sub_columns_divison;
+
+		// default_relation_type
+		protected $default_relation_type;
+		// default_relation_type_rel
+		protected $default_relation_type_rel;
 
 
 
