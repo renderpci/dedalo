@@ -2817,6 +2817,9 @@
 		Fixed component_json error when no value is available from component. Now, null is returned instead of error
 		Valencia 12-01-2023T10:48:00
 		Removed unnecessary 'htmlspecialchars' conversion in tool_export that cause html chars into csv files
+		Valencia 13-01-2023T15:54:00
+		Added component_info users_activity date range selection
+
 
 
 	[/HISTORY]
@@ -2848,7 +2851,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-01-2023T10:48:00');
+	define('DEDALO_BUILD'	, '13-01-2023T15:54:00');
 
 
 
