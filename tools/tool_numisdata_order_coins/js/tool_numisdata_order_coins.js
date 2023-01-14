@@ -126,6 +126,7 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 }//end build_custom
 
 
+
 /**
 * ASSIGN_ELEMENT
 * Set the original and copy properties to discard component
@@ -152,7 +153,6 @@ tool_numisdata_order_coins.prototype.assign_element = function(options){
 
 	return change
 }//end assign_element
-
 
 
 
