@@ -147,7 +147,6 @@ const render_header_options = async function(self, content_data) {
 			button_node	: order_by_weight,
 			tipo		: 'numisdata133'
 		})
-
 	})
 
 	const order_by_diameter = ui.create_dom_element({
@@ -215,7 +214,6 @@ const render_header_options = async function(self, content_data) {
 		left_container.appendChild(coins_node)
 	}
 
-
 	const set_original_button = ui.create_dom_element({
 		element_type	: 'button',
 		class_name		: 'tool_button set_original light',
@@ -251,46 +249,8 @@ const render_header_options = async function(self, content_data) {
 
 	})
 
-
-
 	return fragment
 }//end render_header_options
-
-
-
-/**
-* RENDER_STATUS
-* Render the status components to get control of the process of the tool
-* the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
-* @param object self
-* 	instance of current tool
-* @return DOM node fragment
-*/
-const render_status = async function(self) {
-
-	const fragment = new DocumentFragment()
-
-	// status_user_component
-		if (self.status_user_component) {
-			self.status_user_component.context.view	= 'mini'
-			self.status_user_component.is_inside_tool = true
-			self.status_user_component.show_interface.save_animation = false
-			const status_user_node = await self.status_user_component.render()
-			fragment.appendChild(status_user_node)
-		}
-
-	// status_admin_component
-		if (self.status_admin_component) {
-			self.status_admin_component.context.view = 'mini'
-			self.status_admin_component.is_inside_tool = true
-			self.status_admin_component.show_interface.save_animation = false
-			const status_admin_node	= await self.status_admin_component.render()
-			fragment.appendChild(status_admin_node)
-		}
-
-
-	return fragment
-}//end render_status
 
 
 
@@ -328,6 +288,7 @@ const render_activity_info = function(self) {
 
 	return activity_info_body
 }//end render_activity_info
+
 
 
 /**
@@ -373,10 +334,7 @@ const get_ordered_coins = async function(self){
 	drop({
 		self : self
 	})
-
-
 }//end get_ordered_coins
-
 
 
 
