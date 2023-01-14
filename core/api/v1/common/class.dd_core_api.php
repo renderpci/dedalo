@@ -1673,6 +1673,11 @@ final class dd_core_api {
 								$element->data_source = $ddo_source->data_source;
 							}
 
+						// properties optional
+							if (!empty($properties)){
+								$element->set_properties($properties);
+							}
+
 					// }else if ($model==='area_thesaurus'){
 						// IN PROCESS TO IMPLEMENT
 						// // area_thesaurus

@@ -2452,6 +2452,14 @@ abstract class common {
 			switch ($mode) {
 				case 'list':
 				case 'portal_list':
+					// if section or component has properties injected, use instead the section_list
+					// And sometimes the portals don't has section_list defined.
+					// In these cases get the properties from the current tipo
+					$properties = $this->get_properties();
+					if($model === 'section' && isset($properties->source->request_config)){
+						break;
+					}
+
 					# in the case that section_list is defined
 					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
 					if(isset($ar_terms[0])) {
@@ -2461,8 +2469,7 @@ abstract class common {
 						$properties		= $RecordObj_dd->get_properties();
 					}
 					else{
-						// sometimes the portals don't has section_list defined.
-						// In these cases get the properties from the current tipo
+
 						// $RecordObj_dd	= new RecordObj_dd($tipo);
 						// $properties		= $RecordObj_dd->get_properties();
 						$properties			= $this->get_properties();
