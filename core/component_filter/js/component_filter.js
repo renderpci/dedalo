@@ -6,6 +6,7 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_edit_component_filter} from '../../component_filter/js/render_edit_component_filter.js'
 	import {render_list_component_filter} from '../../component_filter/js/render_list_component_filter.js'
 	import {render_search_component_filter} from '../../component_filter/js/render_search_component_filter.js'
@@ -135,24 +136,39 @@ component_filter.prototype.change_handler = async function(options) {
 		)
 		const changed_value	= (action==='insert') ? datalist_value : null
 
-	// change data array
-		const changed_data = [Object.freeze({
+	// changed_data_item
+		const changed_data_item = Object.freeze({
 			action	: action,
 			key		: changed_key,
 			value	: changed_value
-		})]
-
-	// fix instance changed_data
-		self.data.changed_data = changed_data
-
-	// force to save on every change. Needed to recalculate the value keys
-		await self.change_value({
-			changed_data	: changed_data,
-			refresh			: false,
-			remove_dialog	: ()=>{
-				return true
-			}
 		})
+
+	if (self.mode==='search') {
+
+		// update the instance data (previous to save)
+			self.update_data_value(changed_data_item)
+		// set data.changed_data. The change_data to the instance
+			// self.data.changed_data = changed_data
+		// publish search. Event to update the dom elements of the instance
+			event_manager.publish('change_search_element', self)
+
+	}else{
+
+		// change data array
+			const changed_data = [changed_data_item]
+
+		// fix instance changed_data
+			self.data.changed_data = changed_data
+
+		// force to save on every change. Needed to recalculate the value keys
+			await self.change_value({
+				changed_data	: changed_data,
+				refresh			: false,
+				remove_dialog	: ()=>{
+					return true
+				}
+			})
+	}
 
 
 	return true

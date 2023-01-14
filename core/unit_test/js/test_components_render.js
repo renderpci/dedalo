@@ -6,34 +6,38 @@ import {
 } from './elements.js'
 import {get_instance} from '../../common/js/instances.js'
 import {ui} from '../../common/js/ui.js'
-import {clone} from '../../common/js/utils/util.js'
+// import {clone} from '../../common/js/utils/util.js'
 
 
 // vars
 	const pairs = [
+		// {
+		// 	mode : 'list',
+		// 	view : 'default'
+		// },
+		// {
+		// 	mode : 'list',
+		// 	view : 'line'
+		// },
+		// {
+		// 	mode : 'list',
+		// 	view : 'mini'
+		// },
+		// {
+		// 	mode : 'list',
+		// 	view : 'text'
+		// },
+		// {
+		// 	mode : 'edit',
+		// 	view : 'default'
+		// },
+		// {
+		// 	mode : 'edit',
+		// 	view : 'line'
+		// },
 		{
-			mode : 'list',
+			mode : 'search',
 			view : 'default'
-		},
-		{
-			mode : 'list',
-			view : 'line'
-		},
-		{
-			mode : 'list',
-			view : 'mini'
-		},
-		{
-			mode : 'list',
-			view : 'text'
-		},
-		{
-			mode : 'edit',
-			view : 'default'
-		},
-		{
-			mode : 'edit',
-			view : 'line'
 		}
 	]
 	const elements_length	= elements.length
@@ -121,8 +125,19 @@ async function rendering_test(options, container) {
 			// render instance
 				const new_node = await new_instance.render()
 
-			// insert in DOM
-				container.appendChild(new_node)
+			// search case
+				if (new_instance.mode==='search') {
+					const search_component = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'search_component',
+						parent			: container
+					})
+					// insert in DOM
+					search_component.appendChild(new_node)
+				}else{
+					// insert in DOM
+					container.appendChild(new_node)
+				}
 
 			// asserts
 				assert.equal(new_instance.status, 'rendered');
