@@ -268,10 +268,18 @@ const get_content_data = function(self) {
 				let value		= item.value
 				switch(item.type){
 					case 'data_version':
-						class_name = (item.value[0]<6)
-							? 'error'
-							: ''
-						value = item.value.join('.') + ' - Outdated!'
+						const is_outdated = item.value[0]<6
+						if (is_outdated) {
+							class_name	= 'error'
+							value		= item.value.join('.') + ' - Outdated!'
+							// if version is outdated, jump to area development to update
+							const area_development_tipo = 'dd770'
+							if (window.location.search.indexOf(area_development_tipo)===-1) {
+								const base_url = window.location.origin + window.location.pathname
+								const target_url = base_url + '?t=' + area_development_tipo
+								window.location.replace(target_url)
+							}
+						}
 						break;
 					default:
 						break;
