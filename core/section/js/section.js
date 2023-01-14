@@ -53,6 +53,7 @@ export const section = function() {
 	this.filter					= null
 	this.inspector				= null
 	this.paginator				= null
+	this.buttons				= null
 
 	this.id_variant				= null
 
@@ -150,6 +151,11 @@ section.prototype.init = async function(options) {
 
 		// add_show to rqo to configure specific show
 		self.add_show 				= options.add_show || false
+
+		// buttons. bool to show / hide the buttons in list
+		self.buttons 				= options.buttons || true
+
+
 	// event subscriptions
 		// new_section_ event
 			self.events_tokens.push(
