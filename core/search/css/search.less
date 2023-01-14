@@ -5,16 +5,60 @@
 */
 
 // selected_color
-@selected_color  : #ff9620; // @color_orange;	//
+@selected_color: #ff9620; // @color_orange;	//
 // Component color
-@component_color : lighten(@selected_color, 25%);
+@component_color: lighten(@selected_color, 25%);
 // Component color hover
-@component_color_hover : #ff9620;//darken(@selected_color, 15%);
+@component_color_hover: #ff9620;//darken(@selected_color, 15%);
 // bg_color_global container
-@bg_color_global : #efefef; //#F7F7F7;
+@bg_color_global: #efefef; //#F7F7F7;
 // unused
 // @bg_component_color : #f6f6f6;
 // @bg_section_group_color: #969ca1;
+
+
+// search_component (shared by unit_test preview)
+.search_component {
+	//background-color: lighten(@component_color, 10%);
+	background-color: rgba(251, 251, 251, 0.48);
+	display: flex;
+	position: relative;
+	// Add
+	margin: 2px;
+	// border: 1px solid @color_grey_medium;
+	// Experimental all same width
+	//width: 250px;
+	//flex-basis: 32%;
+	min-height: 55px;
+	border-radius: 2px;
+	flex: 1 1 300px;
+	// width: 300px;
+	max-width: 50%;
+	min-width: 49%;
+	flex-wrap: wrap;
+
+	>.wrapper_component {
+		flex-grow: 1;
+
+		>.label {
+			padding: 0.5em;
+		}
+		>.content_data {
+			padding: 0.5em !important;
+		}
+	}
+
+	>.button.close {
+		position: absolute;
+		right: 0px;
+		top: 3px;
+		z-index: 999999;
+
+		&:active {
+			opacity: 0.5;
+		}
+	}
+}//end .search_component
 
 
 
@@ -126,45 +170,7 @@
 
 					// search_component
 					>.search_component {
-						//background-color: lighten(@component_color, 10%);
-						background-color: rgba(251, 251, 251, 0.48);
-						display: flex;
-						position: relative;
-						// Add
-						margin: 2px;
-						// border: 1px solid @color_grey_medium;
-						// Experimental all same width
-						//width: 250px;
-						//flex-basis: 32%;
-						min-height: 55px;
-						border-radius: 2px;
-						flex: 1 1 300px;
-						// width: 300px;
-						max-width: 50%;
-						min-width: 49%;
-						flex-wrap: wrap;
-
-						>.wrapper_component {
-							flex-grow: 1;
-
-							>.label {
-								padding: 0.5em;
-							}
-							>.content_data {
-								padding: 0.5em;
-							}
-						}
-
-						>.button.close {
-							position: absolute;
-							right: 0px;
-							top: 3px;
-							z-index: 999999;
-
-							&:active {
-								opacity: 0.5;
-							}
-						}
+						// defined at top to share css
 					}
 
 					// Last component
@@ -758,10 +764,6 @@
 	// 	background-repeat: no-repeat;
 	// 	background-size: 12px;
 	// }
-
-
-
-
 
 
 

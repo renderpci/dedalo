@@ -33,6 +33,9 @@ export const view_default_edit_portal = function() {
 /**
 * RENDER
 * Manages the component's logic and appearance in client side
+* @param object self
+* @param object options
+* @return DOM node wrapper
 */
 view_default_edit_portal.render = async function(self, options) {
 

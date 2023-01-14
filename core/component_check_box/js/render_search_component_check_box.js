@@ -46,14 +46,13 @@ render_search_component_check_box.prototype.search = async function() {
 
 /**
 * GET_CONTENT_DATA
+* @param instance self
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
 
 	// short vars
-		const value		= self.data.value
-		const mode		= self.mode
-		const datalist	= self.data.datalist
+		const datalist	= self.data.datalist || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
@@ -87,6 +86,7 @@ const get_content_data = function(self) {
 			content_data[i] = input_element_node
 		}
 
+
 	return content_data
 }//end get_content_data
 
@@ -100,34 +100,41 @@ const get_content_data = function(self) {
 * @param object current_value
 * @param object self
 *
-* @return DOM node li
+* @return DOM node content_value
 */
 const get_input_element = (i, current_value, self) => {
 
-	const input_id = self.id +"_"+ i + "_" + new Date().getUTCMilliseconds()
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value // is object as {label, section_id, value}
+		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
+		const label				= datalist_item.label
+		const section_id		= datalist_item.section_id
 
-	const value				= self.data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value // is object as {label, section_id, value}
-	const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
-	const label				= datalist_item.label
-	const section_id		= datalist_item.section_id
+	// create content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
 
-	// li
-		const li = ui.create_dom_element({
-			element_type : 'li'
+	// label
+		// const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
+		const option_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: label,
+			parent			: content_value
 		})
 
 	// input checkbox
-		const input = ui.create_dom_element({
+		const input_checkbox = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'checkbox',
-			id				: input_id,
-			parent			: li
+			type			: 'checkbox'
 		})
-		input.addEventListener('change', function() {
+		option_label.prepend(input_checkbox)
+		input_checkbox.addEventListener('change', function() {
 
-			const action		= (input.checked===true) ? 'insert' : 'remove'
+			const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
 			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
 			const changed_value	= (action==='insert') ? datalist_value : null
 
@@ -143,26 +150,18 @@ const get_input_element = (i, current_value, self) => {
 				// self.data.changed_data = changed_data
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-		})
+		})//end change event
+
 		// checked option set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					input.checked = 'checked'
+			for (let j = 0; j < value_length; j++) {
+				if (value[j] && datalist_value &&
+					value[j].section_id===datalist_value.section_id &&
+					value[j].section_tipo===datalist_value.section_tipo
+					) {
+						input_checkbox.checked = 'checked'
+				}
 			}
-		}
-
-	// label
-		const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
-		const option_label = ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: label_string,
-			parent			: li
-		})
-		option_label.setAttribute("for", input_id)
 
 
-	return li
+	return content_value
 }//end get_input_element
