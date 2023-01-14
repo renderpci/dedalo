@@ -1,0 +1,253 @@
+{
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "inf": "Fecha de creación [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 12,
+              "hour": 18,
+              "time": 65021854469,
+              "year": 2023,
+              "month": 1,
+              "minute": 14,
+              "second": 29
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "inf": "Fecha de modificación [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 13,
+              "hour": 22,
+              "time": 65021956810,
+              "year": 2023,
+              "month": 1,
+              "minute": 40,
+              "second": 10
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "inf": "Descripción [component_text_area]",
+      "dato": {
+        "lg-spa": [
+          "<p>Agrupación y jerarquización de tipos numismáticos</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Etiqueta [component_input_text]",
+      "dato": {
+        "lg-eng": [
+          "Cataloging numismatic types"
+        ],
+        "lg-spa": [
+          "Catalogación de tipos numismáticos"
+        ]
+      }
+    },
+    "dd1326": {
+      "inf": "Nombre de la herramienta [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_numisdata_cataloging"
+        ]
+      }
+    },
+    "dd1327": {
+      "inf": "Versión [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "2.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "inf": "Versión Dédalo mínima [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "6.0.0"
+        ]
+      }
+    },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "view": "types_mosaic",
+            "source": {
+              "request_config": [
+                {
+                  "sqo": {
+                    "section_tipo": [
+                      {
+                        "value": [
+                          "numisdata3"
+                        ],
+                        "source": "section"
+                      }
+                    ]
+                  },
+                  "show": {
+                    "ddo_map": [
+                      {
+                        "info": "Number (component_input_text)",
+                        "mode": "list",
+                        "tipo": "numisdata27",
+                        "parent": "self",
+                        "in_mosaic": true,
+                        "section_tipo": "self"
+                      },
+                      {
+                        "info": "Mint (component_portal)",
+                        "mode": "list",
+                        "tipo": "numisdata30",
+                        "parent": "self",
+                        "in_mosaic": true,
+                        "section_tipo": "self"
+                      },
+                      {
+                        "info": "Coins (component_portal)",
+                        "mode": "list",
+                        "tipo": "numisdata77",
+                        "limit": 1,
+                        "parent": "self",
+                        "in_mosaic": true,
+                        "section_tipo": "self"
+                      },
+                      {
+                        "info": "Obverse (component_portal)",
+                        "mode": "list",
+                        "tipo": "numisdata164",
+                        "parent": "numisdata77",
+                        "in_mosaic": true,
+                        "section_tipo": "numisdata4"
+                      },
+                      {
+                        "info": "Image (component_image)",
+                        "mode": "list",
+                        "tipo": "rsc29",
+                        "width": "100%",
+                        "parent": "numisdata164",
+                        "section_tipo": "rsc170"
+                      },
+                      {
+                        "info": "Reverse (component_portal)",
+                        "mode": "list",
+                        "tipo": "numisdata165",
+                        "parent": "numisdata77",
+                        "section_tipo": "numisdata4"
+                      },
+                      {
+                        "info": "Image (component_image)",
+                        "mode": "list",
+                        "tipo": "rsc29",
+                        "width": "100%",
+                        "parent": "numisdata165",
+                        "section_tipo": "rsc170"
+                      }
+                    ],
+                    "sqo_config": {
+                      "limit": 20
+                    }
+                  },
+                  "type": "main",
+                  "api_engine": "dedalo"
+                }
+              ]
+            },
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1350": {
+      "inf": "Afecta a tipos: [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            "numisdata3"
+          ]
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          []
+        ]
+      }
+    }
+  },
+  "section_id": 6,
+  "created_date": "2023-01-12 18:14:29",
+  "section_tipo": "dd1340",
+  "modified_date": "2023-01-13 22:40:10",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": -1
+}
