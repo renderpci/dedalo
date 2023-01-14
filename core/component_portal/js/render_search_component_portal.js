@@ -10,6 +10,7 @@
 	import {
 		// render_column_remove,
 		activate_autocomplete,
+		render_column_component_info
 	} from './render_edit_component_portal.js'
 
 
@@ -38,14 +39,21 @@ render_search_component_portal.prototype.search = async function(options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-
 	// columns_map
-		const columns_map = rebuild_columns_map(self)
+		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
+		console.log('columns_map:', columns_map);
 
+	// ar_section_record
+		const ar_section_record = await get_section_records({
+			caller	: self,
+			mode	:'list'
+		})
+		// store to allow destroy later
+		self.ar_instances.push(...ar_section_record)
 
 	// content_data. Note that function build_content_data is imported from edit mode
-		const content_data = await build_content_data(self)
+		const content_data = await build_content_data(self, ar_section_record)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -61,13 +69,6 @@ render_search_component_portal.prototype.search = async function(options) {
 	// autocomplete
 		wrapper.addEventListener('click', function() {
 			activate_autocomplete(self, wrapper)
-			// .then(function(){
-				// if (e.target.matches('input[type="text"].q_operator')) {
-				// 	// prevent activate component on click inside q_operator input
-				// 	return true
-				// }
-				// self.autocomplete.search_input.focus()
-			// })
 		})
 
 
@@ -79,9 +80,11 @@ render_search_component_portal.prototype.search = async function(options) {
 /**
 * BUILD_CONTENT_DATA
 * Used too in search mode
+* @param object self
+* @param array ar_section_record
 * @return DOM node content_data
 */
-export const build_content_data = async function(self) {
+export const build_content_data = async function(self, ar_section_record) {
 
 	const fragment = new DocumentFragment()
 
@@ -99,37 +102,22 @@ export const build_content_data = async function(self) {
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
 
-		const ar_section_record = await get_section_records({
-			caller	: self,
-			mode	:'list'
-		})
-
-		// store to allow destroy later
-		self.ar_instances.push(...ar_section_record)
-
+	// ar_section_record
 		const ar_section_record_length = ar_section_record.length
-		const ar_promises = []
 		for (let i = 0; i < ar_section_record_length; i++) {
-
-			const render_promise = ar_section_record[i].render()
-			ar_promises.push(render_promise)
+			// section_record
+			const section_record_node = await ar_section_record[i].render()
+			fragment.appendChild(section_record_node)
 		}
-		await Promise.all(ar_promises).then(function(values) {
-		  for (let i = 0; i < ar_section_record_length; i++) {
-
-			const section_record = values[i]
-
-			fragment.appendChild(section_record)
-		  }
-		});
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
+
 
 	return content_data
 }//end build_content_data
@@ -145,14 +133,13 @@ const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
 
-	// // column section_id check
-	// 	columns_map.push({
-	// 		id			: 'section_id',
-	// 		label		: 'Id',
-	// 		width 		: 'auto',
-	// 		callback	: render_edit_view_line.render_column_id
-	// 	})
-
+	// column section_id check
+		// 	columns_map.push({
+		// 		id			: 'section_id',
+		// 		label		: 'Id',
+		// 		width 		: 'auto',
+		// 		callback	: render_edit_view_line.render_column_id
+		// 	})
 
 	const base_columns_map = await self.columns_map
 
@@ -168,14 +155,13 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// button_remove
-		if (self.permissions>1) {
-			columns_map.push({
-				id			: 'remove',
-				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
-				callback	: render_column_remove // self.render_column_remove
-			})
-		}
+		columns_map.push({
+			id			: 'remove',
+			label		: get_label.delete || 'Delete',
+			width 		: 'auto',
+			callback	: render_column_remove // self.render_column_remove
+		})
+
 
 	return columns_map
 }//end rebuild_columns_map
