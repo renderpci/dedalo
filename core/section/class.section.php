@@ -204,7 +204,7 @@ class section extends common {
 	public function get_dato() : object {
 
 		// check valid call
-			if ( abs(intval($this->section_id))<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+			if ( abs(intval($this->section_id))<1 && (strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false && strpos($this->section_id, 'search')===false) ) {
 				if(SHOW_DEBUG===true) {
 					if ($this->section_id==='result') {
 						throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
@@ -213,7 +213,7 @@ class section extends common {
 				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
 			}
 
-		// save_handler. If section_id have a temporal string the save handier will be 'session' the section will save into the menory NOT to database
+		// save_handler. If section_id have a temporal string the save handier will be 'session' the section will save into the memory NOT to database
 			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
 				$this->save_handler = 'session';
 			}
