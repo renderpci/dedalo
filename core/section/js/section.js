@@ -329,6 +329,20 @@ section.prototype.init = async function(options) {
 			self.load_section_tool_files()
 		}
 
+	self.render_views = [
+		{
+			view	: 'default',
+			mode	: 'edit',
+			render	: 'view_default_edit_section'
+		},
+		{
+			view	: 'default',
+			mode	: 'list',
+			render	: 'view_default_list_section'
+		}
+	]
+
+
 	// status update
 		self.status = 'initiated'
 
