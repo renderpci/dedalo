@@ -92,16 +92,23 @@ export const get_content_data_edit = function(self) {
 
 /**
 * GET_INPUT_ELEMENT_EDIT
+* Render a input element based on passed value
+* @param int i
+* 	data.value array key
+* @param object current_value
+* @param object self
+*
 * @return DOM node content_value
 */
 const get_input_element_edit = (i, current_value, self) => {
 
-	const value				= self.data.value || []
-	const value_length		= value.length
-	const datalist_item		= current_value
-	const datalist_value	= datalist_item.value
-	const label				= datalist_item.label
-	const section_id		= datalist_item.section_id
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_item		= current_value
+		const datalist_value	= datalist_item.value
+		const label				= datalist_item.label
+		const section_id		= datalist_item.section_id
 
 	// create content_value
 		const content_value = ui.create_dom_element({
@@ -136,26 +143,27 @@ const get_input_element_edit = (i, current_value, self) => {
 					self.node.classList.add('modified')
 				}
 
-			// const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-			// const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			// const changed_value	= (action==='insert') ? datalist_value : null
+			// DES
+				// const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
+				// const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+				// const changed_value	= (action==='insert') ? datalist_value : null
 
-			// const changed_data = [Object.freeze({
-			// 	action	: action,
-			// 	key		: changed_key,
-			// 	value	: changed_value
-			// })]
-			// // force to save on every change
-			// 	self.change_value({
-			// 		changed_data	: changed_data,
-			// 		refresh			: false,
-			// 		remove_dialog	: ()=>{
-			// 			return true
-			// 		}
-			// 	})
-			// 	.then(()=>{
-			// 		self.selected_key = i
-			// 	})
+				// const changed_data = [Object.freeze({
+				// 	action	: action,
+				// 	key		: changed_key,
+				// 	value	: changed_value
+				// })]
+				// // force to save on every change
+				// 	self.change_value({
+				// 		changed_data	: changed_data,
+				// 		refresh			: false,
+				// 		remove_dialog	: ()=>{
+				// 			return true
+				// 		}
+				// 	})
+				// 	.then(()=>{
+				// 		self.selected_key = i
+				// 	})
 
 			self.change_handler({
 				self			: self,
@@ -167,14 +175,14 @@ const get_input_element_edit = (i, current_value, self) => {
 		})//end change event
 
 		// checked option set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					input_checkbox.checked = 'checked'
+			for (let j = 0; j < value_length; j++) {
+				if (value[j] && datalist_value &&
+					value[j].section_id===datalist_value.section_id &&
+					value[j].section_tipo===datalist_value.section_tipo
+					) {
+						input_checkbox.checked = 'checked'
+				}
 			}
-		}
 
 	// developer_info
 		ui.create_dom_element({
@@ -236,10 +244,9 @@ const get_input_element_edit = (i, current_value, self) => {
 */
 export const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
-
-	const fragment = new DocumentFragment()
+	// short vars
+		const is_inside_tool	= self.is_inside_tool
+		const fragment			= new DocumentFragment()
 
 	// button edit (go to target section)
 		if(!is_inside_tool) {

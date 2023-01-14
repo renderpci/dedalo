@@ -121,7 +121,7 @@ export const get_content_data = function(self) {
 * GET_INPUT_ELEMENT
 * @return DOM node li
 */
-const get_input_element = (element, self) => {
+export const get_input_element = (element, self) => {
 
 	// short vars
 		const value				= self.data.value || []
@@ -151,8 +151,8 @@ const get_input_element = (element, self) => {
 	// input checkbox
 		const input_node = ui.create_dom_element({
 			element_type	: 'input',
-			class_name		: 'item_input',
-			type			: 'checkbox'
+			type			: 'checkbox',
+			class_name		: 'item_input'
 		})
 		label_node.prepend(input_node)
 		input_node.addEventListener('change',function(e) {
@@ -214,14 +214,14 @@ const get_input_element = (element, self) => {
 		}
 
 		// checked option set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					input_node.checked = 'checked'
+			for (let j = 0; j < value_length; j++) {
+				if (value[j] && datalist_value &&
+					value[j].section_id===datalist_value.section_id &&
+					value[j].section_tipo===datalist_value.section_tipo
+					) {
+						input_node.checked = 'checked'
+				}
 			}
-		}
 
 
 	return li
