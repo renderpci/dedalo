@@ -126,6 +126,11 @@
 						true // bool cache
 					);
 
+				// properties optional
+					if (!empty($this->properties)){
+						$section->set_properties($this->properties);
+					}
+
 				// pagination. fix pagination vars (defined in class component_common)
 					$section->pagination = $pagination;
 
