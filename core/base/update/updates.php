@@ -133,6 +133,15 @@ $updates->$v = new stdClass();
 					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
 			");
 
+	// update time machine data. Update 'data' of time_machine
+		require_once dirname(dirname(__FILE__)) .'/upgrade/class.time_machine_v5_to_v6.php';
+		$script_obj = new stdClass();
+			$script_obj->info			= "Update data of time_machine, from 'txt' to array";
+			$script_obj->script_class	= "time_machine_v5_to_v6";
+			$script_obj->script_method	= "convert_table_data_time_machine";
+			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
 	// register tools. Before parse old data, we need to have the tools available
 		$script_obj = new stdClass();
 			$script_obj->info			= "Register all tools found in folder 'tools' ";
