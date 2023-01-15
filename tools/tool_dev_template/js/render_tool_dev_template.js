@@ -5,18 +5,19 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+// import ui to create DOM nodes and common html structures as wrappers or content_data compatible with the all Dédalo
 	import {ui} from '../../../core/common/js/ui.js'
 
 
 
 /**
-* RENDER_TOOL_DUMMY
+* render_tool_dev_template
 * Manages the component's logic and appearance in client side
 */
-export const render_tool_dummy = function() {
+export const render_tool_dev_template = function() {
 
 	return true
-}//end render_tool_dummy
+}//end render_tool_dev_template
 
 
 
@@ -27,7 +28,7 @@ export const render_tool_dummy = function() {
 * @param object options
 * @return DOM node
 */
-render_tool_dummy.prototype.edit = async function(options) {
+render_tool_dev_template.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -44,17 +45,6 @@ render_tool_dummy.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.caller.refresh()
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
 
 
 	return wrapper
@@ -80,14 +70,14 @@ const get_content_data = async function(self) {
 		})
 
 	// source component
-		const source_component_container = ui.create_dom_element({
+		const main_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'source_component_container',
+			class_name		: 'main_component_container',
 			parent			: components_container
 		})
 		self.main_element.render()
 		.then(function(component_node){
-			source_component_container.appendChild(component_node)
+			main_component_container.appendChild(component_node)
 		})
 
 	// buttons container
