@@ -51,11 +51,14 @@ render_search_component_input_text.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
 
-	const value	= self.data.value
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
