@@ -630,7 +630,7 @@ class component_image extends component_media_common {
 
 		// common data
 			$id					= $this->get_id();
-			$additional_path	= $this->get_additional_path();
+			// $additional_path	= $this->get_additional_path();
 			$initial_media_path	= $this->get_initial_media_path();
 
 		// source data (default quality is source)
@@ -657,10 +657,16 @@ class component_image extends component_media_common {
 			}
 
 		// thumb generate
-			$dd_thumb = ImageMagick::dd_thumb('list', $default_image_path, $image_thumb_path, false, $initial_media_path);
+			$dd_thumb = ImageMagick::dd_thumb(
+				'list',
+				$default_image_path,
+				$image_thumb_path,
+				false, // bool dimensions
+				$initial_media_path
+			);
 
 		// debug
-			debug_log(__METHOD__." dd_thumb function called and executed. ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." dd_thumb function called and executed. ".to_string($image_thumb_path), logger::DEBUG);
 
 		// result
 			$result = (object)[
