@@ -7,8 +7,11 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_input_element_edit
-	} from '../../component_date/js/view_default_edit_date.js'
+		input_element_range,
+		input_element_period,
+		input_element_time,
+		input_element_date
+	} from './render_edit_component_date.js'
 
 
 
@@ -89,7 +92,7 @@ const get_content_data = function(self) {
 		const inputs_value	= value.length>0 ? value : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_input_element_edit(i, inputs_value[i], self)
+			const input_element_node = get_input_element(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -98,3 +101,52 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* GET_INPUT_ELEMENT
+* @param int i
+* @param object|null current_value
+* @param object self
+* @return DOM node content_value
+*/
+const get_input_element = (i, current_value, self) => {
+
+	const date_mode	= self.get_date_mode()
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// input node
+		let input_node = ''
+		// build date base on date_mode
+		switch(date_mode) {
+
+			case 'range':
+				input_node = input_element_range(i, current_value, self)
+				break;
+
+			case 'period':
+				input_node = input_element_period(i, current_value, self)
+				break;
+
+			case 'time':
+				input_node = input_element_time(i, current_value, self)
+				break;
+
+			case 'date':
+			default:
+				input_node = input_element_date(i, current_value, self)
+				break;
+		}
+
+	// add input_node to the content_value
+		content_value.appendChild(input_node)
+
+
+	return content_value
+}//end get_input_element
