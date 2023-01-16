@@ -180,9 +180,9 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 			.then(function(response){
 				dd_console("-> update_cache API response:",'DEBUG',response);
 
-				const result = response.result // array of objects
+				// const result = response.result // array of objects
 
-				resolve(result)
+				resolve(response)
 			})
 		})
 }//end update_cache
