@@ -127,9 +127,7 @@ component_check_box.prototype.get_changed_key = function(action, value, source=t
 /**
 * CHANGE_HANDLER
 * Manages the change event actions
-* @param event e
-* @param int key
-* @param object self
+* @param object options
 * @return bool
 */
 component_check_box.prototype.change_handler = async function(options) {

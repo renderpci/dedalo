@@ -268,7 +268,9 @@
 				overflow: initial; // !important
 				// z-index: auto;
 				// background-color: rgb(255 252 249);
-				background-color: lighten(@color_orange_dedalo, 45.1%);
+				&:not(.hilite_element) {
+					background-color: lighten(@color_orange_dedalo, 45.1%);
+				}
 
 				// >.content_data >.content_value >.show_on_active {
 				.show_on_active {

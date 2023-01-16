@@ -23,7 +23,7 @@ class time_machine_v5_to_v6 {
 	* CONVERT_TABLE_DATA
 	* @return bool true
 	*/
-	public static function convert_table_data(array $ar_tables, string $action) : bool {
+	public static function convert_table_data(array $ar_tables) : bool {
 
 		# Maximum execution time
 		set_time_limit(0);
@@ -39,7 +39,7 @@ class time_machine_v5_to_v6 {
 			'component_number'
 		];
 
-		foreach ($ar_tables as $key => $table) {
+		foreach ($ar_tables as $table) {
 
 			// Get last id in the table
 			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
@@ -67,7 +67,7 @@ class time_machine_v5_to_v6 {
 
 				$strQuery 	= "SELECT * FROM $table WHERE id = $i ORDER BY id ASC";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if(!$result) {
+				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
 					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 					continue;
