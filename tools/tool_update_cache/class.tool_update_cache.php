@@ -34,9 +34,10 @@ class tool_update_cache extends tool_common {
 			$sqo_id	= implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 				$response->msg .= ' section session sqo is not found!';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
-			$sqo			= $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+			$sqo			= clone $_SESSION['dedalo']['config']['sqo'][$sqo_id];
 			$sqo->limit		= 0;
 			$sqo->offset	= 0;
 
@@ -45,7 +46,7 @@ class tool_update_cache extends tool_common {
 			$rows_data	= $search->search();
 
 		// result records iterate
-			foreach ($rows_data->ar_records as $key => $row) {
+			foreach ($rows_data->ar_records as $row) {
 
 				$section_id = $row->section_id;
 
@@ -75,11 +76,8 @@ class tool_update_cache extends tool_common {
 						if ($result!==true) {
 							debug_log(__METHOD__." Error on regenerate component $model - $current_component_tipo - $section_tipo - $section_id ", logger::ERROR);
 						}
-
 				}//end foreach ($related_terms as $current_component_tipo)
-
 			}//end foreach ($records_data->result as $key => $ar_value)
-
 
 		// Enable logging activity and time machine # !IMPORTANT
 			logger_backend_activity::$enable_log 				= true;

@@ -16,6 +16,7 @@
 	.wrapper_tool.tool_update_cache {
 
 		>.content_data {
+			position: relative;
 
 			.section_info {
 				display: flex;
@@ -66,14 +67,26 @@
 			}
 
 			.buttons_container {
-				display: block;
+				display: flex;
 				padding: 1rem;
+				position: relative;
 
 				.button_apply {
 					background-color: @tool_color;
 					padding-left: 1.5rem;
 					padding-right: 1.5rem;
 				}
+
+				.response_message {
+					padding: 0.5rem;
+					padding-left: 2rem;
+				}
+			}
+
+			.spinner {
+				top: calc(50% - 1rem);
+				left: calc(50% - 3.2rem);
+				border-top-color: @tool_color;
 			}
 		}//end content_data
 	}//end wrapper_tool
