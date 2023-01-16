@@ -71,7 +71,7 @@ class data_v5_to_v6 extends v5_to_v6 {
 
 							if ($key==='info') {
 								// changes 'info' by 'inf' for readability
-								$new_component_data->inf = $value->label . ' [' . $value->model .']';
+								$new_component_data->inf = $value->label . ' [' . $value->modelo .']';
 							}else{
 								$new_component_data->{$key} = $value;
 							}
