@@ -410,8 +410,8 @@
 		// color_profiles_path
 		define('COLOR_PROFILES_PATH'				, DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
 		// thumbs dedalo_image_thumb sizes. Integer as pixels
-		define('DEDALO_IMAGE_THUMB_WIDTH'			, 224);	// int Default 102 | 224
-		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 149);	// int Default 57 | 149
+		define('DEDALO_IMAGE_THUMB_WIDTH'			, 222);	// int Default 102 | 222
+		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 148);	// int Default 57 | 148
 		// image_web_folder normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
 
