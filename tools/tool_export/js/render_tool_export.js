@@ -96,7 +96,8 @@ const get_content_data_edit = async function(self) {
 					'component_password'
 				]
 			})
-			render_components_list({
+			// render_components_list (common shared render by render_common.js)
+			const ar_components = render_components_list({
 				self				: self,
 				section_tipo		: self.target_section_tipo,
 				target_div			: components_list_container,
@@ -271,7 +272,9 @@ const get_content_data_edit = async function(self) {
 					// }
 
 				// spinner add
-					button_export.classList.add('hide')
+					[button_export, activate_all_columns, deactivate_all_columns].map(
+						el => el.classList.add('hide')
+					)
 					const spinner = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'spinner',
@@ -292,8 +295,83 @@ const get_content_data_edit = async function(self) {
 					}
 
 				// spinner remove
-					button_export.classList.remove('hide')
+					[button_export, activate_all_columns, deactivate_all_columns].map(
+						el => el.classList.remove('hide')
+					)
 					spinner.remove()
+			})
+
+		// activate_all_columns
+			const activate_all_columns = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'activation light activate_all_columns',
+				inner_html		: get_label.activar_todas_las_columnas || 'Activate all columns',
+				parent			: export_buttons_config
+			})
+			activate_all_columns.addEventListener('click', function(e) {
+				e.stopPropagation()
+				// console.log('components_list_container:', components_list_container);
+				const ar_components_length = ar_components.length
+				for (let i = 0; i < ar_components_length; i++) {
+
+					const item = ar_components[i]
+
+					// short vars
+						const path	= item.path
+						const ddo	= item.ddo
+
+					// rebuild ddo
+						const new_ddo = {
+							id				: ddo.section_tipo +'_'+ ddo.tipo +'_list_'+ ddo.lang,
+							tipo			: ddo.tipo,
+							section_tipo	: ddo.section_tipo,
+							model			: ddo.model,
+							parent			: ddo.parent,
+							lang			: ddo.lang,
+							mode			: ddo.mode,
+							label			: ddo.label,
+							path			: path // full path from current section replaces ddo single path
+						}
+
+					// exists
+						const found = self.ar_ddo_to_export.find(el => el.id===new_ddo.id)
+						if (found) {
+							// console.log('Ignored already included item ddo:', found);
+							continue;
+						}
+
+					// Build component html
+						self.build_export_component(new_ddo)
+						.then((export_component_node)=>{
+
+							// add DOM node
+							user_selection_list.appendChild(export_component_node)
+
+							// Update the ddo_export list
+							self.ar_ddo_to_export.push(new_ddo)
+
+							// save local db data
+							self.update_local_db_data()
+						})
+				}//end for (let i = 0; i < ar_components_length; i++)
+			})
+
+		// deactivate_all_columns
+			const deactivate_all_columns = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'activation light deactivate_all_columns',
+				inner_html		: get_label.desactivar_todas_las_columnas || 'Disable all columns',
+				parent			: export_buttons_config
+			})
+			deactivate_all_columns.addEventListener('click', function(e) {
+				e.stopPropagation()
+
+				const close_buttons = user_selection_list.querySelectorAll('.close') || []
+				const close_buttons_length = close_buttons.length
+				for (let i = 0; i < close_buttons_length; i++) {
+					const item = close_buttons[i]
+					item.click()
+				}
 			})
 
 	// download_buttons_options

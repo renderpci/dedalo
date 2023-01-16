@@ -17,10 +17,12 @@
 *	dom element options.target_div (Target dom element on new data will be added)
 *	array path (Cumulative array of component path objects)
 *
-* @return bool
+* @return array ar_components
 */
 export const render_components_list = function(options) {
 	// console.log("render_components_list options:", options);
+
+	const ar_components = []
 
 	// options
 		const self				= options.self
@@ -143,6 +145,9 @@ export const render_components_list = function(options) {
 					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
 					// component.addEventListener('drop',function(e){self.on_drop(this,e)})
 
+				// add
+					ar_components.push(component)
+
 				// Portals and autocomplete only
 				// Pointer to open "children" target section (portals and autocompletes)
 				// Builds li element
@@ -184,5 +189,5 @@ export const render_components_list = function(options) {
 		window.scrollTo(0, 0);
 
 
-	return true
+	return ar_components
 }//end render_components_list
