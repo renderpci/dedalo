@@ -174,7 +174,7 @@ const get_content_data = function(self) {
 				const button_duplicate = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light duplicate',
-					title			: section_button_new.label || "Duplicate",
+					title			: get_label.duplicar || "Duplicate",
 					parent			: buttons_container
 				})
 				button_duplicate.addEventListener('click', (e) => {
