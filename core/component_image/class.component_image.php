@@ -1816,7 +1816,6 @@ class component_image extends component_media_common {
 
 
 
-
 	/**
 	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
 	* @return array|null $result
@@ -1862,7 +1861,6 @@ class component_image extends component_media_common {
 
 
 
-
 	/**
 	* PIXEL_TO_CENTIMETERS
 	* @param string $quality
@@ -1902,6 +1900,26 @@ class component_image extends component_media_common {
 
 		return $px2cm;
 	}//end pixel_to_centimeters
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-build and save its data
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() : bool {
+
+		// exec media common method
+			parent::regenerate_component();
+
+		// re-create thumb
+			$this->generate_thumb();
+
+
+		return true;
+	}//end regenerate_component
 
 
 
