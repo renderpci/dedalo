@@ -34,7 +34,10 @@ view_text_input_text.render = async function(self) {
 		const fallback			= get_fallback_value(value, fallback_value)
 		const value_string		= fallback.join(self.context.fields_separator)
 
-		const text_node = document.createTextNode(value_string)
+		// const text_node = document.createTextNode(value_string)
+		const el = document.createElement('span')
+		el.innerHTML = value_string
+		const text_node = el
 
 	return text_node
 }//end get_text
