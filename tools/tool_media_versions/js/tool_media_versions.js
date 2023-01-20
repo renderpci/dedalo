@@ -154,7 +154,9 @@ tool_media_versions.prototype.get_files_info = async function() {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> get_files_info API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_files_info API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -206,7 +208,9 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> delete_file API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> delete_file API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -258,7 +262,9 @@ tool_media_versions.prototype.build_version = async function(quality) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> build_version API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> build_version API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -310,7 +316,9 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> conform_headers API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> conform_headers API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -365,7 +373,9 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> rotate API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> rotate API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 

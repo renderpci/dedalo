@@ -71,6 +71,7 @@ class data_v5_to_v6 extends v5_to_v6 {
 
 							if ($key==='info') {
 								// changes 'info' by 'inf' for readability
+								// HERE NEED TO READ OLD MODELO!!!!!!!!!!!!!! because the V5 data has modelo as key
 								$new_component_data->inf = $value->label . ' [' . $value->modelo .']';
 							}else{
 								$new_component_data->{$key} = $value;

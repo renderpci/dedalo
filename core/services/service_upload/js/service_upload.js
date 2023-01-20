@@ -145,7 +145,9 @@ const get_system_info = async function() {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> get_system_info API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_system_info API response:",'DEBUG',response);
+				}
 
 				const result = response.result
 
