@@ -1169,6 +1169,7 @@ component_common.prototype.change_mode = async function(options) {
 * Unified way to set changed_data item
 * @param object changed_data_item
 * @return bool
+* 	Returns true when new data is different from stored db data and false when not
 */
 component_common.prototype.set_changed_data = function(changed_data_item) {
 
@@ -1193,6 +1194,11 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 			? self.db_data.value[key]
 			: null
 		const new_value			= changed_data_item.value
+
+		// debug
+			// console.log('original_value:', original_value);
+			// console.log('new_value:', new_value);
+			// console.log('is_equal:', is_equal(new_value, original_value));
 
 		if (is_equal(new_value, original_value)) {
 			set_before_unload(false)
