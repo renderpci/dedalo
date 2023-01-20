@@ -3104,6 +3104,10 @@ input:-moz-placeholder {
   box-shadow: -1px 1px 0px #f78a1c, inset -1px 1px 0px #f78a1c;
   color: #f78a1c;
   overflow: initial;
+}
+.wrapper_component.edit.active:not(.hilite_element),
+.wrapper_component.search.active:not(.hilite_element),
+.wrapper_component.player.active:not(.hilite_element) {
   background-color: #fffdfa;
 }
 .wrapper_component.edit.active .show_on_active,
@@ -6587,10 +6591,10 @@ dd-modal .footer.distribute {
 .toolbar_container > .toolbar_button {
   height: 1.8em;
   padding: 0.33rem;
-  padding-right: 0.5em;
-  padding-left: 0.5em;
-  cursor: pointer;
+  padding-right: 0.33em;
+  padding-left: 0.25em;
   border-radius: 0.25em;
+  cursor: pointer;
 }
 .toolbar_container > .toolbar_button.separator {
   pointer-events: none;
@@ -8291,6 +8295,14 @@ dd-modal .footer.distribute {
   box-shadow: 0px 0px 10px #3b87fd;
   opacity: 1;
   z-index: 1;
+}
+.component_av.view_default.search > .content_data,
+.component_av.view_player.search > .content_data {
+  min-height: unset;
+}
+.component_av.view_default.search > .content_data > .content_value,
+.component_av.view_player.search > .content_data > .content_value {
+  height: unset;
 }
 .component_av.view_line.list {
   height: 5rem;

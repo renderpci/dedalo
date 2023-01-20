@@ -8,7 +8,7 @@
 	import {view_mini_date} from './view_mini_date.js'
 	import {view_line_edit_date} from './view_line_edit_date.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 
 
 
@@ -509,25 +509,47 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			}
 			ui.component.error(false, input_wrap)
 
-			const value = self.data.value[i]
-				? JSON.parse(JSON.stringify(self.data.value[i]))
-				: {mode}
+			if (self.mode==='search') {
 
-			const new_value = (response.result.year)
-				? response.result
-				: ''
+				// parsed_value
+					const parsed_value = (input.value.length>0) ? input.value : null
 
-			value[mode] = new_value
+				// changed_data
+					const changed_data_item = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: parsed_value
+					})
 
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				key		: i,
-				value	: value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
+				// update the instance data (previous to save)
+					self.update_data_value(changed_data_item)
+				// set data.changed_data. The change_data to the instance
+					// self.data.changed_data = changed_data
+				// publish search. Event to update the DOM elements of the instance
+					event_manager.publish('change_search_element', self)
+
+			}else{
+
+				const value = self.data.value[i]
+					? JSON.parse(JSON.stringify(self.data.value[i]))
+					: {mode}
+
+				const new_value = (response.result.year)
+					? response.result
+					: ''
+
+				value[mode] = new_value
+
+				const changed_data = [Object.freeze({
+					action	: 'update',
+					key		: i,
+					value	: value
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+			}
 		})
 
 	// button_calendar

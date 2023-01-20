@@ -171,13 +171,36 @@ const get_content_data = async function(self) {
 				}
 			// update_cache
 			if (confirm(get_label.sure || 'Sure?')) {
-				content_data.classList.add('loading')
+				components_list_container.classList.add('loading')
+				button_apply.classList.add('loading')
+				// clean response_message
+					while (response_message.firstChild) {
+						response_message.removeChild(response_message.firstChild);
+					}
+				// spinner
+					const spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner',
+						parent			: content_data
+					})
+
 				const ar_component_tipo = checked_list.map(el => el.value)
 				self.update_cache(ar_component_tipo)
-				.then(function(){
-					content_data.classList.remove('loading')
+				.then(function(response){
+					components_list_container.classList.remove('loading')
+					button_apply.classList.remove('loading')
+					spinner.remove()
+					response_message.innerHTML = response.msg || 'Unknown error'
 				})
 			}
+		})
+
+	// response_message
+		const response_message = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response_message',
+			inner_html		: '',
+			parent			: buttons_container
 		})
 
 	// content_data
