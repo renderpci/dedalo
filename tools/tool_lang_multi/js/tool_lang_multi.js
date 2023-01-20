@@ -191,7 +191,9 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> automatic_translation API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> automatic_translation API response:",'DEBUG',response);
+				}
 
 				// user messages
 					const msg_type = (response.result===false) ? 'error' : 'ok'
@@ -202,7 +204,9 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 				// reload target lang
 					const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
 					target_component.refresh()
-					dd_console('target_component', 'DEBUG', target_component)
+					if(SHOW_DEVELOPER===true) {
+						dd_console('target_component', 'DEBUG', target_component)
+					}
 
 				resolve(response)
 			})

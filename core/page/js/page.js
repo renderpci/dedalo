@@ -88,8 +88,9 @@ page.prototype.init = async function(options) {
 			)
 		// fn_user_navigation
 			async function fn_user_navigation(user_navigation_options) {
-				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
-
+				if(SHOW_DEVELOPER===true) {
+					dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
+				}
 				// options
 					const source			= user_navigation_options.source
 					const sqo				= user_navigation_options.sqo || null

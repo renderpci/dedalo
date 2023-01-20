@@ -166,7 +166,9 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> load_csv_files_list API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> load_csv_files_list API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -219,7 +221,9 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> remove_file API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> remove_file API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -271,7 +275,9 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> import_files API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> import_files API response:",'DEBUG',response);
+				}
 
 				resolve(response)
 			})
@@ -317,7 +323,9 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> get_section_components_list API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_section_components_list API response:",'DEBUG',response);
+				}
 
 				if (!response.result) {
 					resolve({
@@ -384,7 +392,9 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> process_uploaded_file API response:",'DEBUG', response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> process_uploaded_file API response:",'DEBUG', response);
+				}
 
 				resolve(response)
 			})

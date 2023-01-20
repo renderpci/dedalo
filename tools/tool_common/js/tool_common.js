@@ -47,7 +47,9 @@ export const tool_common = function(){
 * }
 */
 tool_common.prototype.init = async function(options) {
-	dd_console(`init tool options`, 'DEBUG', options)
+	if(SHOW_DEVELOPER===true) {
+		dd_console(`init tool options`, 'DEBUG', options)
+	}
 
 	const self = this
 

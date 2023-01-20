@@ -402,7 +402,9 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> process_uploaded_file API response:",'DEBUG', response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> process_uploaded_file API response:",'DEBUG', response);
+				}
 
 				resolve(response)
 			})
