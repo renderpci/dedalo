@@ -133,6 +133,18 @@ $updates->$v = new stdClass();
 					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
 			");
 
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_portal',
+			'component_text_area',
+			'component_json',
+			'component_av',
+			'component_image',
+			'component_pdf',
+			'component_svg',
+			'component_number'
+		];	// Force convert from string to array
+
 	// update time machine data. Update 'data' of time_machine
 		require_once dirname(dirname(__FILE__)) .'/upgrade/class.time_machine_v5_to_v6.php';
 		$script_obj = new stdClass();
@@ -158,18 +170,6 @@ $updates->$v = new stdClass();
 			$script_obj->script_method	= "change_component_dato";
 			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 		$updates->$v->run_scripts[] = $script_obj;
-
-	// UPDATE COMPONENTS
-		$updates->$v->components_update = [
-			'component_portal',
-			'component_text_area',
-			'component_json',
-			'component_av',
-			'component_image',
-			'component_pdf',
-			'component_svg',
-			'component_number'
-		];	// Force convert from string to array
 
 	// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data

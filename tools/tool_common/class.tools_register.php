@@ -52,7 +52,7 @@ class tools_register {
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || $basename==='tool_dummy' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
+					if ($basename==='tool_common' || $basename==='tool_dev_template' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
 						debug_log(__METHOD__." Ignored dir  ".to_string($basename), logger::ERROR);
 						continue;
 					}
@@ -140,12 +140,19 @@ class tools_register {
 				// Clean. remove tools section records in the database
 					// tools_register::clean_section_tools_data();
 
-				// import record (section tool1) in db matrix_tools
+				// import record (section tool) in db matrix_tools
 					$section_id_counter = 1; // first section_id to use
 					foreach ($info_objects_parsed as $current_tool_section_data) {
 
 						// section save raw data
-							$tool_name = reset($current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN});
+							try {
+								$tool_name = reset($current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN});
+							} catch (Exception $e) {
+								debug_log(__METHOD__." ERROR on get tool name ".$e->getMessage(), logger::ERROR);
+								debug_log(__METHOD__." Ignored tool ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
+								continue;
+							}
+
 							if (empty($tool_name)) {
 								debug_log(__METHOD__." Error. tool name is empty ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
 								continue;

@@ -5,8 +5,28 @@ import {
 	elements
 } from './elements.js'
 import {get_instance} from '../../common/js/instances.js'
+import {event_manager} from '../../common/js/event_manager.js'
 import {ui} from '../../common/js/ui.js'
+// import {search} from '../../search/js/search.js'
 // import {clone} from '../../common/js/utils/util.js'
+
+
+
+// search change_search_element event subscription
+event_manager.subscribe('change_search_element', fn_change_search_element)
+async function fn_change_search_element(instance) {
+	// show save animation. add save_success class to component wrappers (green line animation)
+	ui.component.exec_save_successfully_animation(instance)
+	// set instance as changed or not based on their value
+	const hilite = (
+		(instance.data.value && instance.data.value.length>0) ||
+		(instance.data.q_operator && instance.data.q_operator.length>0)
+	)
+	ui.hilite({
+		instance	: instance, // instance object
+		hilite		: hilite // bool
+	})
+}
 
 
 // vars
