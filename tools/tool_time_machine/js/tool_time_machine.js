@@ -303,8 +303,9 @@ tool_time_machine.prototype.apply_value = function(options) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> apply_value API response:",'DEBUG',response);
-
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> apply_value API response:",'DEBUG',response);
+				}
 				// // reload source component on finish close
 				// 	if (self.caller) {
 				// 		self.caller.refresh()

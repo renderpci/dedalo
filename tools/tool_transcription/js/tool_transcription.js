@@ -248,7 +248,9 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 				body : rqo
 			})
 			.then(function(api_response){
-				dd_console("[tool_transcription.get_user_tools] api_response:",'DEBUG',api_response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("[tool_transcription.get_user_tools] api_response:",'DEBUG',api_response);
+				}
 
 				const result = api_response.result // array of objects
 
