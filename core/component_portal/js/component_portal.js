@@ -362,8 +362,9 @@ component_portal.prototype.build = async function(autoload=false) {
 					body : self.rqo
 				})
 				// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
-				dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
-
+				if(SHOW_DEVELOPER===true) {
+					dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
+				}
 			// set Context
 				// context is only set when it's empty the origin context,
 				// if the instance has previous context, it will need to preserve.

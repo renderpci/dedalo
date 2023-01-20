@@ -160,7 +160,9 @@ tool_indexation.prototype.init = async function(options) {
 				event_manager.subscribe('click_tag_index_'+ id_base, fn_click_tag_index)
 			)
 			function fn_click_tag_index(options) {
-				dd_console(`+++++++ click_tag_index`, 'DEBUG', options)
+				if(SHOW_DEVELOPER===true) {
+					dd_console(`+++++++ click_tag_index`, 'DEBUG', options)
+				}
 
 				// options
 					const caller			= options.caller // instance of component text area

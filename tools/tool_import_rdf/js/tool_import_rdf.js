@@ -159,7 +159,9 @@ tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_value
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> get_rdf_data API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_rdf_data API response:",'DEBUG',response);
+				}
 
 				// user messages
 					const msg_type = (response.result===false) ? 'error' : 'ok'

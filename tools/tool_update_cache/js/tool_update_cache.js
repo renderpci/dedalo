@@ -132,7 +132,9 @@ tool_update_cache.prototype.get_component_list = function() {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> get_component_list API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_component_list API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -178,7 +180,9 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> update_cache API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> update_cache API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 

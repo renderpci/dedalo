@@ -165,7 +165,9 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> change_all_time_codes API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> change_all_time_codes API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of changed tc
 

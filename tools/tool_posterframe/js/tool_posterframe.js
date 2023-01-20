@@ -155,7 +155,9 @@ tool_posterframe.prototype.create_posterframe = function(current_time) {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> create_posterframe API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> create_posterframe API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -204,7 +206,9 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> delete_posterframe API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> delete_posterframe API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -248,7 +252,9 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> get_ar_identifying_image API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_ar_identifying_image API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 
@@ -299,7 +305,9 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> create_identifying_image API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> create_identifying_image API response:",'DEBUG',response);
+				}
 
 				const result = response.result // array of objects
 

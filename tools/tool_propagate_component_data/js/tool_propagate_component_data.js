@@ -179,7 +179,9 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 				body : rqo
 			})
 			.then(function(response){
-				dd_console("-> propagate_component_data API response:",'DEBUG',response);
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> propagate_component_data API response:",'DEBUG',response);
+				}
 
 				resolve(response)
 			})

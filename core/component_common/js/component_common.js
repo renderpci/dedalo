@@ -205,9 +205,10 @@ component_common.prototype.build = async function(autoload=false){
 				const api_response = await data_manager.request({
 					body : rqo
 				})
+				if(SHOW_DEVELOPER===true) {
 				// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
-				dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
-
+					dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
+				}
 
 			// Context
 				if(!self.context){
@@ -458,8 +459,9 @@ component_common.prototype.save = async function(changed_data) {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
-					dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
-
+					if(SHOW_DEVELOPER===true) {
+						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
+					}
 				// debug
 					if(SHOW_DEBUG===true) {
 						if (api_response.result) {
