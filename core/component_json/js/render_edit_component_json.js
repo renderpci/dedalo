@@ -25,7 +25,7 @@ export const render_edit_component_json = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return DOM node|null
 */
 render_edit_component_json.prototype.edit = async function(options) {
 
@@ -50,25 +50,3 @@ render_edit_component_json.prototype.edit = async function(options) {
 
 	return null
 }//end edit
-
-
-
-/**
-* ON_CHANGE
-*/
-export const on_change = function(self, editor, json_string, key) {
-
-	const value = json_string // JSON_parse_safely(json_string)
-
-	// change data
-		const changed_data_item = Object.freeze({
-			action	: 'update',
-			key		: key,
-			value	: value
-		})
-
-	// fix instance changed_data
-		const changed = self.set_changed_data(changed_data_item)
-
-	return changed
-}//end on_change
