@@ -93,7 +93,7 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* GET_content_value
+* GET_CONTENT_VALUE
 * @return DOM node content_value
 */
 const get_content_value = (i, current_value, self) => {
@@ -107,10 +107,7 @@ const get_content_value = (i, current_value, self) => {
 	// load_editor and init
 		async function load_editor() {
 
-			// validated. Changed to false on editor.onValidationError
-			let validated = true
-
-			// load editor files (js/css)
+			// load editor files (JS/CSS)
 			self.load_editor_files()
 			.then(()=>{
 
@@ -126,13 +123,13 @@ const get_content_value = (i, current_value, self) => {
 
 						self.save_sequence(editor)
 						.then(function(){
-
-							on_change(self, editor)
-
 							editor.frame.classList.remove('isDirty')
-							button_save.classList.remove('warning')
 						})
 					})
+
+				// validated. Changed to false on editor.onValidationError
+				// let validated = true
+				let is_first_validation = true
 
 				// editor_options
 					const editor_options = {
@@ -140,48 +137,24 @@ const get_content_value = (i, current_value, self) => {
 						modes		: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 						// maxLines : 100, // Infinity,
 						onError : function (err) {
-							console.error('err:',err);
+							console.error('JSON editor error:', err);
 							alert(err.toString());
 						},
-						onValidationError : function() {
-							validated = false
-						},
-						onChange : function(json) {
-							if (editor) {
-								on_change(self, editor)
+						onValidate : function(json) {
+							if (is_first_validation===false) {
+								const changed = on_change(self, editor, json, i)
+								if (changed===true) {
+									button_save.classList.remove('hide')
+								}else{
+									button_save.classList.add('hide')
+								}
 							}else{
-								console.error('Error. editor is not available!:');
+								is_first_validation = false
 							}
-						},
-						onValidate : function() {
-							validated = true
-
-					       //var json = editor.get();
-					       // Update hidden text area value
-					       //editor_text_area.value = editor.getText()
-
-							// const json = editor.get();
-							//      	console.log("json:",json);
-							//      	//console.log("json editor.get():",editor.get());
-							//      	console.log("text editor.getText():",editor.getText());
-
-							// const changed_data = [Object.freeze({
-							// 	action	: 'update',
-							// 	key		: 0,
-							// 	value	: editor.get()
-							// })]
-							// self.change_value({
-							// 	changed_data : changed_data,
-							// 	refresh 	 : false
-							// })
-						},
-						onBlur : function() {
-						    // 	console.log('content changed:', this);
-						    // 	alert("content changed");
 						}
 					}
 
-				// create a new instace of the editor when DOM element is ready
+				// create a new instance of the editor when DOM element is ready
 					// event_manager.when_in_viewport(li, function(){
 					// 	console.log("container in DOM:",li);
 					// })
