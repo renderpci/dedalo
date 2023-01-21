@@ -107,11 +107,13 @@
 
 		// references
 			// get the references calculated by relations with other sections. Return array
+			if ($mode!=='search') {
 				$references = $this->get_calculated_references();
 				// references. Add to item if exists
 				if (!empty($references)) {
 					$item->references = $references;
 				}
+			}
 
 
 		$data[] = $item;
