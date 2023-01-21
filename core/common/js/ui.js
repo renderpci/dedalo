@@ -197,8 +197,9 @@ export const ui = {
 					}//end if (model!=='component_filter')
 
 				// read only. Disable events on permissions <2
-					if (instance.permissions<2) {
+					if (!instance.permissions || parseInt(instance.permissions) <2) {
 						wrapper.classList.add('disabled_component')
+						console.warn('+++++ instance:', instance.tipo, instance);
 					}
 
 				// event click . Activate component on event
