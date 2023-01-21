@@ -56,46 +56,19 @@ render_edit_component_json.prototype.edit = async function(options) {
 /**
 * ON_CHANGE
 */
-export const on_change = function(self, editor) {
+export const on_change = function(self, editor, json_string, key) {
 
-	const editor_wrapper	= editor.frame
-	const button_save		= editor_wrapper.previousElementSibling
-	const db_value			= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+	const value = json_string // JSON_parse_safely(json_string)
 
-	button_save.classList.add("warning")
-	editor_wrapper.classList.add("isDirty")
+	// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: value
+		})
 
-	try {
-		const edited_value 	= editor.get()
+	// fix instance changed_data
+		const changed = self.set_changed_data(changed_data_item)
 
-		if (typeof edited_value!=="undefined") {
-
-			const changed = JSON.stringify(db_value)!==JSON.stringify(edited_value)
-			if (changed) {
-
-				editor_wrapper.classList.add("isDirty")
-				button_save.classList.add("warning")
-
-				// set_before_unload (bool) add
-					set_before_unload(true)
-			}else{
-
-				if (editor_wrapper.classList.contains("isDirty")) {
-					editor_wrapper.classList.remove("isDirty")
-					button_save.classList.remove("warning")
-				}
-
-				// set_before_unload (bool) remove
-					set_before_unload(false)
-			}
-		}
-
-	}catch(error){
-		// console.log("error:",error);
-		editor_wrapper.classList.add("isDirty")
-	}
-
-
-	return true
+	return changed
 }//end on_change
-
