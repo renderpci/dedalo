@@ -162,7 +162,6 @@ class security {
 				]);
 
 
-
 		return $permissions_table;
 	}//end get_permissions_table
 
@@ -171,7 +170,7 @@ class security {
 	/**
 	* GET_AR_PERMISSIONS_IN_MATRIX_FOR_CURRENT_USER
 	* Search in matrix record with this id (user_id) as parent,
-	* filter by tipo - modelo name (component_security_access) and get dato if exists in db
+	* filter by tipo - model name (component_security_access) and get dato if exists in db
 	* @return array $ar_permissions_in_matrix_for_current_user
 	*	Array of all element=>level like array([dd12] => 2,[dd93] => 2,..)
 	*	Include areas and components permissions
@@ -394,7 +393,7 @@ class security {
 		$options = new stdClass();
 			$options->section_tipo	= null;
 			$options->section_id	= null;
-			$options->ar_sections	= null;
+			$options->ar_sections	= [];
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// user_id
@@ -405,7 +404,7 @@ class security {
 
 		// Permissions
 			$permissions = 2;
-		
+
 		// component_security_access
 			$component_security_access		= security::get_user_security_access();
 			$component_security_access_dato	= $component_security_access->get_dato();

@@ -7,6 +7,10 @@
 class component_security_access extends component_common {
 
 
+
+	/**
+	* @var
+	*/
 	public $datalist;
 
 

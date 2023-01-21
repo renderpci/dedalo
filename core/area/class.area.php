@@ -18,7 +18,7 @@ class area extends area_common  {
 	/**
 	* GET AREAS RECURSIVE IN JSON FORMAT OF ALL MAJOR AREAS
 	* Iterate all major existing area tipes (area_root,area_resource,area_admin, ...)
-	* and get all tipos of every one mixed in one full ontology json array
+	* and get all tipos of every one mixed in one full ontology JSON array
 	* Used in menu and security access
 	* @see menu, component_security_access
 	* @return array $areas
@@ -161,7 +161,7 @@ class area extends area_common  {
 
 	/**
 	* AREA_TO_REMOVE
-	* @return bool
+	* @return object $config_areas
 	*/
 	public static function get_config_areas() : object {
 
