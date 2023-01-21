@@ -3334,12 +3334,33 @@ abstract class component_common extends common {
 				// current DB array of value
 					$dato = $this->get_dato();
 
-				// check selected value for mistakes
+				// debug
+					// debug_log(__METHOD__
+					// 	.' +++++++++++++++++++++++++++++++++  sort_data:'
+					// 	.PHP_EOL.'key value:'. to_string($source_key)
+					// 	.PHP_EOL.'given value:'. to_string($value)
+					// 	.PHP_EOL.'DB value (dato[source_key]):'. to_string($dato[$source_key])
+					// 	.PHP_EOL.'dato value:'. to_string($dato)
+					// 	, logger::ERROR
+					// );
+
+				// check selected value to detect mistakes
 					if (!isset($dato[$source_key])) {
 						debug_log(__METHOD__.' Error on sort_data. Source value key ['.$source_key.'] do not exists! ', logger::ERROR);
 						return false;
-					}elseif(!locator::compare_locators($dato[$source_key], $value, ['section_id','section_tipo','from_component_tipo','tag_id'])) {
-						debug_log(__METHOD__.' Error on sort_data. Source value if different from DB value:'.PHP_EOL.'given value:'.$value.PHP_EOL.'DB value:'. $dato[$source_key], logger::ERROR);
+					}elseif(!locator::compare_locators(
+							$dato[$source_key],
+							$value,
+							['section_id','section_tipo','from_component_tipo','tag_id'])
+						) {
+						debug_log(__METHOD__
+							.' Error on sort_data. Source value if different from DB value:'
+							.PHP_EOL.'key value:'. to_string($source_key)
+							.PHP_EOL.'given value:'. to_string($value)
+							.PHP_EOL.'DB value (dato[source_key]):'. to_string($dato[$source_key])
+							.PHP_EOL.'dato value:'. to_string($dato)
+							, logger::ERROR
+						);
 						return false;
 					}
 

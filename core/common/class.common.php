@@ -1958,11 +1958,11 @@ abstract class common {
 										$related_element->from_component_tipo	= $this->tipo;
 										$related_element->from_section_tipo		= $this->section_tipo;
 
-										//caller obj, inject the caller section_tipo and section_id
-											$caller_dataframe = new stdClass();
-												$caller_dataframe->section_tipo	= $this->section_tipo;
-												$caller_dataframe->section_id		= $this->section_id;
-											$related_element->set_caller_dataframe($caller_dataframe);
+										// caller_dataframe obj, inject the caller section_tipo and section_id
+										$caller_dataframe = new stdClass();
+											$caller_dataframe->section_tipo	= $this->section_tipo;
+											$caller_dataframe->section_id	= $this->section_id;
+										$related_element->set_caller_dataframe($caller_dataframe);
 									}
 
 								// Inject data for component_semantic_node

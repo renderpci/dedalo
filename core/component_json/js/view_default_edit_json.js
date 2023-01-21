@@ -5,10 +5,9 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {on_change} from './render_edit_component_json.js'
-
 
 
 
@@ -24,7 +23,7 @@ export const view_default_edit_json = function() {
 
 
 /**
-* EDIT
+* RENDER
 * Render node for use in edit
 * @return DOM node
 */
@@ -57,7 +56,7 @@ view_default_edit_json.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 

@@ -18,7 +18,7 @@ class tool_import_dedalo_csv extends tool_common {
 	* Read requested dir and return all files of request extension found
 	* @return object $response
 	*/
-	public static function get_csv_files(object $request_options) : object {
+	public static function get_csv_files() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -29,7 +29,10 @@ class tool_import_dedalo_csv extends tool_common {
 			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
 
 		// read_files
-			$files_list	= tool_common::read_files($dir, $valid_extensions=['csv']);
+			$files_list	= tool_common::read_files(
+				$dir,
+				['csv'] // array $valid_extensions
+			);
 
 		// files info
 			$files_info = [];
@@ -154,7 +157,7 @@ class tool_import_dedalo_csv extends tool_common {
 				: null;
 
 
-		return (object)$response;
+		return $response;
 	}//end get_csv_files
 
 
@@ -386,12 +389,14 @@ class tool_import_dedalo_csv extends tool_common {
 
 					if (!empty($user_locator)) {
 						// component build and set dato
-							$component 		= component_common::get_instance($created_by_user['model'],
-																			 $created_by_user['tipo'],
-																			 $section_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);
+							$component = component_common::get_instance(
+								$created_by_user['model'],
+								$created_by_user['tipo'],
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$section_tipo
+							);
 							$component->set_dato($user_locator);
 							$section->set_component_relation_dato($component);
 
@@ -416,12 +421,14 @@ class tool_import_dedalo_csv extends tool_common {
 
 					if (!empty($current_date)) {
 						// component build and set dato
-							$component 		= component_common::get_instance($created_date['model'],
-																			 $created_date['tipo'],
-																			 $section_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);
+							$component = component_common::get_instance(
+								$created_date['model'],
+								$created_date['tipo'],
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$section_tipo
+							);
 							$component->set_dato($current_date->component_dato);
 							$section->set_component_direct_dato($component);
 
@@ -441,12 +448,14 @@ class tool_import_dedalo_csv extends tool_common {
 
 					if (!empty($user_locator)) {
 						// component build and set dato
-							$component 		= component_common::get_instance($modified_by_user['model'],
-																			 $modified_by_user['tipo'],
-																			 $section_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);
+							$component = component_common::get_instance(
+								$modified_by_user['model'],
+								$modified_by_user['tipo'],
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$section_tipo
+							);
 							$component->set_dato($user_locator);
 							$section->set_component_relation_dato($component);
 
@@ -463,7 +472,7 @@ class tool_import_dedalo_csv extends tool_common {
 				# modified_date
 				}elseif ($column_map->model==='modified_date' || $column_map->map_to===$modified_date['tipo']) {
 
-					$current_date 	= self::build_date_from_value($value);
+					$current_date = self::build_date_from_value($value);
 
 					# Format
 					# $current_date = array(
@@ -473,12 +482,14 @@ class tool_import_dedalo_csv extends tool_common {
 
 					if (!empty($current_date)) {
 						// component build and set dato
-							$component 		= component_common::get_instance($modified_date['model'],
-																			 $modified_date['tipo'],
-																			 $section_id,
-																			 'list',
-																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);
+							$component = component_common::get_instance(
+								$modified_date['model'],
+								$modified_date['tipo'],
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$section_tipo
+							);
 							$component->set_dato($current_date->component_dato);
 							$section->set_component_direct_dato($component);
 
@@ -553,7 +564,7 @@ class tool_import_dedalo_csv extends tool_common {
 								$failed->section_id		= $section_id;
 								$failed->data			= stripslashes( $value );
 								$failed->component_tipo	= $component->get_tipo();
-								$failed->msg			= 'IGNORED: malformed data '. $error;
+								$failed->msg			= 'IGNORED: malformed data '. to_string($value);
 							$failed_rows[] = $failed;
 							continue 1;
 						}
@@ -579,7 +590,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 				# Elements 'translatable' can be formatted as json values like {"lg-eng":"My value","lg-spa":"Mi valor"}
 				if (($translate===true || $with_lang_versions===true) && is_object($value)) {
-					debug_log(__METHOD__." Parsing multilanguaje value [$component_tipo - $section_tipo - $section_id]: ".to_string($value), logger::DEBUG);
+					debug_log(__METHOD__." Parsing multi-language value [$component_tipo - $section_tipo - $section_id]: ".to_string($value), logger::DEBUG);
 					foreach ($value as $v_key => $v_value) {
 
 						if (strpos($v_key, 'lg-')===0) {
@@ -596,7 +607,7 @@ class tool_import_dedalo_csv extends tool_common {
 					if (in_array($model_name, $related_conponents)){ // $model_name==='component_portal' || $model_name==='component_autocomplete') {
 						// check every locator to be valid!!
 						if(!empty($value)) {
-							foreach ((array)$value as $pkey => $current_locator) {
+							foreach ((array)$value as $current_locator) {
 								if (empty($current_locator->section_tipo) || empty($current_locator->section_id))	{
 
 									$error = empty($current_locator->section_id)
@@ -633,12 +644,12 @@ class tool_import_dedalo_csv extends tool_common {
 			}//end foreach ($row as $key => $value)
 
 			// action
-				if($create_record) {
+				if($create_record===true) {
 					$created_rows[] = $section_id;
-					$action = "created";
+					// $action = "created";
 				}else{
 					$updated_rows[] = $section_id;
-					$action = "updated";
+					// $action = "updated";
 				}
 
 			// SAVE . ROW SAVE . Save edited by components section once per row
