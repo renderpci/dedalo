@@ -532,8 +532,15 @@ render_search.prototype.render_search_buttons = function(){
 		})
 		reset_button.addEventListener('click', function(e){
 			e.stopPropagation()
-			self.reset(this)
-			//self.toggle_search_panel()
+			render_filter({
+				self				: self,
+				editing_preset		: self.json_filter,
+				clean_q				: true,
+				allow_duplicates	: true
+			})
+
+			// render buttons
+			self.render_search_buttons()
 		})
 	// Show all
 		const show_all_button = ui.create_dom_element({
