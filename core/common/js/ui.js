@@ -767,12 +767,17 @@ export const ui = {
 			// changed_data check. This action saves changed_data
 			// and reset component changed_data to empty array []
 				if (component.data && component.data.changed_data && component.data.changed_data.length>0) {
-					// console.log('>>>>>> UI component.data.changed_data:', component.model, component.data.changed_data);
-					// set_before_unload(true)
-					await component.change_value({
-						changed_data	: component.data.changed_data,
-						refresh			: false
-					})
+					const save_on_deactivate = typeof component.save_on_deactivate!=='undefined'
+						? component.save_on_deactivate
+						: true
+					console.log('save_on_deactivate:', save_on_deactivate);
+					if (save_on_deactivate===true) {
+						// set_before_unload(true)
+						await component.change_value({
+							changed_data	: component.data.changed_data,
+							refresh			: false
+						})
+					}
 				}
 
 			// component active status
