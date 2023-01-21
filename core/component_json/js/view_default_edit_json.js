@@ -4,10 +4,8 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	import {on_change} from './render_edit_component_json.js'
+	import {change_handler} from './component_json.js'
 
 
 
@@ -25,7 +23,9 @@ export const view_default_edit_json = function() {
 /**
 * RENDER
 * Render node for use in edit
-* @return DOM node
+* @param object self
+* @param object options
+* @return DOM node wrapper
 */
 view_default_edit_json.render = async function(self, options) {
 
@@ -62,6 +62,7 @@ view_default_edit_json.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return DOM node content_data
 */
 const get_content_data_edit = function(self) {
@@ -76,7 +77,7 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= value
 		const value_length	= inputs_value.length
 		if (value_length>1) {
-			console.warn("More than one value in component_json is not allowed at now. Ignored next values. N values: ",value_length);
+			console.warn('More than one value in component_json is not allowed at now. Ignored next values. N values: ', value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
 			const content_value = get_content_value(i, inputs_value[i], self)
@@ -94,9 +95,13 @@ const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* Render JSON editor for current value
+* @param int key
+* @param mixed current_value
+* @param object self
 * @return DOM node content_value
 */
-const get_content_value = (i, current_value, self) => {
+const get_content_value = (key, current_value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -114,7 +119,7 @@ const get_content_value = (i, current_value, self) => {
 				// button_save
 					const button_save = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'primary save button_save',
+						class_name		: 'warning save button_save',
 						inner_html		: get_label.salvar || 'Save',
 						parent			: content_value
 					})
@@ -127,8 +132,7 @@ const get_content_value = (i, current_value, self) => {
 						})
 					})
 
-				// validated. Changed to false on editor.onValidationError
-				// let validated = true
+				// validated. Changed to false after init parse
 				let is_first_validation = true
 
 				// editor_options
@@ -141,23 +145,19 @@ const get_content_value = (i, current_value, self) => {
 							alert(err.toString());
 						},
 						onValidate : function(json) {
-							if (is_first_validation===false) {
-								const changed = on_change(self, editor, json, i)
-								if (changed===true) {
-									button_save.classList.remove('hide')
-								}else{
-									button_save.classList.add('hide')
-								}
-							}else{
+
+							// ignore first validation (when editor value is parsed on init)
+							if (is_first_validation===true) {
+								// next event will be already useful
 								is_first_validation = false
+								return
 							}
+
+							change_handler(self, json, key)
 						}
 					}
 
 				// create a new instance of the editor when DOM element is ready
-					// event_manager.when_in_viewport(li, function(){
-					// 	console.log("container in DOM:",li);
-					// })
 					const editor = new JSONEditor(
 						content_value,
 						editor_options,
@@ -182,8 +182,6 @@ const get_content_value = (i, current_value, self) => {
 				// 		button_save.click()
 				// 	}
 				// })
-
-			return true
 		}//end load_editor
 
 	// observe in viewport
@@ -204,7 +202,7 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
+* @param object self
 * @return DOM node buttons_container
 */
 const get_buttons = (self) => {
@@ -263,8 +261,11 @@ const get_buttons = (self) => {
 /**
 * DOWNLOAD_OBJECT_AS_JSON
 * Force automatic download of component data value
+* @param object export_obj
+* @param string export_name
+* @return void
 */
-const download_object_as_json = function(export_obj, export_name){
+const download_object_as_json = function(export_obj, export_name) {
 
     const data_str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(export_obj,undefined,2));
 
@@ -276,6 +277,4 @@ const download_object_as_json = function(export_obj, export_name){
 
     download_anchor_node.click();
     download_anchor_node.remove();
-
-    return true
 }//end download_object_as_json
