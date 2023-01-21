@@ -1097,30 +1097,6 @@ search.prototype.get_search_group_operator = function(search_group) {
 	}//end update_section
 
 
-
-	/**
-	* RESET
-	* Force render filter again without add component values
-	* @return bool true
-	*/
-	search.prototype.reset = function(button_obj) {
-
-		const self = this
-
-		self.render_filter({
-			editing_preset		: self.json_filter,
-			clean_q				: true,
-			allow_duplicates	: true
-		})
-
-		// render buttons
-		self.render_search_buttons()
-
-		return true
-	}//end reset
-
-
-
 /**
 * TRACK_SHOW_PANEL
 * Manage cookies of user opened/closed panels
