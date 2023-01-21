@@ -17,25 +17,28 @@
 
 export const component_json = function(){
 
-	this.id				= null
+	this.id					= null
 
-	this.model			= null
-	this.tipo			= null
-	this.section_tipo	= null
-	this.section_id		= null
-	this.mode			= null
-	this.lang			= null
-	this.section_lang	= null
+	this.model				= null
+	this.tipo				= null
+	this.section_tipo		= null
+	this.section_id			= null
+	this.mode				= null
+	this.lang				= null
+	this.section_lang		= null
 
-	this.context		= null
-	this.data			= null
+	this.context			= null
+	this.data				= null
 
-	this.parent			= null
-	this.node			= null
+	this.parent				= null
+	this.node				= null
 
-	this.tools			= null
+	this.tools				= null
 
-	this.editors		= []
+	this.editors			= []
+
+	// save_on_deactivate. Prevent to auto-save value when component is deactivated
+	this.save_on_deactivate	= false
 
 	return true
 }//end component_json
@@ -73,28 +76,30 @@ export const component_json = function(){
 
 /**
 * LOAD_EDITOR_FILES
-* @return promise
+* @return bool
 */
-component_json.prototype.load_editor_files = function() {
+component_json.prototype.load_editor_files = async function() {
 
-	const self = this
+	// load JSONEditor files if not already loaded
+		if(typeof JSONEditor==='undefined'){
 
-	// load dependencies js/css
-		const load_promises = []
+			// load dependencies js/css
+				const load_promises = []
 
-		// css file load
-			const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
-			load_promises.push( common.prototype.load_style(lib_css_file) )
+			// css file load
+				const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
+				load_promises.push( common.prototype.load_style(lib_css_file) )
 
-		// js module import
-			const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
-			load_promises.push( load_promise )
-			//self.JSONEditor = JSONEditor
+			// js module import
+				const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
+				load_promises.push( load_promise )
+				//self.JSONEditor = JSONEditor
 
-	const js_promise = Promise.all(load_promises)
+			await Promise.all(load_promises)
+		}
 
 
-	return js_promise
+	return true
 }//end load_editor_files
 
 
@@ -142,7 +147,7 @@ component_json.prototype.save_sequence = async function(editor) {
 		return null
 	})();
 
-	// check json format and validate
+	// check JSON format and validate
 		if (validated!==true) {
 
 			// manual check valid value
@@ -183,86 +188,8 @@ component_json.prototype.save_sequence = async function(editor) {
 				refresh			: false
 			})
 			.then((save_response)=>{
-				// on_change(self, editor)
-
-				// editor.frame.classList.remove("isDirty")
-				// button_save.classList.remove("warning")
 
 				resolve(save_response)
 			})
 		})
 }//end save_sequence
-
-
-
-/**
-* LOAD_CONTEXT
-*/
-	// component_json.prototype.load_context = function() {
-
-	// 	const self = this
-
-	// 	if (self.context) {
-
-	// 		return new Promise(function(resolve) {
-	// 		  resolve(self.context)
-	// 		});
-	// 	}
-
-	// 	const options = {
-	// 		model 			: 'section_record',
-	// 		tipo 			: self.section_tipo,
-	// 		section_tipo 	: self.section_tipo,
-	// 		section_id		: self.section_id,
-	// 		mode			: self.mode,
-	// 		lang			: self.section_lang
-	// 	}
-
-	// 	const tipo = self.tipo
-
-	// 	// section instance
-	// 		const js_promise = instances.get_instance(options).then(function(current_section_record){
-
-	// 			const context = current_section_record.get_component_context(tipo);
-
-	// 			//event_manager.publish('stateChange')
-
-	// 			// set
-	// 				self.context = context
-	// 		})
-
-	// 	//event_manager.subscribe('stateChange', () => self.render())
-
-	// 	return js_promise
-	// }//end load_context
-
-
-
-/**
-* LOAD_DATA
-*/
-	// component_json.prototype.load_data = function(){
-
-	// 	const self = this
-
-	// 	const options = {
-	// 		model 			: 'section_record',
-	// 		tipo 			: self.section_tipo,
-	// 		section_tipo 	: self.section_tipo,
-	// 		section_id		: self.section_id,
-	// 		mode			: self.mode,
-	// 		lang			: self.section_lang
-	// 	}
-
-	// 	const tipo = self.tipo
-
-	// 	// section instance
-	// 		const js_promise = instances.get_instance(options).then(function(current_section){
-
-	// 			self.data =	current_section.get_component_data(tipo);
-
-	// 			return self.data
-	// 		})
-
-	// 	return js_promise
-	// }//end load_data
