@@ -9465,12 +9465,14 @@ dd-modal .footer.distribute {
 * Included from main.less file
 */
 .component_json .button_save {
-  display: none;
   position: absolute;
   right: 0px;
-  top: 0px;
+  top: 1px;
   z-index: 1;
-  height: 36px;
+  height: 35px;
+  margin: 0;
+  background-color: #949494;
+  border: none;
 }
 .component_json .button_save:before {
   background-color: #2e6cd0;
