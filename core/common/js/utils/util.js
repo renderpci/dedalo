@@ -339,7 +339,8 @@ export function array_equals(source, array) {
 			if (!source[i].equals(array[i]))
 				return false;
 		}
-		else if (source[i] != array[i]) {
+		// else if (source[i] != array[i]) {
+		else if (!is_equal(source[i], array[i])) {
 			// Warning - two different object instances will never be equal: {x:20} != {x:20}
 			return false;
 		}
