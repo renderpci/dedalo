@@ -38,7 +38,7 @@ view_default_edit_json.render = async function(self, options) {
 			: self.data.value
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -61,11 +61,11 @@ view_default_edit_json.render = async function(self, options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
 * @param object self
 * @return DOM node content_data
 */
-const get_content_data_edit = function(self) {
+const get_content_data = function(self) {
 
 	const value = self.data.value
 
@@ -89,7 +89,7 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
