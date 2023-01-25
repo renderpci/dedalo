@@ -890,7 +890,8 @@ component_portal.prototype.get_search_value = function() {
 
 	const self = this
 
-	const current_value = self.data.value
+	const data			= self.data || {}
+	const current_value	= data.value || []
 
 	const new_value = [];
 	const value_len = current_value.length

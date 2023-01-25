@@ -116,14 +116,14 @@ tool_numisdata_cataloging.prototype.load_section = async function(options){
 	const request_config = self.context.properties.source.request_config
 
 	const section_options = {
-			model			: 'section',
-			mode			: 'list',
-			tipo			: self.caller.tipo,
-			section_tipo	: self.caller.section_tipo,
-			section_id		: null,
-			lang			: self.caller.lang,
-			section_lang	: self.caller.section_lang,
-			type			: 'section'
+		model			: 'section',
+		mode			: 'list',
+		tipo			: self.caller.tipo,
+		section_tipo	: self.caller.section_tipo,
+		section_id		: null,
+		lang			: self.caller.lang,
+		section_lang	: self.caller.section_lang,
+		type			: 'section'
 	}
 	self.main_element = await get_instance(section_options)
 
