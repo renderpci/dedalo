@@ -1051,7 +1051,6 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			element.classList.add("and")
 		}
 
-
 		return true
 	}//end toggle_operator_value
 

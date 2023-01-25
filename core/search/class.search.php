@@ -499,17 +499,17 @@ class search {
 			foreach ($ar_rows as $row_value) {
 
 				$item = json_decode('{
-			        "q": "'.$row_value->section_id.'",
-			        "q_operator": null,
-			        "path": [
-			          {
-			            "section_tipo": "'.$row_value->section_tipo.'",
-			            "component_tipo": "section_id",
-			            "model": "component_section_id",
-			            "name": "Id"
-			          }
-			        ]
-			      }');
+					"q": "'.$row_value->section_id.'",
+					"q_operator": null,
+					"path": [
+					  {
+						"section_tipo": "'.$row_value->section_tipo.'",
+						"component_tipo": "section_id",
+						"model": "component_section_id",
+						"name": "Id"
+					  }
+					]
+				  }');
 
 				$children_filter[] = $item;
 			}
