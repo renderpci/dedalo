@@ -57,7 +57,7 @@ class navigator {
 
 
 	public static function get_user_id() : int {
-		return (int)navigator::$user_id;
+		return (int)(navigator::$user_id ?? $_SESSION['dedalo']['auth']['user_id']);
 	}
 	# Alias of get_user_id
 	public static function get_userID_matrix() : int {
