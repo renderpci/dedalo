@@ -131,15 +131,15 @@ export const set_context_vars = function(self) {
 		// if show_interface is defined in properties used the definition, else use this default
 			const default_show_interface = {
 				read_only 			: false, // bool false
-				save_animation		: true, // bool false
+				save_animation		: true, // bool true
 				// buttons_container	: true, // bool false
-				value_buttons		: true,  // bool false
-				button_add			: true, // bool false
-				button_link			: true, // bool false
-				tools				: true, // bool false
+				value_buttons		: true,  // bool true
+				button_add			: true, // bool true
+				button_link			: true, // bool true
+				tools				: true, // bool true
 				button_external		: false, // bool false
 				button_tree			: false, // bool false
-				show_autocomplete 	: true // bool false
+				show_autocomplete 	: true // bool true
 			}
 			// set the instance show_interface
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
