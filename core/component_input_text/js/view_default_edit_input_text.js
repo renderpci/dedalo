@@ -237,9 +237,11 @@ const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if (!is_inside_tool) {
-			ui.add_tools(self, fragment)
-		}
+		if( self.show_interface.tools === true){
+			// if (!is_inside_tool && self.mode==='edit') {
+				ui.add_tools(self, fragment)
+			// }
+		}//end add tools
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
