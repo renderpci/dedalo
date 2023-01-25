@@ -25,17 +25,26 @@ export const render_search_component_filter_records = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_search_component_filter_records.prototype.search = async function() {
+render_search_component_filter_records.prototype.search = async function(options) {
 
 	const self = this
 
-	// content data
+	// render_level
+		const render_level = options.render_level || 'full'
+
+	// content_data
 		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
+
 
 	// events (delegated)
 		add_events(self, wrapper)

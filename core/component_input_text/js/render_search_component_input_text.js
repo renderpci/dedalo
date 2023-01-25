@@ -30,11 +30,14 @@ render_search_component_input_text.prototype.search = async function(options) {
 
 	const self = this
 
-	// options
-		// const render_level = options.render_level || 'full'
+	// render_level
+		const render_level = options.render_level || 'full'
 
-	// content data
+	// content_data
 		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
