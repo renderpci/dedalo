@@ -374,7 +374,8 @@ class ontology {
 				? (defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? DEDALO_AR_EXCLUDE_COMPONENTS : []) // v6
 				: (defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : []); // v5
 
-		$ar_children = array_unique($ar_ts_children);
+		// $ar_children = array_unique($ar_ts_children);
+		$ar_children = $ar_ts_children;
 		foreach($ar_children as $element_tipo) {
 
 			// Remove_exclude_models
@@ -388,7 +389,7 @@ class ontology {
 					continue;
 				}
 
-			// get the ontology json format
+			// get the ontology JSON format
 				$ar_elements[]	= ontology::tipo_to_json_item($element_tipo, [
 					'tipo'			=> true,
 					'tld'			=> false,
@@ -404,7 +405,7 @@ class ontology {
 					'label'			=> true
 				]);
 
-			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo));
+			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo) );
 		}
 
 		# STORE CACHE DATA
