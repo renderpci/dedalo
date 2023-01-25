@@ -71,13 +71,13 @@ class security {
 	*/
 	public static function get_security_permissions(string $parent_tipo, string $tipo) : int {
 
-		// logged user id
+		// logged root user id
 			$user_id = $_SESSION['dedalo']['auth']['user_id'];
 			if ((int)$user_id===DEDALO_SUPERUSER) {
 				return 3;
 			}
 
-		// Tools Register section 'dd1324'
+		// tools register section 'dd1324' allow access as read
 			if ($parent_tipo===DEDALO_REGISTER_TOOLS_SECTION_TIPO) {
 				return 1;
 			}
@@ -87,8 +87,11 @@ class security {
 
 		// permissions_table find
 			$found = array_find($permissions_table, function($el) use($parent_tipo, $tipo){
-				return $el->section_tipo===$parent_tipo && $el->tipo===$tipo;
+				return $el->tipo===$tipo && $el->section_tipo===$parent_tipo;
 			});
+			// if (!$found) {
+			// 	dump($permissions_table, ' permissions_table ++ '.to_string($parent_tipo .' - '. $tipo));
+			// }
 
 			$permissions = $found->value ?? 0;
 
@@ -107,59 +110,67 @@ class security {
 	*/
 	private static function get_permissions_table() : array {
 
-		static $permissions_table;
+		// short vars
+			static $permissions_table;
+			$cache_file_name	= 'cache_permissions_table.json';
 
-		// cache file
-			$file_name = DEDALO_ENTITY .'_'. navigator::get_user_id() . '.cache_permissions_table.json';
+		// cache cascade
+			$use_cache = false;
+			if ($use_cache===true) {
+				switch (true) {
 
-		switch (true) {
+					// static cache (ram)
+					case (isset($permissions_table)):
+						// Cached once by script run
+						return $permissions_table;
+						break;
 
-			// STATIC CACHE (RAM)
-			case (isset($permissions_table)):
-				// Cached once by script run
-				return $permissions_table;
-				break;
+					// development_server (non session cache is used)
+						// case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
+						// 	// Break and continue calculation without session cache
+						// 	break;
 
-			// DEVELOPMENT_SERVER (Non session cache is used)
-				// case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
-				// 	// Break and continue calculation without session cache
-				// 	break;
+					// session cache (hd)
+						// case (isset($_SESSION['dedalo']['auth']['permissions_table'])):
+						// 	// debug_log(__METHOD__." Loaded permissions_table session");
+						// 	$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
+						// 	return $permissions_table;
+						// 	break;
 
-			// SESSION CACHE (HD)
-				// case (isset($_SESSION['dedalo']['auth']['permissions_table'])):
-				// 	// debug_log(__METHOD__." Loaded permissions_table session");
-				// 	$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
-				// 	return $permissions_table;
-				// 	break;
+					// cache file
+					default:
+						// cache file
+						$cache_data	= dd_cache::cache_from_file((object)[
+							'file_name' => $cache_file_name
+						]);
+						if (!empty($cache_data)) {
 
-			// DEFAULT
-			default:
-				// Continue calculating
+							$permissions_table = json_decode($cache_data);
 
-				// cache file
-				$cache_data = dd_cache::cache_from_file((object)[
-					'file_name' => $file_name
-				]);
-				if ($cache_data) {
-
-					$permissions_table = json_decode($cache_data);
-
-					debug_log(__METHOD__." returning permissions_table from cache disk file ".to_string($file_name), logger::DEBUG);
-					return $permissions_table;
+							debug_log(__METHOD__." Returning permissions_table from cache disk file", logger::DEBUG);
+							return $permissions_table;
+						}
+						break;
 				}
-				break;
-		}
+			}
 
-		// calculation
-			$permissions_table = security::get_ar_permissions_in_matrix_for_current_user();
+		// permissions_table calculation once
+			$permissions_table = security::get_ar_permissions_in_matrix_for_current_user(
+				navigator::get_user_id()
+			);
+			// if ($tipo==='numisdata1017') {
+				// dump($permissions_table, ' permissions_table ++ '.to_string($tipo));
+			// }
 
 		// session cached table
-			// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
-			// cache
+			if ($use_cache===true) {
+				// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+				// cache to file
 				dd_cache::cache_to_file((object)[
-					'file_name'	=> $file_name,
+					'file_name'	=> $cache_file_name,
 					'data'		=> $permissions_table
 				]);
+			}
 
 
 		return $permissions_table;
@@ -171,14 +182,15 @@ class security {
 	* GET_AR_PERMISSIONS_IN_MATRIX_FOR_CURRENT_USER
 	* Search in matrix record with this id (user_id) as parent,
 	* filter by tipo - model name (component_security_access) and get dato if exists in db
+	* @param int $user_id
 	* @return array $ar_permissions_in_matrix_for_current_user
-	*	Array of all element=>level like array([dd12] => 2,[dd93] => 2,..)
+	*	Array of all elements of current Ontology with permission values
 	*	Include areas and components permissions
 	*/
-	private static function get_ar_permissions_in_matrix_for_current_user() : array {
+	private static function get_ar_permissions_in_matrix_for_current_user( int $user_id ) : array {
 
 		// get reliable component (assigned profile checked)
-			$component_security_access = security::get_user_security_access();
+			$component_security_access = security::get_user_security_access($user_id);
 
 		// dato_access. is the first value of the result array if not empty
 		// $dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
@@ -194,12 +206,10 @@ class security {
 	/**
 	* GET_USER_SECURITY_ACCESS
 	* Locate component_security_access of current logged user based on user profile
+	* @param int $user_id
 	* @return object|null $component_security_access
 	*/
-	private static function get_user_security_access() : ?object {
-
-		// Default behavior is false (use logged user to calculate permissions)
-			$user_id = $_SESSION['dedalo']['auth']['user_id'];
+	private static function get_user_security_access( int $user_id ) : ?object {
 
 		// user profile
 			$user_profile = security::get_user_profile($user_id);
@@ -259,18 +269,18 @@ class security {
 
 
 	/**
-	* GET_PERMISSIONS_TABLE_OF_SPECIFIC_USER
+	* GET_PERMISSIONS_TABLE_OF_SPECIFIC_USER (NOT USED)
 	* Custom user calculus
 	* @param int $user_id
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
 	*/
-	public static function get_permissions_table_of_specific_user(int $user_id) : array {
+		// public static function get_permissions_table_of_specific_user(int $user_id) : array {
 
-		$permissions_table = security::get_ar_permissions_in_matrix_for_current_user( $user_id );
+		// 	$permissions_table = security::get_ar_permissions_in_matrix_for_current_user( $user_id );
 
-		return (array)$permissions_table;
-	}//end get_permissions_table_of_specific_user
+		// 	return (array)$permissions_table;
+		// }//end get_permissions_table_of_specific_user
 
 
 
@@ -384,81 +394,82 @@ class security {
 
 
 	/**
-	* SET_SECTION_PERMISSIONS
+	* SET_SECTION_PERMISSIONS (NOT USED)
 	* Allow current user access to created default sections
+	* @param object $options
 	* @return bool
 	*/
-	private static function set_section_permissions(object $request_options) : bool {
+		// private static function set_section_permissions(object $options) : bool {
 
-		$options = new stdClass();
-			$options->section_tipo	= null;
-			$options->section_id	= null;
-			$options->ar_sections	= [];
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// 	// options
+		// 		$section_tipo	= $options->section_tipo ?? null;
+		// 		$section_id		= $options->section_id ?? null;
+		// 		$ar_sections	= $options->ar_sections ?? [];
 
-		// user_id
-			$user_id = navigator::get_user_id();
-			if (SHOW_DEBUG===true || $user_id<1) {
-				return true;
-			}
+		// 	// user_id
+		// 		$user_id = navigator::get_user_id();
+		// 		if (SHOW_DEBUG===true || $user_id<1) {
+		// 			return true;
+		// 		}
 
-		// Permissions
-			$permissions = 2;
+		// 	// Permissions
+		// 		$permissions = 2;
 
-		// component_security_access
-			$component_security_access		= security::get_user_security_access();
-			$component_security_access_dato	= $component_security_access->get_dato();
+		// 	// component_security_access
+		// 		$component_security_access			= security::get_user_security_access();
+		// 		$component_security_access_dato		= $component_security_access->get_dato() ?? [];
+		// 		// $component_security_access_dato	= security::get_ar_permissions_in_matrix_for_current_user($user_id);
 
-		// Iterate sections (normally like ts1,ts2)
-		// foreach ((array)$options->ar_sections as $current_section_tipo) {
-			$ar_sections_length = sizeof($options->ar_sections);
-			for ($i=0; $i < $ar_sections_length; $i++) {
+		// 	// Iterate sections (normally like ts1,ts2)
+		// 	// foreach ((array)$options->ar_sections as $current_section_tipo) {
+		// 		$ar_sections_length = sizeof($ar_sections);
+		// 		for ($i=0; $i < $ar_sections_length; $i++) {
 
-				$current_section_tipo = $options->ar_sections[$i];
+		// 			$current_section_tipo = $ar_sections[$i];
 
-				$section_permissions = new stdClass();
-					$section_permissions->tipo			= $current_section_tipo;
-					// $section_permissions->parent		= $current_section_tipo;
-					// $section_permissions->type		= 'area';
-					$section_permissions->section_tipo	= $current_section_tipo;
-					$section_permissions->value			= $permissions;
+		// 			$section_permissions = new stdClass();
+		// 				$section_permissions->tipo			= $current_section_tipo;
+		// 				// $section_permissions->parent		= $current_section_tipo;
+		// 				// $section_permissions->type		= 'area';
+		// 				$section_permissions->section_tipo	= $current_section_tipo;
+		// 				$section_permissions->value			= $permissions;
 
-				$component_security_access_dato[] = $section_permissions;
+		// 			$component_security_access_dato[] = $section_permissions;
 
-				# Components inside section
-				$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
-				$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
-					$real_section, // section_tipo
-					['component','button','section_group'], // ar_model_name_required
-					true, // from_cache
-					false, // resolve_virtual
-					true, // recursive
-					false // search_exact
-				);
+		// 			# Components inside section
+		// 			$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
+		// 			$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
+		// 				$real_section, // section_tipo
+		// 				['component','button','section_group'], // ar_model_name_required
+		// 				true, // from_cache
+		// 				false, // resolve_virtual
+		// 				true, // recursive
+		// 				false // search_exact
+		// 			);
 
-				foreach ($ar_children as $children_tipo) {
+		// 			foreach ($ar_children as $children_tipo) {
 
-					$component_permissions = new stdClass();
-						$component_permissions->tipo			= $children_tipo;
-						// $component_permissions->parent		= $current_section_tipo;
-						$component_permissions->section_tipo	= $current_section_tipo;
-						$component_permissions->value			= $permissions;
+		// 				$component_permissions = new stdClass();
+		// 					$component_permissions->tipo			= $children_tipo;
+		// 					// $component_permissions->parent		= $current_section_tipo;
+		// 					$component_permissions->section_tipo	= $current_section_tipo;
+		// 					$component_permissions->value			= $permissions;
 
-					$component_security_access_dato[] = $component_permissions;
-				}
+		// 				$component_security_access_dato[] = $component_permissions;
+		// 			}
 
-			}//end foreach ($ar_sections as $current_section_tipo)
+		// 		}//end foreach ($ar_sections as $current_section_tipo)
 
-		// Save calculated data
-			$component_security_access->set_dato($component_security_access_dato);
-			$component_security_access->Save();
+		// 	// Save calculated data
+		// 		$component_security_access->set_dato($component_security_access_dato);
+		// 		$component_security_access->Save();
 
-		// Regenerate permissions table
-			security::reset_permissions_table();
+		// 	// Regenerate permissions table
+		// 		security::reset_permissions_table();
 
 
-		return true;
-	}//end set_section_permissions
+		// 	return true;
+		// }//end set_section_permissions
 
 
 

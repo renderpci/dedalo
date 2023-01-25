@@ -52,7 +52,7 @@ class search {
 		protected $sql_query_order_default;
 
 		# sql_query_order_window_subselect
-		# Specific order sql sentence for window subselect
+		# Specific order SQL sentence for window sub-select
 		protected $sql_query_order_window_subselect;
 
 		# relations cache
@@ -81,6 +81,18 @@ class search {
 		// main_section_tipo_alias : string
 		public $main_section_tipo_alias;
 
+		// filter_join
+		protected $filter_join;
+		protected $filter_join_where;
+
+		// filter_by_user_records
+		protected $filter_by_user_records;
+
+		// sql_query_order_custom
+		protected $sql_query_order_custom;
+
+		// ar_sql_joins
+		protected $ar_sql_joins;
 
 
 	/**
@@ -588,7 +600,7 @@ class search {
 
 		# SELECT
 			$new_search_query_object_select = [];
-			foreach ($this->search_query_object->select as $key => $select_object) {
+			foreach ($this->search_query_object->select as $select_object) {
 				$new_search_query_object_select[] = search::component_parser_select( $select_object );
 			}
 			# Replace select array with components preparsed values
@@ -597,7 +609,7 @@ class search {
 		# ORDER. Note that order is parsed with same parser as 'select' (component_parser_select)
 			if (!empty($this->search_query_object->order)) {
 				$new_search_query_object_order = [];
-				foreach ((array)$this->search_query_object->order as $key => $select_object) {
+				foreach ((array)$this->search_query_object->order as $select_object) {
 					$new_search_query_object_order[] = search::component_parser_select( $select_object );
 				}
 				#debug_log(__METHOD__." new_search_query_object_order ".to_string($new_search_query_object_order), logger::DEBUG); #die();
@@ -627,8 +639,8 @@ class search {
 	*/
 	public static function component_parser_select( object $select_object ) {
 
-		$path				= $select_object->path;
-		$component_tipo 	= end($path)->component_tipo;
+		$path			= $select_object->path;
+		$component_tipo	= end($path)->component_tipo;
 
 		// prevent direct columns (section_id, section_tipo, id) parse
 			if (true===in_array($component_tipo, self::$ar_direct_columns)) {
@@ -649,7 +661,9 @@ class search {
 	* CONFORM_SEARCH_QUERY_OBJECT
 	* Call to components to conform final search_query_object, adding specific component path, search operators etc.
 	* Recursive
-	* @return array $new_ar_query_object
+	* @param string $op
+	* @param array $ar_value
+	* @return object $new_ar_query_object
 	*/
 	public static function conform_search_query_object(string $op, array $ar_value) : object {
 
@@ -743,16 +757,15 @@ class search {
 		}
 
 		# Search elements. Order is important
-			$main_where_sql 		= $this->build_main_where_sql();
-			$sql_query_order 		= $this->build_sql_query_order();	// Order before select !
-			$sql_query_select 		= $this->build_sql_query_select($full_count);
-			$sql_filter 			= $this->build_sql_filter();
+			$main_where_sql			= $this->build_main_where_sql();
+			$sql_query_order		= $this->build_sql_query_order();	// Order before select !
+			$sql_query_select		= $this->build_sql_query_select($full_count);
+			$sql_filter				= $this->build_sql_filter();
 			$sql_projects_filter	= $this->build_sql_projects_filter();
-			$sql_joins 				= $this->get_sql_joins();
-			$main_from_sql  		= $this->build_main_from_sql();
-			$sql_limit 				= $this->search_query_object->limit;
-			$sql_offset 			= $this->search_query_object->offset;
-
+			$sql_joins				= $this->get_sql_joins();
+			$main_from_sql			= $this->build_main_from_sql();
+			$sql_limit				= $this->search_query_object->limit;
+			$sql_offset				= $this->search_query_object->offset;
 
 			if(isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
 				$sql_limit = "all";
@@ -811,7 +824,7 @@ class search {
 					if (!empty($this->filter_join_where)) {
 						$sql_query .= $this->filter_join_where;
 					}
-				// multisection union case
+				// multi-section union case
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
 					}
@@ -985,7 +998,7 @@ class search {
 									}
 								}
 							}
-							// order multisection union case
+							// order multi-section union case
 								if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
 									$order_query = str_replace('mix.', '', $order_query);
 								}
@@ -1085,7 +1098,7 @@ class search {
 
 	/**
 	* BUILD_UNION_QUERY
-	* Rewrite query string building sql union for each different matrix table
+	* Rewrite query string building SQL union for each different matrix table
 	* @param string $sql_query
 	* @return string $sql_query
 	*/
@@ -1136,7 +1149,7 @@ class search {
 		$search_query_object = $this->search_query_object;
 
 		$ar_sql_select	= [];
-		$ar_key_path	= [];
+		// $ar_key_path	= [];
 
 		$ar_sql_select[] = ($this->remove_distinct===true)
 			? $this->main_section_tipo_alias.'.section_id'
@@ -1152,7 +1165,7 @@ class search {
 				// 	: $this->main_section_tipo_alias.'.datos';
 				$ar_sql_select[] = $this->main_section_tipo_alias.'.datos';
 			}else{
-				foreach ($search_query_object->select as $key => $select_object) {
+				foreach ($search_query_object->select as $select_object) {
 
 					$path				= $select_object->path;
 					$table_alias		= $this->get_table_alias_from_path($path);
@@ -1164,7 +1177,7 @@ class search {
 					#$apply_distinct	= isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
 					$apply_distinct		= (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
 					$component_path		= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO)
-						? str_replace('valor_list', 'dato', $component_path) // In activity section, data container is always 'dato'
+						? str_replace('valor_list', 'dato', $select_object->component_path) // In activity section, data container is always 'dato'
 						: implode(',', $select_object->component_path);
 
 					$sql_select = '';
@@ -1255,7 +1268,7 @@ class search {
 
 	/**
 	* BUILD_SQL_PROJECTS_FILTER
-	* Create the sql code for filter records by user projects
+	* Create the SQL code for filter records by user projects
 	* @return string $sql_projects_filter
 	*/
 	public function build_sql_projects_filter() : string {
@@ -1276,7 +1289,7 @@ class search {
 		static $sql_projects_filter_data;
 		$uid = $section_tipo.'_'.$user_id;
 		if (isset($sql_projects_filter_data[$uid])) {
-			#debug_log(__METHOD__." Cached filter sql code returned for section $section_tipo".to_string(), logger::DEBUG);
+			#debug_log(__METHOD__." Cached filter SQL code returned for section $section_tipo".to_string(), logger::DEBUG);
 			return $sql_projects_filter_data[$uid];
 		}
 
@@ -1392,7 +1405,7 @@ class search {
 						#$sql_filter .= PHP_EOL . 'AND '.$section_alias.'.'.$datos_container.'#>\'{components,'.DEDALO_FILTER_MASTER_TIPO.',dato,'.DEDALO_DATA_NOLAN.'}\' ?| array['.$ar_values_string.']';
 						# Filter by any of user projects
 						$ar_query = [];
-						foreach ((array)$filter_master_dato as $key => $current_project_locator) {
+						foreach ((array)$filter_master_dato as $current_project_locator) {
 							$search_locator = new locator();
 								$search_locator->set_section_tipo($current_project_locator->section_tipo);
 								$search_locator->set_section_id($current_project_locator->section_id);
@@ -1412,8 +1425,14 @@ class search {
 					$sql_filter .= PHP_EOL . ' AND ';
 
 					# SECTION FILTER TIPO : Actual component_filter of this section
-					# params: $section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false
-					$ar_component_filter = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_filter'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+					$ar_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
+						$section_tipo, // string section_tipo
+						['component_filter'], // array ar_modelo_name_required
+						true, // bool from_cache
+						true, // bool resolve_virtual
+						true, // bool recursive
+						true // bool search_exact
+					);
 					if (!isset($ar_component_filter[0])) {
 						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
 						debug_log(__METHOD__." Error Processing Request. Filter not found is this section ($section_tipo) $section_name ".to_string(), logger::ERROR);
@@ -1662,7 +1681,7 @@ class search {
 		$ar_section_tipo   = $this->ar_section_tipo;
 
 		# main_section_tipo is always the first section tipo
-		$main_section_tipo = $this->main_section_tipo;
+		// $main_section_tipo = $this->main_section_tipo;
 
 		# alias . Sort version of main_section_tipo
 		$main_section_tipo_alias = $this->main_section_tipo_alias;
@@ -2401,21 +2420,21 @@ class search {
 						if (strpos($model_name,'component')===0) {
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
-							foreach ($ar_path as $key => $value) {
+							foreach ($ar_path as $value) {
 								$path[] = $value;
 							}
 						}
 
 					}else{
 
-						foreach ($ar_terminos_relacionados as $key => $current_tipo) {
+						foreach ($ar_terminos_relacionados as $current_tipo) {
 
 							// Use only first related tipo
 							$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 							if (strpos($model_name,'component')!==0) continue;
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
-							foreach ($ar_path as $key => $value) {
+							foreach ($ar_path as $value) {
 								$path[] = $value;
 							}
 							break; // Avoid multiple components in path !
@@ -3265,26 +3284,24 @@ class search {
 	*	ORDER BY count
 	* @return array $ar_result
 	*/
-	public static function search_count(object $request_options) : array {
+	public static function search_count(object $options) : array {
 
 		# (!) Hecha para usar en estadísticas actividad pero no implementada todavía ! [2018-12-14]
 
-		$options = new stdClass();
-			$options->column_tipo	= null; // string like dd15
-			$options->column_path	= null; // string like datos#>>'{components, dd544, dato, lg-nolan }'
-			$options->section_tipo	= null; // string like oh1
+		// options
+			$column_tipo	= $options->column_tipo ?? null; // string like dd15
+			$column_path	= $options->column_path ?? null; // string like datos#>>'{components, dd544, dato, lg-nolan }'
+			$section_tipo	= $options->section_tipo ?? null; // string like oh1
 
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		$matrix_table = common::get_matrix_table_from_tipo($options->section_tipo);
+		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
 		$strQuery = '
 		SELECT
-		'.$options->column_path.' AS '.$options->column_tipo.',
-		COUNT ('.$options->column_path.') AS count
+		'.$column_path.' AS '.$column_tipo.',
+		COUNT ('.$column_path.') AS count
 		FROM "'.$matrix_table.'"
-		WHERE section_tipo = \''.$options->section_tipo.'\'
-		GROUP BY '.$options->column_tipo.'
+		WHERE section_tipo = \''.$section_tipo.'\'
+		GROUP BY '.$column_tipo.'
 		ORDER BY count
 		;';
 
@@ -3302,7 +3319,7 @@ class search {
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$item = new stdClass();
-				$item->tipo  = $options->column_tipo;
+				$item->tipo  = $column_tipo;
 				$item->count = $rows['count'];
 
 			$ar_result[] = $item;

@@ -222,22 +222,23 @@ abstract class common {
 				return 0;
 			}
 
-		if( empty($parent_tipo) ) {
-			if(SHOW_DEBUG===true) {
-				dump($parent_tipo, 'parent_tipo');
-				trigger_error("Error Processing Request. get_permissions: parent_tipo is empty");
+		// check params
+			if( empty($parent_tipo) ) {
+				if(SHOW_DEBUG===true) {
+					dump($parent_tipo, 'parent_tipo');
+					trigger_error("Error Processing Request. get_permissions: parent_tipo is empty");
+				}
+				debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
+				return 0;
 			}
-			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
-			return 0;
-		}
-		if( empty($tipo) ) {
-			if(SHOW_DEBUG===true) {
-				dump($tipo, 'get_permissions error for tipo');
-				trigger_error("Error Processing Request. get_permissions: tipo is empty");
+			if( empty($tipo) ) {
+				if(SHOW_DEBUG===true) {
+					dump($tipo, 'get_permissions error for tipo');
+					trigger_error("Error Processing Request. get_permissions: tipo is empty");
+				}
+				debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
+				return 0;
 			}
-			debug_log(__METHOD__." Error Processing Request. get_permissions: tipo is empty ".to_string(), logger::ERROR);
-			return 0;
-		}
 
 		$permissions = security::get_security_permissions($parent_tipo, $tipo);
 
