@@ -52,51 +52,60 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_DATALIST
-	* @param ?int $user_id = null
+	* Generates the whole component datalist (ontology tree) to set access permissions by admins
+	* Note that login sequence launch a background process to calculate this datalist because
+	* the resolution is considerably expensive (about 3 to 6 secs)
+	* @param int $user_id
 	* @return array $datalist
 	*/
-	public function get_datalist( ?int $user_id=null ) : array {
+	public function get_datalist( int $user_id ) : array {
 		$start_time = start_time();
 
 		// already resolved in current instance
 			if (isset($this->datalist)) {
 				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Return already set datalist ".count($this->datalist), logger::DEBUG);
+					debug_log(__METHOD__.' Return already set datalist. count: '.count($this->datalist), logger::DEBUG);
 				}
 				return $this->datalist;
 			}
 
-		// cache datalist from session
-			// if (isset($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG])) {
-			// 	if(SHOW_DEBUG===true) {
-			// 		$total = count($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG]);
-			// 		debug_log(
-			// 			__METHOD__." Return already in session datalist ".$total,
-			// 			logger::DEBUG
-			// 		);
-			// 	}
-			// 	return $_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG];
-			// }
+		$cache_file_name = 'cache_tree.json';
 
-		// cache from file. This file is generated in background on every user login
-			$contents = dd_cache::cache_from_file((object)[
-				'file_name' => DEDALO_ENTITY .'_'. navigator::get_user_id() . '.cache_tree.json'
-			]);
-			$datalist = (!empty($contents))
-				? json_decode($contents)
-				: null;
-			if (!empty($datalist)) {
-				$this->datalist = $datalist;
-				$total = exec_time_unit($start_time,'ms').' ms';
-				debug_log(
-					__METHOD__." Return already calculated and cached in file datalist. Total items: ". count($datalist).' in time: '.$total,
-					logger::DEBUG
-				);
-				return $datalist;
+		// cache cascade
+			$use_cache = true;
+			if ($use_cache===true) {
+
+				// cache from session
+					// if (isset($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG])) {
+					// 	if(SHOW_DEBUG===true) {
+					// 		$total = count($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG]);
+					// 		debug_log(
+					// 			__METHOD__." Return already in session datalist ".$total,
+					// 			logger::DEBUG
+					// 		);
+					// 	}
+					// 	return $_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG];
+					// }
+
+				// cache from file. (!) This file is generated in background on every user login
+					$contents = dd_cache::cache_from_file((object)[
+						'file_name' => $cache_file_name
+					]);
+					$datalist = (!empty($contents))
+						? json_decode($contents)
+						: null;
+					if (!empty($datalist)) {
+						$this->datalist = $datalist;
+						$total = exec_time_unit($start_time,'ms').' ms';
+						debug_log(
+							__METHOD__." Return already calculated and cached in file datalist. Total items: ". count($datalist).' in time: '.$total,
+							logger::DEBUG
+						);
+						return $datalist;
+					}
 			}
 
 		// short vars
-			$user_id			= $user_id ?? navigator::get_user_id();
 			$is_global_admin	= security::is_global_admin($user_id);
 			$ar_areas			= [];
 
@@ -120,6 +129,18 @@ class component_security_access extends component_common {
 				}
 			}
 
+		// duplicates check
+			$ar_clean = [];
+			foreach ($ar_areas as $area) {
+				$key = $area->tipo .'_'. $area->parent; // .'_' .$area->section_tipo
+				if (isset($ar_clean[$key])) {
+					debug_log(__METHOD__." Duplicate item ".to_string($area), logger::ERROR);
+				}else{
+					$ar_clean[$key] = $area;
+				}
+			}
+			$ar_areas = array_values($ar_clean);
+
 		// datalist. resolve section (real and virtual) components
 			$datalist = [];
 			$ar_areas_length = sizeof($ar_areas);
@@ -139,19 +160,11 @@ class component_security_access extends component_common {
 
 				// section case
 					if ($current_area->model==='section') {
-
 						// recursive calculated children area added too
-						$children_recursive = ontology::get_children_recursive($current_area->tipo);
-						foreach ($children_recursive as $current_child) {
-
-							$datalist[] = (object)[
-								'tipo'			=> $current_child->tipo,
-								'section_tipo'	=> $section_tipo,
-								'model'			=> $current_child->model,
-								'label'			=> $current_child->label,
-								'parent'		=> $current_child->parent
-							];
-						}
+						$datalist = array_merge(
+							$datalist,
+							self::get_element_datalist($current_area->tipo)
+						);
 					}
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
 
@@ -159,7 +172,11 @@ class component_security_access extends component_common {
 			$this->datalist = $datalist;
 
 		// cache session. Store in session for speed
-			// $_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG] = $datalist;
+			if ($use_cache===true) {
+				// $_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG] = $datalist;
+				// cache to file.
+				// (!) This file is already generated on user login, launching the process in background
+			}
 
 		// debug
 			debug_log(
@@ -167,9 +184,160 @@ class component_security_access extends component_common {
 				logger::DEBUG
 			);
 
-
 		return $datalist;
 	}//end get_datalist
+
+
+
+	/**
+	* GET_ELEMENT_DATALIST
+	*
+	* @param string $section_tipo
+	* @return array $element_datalist
+	*/
+	public static function get_element_datalist(string $section_tipo) : array {
+
+		$datalist = [];
+
+		$children_recursive = self::get_children_recursive_security_acces($section_tipo);
+		foreach ($children_recursive as $current_child) {
+
+			// add
+				$item = (object)[
+					'tipo'			=> $current_child->tipo,
+					'section_tipo'	=> $section_tipo,
+					'model'			=> $current_child->model,
+					'label'			=> $current_child->label,
+					'parent'		=> $current_child->parent
+				];
+				$datalist[] = $item;
+		}
+
+		// duplicates check
+			// $ar_clean = [];
+			// foreach ($datalist as $area) {
+			// 	$key = $area->tipo .'_'. $area->parent; // .'_' .$area->section_tipo
+			// 	if (isset($ar_clean[$key])) {
+			// 		debug_log(__METHOD__." Duplicate item ".to_string($area), logger::ERROR);
+			// 	}else{
+			// 		$ar_clean[$key] = $area;
+			// 	}
+			// }
+			// $datalist = array_values($ar_clean);
+			// dump($datalist, ' datalist ++ '.to_string($section_tipo));
+
+
+		return $datalist;
+	}//end get_element_datalist
+
+
+
+	/**
+	* GET_CHILDREN_RECURSIVE_SECURITY_ACCES
+	* Custom recursive children resolve
+	* @param string $tipo
+	* @return array $element_datalist
+	*/
+	private static function get_children_recursive_security_acces(string $tipo) : array {
+
+		// static cache
+			// static $children_recursive_security_access_data;
+			// if(isset($children_recursive_security_access_data[$tipo])) {
+			// 	return $children_recursive_security_access_data[$tipo];
+			// }
+
+		$ar_elements = [];
+
+		$source_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		switch ($source_model) {
+
+			case 'section':
+
+				$section_tipo				= $tipo;
+				$ar_modelo_name_required	= array('section_group','section_tab','button_','relation_list','time_machine_list','component_');
+
+				// real section
+					$ar_ts_children = section::get_ar_children_tipo_by_model_name_in_section(
+						$section_tipo, // string section_tipo
+						$ar_modelo_name_required, // array ar_modelo_name_required
+						true, // bool from_cache
+						true, // bool resolve_virtual
+						false, // bool recursive
+						false // bool search_exact
+					);
+
+				// virtual case add too
+					$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
+					if ($section_tipo!==$section_real_tipo) {
+						// Virtual section too is necessary (buttons specifics)
+						$ar_ts_children_v = section::get_ar_children_tipo_by_model_name_in_section(
+							$section_tipo, // string section_tipo
+							$ar_modelo_name_required, // array ar_modelo_name_required
+							true, // bool from_cache
+							false, // bool resolve_virtual
+							false, // bool recursive
+							false// bool search_exact
+						);
+						$ar_ts_children	= array_merge($ar_ts_children, $ar_ts_children_v);
+					}
+				break;
+
+			default:
+				# Areas or section groups ...
+				$RecordObj_dd	= new RecordObj_dd($tipo);
+				$ar_ts_children	= $RecordObj_dd->get_ar_childrens_of_this();
+				break;
+		}
+
+		// ar_exclude_model
+			$ar_exclude_model = array(
+				'component_security_administrator',
+				'section_list',
+				'search_list',
+				'component_semantic_node',
+				'box_elements',
+				'exclude_elements'
+			);
+
+		// ar_exclude_components
+			$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS')
+				? DEDALO_AR_EXCLUDE_COMPONENTS
+				: [];
+
+		// $ar_children = array_unique($ar_ts_children);
+		$ar_children = $ar_ts_children;
+		foreach($ar_children as $element_tipo) {
+
+			// remove_exclude_models
+				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+				if( in_array($component_model, $ar_exclude_model)) {
+					continue ;
+				}
+
+			// remove_exclude_terms : config excludes. If installation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+				if (in_array($element_tipo, $ar_exclude_components)) {
+					continue;
+				}
+
+			// get the ontology JSON format
+				$item = (object)[
+					'tipo'			=> $element_tipo,
+					'section_tipo'	=> $tipo,
+					'model'			=> RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true),
+					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
+					'parent'		=> $tipo
+				];
+				$ar_elements[] = $item;
+
+			$ar_elements = array_merge( $ar_elements, self::get_children_recursive_security_acces($element_tipo) );
+		}
+
+		// STORE CACHE DATA
+		// $children_recursive_security_access_data[$tipo] = $ar_elements;
+
+
+		return $ar_elements;
+	}//end get_children_recursive_security_acces
 
 
 
@@ -295,6 +463,7 @@ class component_security_access extends component_common {
 	* @return array $datalist
 	*/
 	public static function calculate_tree( $user_id ) : array {
+		$start_time = start_time();
 
 		// profile_section_id
 			if($user_id===DEDALO_SUPERUSER || security::is_global_admin($user_id)===true){
@@ -314,7 +483,7 @@ class component_security_access extends component_common {
 
 		// $fiber = new Fiber(function() use($section_id) : void {
 		// $fiber = new Fiber(function() use($section_id) : array {
-			debug_log(__METHOD__." (1) user_id: " .$user_id." launching datalist ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ".to_string(), logger::ERROR);
+			debug_log(__METHOD__." (1) user_id: " .$user_id." launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ".to_string(), logger::ERROR);
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
 			$tipo						= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
@@ -330,7 +499,7 @@ class component_security_access extends component_common {
 			$datalist = $component_security_access->get_datalist( $user_id );
 
 			// Fiber::suspend();
-			debug_log(__METHOD__." (2) count: " . count($datalist) . " launching datalist ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ".to_string(), logger::ERROR);
+			debug_log(__METHOD__." (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// ', logger::ERROR);
 
 			return $datalist;
 		// });

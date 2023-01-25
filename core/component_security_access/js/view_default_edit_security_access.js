@@ -98,11 +98,29 @@ const get_content_data = async function(self) {
 				parent			: content_data
 			})
 
-		// root level nodes
+		// root level nodes. Filtered form full datalist
 			const root_level_items = datalist.filter(el => el.parent==='dd1')
 
+		// debug
+			// value.push({
+			// 	tipo			: 'numisdata1017',
+			// 	section_tipo	: 'numisdata1016',
+			// 	value			: 1
+			// })
+			//
+			// console.log('numisdata1016 section item:', datalist.filter(el => el.tipo==='numisdata1016'));
+			// const found = datalist.find(el => el.tipo==='numisdata1017')
+			// found.section_tipo = 'numisdata3'
+			// console.log('numisdata1017 item:', datalist.filter(el => el.tipo==='numisdata1017'));
+			// console.log('numisdata1017 value:', value.filter(el => el.tipo==='numisdata1017'));
+
 		// tree_nodes. create nodes and add to tree_object
-			const tree_nodes = await render_tree_item(root_level_items, datalist, value, self) // return li nodes
+			const tree_nodes = await render_tree_items(
+				root_level_items, // array of objects as [{"label":"Inventory","model":"area_root","parent":"dd1","section_tipo":"dd242","tipo":"dd242"},...]
+				datalist, // array of objects. Full items list
+				value, // array of objects. Full list of data as [{"section_tipo":"mupi2","tipo":"mupi23","value":2},...]
+				self // object this instance
+			)// return DocumentFragment with li nodes
 			ul.appendChild(tree_nodes)
 
 
@@ -112,7 +130,74 @@ const get_content_data = async function(self) {
 
 
 /**
+* RENDER_TREE_ITEMS
+* Render given tree items hierarchically
+* @param array items
+* @param array datalist
+* @param array value
+* @param instance self
+*
+* @return DocumentFragment
+* 	Containing li nodes
+*/
+const render_tree_items = function(items, datalist, value, self) {
+
+	// tree_object . Object with all li nodes rendered sequentially
+		const tree_object = {}
+
+	// render nodes
+		const items_length = items.length
+		for (let i = 0; i < items_length; i++) {
+
+			const current_item = items[i]
+
+			// render_tree_item (with pointer to their item)
+				const tree_node	= render_tree_item(
+					current_item,
+					datalist,
+					value,
+					self
+				)// li node
+
+			// store in the tree_object
+				// const key = current_item.tipo +'_'+ current_item.section_tipo
+				// const key = current_item.model==='section'
+				// 	? current_item.tipo
+				// 	: current_item.tipo +'_'+ current_item.section_tipo
+				const key = current_item.tipo
+				tree_object[key] = tree_node
+		}
+
+	// hierarchize nodes
+		const fragment = new DocumentFragment()
+		for(const key in tree_object) {
+
+			const tree_node	= tree_object[key]
+			const item		= tree_node.item
+
+			// const parent_key = (item.tipo===item.section_tipo)
+			// 	? item.parent + '_' + item.parent // sections/areas case
+			// 	: item.parent + '_' + item.section_tipo // others (components, section_groups, ...)
+			const parent_key = item.parent
+
+			if(tree_object[parent_key]) {
+				// add to parent branch
+				tree_object[parent_key].branch.appendChild(tree_node)
+				// console.log("Added to parent branch:", key, parent_key);
+			}else{
+				// add to root level
+				fragment.appendChild(tree_node)
+			}
+		}
+
+	return fragment
+}//end render_tree_items
+
+
+
+/**
 * RENDER_TREE_ITEM
+* Recursive function to render tree items
 * @param object item
 * @param array datalist
 * @param array value
@@ -122,64 +207,108 @@ const get_content_data = async function(self) {
 */
 const render_tree_item = function(item, datalist, value, self) {
 
-	// multi item case. render each node and hierarchize all
-		if (Array.isArray(item)) {
-
-			const items = item
-
-			// tree_object . Object with all li nodes rendered sequentially
-				const tree_object = {}
-
-			// render nodes
-				const items_length = item.length
-				for (let i = 0; i < items_length; i++) {
-
-					const current_item = items[i]
-
-					const tree_node	= render_tree_item(current_item, datalist, value, self) // li node
-
-					// store in the tree_object
-					const key = current_item.tipo +'_'+ current_item.section_tipo
-					tree_object[key] = tree_node
-				}
-
-			// hierarchize nodes
-				const fragment = new DocumentFragment()
-				for(const key in tree_object) {
-
-					const tree_node	= tree_object[key]
-
-					// const parent	= tree_node.parent
-					const parent_key = (tree_node.item.tipo===tree_node.item.section_tipo)
-						? tree_node.item.parent + '_' + tree_node.item.parent
-						: tree_node.item.parent + '_' + tree_node.item.section_tipo
-
-					if(tree_object[parent_key]) {
-						// add to parent branch
-						tree_object[parent_key].branch.appendChild(tree_node)
-						// console.log("Added to parent branch:", key, parent_key);
-					}else{
-						// add to root level
-						fragment.appendChild(tree_node)
-					}
-				}
-
-			return fragment
-		}
-
 	// single item case.
 		const fn_render = (item.tipo===item.section_tipo)
 			? render_area_item
 			: render_permissions_item
 
 		// create node and add to tree_object
-		const tree_item_node = fn_render(item, datalist, value, self) // return li node
-		// attach item object
+		const tree_item_node = fn_render(
+			item,
+			datalist,
+			value,
+			self
+		) // return li node
+		// attach item object as pointer
 		tree_item_node.item = item
 
 
 	return tree_item_node
 }//end render_tree_item
+
+
+
+/**
+* RENDER_TREE_ITEM_OLD
+* Recursive function to render tree items
+* @param object item
+* @param array datalist
+* @param array value
+* @param instance self
+*
+* @return DOM node tree_item_node
+*/
+	// const render_tree_item_OLD = function(item, datalist, value, self) {
+
+	// 	// multi item case. render each node and hierarchize all
+	// 		if (Array.isArray(item)) {
+
+	// 			const items = item
+
+	// 			// tree_object . Object with all li nodes rendered sequentially
+	// 				const tree_object = {}
+
+	// 			// render nodes
+	// 				const items_length = item.length
+	// 				for (let i = 0; i < items_length; i++) {
+
+	// 					const current_item = items[i]
+
+	// 					// recursion render_tree_item
+	// 					const tree_node	= render_tree_item(
+	// 						current_item,
+	// 						datalist,
+	// 						value,
+	// 						self
+	// 					)// li node
+
+	// 					// store in the tree_object
+	// 					const key = current_item.tipo +'_'+ current_item.section_tipo
+	// 					tree_object[key] = tree_node
+	// 				}
+
+	// 			// hierarchize nodes
+	// 				const fragment = new DocumentFragment()
+	// 				for(const key in tree_object) {
+
+	// 					const tree_node	= tree_object[key]
+
+	// 					// const parent	= tree_node.parent
+	// 					const parent_key = (tree_node.item.tipo===tree_node.item.section_tipo)
+	// 						? tree_node.item.parent + '_' + tree_node.item.parent // sections/areas case
+	// 						: tree_node.item.parent + '_' + tree_node.item.section_tipo // others (components, section_groups, ...)
+
+	// 					if(tree_object[parent_key]) {
+	// 						// add to parent branch
+	// 						tree_object[parent_key].branch.appendChild(tree_node)
+	// 						// console.log("Added to parent branch:", key, parent_key);
+	// 					}else{
+	// 						// add to root level
+	// 						fragment.appendChild(tree_node)
+	// 					}
+	// 				}
+
+	// 			return fragment
+	// 		}
+
+	// 	// single item case.
+	// 		const fn_render = (item.tipo===item.section_tipo)
+	// 			? render_area_item
+	// 			: render_permissions_item
+
+	// 		// create node and add to tree_object
+	// 		const tree_item_node = fn_render(
+	// 			item,
+	// 			datalist,
+	// 			value,
+	// 			self
+	// 		) // return li node
+	// 		// attach item object
+	// 		tree_item_node.item = item
+
+
+	// 	return tree_item_node
+	// }//end render_tree_item_OLD
 
 
 
@@ -198,12 +327,24 @@ const render_tree_item = function(item, datalist, value, self) {
 */
 const render_area_item = function(item, datalist, value, self) {
 
-	// children check
+	// direct_children check and set
 		const tipo					= item.tipo
 		const section_tipo			= item.section_tipo
 		const direct_children		= item.model==='section'
 			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
 			: datalist.filter(el => el.parent===tipo)
+		// add children subsections (dataframe cases)
+		if (item.model==='section') {
+			const direct_children_length = direct_children.length
+			for (let i = 0; i < direct_children_length; i++) {
+				const item = direct_children[i]
+				if (item.model==='section') {
+					const sub_children = datalist.filter(el => el.parent===item.tipo)
+					// console.log('sub_children:', item.tipo, sub_children);
+					direct_children.push(...sub_children)
+				}
+			}
+		}
 
 	// item_value. get the current item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)
@@ -211,7 +352,7 @@ const render_area_item = function(item, datalist, value, self) {
 			? parseInt(item_value.value)
 			: 0
 
-	// li
+	// li DOM node
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'li_item'
@@ -227,38 +368,37 @@ const render_area_item = function(item, datalist, value, self) {
 		})
 		input_checkbox.item = item
 		// checked option set on match
-			if (typeof item_value!=='undefined') {
-				// console.log("item_value.value:", item_value.value, item.tipo);
-				if (permissions===2) {
-					input_checkbox.checked = true
-				}else if(permissions===1) {
-					input_checkbox.indeterminate = true
-				}else{
-
-				}
+		if (typeof item_value!=='undefined') {
+			// console.log("item_value.value:", item_value.value, item.tipo);
+			if (permissions===2) {
+				input_checkbox.checked = true
+			}else if(permissions===1) {
+				input_checkbox.indeterminate = true
+			}else{
+				// nothing to do
 			}
-
+		}
 		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+			const name = 'update_value_' + self.id + '_' + tipo + '_' + section_tipo
 			self.events_tokens.push(
-				event_manager.subscribe('update_value_' + self.id + '_' + tipo + '_' + section_tipo, fn_update_value)
+				event_manager.subscribe(name, fn_update_value)
 			)
 			function fn_update_value(changed_data) {
 				// console.log("-------------- - event update_value changed_data:", changed_data);
 				// change the value of the current dom element
 				if (changed_data===2) {
-					input_checkbox.checked = true
-					input_checkbox.indeterminate = false
+					input_checkbox.checked			= true
+					input_checkbox.indeterminate	= false
 				}else if(changed_data===1) {
-					input_checkbox.checked = false
-					input_checkbox.indeterminate = true
+					input_checkbox.checked			= false
+					input_checkbox.indeterminate	= true
 				}else if(changed_data===0) {
-					input_checkbox.checked = false
-					input_checkbox.indeterminate = false
+					input_checkbox.checked			= false
+					input_checkbox.indeterminate	= false
 				}
 			}
-
 		// change event
-			input_checkbox.addEventListener("change", async function(e) {
+			input_checkbox.addEventListener('change', async function(e) {
 				e.preventDefault()
 
 				const input_value = input_checkbox.checked
@@ -269,7 +409,6 @@ const render_area_item = function(item, datalist, value, self) {
 
 				// parents. get the all parents of the item
 				const parents = await self.get_parents(input_checkbox.item)
-
 				// set the data of the parents and change the DOM node with update_value event
 				const parents_length = parents.length
 				for (let i = parents_length - 1; i >= 0; i--) {
@@ -321,7 +460,12 @@ const render_area_item = function(item, datalist, value, self) {
 					label.classList.add('up')
 					if (!branch.hasChildNodes()) {
 						// direct_children render (return hierarchized children nodes)
-						const tree_node = render_tree_item(direct_children, datalist, value, self) // return li node
+						const tree_node = render_tree_items(
+							direct_children,
+							datalist,
+							value,
+							self
+						) // return li node
 						branch.appendChild(tree_node)
 					}
 				}
@@ -344,48 +488,25 @@ const render_area_item = function(item, datalist, value, self) {
 				// self.events_tokens.push(
 					// event_manager.subscribe('rendered_tree_' + self.id, fn_global_radio)
 				// )
-				function fn_global_radio(children) {
-					const components_container	= branch
-					const radio_group			= create_global_radio_group(self, item, permissions, datalist, components_container, children)
-					permissions_global.appendChild(radio_group)
-				}
-				// fn_global_radio()
 
-
-				// delegates get_children task to worker. When finish, create global radio for current area
-					when_in_viewport(
-						li, // DOM node
-						function() {
-
-							// console.log('datalist:', typeof datalist, datalist);
-							// const datalist_map = new Map(datalist.map(i => [i.key, i.val]));
-							// const mySet1 = new Set()
-							// const length = datalist.length
-							// for (let i = length - 1; i >= 0; i--) {
-							// 	mySet1.add(datalist[i])
-							// }
-							// // mySet1.add(...datalist)
-							// console.log('mySet1:', mySet1);
-
-							const current_worker = new Worker('../component_security_access/js/worker_security_access.js', {
-								type : 'module'
-							});
-							current_worker.postMessage({
-								fn		: 'get_children',
-								params	: [item, datalist]
-							});
-							current_worker.onmessage = function(e) {
-								const children = e.data.result
-								// console.log('children:', children);
-								fn_global_radio(children)
-								current_worker.terminate()
-							}
-						}
-					)
+				// children create radio_group for permissions_global
+					self.get_children(item, datalist)
+					.then(function(children){
+						const radio_group = create_global_radio_group(
+							self,
+							item,
+							permissions,
+							datalist,
+							branch, // DOM node components_container
+							children // array of nodes
+						)
+						permissions_global.appendChild(radio_group)
+					})
 
 			// add branch at last position
 			li.appendChild(branch)
 		}//end direct_children
+
 
 	return li
 }//end render_area_item
@@ -408,9 +529,10 @@ const render_area_item = function(item, datalist, value, self) {
 const render_permissions_item = function(item, datalist, value, self) {
 
 	// short vars
-		const section_tipo		= item.section_tipo
-		const tipo				= item.tipo
-		const direct_children	= datalist.find(el => el.section_tipo===section_tipo && el.parent===tipo)
+		const section_tipo			= item.section_tipo
+		const tipo					= item.tipo
+		// const direct_children	= datalist.find(el => el.section_tipo===section_tipo && el.parent===tipo)
+		const direct_children		= datalist.find(el => el.parent===tipo)
 
 	// item_value (permissions). get the item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===item.tipo)
@@ -418,7 +540,7 @@ const render_permissions_item = function(item, datalist, value, self) {
 			? parseInt(item_value.value)
 			: 0
 
-	// li
+	// li DOM node
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'li_item permissions'
@@ -456,7 +578,7 @@ const render_permissions_item = function(item, datalist, value, self) {
 					class_name		: 'ul_item branch',
 					parent			: li
 				})
-			li.branch = branch
+				li.branch = branch
 		}//end direct_children
 
 	// add li branch link to hierarchize
@@ -494,7 +616,7 @@ const create_permissions_radio_group = function(self, item, permissions) {
 			if(permissions===radio_value) {
 				radio_input.checked = true
 			}
-
+		/* DESACTIVO TEMPORALMENTE (!)*/
 		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 			self.events_tokens.push(
 				event_manager.subscribe('update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo, fn_update_value)
@@ -508,13 +630,13 @@ const create_permissions_radio_group = function(self, item, permissions) {
 			}
 
 		// change event
-			radio_input.addEventListener("change", async function() {
+			radio_input.addEventListener('change', async function() {
 
 				const input_value = parseInt(radio_input.value)
 				// get the all parents of the item
 
 				// set the data of the parents and change the DOM node with update_value event
-					const children			= self.get_children(item)
+					const children			= await self.get_children(item)
 					const children_length	= children.length
 					for (let i = children_length - 1; i >= 0; i--) {
 						const current_child = children[i]
@@ -530,6 +652,7 @@ const create_permissions_radio_group = function(self, item, permissions) {
 				// show_save_button
 					event_manager.publish('show_save_button_'+self.id)
 			})//end radio_input.addEventListener("change", async function(e)
+
 
 		// radio_input_label
 			const radio_input_label = ui.create_dom_element({
@@ -619,15 +742,29 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 			}
 
 		// change event
-			radio_input.addEventListener("change", async function() {
+			radio_input.addEventListener('change', async function() {
 
 				const input_value = parseInt(radio_input.value)
+
+				// radio_button_children
+					// const radio_button_children = (item.tipo===item.section_tipo)
+					// 	? datalist.filter(el => el.parent === item.tipo) // section / area case
+					// 	: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
+					// console.log('item:', item);
+					// console.log('datalist parents:', datalist.map(el => el.parent));
+					// const a = datalist.map(el => el.parent).filter(el => el==='rsc176')
+					// console.log('a parent rsc176:', a);
+					// console.log('++ rsc5:', self.data.datalist.filter(el => el.tipo==='rsc5') );
+					// console.log('radio_button_children:', item.tipo, radio_button_children);
+					// console.log('children:', children);
+					// return
 
 				for (let i = children_length - 1; i >= 0; i--) {
 					const child = children[i]
 					if(child.tipo===child.section_tipo){
 						// areas case
-						event_manager.publish('update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo, input_value)
+						const name = 'update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo
+						event_manager.publish(name, input_value)
 					}else{
 						// components case
 						self.update_value(child, input_value)

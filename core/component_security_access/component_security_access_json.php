@@ -47,6 +47,8 @@
 
 	if($options->get_data===true && $permissions>0) {
 
+		$user_id = navigator::get_user_id();
+
 		// value
 			switch ($mode) {
 				case 'list':
@@ -56,7 +58,7 @@
 				case 'edit':
 				default:
 					$value		= $this->get_dato();
-					$datalist	= $this->get_datalist();
+					$datalist	= $this->get_datalist($user_id);
 					break;
 			}
 
