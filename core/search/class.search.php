@@ -2882,6 +2882,89 @@ class search {
 		#$name_component_model_name = RecordObj_dd::get_modelo_name_by_tipo($name_component_tipo,true);
 		#$json_component_model_name = RecordObj_dd::get_modelo_name_by_tipo($json_component_tipo,true);
 
+		$filter = '{
+			"$or": [
+				{
+					"q": [
+						{
+							"from_component_tipo": "dd640",
+							"section_id": "1",
+							"section_tipo": "dd64"
+						}
+					],
+					"q_operator": null,
+					"path": [
+						{
+							"section_tipo": "dd623",
+							"component_tipo": "dd640",
+							"model": "component_radio_button",
+							"name": "Público"
+						}
+					],
+					"type": "jsonb"
+				},
+				{
+					"$and": [
+						{
+							"q": [
+								"'.$target_section_tipo.'"
+							],
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "dd623",
+									"component_tipo": "dd642",
+									"model": "component_input_text",
+									"name": "Section tipo"
+								}
+							],
+							"type": "jsonb"
+						},
+						{
+							"q": [
+								{
+									"section_id": "2",
+									"section_tipo": "dd128"
+								}
+							],
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "dd623",
+									"component_tipo": "dd654",
+									"model": "component_select",
+									"name": "Usuario"
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				}
+			]
+		}';
+
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo($section_tipo);
+			$sqo->set_limit(0);
+			$sqo->set_filter($filter);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		$filter = '';
 		if (!empty($target_section_tipo) ) {
 			$filter .= "AND datos#>'{components,{$target_section_component_tipo},dato,lg-nolan}' @> '[\"".$target_section_tipo."\"]' ";
