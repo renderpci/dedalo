@@ -34,6 +34,8 @@ export const component_security_access = function(){
 
 	this.tools
 
+	this.worker_path
+
 	return true
 }//end component_security_access
 
@@ -67,6 +69,29 @@ export const component_security_access = function(){
 
 	component_security_access.prototype.change_mode			= component_common.prototype.change_mode
 
+
+
+/**
+* INIT
+* @return promise bool
+*/
+component_security_access.prototype.init = async function(options) {
+
+	const self = this
+
+	// call the generic common tool init
+		const common_init = await component_common.prototype.init.call(self, options);
+
+	// check worker support. Manages get_children and get_parents expensive recursive functions mainly
+		if(!window.Worker) {
+			console.error('Your browser doesn\'t support web workers.');
+			// throw new Error('Unable to continue. workers are needed');
+		}
+		self.worker_path = '../component_security_access/js/worker_security_access.js'
+
+
+	return common_init
+}//end  init
 
 
 /**
@@ -132,7 +157,8 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		self.data.value = value
 
 	// event. publish update_value_xx event on change data.value
-		event_manager.publish('update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo, input_value)
+		const name = 'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo
+		event_manager.publish(name, input_value)
 
 	// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
 
@@ -155,28 +181,31 @@ component_security_access.prototype.update_value = function(item, input_value) {
 	}
 * @return array ar_parents
 */
-component_security_access.prototype.get_parents = function(item) {
+component_security_access.prototype.get_parents = function(item, datalist) {
 
 	const self = this
 
-	let ar_parents = []
+	datalist = datalist || self.data.datalist
 
-	// const parents = (item.model==='section' || item.model.indexOf('area')===0)
-	const parents = (item.tipo===item.section_tipo)
-		? self.data.datalist.filter(el => el.tipo === item.parent)
-		: self.data.datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
+	return new Promise(function(resolve){
 
-	const parents_length = parents.length
-	if(parents_length>0){
-		// ar_parents.push(...parents)
-		ar_parents = parents
-		for (let i = 0; i < parents_length; i++) {
-			const recursive_parents = self.get_parents( parents[i] )
-			ar_parents.push(...recursive_parents)
+		const current_worker = new Worker(self.worker_path, {
+			type : 'module'
+		})
+		current_worker.onmessage = function(e) {
+			const parents = e.data.result
+			// current_worker.terminate()
+			// console.log('parents:', parents);
+			resolve( parents )
 		}
-	}
-
-	return ar_parents
+		current_worker.onerror = function(e) {
+			console.error('Worker error:', e);
+		}
+		current_worker.postMessage({
+			fn		: 'get_parents',
+			params	: [item, datalist]
+		})
+	})
 }//end get_parents
 
 
@@ -199,27 +228,27 @@ component_security_access.prototype.get_children = function(item, datalist) {
 
 	const self = this
 
-	let ar_children = []
-
 	datalist = datalist || self.data.datalist
 
-	// const children = (item.model==='section' || item.model.indexOf('area')===0)
-	const children = (item.tipo===item.section_tipo)
-		? datalist.filter(el => el.parent === item.tipo) // section / area case
-		: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
+	return new Promise(function(resolve){
 
-	const children_length = children.length
-	if(children_length>0){
-		// ar_children.push(...children)
-		ar_children = children
-		const children_length = children.length
-		for (let i = 0; i < children_length; i++) {
-			const recursive_parents	= self.get_children( children[i], datalist )
-			ar_children.push(...recursive_parents)
+		const current_worker = new Worker(self.worker_path, {
+			type : 'module'
+		})
+		current_worker.onmessage = function(e) {
+			const children = e.data.result
+			// current_worker.terminate()
+			// console.log('children:', children);
+			resolve( children )
 		}
-	}
-
-	return ar_children
+		current_worker.onerror = function(e) {
+			console.error('Worker error:', e);
+		}
+		current_worker.postMessage({
+			fn		: 'get_children',
+			params	: [item, datalist]
+		})
+	})
 }//end get_children
 
 
@@ -258,7 +287,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 
 		if(diff_value===false) {
 			// check values of every child finding a different value from last value found
-			const current_children = self.get_children(current_parent)
+			const current_children = await self.get_children(current_parent)
 			const current_children_length = current_children.length
 			for (let k = current_children_length - 1; k >= 0; k--) {
 

@@ -102,30 +102,27 @@ self.onmessage = function(e) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
-* @return array ar_children
+* @return array children
 */
-	self.get_children = function(item, datalist) {
+self.get_children = function(item, datalist) {
 
-		let ar_children = []
+	// const children = (item.model==='section' || item.model.indexOf('area')===0)
+	const children = (item.tipo===item.section_tipo)
+		? datalist.filter(el => el.parent === item.tipo) // section / area case
+		: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
 
-		// const children = (item.model==='section' || item.model.indexOf('area')===0)
-		const children = (item.tipo===item.section_tipo)
-			? datalist.filter(el => el.parent === item.tipo) // section / area case
-			: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
+	const children_length = children.length
+	if(children_length>0){
 
 		const children_length = children.length
-		if(children_length>0){
-			// ar_children.push(...children)
-			ar_children = children
-			const children_length = children.length
-			for (let i = 0; i < children_length; i++) {
-				const recursive_parents = self.get_children( children[i], datalist )
-				ar_children.push(...recursive_parents)
-			}
+		for (let i = 0; i < children_length; i++) {
+			const recursive_children = self.get_children( children[i], datalist )
+			children.push(...recursive_children)
 		}
+	}
 
-		return ar_children
-	}//end get_children
+	return children
+}//end get_children
 
 
 
@@ -141,11 +138,9 @@ self.onmessage = function(e) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
-* @return array ar_parents
+* @return array parents
 */
 self.get_parents = function(item, datalist) {
-
-	let ar_parents = []
 
 	// const parents = (item.model==='section' || item.model.indexOf('area')===0)
 	const parents = (item.tipo===item.section_tipo)
@@ -154,13 +149,11 @@ self.get_parents = function(item, datalist) {
 
 	const parents_length = parents.length
 	if(parents_length>0){
-		// ar_parents.push(...parents)
-		ar_parents = parents
 		for (let i = 0; i < parents_length; i++) {
-			const recursive_parents = get_parents( parents[i], datalist )
-			ar_parents.push(...recursive_parents)
+			const recursive_parents = self.get_parents( parents[i], datalist )
+			parents.push(...recursive_parents)
 		}
 	}
 
-	return ar_parents
+	return parents
 }//end get_parents
