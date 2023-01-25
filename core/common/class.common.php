@@ -2003,6 +2003,16 @@ abstract class common {
 									$related_element->parent_grouper = $parent_grouper;
 								}
 
+							// properties injection
+								if (isset($dd_object->properties)) {
+
+									$properties = $related_element->get_properties() ?? new stdClass();
+									foreach ($dd_object->properties as $key => $value) {
+										$properties->$key = $value;
+									}
+									$related_element->set_properties($properties);
+								}
+
 							// skip_subdatum subdatum_options
 								$bool_get_data = true;
 								// (!) Commented because currently all portals are direct (included set dato external cases). To consider to use in the future
@@ -2232,6 +2242,7 @@ abstract class common {
 					// create the new request_config with the caller
 					$request_config = new stdClass();
 						$request_config->api_engine		= 'dedalo';
+						$request_config->type			= 'main';
 						$request_config->show			= new stdClass();
 						$request_config->show->ddo_map	= $new_show_ddo_map;
 
