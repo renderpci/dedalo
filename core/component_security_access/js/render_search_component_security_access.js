@@ -25,17 +25,26 @@ export const render_search_component_security_access = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_search_component_security_access.prototype.search = async function() {
+render_search_component_security_access.prototype.search = async function(options) {
 
 	const self 	= this
 
-	const content_data = get_content_data(self)
+	// render_level
+		const render_level = options.render_level || 'full'
+
+	// content_data
+		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-		wrapper.id = self.id
+		// set pointers
+		wrapper.content_data	= content_data
+		wrapper.id				= self.id
 
 	return wrapper
 }//end search

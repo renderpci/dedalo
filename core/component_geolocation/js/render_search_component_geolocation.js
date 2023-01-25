@@ -30,12 +30,18 @@ export const render_search_component_geolocation = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_search_component_geolocation.prototype.search = async function() {
+render_search_component_geolocation.prototype.search = async function(options) {
 
 	const self = this
 
-	// content data
-		const content_data = await get_content_data_edit(self)
+	// render_level
+		const render_level = options.render_level || 'full'
+
+	// content_data
+		const content_data = get_content_data_edit(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
