@@ -3,93 +3,101 @@
 
 
 // import
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 
 
 
-	/**
-	* LOAD_USER_SEARCH_PRESETs
-	* Get section search presets records
-	* On click on search presets list, load all user presets from db to get the list names
-	* @return true
-	*/
-	export const load_user_search_presets = async function(self) {
+// vars
+const presets_section_tipo = 'dd623'
 
-		// sqo
-			const locator_user = {
-				section_id		: page_globals.user_id,
-				section_tipo	: 'dd128'
-			}
-			const locator_public_true = {
-				section_id			: '1',
-				section_tipo		: 'dd64',
-				from_component_tipo	: 'dd640'
-			}
-			const fiter = {
-				"$or": [
-					{
-						q		: [ locator_public_true ],
-						path	: [{
-							section_tipo	: 'dd623',
-							component_tipo	: 'dd640',
-							model			: 'component_radio_button',
-							name			: 'Public'
-						}],
-						type: 'jsonb'
-					},
-					{
-						"$and": [
-							{
-								q		: [ self.section_tipo ],
-								path	: [{
-									section_tipo	: 'dd623',
-									component_tipo	: 'dd642',
-									model			: 'component_input_text',
-									name			: 'Section tipo'
-								}],
-								type: 'jsonb'
-							},
-							{
-								q		: [ locator_user ],
-								path	: [{
-									section_tipo	: 'dd623',
-									component_tipo	: 'dd654',
-									model			: 'component_select',
-									name			: 'User'
-								}],
-								type: 'jsonb'
-							}
-						]
-					}
-				]
-			};
+
+
+/**
+* LOAD_USER_SEARCH_PRESETS
+* Get section search presets records
+* On click on search presets list, load all user presets from db to get the list names
+* @param object self
+* @return object section
+* 	section instance
+*/
+export const load_user_search_presets = async function(self) {
+
+	// sqo
+		const locator_user = {
+			section_id		: page_globals.user_id,
+			section_tipo	: 'dd128'
+		}
+		const locator_public_true = {
+			section_id			: '1',
+			section_tipo		: 'dd64',
+			from_component_tipo	: 'dd640'
+		}
+		const fiter = {
+			"$and": [
+				{
+					q		: [ self.section_tipo ],
+					path	: [{
+						component_tipo	: 'dd642',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						model			: 'component_input_text',
+						name			: 'Section tipo'
+					}],
+					type: 'jsonb'
+				},
+				{
+					"$or": [
+						{
+							q		: [ locator_public_true ],
+							path	: [{
+								component_tipo	: 'dd640',
+								section_tipo	: presets_section_tipo, // 'dd623'
+								model			: 'component_radio_button',
+								name			: 'Public'
+							}],
+							type: 'jsonb'
+						},
+						{
+							q		: [ locator_user ],
+							path	: [{
+								component_tipo	: 'dd654',
+								section_tipo	: presets_section_tipo, // 'dd623'
+								model			: 'component_select',
+								name			: 'User'
+							}],
+							type: 'jsonb'
+						}
+					]
+				}
+			]
+		}
 		const sqo = {
 			limit			: 10,
+			filter			: fiter,
 			section_tipo	: [{
-				tipo : 'dd623'
-			}],
-			filter			: fiter
+				tipo : presets_section_tipo // 'dd623'
+			}]
 		}
 
+	// request_config
 		const request_config = [{
-			sqo		: sqo,
+			sqo			: sqo,
+			api_engine	: 'dedalo',
+			type		: 'main',
 			show	: {
 				ddo_map :[{
-					section_tipo	: 'dd623',
 					tipo			: 'dd624',
-					parent			: 'dd623'
+					section_tipo	: presets_section_tipo, // 'dd623',
+					parent			: presets_section_tipo // 'dd623'
 				}]
-			},
-			api_engine	: 'dedalo',
-			type		: 'main'
+			}
 		}]
 
-
+	// section
 		const instance_options = {
 			model			: 'section',
-			tipo			: 'dd623',
-			section_tipo	: 'dd623',
+			tipo			: presets_section_tipo, // 'dd623'
+			section_tipo	: presets_section_tipo, // 'dd623'
 			section_id		: null,
 			mode			: 'list',
 			lang			: page_globals.dedalo_data_lang,
@@ -97,12 +105,13 @@
 			add_show 		: true,
 			id_variant		: self.section_tipo + '_search_user_presets'
 		}
-
-
 		const section = await instances.get_instance(instance_options)
 		await section.build(true)
 
-		// section. render another node of component caller and append to container
+	// fix user_presets_section
+		self.user_presets_section = section
+
+	// section. render another node of component caller and append to container
 		section.render_views.push(
 			{
 				view	: 'search_user_presets',
@@ -113,211 +122,207 @@
 		)
 		section.context.view	= 'search_user_presets'
 		section.filter			= false
-
-		self.user_presets_section = section
-
-		return true
-	}//end load_user_search_preset
+		section.caller			= self
 
 
+	return section
+}//end load_user_search_presets
 
 
 
+/**
+* EDIT_USER_SEARCH_PRESET
+* Builds a presets section in edit mode with given section_id
+* @param object self
+* @param int section_id
+* @return object section
+* 	section instance
+*/
+export const edit_user_search_preset = async function(self, section_id) {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	/**
-	* LOAD_SEARCH_PRESET
-	* Onclick arrow button in search presets list, load preset from db and apply to current canvas
-	* @return true
-	*/
-	export const load_search_preset = async function(button_obj) {
-
-		const self = this
-
-		const li 		  	 = button_obj.parentNode
-		const json_object 	 = JSON.parse(li.dataset.json_preset)
-		const section_id  	 = li.dataset.section_id
-		const save_arguments = JSON.parse(li.dataset.save_arguments)
-
-		self.parse_json_query_obj_to_dom( button_obj, json_object, {allow_duplicates:true} )
-
-
-		const search2_container_selection_presets 	= document.getElementById("search2_container_selection_presets")
-		const section_tipo 							= search2_container_selection_presets.dataset.section_tipo
-
-		// Set cookie
-		// Save cookie to track preset selected
-		const cookie_name 				= "search_presets"
-		let cookie_value 				= read_cookie(cookie_name) || '{}'
-			cookie_value 				= JSON.parse(cookie_value)
-			cookie_value[section_tipo]  = section_id
-			create_cookie(cookie_name, JSON.stringify(cookie_value), 365)
-
-		// WORK IN PROGRESS
-			// const current_cookie_track = await data_manager.set_local_db_data(
-			// 	{
-			// 		id		: 'search_presets',
-			// 		value	: {}
-			// 	},
-			// 	'status' // string table
-			// )
-			// console.log('++++++++++++++++++++++ current_cookie_track:', current_cookie_track);
-
-
-		// Re-Load user presets list
-		// self.get_component_presets({target_section_tipo : section_tipo})
-
-		// Reset all selections
-		const all_selected = li.parentNode.childNodes
-		const len = all_selected.length
-		for (let i = len - 1; i >= 0; i--) {
-			all_selected[i].classList.remove("selected")
-		}
-		// Select current
-		li.classList.add("selected")
-
-		// Set initial state as unchanged
-		self.update_state({
-				state 			   		: 'unchanged',
-				editing_section_id 		: section_id,
-				editing_save_arguments 	: save_arguments
-			})
-
-
-		return true
-	}//end load_search_preset
-
-
-
-
-
-
-
-
-
-
-	/**
-	* EDIT_PRESET
-	* Load a customized presets section with all required components to edit
-	* @return promise
-	*/
-	export const edit_preset = function(button) {
-
-		const self = this
-
-		const li 		= button.parentNode
-		const div_edit 	= li.querySelector('.div_edit')
-		let json_preset = {}
-
-		if (div_edit.innerHTML.length>1) {
-			// Clean
-			while (div_edit.hasChildNodes()) {
-				div_edit.removeChild(div_edit.lastChild);
-			}
-			return false;
-		}
-
-		// Reset all div_edit
-		//let all_div_edit = li.parentNode.querySelectorAll('.div_edit')
-		const search2_container_selection_presets 	= document.getElementById("search2_container_selection_presets")
-		const all_div_edit 							= search2_container_selection_presets.querySelectorAll('.div_edit')
-		const len = all_div_edit.length
-		for (let i = len - 1; i >= 0; i--) {
-			// Clean
-			while (all_div_edit[i].hasChildNodes()) {
-				all_div_edit[i].removeChild(all_div_edit[i].lastChild);
-			}
-		}
-
-		const section_tipo = self.search_presets_section_tipo //"dd623" // Search Presets
-
-		// Load component from trigger
-		const trigger_vars = {
-				mode 		: "load_components",
-				components 	: [
-				{
-					component_tipo 	: "dd624", // Name
-					section_tipo 	: section_tipo,
-					section_id 		: li.dataset.section_id,
-					mode 			: 'edit'// mode: search | edit
-				},
-				{
-					component_tipo 	: "dd640", // Public
-					section_tipo 	: section_tipo,
-					section_id 		: li.dataset.section_id,
-					mode 			: 'edit'// mode: search | edit
-				},
-				{
-					component_tipo 	: "dd641", // Default
-					section_tipo 	: section_tipo,
-					section_id 		: li.dataset.section_id,
-					mode 			: 'edit'// mode: search | edit
-				},
-				{
-					component_tipo 	: "dd648", // Save arguments
-					section_tipo 	: section_tipo,
-					section_id 		: li.dataset.section_id,
-					mode 			: 'edit'// mode: search | edit
-				}
-				]
-		}
-		//console.log("trigger_vars:",trigger_vars); return;
-
-		// PROMISE JSON XMLHttpRequest
-		const js_promise = common.get_json_data(self.url_trigger, trigger_vars).then(function(response){
-
-			if (response) {
-
-				// Add component html to target div
-				div_edit.innerHTML = response.result
-
-				// Exec comonents scripts
-				exec_scripts_inside(div_edit)
-
-				// Locate wrap_component_dd648 inside html and add an listerner to radio button save_arguments
-				const wrapper_dd648  = div_edit.querySelector("div.wrap_component_dd648")
-				const radio_buttons  = wrapper_dd648.querySelectorAll(".css_radio_button")
-				for (let i = radio_buttons.length - 1; i >= 0; i--) {
-					radio_buttons[i].addEventListener("change",function(e){
-						//console.log("radio_button:",this, this.checked, this.value);
-						if (this.checked===true) {
-							let seleted_value_obj = JSON.parse(this.value)
-							let save_arguments 	  = false
-							if (seleted_value_obj.section_id==1) {
-								save_arguments = true
+	// request_config
+		const request_config = [{
+			api_engine	: 'dedalo',
+			type		: 'main',
+			show	: {
+				ddo_map :[
+					{
+						tipo			: 'dd624',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
 							}
-							// Update state
-							self.update_state({
-								state 					:'changed',
-								editing_section_id 		: li.dataset.section_id,
-								editing_save_arguments 	: save_arguments
-							})
-							// Update li dataset
-							li.dataset.save_arguments = save_arguments
 						}
-					})
+					},
+					{
+						tipo			: 'dd640',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
+							}
+						}
+					},
+					{
+						tipo			: 'dd641',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
+							}
+						}
+					},
+					{
+						tipo			: 'dd648',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						parent			: presets_section_tipo, // 'dd623'
+						properties : {
+							show_interface : {
+								tools : false
+							}
+						}
+					}
+				]
+			}
+		}]
+
+	// section
+		const instance_options = {
+			model			: 'section',
+			tipo			: presets_section_tipo, // 'dd623'
+			section_tipo	: presets_section_tipo, // 'dd623'
+			section_id		: section_id,
+			mode			: 'edit',
+			lang			: page_globals.dedalo_data_lang,
+			request_config	: request_config,
+			add_show 		: true,
+			id_variant		: self.section_tipo +'_'+ section_id + '_search_user_preset'
+		}
+		const section = await instances.get_instance(instance_options)
+		// filter search disallow
+			section.filter = false
+		// inspector disallow
+			section.inspector = false
+		// build
+			await section.build(true)
+
+
+	return section
+}//end edit_user_search_preset
+
+
+
+/**
+* LOAD_SEARCH_PRESET
+* Get DDBB data from component_json in presets section with given section_id
+* On click arrow button in search presets list, load preset from db and apply to current canvas
+* @return true
+*/
+export const load_search_preset = async function(options) {
+
+	// options
+		const section_id = options.section_id
+
+	// component
+		const instance_options = {
+			tipo			: 'dd625',
+			section_tipo	: presets_section_tipo, // 'dd623',
+			section_id		: section_id,
+			model			: 'component_json',
+			mode			: 'edit',
+			lang			: page_globals.dedalo_data_nolan
+		}
+		const component = await instances.get_instance(instance_options)
+		await component.build(true)
+		const value = component.data.value
+
+	// json_filter
+		const json_filter = (value || value[0])
+			? value[0]
+			: {"$and":[]} // default
+
+
+	return json_filter
+}//end load_search_preset
+
+
+
+/**
+* NEW_SEARCH_PRESET
+* Creates a new presets section records adding section_tipo and user_id
+* On click new button in search presets list, load preset from db and apply to current canvas
+* @param object options
+* @return promise
+* 	Resolve section_id
+*/
+export const new_search_preset = function(options) {
+
+	// options
+		const self = options.self
+
+	// short vars
+		const section_tipo	= self.section_tipo
+		const locator_user	= {
+			section_id		: page_globals.user_id,
+			section_tipo	: 'dd128'
+		}
+
+	return new Promise(async function(resolve){
+
+		// data_manager. create
+			const rqo = {
+				action	: 'create',
+				source	: {
+					section_tipo : presets_section_tipo // 'dd623'
 				}
+			}
+			const api_response = await data_manager.request({
+				body : rqo
+			})
+			if (api_response.result && api_response.result>0) {
 
-			}//end if (response)
+				const new_section_id = api_response.result
+				console.log('new_section_id:', new_section_id);
 
-		}, function(error) {
-			console.log("[search2.edit_preset] Error.", error);
-			// html_page.loading_content( wrap_div, 0 );
-		})
+				// set section_tipo value
+					const component_instance_section_tipo = await instances.get_instance({
+						tipo			: 'dd642',
+						model			: 'component_input_text',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						section_id		: new_section_id,
+						mode			: 'edit'
+					})
+					await component_instance_section_tipo.build(true)
+					const changed_data_section = [{
+						action	: 'insert',
+						key		: 0,
+						value	: section_tipo
+					}]
+					await component_instance_section_tipo.save(changed_data_section)
 
-		return js_promise
-	}//end edit_preset
+				// set user value
+					const component_instance_user = await instances.get_instance({
+						tipo			: 'dd654',
+						model			: 'component_select',
+						section_tipo	: presets_section_tipo, // 'dd623'
+						section_id		: new_section_id,
+						mode			: 'edit'
+					})
+					await component_instance_user.build(true)
+					const changed_data_user = [{
+						action	: 'insert',
+						key		: 0,
+						value	: locator_user
+					}]
+					await component_instance_user.save(changed_data_user)
+
+				resolve(new_section_id)
+			}else{
+				console.error('Error on create new preset section. api_response: ', api_response);
+			}
+	})
+}//end new_search_preset
