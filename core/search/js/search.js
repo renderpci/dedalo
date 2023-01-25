@@ -24,8 +24,7 @@
 	} from './search_drag.js'
 	import {
 		load_user_search_presets,
-		load_search_preset,
-		edit_preset
+		load_search_preset
 	} from './search_user_presets.js'
 	// import {
 		// create_cookie,
@@ -74,8 +73,6 @@ export const search = function() {
 	search.prototype.on_drop						= on_drop
 	// user presets
 	search.prototype.load_search_preset				= load_search_preset
-	search.prototype.edit_preset					= edit_preset
-
 	search.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
 	search.prototype.calculate_component_path		= common.prototype.calculate_component_path
 

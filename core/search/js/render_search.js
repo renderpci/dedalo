@@ -10,6 +10,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {create_cookie, read_cookie} from '../../common/js/utils/cookie.js'
+	import {new_search_preset, edit_user_search_preset} from './search_user_presets.js'
 
 
 
@@ -197,16 +198,39 @@ render_search.prototype.render_base = function() {
 				class_name		: 'button add',
 				parent			: component_presets_label
 			})
-			.addEventListener('click',function(){
-				self.new_preset(button_add_preset)
+			.addEventListener('click', async function(e){
+				e.stopPropagation()
+
+				const section_id = await new_search_preset({
+					self : self
+				})
+
+				// launch the editor
+				const section = await edit_user_search_preset(self, section_id)
+
+				// modal
+					const body = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'container'
+					})
+					section.render()
+					.then(function(section_node){
+						body.appendChild(section_node)
+						// modal attach
+						ui.attach_to_modal({
+							header	: 'User search preset',
+							body	: body,
+							footer	: null
+						})
+					})
 			})
 		// new_preset_div. create the new_preset_div
-			const new_preset_div = ui.create_dom_element({
-				id 				: 'new_preset_div',
-				element_type	: 'div',
-				class_name		: 'new_preset_div',
-				parent			: self.search_container_selection_presets
-			})
+			// const new_preset_div = ui.create_dom_element({
+			// 	id 				: 'new_preset_div',
+			// 	element_type	: 'div',
+			// 	class_name		: 'new_preset_div',
+			// 	parent			: self.search_container_selection_presets
+			// })
 		// get section of users presets
 		self.user_presets_section.render().then((user_presets_node)=>{
 			self.search_container_selection_presets.appendChild(user_presets_node)
@@ -245,7 +269,7 @@ render_search.prototype.render_base = function() {
 * @param object options
 * @return DOM element search_group_container
 */
-const render_filter = function(options){
+export const render_filter = function(options){
 
 	// options
 		const self				= options.self

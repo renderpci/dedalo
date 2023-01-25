@@ -1,23 +1,25 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise */
+/*global */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
 	import {get_section_records} from '../../section/js/section.js'
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
+	// import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
 		render_server_response_error,
 		no_records_node
 	} from '../../section/js/render_common_section.js'
+	import {edit_user_search_preset, load_search_preset} from './search_user_presets.js'
+	import {render_filter} from './render_search.js'
 
 
 
 /**
-* view_search_user_presets
+* VIEW_SEARCH_USER_PRESETS
 * Manages the component's logic and appearance in client side
 */
 export const view_search_user_presets = function() {
@@ -28,26 +30,29 @@ export const view_search_user_presets = function() {
 
 
 /**
-* LIST
-* Render node for use in list
-* @return DOM node
+* RENDER
+* Render wrapper node
+* @param object self
+* @param object options
+* @return DOM node wrapper
 */
 view_search_user_presets.render = async function(self, options) {
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	// running_with_errors case
 		if (self.running_with_errors) {
 			return render_server_response_error(
 				self.running_with_errors
-			);
+			)
 		}
 
 	// columns_map
-		const columns_map = await rebuild_columns_map(self)
-		self.columns_map = columns_map
+		const columns_map	= await rebuild_columns_map(self)
+		self.columns_map	= columns_map
 
-	// ar_section_record. section_record instances (initied and built)
+	// ar_section_record. section_record instances (init and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_section_records({caller: self})
@@ -58,8 +63,9 @@ view_search_user_presets.render = async function(self, options) {
 			return content_data
 		}
 
-	const fragment = new DocumentFragment()
-	
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
 	// paginator container node
 		if (self.paginator) {
 			const paginator_container = ui.create_dom_element({
@@ -71,7 +77,7 @@ view_search_user_presets.render = async function(self, options) {
 			self.paginator.build()
 			.then(function(){
 				self.paginator.mode = 'micro'
-				self.paginator.render().then(paginator_wrapper =>{
+				self.paginator.render().then(paginator_wrapper => {
 					paginator_container.appendChild(paginator_wrapper)
 				})
 			})
@@ -95,12 +101,9 @@ view_search_user_presets.render = async function(self, options) {
 			}else{
 				// flat columns create a sequence of grid widths taking care of sub-column space
 				// like 1fr 1fr 1fr 3fr 1fr
-				const items				= ui.flat_column_items(columns_map)
-				const template_columns	= items.join(' ')
-
 				const css_object = {
 					'.list_body' : {
-						'grid-template-columns' : template_columns
+						'grid-template-columns' : '1rem 1rem auto 1rem'
 					}
 				}
 				// use calculated css
@@ -122,14 +125,16 @@ view_search_user_presets.render = async function(self, options) {
 		wrapper.list_body		= list_body
 
 
-
 	return wrapper
-}//end list
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA
+* Render content data
+* @param array ar_section_record
+* @param object self
 * @return DOM node content_data
 */
 const get_content_data = async function(ar_section_record, self) {
@@ -161,8 +166,8 @@ const get_content_data = async function(ar_section_record, self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
 			  content_data.appendChild(fragment)
 
 
@@ -174,11 +179,21 @@ const get_content_data = async function(ar_section_record, self) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
 
 	const columns_map = []
+
+	// column apply_preset
+		columns_map.push({
+			id			: 'apply_preset',
+			label		: 'Apply',
+			tipo		: 'apply_preset', // used to sort only
+			width		: 'auto',
+			callback	: render_column_apply_preset
+		})
 
 	// column section_id check
 		columns_map.push({
@@ -211,39 +226,52 @@ const rebuild_columns_map = async function(self) {
 				callback	: render_column_remove
 			})
 		}
+
+
 	return columns_map
 }//end rebuild_columns_map
 
 
 
 /**
-* RENDER_COLUMN_ID
+* RENDER_COLUMN_APPLY_PRESET
 * @param object options
 * @return DOM DocumentFragment
 */
-export const render_column_id = function(options){
+export const render_column_apply_preset = function(options) {
 
 	// options
-		const self					= options.caller // object instance, usually section or portal
-		const section_id			= options.section_id
-		const section_tipo			= options.section_tipo
-		// const paginated_key			= options.paginated_key // int . Current item paginated_key in all result
+		const self				= options.caller.caller // object instance, usually section or portal
+		const section_id		= options.section_id
+		// const section_tipo	= options.section_tipo
+		// const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
 
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
-	// permissions
-		// const permissions = self.permissions
-
-	const fragment = new DocumentFragment()
-
-		// button_edit
+	// button_edit
 		const button_edit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'button_edit button_view_' + self.context.view,
+			class_name		: 'button_edit',
 			parent			: fragment
 		})
-		button_edit.addEventListener('click', function(e) {
+		button_edit.addEventListener('click', async function(e) {
 			e.stopPropagation()
 
+			// load DDBB component data
+			load_search_preset({
+				section_id : section_id
+			})
+			.then(function(json_filter){
+				// render_filter
+				render_filter({
+					self				: self,
+					editing_preset		: json_filter,
+					allow_duplicates	: true
+				})
+				// render buttons
+				self.render_search_buttons()
+			})
 		})
 
 	// edit icon
@@ -255,9 +283,69 @@ export const render_column_id = function(options){
 		})
 
 
+	return fragment
+}//end render_column_apply_preset
+
+
+
+/**
+* RENDER_COLUMN_ID
+* @param object options
+* @return DOM DocumentFragment
+*/
+export const render_column_id = function(options) {
+
+	// options
+		const self				= options.caller // object instance, usually section or portal
+		const section_id		= options.section_id
+		// const section_tipo	= options.section_tipo
+		// const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
+
+	// permissions
+		// const permissions = self.permissions
+
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	// button_edit
+		const button_edit = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_edit button_view_' + self.context.view,
+			parent			: fragment
+		})
+		button_edit.addEventListener('click', async function(e) {
+			e.stopPropagation()
+
+			const section = await edit_user_search_preset(self, section_id)
+
+			// modal
+				const body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'container'
+				})
+				section.render()
+				.then(function(section_node){
+					body.appendChild(section_node)
+					// modal attach
+					ui.attach_to_modal({
+						header	: 'User search preset',
+						body	: body,
+						footer	: null
+					})
+				})
+		})
+
+	// edit icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			// class_name	: 'button pen icon grey',
+			class_name		: 'button edit icon grey',
+			parent			: button_edit
+		})
+
 
 	return fragment
-};//end render_column_id()
+}//end render_column_id()
 
 
 
@@ -266,14 +354,15 @@ export const render_column_id = function(options){
 * @param object options
 * @return DOM DocumentFragment
 */
-export const render_column_remove = function(options){
+export const render_column_remove = function(options) {
 
 	// options
-		const self					= options.caller // object instance, usually section
-		const section_id			= options.section_id
-		const section_tipo			= options.section_tipo
+		const self			= options.caller // object instance, usually section
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// delete_button
 		const delete_button = ui.create_dom_element({
@@ -281,7 +370,7 @@ export const render_column_remove = function(options){
 			class_name		: 'button_delete',
 			parent			: fragment
 		})
-		delete_button.addEventListener("click", function(){
+		delete_button.addEventListener('click', function(){
 			// delete_record
 				self.delete_record({
 					section			: self,
@@ -304,6 +393,6 @@ export const render_column_remove = function(options){
 			parent			: delete_button
 		})
 
-	return fragment
-};//end render_column_remove()
 
+	return fragment
+}//end render_column_remove()
