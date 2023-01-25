@@ -287,7 +287,9 @@ const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		ui.add_tools(self, fragment)
+		if( self.show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)

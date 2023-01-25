@@ -50,6 +50,7 @@ render_search_component_filter.prototype.search = async function(options) {
 }//end search
 
 
+
 /**
 * GET_CONTENT_DATA
 * @return dom object content_data

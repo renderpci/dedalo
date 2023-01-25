@@ -50,10 +50,6 @@ render_search_component_email.prototype.search = async function(options) {
 }//end search
 
 
-
-
-
-
 /**
 * GET_CONTENT_DATA
 * @return DOM node content_data

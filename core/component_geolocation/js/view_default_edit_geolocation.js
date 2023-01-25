@@ -87,6 +87,7 @@ export const get_content_data_edit = async function(self) {
 }//end get_content_data_edit
 
 
+
 /**
 * GET_INPUT_ELEMENT_EDIT
 * @return DOM element content_value
@@ -319,8 +320,10 @@ const get_buttons = (self) => {
 		})
 
 	// buttons tools
-		if (!is_inside_tool && mode==='edit') {
-			ui.add_tools(self, fragment)
+		if( self.show_interface.tools === true){
+			if (!is_inside_tool && mode==='edit') {
+				ui.add_tools(self, fragment)
+			}
 		}
 
 	// save
