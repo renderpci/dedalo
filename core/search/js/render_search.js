@@ -102,16 +102,6 @@ render_search.prototype.render_base = function() {
 
 	const fragment = new DocumentFragment()
 
-	// filter button . Show and hide all search elements
-		// const filter_button = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'filter_button button search',
-		// 	parent			: fragment
-		// })
-		// .addEventListener("click", () => {
-		// 	toggle_search_panel(self)
-		// })
-
 	// search_global_container . Main search div
 		const search_global_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -201,26 +191,26 @@ render_search.prototype.render_base = function() {
 				parent			: self.search_container_selection_presets
 			})
 			// button_new_preset
-			ui.create_dom_element({
+			const button_add_preset = ui.create_dom_element({
+				id 				: 'button_new_preset',
 				element_type	: 'span',
 				class_name		: 'button add',
 				parent			: component_presets_label
 			})
 			.addEventListener('click',function(){
-				self.new_preset(this)
+				self.new_preset(button_add_preset)
 			})
 		// new_preset_div. create the new_preset_div
-			ui.create_dom_element({
+			const new_preset_div = ui.create_dom_element({
+				id 				: 'new_preset_div',
 				element_type	: 'div',
 				class_name		: 'new_preset_div',
 				parent			: self.search_container_selection_presets
 			})
-		// component_presets_list. create the  component_presets_list
-			ui.create_dom_element({
-				element_type	: 'ul',
-				class_name		: 'component_presets_list',
-				parent			: self.search_container_selection_presets,
-			})
+		// get section of users presets
+		self.user_presets_section.render().then((user_presets_node)=>{
+			self.search_container_selection_presets.appendChild(user_presets_node)
+		})
 
 	// toggle_container_selection_presets. button toggle user presets
 		const toggle_container_selection_presets = ui.create_dom_element({
