@@ -660,10 +660,13 @@ abstract class component_common extends common {
 				// v5 matrix_dd list compatibility
 				$dato = [$dato];
 			}else{
-
+				$dato_to_show = get_called_class()==='component_password'
+					? '************'
+					: $dato;
 				debug_log(__METHOD__ . ' '
-					. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
-					. 'model: '. get_called_class() .PHP_EOL
+					. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: ' . PHP_EOL
+					. to_string($dato_to_show) . PHP_EOL
+					. 'model: '. get_called_class() . PHP_EOL
 					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
 					. 'table: '. $matrix_table
 					, logger::ERROR
