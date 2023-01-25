@@ -89,11 +89,6 @@ const get_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
-	// buttons tools
-		// if (!is_inside_tool) {
-		// 	ui.add_tools(self, fragment)
-		// }
-
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 

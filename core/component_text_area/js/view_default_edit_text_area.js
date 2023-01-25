@@ -140,8 +140,9 @@ const get_buttons = (self) => {
 			})
 
 		// buttons tools
-			ui.add_tools(self, fragment)
-			// console.log("Added buttons to buttons_container:", buttons_container, self.tipo);
+			if( self.show_interface.tools === true){
+				ui.add_tools(self, fragment)
+			}
 	}
 
 	// buttons container
