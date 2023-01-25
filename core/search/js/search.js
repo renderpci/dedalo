@@ -23,7 +23,7 @@
 		on_drop
 	} from './search_drag.js'
 	import {
-		load_user_search_preset,
+		load_user_search_presets,
 		load_search_preset,
 		edit_preset
 	} from './search_user_presets.js'
@@ -255,7 +255,7 @@ search.prototype.build = async function(){
 
 	// user_presets. load user preset data
 		ar_promises.push(
-			load_user_search_preset(self)
+			load_user_search_presets(self)
 		)
 
 	// get_section_elements_context

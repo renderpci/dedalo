@@ -1,19 +1,22 @@
-/*global get_label, page_globals, SHOW_DEBUG */
+/*global page_globals, */
 /*eslint no-undef: "error"*/
 
 
 // import
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
 
+
+
 	/**
-	* LOAD_USER_SEARCH_PRESET
-	* Onclick on search presets list, load all user presets from db to get the list names
+	* LOAD_USER_SEARCH_PRESETs
+	* Get section search presets records
+	* On click on search presets list, load all user presets from db to get the list names
 	* @return true
 	*/
-	export const load_user_search_preset = async function(self) {
+	export const load_user_search_presets = async function(self) {
 
-		// SQO
+		// sqo
 			const locator_user = {
 				section_id		: page_globals.user_id,
 				section_tipo	: 'dd128'
