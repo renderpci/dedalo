@@ -23,11 +23,8 @@
 		on_drop
 	} from './search_drag.js'
 	import {
+		load_user_search_preset,
 		load_search_preset,
-		new_preset,
-		save_new_preset,
-		save_preset,
-		delete_preset,
 		edit_preset
 	} from './search_user_presets.js'
 	// import {
@@ -77,10 +74,6 @@ export const search = function() {
 	search.prototype.on_drop						= on_drop
 	// user presets
 	search.prototype.load_search_preset				= load_search_preset
-	search.prototype.new_preset						= new_preset
-	search.prototype.save_new_preset				= save_new_preset
-	search.prototype.save_preset					= save_preset
-	search.prototype.delete_preset					= delete_preset
 	search.prototype.edit_preset					= edit_preset
 
 	search.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
@@ -200,8 +193,8 @@ search.prototype.build = async function(){
 			// load editing preset data
 				const editing_preset = await data_manager.request({
 					body : {
-						action				: "filter_get_editing_preset",
-						target_section_tipo	: self.section_tipo
+						action			: "filter_get_editing_preset",
+						section_tipo	: self.section_tipo
 					}
 				})
 
@@ -647,10 +640,8 @@ search.prototype.get_component_instance = async function(options) {
 		component_instance.data.q_operator	= q_operator
 		component_instance.path				= path
 
-
 	// add instance
 		self.ar_instances.push(component_instance)
-
 
 	return component_instance
 }//end get_component_instance
