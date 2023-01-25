@@ -31,11 +31,18 @@ export const render_search_component_date = function() {
 * Render node for use in search
 * @return DOM node wrapper
 */
-render_search_component_date.prototype.search = async function() {
+render_search_component_date.prototype.search = async function(options) {
 
 	const self 	= this
 
-	const content_data = get_content_data(self)
+	// render_level
+		const render_level = options.render_level || 'full'
+
+	// content_data
+		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// load editor files (calendar)
 		await self.load_editor()
@@ -44,8 +51,7 @@ render_search_component_date.prototype.search = async function() {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
-
-	// set pointer to content_data
+		// set pointers
 		wrapper.content_data = content_data
 
 	return wrapper

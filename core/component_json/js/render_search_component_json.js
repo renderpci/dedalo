@@ -25,12 +25,18 @@ export const render_search_component_json = function() {
 * Render node for use in edit
 * @return DOM node wrapper
 */
-render_search_component_json.prototype.search = async function() {
+render_search_component_json.prototype.search = async function(options) {
 
 	const self = this
 
-	// content data
+	// render_level
+		const render_level = options.render_level || 'full'
+
+	// content_data
 		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {

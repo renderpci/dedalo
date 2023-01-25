@@ -250,177 +250,6 @@ render_search.prototype.render_base = function() {
 
 
 /**
-* RENDER_COMPONENTS_LIST
-* Create DOM elements to generate list of components and section groups of current section
-* @see this.get_section_elements_context
-* @param object options
-*	string options.section_tipo (section to load components and render)
-*	DOM element options.target_div (Target DOM element on new data will be added)
-*	array path (Cumulative array of component path objects)
-*
-* @return promise
-*/
-	// render_search.prototype.render_components_list = async function(options) {
-
-	// 	const self = this
-
-	// 	const section_tipo	= options.section_tipo
-	// 	const target_div	= options.target_div
-	// 	const path			= options.path
-
-	// 	// load components from api
-	// 		const ar_elements = await self.get_section_elements_context({
-	// 			section_tipo : section_tipo
-	// 		})
-	// 		//console.log("ar_elements:",ar_elements);
-
-	// 	// Clean target_div
-	// 		while (target_div.hasChildNodes()) {
-	// 			target_div.removeChild(target_div.lastChild);
-	// 		}
-
-	// 	// First item check
-	// 		if (!ar_elements || typeof ar_elements[0]==="undefined") {
-	// 			console.warn(`[render_components_list] Error. Empty ar_elements on get_section_elements_context ${section_tipo}`, ar_elements);
-	// 			return false
-	// 		}
-
-	// 	// Div container
-	// 		const top_parent = ui.create_dom_element({
-	// 			element_type	: 'ul',
-	// 			class_name 	 	: "search_section_container",
-	// 			parent 		    : target_div
-	// 		})
-
-	// 	// Div target_container
-	// 		const target_container = ui.create_dom_element({
-	// 			element_type	: 'ul',
-	// 			class_name 	 	: "search_section_container target_container",
-	// 			parent 		    : target_div
-	// 		})
-
-	// 	let section_group
-
-	// 	const len = ar_elements.length
-	// 	for (let i = 0; i < len; i++) {
-	// 		const element = ar_elements[i]
-
-	// 		switch (true) {
-
-	// 			case element.model==='section':
-	// 				// section title bar
-	// 				const section_bar = ui.create_dom_element({
-	// 					element_type : 'li',
-	// 					parent 		 : top_parent,
-	// 					class_name 	 : "search_section_bar_label ",
-	// 					inner_html 	 : element.label
-	// 				})
-	// 				section_bar.addEventListener("click", function(e){
-	// 				//this.parentNode.parentNode.innerHTML = ""
-	// 					if (target_div.classList.contains("target_container")) {
-	// 						target_div.innerHTML = ""
-	// 					}
-
-	// 				});
-	// 				break;
-
-	// 			case element.model==='section_group' || element.model==='section_tab':
-	// 				// Section group container (ul)
-	// 					section_group = ui.create_dom_element({
-	// 						element_type : 'ul',
-	// 						parent 		 : top_parent
-	// 					})
-	// 					// Section group label (li)
-	// 					ui.create_dom_element({
-	// 						element_type : 'li',
-	// 						parent 		 : section_group,
-	// 						class_name 	 : "search_section_group_label",
-	// 						inner_html 	 : element.label
-	// 					})
-
-	// 				break;
-
-	// 			default:
-	// 				// Calculated path (from dom position)
-	// 				const calculated_component_path = self.calculate_component_path( element, path )
-
-	// 				const class_names 	= "search_component_label element_draggable"
-	// 				const is_draggable 	= true
-	// 				// if (element.model==="component_portal") {
-	// 				// 	// Autocompletes only
-	// 				// 	// Pointer to open "children" section (portals and aurocompletes)
-	// 				// 	// Builds li element
-	// 				// 	class_names = "search_component_label element_draggable"
-	// 				// }else if (element.model==="component_portal"){
-	// 				// 	class_names = "search_component_label"
-	// 				// 	is_draggable 		= false
-
-	// 				// }
-
-	// 				const section_id = self.get_section_id()
-	// 				const component = ui.create_dom_element({
-	// 					element_type 			: 'li',
-	// 					parent 		 			: section_group,
-	// 					class_name 	 			: class_names,
-	// 					inner_html 				: element.label,
-	// 					draggable 	 			: is_draggable,
-	// 					data_set 				: { path : JSON.stringify(calculated_component_path),
-	// 												tipo 			: element.tipo,
-	// 												section_tipo 	: element.section_tipo,
-	// 												section_id 		: section_id
-	// 											}
-	// 				})
-
-
-	// 				// if (element.model!=="component_portal"){
-	// 					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
-	// 					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-	// 					component.addEventListener('drop',function(e){self.on_drop(this,e)})
-	// 				// }
-
-	// 				// Portals and autocomplete only
-	// 				// Pointer to open "children" target section (portals and autocompletes)
-	// 				// Builds li element
-	// 				if (element.target_section_tipo){
-
-	// 					component.classList.add('has_subquery')
-
-	// 					// Event on click load "children" section inside target_container recursively
-	// 					const target_section  = element.target_section_tipo[0] // Select first only
-	// 					component.addEventListener("click", function(e){
-
-	// 						// component_tipo : component.component_tipo
-	// 						self.render_components_list({
-	// 							section_tipo : target_section,
-	// 							target_div 	 : target_container,
-	// 							path 		 : calculated_component_path
-	// 						})
-	// 						// Reset active in current wrap
-	// 						const ar_active_now = top_parent.querySelectorAll("li.active")
-	// 						const len = ar_active_now.length
-	// 						for (let i = len - 1; i >= 0; i--) {
-	// 							ar_active_now[i].classList.remove('active');
-	// 						}
-	// 						// Active current
-	// 						this.classList.add('active');
-	// 					});
-
-	// 				}
-	// 				break;
-	// 		}//end switch (true)
-
-	// 	}//end for (let i = 0; i < len; i++)
-
-	// 	// Scroll window to top always
-	// 		window.scrollTo(0, 0);
-
-
-	// 	return true
-	// }//end render_components_list
-
-
-
-/**
 * RENDER_FILTER
 * Create the central filter group (components selected, max records, show all, apply button)
 * @param object options
@@ -530,17 +359,27 @@ render_search.prototype.render_search_buttons = function(){
 			parent			: reset_group
 
 		})
-		reset_button.addEventListener('click', function(e){
+		reset_button.addEventListener('click', async function(e){
 			e.stopPropagation()
-			render_filter({
-				self				: self,
-				editing_preset		: self.json_filter,
-				clean_q				: true,
-				allow_duplicates	: true
-			})
 
-			// render buttons
-			self.render_search_buttons()
+			const ar_promises = []
+			for (let i = self.ar_instances.length - 1; i >= 0; i--) {
+				const instance = self.ar_instances[i]
+				ar_promises.push(
+					new Promise(async function(resolve){
+						instance.data.value = []
+						await instance.refresh({
+							build_autoload : false
+						})
+						resolve(instance)
+					})
+				)
+			}
+			const values = await Promise.all(ar_promises)
+
+			const section_tipo = self.search_container_selection_presets.dataset.section_tipo
+			self.save_temp_preset(section_tipo)
+
 		})
 	// Show all
 		const show_all_button = ui.create_dom_element({
@@ -682,9 +521,15 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 * Add too, button close and optional label
 * @return promise bool true
 */
-render_search.prototype.build_search_component = async function(parent_div, path_plain, current_value, q_operator, section_id) {
+render_search.prototype.build_search_component = async function(options) {
 
 	const self = this
+
+	const parent_div		= options.parent_div
+	const path_plain		= options.path_plain
+	const current_value		= options.current_value
+	const q_operator		= options.q_operator
+	const section_id		= options.section_id
 
 	// short vars
 		const path			= JSON.parse(path_plain)
@@ -1205,7 +1050,6 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 			element.classList.remove("or")
 			element.classList.add("and")
 		}
-
 
 		return true
 	}//end toggle_operator_value

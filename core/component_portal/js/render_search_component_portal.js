@@ -42,7 +42,6 @@ render_search_component_portal.prototype.search = async function(options) {
 	// columns_map
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
-		console.log('columns_map:', columns_map);
 
 	// ar_section_record
 		const ar_section_record = await get_section_records({

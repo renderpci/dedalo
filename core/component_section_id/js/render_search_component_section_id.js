@@ -38,6 +38,9 @@ render_search_component_section_id.prototype.search = async function(options) {
 
 	// content_data
 		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_search(self, {
