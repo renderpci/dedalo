@@ -521,9 +521,15 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 * Add too, button close and optional label
 * @return promise bool true
 */
-render_search.prototype.build_search_component = async function(parent_div, path_plain, current_value, q_operator, section_id) {
+render_search.prototype.build_search_component = async function(options) {
 
 	const self = this
+
+	const parent_div		= options.parent_div
+	const path_plain		= options.path_plain
+	const current_value		= options.current_value
+	const q_operator		= options.q_operator
+	const section_id		= options.section_id
 
 	// short vars
 		const path			= JSON.parse(path_plain)

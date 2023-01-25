@@ -72,7 +72,13 @@
 		const section_id = data_parse.section_id
 
 		// Build component html
-		self.build_search_component(wrap_target, path, null, null, section_id).then(()=>{
+		self.build_search_component({
+			parent_div		: wrap_target,
+			path_plain		: path,
+			current_value	: null,
+			q_operator		: null,
+			section_id		: section_id
+		}).then(()=>{
 			//Update the state and save
 			self.update_state({state:'changed'})
 

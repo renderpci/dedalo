@@ -537,7 +537,13 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 					}
 					 const section_id = self.get_section_id()
 					// Add. If not already resolved, add
-						self.build_search_component( dom_element, JSON.stringify(filter.path), current_value, q_operator, section_id)
+						self.build_search_component({
+							parent_div		: dom_element,
+							path_plain		: JSON.stringify(filter.path),
+							current_value	: current_value,
+							q_operator		: q_operator,
+							section_id		: section_id
+						})
 
 					// Set as resolved
 						if (allow_duplicates!==true) {
@@ -720,6 +726,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 	// elements inside
 	// let ar_elements = group_dom_obj.querySelectorAll(":scope > .search_component,:scope > .search_group") //
 	const ar_elements = group_dom_obj.children
+
 	const len = ar_elements.length
 	for (let i = 0; i < len; i++) {
 
