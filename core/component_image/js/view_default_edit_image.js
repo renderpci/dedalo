@@ -267,7 +267,9 @@ const get_buttons = (self) => {
 		})
 
 	// buttons tools
-		ui.add_tools(self, fragment)
+		if( self.show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
 
 	// open svg editor tools
 		const vector_editor = ui.create_dom_element({

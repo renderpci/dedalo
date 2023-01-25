@@ -293,7 +293,9 @@ const get_buttons = (self) => {
 
 
 	// buttons tools
-		ui.add_tools(self, fragment)
+		if( self.show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
 
 	// des
 		// const button_info = ui.create_dom_element({
