@@ -1417,10 +1417,10 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$user_id				= navigator::get_user_id();
-		$target_section_tipo	= $json_data->target_section_tipo;
+		$user_id		= navigator::get_user_id();
+		$section_tipo	= $json_data->section_tipo;
 
-		$editing_preset = search::get_preset($user_id, $target_section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
+		$editing_preset	= search::get_preset($user_id, $section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
 
 		// response
 			$response->result	= $editing_preset;
@@ -1472,10 +1472,10 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$user_id				= navigator::get_user_id();
-		$target_section_tipo	= $json_data->target_section_tipo;
+		$user_id			= navigator::get_user_id();
+		$section_tipo		= $json_data->section_tipo;
 
-		$filter_components = search::filter_get_user_presets($user_id, $target_section_tipo);
+		$filter_components	= search::filter_get_user_presets($user_id, $section_tipo);
 
 		// response
 			$response->result	= $filter_components;
