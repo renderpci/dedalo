@@ -656,32 +656,47 @@
 
 			return $init_response;
 		}else{
+
 			// write test file
-			$file_name = DEDALO_ENTITY .'_'. $user_id.'.cache_test_file.json';
+			$file_name		= DEDALO_ENTITY .'_'. $user_id.'.cache_test_file.json';
+			$custom_prefix	= 'to_delete_';
 			dd_cache::process_and_cache_to_file((object)[
-				'process_file' => DEDALO_CORE_PATH . '/base/cache_test_file.php',
-				'data' => (object)[
-					'session_id' => session_id(),
-					'user_id' => $user_id
+				'process_file'	=> DEDALO_CORE_PATH . '/base/cache_test_file.php',
+				'data'			=> (object)[
+					'session_id'	=> session_id(),
+					'user_id'		=> $user_id
 				],
-				'file_name' => $file_name,
-				'wait' => true
+				'file_name'	=> $file_name,
+				'wait'		=> true,
+				'prefix'	=> $custom_prefix
 			]);
 			// read test file
 			$cache_data = dd_cache::cache_from_file((object)[
-				'file_name' => $file_name
+				'file_name'	=> $file_name,
+				'prefix'	=> $custom_prefix
 			]);
-
+			// check file data
 			if (empty($cache_data)) {
 				$init_response->msg[]	= 'Warning: cache data stream fails. Check your DEDALO_CACHE_MANAGER config to fix it';
 				$init_response->errors	= true;
 				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
 				return $init_response;
+			}else{
+				// delete test file
+				$delete_cache = dd_cache::delete_cache_files([
+					$custom_prefix . $file_name
+				]);
+				if ($delete_cache!==true) {
+					$init_response->msg[]	= 'Warning: delete cache test file fails. Check your DEDALO_CACHE_MANAGER files_path permissions to fix it';
+					$init_response->errors	= true;
+					debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+
+					return $init_response;
+				}
 			}
 		}
 	}
-
 
 // LANGS JS (moved to login.php !)
 	#	# Generate js files with all labels (in not extist current lang file)

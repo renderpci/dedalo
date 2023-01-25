@@ -657,23 +657,23 @@ class login extends common {
 			}
 
 		// precalculate profiles datalist security access in background
-		// This file is generated on every user login
+		// This file is generated on every user login,,launching the process in background
 			$status = dd_cache::process_and_cache_to_file((object)[
-				'process_file' => DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
-				'data' => (object)[
-					'session_id' => session_id(),
-					'user_id' => $user_id
+				'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+				'data'			=> (object)[
+					'session_id'	=> session_id(),
+					'user_id'		=> $user_id
 				],
-				'file_name' => DEDALO_ENTITY .'_'. $user_id.'.cache_tree.json'
+				'file_name'		=> 'cache_tree.json'
 			]);
-			debug_log(__METHOD__." Generating security access datalist in background ".to_string($status), logger::DEBUG);
+			debug_log(__METHOD__." Generating security access datalist in background... ".to_string($status), logger::DEBUG);
 
 		// log : Prepare and save login action
 			$browser = $_SERVER['HTTP_USER_AGENT'];
 			if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
-			$activity_datos['result']		= "allow";
-			$activity_datos['cause']		= "correct user and password";
+			$activity_datos['result']		= 'allow';
+			$activity_datos['cause']		= 'correct user and password';
 			$activity_datos['username']		= $username;
 			$activity_datos['browser']		= $browser;
 			$activity_datos['DB-backup']	= $backup_info;
@@ -895,6 +895,7 @@ class login extends common {
 	/**
 	* VERIFY_LOGIN
 	* Check that the user is authenticated
+	* based in session existing properties
 	* @return bool (true/false)
 	*/
 	private static function verify_login() : bool {
@@ -907,7 +908,6 @@ class login extends common {
 			$_SESSION['dedalo']['auth']['is_logged'] !== 1 ||
 			empty($_SESSION['dedalo']['auth']['salt_secure'])
 			) {
-
 
 			if (empty($_SESSION['dedalo']['auth']['user_id'])) {
 
@@ -959,40 +959,40 @@ class login extends common {
 	/**
 	* QUIT
 	* Made logout
-	* @param object $request_options
+	* @param object $options
 	* @return bool
 	*/
-	public static function Quit(object $request_options) {
+	public static function Quit(object $options) {
 
-		$options = new stdClass();
-			$options->mode	= null;
-			$options->cause	= 'called quit method';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$mode	= $options->mode ?? null;
+			$cause	= $options->cause ?? 'called quit method';
 
+		// already login check
+			if (self::is_logged()!==true) {
+				return false;
+			}
 
-		if (self::is_logged()!==true) {
-			return false;
-		}
+		// session user values
+			$user_id	= $_SESSION['dedalo']['auth']['user_id'];
+			$username	= $_SESSION['dedalo']['auth']['username'];
 
-		$user_id	= $_SESSION['dedalo']['auth']['user_id'];
-		$username	= $_SESSION['dedalo']['auth']['username'];
-
-		// LOCK_COMPONENTS. Remove lock_components elements
+		// lock_components. remove lock_components elements
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 				lock_components::force_unlock_all_components($user_id);
 			}
 
-		// LOGIN ACTIVITY REPORT
+		// login activity report
 			self::login_activity_report(
 				"User $user_id was logout. Bye $username",
 				null,
 				'LOG OUT',
 				// $activity_datos
 				array(
-					'result' 	=> 'quit',
-					'cause' 	=> $options->cause,
-					'username' 	=> $username,
-					'mode' 		=> $options->mode
+					'result'	=> 'quit',
+					'cause'		=> $cause,
+					'username'	=> $username,
+					'mode'		=> $mode
 				)
 			);
 
@@ -1015,16 +1015,22 @@ class login extends common {
 				}
 			}
 
-		#unset($_SESSION['dedalo']['auth']);
-		#unset($_SESSION['dedalo']['config']);
-		$cookie_name = session_name();
-		unset($_SESSION['dedalo']);
-		#setcookie($cookie_name, null, -1, '/');
-		setcookie($cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
-		#unset($_SESSION);
-		debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
+		// reset cookie and session
+			#unset($_SESSION['dedalo']['auth']);
+			#unset($_SESSION['dedalo']['config']);
+			$cookie_name = session_name();
+			unset($_SESSION['dedalo']);
+			#setcookie($cookie_name, null, -1, '/');
+			setcookie($cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+			#unset($_SESSION);
+			debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
 
-		// SAML LOGOUT
+		// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER->files_path)) {
+				dd_cache::delete_cache_files();
+			}
+
+		// saml logout
 			if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
 				# code...
 			}
