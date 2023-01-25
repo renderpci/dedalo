@@ -1,9 +1,144 @@
+/*global get_label, page_globals, SHOW_DEBUG */
+/*eslint no-undef: "error"*/
+
+
+// import
+	import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
+
+	/**
+	* LOAD_USER_SEARCH_PRESET
+	* Onclick on search presets list, load all user presets from db to get the list names
+	* @return true
+	*/
+	export const load_user_search_preset = async function(self) {
+
+		// SQO
+			const locator_user = {
+				section_id		: page_globals.user_id,
+				section_tipo	: 'dd128'
+			}
+			const locator_public_true = {
+				section_id			: '1',
+				section_tipo		: 'dd64',
+				from_component_tipo	: 'dd640'
+			}
+			const fiter = {
+				"$or": [
+					{
+						q		: [ locator_public_true ],
+						path	: [{
+							section_tipo	: 'dd623',
+							component_tipo	: 'dd640',
+							model			: 'component_radio_button',
+							name			: 'Public'
+						}],
+						type: 'jsonb'
+					},
+					{
+						"$and": [
+							{
+								q		: [ self.section_tipo ],
+								path	: [{
+									section_tipo	: 'dd623',
+									component_tipo	: 'dd642',
+									model			: 'component_input_text',
+									name			: 'Section tipo'
+								}],
+								type: 'jsonb'
+							},
+							{
+								q		: [ locator_user ],
+								path	: [{
+									section_tipo	: 'dd623',
+									component_tipo	: 'dd654',
+									model			: 'component_select',
+									name			: 'User'
+								}],
+								type: 'jsonb'
+							}
+						]
+					}
+				]
+			};
+		const sqo = {
+			limit			: 10,
+			section_tipo	: [{
+				tipo : 'dd623'
+			}],
+			filter			: fiter
+		}
+
+		const request_config = [{
+			sqo		: sqo,
+			show	: {
+				ddo_map :[{
+					section_tipo	: 'dd623',
+					tipo			: 'dd624',
+					parent			: 'dd623'
+				}]
+			},
+			api_engine	: 'dedalo',
+			type		: 'main'
+		}]
+
+
+		const instance_options = {
+			model			: 'section',
+			tipo			: 'dd623',
+			section_tipo	: 'dd623',
+			section_id		: null,
+			mode			: 'list',
+			lang			: page_globals.dedalo_data_lang,
+			request_config	: request_config,
+			add_show 		: true,
+			id_variant		: self.section_tipo + '_search_user_presets'
+		}
+
+
+		const section = await instances.get_instance(instance_options)
+		await section.build(true)
+
+		// section. render another node of component caller and append to container
+		section.render_views.push(
+			{
+				view	: 'search_user_presets',
+				mode	: 'list',
+				render	: 'view_search_user_presets',
+				path 	: '../../search/js/view_search_user_presets.js'
+			}
+		)
+		section.context.view	= 'search_user_presets'
+		section.filter			= false
+
+		self.user_presets_section = section
+
+		return true
+	}//end load_user_search_preset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 	/**
 	* LOAD_SEARCH_PRESET
-	* Onclick arrow button in search presets list, load jquery preset from db and apply to current canvas
+	* Onclick arrow button in search presets list, load preset from db and apply to current canvas
 	* @return true
 	*/
 	export const load_search_preset = async function(button_obj) {

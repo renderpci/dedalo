@@ -254,17 +254,9 @@ search.prototype.build = async function(){
 		*/
 
 	// user_presets. load user preset data
-		ar_promises.push( new Promise(async function(resolve){
-
-			const user_presets = await data_manager.request({
-				body : {
-					action				: "filter_get_user_presets",
-					target_section_tipo	: self.section_tipo
-				}
-			})
-
-			resolve(user_presets)
-		}))
+		ar_promises.push(
+			load_user_search_preset(self)
+		)
 
 	// get_section_elements_context
 		ar_promises.push( self.get_section_elements_context({
