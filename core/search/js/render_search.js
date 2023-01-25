@@ -359,17 +359,27 @@ render_search.prototype.render_search_buttons = function(){
 			parent			: reset_group
 
 		})
-		reset_button.addEventListener('click', function(e){
+		reset_button.addEventListener('click', async function(e){
 			e.stopPropagation()
-			render_filter({
-				self				: self,
-				editing_preset		: self.json_filter,
-				clean_q				: true,
-				allow_duplicates	: true
-			})
 
-			// render buttons
-			self.render_search_buttons()
+			const ar_promises = []
+			for (let i = self.ar_instances.length - 1; i >= 0; i--) {
+				const instance = self.ar_instances[i]
+				ar_promises.push(
+					new Promise(async function(resolve){
+						instance.data.value = []
+						await instance.refresh({
+							build_autoload : false
+						})
+						resolve(instance)
+					})
+				)
+			}
+			const values = await Promise.all(ar_promises)
+
+			const section_tipo = self.search_container_selection_presets.dataset.section_tipo
+			self.save_temp_preset(section_tipo)
+
 		})
 	// Show all
 		const show_all_button = ui.create_dom_element({
