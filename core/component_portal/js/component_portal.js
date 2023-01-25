@@ -203,9 +203,10 @@ component_portal.prototype.init = async function(options) {
 				}
 			}
 
-	// render views
-		// definition of the render views that could used.
-		// if tools or other components could add specific views dynamically
+	// render_views
+		// Definition of the rendering views that could de used.
+		// Tools or another components could add specific views dynamically
+		// Sample:
 		// {
 		// 		view	: 'default',
 		// 		mode	: 'edit',

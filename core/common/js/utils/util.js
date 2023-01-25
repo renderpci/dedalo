@@ -396,15 +396,19 @@ export function array_equals(source, array) {
 	// 	}
 	// }//end object_equals
 export function  object_equals (o1, o2){
+
 	// check if the o1 is object
 	// null is a object but it's not possible check his keys, so use the ===
 	// check if the object keys has length, has any property
-	const equal = typeof o1 === 'object'
-		&& (o1 !== null || o2 !== null )
-		&& Object.keys(o1).length > 0
-			? Object.keys(o1).length === Object.keys(o2).length
-				&& Object.keys(o1).every(p => object_equals(o1[p], o2[p]))
-			: o1 === o2;
+	const equal = (o1 !== null && o2 !== null) && typeof o1 === 'object' && Object.keys(o1).length > 0
+		? Object.keys(o1).length === Object.keys(o2).length
+		  && Object.keys(o1).every(p => is_equal(o1[p], o2[p]))
+		: o1 === o2;
+
+	// debug
+		// console.log('o1:', o1);
+		// console.log('o2:', o2);
+		// console.log('equal:', equal);
 
 	return equal
 }//end object_equals

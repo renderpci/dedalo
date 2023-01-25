@@ -9,7 +9,7 @@
 	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_edit_component_json, on_change} from '../../component_json/js/render_edit_component_json.js'
+	import {render_edit_component_json} from '../../component_json/js/render_edit_component_json.js'
 	import {render_list_component_json} from '../../component_json/js/render_list_component_json.js'
 	import {render_search_component_json} from '../../component_json/js/render_search_component_json.js'
 
@@ -106,19 +106,24 @@ component_json.prototype.load_editor_files = async function() {
 
 /**
 * SET_VALUE
-* @return promise
+* Overwrites component_common method
+* @param mixed value
+* @return bool
 */
-component_json.prototype.set_value = async function(value) {
+component_json.prototype.set_value = async function(value, key=0) {
 
 	const self = this
 
-	const editor = self.editors[0]
+	const editor = self.editors[key]
 
 	await editor.set(value)
-	// await editor.update(value);
-	await editor.refresh();
 
-	on_change(self, editor)
+	await editor.refresh({
+		build_autoload	: false,
+		render_level	: 'content'
+	});
+
+	change_handler(self, value, key)
 
 	return true
 }//end set_value
@@ -126,8 +131,36 @@ component_json.prototype.set_value = async function(value) {
 
 
 /**
+* CHANGE_HANDLER
+* Updates component changed_data value
+* @param object self
+* @param mixed value
+* 	JSON editor content as JSON format
+* @param int key
+* @return bool changed
+*/
+export const change_handler = function(self, value, key) {
+
+	// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: value
+		})
+
+	// fix instance changed_data
+		const changed = self.set_changed_data(changed_data_item)
+
+	return changed
+}//end change_handler
+
+
+
+/**
 * SAVE_SEQUENCE
-* @return promise
+* Check if value is JSON valid and save it when true
+* @param object editor
+* @return object|bool
 */
 component_json.prototype.save_sequence = async function(editor) {
 
@@ -175,21 +208,18 @@ component_json.prototype.save_sequence = async function(editor) {
 			return false
 		}
 
-	// save sequence
-		return new Promise(function(resolve){
+	// changed_data
+		const changed_data = [Object.freeze({
+			action	: 'update',
+			key		: 0,
+			value	: current_value
+		})]
 
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				key		: 0,
-				value	: current_value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-			.then((save_response)=>{
-
-				resolve(save_response)
-			})
+	// save_response
+		const save_response = await self.change_value({
+			changed_data	: changed_data,
+			refresh			: false
 		})
+
+	return save_response
 }//end save_sequence
