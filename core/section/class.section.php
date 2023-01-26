@@ -3841,5 +3841,32 @@ class section extends common {
 
 
 
+	/**
+	* GET_PERMISSIONS
+	* @return int $this->permissions
+	*/
+	public function get_section_permissions() : int {
+
+			$this->permissions = common::get_permissions($this->tipo, $this->tipo);
+
+			// logged user id
+				$user_id = $_SESSION['dedalo']['auth']['user_id'];
+
+			// user section . Allow user edit self data (used by tool_user_admin)
+				if ($this->permissions<2 &&
+					$this->tipo===DEDALO_SECTION_USERS_TIPO &&
+					$this->section_id==$user_id) {
+					return 1;
+				}
+
+			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1) {
+				return 1;
+			}
+
+		return $this->permissions;
+	}//end get_permissions
+
+
+
 
 }//end class section
