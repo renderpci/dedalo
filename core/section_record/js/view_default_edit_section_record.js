@@ -48,13 +48,13 @@ view_default_edit_section_record.render = async function(self, options) {
 		// 	content_data	: content_data
 		// })
 		const wrapper = document.createElement('div')
-			  wrapper.classList.add([
+			  wrapper.classList.add(
 			  	'wrapper_section_record',
 			  	'section_record',
 			  	self.tipo,
 			  	self.mode,
 			  	self.view
-			  ])
+			  )
 			  wrapper.appendChild(content_data)
 
 	// wrapper_section_record section_record numisdata3 numisdata3_numisdata3 edit view_default disabled_component
