@@ -80,82 +80,12 @@ const get_content_data = async function(self) {
 			parent 			: fragment
 		})
 
-	// components
-		const ar_promises			= []
-		const component_list		= self.get_ddo_map()
-		const component_list_length	= component_list.length
-		for (let i = 0; i < component_list_length; i++) {
+	// section
+		self.user_section.render()
+		.then(function(section_node){
+			components_container.appendChild(section_node)
 
-			// promise add and continue. Init and build
-			ar_promises.push(new Promise(async function(resolve){
-
-				// context
-					const current_context = Object.assign({}, component_list[i])
-
-				// init
-					const instance_options = {
-						model				: current_context.model,
-						tipo				: current_context.tipo,
-						section_tipo		: current_context.section_tipo,
-						section_id			: page_globals.user_id,
-						mode				: current_context.mode,
-						lang				: current_context.lang || page_globals.dedalo_data_lang,
-						section_lang		: self.lang,
-						parent				: current_context.parent,
-						type				: current_context.type,
-						context				: current_context,
-						id_variant			: self.model
-						// data				: current_data,
-						// datum			: self.datum,
-						// request_config	: current_context.request_config,
-						// columns_map		: current_context.columns_map,
-						// caller			: self
-					}
-					const component_instance = await instances.get_instance(instance_options)
-
-				// build
-					await component_instance.build(true)
-
-				// (!) update permissions more restrictively after build
-					if (typeof current_context.permissions!=='undefined') {
-						component_instance.permissions = current_context.permissions
-					}
-
-				// render
-					const node = await component_instance.render()
-					// components_container.appendChild(node)
-
-				resolve(node)
-			}))
-		}//end for (let i = 0; i < component_list_length; i++)
-
-	// ar_instances. When all section_record instances are built, set them
-		await Promise.all(ar_promises).then((nodes) => {
-			// add components rendered nodes to DOM components_container
-			const nodes_length = nodes.length
-			for (let i = 0; i < nodes_length; i++) {
-				const node = nodes[i]
-				components_container.appendChild(node)
-			}
-		});
-
-	// source component
-		// const source_component_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'source_component_container',
-		// 	parent			: components_container
-		// })
-		// self.main_element.render()
-		// .then(function(component_node){
-		// 	source_component_container.appendChild(component_node)
-		// })
-
-	// buttons container
-		// const buttons_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'buttons_container',
-		// 	parent			: components_container
-		// })
+		})
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
