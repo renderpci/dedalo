@@ -1832,8 +1832,8 @@ abstract class common {
 						$mode					= $dd_object->mode ?? $this->get_mode();
 						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$label					= $dd_object->label ?? '';
-						// $view				= $dd_object->view ?? null;
-
+						$view					= $dd_object->view ?? null;
+					
 					// ar_subcontext_calculated
 						// $cid = $current_section_tipo . '_' . $section_id . '_' . $current_tipo;
 						// if (in_array($cid, $ar_subcontext_calculated)) {
@@ -1974,9 +1974,9 @@ abstract class common {
 									}
 
 								// inject view
-									// if(isset($view)){
-									// 	$related_element->view = $view;
-									// }
+									if(!empty($view)){
+										$related_element->view = $view;
+									}
 								break;
 
 							// grouper case
@@ -3053,13 +3053,15 @@ abstract class common {
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
 						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+						// $legacy_model 				= RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo)
 						$current_tipo_RecordObj_dd	= new RecordObj_dd($current_tipo);
 						$current_tipo_properties	= $current_tipo_RecordObj_dd->get_properties();
 						$own_view					= isset($current_tipo_properties->view)
 							? $current_tipo_properties->view
-							: ($model === 'component_portal'
-								? 'line'
-								: null); // 'default'
+							: common::resolve_view((object)[
+								'model'	=> $model,
+								'tipo'	=> $current_tipo
+							  ]);
 
 						$view = isset($children_view)
 							? $children_view
@@ -4066,17 +4068,39 @@ abstract class common {
 				return $properties->view;
 			}
 
+		// resolve legacy models and exceptions
+			$options = new stdClass();
+				$options->model	= $this->get_model();
+				$options->tipo	= $this->get_tipo();
+
+			$view = common::resolve_view($options);
+
+		return $view;
+	}//end get_view
+
+
+
+	/**
+	* RESOlVE_VIEW
+	* @return string|null $view
+	*/
+	public static function resolve_view(object $options) : ?string {
+
+		// options
+			$model	= $options->model;
+			$tipo	= $options->tipo;
+
 		// non relation components cases as 'component_input_text'
-			// $ar_related = component_relation_common::get_components_with_relations();
+		// $ar_related = component_relation_common::get_components_with_relations();
 			$components_to_change = [
 				'component_portal',
 				'component_text_area'
 			];
 
 		// relation components like 'component_portal'
-			$legacy_model = (in_array($this->get_model(), $components_to_change))
-				? RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo)
-				: $this->get_model();
+			$legacy_model = (in_array($model, $components_to_change))
+				? RecordObj_dd::get_legacy_model_name_by_tipo($tipo)
+				: $model;
 
 		// view
 			switch ($legacy_model) {
@@ -4100,9 +4124,8 @@ abstract class common {
 					break;
 			}
 
-
 		return $view;
-	}//end get_view
+	}//end resolve_view
 
 
 
