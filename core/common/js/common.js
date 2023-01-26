@@ -299,9 +299,13 @@ common.prototype.render = async function (options={}) {
 			  })()
 			: render_mode
 
-		const node = await self[current_render_mode]({
-			render_level : render_level
-		})
+		// render options
+			const render_options = Object.assign({
+				render_level	: render_level,
+				render_mode		: render_mode
+			}, options)
+
+		const node = await self[current_render_mode](render_options)
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
