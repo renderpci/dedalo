@@ -1844,6 +1844,35 @@ abstract class component_common extends common {
 				$item->label		= $label;
 				$item->section_id	= $current_row->section_id;
 
+			// add tool information when the component is component_security_tools
+			// the component_security_tools is built as component_check_box and rendered as view
+			// this information is required to get specific tool information
+				if($this->tipo === DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO){
+					// create the section of the tool and inject his data ($current_row) to avoid call to DDBB
+					$section = section::get_instance(
+						$current_row->section_id, // string|null section_id
+						$current_row->section_tipo // string section_tipo
+					);
+					$section->set_dato($current_row);
+
+					// create the component of tool_simple_object_tipo and get his data
+					$component_tool_simple_object_tipo = 'dd1353';
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tool_simple_object_tipo);
+					$component_tool_name = component_common::get_instance(
+						$model_name, // string model
+						$component_tool_simple_object_tipo, // string tipo
+						$current_row->section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$current_row->section_tipo // string section_tipo
+					);
+					$data = $component_tool_name->get_dato();
+
+					// add to the datalist the name and always_active
+					$item->tool_name		= $data[0]->name;
+					$item->always_active	= $data[0]->always_active;
+				}
+
 			$result[] = $item;
 		}
 		# Sort result for easy user select
