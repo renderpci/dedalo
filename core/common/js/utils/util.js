@@ -1,4 +1,4 @@
-/* global Promise, SHOW_DEBUG, structuredClone */
+/* global Promise, structuredClone */
 /*eslint no-undef: "error"*/
 
 
@@ -517,3 +517,20 @@ export function find_up_node(el, target_tag, compare) {
 
 	return null;
 }//end find_up_node
+
+
+
+/**
+* PAUSE
+* Creates a pause in the async execution
+* using a promise over a timeout
+* @param int milliseconds
+* @return promise
+*/
+export function pause(milliseconds) {
+	return new Promise(function(resolve){
+		setTimeout(function(){
+			resolve(true)
+		}, milliseconds)
+	})
+}//end pause
