@@ -2823,8 +2823,8 @@
 		Fixed redundancy data in class ontology->get_children_recursive when section is virtual
 		Removed tool_import_files limitConcurrentUploads param that block normal uploads when value is more than 1 (tool_import_files_dcnav too)
 		Fix z-index issue in ontology tree mark tag
-
-
+	Released version 5.9.4
+		Check tm permissions to show or hide tm_list and component_history in inspector
 	[/HISTORY]
 
 
@@ -2848,7 +2848,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.3';
+	$DEDALO_VERSION = '5.9.3a';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
