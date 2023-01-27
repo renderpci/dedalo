@@ -303,6 +303,105 @@ class ontology {
 
 
 	/**
+	* GET_CHILDREN_RECURSIVE_OLD . TS TREE FULL FROM PARENT
+	* You get the types of the sections / areas and hierarchically break down their section_group
+	* @param string $terminoID
+	* @return array $ar_tesauro
+	*	array recursive of thesaurus structure children
+	*/
+		// public static function get_children_recursive_OLD(string $tipo) : array {
+
+		// 	if(SHOW_DEBUG===true) {
+		// 		$start_time=microtime(1);
+		// 	}
+
+		// 	# STATIC CACHE
+		// 	static $childrens_recursive_data;
+		// 	if(isset($childrens_recursive_data[$tipo])) return $childrens_recursive_data[$tipo];
+
+		// 	$ar_elements = [];
+
+		// 	$source_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 	switch ($source_model) {
+
+		// 		case 'section':
+
+		// 			$section_tipo				= $tipo;
+		// 			$ar_modelo_name_required	= array('section_group','section_tab','button_','relation_list','time_machine_list');
+
+		// 			# Real section
+		// 			//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
+		// 			$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+
+		// 			# Virtual section too is neccesary (buttons specifics)
+		// 			$ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
+		// 			$ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
+		// 			break;
+
+		// 		default:
+		// 			# Areas
+		// 			$RecordObj_dd		= new RecordObj_dd($tipo);
+		// 			$ar_ts_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
+		// 			break;
+		// 	}
+
+
+		// 	$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+
+		// 	// ar_exclude_components
+		// 		$dedalo_version = explode(".", DEDALO_VERSION);
+		// 		if ( (int)$dedalo_version[0]>5 ) {
+		// 			$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? DEDALO_AR_EXCLUDE_COMPONENTS : [];
+		// 		}else{
+		// 			$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
+		// 		}
+
+		// 	foreach((array)$ar_ts_childrens as $element_tipo) {
+
+		// 		// Remove_exclude_models
+		// 			$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+		// 			if( in_array($component_model, $ar_exclude_modelo)) {
+		// 				continue ;
+		// 			}
+
+		// 		// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+		// 			if (in_array($element_tipo, $ar_exclude_components)) {
+		// 				continue;
+		// 			}
+
+		// 		// get the ontology json format
+		// 			$ar_elements[]	= ontology::tipo_to_json_item($element_tipo, [
+		// 				'tipo'			=> true,
+		// 				'tld'			=> false,
+		// 				'is_model'		=> false,
+		// 				'model'			=> true,
+		// 				'model_tipo'	=> false,
+		// 				'parent'		=> true,
+		// 				'order'			=> true,
+		// 				'translatable'	=> false,
+		// 				'properties'	=> false,
+		// 				'relations'		=> false,
+		// 				'descriptors'	=> false,
+		// 				'label'			=> true
+		// 			]);
+
+		// 		$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo));
+		// 	}
+
+		// 	# STORE CACHE DATA
+		// 	$childrens_recursive_data[$tipo] = $ar_elements;
+
+		// 	if(SHOW_DEBUG===true) {
+		// 		$total=round(microtime(1)-$start_time,3);
+		// 		#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);
+		// 	}
+
+		// 	return $ar_elements;
+		// }//end get_children_recursive_OLD
+
+
+
+	/**
 	* GET_CHILDREN_RECURSIVE . TS TREE FULL FROM PARENT
 	* You get the types of the sections / areas and hierarchically break down their section_group
 	* @param string $terminoID
@@ -312,12 +411,12 @@ class ontology {
 	public static function get_children_recursive(string $tipo) : array {
 
 		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);
+			// $start_time=microtime(1);
 		}
 
 		# STATIC CACHE
-		static $childrens_recursive_data;
-		if(isset($childrens_recursive_data[$tipo])) return $childrens_recursive_data[$tipo];
+		static $children_recursive_data;
+		if(isset($children_recursive_data[$tipo])) return $children_recursive_data[$tipo];
 
 		$ar_elements = [];
 
@@ -329,47 +428,70 @@ class ontology {
 				$section_tipo				= $tipo;
 				$ar_modelo_name_required	= array('section_group','section_tab','button_','relation_list','time_machine_list');
 
-				# Real section
-				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
-				$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+				// real section
+					$ar_ts_children = section::get_ar_children_tipo_by_model_name_in_section(
+						$section_tipo, // string section_tipo
+						$ar_modelo_name_required, // array ar_modelo_name_required
+						true, // bool from_cache
+						true, // bool resolve_virtual
+						false, // bool recursive
+						false // bool search_exact
+					);
 
-				# Virtual section too is neccesary (buttons specifics)
-				$ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
-				$ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
+				// virtual case add too
+					$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
+					if ($section_tipo!==$section_real_tipo) {
+						// Virtual section too is necessary (buttons specifics)
+						$ar_ts_children_v = section::get_ar_children_tipo_by_model_name_in_section(
+							$section_tipo, // string section_tipo
+							$ar_modelo_name_required, // array ar_modelo_name_required
+							true, // bool from_cache
+							false, // bool resolve_virtual
+							false, // bool recursive
+							false// bool search_exact
+						);
+						$ar_ts_children	= array_merge($ar_ts_children, $ar_ts_children_v);
+					}
 				break;
 
 			default:
 				# Areas
-				$RecordObj_dd		= new RecordObj_dd($tipo);
-				$ar_ts_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
+				$RecordObj_dd	= new RecordObj_dd($tipo);
+				$ar_ts_children	= $RecordObj_dd->get_ar_childrens_of_this();
 				break;
 		}
 
-
-		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+		// ar_exclude_model
+			$ar_exclude_model = array(
+				'component_security_administrator',
+				'section_list','search_list',
+				'component_semantic_node',
+				'box_elements',
+				'exclude_elements'
+			);
 
 		// ar_exclude_components
-			$dedalo_version = explode(".", DEDALO_VERSION);
-			if ( (int)$dedalo_version[0]>5 ) {
-				$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? DEDALO_AR_EXCLUDE_COMPONENTS : [];
-			}else{
-				$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
-			}
+			$dedalo_version = explode('.', DEDALO_VERSION);
+			$ar_exclude_components = (int)$dedalo_version[0]>5
+				? (defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? DEDALO_AR_EXCLUDE_COMPONENTS : []) // v6
+				: (defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : []); // v5
 
-		foreach((array)$ar_ts_childrens as $element_tipo) {
+		// $ar_children = array_unique($ar_ts_children);
+		$ar_children = $ar_ts_children;
+		foreach($ar_children as $element_tipo) {
 
 			// Remove_exclude_models
 				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-				if( in_array($component_model, $ar_exclude_modelo)) {
+				if( in_array($component_model, $ar_exclude_model)) {
 					continue ;
 				}
 
-			// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+			// remove_exclude_terms : config excludes. If installation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
 				if (in_array($element_tipo, $ar_exclude_components)) {
 					continue;
 				}
 
-			// get the ontology json format
+			// get the ontology JSON format
 				$ar_elements[]	= ontology::tipo_to_json_item($element_tipo, [
 					'tipo'			=> true,
 					'tld'			=> false,
@@ -385,15 +507,18 @@ class ontology {
 					'label'			=> true
 				]);
 
-			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo));
+			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo) );
 		}
 
 		# STORE CACHE DATA
-		$childrens_recursive_data[$tipo] = $ar_elements;
+		$children_recursive_data[$tipo] = $ar_elements;
 
 		if(SHOW_DEBUG===true) {
-			$total=round(microtime(1)-$start_time,3);
-			#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);
+			// $total=round(microtime(1)-$start_time,3);
+			// debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);
+			// if ($tipo==='numisdata3') {
+			// 	dump($ar_elements, ' //////// ar_elementss ++ '.to_string($tipo));
+			// }
 		}
 
 		return $ar_elements;

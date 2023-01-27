@@ -2819,7 +2819,10 @@
 		Removed unnecessary 'htmlspecialchars' conversion in tool_export that cause html chars into csv files
 		Valencia 13-01-2023T15:54:00
 		Added component_info users_activity date range selection
-
+		Valencia 24-01-2023T20:48:00
+		Fixed redundancy data in class ontology->get_children_recursive when section is virtual
+		Removed tool_import_files limitConcurrentUploads param that block normal uploads when value is more than 1 (tool_import_files_dcnav too)
+		Fix z-index issue in ontology tree mark tag
 
 
 	[/HISTORY]
@@ -2851,7 +2854,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '13-01-2023T15:54:00');
+	define('DEDALO_BUILD'	, '24-01-2023T20:48:00');
 
 
 
