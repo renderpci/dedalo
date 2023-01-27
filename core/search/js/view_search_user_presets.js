@@ -1,4 +1,4 @@
-/*global */
+/*global get_label*/
 /*eslint no-undef: "error"*/
 
 
@@ -6,7 +6,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone} from '../../common/js/utils/index.js'
+	// import {pause} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
@@ -101,13 +101,14 @@ view_search_user_presets.render = async function(self, options) {
 			}else{
 				// flat columns create a sequence of grid widths taking care of sub-column space
 				// like 1fr 1fr 1fr 3fr 1fr
-				const css_object = {
-					'.list_body' : {
-						'grid-template-columns' : '1rem 1rem auto 1rem'
-					}
-				}
-				// use calculated css
-				set_element_css(selector, css_object)
+				// const css_object = {
+				// 	'.list_body' : {
+				// 		'grid-template-columns' : '1rem 1rem auto 1rem'
+				// 	}
+				// }
+				// // use calculated css
+				// set_element_css(selector, css_object)
+				// (!) grid columns defined in search.css
 			}
 
 	// content_data append
@@ -139,7 +140,8 @@ view_search_user_presets.render = async function(self, options) {
 */
 const get_content_data = async function(ar_section_record, self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// add all section_record rendered nodes
 		const ar_section_record_length = ar_section_record.length

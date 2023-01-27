@@ -2865,7 +2865,7 @@ class search {
 
 
 
-	############################ FILTER FUNCTIONS #################################
+	############################ SEARCH FILTER FUNCTIONS #################################
 
 
 
@@ -3106,6 +3106,7 @@ class search {
 
 	/**
 	* SEARCH_OPTIONS_TITLE
+	* Creates the HTML of the components in search mode to draw the tool tip
 	* @param array $search_operators_info
 	*	Array of operator => label like: ... => between
 	* @return string $search_options_title
@@ -3116,14 +3117,15 @@ class search {
 
 		if (!empty($search_operators_info)) {
 
-			$search_options_title .= '<b>'.label::get_label('opciones_de_busqueda') . ':</b>';
+			$search_options_title .= '<b>' . label::get_label('opciones_de_busqueda') . ':</b>';
 			foreach ($search_operators_info as $ikey => $ivalue) {
-				$search_options_title .= '<div class="search_options_title_item"><span>' . $ikey .'</span><span>'. label::get_label($ivalue).'</span></div>';
+
+				$search_options_title .= '<div class="search_options_title_item">';
+				$search_options_title .= '<span>' . $ikey .'</span>';
+				$search_options_title .= '<span>'. label::get_label($ivalue).'</span>';
+				$search_options_title .= '</div>';
 			}
-
-			#$search_options_title = htmlspecialchars($search_options_title);
 		}
-
 
 		return $search_options_title;
 	}//end search_options_title

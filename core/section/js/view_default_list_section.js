@@ -62,8 +62,10 @@ view_default_list_section.render = async function(self, options) {
 			return content_data
 		}
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
+	// buttons add
 		if (self.buttons && self.mode!=='tm') {
 			const buttons_node = get_buttons(self);
 			if(buttons_node){
@@ -196,7 +198,9 @@ const get_content_data = async function(ar_section_record, self) {
 			// parallel mode
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render()
+					const render_promise_node = ar_section_record[i].render({
+						add_hilite_row : true
+					})
 					ar_promises.push(render_promise_node)
 				}
 				await Promise.all(ar_promises).then(function(values) {
@@ -263,7 +267,6 @@ const rebuild_columns_map = async function(self) {
 
 	return columns_map
 }//end rebuild_columns_map
-
 
 
 
