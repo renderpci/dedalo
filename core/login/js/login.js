@@ -213,10 +213,10 @@ login.prototype.action_dispatch = async function(api_response) {
 		if (api_response.result===true) {
 
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
-			const files_loader = render_files_loader({
-				on_load_finish : load_finish
-			})
-			self.node.content_data.top.appendChild(files_loader)
+				const files_loader = render_files_loader({
+					on_load_finish : load_finish
+				})
+				self.node.content_data.top.appendChild(files_loader)
 
 			// launch worker cache
 				const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
@@ -235,6 +235,9 @@ login.prototype.action_dispatch = async function(api_response) {
 						// self.node.content_data.info.classList.add('hide')
 						// show things
 						self.node.content_data.top.classList.remove('hide')
+
+						// raspa_loading
+						self.node.content_data.classList.add('raspa_loading')
 					}
 
 					// send message data to files_loader function
