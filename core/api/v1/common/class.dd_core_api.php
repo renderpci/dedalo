@@ -1231,38 +1231,7 @@ final class dd_core_api {
 
 
 
-	/**
-	* FILTER_GET_EDITING_PRESET
-	* Loads from temp presets record the last filter saved
-	* @param object $options
-	* @return object $response
-	*/
-	public static function filter_get_editing_preset(object $options) : object {
-
-		session_write_close();
-
-		// options
-			$section_tipo = $options->section_tipo;
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		// get_preset
-			$result	= search::get_preset(
-				navigator::get_user_id(),
-				$section_tipo,
-				DEDALO_TEMP_PRESET_SECTION_TIPO
-			);
-
-		// response
-			$response->result	= $result;
-			$response->msg		= 'OK. Request done';
-
-
-		return $response;
-	}//end filter_get_editing_preset
+	// search methods ///////////////////////////////////
 
 
 
