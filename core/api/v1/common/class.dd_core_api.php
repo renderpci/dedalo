@@ -1474,39 +1474,6 @@ final class dd_core_api {
 
 
 	/**
-	* FILTER_GET_USER_PRESETS
-	* @param object $options
-	* @return object $response
-	*/
-	public static function filter_get_user_presets(object $options) : object {
-
-		session_write_close();
-
-		// options
-			$section_tipo = $options->section_tipo;
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		// get_user_presets
-			$result	= search::filter_get_user_presets(
-				navigator::get_user_id(),
-				$section_tipo
-			);
-
-		// response
-			$response->result	= $result;
-			$response->msg		= 'OK. Request done';
-
-
-		return $response;
-	}//end filter_get_user_presets
-
-
-
-	/**
 	* ONTOLOGY_GET_CHILDREN_RECURSIVE
 	* Calculate recursively the children of given term
 	* @param object $options
