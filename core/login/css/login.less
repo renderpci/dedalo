@@ -37,6 +37,23 @@
 		max-width: 24em;
 		padding: 2em;
 
+		&.raspa_loading {
+			&:before {
+				background-image: url(../../themes/default/raspa-mirando-pantalla.jpg);
+				background-position: -314px 0;
+				background-repeat: no-repeat;
+				background-size: 882px;
+				content: '';
+				position: fixed;
+				height: 100%;
+				width: 100%;
+				z-index: -1;
+				top: 0px;
+				left: 0px;
+				opacity: 0.25;
+			}
+		}
+
 		>.top {
 			text-align: center;
 			.loader_label {
