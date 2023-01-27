@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG */
+/*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -23,6 +23,7 @@
 		on_drop
 	} from './search_drag.js'
 	import {
+		get_editing_preset,
 		load_user_search_presets,
 		load_search_preset
 	} from './search_user_presets.js'
@@ -87,11 +88,14 @@ search.prototype.init = async function(options) {
 	const self = this
 
 	// options
-		self.caller					= options.caller
-		self.context				= options.caller.context
-		self.mode					= options.mode
+		self.caller		= options.caller
+		self.context	= options.caller.context
+		self.mode		= options.mode
+		self.lang		= options.lang || page_globals.dedalo_data_lang
+
 
 	// short vars
+		self.type					= 'filter'
 		self.section_tipo			= self.caller.section_tipo
 		self.events_tokens			= []
 		self.ar_instances			= []
@@ -110,7 +114,7 @@ search.prototype.init = async function(options) {
 			? self.caller.get_sections_selector_data()
 			: null
 
-	// dom stored pointers
+	// DOM stored pointers
 		self.wrapper							= null
 		self.search_global_container			= null
 		self.search_container_selector			= null
@@ -154,12 +158,12 @@ search.prototype.init = async function(options) {
 		}
 
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
-		// self.events_tokens.push(
-		// 	event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
-		// )
-		// function fn_toggle_search_panel(button_node) {
-		// 	toggle_search_panel(self)
-		// }
+			// self.events_tokens.push(
+			// 	event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+			// )
+			// function fn_toggle_search_panel(button_node) {
+			// 	toggle_search_panel(self)
+			// }
 
 	// status update
 		self.status = 'initiated'
@@ -250,7 +254,7 @@ search.prototype.build = async function(){
 		//load_all_section_elements_context()
 		*/
 
-	// user_presets. load user preset data
+	// user_presets. load user preset data (list of user presets from section dd623)
 		ar_promises.push(
 			load_user_search_presets(self)
 		)
@@ -269,9 +273,9 @@ search.prototype.build = async function(){
 	// wait until all request are resolved
 		await Promise.allSettled(ar_promises);
 
-
 	// status update
 		self.status = 'built'
+
 
 	return true
 }//end build
@@ -280,7 +284,7 @@ search.prototype.build = async function(){
 
 /**
 * DES RENDER
-* @return promise resolve dom element filter_wrapper
+* @return promise resolve DOM element filter_wrapper
 */
 	// search.prototype.render = async function() {
 
@@ -533,9 +537,8 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 						}
 				}
 
-		}else
 		// If key contains $ is a group
-		if (key.indexOf('$')!==-1) {
+		}else if (key.indexOf('$')!==-1) {
 
 			// Case is group
 				const ar_data = filter[key]
@@ -604,10 +607,7 @@ search.prototype.get_component_instance = async function(options) {
 				section_tipo	: section_tipo,
 				section_id		: section_id,
 				mode			: 'search',
-				lang			: lang,
-				// context			: context
-				// data			: current_data,
-				// datum		: current_datum
+				lang			: lang
 			}
 			const component_instance = await instances.get_instance(component_options)
 
@@ -632,6 +632,7 @@ search.prototype.get_component_instance = async function(options) {
 	// add instance
 		self.ar_instances.push(component_instance)
 
+
 	return component_instance
 }//end get_component_instance
 
@@ -650,10 +651,11 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 	const mode				= options.mode || 'default'
 	const save_arguments	= options.save_arguments
 
-	const json_query_obj = {
-		id 		: "temp",
-		filter 	: {}
-	}
+	// json_query_obj
+		const json_query_obj = {
+			id 		: 'temp',
+			filter 	: {}
+		}
 
 	// First level
 		const root_search_group = self.root_search_group
@@ -681,7 +683,7 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 			}
 		}
 
-	// Add object with groups fo filter array
+	// Add object with groups to filter array
 		json_query_obj.filter = filter_obj
 
 
@@ -1084,6 +1086,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	}//end update_section
 
 
+
 /**
 * TRACK_SHOW_PANEL
 * Manage cookies of user opened/closed panels
@@ -1178,7 +1181,7 @@ search.prototype.get_panels_status = async function() {
 
 /**
 * SEARCH_FROM_ENTER_KEY
-* @return
+* @return bool
 */
 search.prototype.search_from_enter_key = function(button_submit) {
 
@@ -1186,9 +1189,9 @@ search.prototype.search_from_enter_key = function(button_submit) {
 		//console.log("[saerch2.search_from_enter_key] search_panel_is_open:",button_submit, search2.search_panel_is_open);
 	}
 
-	//button_submit.click()
+	// button_submit.click()
 
-	if (search2.search_panel_is_open===true) {
+	if (search.search_panel_is_open===true) {
 		button_submit.click()
 	}else{
 		this.toggle_search_panel()
@@ -1233,5 +1236,3 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 	// 	return true;
 	// }//end init_tipology_selector
-
-
