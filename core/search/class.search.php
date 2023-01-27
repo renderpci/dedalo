@@ -2881,37 +2881,90 @@ class search {
 
 		$preset_obj = null;
 
-		$matrix_table = 'matrix_list';
+		// $matrix_table = 'matrix_list';
 
-		$user_locator = new locator();
-			$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-			$user_locator->set_section_id($user_id);
-			$user_locator->set_from_component_tipo('dd654');
-			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-		$filter_user = 'datos#>\'{relations}\' @> \'['.json_encode($user_locator).']\'';
+		// $user_locator = new locator();
+		// 	$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+		// 	$user_locator->set_section_id($user_id);
+		// 	$user_locator->set_from_component_tipo('dd654');
+		// 	$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+		// $filter_user = 'datos#>\'{relations}\' @> \'['.json_encode($user_locator).']\'';
 
-		$filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
+		// $filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
 
-		// Find existing preset
-		$strQuery	 = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
-		$strQuery	.= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
-		$strQuery	.= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
-		$strQuery	.= 'LIMIT 1;';
-		$result		 = JSON_RecordObj_matrix::search_free($strQuery);
-		if ($result===false) {
-			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-			return $preset_obj; // is null
-		}
-		while ($rows = pg_fetch_assoc($result)) {
+		// // Find existing preset
+		// $strQuery	 = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
+		// $strQuery	.= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
+		// $strQuery	.= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
+		// $strQuery	.= 'LIMIT 1;';
+		// $result		 = JSON_RecordObj_matrix::search_free($strQuery);
+		// if ($result===false) {
+		// 	trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
+		// 	return $preset_obj; // is null
+		// }
+		// while ($rows = pg_fetch_assoc($result)) {
 
-			$section_id		= $rows['section_id'];
-			$json_filter	= json_decode($rows['json_filter']);
+		// 	$section_id		= $rows['section_id'];
+		// 	$json_filter	= json_decode($rows['json_filter']);
 
-			$preset_obj = new stdClass();
-				$preset_obj->section_id		= (int)$section_id;
-				$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
-			break; // Only one expected
-		}
+		// 	$preset_obj = new stdClass();
+		// 		$preset_obj->section_id		= (int)$section_id;
+		// 		$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
+		// 	break; // Only one expected
+		// }
+
+		// search with standard sqo
+			$sqo = json_decode('{
+				"section_tipo" : ["'.$preset_section_tipo.'"],
+				"limit": 1,
+				"filter": {
+					"$and": [
+						{
+							"q": [
+								"'.$target_section_tipo.'"
+							],
+							"path": [
+								{
+									"name": "Name",
+									"model": "component_input_text",
+									"section_tipo": "'.$preset_section_tipo.'",
+									"component_tipo": "dd642"
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				}
+			}');
+			$search = search::get_instance($sqo);
+			$result = $search->search();
+
+			if (!empty($result->ar_records) && !empty($result->ar_records[0])) {
+				// success, preset record exists
+
+				$section_id = $result->ar_records[0]->section_id;
+
+				// component_json dd625
+					$tipo		= 'dd625';
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$component	= component_common::get_instance(
+						$model, // string model
+						$tipo, // string tipo
+						$section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$preset_section_tipo // string section_tipo
+					);
+					$dato = $component->get_dato();
+
+					if (!empty($dato)) {
+
+						$preset_obj = (object)[
+							'section_id'	=> (int)$section_id,
+							'json_filter'	=> reset($dato)
+						];
+					}
+			}
 
 
 		return $preset_obj;
