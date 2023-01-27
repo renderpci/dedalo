@@ -1406,25 +1406,32 @@ final class dd_core_api {
 
 	/**
 	* FILTER_GET_EDITING_PRESET
+	* Loads from temp presets record the last filter saved
+	* @param object $options
 	* @return object $response
 	*/
-	public static function filter_get_editing_preset(object $json_data) : object {
+	public static function filter_get_editing_preset(object $options) : object {
 
 		session_write_close();
+
+		// options
+			$section_tipo = $options->section_tipo;
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$user_id		= navigator::get_user_id();
-		$section_tipo	= $json_data->section_tipo;
-
-		$editing_preset	= search::get_preset($user_id, $section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
+		// get_preset
+			$result	= search::get_preset(
+				navigator::get_user_id(),
+				$section_tipo,
+				DEDALO_TEMP_PRESET_SECTION_TIPO
+			);
 
 		// response
-			$response->result	= $editing_preset;
-			$response->msg		= 'Ok. Request done';
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done';
 
 
 		return $response;
@@ -1434,23 +1441,30 @@ final class dd_core_api {
 
 	/**
 	* FILTER_SET_EDITING_PRESET
+	* Saves given filter in temp preset section
+	* @param object $options
 	* @return object $response
 	*/
-	public static function filter_set_editing_preset(object $json_data) : object {
+	public static function filter_set_editing_preset(object $options) : object {
+
+		// options
+			$section_tipo	= $options->section_tipo;
+			$filter_obj		= $options->filter_obj;
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$user_id		= (int)navigator::get_user_id();
-		$section_tipo	= $json_data->section_tipo;
-		$filter_obj		= $json_data->filter_obj;
-
-		$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
+		// save_temp_preset
+			$result = search::save_temp_preset(
+				navigator::get_user_id(),
+				$section_tipo,
+				$filter_obj
+			);
 
 		// response
-			$response->result	= $save_temp_preset;
+			$response->result	= $result;
 			$response->msg		= 'OK. Request done';
 
 
@@ -1461,24 +1475,29 @@ final class dd_core_api {
 
 	/**
 	* FILTER_GET_USER_PRESETS
+	* @param object $options
 	* @return object $response
 	*/
-	public static function filter_get_user_presets(object $json_data) : object {
+	public static function filter_get_user_presets(object $options) : object {
 
 		session_write_close();
+
+		// options
+			$section_tipo = $options->section_tipo;
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$user_id			= navigator::get_user_id();
-		$section_tipo		= $json_data->section_tipo;
-
-		$filter_components	= search::filter_get_user_presets($user_id, $section_tipo);
+		// get_user_presets
+			$result	= search::filter_get_user_presets(
+				navigator::get_user_id(),
+				$section_tipo
+			);
 
 		// response
-			$response->result	= $filter_components;
+			$response->result	= $result;
 			$response->msg		= 'OK. Request done';
 
 
@@ -1490,12 +1509,15 @@ final class dd_core_api {
 	/**
 	* ONTOLOGY_GET_CHILDREN_RECURSIVE
 	* Calculate recursively the children of given term
-	* @param object $json_data
+	* @param object $options
 	* @return object $response
 	*/
-	public static function ontology_get_children_recursive(object $json_data) : object {
+	public static function ontology_get_children_recursive(object $options) : object {
 
 		// session_write_close();
+
+		// options
+			$target_tipo = $options->target_tipo;
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1503,10 +1525,9 @@ final class dd_core_api {
 			$response->error	= null;
 
 		// ontology call
-			$target_tipo	= $json_data->target_tipo;
-			$children		= ontology::get_children_recursive($target_tipo);
+			$children = ontology::get_children_recursive($target_tipo);
 
-		// response ok
+		// response
 			$response->result	= $children;
 			$response->msg		= 'OK. Request done';
 
