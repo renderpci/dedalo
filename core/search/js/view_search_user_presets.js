@@ -156,7 +156,10 @@ const get_content_data = async function(ar_section_record, self) {
 			// parallel mode
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render()
+					// render
+					const render_promise_node = ar_section_record[i].render({
+						add_hilite_row : false
+					})
 					ar_promises.push(render_promise_node)
 				}
 				await Promise.all(ar_promises).then(function(values) {
