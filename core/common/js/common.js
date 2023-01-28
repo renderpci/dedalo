@@ -230,10 +230,10 @@ common.prototype.render = async function (options={}) {
 	// permissions
 		const permissions = parseInt(self.permissions)
 		if(permissions<1){
-			const node = new DocumentFragment()
-			const text_node = document.createElement('span') //createTextNode('')
-				node.appendChild(text_node)
-
+			const node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'no_access'
+			})
 			self.node = node
 
 			return node
