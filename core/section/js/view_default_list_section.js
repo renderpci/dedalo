@@ -267,8 +267,6 @@ const rebuild_columns_map = async function(self) {
 
 
 
-
-
 /**
 * GET_BUTTONS
 * @param object self
