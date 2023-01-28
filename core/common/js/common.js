@@ -227,6 +227,17 @@ common.prototype.render = async function (options={}) {
 		const render_level	= options.render_level || 'full'
 		const render_mode	= options.render_mode || self.mode
 
+	// permissions
+		const permissions = parseInt(self.permissions)
+		if(permissions<1){
+			const node = new DocumentFragment()
+			const text_node = document.createElement('span') //createTextNode('')
+				node.appendChild(text_node)
+
+			self.node = node
+
+			return node
+		}
 	// console.trace()
 	// console.log("self:",self, render_level);
 

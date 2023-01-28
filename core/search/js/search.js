@@ -161,6 +161,9 @@ search.prototype.init = async function(options) {
 		// 	toggle_search_panel(self)
 		// }
 
+	//permissions
+		self.permissions = 2
+
 	// status update
 		self.status = 'initiated'
 

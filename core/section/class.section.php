@@ -3250,6 +3250,9 @@ class section extends common {
 					// ddo item model
 						$ddo->model = $ddo->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo, true);
 
+					// permissions
+						$ddo->permissions = 1;
+
 					// model of dato tipo
 						$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true); // model of dato tipo
 

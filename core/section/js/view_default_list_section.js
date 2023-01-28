@@ -233,7 +233,7 @@ const rebuild_columns_map = async function(self) {
 			label		: 'Id',
 			tipo		: 'section_id', // used to sort only
 			sortable	: true,
-			width		: 'auto',
+			width		: 'minmax(auto, 6rem)',
 			path		: [{
 				// note that component_tipo=section_id is valid here
 				// because section_id is a direct column in search
