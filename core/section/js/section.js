@@ -253,33 +253,33 @@ section.prototype.init = async function(options) {
 
 
 		// delete_section_ event. (!) Moved to self button delete in render_section_list
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
-			// )
-			// async function fn_delete_section(options) {
-			// 	console.log("-> delete_section_ options:", self.id, options);
-			// 	// options
-			// 		const section_id	= options.section_id
-			// 		const section_tipo	= options.section_tipo
-			// 		const section		= options.caller
-			// 		const sqo			= options.sqo ||
-			// 			{
-			// 				section_tipo		: [section_tipo],
-			// 				filter_by_locators	: [{
-			// 					section_tipo	: section_tipo,
-			// 					section_id		: section_id
-			// 				}],
-			// 				limit				: 1
-			// 			}
+			self.events_tokens.push(
+				event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
+			)
+			async function fn_delete_section(options) {
 
-			// 	// delete_record
-			// 		self.delete_record({
-			// 			section			: section,
-			// 			section_id		: section_id,
-			// 			section_tipo	: section_tipo,
-			// 			sqo				: sqo
-			// 		})
-			// }//end fn_create_new_section
+				// options
+					const section_id	= options.section_id
+					const section_tipo	= options.section_tipo
+					const section		= options.caller
+					const sqo			= options.sqo ||
+						{
+							section_tipo		: [section_tipo],
+							filter_by_locators	: [{
+								section_tipo	: section_tipo,
+								section_id		: section_id
+							}],
+							limit				: 1
+						}
+
+				// delete_section
+					self.delete_record({
+						section			: section,
+						section_id		: section_id,
+						section_tipo	: section_tipo,
+						sqo				: sqo
+					})
+			}//end fn_create_new_section
 
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
 			self.events_tokens.push(
