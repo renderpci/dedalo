@@ -92,6 +92,9 @@ abstract class common {
 		// caller_dataframe the element that call to other element (component, section, area, etc)
 		public $caller_dataframe;
 
+		// data_source . string ('tm' for time machine source data)
+		public $data_source;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
