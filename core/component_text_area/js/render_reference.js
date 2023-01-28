@@ -65,7 +65,7 @@ export const render_reference = async function(options) {
 			const reference_component_node	= await reference_component.render()
 
 		// save_animation
-			reference_component.properties.show_interface.save_animation = false
+			reference_component.show_interface.save_animation = false
 
 		// change data to set empty value in the component (it saved in Session instead DDBB)
 			const changed_data = [Object.freeze({
