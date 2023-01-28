@@ -35,8 +35,8 @@ export const render_reference = async function(options) {
 
 		// convert the data_tag form string to json*-
 		// replace the ' to " stored in the html data to JSON "
-		const data				= data_string.replace(/\'/g, '"')
-		const locator			= data && data.length > 0
+		const data		= data_string.replace(/\'/g, '"')
+		const locator	= data && data.length > 0
 			? JSON.parse(data)
 			: null
 
@@ -56,9 +56,20 @@ export const render_reference = async function(options) {
 			caller			: self
 		}
 		// get the instance, built and render
-			const reference_component		= await instances.get_instance(instance_options)
-											  await reference_component.build(true)
+			const reference_component = await instances.get_instance(instance_options)
+										await reference_component.build(true)
+			if(reference_component.permissions<1){
+				const label = get_label.no_access  || 'No access here'
 
+				// modal
+				const modal = ui.attach_to_modal({
+					header	: get_label.warning || 'Warning',
+					body	: label+': '+ reference_component.label,
+					footer	: false,
+					size	: 'small' // string size big|normal
+				})
+				return false
+			}
 			// is_inside_tool force to prevent to show tool buttons
 			reference_component.is_inside_tool = true
 
@@ -205,7 +216,7 @@ export const render_reference = async function(options) {
 			header	: header,
 			body	: body,
 			footer	: footer,
-			size	: 'normal' // string size big|normal
+			size	: 'small' // string size big|normal
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = async () => {
