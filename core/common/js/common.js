@@ -84,9 +84,6 @@ common.prototype.build = async function () {
 	// status update
 		self.status = 'building'
 
-	// permissions. calculate and set (used by section records later)
-		self.permissions = self.context.permissions
-
 	// status update
 		self.status = 'built'
 
@@ -108,7 +105,7 @@ export const set_context_vars = function(self) {
 		self.type			= self.context.type // typology of current instance, usually 'component'
 		self.label			= self.context.label // label of current component like 'summary'
 		self.tools			= self.context.tools || [] //set the tools of the component
-		self.permissions	= self.context.permissions || null
+		// self.permissions	= self.context.permissions || 0
 
 		// view. Swaps the value with the context value and makes it a getter/setter of the context value
 		// this allow sync self.view and self.context.view after building the instance
@@ -125,6 +122,18 @@ export const set_context_vars = function(self) {
 				}
 			});
 
+			self.permissions = self.context.permissions || self.permissions
+			Object.defineProperty(self, 'permissions', {
+				get : function() {
+					return self.context.permissions
+						? self.context.permissions
+						: 0
+					// return self.context.view || self.view;
+				},
+				set : function(value) {
+					return self.context.permissions = value
+				}
+			});
 
 		// show_interface. object . Defines useful view custom properties to take control
 		// of some common component behaviors

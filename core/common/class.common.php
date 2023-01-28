@@ -2694,6 +2694,15 @@ abstract class common {
 										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);
 									}
 
+								// permissions check
+									if($model === 'section') {
+										$check_section_tipo = is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
+										$permissions = common::get_permissions($check_section_tipo, $current_ddo->tipo);
+										if($permissions<1){
+											continue;
+										}
+									}
+
 								// add parsed ddo
 									$final_ddo_map[] = $current_ddo;
 							}//end foreach ($ar_ddo_map as $current_ddo)
@@ -2831,7 +2840,6 @@ abstract class common {
 
 								// label. Add to all ddo_map items
 									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
-
 
 								// mode
 									$current_ddo_map->mode = isset($current_ddo_map->mode)
