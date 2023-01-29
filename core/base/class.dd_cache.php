@@ -93,8 +93,6 @@ class dd_cache {
 		// options
 			// object data
 			$data		= $options->data;
-			// user_id
-			$user_id	= $options->user_id ?? navigator::get_user_id();
 			// string file_name. Sample	: 1.cache_tree.json
 			$file_name	= $options->file_name;
 			// prefix

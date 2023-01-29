@@ -425,9 +425,7 @@ section.prototype.build = async function(autoload=false) {
 				caller	: self,
 				mode	: self.mode
 			})
-			// self.filter.build()
 		}
-		// console.log("section build filter inactive (remember) ");
 
 	// load data if is not already received as option
 		if (autoload===true) {

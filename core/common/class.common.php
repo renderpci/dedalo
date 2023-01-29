@@ -1615,7 +1615,7 @@ abstract class common {
 			// relation_list // time_machine_list
 				if($model==='section'){
 					$dd_object->relation_list		= $this->get_relation_list();
-					$dd_object->time_machine_list	= $this->get_time_machine_list();
+					$dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
 					$dd_object->section_map 		= section::get_section_map( $section_tipo );
 				}
 				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_time_unit($start_time) );
@@ -1836,7 +1836,7 @@ abstract class common {
 						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$label					= $dd_object->label ?? '';
 						$view					= $dd_object->view ?? null;
-					
+
 					// ar_subcontext_calculated
 						// $cid = $current_section_tipo . '_' . $section_id . '_' . $current_tipo;
 						// if (in_array($cid, $ar_subcontext_calculated)) {

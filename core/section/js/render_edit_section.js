@@ -1,11 +1,12 @@
-/*global get_label, Promise, SHOW_DEVELOPER, SHOW_DEBUG */
+/*global  */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
+	// import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_section} from './view_default_edit_section.js'
+
 
 
 /**
@@ -22,7 +23,8 @@ export const render_edit_section = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @param object options
+* @return DOM node|null
 */
 render_edit_section.prototype.edit = async function(options) {
 
@@ -54,5 +56,3 @@ render_edit_section.prototype.edit = async function(options) {
 
 	return null
 }//end edit
-
-
