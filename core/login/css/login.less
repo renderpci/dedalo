@@ -29,6 +29,20 @@
 		background-color: rgb(255 255 255 / 89%);
 	}
 
+	&:before {
+		background-image: url('../../themes/default/raspas/raspa_pantalla_1.jpg');
+		background-size: cover;
+		content: '';
+		transform: unset;
+		opacity: 0;
+		transition: opacity 0.75s ease-in-out;
+	}
+	&.raspa_loading {
+		&:before {
+			opacity: 1;
+		}
+	}
+
 	>.content_data {
 		background-color: rgba(243, 243, 243, 0.76);
 		border: solid 1px #e1e1e1;
@@ -37,22 +51,7 @@
 		max-width: 24em;
 		padding: 2em;
 
-		&.raspa_loading {
-			&:before {
-				background-image: url(../../themes/default/raspa-mirando-pantalla.jpg);
-				background-position: -314px 0;
-				background-repeat: no-repeat;
-				background-size: 882px;
-				content: '';
-				position: fixed;
-				height: 100%;
-				width: 100%;
-				z-index: -1;
-				top: 0px;
-				left: 0px;
-				opacity: 0.25;
-			}
-		}
+
 
 		>.top {
 			text-align: center;
