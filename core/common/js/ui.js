@@ -774,7 +774,7 @@ export const ui = {
 					const save_on_deactivate = typeof component.save_on_deactivate!=='undefined'
 						? component.save_on_deactivate
 						: true
-					console.log('save_on_deactivate:', save_on_deactivate);
+
 					if (save_on_deactivate===true) {
 						// set_before_unload(true)
 						await component.change_value({
