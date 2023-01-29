@@ -5,11 +5,124 @@
 // import
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
+	import {create_source} from '../../common/js/common.js'
 
 
 
 // vars
-const presets_section_tipo = 'dd623'
+	const presets_section_tipo							= 'dd623'
+	const temp_presets_section_tipo						= 'dd655'
+	// component_json_preset_tipo. Where preset filter is stored (component_json)
+	const presets_component_json_tipo					= 'dd625'
+	// component_section_value_tipo. Where section_tipo is stored (component_input_text)
+	const presets_component_section_value_tipo			= 'dd642'
+	// component_user_value_tipo. Where user_id is stored (component_select)
+	const presets_component_user_id_value_tipo			= 'dd654'
+	// presets_component_name_value_tipo. Where preset name is stored
+	const presets_component_name_value_tipo				= 'dd624'
+	// presets_component_public_value_tipo. Where preset public value is stored
+	const presets_component_public_value_tipo			= 'dd640'
+	// presets_component_default_value_tipo. Where preset is default value is stored
+	const presets_component_default_value_tipo			= 'dd641'
+	// presets_component_save_arguments_value_tipo. Where preset save arguments value is stored
+	const presets_component_save_arguments_value_tipo	= 'dd648'
+
+
+
+/**
+* GET_EDITING_PRESET_JSON_FILTER
+* Get json_filter from temp presets if exists
+* Matching using section tipo and user id
+* @param object self
+* @return object|null
+*/
+export const get_editing_preset_json_filter = async function(self) {
+
+	// source
+		const source				= create_source(self, 'search')
+			  source.tipo			= temp_presets_section_tipo
+			  source.section_tipo	= temp_presets_section_tipo
+
+	// sqo
+		const sqo = {
+			section_tipo	: [temp_presets_section_tipo],
+			filter			: {
+				"$and": [
+					{
+						q		: [self.section_tipo],
+						path	: [
+							{
+								name			: "Section tipo",
+								component_tipo	: presets_component_section_value_tipo, // dd642,
+								section_tipo	: temp_presets_section_tipo,
+								model			: "component_input_text"
+							}
+						],
+						type : "jsonb"
+					},
+					{
+						q 		: [
+							{
+								section_id		: page_globals.user_id,
+								section_tipo	: "dd128"
+							}
+						],
+						path : [
+							{
+								name			: "User",
+								component_tipo	: presets_component_user_id_value_tipo, // dd654,
+								section_tipo	: temp_presets_section_tipo,
+								model			: "component_select"
+							}
+						],
+						type : "jsonb"
+					}
+				]
+			}
+		}
+
+	// show
+		const show = {
+			ddo_map : [{
+				tipo			: presets_component_json_tipo, // dd625 component_json data
+				section_tipo	: temp_presets_section_tipo,
+				parent			: temp_presets_section_tipo
+			}]
+		}
+
+	// rqo
+		const rqo = {
+			action : 'read',
+			source	: source,
+			sqo		: sqo,
+			show	: show
+		}
+
+	return new Promise(async function(resolve){
+
+		// API request
+			const api_response = await data_manager.request({
+				body : rqo
+			})
+
+		// editing_preset
+			if (api_response.result) {
+
+				const data = api_response.result.data
+				const component_json_data = data.find(el => el.tipo===presets_component_json_tipo)
+				if (component_json_data) {
+
+					const json_filter = component_json_data.value && component_json_data.value[0]
+						? component_json_data.value[0]
+						: null
+
+					resolve(json_filter)
+				}
+			}else{
+				resolve(null)
+			}
+	})
+}//end get_editing_preset_json_filter
 
 
 
@@ -31,14 +144,14 @@ export const load_user_search_presets = async function(self) {
 		const locator_public_true = {
 			section_id			: '1',
 			section_tipo		: 'dd64',
-			from_component_tipo	: 'dd640'
+			from_component_tipo	: presets_component_public_value_tipo // 'dd640'
 		}
 		const fiter = {
 			"$and": [
 				{
 					q		: [ self.section_tipo ],
 					path	: [{
-						component_tipo	: 'dd642',
+						component_tipo	: presets_component_section_value_tipo, // 'dd642',
 						section_tipo	: presets_section_tipo, // 'dd623'
 						model			: 'component_input_text',
 						name			: 'Section tipo'
@@ -50,7 +163,7 @@ export const load_user_search_presets = async function(self) {
 						{
 							q		: [ locator_public_true ],
 							path	: [{
-								component_tipo	: 'dd640',
+								component_tipo	: presets_component_public_value_tipo, // 'dd640',
 								section_tipo	: presets_section_tipo, // 'dd623'
 								model			: 'component_radio_button',
 								name			: 'Public'
@@ -60,7 +173,7 @@ export const load_user_search_presets = async function(self) {
 						{
 							q		: [ locator_user ],
 							path	: [{
-								component_tipo	: 'dd654',
+								component_tipo	: presets_component_user_id_value_tipo, // 'dd654',
 								section_tipo	: presets_section_tipo, // 'dd623'
 								model			: 'component_select',
 								name			: 'User'
@@ -86,7 +199,7 @@ export const load_user_search_presets = async function(self) {
 			type		: 'main',
 			show	: {
 				ddo_map :[{
-					tipo			: 'dd624',
+					tipo			: presets_component_name_value_tipo, // 'dd624',
 					section_tipo	: presets_section_tipo, // 'dd623',
 					parent			: presets_section_tipo // 'dd623'
 				}]
@@ -102,8 +215,10 @@ export const load_user_search_presets = async function(self) {
 			mode			: 'list',
 			lang			: page_globals.dedalo_data_lang,
 			request_config	: request_config,
-			add_show 		: true,
-			id_variant		: self.section_tipo + '_search_user_presets'
+			add_show		: true,
+			id_variant		: self.section_tipo + '_search_user_presets',
+			inspector		: false, // (!) disable elements
+			filter			: false // (!) disable elements
 		}
 		const section = await instances.get_instance(instance_options)
 		await section.build(true)
@@ -121,7 +236,6 @@ export const load_user_search_presets = async function(self) {
 			}
 		)
 		section.context.view	= 'search_user_presets'
-		section.filter			= false
 		section.caller			= self
 
 
@@ -133,6 +247,7 @@ export const load_user_search_presets = async function(self) {
 /**
 * EDIT_USER_SEARCH_PRESET
 * Builds a presets section in edit mode with given section_id
+* Normally is rendered and place it into a modal box
 * @param object self
 * @param int section_id
 * @return object section
@@ -147,7 +262,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 			show	: {
 				ddo_map :[
 					{
-						tipo			: 'dd624',
+						tipo			: presets_component_name_value_tipo, // 'dd624',
 						section_tipo	: presets_section_tipo, // 'dd623'
 						parent			: presets_section_tipo, // 'dd623'
 						properties : {
@@ -157,7 +272,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 						}
 					},
 					{
-						tipo			: 'dd640',
+						tipo			: presets_component_public_value_tipo, // 'dd640',
 						section_tipo	: presets_section_tipo, // 'dd623'
 						parent			: presets_section_tipo, // 'dd623'
 						properties : {
@@ -167,7 +282,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 						}
 					},
 					{
-						tipo			: 'dd641',
+						tipo			: presets_component_default_value_tipo, // 'dd641',
 						section_tipo	: presets_section_tipo, // 'dd623'
 						parent			: presets_section_tipo, // 'dd623'
 						properties : {
@@ -177,7 +292,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 						}
 					},
 					{
-						tipo			: 'dd648',
+						tipo			: presets_component_save_arguments_value_tipo, // 'dd648',
 						section_tipo	: presets_section_tipo, // 'dd623'
 						parent			: presets_section_tipo, // 'dd623'
 						properties : {
@@ -229,8 +344,8 @@ export const load_search_preset = async function(options) {
 
 	// component
 		const instance_options = {
-			tipo			: 'dd625',
-			section_tipo	: presets_section_tipo, // 'dd623',
+			tipo			: presets_component_json_tipo, // dd625
+			section_tipo	: presets_section_tipo, // dd623
 			section_id		: section_id,
 			model			: 'component_json',
 			mode			: 'edit',
@@ -241,7 +356,7 @@ export const load_search_preset = async function(options) {
 		const value = component.data.value
 
 	// json_filter
-		const json_filter = (value || value[0])
+		const json_filter = (value && value[0])
 			? value[0]
 			: {"$and":[]} // default
 
@@ -252,14 +367,14 @@ export const load_search_preset = async function(options) {
 
 
 /**
-* NEW_SEARCH_PRESET
+* CREATE_NEW_SEARCH_PRESET
 * Creates a new presets section records adding section_tipo and user_id
 * On click new button in search presets list, load preset from db and apply to current canvas
 * @param object options
 * @return promise
 * 	Resolve section_id
 */
-export const new_search_preset = function(options) {
+export const create_new_search_preset = function(options) {
 
 	// options
 		const self = options.self
@@ -290,7 +405,7 @@ export const new_search_preset = function(options) {
 
 				// set section_tipo value
 					const component_instance_section_tipo = await instances.get_instance({
-						tipo			: 'dd642',
+						tipo			: presets_component_section_value_tipo, // 'dd642',
 						model			: 'component_input_text',
 						section_tipo	: presets_section_tipo, // 'dd623'
 						section_id		: new_section_id,
@@ -306,7 +421,7 @@ export const new_search_preset = function(options) {
 
 				// set user value
 					const component_instance_user = await instances.get_instance({
-						tipo			: 'dd654',
+						tipo			: presets_component_user_id_value_tipo, // 'dd654',
 						model			: 'component_select',
 						section_tipo	: presets_section_tipo, // 'dd623'
 						section_id		: new_section_id,
@@ -325,4 +440,85 @@ export const new_search_preset = function(options) {
 				console.error('Error on create new preset section. api_response: ', api_response);
 			}
 	})
-}//end new_search_preset
+}//end create_new_search_preset
+
+
+
+/**
+* SAVE_PRESET
+* Creates preset data given
+* @param object options
+* @return promise
+* 	Resolve section_id
+*/
+export const save_preset = async function(options) {
+
+	// options
+		const self			= options.self
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
+
+	// filter value
+		const filter_obj = await self.parse_dom_to_json_filter({}).filter
+
+	return new Promise(async function(resolve){
+
+		// rqo. save
+			const rqo = {
+				action	: 'save',
+				source	: {
+					tipo			: presets_component_json_tipo,
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					lang			: page_globals.dedalo_data_nolan,
+					type			: 'component'
+				},
+				data	: {
+					changed_data : [
+						{
+							action	: 'update',
+							key		: 0,
+							value	: filter_obj
+						}
+					]
+				}
+			}
+
+		// API request
+			const api_response = await data_manager.request({
+				body : rqo
+			})
+
+		// error check
+			if (!api_response.result) {
+				console.error(`Error on create save preset section (${section_tipo} - ${section_id}). api_response: `, api_response);
+			}
+
+		resolve(api_response)
+	})
+}//end save_preset
+
+
+
+/**
+* SAVE_TEMP_PRESET
+* @param string section_tipo
+* @return object api_response
+*/
+export const save_temp_preset = async function(self, section_tipo) {
+
+	// Recalculate filter_obj from DOM in default mode (include components with empty values)
+		const filter_obj = await self.parse_dom_to_json_filter({}).filter
+
+	// save editing preset
+		const api_response = await data_manager.request({
+			body : {
+				action			: 'filter_set_editing_preset',
+				section_tipo	: section_tipo, // self.section_tipo,
+				filter_obj		: filter_obj
+			}
+		})
+
+
+	return api_response
+}//end save_temp_preset
