@@ -12,10 +12,10 @@ class login extends common {
 	* CLASS VARS
 	*/
 		protected $id;
-		protected $tipo_active_account	= 'dd131';
-		protected $tipo_button_login	= 'dd259';
-		protected static $login_matrix_table = 'matrix';
-		const SU_DEFAULT_PASSWORD = '';
+		protected $tipo_active_account			= 'dd131';
+		protected $tipo_button_login			= 'dd259';
+		protected static $login_matrix_table	= 'matrix';
+		const SU_DEFAULT_PASSWORD				= '';
 
 
 
@@ -101,7 +101,6 @@ class login extends common {
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 				self::login_activity_report(
 					"Denied login attempted by: $username. This user does not exist in the database",
-					NULL,
 					'LOG IN',
 					$activity_datos
 				);
@@ -126,7 +125,6 @@ class login extends common {
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 				self::login_activity_report(
 					"Denied login attempted by : $username. This user exist more than once in the database ".$user_count,
-					NULL,
 					'LOG IN',
 					$activity_datos
 				);
@@ -168,7 +166,6 @@ class login extends common {
 					# LOGIN ACTIVITY REPORT
 					self::login_activity_report(
 						"Denied login attempted by: $username. Wrong password [1] (Incorrect password)",
-						NULL,
 						'LOG IN',
 						$activity_datos
 					);
@@ -198,7 +195,6 @@ class login extends common {
 				# LOGIN ACTIVITY REPORT
 				self::login_activity_report(
 					"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
-					NULL,
 					'LOG IN',
 					// activity_datos
 					array(
@@ -315,10 +311,10 @@ class login extends common {
 								return $response;
 							}else{
 								# Logged as different user
-								login::Quit(array(
-									'mode' => 'saml',
-									'cause'=> 'Browser already logged as different user'
-								)); // Logout old user before continue login
+								login::Quit((object)[
+									'mode'	=> 'saml',
+									'cause'	=> 'Browser already logged as different user'
+								]); // Logout old user before continue login
 							}
 						}
 
@@ -333,7 +329,6 @@ class login extends common {
 							# LOGIN ACTIVITY REPORT
 							self::login_activity_report(
 								"[Login_SAML] Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
-								NULL,
 								'LOG IN',
 								// activity_datos
 								array(
@@ -383,7 +378,13 @@ class login extends common {
 							$full_username = login::get_full_username($section_id);
 
 						// init_user_login_sequence
-							$init_user_login_sequence = login::init_user_login_sequence($section_id, $username, $full_username, $init_test=false, 'saml');
+							$init_user_login_sequence = login::init_user_login_sequence(
+								$section_id,
+								$username,
+								$full_username,
+								false, // bool init_test
+								'saml'
+							);
 							if ($init_user_login_sequence->result===false) {
 								# RETURN FALSE
 								$response->result = false;
@@ -405,7 +406,6 @@ class login extends common {
 					// LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 						self::login_activity_report(
 							"[Login_SAML] Denied login attempted by: saml_user. This code does not exist in the database",
-							NULL,
 							'LOG IN',
 							// activity_datos
 							array(
@@ -569,7 +569,6 @@ class login extends common {
 	* @return object $response
 	*/
 	private static function init_user_login_sequence($user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
-		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result			= false;
@@ -657,7 +656,7 @@ class login extends common {
 			}
 
 		// precalculate profiles datalist security access in background
-		// This file is generated on every user login,,launching the process in background
+		// This file is generated on every user login, launching the process in background
 			$status = dd_cache::process_and_cache_to_file((object)[
 				'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 				'data'			=> (object)[
@@ -681,7 +680,6 @@ class login extends common {
 		// login activity report
 			self::login_activity_report(
 				"User $user_id is logged. Hello $username",
-				null,
 				'LOG IN',
 				$activity_datos
 			);
@@ -701,22 +699,18 @@ class login extends common {
 	*/
 	private static function init_cookie_auth() : bool {
 
-		$cookie_name  = self::get_auth_cookie_name();
-		$cookie_value = self::get_auth_cookie_value();
+		// short vars
+			$cookie_name		= self::get_auth_cookie_name();
+			$cookie_value		= self::get_auth_cookie_value();
+			$ktoday				= date("Y_m_d");
+			$kyesterday			= date("Y_m_d",strtotime("-1 day"));
+			$cookie_file		= DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
+			$cookie_file_exists	= file_exists($cookie_file);
+			if ($cookie_file_exists===true) {
 
-		$current	= '';
-		$previous	= '';
-
-		$ktoday		= date("Y_m_d");
-		$kyesterday	= date("Y_m_d",strtotime("-1 day"));
-
-		$cookie_file		= DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
-		$cookie_file_exists	= file_exists($cookie_file);
-		if ($cookie_file_exists===true) {
-
-			$current_file	= file_get_contents($cookie_file);
-			$ar_data		= json_decode($current_file);
-		}
+				$current_file	= file_get_contents($cookie_file);
+				$ar_data		= json_decode($current_file);
+			}
 
 		if ( $cookie_file_exists===true && isset($ar_data->$ktoday) && isset($ar_data->$kyesterday) ) {
 
@@ -772,24 +766,24 @@ class login extends common {
 				// 	$htaccess_text .= 'Satisfy any'.PHP_EOL;
 
 			// APACHE 2.4
-			$htaccess_text  = '';
+				$htaccess_text  = '';
 
-			$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
-			$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
-  			$htaccess_text .= 'Require all granted'.PHP_EOL;
-			$htaccess_text .= '</FilesMatch>'.PHP_EOL;
+				$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
+				$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
+	  			$htaccess_text .= 'Require all granted'.PHP_EOL;
+				$htaccess_text .= '</FilesMatch>'.PHP_EOL;
 
-			$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
-			$htaccess_text .= 'AuthType Basic'.PHP_EOL;
-			$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
-			$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
-			$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
-			$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
-			$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
-			// Require any sentence
-			$htaccess_text .= '<RequireAny>'.PHP_EOL;
-			$htaccess_text .= 'Require env PASS'.PHP_EOL;
-			$htaccess_text .= 'Require valid-user'.PHP_EOL;
+				$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
+				$htaccess_text .= 'AuthType Basic'.PHP_EOL;
+				$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
+				$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
+				$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
+				$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
+				$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
+				// Require any sentence
+				$htaccess_text .= '<RequireAny>'.PHP_EOL;
+				$htaccess_text .= 'Require env PASS'.PHP_EOL;
+				$htaccess_text .= 'Require valid-user'.PHP_EOL;
 
 			# INIT_COOKIE_AUTH_ADDONS (From config)
 			if ( defined('INIT_COOKIE_AUTH_ADDONS') ) {
@@ -802,7 +796,6 @@ class login extends common {
 
 			$htaccess_text .= '</RequireAny>'.PHP_EOL;
 
-
 			debug_log(__METHOD__." htaccess_text ".to_string($htaccess_text), logger::DEBUG);
 
 			# File .htaccess
@@ -811,7 +804,7 @@ class login extends common {
 				// Remove cookie file (cookie_file.php)
 				unlink($cookie_file);
 				// Launch Exception
-				throw new Exception("Error Processing Request. Media protecction error on create access file", 1);
+				throw new Exception("Error Processing Request. Media protection error on create access file", 1);
 			}
 		}
 
@@ -949,7 +942,7 @@ class login extends common {
 	*/
 	private static function get_login_tipo() : string {
 
-		$tipo = 'dd229'; // fixed because do not change never
+		$tipo = 'dd229'; // fixed because never changes
 
 		return $tipo;
 	}//end get_login_tipo
@@ -985,7 +978,6 @@ class login extends common {
 		// login activity report
 			self::login_activity_report(
 				"User $user_id was logout. Bye $username",
-				null,
 				'LOG OUT',
 				// $activity_datos
 				array(
@@ -999,19 +991,33 @@ class login extends common {
 		// Cookie properties
 			$cookie_properties = common::get_cookie_properties();
 
-		// Delete auth cookie
+		// Delete authorization cookie
 			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
 				$cookie_auth = (object)$_SESSION['dedalo']['auth']['cookie_auth'];
 				$ktoday 	 = date("Y_m_d");
 				$kyesterday  = date("Y_m_d",strtotime("-1 day"));
 
 				if (isset($cookie_auth->$ktoday->cookie_name)) {
-					#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
-					setcookie($cookie_auth->$ktoday->cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+					setcookie(
+						$cookie_auth->$ktoday->cookie_name, // string $name
+						'', // string $value
+						-1, // int $expires_or_options
+						'/', // string $path
+						$cookie_properties->domain, // string $domain
+						$cookie_properties->secure, // bool $secure
+						$cookie_properties->httponly // bool $httponly
+					);
 				}
 				if (isset($cookie_auth->$kyesterday->cookie_name)) {
-					#setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
-					setcookie($cookie_auth->$kyesterday->cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+					setcookie(
+						$cookie_auth->$kyesterday->cookie_name, // string $name
+						'', // string $value
+						-1, // int $expires_or_options
+						'/', // string $path
+						$cookie_properties->domain, // string $domain
+						$cookie_properties->secure, // bool $secure
+						$cookie_properties->httponly// bool $httponly
+					);
 				}
 			}
 
@@ -1020,8 +1026,15 @@ class login extends common {
 			#unset($_SESSION['dedalo']['config']);
 			$cookie_name = session_name();
 			unset($_SESSION['dedalo']);
-			#setcookie($cookie_name, null, -1, '/');
-			setcookie($cookie_name, '', -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+			setcookie(
+				$cookie_name,
+				'',
+				-1,
+				'/',
+				$cookie_properties->domain,
+				$cookie_properties->secure,
+				$cookie_properties->httponly
+			);
 			#unset($_SESSION);
 			debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
 
@@ -1042,9 +1055,13 @@ class login extends common {
 
 	/**
 	* LOGIN ACTIVITY REPORT
+	* Save activity info into logger file
+	* @param string $msg
+	* @param string $login_label
+	* @param array $activity_datos = null
 	* @return void
 	*/
-	public static function login_activity_report(string $msg, $projects=null, string $login_label='LOG IN', array $activity_datos=null) {
+	public static function login_activity_report(string $msg, string $login_label, array $activity_datos=null) {
 
 		$datos = array("msg" => $msg);
 
