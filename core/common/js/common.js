@@ -1,10 +1,10 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView */
+/*global SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
@@ -217,9 +217,6 @@ common.prototype.render = async function (options={}) {
 	// options
 		const render_level	= options.render_level || 'full'
 		const render_mode	= options.render_mode || self.mode
-
-	// console.trace()
-	// console.log("self:",self, render_level);
 
 	// status check to prevent duplicated actions
 		switch(self.status) {
