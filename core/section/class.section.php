@@ -1,10 +1,9 @@
 <?php
-/*
+/**
 * CLASS SECTION
+*
+*
 */
-
-
-
 class section extends common {
 
 
@@ -492,11 +491,9 @@ class section extends common {
 			$component_obj->set_section_obj($this);
 
 		// component short vars
-			$component_tipo 		= $component_obj->get_tipo();
-			$component_lang 		= $component_obj->get_lang();
-			$component_valor_lang 	= $component_obj->get_valor_lang();
-			$component_model_name 	= get_class($component_obj);
-			$component_traducible 	= $component_obj->get_traducible();
+			$component_tipo			= $component_obj->get_tipo();
+			$component_lang			= $component_obj->get_lang();
+			$component_model_name	= get_class($component_obj);
 
 		// section dato
 			$dato = $this->get_dato();
@@ -581,6 +578,9 @@ class section extends common {
 
 	/**
 	* SET_COMPONENT_RELATION_DATO
+	*
+	* @param object $component_obj
+	* 	Component instance
 	* @return object $this->dato
 	*/
 	public function set_component_relation_dato( object $component_obj ) : object {
@@ -590,10 +590,8 @@ class section extends common {
 			$component_obj->set_section_obj($this);
 
 		// component short vars
-			$component_tipo			= $component_obj->get_tipo();
-			$component_dato			= $component_obj->get_dato_full();
-			$relation_type			= $component_obj->get_relation_type();
-			$from_component_tipo	= $component_tipo;
+			$component_tipo	= $component_obj->get_tipo();
+			$component_dato	= $component_obj->get_dato_full();
 
 		// caller_section case
 		// used for dataframe
@@ -832,7 +830,8 @@ class section extends common {
 
 					// Create a counter if not exists
 						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-							$consolidate_counter = counter::consolidate_counter( $tipo, $matrix_table, $matrix_table_counter );
+							// consolidate_counter
+							counter::consolidate_counter($tipo, $matrix_table, $matrix_table_counter);
 							// Re-check counter value
 							$current_id_counter = (int)counter::get_counter_value($tipo, $matrix_table_counter);
 						}
@@ -884,7 +883,7 @@ class section extends common {
 					// Components container
 						if (!empty($options->main_components_obj)) {
 							// Main components obj : When creating a section, you can optionally pass the component data directly
-							$section_dato->components = $options->main_components_obj;	# Añade el dato de todos los componentes de una sola vez (activity)
+							$section_dato->components = $options->main_components_obj;	// Add the data of all the components at once (activity)
 						}else{
 							// components container (empty when insert)
 							$section_dato->components = isset($this->dato->components) ? $this->dato->components : new stdClass();
@@ -893,7 +892,7 @@ class section extends common {
 					// Relations container
 						if (!empty($options->main_relations)) {
 							// Main relations : When creating a section, you can optionally pass the data of the relationships directly
-							$section_dato->relations = $options->main_relations;	# Añade el dato de todas las relaciones de una sola vez (activity)
+							$section_dato->relations = $options->main_relations; // Add the data of all relationships at once (activity)
 						}else{
 							// relations container
 							$section_dato->relations = isset($this->dato->relations) ? (array)$this->dato->relations : [];
@@ -909,11 +908,11 @@ class section extends common {
 			// Real data save
 				// Time machine data. We save only current new section in time machine once (section info not change, only components changes)
 					$time_machine_data = clone $section_dato;
-						unset($time_machine_data->components); 	# Remove unnecessary empty 'components' object
-						unset($time_machine_data->relations); 	# Remove unnecessary empty 'relations' object
+						unset($time_machine_data->components); 	// Remove unnecessary empty 'components' object
+						unset($time_machine_data->relations); 	// Remove unnecessary empty 'relations' object
 					$save_options = new stdClass();
 						$save_options->time_machine_data = $time_machine_data;
-						$save_options->time_machine_lang = DEDALO_DATA_NOLAN;	# Always nolan for section
+						$save_options->time_machine_lang = DEDALO_DATA_NOLAN;	// Always nolan for section
 						$save_options->time_machine_tipo = $tipo;
 						$save_options->new_record		 = true;
 
@@ -1102,7 +1101,8 @@ class section extends common {
 	/**
 	* DELETE (SECTION)
 	* Delete section with options
-	* @param string $delete_mode data|record
+	* @param string $delete_mode
+	* 	Options: data|record
 	* @return bool
 	*/
 	public function Delete( string $delete_mode ) : bool {
@@ -1119,7 +1119,7 @@ class section extends common {
 		// section_tipo
 			$section_tipo = $this->tipo;
 			// section_real_tipo. If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
-			if(isset($this->properties->section_tipo) && $this->properties->section_tipo === "real"){
+			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
 				$section_tipo = $this->get_section_real_tipo();
 			}
 			// user id
@@ -1155,9 +1155,10 @@ class section extends common {
 
 						$current_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
 
-						if (in_array($current_model_name, $ar_components_model_no_delete_dato)){
-							continue;
-						}
+						// don't delete some components check
+							if (in_array($current_model_name, $ar_components_model_no_delete_dato)){
+								continue;
+							}
 
 						$translatable	= RecordObj_dd::get_translatable($current_component_tipo);
 						$ar_lang		= ($translatable === false)
@@ -1408,12 +1409,14 @@ class section extends common {
 	*/
 	public static function get_section_real_tipo_static(string $section_tipo) : string {
 
-		$ar_related = common::get_ar_related_by_model($model_name='section', $section_tipo);
-		if (isset($ar_related[0])) {
-			$section_real_tipo = $ar_related[0];
-		}else{
-			$section_real_tipo = $section_tipo;
-		}
+		$ar_related = common::get_ar_related_by_model(
+			'section', // string model_name
+			$section_tipo
+		);
+
+		$section_real_tipo = isset($ar_related[0])
+			? $ar_related[0]
+			: $section_tipo;
 
 		return $section_real_tipo;
 	}//end get_section_real_tipo_static
@@ -1426,22 +1429,20 @@ class section extends common {
 	* @param $model_name_required
 	*	Name of desired filtered model. You can use partial name like 'component_' (string position search is made it)
 	* @see class.section.php -> get_ar_authorized_areas_for_user
-	* @return $ar_section_obj
+	* @return ?array $ar_section_obj
 	*	Array of objects (usually components) filtered by model_name_required with parent = current section id matrix
 	*/
-	public function get_ar_children_objects_by_model_name_in_section(string $model_name_required, bool $resolve_virtual=true) : array {
+	public function get_ar_children_objects_by_model_name_in_section(string $model_name_required, bool $resolve_virtual=true) : ?array {
 
 		$ar_section_obj = [];
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$start_time = start_time();
-				// global$TIMER;$TIMER[__METHOD__.'_IN_'.$model_name_required.'_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
+				// $start_time = start_time();
 			}
 
 		// short vars
-			$tipo		= $this->get_tipo();
-			$section_id	= $this->section_id;
+			$tipo = $this->get_tipo();
 
 		// resolve_virtual : Resolve virtual section to real
 			if($resolve_virtual) {
@@ -1449,15 +1450,15 @@ class section extends common {
 				$original_tipo = $tipo;
 				# SECTION VIRTUAL
 				$section_real_tipo = $this->get_section_real_tipo();
-				if($section_real_tipo!=$original_tipo) {
+				if($section_real_tipo!==$original_tipo) {
 					// overwrite current section tipo with real section tipo
 					$tipo = $section_real_tipo;
 				}
 			}
 
 		// static cache
-			$uid = $this->section_id .'_'. $tipo .'_'. $model_name_required;
 			static $ar_children_objects_by_modelo_name_in_section;
+			$uid = $this->section_id .'_'. $tipo .'_'. $model_name_required;
 			if(isset($ar_children_objects_by_modelo_name_in_section[$uid])) {
 				return $ar_children_objects_by_modelo_name_in_section[$uid];
 			}
@@ -1475,11 +1476,11 @@ class section extends common {
 
 			// Clear obj on every iteration
 				$current_obj	= null;
-				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($child_tipo, true);
+				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($child_tipo, true);
 
 			// We filter to load only those of the desired model
 				if( strpos($model_name, $model_name_required)===false ) {
-					continue; # Skip
+					continue; // Skip non required models
 				}
 
 			// We build the object (depending on the desired type it is built differently: component, button, etc..)
@@ -1588,10 +1589,10 @@ class section extends common {
 				# EXCLUDE ELEMENTS
 				if ($ar_tipo_exclude_elements===false) {
 					$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-						$original_tipo, // tipo
-						$model_name='exclude_elements', // modelo_name
-						$relation_type='children', // relation_type
-						$search_exact // search_exact
+						$original_tipo, // string tipo
+						'exclude_elements', // string model_name
+						'children', // string relation_type
+						$search_exact // bool search_exact
 					);
 				}
 				if (!isset($ar_tipo_exclude_elements[0])) {
@@ -1612,9 +1613,8 @@ class section extends common {
 						$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 						if($model_name==='section_group') {
 							$ar_recursive_childrens 			 = (array)section::get_ar_recursive_children($component_tipo, $ar_exclude_models);
-							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
+							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude, $ar_recursive_childrens);
 						}
-
 					}//end foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
 				}
 
@@ -1632,7 +1632,7 @@ class section extends common {
 				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
 			}else{
 				$RecordObj_dd			= new RecordObj_dd($tipo);
-				$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this();
+				$ar_recursive_childrens = $RecordObj_dd->get_ar_childrens_of_this();
 			}
 
 		}else{
@@ -1640,27 +1640,27 @@ class section extends common {
 			switch (true) {
 				// Components are searched recursively
 				case (strpos($ar_model_name_required[0], 'component')!==false && $recursive!==false):
-					$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
+					$ar_recursive_childrens = section::get_ar_recursive_children($tipo, $ar_exclude_models);
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
 					$RecordObj_dd			= new RecordObj_dd($tipo);
-					$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this();
+					$ar_recursive_childrens = $RecordObj_dd->get_ar_childrens_of_this();
 					break;
 			}
 		}
 
 		if( empty($ar_recursive_childrens) ) {
-			#throw new Exception(__METHOD__." ar_recursive_childrens is empty! This section don't have: '$model_name_required' ");
-			#debug_log(__METHOD__." ar_recursive_childrens is empty! This section id=$parent don't have: '$model_name_required' ". __METHOD__ );
+			// throw new Exception(__METHOD__." ar_recursive_childrens is empty! This section don't have: '$model_name_required' ");
+			// debug_log(__METHOD__." ar_recursive_childrens is empty! This section id=$parent don't have: '$model_name_required' ". __METHOD__ );
 			return $section_ar_children_tipo; # return empty array
 		}
 
-		# UNSET the exclude elements of the virtual section to the original section
+		// unset the exclude elements of the virtual section to the original section
 		if($resolve_virtual) {
 			$ar_recursive_childrens = array_diff($ar_recursive_childrens,$ar_terminos_relacionados_to_exclude);
 		}
-		# Recorremos los elementos hijos de la sección actual en el tesauro
+		// Loop through the child elements of the current section in the thesaurus
 		foreach($ar_recursive_childrens as $current_terminoID) {
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID, true);
@@ -1669,17 +1669,17 @@ class section extends common {
 				if (strpos($model_name, $model_name_required)!==false && !in_array($current_terminoID, $section_ar_children_tipo) ) {
 
 					if($search_exact===true && $model_name!==$model_name_required) {
-						# No is accepted model
+						// Is not accepted model
 					}else{
 						$section_ar_children_tipo[] = $current_terminoID;
 					}
 				}
 
-				# COMPONENT_FILTER : Si buscamos 'component_filter', sólo devolveremos el primero, dado que pueden haber secciones anidadas
+				// component_filter : If we search for 'component_filter', we will only return the first one, since there may be nested sections
 				if($ar_model_name_required[0]==='component_filter' && count($ar_recursive_childrens)>1) {
 					if(SHOW_DEBUG===true) {
-						#debug_log(__METHOD__." Broken loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_childrens). " " .to_string($ar_model_name_required));
-						#throw new Exception("Error Processing Request", 1);
+						// debug_log(__METHOD__." Broken loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_childrens). " " .to_string($ar_model_name_required));
+						// throw new Exception("Error Processing Request", 1);
 					}
 					continue;
 				}
@@ -1757,7 +1757,11 @@ class section extends common {
 					error_log("Warning. exclude_elements of section $this->tipo not found (2). All virtual section must has defined exclude_elements");
 				}else{
 					// locate excluded tipos (related terms) in this virtual section
-					$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);
+					$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados(
+						$ar_exclude_elements_tipo[0],
+						false, // bool cache
+						true // bool simple
+					);
 				}
 
 			// real section
@@ -1808,6 +1812,7 @@ class section extends common {
 
 	/**
 	* GET_BUTTON
+	* @param string $model_name
 	* @return object|null $button_object
 	*/
 	public function get_button(string $model_name) : ?object {
@@ -1852,10 +1857,14 @@ class section extends common {
 	* @param string $timestamp
 	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
 	* This method is used mainly in importations
+	* @return void
 	*/
 	public function set_created_date(string $timestamp) : void {
 
-		$date = dd_date::get_date_with_format( $timestamp, $format="Y-m-d H:i:s" );
+		$date = dd_date::get_date_with_format(
+			$timestamp,
+			'Y-m-d H:i:s' // string format
+		);
 
 		$dato = $this->get_dato(); // Force load
 		$dato->created_date = $date;
@@ -1869,10 +1878,14 @@ class section extends common {
 	* @param string $timestamp
 	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
 	* This method is used mainly in importations
+	* @return void
 	*/
 	public function set_modified_date(string $timestamp) : void {
 
-		$date = dd_date::get_date_with_format( $timestamp, $format="Y-m-d H:i:s" );
+		$date = dd_date::get_date_with_format(
+			$timestamp,
+			'Y-m-d H:i:s' // string format
+		);
 
 		$dato = $this->get_dato(); // Force load
 		$dato->modified_date = $date;
@@ -1883,36 +1896,38 @@ class section extends common {
 
 	/**
 	* GET_CREATED_DATE
-	* @return string|null $valor_local
+	* @return string|null $local_value
 	*/
 	public function get_created_date() : ?string {
 
-		$dato = $this->get_dato();
-		if( !isset($dato->created_date) ){
-			return false;
-		}
+		$dato			= $this->get_dato();
+		$local_value	= isset($dato->created_date)
+			? component_date::timestamp_to_date(
+				$dato->created_date,
+				true // bool full
+			  )
+			: null;
 
-		$valor_local = component_date::timestamp_to_date($dato->created_date, $full=true);
-
-		return $valor_local;
+		return $local_value;
 	}//end get_created_date
 
 
 
 	/**
 	* GET_MODIFIED_DATE
-	* @return string|null $valor_local
+	* @return string|null $local_value
 	*/
 	public function get_modified_date() : ?string {
 
-		$dato = $this->get_dato();
-		if( !isset($dato->modified_date) ){
-			return false;
-		}
+		$dato			= $this->get_dato();
+		$local_value	= isset($dato->modified_date)
+			? component_date::timestamp_to_date(
+				$dato->modified_date,
+				true // bool full
+			  )
+			: null;
 
-		$valor_local = component_date::timestamp_to_date($dato->modified_date, $full=true);
-
-		return $valor_local;
+		return $local_value;
 	}//end get_modified_date
 
 
@@ -1926,10 +1941,10 @@ class section extends common {
 
 		$dato = $this->get_dato();
 		if( isset($dato->created_by_userID) )  {
-			return $dato->created_by_userID;
+			return (int)$dato->created_by_userID;
 		}
 
-		return false;
+		return null;
 	}//end get_created_by_userID
 
 
@@ -1993,20 +2008,23 @@ class section extends common {
 
 	/**
 	* GET_USER_NAME_BY_USERID
-	* @return string $usesr_name
+	* @param int $userID
+	* @return string $user_name
 	*/
 	public static function get_user_name_by_userID(int $userID) : string {
 
 		if($userID==DEDALO_SUPERUSER){
-			$user_name = 'Admin debuger';
+			$user_name = 'Admin debugger';
 		}else{
 			$username_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FULL_USER_NAME_TIPO,true);
-			$obj_user_name	= component_common::get_instance($username_model, // 'component_input_text',
-															 DEDALO_FULL_USER_NAME_TIPO,
-															 $userID,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 DEDALO_SECTION_USERS_TIPO);
+			$obj_user_name	= component_common::get_instance(
+				$username_model, // 'component_input_text',
+				DEDALO_FULL_USER_NAME_TIPO,
+				$userID,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
 			$user_name = $obj_user_name->get_valor();
 		}
 
@@ -2148,14 +2166,14 @@ class section extends common {
 
 
 	/**
-	* GET_AR_CHILDRENS_BY_MODEL
+	* GET_AR_CHILDREN_BY_MODEL
 	* Get the children of the section by modelo_name required
 	* children like relation_list or time machine_list
 	* @param string $section_tipo
 	* @param array $ar_model_name_required
 	* @return string|null $first_child
 	*/
-	public static function get_ar_childrens_by_model(string $section_tipo, array $ar_model_name_required) : ?string {
+	public static function get_ar_children_by_model(string $section_tipo, array $ar_model_name_required) : ?string {
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
@@ -2192,7 +2210,7 @@ class section extends common {
 		}
 
 		return null;
-	}//end get_ar_childrens_by_model
+	}//end get_ar_children_by_model
 
 
 
@@ -2627,7 +2645,7 @@ class section extends common {
 	public function get_relation_list() : ?string {
 
 		$section_tipo		= $this->tipo;
-		$relation_list_tipo	= section::get_ar_childrens_by_model($section_tipo, ['relation_list']) ?? null;
+		$relation_list_tipo	= section::get_ar_children_by_model($section_tipo, ['relation_list']) ?? null;
 
 		$permissions = !empty($relation_list_tipo)
 			? common::get_permissions($section_tipo, $relation_list_tipo)
@@ -3618,14 +3636,14 @@ class section extends common {
 
 
 	/**
-	* GET_TIME_MACHINE_LIST
+	* GET_TIME_MACHINE_LIST_TIPO
 	* Get the time machine list tipo for the section
 	* @return string|null $time_machine_list_tipo
 	*/
-	public function get_time_machine_list() : ?string {
+	public function get_time_machine_list_tipo() : ?string {
 
 		$section_tipo			= $this->tipo;
-		$time_machine_list_tipo	= section::get_ar_childrens_by_model($section_tipo, ['time_machine_list']) ?? null;
+		$time_machine_list_tipo	= section::get_ar_children_by_model($section_tipo, ['time_machine_list']) ?? null;
 
 		$permissions = isset($time_machine_list_tipo)
 			? common::get_permissions( $section_tipo, $time_machine_list_tipo)
@@ -3636,7 +3654,7 @@ class section extends common {
 		}
 
 		return null;
-	}//end get_time_machine_list
+	}//end get_time_machine_list_tipo
 
 
 
@@ -3850,25 +3868,25 @@ class section extends common {
 	*/
 	public function get_section_permissions() : int {
 
-			$this->permissions = common::get_permissions($this->tipo, $this->tipo);
+		$this->permissions = common::get_permissions($this->tipo, $this->tipo);
 
-			// logged user id
-				$user_id = $_SESSION['dedalo']['auth']['user_id'];
+		// logged user id
+			$user_id = navigator::get_user_id() ?? null;
 
-			// user section . Allow user edit self data (used by tool_user_admin)
-				if ($this->permissions<2 &&
-					$this->tipo===DEDALO_SECTION_USERS_TIPO &&
-					$this->section_id==$user_id) {
-					return 1;
-				}
+		// user section . Allow user edit self data (used by tool_user_admin)
+			if ($this->permissions<2 &&
+				$this->tipo===DEDALO_SECTION_USERS_TIPO &&
+				$this->section_id==$user_id) {
+				return 1;
+			}
 
+		// maintains dedalo_activity_section_tipo < 2 to prevent edition
 			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1) {
 				return 1;
 			}
 
 		return $this->permissions;
 	}//end get_permissions
-
 
 
 
