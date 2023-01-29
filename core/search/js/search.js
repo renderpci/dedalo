@@ -24,7 +24,6 @@
 	} from './search_drag.js'
 	import {
 		get_editing_preset_json_filter,
-		load_user_search_presets,
 		load_search_preset,
 		save_temp_preset
 	} from './search_user_presets.js'
@@ -190,78 +189,42 @@ search.prototype.build = async function() {
 	// status update
 		self.status = 'building'
 
-	const ar_promises = []
+	// ar_promises
+		const ar_promises = []
 
-	// editing_preset. json_filter from DDBB temp presets section
-		ar_promises.push( new Promise(async function(resolve){
+	// editing_preset. Get json_filter from DDBB temp presets section
+		ar_promises.push( new Promise(function(resolve){
 
-			// editing_preset
-				const json_filter = await get_editing_preset_json_filter(self);
+			get_editing_preset_json_filter(self)
+			.then(function(json_filter){
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					if (!json_filter) {
-						console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, json_filter);
+				// debug
+					if(SHOW_DEBUG===true) {
+						if (!json_filter) {
+							console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, json_filter);
+						}
 					}
-				}
-
-			// fix value
+				// fix value
 				self.json_filter = json_filter || {"$and":[]}
 
-			resolve(self.json_filter)
+				resolve(self.json_filter)
+			})
 		}))
 
-	// DES get the section_tipo from editing_preset
-		/*
-		const load_all_section_elements_context = async () => {
+	// section_elements. Get section elements context list
+		ar_promises.push( new Promise(function(resolve){
 
-			const editing_preset_sections 	= self.get_ar_sections_from_editing_preset(self.json_filter)
-			const ar_sections_raw 			= [self.section_tipo, ...editing_preset_sections]
-			const ar_sections 				= []
-			for (let i = 0; i < ar_sections_raw.length; i++) {
-				if(ar_sections.indexOf(ar_sections_raw[i])===-1){
-					ar_sections.push(ar_sections_raw[i])
-				}
-			}
-
-			// load data
-				const api_response = await data_manager.request({
-					//url  : self.url_trigger,
-					body : {
-						action 	 	 	: "get_section_elements_context",
-						context_type	: 'simple',
-						ar_section_tipo : ar_sections
-					}
-				})
-				for (let i = 0; i < ar_sections.length; i++) {
-					// fix
-					self.components_list[ar_sections[i]] = api_response.result.filter(element => element.section_tipo === ar_sections[i])
-				}
-				console.log("*****self.components_list:",self.components_list);
-
-			return self.components_list
-		}
-		//load_all_section_elements_context()
-		*/
-
-	// user_presets. load user preset data (list of user presets from section dd623)
-		ar_promises.push(
-			load_user_search_presets(self)
-		)
-
-	// get_section_elements_context
-		ar_promises.push( self.get_section_elements_context({
-			section_tipo : self.section_tipo
-		}) )
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("-> search build editing_preset:", editing_preset);
-			// console.log("-> search build user_presets:", user_presets);
-		}
+			self.get_section_elements_context({
+				section_tipo : self.section_tipo
+			})
+			.then(function(response){
+				resolve(response)
+			})
+		}))
 
 	// wait until all request are resolved
 		await Promise.allSettled(ar_promises);
+
 
 	// status update
 		self.status = 'built'

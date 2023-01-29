@@ -98,7 +98,7 @@ export const get_editing_preset_json_filter = async function(self) {
 			show	: show
 		}
 
-	return new Promise(async function(resolve){
+	return new Promise(async function(resolve, reject){
 
 		// API request
 			const api_response = await data_manager.request({
@@ -117,9 +117,11 @@ export const get_editing_preset_json_filter = async function(self) {
 						: null
 
 					resolve(json_filter)
+				}else{
+					resolve(null)
 				}
 			}else{
-				resolve(null)
+				reject(null)
 			}
 	})
 }//end get_editing_preset_json_filter
@@ -222,9 +224,6 @@ export const load_user_search_presets = async function(self) {
 		}
 		const section = await instances.get_instance(instance_options)
 		await section.build(true)
-
-	// fix user_presets_section
-		self.user_presets_section = section
 
 	// section. render another node of component caller and append to container
 		section.render_views.push(
