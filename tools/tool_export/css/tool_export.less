@@ -17,7 +17,7 @@
 			width: 100%;
 			min-height: 90vh;
 				display: grid;
-			grid-template-columns: auto auto 200px;
+			grid-template-columns: auto 1fr 200px;
 
 			h1 {
 				margin-bottom: 1em;
@@ -37,6 +37,8 @@
 					border-left: 1px solid #bbbbbb;
 					border-right: 1px solid #bbb;
 					position: relative;
+					margin-left: 1rem;
+					max-width: 30rem;
 
 					&.dragover {
 						outline: 1px solid @tool_color;
