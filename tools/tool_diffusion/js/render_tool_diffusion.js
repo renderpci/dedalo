@@ -155,7 +155,8 @@ const get_content_data = async function(self) {
 		ui.collapse_toggle_track({
 			toggler			: button_info,
 			container		: info_div,
-			collapsed_id	: 'collapsed_tool_diffusion_info'
+			collapsed_id	: 'collapsed_tool_diffusion_info',
+			default_state 	: 'closed'
 		})
 
 	// publication items

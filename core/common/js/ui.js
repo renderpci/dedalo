@@ -2566,6 +2566,7 @@ export const ui = {
 		// defaults definitions by model
 		// if ddo width is not defined, use this defaults
 			const width_defaults = {
+				section_id 				: 'minmax(auto, 6rem)',
 				component_publication	: '5rem',
 				component_info			: 'minmax(9rem, 1fr)',
 				component_image			: '102px',

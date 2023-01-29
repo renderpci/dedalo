@@ -43,7 +43,7 @@ export const tool_common = function(){
 *	section_id: "1"
 *	section_tipo: "rsc167"
 *	tipo: "rsc36"
-*	tool_object: {section_id: "2", section_tipo: "dd1324", name: "tool_indexation", label: "Tool Indexation", icon: "/v6/tools/tool_indexation/img/icon.svg", …}
+*	tool_config: {ddo_map:[], ...}
 * }
 */
 tool_common.prototype.init = async function(options) {
@@ -55,18 +55,15 @@ tool_common.prototype.init = async function(options) {
 
 	// options
 		self.model			= options.model
-		self.section_tipo	= options.section_tipo
+		self.section_tipo	= options.section_tipo //
 		self.section_id		= options.section_id
 		self.lang			= options.lang
 		self.mode			= options.mode || 'edit'
-		// self.label		= options.label
-		// self.tool_labels	= options.tool_labels
-		// self.description	= options.description
-		self.config			= options.config // specific configuration that define in current installation things like machine translation will be used.
+		self.config			= options.config // specific configuration that define, in current installation, things like machine translation will be used.
 		self.tool_config	= options.tool_config
+		self.caller			= options.caller
 
 		// caller. Could be direct assigned (modal) or by URL caller_id (new window)
-			self.caller = options.caller // optional, only for refresh on tool exit
 			// notify caller is already calculated (new window case)
 			self.caller_is_calculated = !self.caller
 			// caller fallback to window.opener.callers variable or local data base
@@ -641,9 +638,7 @@ tool_common.prototype.load_component = async function(options) {
 * When the user triggers the click event, a publish 'open_tool' is made
 * @param object options
 * @return object|bool
-* 	object is
-
-a tool instance
+* 	object is a tool instance
 */
 export const open_tool = async (options) => {
 	console.warn("------ open_tool call options:",options);

@@ -3250,6 +3250,9 @@ class section extends common {
 					// ddo item model
 						$ddo->model = $ddo->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo, true);
 
+					// permissions
+						$ddo->permissions = 1;
+
 					// model of dato tipo
 						$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true); // model of dato tipo
 
@@ -3838,6 +3841,33 @@ class section extends common {
 
 		return (int)$new_section_id;
 	}//end duplicate_current_section
+
+
+
+	/**
+	* GET_PERMISSIONS
+	* @return int $this->permissions
+	*/
+	public function get_section_permissions() : int {
+
+			$this->permissions = common::get_permissions($this->tipo, $this->tipo);
+
+			// logged user id
+				$user_id = $_SESSION['dedalo']['auth']['user_id'];
+
+			// user section . Allow user edit self data (used by tool_user_admin)
+				if ($this->permissions<2 &&
+					$this->tipo===DEDALO_SECTION_USERS_TIPO &&
+					$this->section_id==$user_id) {
+					return 1;
+				}
+
+			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1) {
+				return 1;
+			}
+
+		return $this->permissions;
+	}//end get_permissions
 
 
 

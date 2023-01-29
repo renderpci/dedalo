@@ -6,12 +6,11 @@
 // import needed modules
 	import {clone} from '../../../core/common/js/utils/index.js'
 	// import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import * as instances from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_user_admin} from './render_tool_user_admin.js' // self tool rendered (called from render common)
-
 
 
 /**
@@ -69,9 +68,8 @@ tool_user_admin.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
+
 	// set the self specific vars not defined by the generic init (in tool_common)
-
-
 
 	return common_init
 }//end init
@@ -92,32 +90,7 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-			// const context = self.build_context()
-			// const generate_rqo = async function(){
-			// 	// request_config_object. get the request_config_object from context
-			// 	const request_config_object	= context.request_config
-			// 		? context.request_config.find(el => el.api_engine==='dedalo')
-			// 		: {}
-
-			// 	// rqo build
-			// 	const action	= 'search'
-			// 	const add_show	= true
-			// 	const rqo = await self.build_rqo_show(request_config_object, action, add_show)
-
-			// 	// source (overwrite default created from tool instead section)
-			// 		rqo.source.model		= context.model
-			// 		rqo.source.tipo			= context.tipo
-			// 		rqo.source.section_tipo	= context.section_tipo
-			// 		rqo.source.section_id	= context.section_id
-
-			// 	return rqo
-			// }
-			// const rqo = await generate_rqo()
-			// console.log("rqo:",rqo);
-			// const api_response = await data_manager.request({body:rqo})
-			// console.log("api_response:",api_response);
-			// self.section_data		= api_response.result.data
-			// self.section_context	= api_response.result.context
+			self.user_section = await self.build_user_section()
 
 	} catch (error) {
 		self.error = error
@@ -150,18 +123,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'section_id',
 			mode			: 'edit',
-			permissions		: 1
-		},
-		// user profile . read only (!)
-		{
-			tipo			: DD_TIPOS.DEDALO_USER_PROFILE_TIPO,
-			type			: 'component',
-			typo			: 'ddo',
-			model			: 'component_select',
-			section_tipo	: section_tipo,
-			parent			: section_tipo,
-			// label		: 'User profile',
-			mode			: 'edit',
+			properties		: {css:{}},
 			permissions		: 1
 		},
 		// username . read only (!)
@@ -174,18 +136,23 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'User name',
 			mode			: 'edit',
+			properties		: {css:{}},
+			view 			: 'line',
 			permissions		: 1
 		},
-		// password . editable
+		// user profile . read only (!)
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_PASSWORD_TIPO,
+			tipo			: DD_TIPOS.DEDALO_USER_PROFILE_TIPO,
 			type			: 'component',
 			typo			: 'ddo',
-			model			: 'component_password',
+			model			: 'component_select',
 			section_tipo	: section_tipo,
 			parent			: section_tipo,
-			// label		: 'Password',
-			mode			: 'edit'
+			// label		: 'User profile',
+			mode			: 'edit',
+			properties		: {css:{}},
+			view 			: 'line',
+			permissions		: 1,
 		},
 		// user full name . editable
 		{
@@ -196,7 +163,20 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			section_tipo	: section_tipo,
 			parent			: section_tipo,
 			// label		: 'Full user name',
-			mode			: 'edit'
+			mode			: 'edit',
+			properties		: {css:{}}
+		},
+		// password . editable
+		{
+			tipo			: DD_TIPOS.DEDALO_USER_PASSWORD_TIPO,
+			type			: 'component',
+			typo			: 'ddo',
+			model			: 'component_password',
+			section_tipo	: section_tipo,
+			parent			: section_tipo,
+			// label		: 'Password',
+			mode			: 'edit',
+			properties		: {css:{}}
 		},
 		// email . editable
 		{
@@ -207,20 +187,22 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			section_tipo	: section_tipo,
 			parent			: section_tipo,
 			// label		: 'email',
-			mode			: 'edit'
+			mode			: 'edit',
+			properties		: {css:{}}
 		},
 		// projects . read only (!)
-		{
-			tipo			: DD_TIPOS.DEDALO_FILTER_MASTER_TIPO,
-			type			: 'component',
-			typo			: 'ddo',
-			model			: 'component_filter_master',
-			section_tipo	: section_tipo,
-			parent			: section_tipo,
-			// label		: 'Project',
-			mode			: 'edit',
-			permissions		: 1
-		},
+		// {
+		// 	tipo			: DD_TIPOS.DEDALO_FILTER_MASTER_TIPO,
+		// 	type			: 'component',
+		// 	typo			: 'ddo',
+		// 	model			: 'component_filter_master',
+		// 	section_tipo	: section_tipo,
+		// 	parent			: section_tipo,
+		// 	// label		: 'Project',
+		// 	mode			: 'edit',
+		// 	properties		: {css:{}},
+		// 	permissions		: 1
+		// },
 		// user image . editable
 		{
 			tipo			: DD_TIPOS.DEDALO_USER_IMAGE_TIPO,
@@ -230,7 +212,8 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			section_tipo	: section_tipo,
 			parent			: section_tipo,
 			// label		: 'User image',
-			mode			: 'edit'
+			mode			: 'edit',
+			properties		: {css:{}},
 		}
 	]
 
@@ -240,10 +223,10 @@ tool_user_admin.prototype.get_ddo_map = function() {
 
 
 /**
-* BUILD_CONTEXT
-* Build a new custom request config based on caller requirements
+* BUILD_user_section
+* Build a new custom request config
 */
-tool_user_admin.prototype.build_context = function() {
+tool_user_admin.prototype.build_user_section = async function() {
 
 	const self = this
 
@@ -251,87 +234,62 @@ tool_user_admin.prototype.build_context = function() {
 		const section_tipo	= DD_TIPOS.DEDALO_SECTION_USERS_TIPO // self.section_tipo
 		const section_id	= page_globals.user_id
 
-	// sample
-		// ['tipo' => 'dd330',						'permissions' => 1],	// section id . read only (!)
-		// ['tipo' => DEDALO_USER_PROFILE_TIPO, 	'permissions' => 1],	// user profile . read only (!)
-		// ['tipo' => DEDALO_USER_NAME_TIPO, 		'permissions' => 1],	// username . read only (!)
-		// ['tipo' => DEDALO_USER_PASSWORD_TIPO, 	'permissions' => 2],	// password
-		// ['tipo' => DEDALO_FULL_USER_NAME_TIPO, 	'permissions' => 2],	// user full name
-		// ['tipo' => DEDALO_USER_EMAIL_TIPO, 		'permissions' => 2],	// email
-		// ['tipo' => DEDALO_FILTER_MASTER_TIPO,	'permissions' => 1],	// projects . read only (!)
-		// ['tipo' => DEDALO_USER_IMAGE_TIPO, 		'permissions' => 2]		// user image
-
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 		const ddo_map = self.get_ddo_map()
-
-	// filter_by_locators
-		const filter_by_locators = [{
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			lang			: page_globals.dedalo_data_nolan // (!) used only in time machine to filter by column lang
-		}]
-
-	// sqo
-		const sqo = {
-			id					: 'tmp',
-			mode				: 'edit',
-			section_tipo		: [{tipo:section_tipo}],
-			filter_by_locators	: filter_by_locators,
-			limit				: 1,
-			offset				: 0
-		}
 
 	// request_config
 		const request_config = [{
 			api_engine	: 'dedalo',
-			// source		: source,
-			sqo			: sqo,
+			type		: 'main',
 			show		: {
 				ddo_map : ddo_map
 			}
 		}]
 
 	// context
-		const context = {
+		const instance_options = {
 			type			: 'section',
 			typo			: 'ddo',
 			tipo			: section_tipo,
 			section_tipo	: section_tipo,
+			section_id		: section_id,
 			lang			: page_globals.dedalo_data_nolan,
 			mode			: 'edit',
 			model			: 'section',
-			parent			: section_tipo,
-			request_config	: request_config
+			add_show 		: true,
+			request_config	: request_config,
+			id_variant		: section_tipo +'_'+ section_id + '_build_user_section'
 		}
-		console.log("tool_user_admin build_context context:",context);
 
-	return context
-}//end build_context
+	const section = await instances.get_instance(instance_options)
+		// filter search disallow
+			section.filter = false
+		// inspector disallow
+			section.inspector = false
+		// build
+			await section.build(true)
+
+
+	return section
+}//end build_user_section
 
 
 
 /**
-* LOAD_COMPONENT_SAMPLE
+* ON_CLOSE_ACTIONS
+* Executes specific action on close the tool
+* @param string open_as
+* 	modal | window
+* @return promise: bool
 */
-tool_user_admin.prototype.load_component_sample = async function(lang) {
+tool_user_admin.prototype.on_close_actions = async function(open_as) {
 
 	const self = this
 
-	// context (clone and edit)
-		const context = Object.assign(clone(self.main_element.context),{
-			lang		: lang,
-			mode		: 'edit',
-			section_id	: self.main_element.section_id
-		})
+	if (open_as==='modal') {
+		// self.caller.refresh() // never refresh caller (component_json)
+		self.destroy(true, true, true)
+	}
 
-	// options
-		const options = {
-			context : context
-		}
-
-	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
-
-
-	return component_instance
-}//end load_component_sample
+	return true
+}//end on_close_actions

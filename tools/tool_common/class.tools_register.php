@@ -446,6 +446,27 @@ class tools_register {
 			$value 			= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_component = $value;
 
+
+		// Always active
+			$component_tipo	= 'dd1601';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato	= (array)$component->get_dato();
+			$dato_ref 		= !empty($dato)
+				? reset($dato)->section_id
+				: null;
+			$value 			= $dato_ref == '1' ? true : false;
+
+			$tool_object->always_active = $value; // array
+
+
 		// requirement translatable
 			$component_tipo = 'dd1333';
 			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);

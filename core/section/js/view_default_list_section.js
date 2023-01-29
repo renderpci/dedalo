@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise */
+/*global get_label, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -21,7 +21,7 @@
 
 
 /**
-* view_default_list_section
+* VIEW_DEFAULT_LIST_SECTION
 * Manages the component's logic and appearance in client side
 */
 export const view_default_list_section = function() {
@@ -32,8 +32,10 @@ export const view_default_list_section = function() {
 
 
 /**
-* LIST
-* Render node for use in list
+* RENDER
+* Render node for use current view
+* @param object self
+* @para object options
 * @return DOM node
 */
 view_default_list_section.render = async function(self, options) {
@@ -48,8 +50,8 @@ view_default_list_section.render = async function(self, options) {
 		}
 
 	// columns_map
-		const columns_map = await rebuild_columns_map(self)
-		self.columns_map = columns_map
+		const columns_map	= await rebuild_columns_map(self)
+		self.columns_map	= columns_map
 
 	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
@@ -110,43 +112,42 @@ view_default_list_section.render = async function(self, options) {
 
 		// list_body css
 			const selector = `${self.section_tipo}_${self.tipo}.list`
+
 		// custom properties defined css
 			if (self.context.css) {
 				// use defined section css
 				set_element_css(selector, self.context.css)
-			}else{
-				// flat columns create a sequence of grid widths taking care of sub-column space
-				// like 1fr 1fr 1fr 3fr 1fr
-				const items				= ui.flat_column_items(columns_map)
-				const template_columns	= items.join(' ')
-
-				// direct assign DES
-					// Object.assign(
-					// 	list_body.style,
-					// 	{
-					// 		"grid-template-columns": template_columns
-					// 	}
-					// )
-
-				// re-parse template_columns as percent
-					// const items_lenght = items.length
-					// const percent_template_columns = items.map(el => {
-					// 	if (el==='1fr') {
-					// 		return Math.ceil(90 / (items_lenght -1)) + '%'
-					// 	}
-					// 	return el
-					// }).join(' ')
-					// console.log("percent_template_columns:",percent_template_columns);
-
-				const css_object = {
-					'.list_body' : {
-						'grid-template-columns' : template_columns
-					}
-				}
-				// use calculated css
-				set_element_css(selector, css_object)
 			}
+			// flat columns create a sequence of grid widths taking care of sub-column space
+			// like 1fr 1fr 1fr 3fr 1fr
+			const items				= ui.flat_column_items(columns_map)
+			const template_columns	= items.join(' ')
 
+			// direct assign DES
+				// Object.assign(
+				// 	list_body.style,
+				// 	{
+				// 		"grid-template-columns": template_columns
+				// 	}
+				// )
+
+			// re-parse template_columns as percent
+				// const items_lenght = items.length
+				// const percent_template_columns = items.map(el => {
+				// 	if (el==='1fr') {
+				// 		return Math.ceil(90 / (items_lenght -1)) + '%'
+				// 	}
+				// 	return el
+				// }).join(' ')
+				// console.log("percent_template_columns:",percent_template_columns);
+
+			const css_object = {
+				'.list_body' : {
+					'grid-template-columns' : template_columns
+				}
+			}
+			// use calculated css
+			set_element_css(selector, css_object)
 
 	// list_header_node. Create and append if ar_instances is not empty
 		// if (self.ar_instances.length>0) {
@@ -169,7 +170,6 @@ view_default_list_section.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data	= content_data
 		wrapper.list_body		= list_body
-
 
 
 	return wrapper
@@ -237,7 +237,7 @@ const rebuild_columns_map = async function(self) {
 			label		: 'Id',
 			tipo		: 'section_id', // used to sort only
 			sortable	: true,
-			width		: 'auto',
+			width		: 'minmax(auto, 6rem)',
 			path		: [{
 				// note that component_tipo=section_id is valid here
 				// because section_id is a direct column in search
@@ -267,7 +267,6 @@ const rebuild_columns_map = async function(self) {
 
 	return columns_map
 }//end rebuild_columns_map
-
 
 
 
