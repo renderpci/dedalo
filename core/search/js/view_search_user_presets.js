@@ -202,9 +202,9 @@ const rebuild_columns_map = async function(self) {
 
 	// column section_id check
 		columns_map.push({
-			id			: 'section_id',
+			id			: 'edit',
 			label		: 'Id',
-			tipo		: 'section_id', // used to sort only
+			tipo		: 'edit', // used to sort only
 			width		: 'auto',
 			path		: [{
 				// note that component_tipo=section_id is valid here
@@ -225,7 +225,7 @@ const rebuild_columns_map = async function(self) {
 	// button_remove
 		if (self.permissions>1) {
 			columns_map.push({
-				id			: 'remove',
+				id			: 'delete',
 				label		: '',
 				width 		: 'auto',
 				callback	: render_column_remove
@@ -241,54 +241,51 @@ const rebuild_columns_map = async function(self) {
 /**
 * RENDER_COLUMN_APPLY_PRESET
 * @param object options
-* @return DOM DocumentFragment
+* @return DOM node button_apply
 */
 export const render_column_apply_preset = function(options) {
 
 	// options
-		const self				= options.caller.caller // object instance, usually section or portal
-		const section_id		= options.section_id
-		// const section_tipo	= options.section_tipo
-		// const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
+		const self			= options.caller.caller // object instance search
+		const section_id	= options.section_id
 
-	// DocumentFragment
-		const fragment = new DocumentFragment()
-
-	// button_edit
-		const button_edit = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button_edit',
-			parent			: fragment
+	// button_apply
+		const button_apply = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button_apply_preset button icon arrow_link'
 		})
-		button_edit.addEventListener('click', async function(e) {
+		button_apply.addEventListener('click', async function(e) {
 			e.stopPropagation()
 
-			// load DDBB component data
+			// load DDBB component_json data
 			load_search_preset({
 				section_id : section_id
 			})
 			.then(function(json_filter){
-				// render_filter
+
+				// render_filter (into search_container_selection at center)
 				render_filter({
 					self				: self,
 					editing_preset		: json_filter,
 					allow_duplicates	: true
 				})
-				// render buttons
+				// render buttons (force to re-create the buttons)
 				self.render_search_buttons()
+				// set as selected
+				const section_record	= button_apply.parentNode.parentNode
+				const content_data		= section_record.parentNode
+				content_data.querySelectorAll('.section_record').forEach((el) => {
+					el.classList.remove('selected')
+				});
+				section_record.classList.add('selected')
+
+				// fix user_preset_section_id
+				self.user_preset_section_id = section_id
 			})
 		})
 
-	// edit icon
-		ui.create_dom_element({
-			element_type	: 'span',
-			// class_name	: 'button pen icon grey',
-			class_name		: 'button edit icon grey',
-			parent			: button_edit
-		})
 
-
-	return fragment
+	return button_apply
 }//end render_column_apply_preset
 
 
@@ -296,60 +293,56 @@ export const render_column_apply_preset = function(options) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
-* @return DOM DocumentFragment
+* @return DOM node button_edit
 */
 export const render_column_id = function(options) {
 
 	// options
-		const self				= options.caller // object instance, usually section or portal
-		const section_id		= options.section_id
-		// const section_tipo	= options.section_tipo
-		// const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
-
-	// permissions
-		// const permissions = self.permissions
-
-	// DocumentFragment
-		const fragment = new DocumentFragment()
+		const self			= options.caller // object instance section
+		const section_id	= options.section_id
 
 	// button_edit
 		const button_edit = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button_edit button_view_' + self.context.view,
-			parent			: fragment
+			element_type	: 'span',
+			class_name		: 'button_edit button icon edit button_view_' + self.context.view
 		})
 		button_edit.addEventListener('click', async function(e) {
 			e.stopPropagation()
 
-			const section = await edit_user_search_preset(self, section_id)
-
-			// modal
+			// modal body
 				const body = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'container'
 				})
-				section.render()
-				.then(function(section_node){
-					body.appendChild(section_node)
-					// modal attach
-					ui.attach_to_modal({
-						header	: 'User search preset',
-						body	: body,
-						footer	: null
-					})
+
+			// modal attach to document
+				const modal_container = ui.attach_to_modal({
+					header	: get_label.presets_de_busqueda || 'User search preset',
+					body	: body,
+					footer	: null
+				})
+				modal_container.on_close = function(){
+					// nothing to do
+				}
+
+			// load section
+				ui.load_item_with_spinner({
+					container	: body,
+					label		: 'Preset ' + section_id,
+					style : {
+						height : '273px'
+					},
+					callback	: async function() {
+						// section load
+						const section		= await edit_user_search_preset(self, section_id)
+						const section_node	= await section.render()
+						return section_node
+					}
 				})
 		})
 
-	// edit icon
-		ui.create_dom_element({
-			element_type	: 'span',
-			// class_name	: 'button pen icon grey',
-			class_name		: 'button edit icon grey',
-			parent			: button_edit
-		})
 
-
-	return fragment
+	return button_edit
 }//end render_column_id()
 
 
@@ -357,23 +350,19 @@ export const render_column_id = function(options) {
 /**
 * RENDER_COLUMN_REMOVE
 * @param object options
-* @return DOM DocumentFragment
+* @return DOM node delete_button
 */
 export const render_column_remove = function(options) {
 
 	// options
-		const self			= options.caller // object instance, usually section
+		const self			= options.caller // object instance section
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
-	// DocumentFragment
-		const fragment = new DocumentFragment()
-
 	// delete_button
 		const delete_button = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button_delete',
-			parent			: fragment
+			element_type	: 'span',
+			class_name		: 'button_delete button delete_light icon'
 		})
 		delete_button.addEventListener('click', function(){
 			// delete_record
@@ -391,13 +380,7 @@ export const render_column_remove = function(options) {
 					}
 				})
 		})
-	// delete_icon
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button delete_light icon',
-			parent			: delete_button
-		})
 
 
-	return fragment
+	return delete_button
 }//end render_column_remove()

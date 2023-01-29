@@ -23,9 +23,10 @@
 		on_drop
 	} from './search_drag.js'
 	import {
-		get_editing_preset,
+		get_editing_preset_json_filter,
 		load_user_search_presets,
-		load_search_preset
+		load_search_preset,
+		save_temp_preset
 	} from './search_user_presets.js'
 	// import {
 		// create_cookie,
@@ -123,11 +124,10 @@ search.prototype.init = async function(options) {
 		self.wrapper_sections_selector			= null
 		self.search_children_recursive_node		= null
 
-		self.node = null
+		self.node								= null
 
-		self.id			= 'search'
-		self.section_id	= 0
-
+		self.id									= 'search'
+		self.section_id							= 0
 
 	// events subscription
 		// change_search_element. Update value, subscription to the changes: if the DOM input value was changed,
@@ -136,13 +136,14 @@ search.prototype.init = async function(options) {
 			event_manager.subscribe('change_search_element', fn_change_search_element)
 		)
 		async function fn_change_search_element(instance) {
+
 			// parse filter to DOM
 			await self.parse_dom_to_json_filter({
-				mode:self.mode
+				mode : self.mode
 			})
 			// Set as changed, it will fire the event to save the temp search section (temp preset)
 			self.update_state({
-				state:'changed'
+				state : 'changed'
 			})
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
@@ -179,7 +180,7 @@ search.prototype.init = async function(options) {
 * Load from API the user editing_preset (current state) and user_presets (stored states)
 * @return promise
 */
-search.prototype.build = async function(){
+search.prototype.build = async function() {
 
 	const self = this
 
@@ -188,35 +189,21 @@ search.prototype.build = async function(){
 
 	const ar_promises = []
 
-	// editing_preset
+	// editing_preset. json_filter from DDBB temp presets section
 		ar_promises.push( new Promise(async function(resolve){
 
-			// load editing preset data
-				const editing_preset = await data_manager.request({
-					body : {
-						action			: "filter_get_editing_preset",
-						section_tipo	: self.section_tipo
+			// editing_preset
+				const json_filter = await get_editing_preset_json_filter(self);
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					if (!json_filter) {
+						console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, json_filter);
 					}
-				})
-
-			// Set json_filter
-				if (!editing_preset.result || !editing_preset.result.json_filter) {
-
-					if(SHOW_DEBUG===true) {
-						console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, editing_preset);
-					}
-
-					self.json_filter = {"$and":[]}
-
-				}else{
-
-					if (editing_preset.result.json_filter && typeof(editing_preset.result.json_filter)!=='object') {
-						console.error("Editing_preset json_filter expected is object but received value is type:", typeof(editing_preset.result.json_filter));
-					}
-
-					self.json_filter = editing_preset.result.json_filter
 				}
-				// console.log("// SEARCH build stored self.json_filter:",self.json_filter);
+
+			// fix value
+				self.json_filter = json_filter || {"$and":[]}
 
 			resolve(self.json_filter)
 		}))
@@ -653,23 +640,22 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 	// json_query_obj
 		const json_query_obj = {
-			id 		: 'temp',
-			filter 	: {}
+			id		: 'temp',
+			filter	: {}
 		}
 
 	// First level
 		const root_search_group = self.root_search_group
 
 	// Add arguments. Used to exclude search arguments on save preset in this mode
-		let add_arguments = true // Default is true
-		if ( typeof save_arguments!=="undefined" && (save_arguments==="true" || save_arguments==="false")) {
-			add_arguments = JSON.parse(save_arguments)
-		}
+		const add_arguments = typeof save_arguments!=='undefined' && (save_arguments==='true' || save_arguments==='false')
+			? JSON.parse(save_arguments)
+			: true
 
 	// Calculate recursively all groups inside
 		const filter_obj = self.recursive_groups(root_search_group, add_arguments, mode)
 		if(SHOW_DEBUG===true) {
-			console.log("++++++++ [parse_dom_to_json_filter] filter_obj: ", filter_obj);
+			console.warn("++++++++ [parse_dom_to_json_filter] filter_obj: ", filter_obj);
 		}
 
 	// children_recursive checkbox
@@ -792,7 +778,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 	// Get search_group direct children
 	const children = search_group.children
-		//console.log("children:",children);
+		// console.log("children:",children);
 
 	// Iterate to find .search_group_operator div
 	const len = children.length
@@ -917,18 +903,17 @@ search.prototype.get_search_group_operator = function(search_group) {
 			}
 
 		// button save preset
-			const button_save_preset = document.getElementById("button_save_preset")
+			const button_save_preset = self.button_save_preset
 			if (button_save_preset) {
-				if (self.mode==='thesaurus') {
-					button_save_preset.classList.add('in_thesaurus')
-				}
-				const current_section_id = search_container_selection_presets.dataset.section_id
-				if (state==='changed' && current_section_id) {
+
+				if (state==='changed' && self.user_preset_section_id) {
 					// Show save preset button
-					button_save_preset.classList.add("show")
+					button_save_preset.classList.remove('hide')
 				}else{
 					// Hide save preset button
-					button_save_preset.classList.remove("show")
+					if (!button_save_preset.classList.contains('hide')) {
+						button_save_preset.classList.add('hide')
+					}
 				}
 			}
 
@@ -936,39 +921,12 @@ search.prototype.get_search_group_operator = function(search_group) {
 			if (state==='changed') {
 				const section_tipo = search_container_selection_presets.dataset.section_tipo
 				// Save temp preset
-				await self.save_temp_preset(section_tipo)
+				await save_temp_preset(self, section_tipo)
 			}
 
 
 		return true
 	}//end update_state
-
-
-
-	/**
-	* SAVE_TEMP_PRESET
-	* @param string section_tipo
-	* @return object api_response
-	*/
-	search.prototype.save_temp_preset = async function(section_tipo) {
-
-		const self = this
-
-		// Recalculate filter_obj from DOM in default mode (include components with empty values)
-			const filter_obj = await self.parse_dom_to_json_filter({}).filter
-
-		// save editing preset
-			const api_response = await data_manager.request({
-				body : {
-					action			: 'filter_set_editing_preset',
-					section_tipo	: section_tipo, // self.section_tipo,
-					filter_obj		: filter_obj
-				}
-			})
-
-
-		return api_response
-	}//end save_temp_preset
 
 
 
