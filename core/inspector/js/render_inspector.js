@@ -618,6 +618,16 @@ export const render_component_info = function(self, component) {
 				? JSON.stringify(component.data.value, null, 1)
 				: ''
 			value_node.textContent = value
+
+			const button_value_copy_node = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning',
+				inner_html		: get_label.copy || 'Copy',
+				parent			: value_node
+			})
+			button_value_copy_node.addEventListener("click", function(){
+				navigator.clipboard.writeText( JSON.stringify(component.data.value) )
+			})
 		}, 50)
 
 		// track collapse toggle state of content
