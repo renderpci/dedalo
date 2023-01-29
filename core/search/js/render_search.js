@@ -13,7 +13,8 @@
 	import {
 		create_new_search_preset,
 		edit_user_search_preset,
-		save_preset
+		save_preset,
+		load_user_search_presets
 	} from './search_user_presets.js'
 
 
@@ -270,11 +271,6 @@ render_search.prototype.render_base = function() {
 			})
 			// fix
 			self.button_save_preset = button_save_preset
-
-		// user_presets_section . get section of users presets
-			self.user_presets_section.render().then((user_presets_node)=>{
-				self.search_container_selection_presets.appendChild(user_presets_node)
-			})
 
 	// toggle_container_selection_presets. button toggle user presets
 		const toggle_container_selection_presets = ui.create_dom_element({
@@ -961,6 +957,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_SEARCH_PANEL
+	* @param object self
 	* @return bool
 	*/
 	export const toggle_search_panel = (self) => {
@@ -989,7 +986,9 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			self.search_panel_is_open = false
 
-			search_global_container.classList.add('hide')
+			if (search_global_container && !search_global_container.classList.contains('hide')) {
+				search_global_container.classList.add('hide')
+			}
 
 			data_manager.delete_local_db_data(
 				status_id,
@@ -1004,6 +1003,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_FIELDS
+	* @param object self
 	* @return bool
 	*/
 	export const toggle_fields = (self) => {
@@ -1025,7 +1025,9 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 		}else{
 
-			search_container_selector.classList.add('display_none')
+			if (search_container_selector && !search_container_selector.classList.contains('display_none')) {
+				search_container_selector.classList.add('display_none')
+			}
 
 			// Set search panel as closed
 				self.track_show_panel({
@@ -1041,30 +1043,38 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_PRESETS
+	* Show/hide user_presets_node
+	* If not already loaded, load the user_search_presets from API
+	* @param object self
 	* @return bool
 	*/
-	export const toggle_presets = (self) => {
+	export const toggle_presets = async (self) => {
 
 		const search_container_selection_presets = self.search_container_selection_presets // button.parentNode.querySelector(".search_container_selection_presets")
 
-		// Read cookie to track state
-		const cookie_name = "presets_panel"
-		let action
+		// user_presets_section . get section of users presets
+			if (!self.user_presets_section) {
+				self.user_presets_section = await load_user_search_presets(self)
+				const user_presets_node = await self.user_presets_section.render()
+				search_container_selection_presets.appendChild(user_presets_node)
+			}
 
-		if (search_container_selection_presets.classList.contains("display_none")) {
+		// action based on css
+			let action
+			if (search_container_selection_presets.classList.contains('display_none')) {
 
-			search_container_selection_presets.classList.remove("display_none")
-			action = 'open'
+				search_container_selection_presets.classList.remove('display_none')
+				action = 'open'
 
-		}else{
+			}else{
 
-			search_container_selection_presets.classList.add("display_none")
-			action = 'close'
-		}
+				search_container_selection_presets.classList.add('display_none')
+				action = 'close'
+			}
 
-		// Set search panel as closed
+		// Set search panel as open/close
 			self.track_show_panel({
-				name	: cookie_name,
+				name	: 'presets_panel', // cookie_name
 				action	: action
 			})
 
