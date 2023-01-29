@@ -1,10 +1,13 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_CORE_URL, DEDALO_ROOT_WEB */
+/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {strip_tags, find_up_node} from '../../common/js/utils/index.js'
+	import {
+		strip_tags,
+		// find_up_node
+	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -941,115 +944,6 @@ export const ui = {
 
 
 
-		/**
-		* BUILD_WRAPPER_EDIT
-		*/
-			// build_wrapper_edit : (instance, items={}) => {
-			// 	if(SHOW_DEBUG===true) {
-			// 		//console.log("[ui.build_wrapper_edit] instance:",instance)
-			// 	}
-
-			// 	const id 			= instance.id || 'id is not set'
-			// 	const model 		= instance.model 	// like component_input-text
-			// 	const type 			= instance.type 	// like 'component'
-			// 	const tipo 			= instance.tipo 	// like 'rsc26'
-			// 	const mode 			= instance.mode 	// like 'edit'
-			// 	const label 		= mode === 'edit_in_list' ? null : instance.label // instance.context.label
-			// 	const main_context 	= instance.context
-			// 	const element_css 	= main_context.css || {}
-
-			// const fragment = new DocumentFragment()
-
-			// 	// label
-			// 		if (label===null || items.label===null) {
-			// 			// no label add
-			// 		}else if(items.label) {
-			// 			// add custom label
-			// 			fragment.appendChild(items.label)
-			// 		}else{
-			// 			// default
-			// 			// const component_label = ui.create_dom_element({
-			// 			// 	element_type	: 'div',
-			// 			// 	class_name		: 'label',
-			// 			// 	inner_html		: label + ' [' + instance.lang.substring(3) + '] [' + instance.permissions +']',
-			// 			// 	parent			: fragment
-			// 			// })
-			// 		}
-
-			// 	// inspector
-			// 		if (items.inspector_div) {
-			// 			fragment.appendChild(items.inspector_div)
-			// 		}
-
-			// 	// buttons
-			// 		if (items.buttons) {
-			// 			const buttons = ui.create_dom_element({
-			// 				element_type	: 'div',
-			// 				class_name		: 'buttons',
-			// 				parent			: fragment
-			// 			})
-			// 			const items_buttons_length = items.buttons.length
-			// 			for (let i = 0; i < items_buttons_length; i++) {
-			// 				buttons.appendChild(items.buttons[i])
-			// 			}
-			// 		}
-
-			// 	// filter
-			// 		// if (instance.filter) {
-			// 		// 	const filter = ui.create_dom_element({
-			// 		// 		element_type	: 'div',
-			// 		// 		class_name		: 'filter',
-			// 		// 		parent			: fragment
-			// 		// 	})
-			// 		// 	instance.filter.build().then(()=>{
-			// 		// 		instance.filter.render().then(filter_wrapper =>{
-			// 		// 			filter.appendChild(filter_wrapper)
-			// 		// 		})
-			// 		// 	})
-			// 		// }
-
-			// 	// paginator
-			// 		if (items.paginator_div) {
-			// 			// place paginator in inspector
-			// 			ui.place_element({
-			// 				source_node			: items.paginator_div,
-			// 				source_instance		: instance,
-			// 				target_instance		: instance.inspector,
-			// 				container_selector	: ".paginator_container",
-			// 				target_selector		: ".wrapper_paginator"
-			// 			})
-			// 		}
-
-			// 	// content_data
-			// 		if (items.content_data) {
-			// 			const content_data = items.content_data
-			// 			// css
-			// 				const content_data_structure_css = typeof element_css.content_data!=="undefined" ? element_css.content_data : []
-			// 				const ar_css = ["content_data", type, ...content_data_structure_css]
-			// 				content_data.classList.add(...ar_css)
-			// 			// add to fragment
-			// 				fragment.appendChild(content_data)
-			// 		}
-
-			// 	// wrapper
-			// 		const wrapper = ui.create_dom_element({
-			// 			element_type	: 'div',
-			// 			class_name		: 'wrapper_' + type + ' ' + model + ' ' + tipo + ' ' + mode
-			// 			})
-			// 			// css
-			// 				const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-			// 			const ar_css = ['wrapper_'+type, model, tipo, mode,	...wrapper_structure_css]
-			// 			wrapper.classList.add(...ar_css)
-
-			// 		// append fragment
-			// 			wrapper.appendChild(fragment)
-
-
-			// 	return wrapper
-			// }//end  build_wrapper_edit
-
-
-
 	},//end section
 
 
@@ -1486,8 +1380,6 @@ export const ui = {
 
 	// DES
 		// button : {
-
-
 
 		// 	/**
 		// 	* BUILD_BUTTON
@@ -2962,8 +2854,9 @@ export const ui = {
 		// options
 			const container			= options.container
 			const preserve_content	= options.preserve_content || false
-			const label				= options.label
+			const label				= options.label || ''
 			const callback			= options.callback
+			const style				= options.style
 
 		// clean container
 			if (preserve_content===false) {
@@ -2979,6 +2872,9 @@ export const ui = {
 				inner_html		: 'Loading ' + label,
 				parent			: container
 			})
+			if (style) {
+				Object.assign(container_placeholder.style, style);
+			}
 			// spinner
 			ui.create_dom_element({
 				element_type	: 'div',

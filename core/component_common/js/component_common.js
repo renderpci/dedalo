@@ -1,4 +1,4 @@
-/* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, Promise */
+/* global get_label, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
