@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise */
+/*global get_label, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -21,7 +21,7 @@
 
 
 /**
-* view_default_list_section
+* VIEW_DEFAULT_LIST_SECTION
 * Manages the component's logic and appearance in client side
 */
 export const view_default_list_section = function() {
@@ -32,8 +32,10 @@ export const view_default_list_section = function() {
 
 
 /**
-* LIST
-* Render node for use in list
+* RENDER
+* Render node for use current view
+* @param object self
+* @para object options
 * @return DOM node
 */
 view_default_list_section.render = async function(self, options) {
@@ -48,8 +50,8 @@ view_default_list_section.render = async function(self, options) {
 		}
 
 	// columns_map
-		const columns_map = await rebuild_columns_map(self)
-		self.columns_map = columns_map
+		const columns_map	= await rebuild_columns_map(self)
+		self.columns_map	= columns_map
 
 	// ar_section_record. section_record instances (initied and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
@@ -62,8 +64,10 @@ view_default_list_section.render = async function(self, options) {
 			return content_data
 		}
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
+	// buttons add
 		if (self.buttons && self.mode!=='tm') {
 			const buttons_node = get_buttons(self);
 			if(buttons_node){
@@ -145,8 +149,6 @@ view_default_list_section.render = async function(self, options) {
 			// use calculated css
 			set_element_css(selector, css_object)
 
-
-
 	// list_header_node. Create and append if ar_instances is not empty
 		// if (self.ar_instances.length>0) {
 			const list_header_node = ui.render_list_header(columns_map, self)
@@ -168,7 +170,6 @@ view_default_list_section.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data	= content_data
 		wrapper.list_body		= list_body
-
 
 
 	return wrapper
@@ -197,7 +198,9 @@ const get_content_data = async function(ar_section_record, self) {
 			// parallel mode
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render()
+					const render_promise_node = ar_section_record[i].render({
+						add_hilite_row : true
+					})
 					ar_promises.push(render_promise_node)
 				}
 				await Promise.all(ar_promises).then(function(values) {

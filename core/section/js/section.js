@@ -4,7 +4,7 @@
 
 
 // imports
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
@@ -286,7 +286,8 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
 			)
 			async function fn_toggle_search_panel() {
-				if (!self.search_container) {
+				if (!self.search_container || !self.filter) {
+					console.log('stop event no filter 1:', this);
 					return
 				}
 				if (self.search_container.children.length===0) {
@@ -308,6 +309,10 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('render_'+self.id, fn_render)
 			)
 			function fn_render() {
+				if (!self.search_container || !self.filter) {
+					console.log('stop event no filter 2:', this);
+					return
+				}
 				// open_search_panel. local DDBB table status
 				const status_id			= 'open_search_panel'
 				const collapsed_table	= 'status'

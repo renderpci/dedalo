@@ -1,10 +1,10 @@
-/*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView */
+/*global SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
@@ -238,8 +238,6 @@ common.prototype.render = async function (options={}) {
 
 			return node
 		}
-	// console.trace()
-	// console.log("self:",self, render_level);
 
 	// status check to prevent duplicated actions
 		switch(self.status) {
@@ -319,9 +317,13 @@ common.prototype.render = async function (options={}) {
 			  })()
 			: render_mode
 
-		const node = await self[current_render_mode]({
-			render_level : render_level
-		})
+		// render options
+			const render_options = Object.assign({
+				render_level	: render_level,
+				render_mode		: render_mode
+			}, options)
+
+		const node = await self[current_render_mode](render_options)
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
@@ -469,7 +471,7 @@ common.prototype.refresh = async function(options={}) {
 
 	// build. Update the instance with new data
 		//if (self.status==='destroyed') {
-		const built = await self.build( build_autoload ) // default value is true
+		await self.build( build_autoload ) // default value is true
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false
@@ -2462,7 +2464,7 @@ common.prototype.get_section_elements_context = async function(options) {
 common.prototype.calculate_component_path = function(component_context, path) {
 
 	if (!Array.isArray(path)) {
-		console.log("[search2.calculate_component_path] Fixed bad path as array! :", path);
+		console.log("[calculate_component_path] Fixed bad path as array! :", path);
 		path = []
 	}
 

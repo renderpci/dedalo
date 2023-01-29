@@ -8,6 +8,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {common,create_source} from '../../common/js/common.js'
+	// import {pause} from '../../common/js/utils/util.js'
 	import {render_login, render_files_loader} from './render_login.js'
 
 
@@ -213,10 +214,10 @@ login.prototype.action_dispatch = async function(api_response) {
 		if (api_response.result===true) {
 
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
-			const files_loader = render_files_loader({
-				on_load_finish : load_finish
-			})
-			self.node.content_data.top.appendChild(files_loader)
+				const files_loader = render_files_loader({
+					on_load_finish : load_finish
+				})
+				await self.node.content_data.top.appendChild(files_loader)
 
 			// launch worker cache
 				const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
@@ -235,6 +236,11 @@ login.prototype.action_dispatch = async function(api_response) {
 						// self.node.content_data.info.classList.add('hide')
 						// show things
 						self.node.content_data.top.classList.remove('hide')
+
+						// raspa_loading Development local only
+						if (location.host.indexOf('127.0.0.1')===0 || location.host.indexOf('localhost')===0) {
+							self.node.classList.add('raspa_loading')
+						}
 					}
 
 					// send message data to files_loader function
