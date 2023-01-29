@@ -1182,179 +1182,6 @@ final class dd_core_api {
 
 
 
-	//
-	// /**
-	// * GET_PAGE_ELEMENT
-	// * Creates a full ready page element from basic vars (tipo, model, lang, mode, section_id)
-	// * @param object $options
-	// * @return object $response
-	// */
-		// public static function get_page_element($request) {
-		//
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-		//
-		// 	// set options from request
-		// 		if (!$options = $request->options) {
-		// 			return $response;
-		// 		}
-		//
-		// 	// sort vars
-		// 		$tipo 			= $options->tipo ?? null;
-		// 		$model 			= $options->model ?? (isset($tipo) ? RecordObj_dd::get_modelo_name_by_tipo($tipo,true) : null);
-		// 		$lang 			= $options->lang ?? DEDALO_DATA_LANG;
-		// 		$mode 			= $options->mode ?? 'list';
-		// 		$section_id 	= $options->section_id ?? null;
-		// 		$component_tipo = $options->component_tipo ?? null;
-		//
-		// 	// page elements
-		// 		switch (true) {
-		//
-		// 			case $model==='menu' :
-		// 				$page_element = (function(){
-		//
-		// 					$menu = new menu();
-		//
-		// 					// menu json
-		// 						$get_json_options = new stdClass();
-		// 							$get_json_options->get_context 	= true;
-		// 							$get_json_options->get_data 	= true;
-		// 						$menu_json = $menu->get_json($get_json_options);
-		//
-		// 					$page_element = new StdClass();
-		// 						$page_element->model 		= 'menu';
-		// 						$page_element->type 		= 'menu';
-		// 						$page_element->tipo 		= 'dd85';
-		// 						$page_element->mode 		= 'edit';
-		// 						$page_element->lang 		= DEDALO_APPLICATION_LANG;
-		// 						$page_element->rqo  = null;
-		// 						$page_element->datum 		= $menu_json;
-		//
-		// 					return $page_element;
-		// 				})();
-		// 				break;
-		//
-		// 			case strpos($model, 'area')===0:
-		// 				$page_element = (function() use ($model, $tipo, $mode){
-		//
-		// 					$page_element = new StdClass();
-		// 						$page_element->model 		= $model;
-		// 						$page_element->type  		= 'area';
-		// 						$page_element->tipo  		= $tipo;
-		// 						$page_element->mode 	 	= $mode;
-		// 						$page_element->lang 	 	= DEDALO_DATA_LANG;
-		// 						$page_element->section_tipo = $tipo;
-		//
-		// 						// rqo
-		// 							$area = area::get_instance($model, $tipo, $mode);
-		// 							$rqo = $area->get_rqo();
-		//
-		// 						$page_element->rqo = $rqo;
-		//
-		// 					return $page_element;
-		// 				})();
-		// 				break;
-		//
-		// 			case $model==='section':
-		// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-		//
-		// 					$section_tipo = $tipo;
-		//
-		// 					// rqo
-		// 						$section = section::get_instance($section_id, $section_tipo, $mode);
-		// 						$section->set_lang($lang);
-		// 						$rqo = $section->get_rqo();
-		//
-		// 					$page_element = new StdClass();
-		// 						$page_element->model 		 = $model;
-		// 						$page_element->type 		 = 'section';
-		// 						$page_element->tipo 		 = $section_tipo;
-		// 						$page_element->section_tipo  = $section_tipo;
-		// 						$page_element->section_id 	 = $section_id;
-		// 						$page_element->mode 		 = $mode;
-		// 						$page_element->lang 		 = $lang;
-		// 						$page_element->rqo	 = $rqo;
-		//
-		// 					return $page_element;
-		// 				})();
-		// 				break;
-		//
-		// 			case $model==='section_tm':
-		// 				$page_element = (function() use ($model, $tipo, $section_id, $mode, $lang, $component_tipo){
-		//
-		// 					$section_tipo = $tipo;
-		//
-		// 					// rqo
-		// 						$section = section_tm::get_instance($section_id, $section_tipo, $mode);
-		// 						$section->set_lang($lang);
-		// 						$rqo = $section->get_rqo();
-		//
-		// 					$page_element = new StdClass();
-		// 						$page_element->model		 = $model;
-		// 						$page_element->type			 = 'section';
-		// 						$page_element->tipo			 = $section_tipo;
-		// 						$page_element->section_tipo  = $section_tipo;
-		// 						$page_element->section_id	 = $section_id;
-		// 						$page_element->mode 		 = $mode;
-		// 						$page_element->lang 		 = $lang;
-		// 						$page_element->rqo	 = $rqo;
-		//
-		// 					return $page_element;
-		// 				})();
-		// 				break;
-		//
-		// 			case $model==='section_tool':
-		// 				$page_element = (function() use ($model, $tipo, $mode){
-		//
-		// 					# Configure section from section_tool data
-		// 					$RecordObj_dd = new RecordObj_dd($tipo);
-		// 					$properties  = $RecordObj_dd->get_properties(true);
-		//
-		// 					#$section_tipo = isset($properties->config->target_section_tipo) ? $properties->config->target_section_tipo :
-		// 					#debug_log(__METHOD__." Error Processing Request. property target_section_tipo does not exist) ".to_string(), logger::ERROR);
-		//
-		// 					$section_tipo 	= $tipo;
-		// 					$section_id		= null;
-		// 					$lang 	 	 	= DEDALO_DATA_LANG;
-		//
-		// 					// rqo
-		// 						$section = section::get_instance($section_id, $section_tipo, $mode);
-		// 						$section->set_lang($lang);
-		// 						$section->config = $properties->config;
-		// 						$rqo = $section->get_rqo();
-		//
-		// 					$page_element = new StdClass();
-		// 						$page_element->model 		 = 'section';
-		// 						$page_element->type 		 = 'section';
-		// 						$page_element->section_tipo  = $section_tipo;
-		// 						$page_element->section_id 	 = $section_id;
-		// 						$page_element->mode 	 	 = $mode;
-		// 						$page_element->lang 	 	 = $lang;
-		// 						$page_element->rqo   = $rqo;
-		//
-		// 					return $page_element;
-		// 				})();
-		// 				break;
-		//
-		// 			default:
-		// 				#throw new Exception("Error Processing Request", 1);
-		// 				$response->msg = 'Error. model not found: '.$model;
-		// 				return $response;
-		//
-		// 		}//end switch ($model)
-		//
-		//
-		// 	$response->result 	= $page_element;
-		// 	$response->msg 	  	= 'Ok. Request done';
-		//
-		//
-		// 	return $response;
-		// }//end get_page_element
-		//
-
-
-
 	// search methods ///////////////////////////////////
 
 
@@ -1404,53 +1231,36 @@ final class dd_core_api {
 
 
 
-	/**
-	* FILTER_GET_EDITING_PRESET
-	* @return object $response
-	*/
-	public static function filter_get_editing_preset(object $json_data) : object {
-
-		session_write_close();
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		$user_id		= navigator::get_user_id();
-		$section_tipo	= $json_data->section_tipo;
-
-		$editing_preset	= search::get_preset($user_id, $section_tipo, DEDALO_TEMP_PRESET_SECTION_TIPO);
-
-		// response
-			$response->result	= $editing_preset;
-			$response->msg		= 'Ok. Request done';
-
-
-		return $response;
-	}//end filter_get_editing_preset
+	// search methods ///////////////////////////////////
 
 
 
 	/**
 	* FILTER_SET_EDITING_PRESET
+	* Saves given filter in temp preset section
+	* @param object $options
 	* @return object $response
 	*/
-	public static function filter_set_editing_preset(object $json_data) : object {
+	public static function filter_set_editing_preset(object $options) : object {
+
+		// options
+			$section_tipo	= $options->section_tipo;
+			$filter_obj		= $options->filter_obj;
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		$user_id		= (int)navigator::get_user_id();
-		$section_tipo	= $json_data->section_tipo;
-		$filter_obj		= $json_data->filter_obj;
-
-		$save_temp_preset = search::save_temp_preset($user_id, $section_tipo, $filter_obj);
+		// save_temp_preset
+			$result = search::save_temp_preset(
+				navigator::get_user_id(),
+				$section_tipo,
+				$filter_obj
+			);
 
 		// response
-			$response->result	= $save_temp_preset;
+			$response->result	= $result;
 			$response->msg		= 'OK. Request done';
 
 
@@ -1460,42 +1270,17 @@ final class dd_core_api {
 
 
 	/**
-	* FILTER_GET_USER_PRESETS
-	* @return object $response
-	*/
-	public static function filter_get_user_presets(object $json_data) : object {
-
-		session_write_close();
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		$user_id			= navigator::get_user_id();
-		$section_tipo		= $json_data->section_tipo;
-
-		$filter_components	= search::filter_get_user_presets($user_id, $section_tipo);
-
-		// response
-			$response->result	= $filter_components;
-			$response->msg		= 'OK. Request done';
-
-
-		return $response;
-	}//end filter_get_user_presets
-
-
-
-	/**
 	* ONTOLOGY_GET_CHILDREN_RECURSIVE
 	* Calculate recursively the children of given term
-	* @param object $json_data
+	* @param object $options
 	* @return object $response
 	*/
-	public static function ontology_get_children_recursive(object $json_data) : object {
+	public static function ontology_get_children_recursive(object $options) : object {
 
 		// session_write_close();
+
+		// options
+			$target_tipo = $options->target_tipo;
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1503,10 +1288,9 @@ final class dd_core_api {
 			$response->error	= null;
 
 		// ontology call
-			$target_tipo	= $json_data->target_tipo;
-			$children		= ontology::get_children_recursive($target_tipo);
+			$children = ontology::get_children_recursive($target_tipo);
 
-		// response ok
+		// response
 			$response->result	= $children;
 			$response->msg		= 'OK. Request done';
 

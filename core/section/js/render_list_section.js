@@ -64,20 +64,19 @@ render_list_section.prototype.list = async function(options) {
 * @param object options
 * @return DOM DocumentFragment
 */
-export const render_column_id = function(options){
+export const render_column_id = function(options) {
 
 	// options
-		const self					= options.caller // object instance, usually section or portal
-		const section_id			= options.section_id
-		const section_tipo			= options.section_tipo
-		const paginated_key				= options.paginated_key // int . Current item paginated_key in all result
-		// const matrix_id			= options.matrix_id
-		// const modification_date	= options.modification_date
+		const self			= options.caller // object instance, usually section or portal
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+		const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
 
 	// permissions
 		const permissions = self.permissions
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// section_id
 		const section_id_node = ui.create_dom_element({
@@ -100,7 +99,8 @@ export const render_column_id = function(options){
 						class_name		: 'link_button',
 						parent			: fragment
 					})
-					link_button.addEventListener("click", function(){
+					link_button.addEventListener('click', function(e) {
+						e.stopPropagation()
 						// top window event
 						top.event_manager.publish('initiator_link_' + self.initiator, {
 							section_tipo	: section_tipo,
@@ -391,4 +391,4 @@ export const render_column_id = function(options){
 
 
 	return fragment
-};//end render_column_id()
+}//end render_column_id

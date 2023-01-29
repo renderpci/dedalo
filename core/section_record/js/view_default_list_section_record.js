@@ -34,7 +34,9 @@ export const view_default_list_section_record = function() {
 view_default_list_section_record.render = async function(self, options) {
 
 	// options
-		// const render_level = options.render_level || 'full'
+		const add_hilite_row = options.add_hilite_row!==undefined
+			? options.add_hilite_row
+			: true // default
 
 	// wrapper.  section_record wrapper
 		const wrapper = ui.create_dom_element({
@@ -53,7 +55,7 @@ view_default_list_section_record.render = async function(self, options) {
 
 		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
-			if (self.caller.model==='section' || self.caller.model==='time_machine') { //  || self.caller.model==='service_time_machine'
+			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') { //  || self.caller.model==='service_time_machine'
 				when_in_dom(wrapper, function(){
 
 					let hilite_row

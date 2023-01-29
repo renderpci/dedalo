@@ -29,6 +29,20 @@
 		background-color: rgb(255 255 255 / 89%);
 	}
 
+	&:before {
+		background-image: url('../../themes/default/raspas/raspa_pantalla_1.jpg');
+		background-size: cover;
+		content: '';
+		transform: unset;
+		opacity: 0;
+		transition: opacity 0.75s ease-in-out;
+	}
+	&.raspa_loading {
+		&:before {
+			opacity: 1;
+		}
+	}
+
 	>.content_data {
 		background-color: rgba(243, 243, 243, 0.76);
 		border: solid 1px #e1e1e1;
@@ -36,6 +50,8 @@
 		.centered;
 		max-width: 24em;
 		padding: 2em;
+
+
 
 		>.top {
 			text-align: center;

@@ -2865,195 +2865,7 @@ class search {
 
 
 
-	############################ FILTER FUNCTIONS #################################
-
-
-
-	/**
-	* FILTER_GET_USER_PRESETS
-	* Return all saved user presets of current section
-	* Used to build list of user presets in filter
-	* @param int $user_id
-	* @param string|null $target_section_tipo
-	* @param string $section_tipo = 'dd623'
-	* 	section 'Search presets' (matrix_list)
-	* @return array $user_presets
-	*/
-	public static function filter_get_user_presets(int $user_id, string $target_section_tipo=null, string $section_tipo='dd623') : array {
-
-		$user_presets = array();
-
-		#$section_tipo 		 			= 'dd623'; // Presets list dd623 or dd655 (temp)
-		$name_component_tipo 			= 'dd624'; // Name field
-		$save_arguments_component_tipo 	= 'dd648'; // Save arguments field
-		$json_component_tipo 			= 'dd625'; // json data field
-		$matrix_table 		 			= 'matrix_list'; //common::get_matrix_table_from_tipo($section_tipo);
-
-		$public_component_tipo 			= 'dd640';
-		$default_component_tipo 		= 'dd641';
-		$target_section_component_tipo 	= 'dd642';
-
-		$locator_public_true = new locator();
-			$locator_public_true->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-			$locator_public_true->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-			$locator_public_true->set_from_component_tipo($public_component_tipo);
-
-		#$name_component_model_name = RecordObj_dd::get_modelo_name_by_tipo($name_component_tipo,true);
-		#$json_component_model_name = RecordObj_dd::get_modelo_name_by_tipo($json_component_tipo,true);
-
-		$filter = '{
-			"$or": [
-				{
-					"q": [
-						{
-							"from_component_tipo": "dd640",
-							"section_id": "1",
-							"section_tipo": "dd64"
-						}
-					],
-					"q_operator": null,
-					"path": [
-						{
-							"section_tipo": "dd623",
-							"component_tipo": "dd640",
-							"model": "component_radio_button",
-							"name": "Público"
-						}
-					],
-					"type": "jsonb"
-				},
-				{
-					"$and": [
-						{
-							"q": [
-								"'.$target_section_tipo.'"
-							],
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "dd623",
-									"component_tipo": "dd642",
-									"model": "component_input_text",
-									"name": "Section tipo"
-								}
-							],
-							"type": "jsonb"
-						},
-						{
-							"q": [
-								{
-									"section_id": "2",
-									"section_tipo": "dd128"
-								}
-							],
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "dd623",
-									"component_tipo": "dd654",
-									"model": "component_select",
-									"name": "Usuario"
-								}
-							],
-							"type": "jsonb"
-						}
-					]
-				}
-			]
-		}';
-
-
-		$sqo = new search_query_object();
-			$sqo->set_section_tipo($section_tipo);
-			$sqo->set_limit(0);
-			$sqo->set_filter($filter);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		$filter = '';
-		if (!empty($target_section_tipo) ) {
-			$filter .= "AND datos#>'{components,{$target_section_component_tipo},dato,lg-nolan}' @> '[\"".$target_section_tipo."\"]' ";
-		}
-
-		# is_global_admin filter
-		$is_global_admin = security::is_global_admin( $user_id );
-		$is_global_admin = false;
-		if ($is_global_admin!==true) {
-			$ar_filter   = [];
-			# Created by user
-			$ar_filter[] = "datos#>'{created_by_userID}' = '". (int)$user_id ."'";
-			# Public
-			$ar_filter[] = "datos#>'{relations}' @> '[". json_encode($locator_public_true) ."]'" ;
-
-			$filter .= 'AND (' . implode(' OR ',$ar_filter) . ')';
-		}
-
-		$select   = 'section_id';
-		$select  .= ",datos#>>'{components,{$name_component_tipo},valor_list,lg-nolan}' as name";
-		$select  .= ",datos#>>'{components,{$json_component_tipo},dato,lg-nolan}' as json_preset";
-		$select  .= ",datos#>>'{relations}' as relations";
-
-		$strQuery 	= "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE (section_tipo='$section_tipo') $filter ORDER BY section_id ASC ";
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);
-		if ($result!==false) {
-			while ($rows = pg_fetch_assoc($result)) {
-
-				$element = new stdClass();
-					// $element->section_tipo	= $target_section_tipo;
-					$element->section_id		= $rows['section_id'];
-					$element->name				= $rows['name'];
-					$element->json_preset		= $rows['json_preset'];
-
-					$public						= false;
-					$default					= false;
-					$save_arguments				= false;
-
-					$relations = json_decode($rows['relations']);
-					if (!empty($relations)) {
-						// Public to bool
-						if (true===locator::in_array_locator($locator_public_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
-							$public = true;
-						}
-						// Default to bool
-						$locator_default_true = clone($locator_public_true);
-							$locator_default_true->set_from_component_tipo($default_component_tipo); // Override from_component_tipo
-						if (true===locator::in_array_locator($locator_default_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
-							$default = true;
-						}
-						// Save arguments to bool
-						$locator_save_arguments_true = clone($locator_public_true);
-							$locator_save_arguments_true->set_from_component_tipo($save_arguments_component_tipo); // Override from_component_tipo
-						if (true===locator::in_array_locator($locator_save_arguments_true, $relations, ['section_id','section_tipo','from_component_tipo'])) {
-							$save_arguments = true;
-						}
-					}
-
-					$element->public			= $public;
-					$element->default			= $default;
-					$element->save_arguments	= $save_arguments;
-
-				// Add element
-				$user_presets[] = $element;
-			}//end while ($rows = pg_fetch_assoc($result))
-		}
-
-
-		return $user_presets;
-	}//end filter_get_user_presets
+	############################ SEARCH FILTER FUNCTIONS #################################
 
 
 
@@ -3069,37 +2881,90 @@ class search {
 
 		$preset_obj = null;
 
-		$matrix_table = 'matrix_list';
+		// $matrix_table = 'matrix_list';
 
-		$user_locator = new locator();
-			$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-			$user_locator->set_section_id($user_id);
-			$user_locator->set_from_component_tipo('dd654');
-			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-		$filter_user = 'datos#>\'{relations}\' @> \'['.json_encode($user_locator).']\'';
+		// $user_locator = new locator();
+		// 	$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+		// 	$user_locator->set_section_id($user_id);
+		// 	$user_locator->set_from_component_tipo('dd654');
+		// 	$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+		// $filter_user = 'datos#>\'{relations}\' @> \'['.json_encode($user_locator).']\'';
 
-		$filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
+		// $filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
 
-		// Find existing preset
-		$strQuery	 = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
-		$strQuery	.= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
-		$strQuery	.= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
-		$strQuery	.= 'LIMIT 1;';
-		$result		 = JSON_RecordObj_matrix::search_free($strQuery);
-		if ($result===false) {
-			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-			return $preset_obj; // is null
-		}
-		while ($rows = pg_fetch_assoc($result)) {
+		// // Find existing preset
+		// $strQuery	 = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
+		// $strQuery	.= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
+		// $strQuery	.= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
+		// $strQuery	.= 'LIMIT 1;';
+		// $result		 = JSON_RecordObj_matrix::search_free($strQuery);
+		// if ($result===false) {
+		// 	trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
+		// 	return $preset_obj; // is null
+		// }
+		// while ($rows = pg_fetch_assoc($result)) {
 
-			$section_id		= $rows['section_id'];
-			$json_filter	= json_decode($rows['json_filter']);
+		// 	$section_id		= $rows['section_id'];
+		// 	$json_filter	= json_decode($rows['json_filter']);
 
-			$preset_obj = new stdClass();
-				$preset_obj->section_id		= (int)$section_id;
-				$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
-			break; // Only one expected
-		}
+		// 	$preset_obj = new stdClass();
+		// 		$preset_obj->section_id		= (int)$section_id;
+		// 		$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
+		// 	break; // Only one expected
+		// }
+
+		// search with standard sqo
+			$sqo = json_decode('{
+				"section_tipo" : ["'.$preset_section_tipo.'"],
+				"limit": 1,
+				"filter": {
+					"$and": [
+						{
+							"q": [
+								"'.$target_section_tipo.'"
+							],
+							"path": [
+								{
+									"name": "Name",
+									"model": "component_input_text",
+									"section_tipo": "'.$preset_section_tipo.'",
+									"component_tipo": "dd642"
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				}
+			}');
+			$search = search::get_instance($sqo);
+			$result = $search->search();
+
+			if (!empty($result->ar_records) && !empty($result->ar_records[0])) {
+				// success, preset record exists
+
+				$section_id = $result->ar_records[0]->section_id;
+
+				// component_json dd625
+					$tipo		= 'dd625';
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$component	= component_common::get_instance(
+						$model, // string model
+						$tipo, // string tipo
+						$section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$preset_section_tipo // string section_tipo
+					);
+					$dato = $component->get_dato();
+
+					if (!empty($dato)) {
+
+						$preset_obj = (object)[
+							'section_id'	=> (int)$section_id,
+							'json_filter'	=> reset($dato)
+						];
+					}
+			}
 
 
 		return $preset_obj;
@@ -3241,6 +3106,7 @@ class search {
 
 	/**
 	* SEARCH_OPTIONS_TITLE
+	* Creates the HTML of the components in search mode to draw the tool tip
 	* @param array $search_operators_info
 	*	Array of operator => label like: ... => between
 	* @return string $search_options_title
@@ -3251,14 +3117,15 @@ class search {
 
 		if (!empty($search_operators_info)) {
 
-			$search_options_title .= '<b>'.label::get_label('opciones_de_busqueda') . ':</b>';
+			$search_options_title .= '<b>' . label::get_label('opciones_de_busqueda') . ':</b>';
 			foreach ($search_operators_info as $ikey => $ivalue) {
-				$search_options_title .= '<div class="search_options_title_item"><span>' . $ikey .'</span><span>'. label::get_label($ivalue).'</span></div>';
+
+				$search_options_title .= '<div class="search_options_title_item">';
+				$search_options_title .= '<span>' . $ikey .'</span>';
+				$search_options_title .= '<span>'. label::get_label($ivalue).'</span>';
+				$search_options_title .= '</div>';
 			}
-
-			#$search_options_title = htmlspecialchars($search_options_title);
 		}
-
 
 		return $search_options_title;
 	}//end search_options_title
