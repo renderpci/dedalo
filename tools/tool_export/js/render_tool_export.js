@@ -380,7 +380,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_options',
 			parent			: fragment
 		})
-
+		const filename = 'export_' +self.caller.label +'_'+ new Date().toLocaleDateString()+'-'+ self.caller.section_tipo
 		// csv. button_export_csv
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
@@ -397,7 +397,7 @@ const get_content_data_edit = async function(self) {
 					const csv_string	= await dd_grid.render()
 
 				// Download it
-					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.csv';
+					const filename	= filename + '.csv';
 					const link		= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
@@ -424,7 +424,7 @@ const get_content_data_edit = async function(self) {
 					const tsv_string	= await dd_grid.render()
 
 				// Download it
-					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.tsv';
+					const filename	= filename + '.tsv';
 					const link		= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
@@ -445,7 +445,7 @@ const get_content_data_edit = async function(self) {
 			button_export_excel.addEventListener('click', function() {
 
 				// Download it
-					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.xls';
+					const filename	= filename+ '.xls';
 					const link		= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
@@ -466,7 +466,7 @@ const get_content_data_edit = async function(self) {
 			button_export_html.addEventListener('click', function() {
 
 				// Download it
-					const filename	= 'export_' + self.caller.section_tipo + '_' + new Date().toLocaleDateString() + '.html';
+					const filename	= filename + '.html';
 					const link		= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
