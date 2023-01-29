@@ -84,9 +84,6 @@ common.prototype.build = async function () {
 	// status update
 		self.status = 'building'
 
-	// permissions. calculate and set (used by section records later)
-		self.permissions = self.context.permissions
-
 	// status update
 		self.status = 'built'
 
@@ -108,7 +105,7 @@ export const set_context_vars = function(self) {
 		self.type			= self.context.type // typology of current instance, usually 'component'
 		self.label			= self.context.label // label of current component like 'summary'
 		self.tools			= self.context.tools || [] //set the tools of the component
-		self.permissions	= self.context.permissions || null
+		// self.permissions	= self.context.permissions || 0
 
 		// view. Swaps the value with the context value and makes it a getter/setter of the context value
 		// this allow sync self.view and self.context.view after building the instance
@@ -125,6 +122,18 @@ export const set_context_vars = function(self) {
 				}
 			});
 
+			self.permissions = self.context.permissions || self.permissions
+			Object.defineProperty(self, 'permissions', {
+				get : function() {
+					return self.context.permissions
+						? self.context.permissions
+						: 0
+					// return self.context.view || self.view;
+				},
+				set : function(value) {
+					return self.context.permissions = value
+				}
+			});
 
 		// show_interface. object . Defines useful view custom properties to take control
 		// of some common component behaviors
@@ -217,6 +226,18 @@ common.prototype.render = async function (options={}) {
 	// options
 		const render_level	= options.render_level || 'full'
 		const render_mode	= options.render_mode || self.mode
+
+	// permissions
+		const permissions = parseInt(self.permissions)
+		if(permissions<1){
+			const node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'no_access'
+			})
+			self.node = node
+
+			return node
+		}
 
 	// status check to prevent duplicated actions
 		switch(self.status) {
@@ -450,7 +471,7 @@ common.prototype.refresh = async function(options={}) {
 
 	// build. Update the instance with new data
 		//if (self.status==='destroyed') {
-		const built = await self.build( build_autoload ) // default value is true
+		await self.build( build_autoload ) // default value is true
 		//}else{
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false
@@ -2443,7 +2464,7 @@ common.prototype.get_section_elements_context = async function(options) {
 common.prototype.calculate_component_path = function(component_context, path) {
 
 	if (!Array.isArray(path)) {
-		console.log("[search2.calculate_component_path] Fixed bad path as array! :", path);
+		console.log("[calculate_component_path] Fixed bad path as array! :", path);
 		path = []
 	}
 

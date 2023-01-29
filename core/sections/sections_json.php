@@ -112,12 +112,6 @@
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
 
-				// permissions check
-					$permissions	= common::get_permissions($section_tipo, $section_tipo);
-					if($permissions<1){
-						continue;
-					}
-
 				// section instance
 					$section = $section_class::get_instance(
 						$section_id,
@@ -125,6 +119,12 @@
 						$mode,
 						true // bool cache
 					);
+
+				// permissions check
+					$permissions	= $section->get_section_permissions();
+					if($permissions<1){
+						continue;
+					}
 
 				// properties optional
 					if (!empty($this->properties)){

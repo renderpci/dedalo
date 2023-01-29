@@ -6,12 +6,7 @@
 // configuration vars
 	$tipo			= $this->get_tipo();
 	$mode			= $this->get_mode();
-	$permissions	= common::get_permissions($tipo, $tipo);
-	if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO && $permissions>1) {
-		$permissions = 1;
-	}
-
-
+	$permissions	= $this->get_section_permissions();
 
 // context
 	$context	= [];

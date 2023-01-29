@@ -362,37 +362,22 @@ export const render_column_id = function(options) {
 								parent			: fragment
 							})
 							delete_button.addEventListener("click", function(){
+								// fire delete_section event, see section.init
+								event_manager.publish('delete_section_' + options.caller.id, {
+									section_tipo	: section_tipo,
+									section_id		: section_id,
+									caller			: options.caller, // section
+									sqo				: {
+										section_tipo		: [section_tipo],
+										filter_by_locators	: [{
+											section_tipo	: section_tipo,
+											section_id		: section_id
+										}],
+										limit				: 1
+									}
+								})
 
-								// DES
-									// event_manager.publish('delete_section_' + options.caller.id, {
-									// 	section_tipo	: section_tipo,
-									// 	section_id		: section_id,
-									// 	caller			: options.caller, // section
-									// 	sqo				: {
-									// 		section_tipo		: [section_tipo],
-									// 		filter_by_locators	: [{
-									// 			section_tipo	: section_tipo,
-									// 			section_id		: section_id
-									// 		}],
-									// 		limit				: 1
-									// 	}
-									// })
 
-
-								// delete_record
-									self.delete_record({
-										section			: self,
-										section_id		: section_id,
-										section_tipo	: section_tipo,
-										sqo				: {
-											section_tipo		: [section_tipo],
-											filter_by_locators	: [{
-												section_tipo	: section_tipo,
-												section_id		: section_id
-											}],
-											limit				: 1
-										}
-									})
 							})
 						// delete_icon
 							ui.create_dom_element({

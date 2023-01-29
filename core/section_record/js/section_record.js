@@ -116,6 +116,9 @@ section_record.prototype.init = async function(options) {
 
 	self.locator					= options.locator
 
+	// permissions
+	self.permissions 				= self.caller.permissions
+
 	// events subscription
 		// event active (when user focus in dom)
 		//event_manager.subscribe('section_record_rendered', (active_section_record) => {

@@ -176,17 +176,12 @@ render_menu.prototype.edit = async function() {
 			logged_user_name.addEventListener('click', (e) => {
 				e.stopPropagation();
 
-				// tool_context (minimum created on the fly)
-					const tool_context = {
-						model		: 'tool_user_admin',
-						tool_config	: {
-							ddo_map : []
-						}
-					}
+				// get the user_admin tool to be fired
+					const tool_user_admin = self.context.tools.find(el => el.model === 'tool_user_admin')
 
 				// open_tool (tool_common)
 					open_tool({
-						tool_context	: tool_context,
+						tool_context	: tool_user_admin,
 						caller			: self
 					})
 			})

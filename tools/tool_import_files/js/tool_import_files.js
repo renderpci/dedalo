@@ -105,9 +105,6 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 				ar_promises.push( new Promise(async (resolve) => {
 
-					// context. it's not given, so, get it from request API
-						const context = null
-
 					const element_options = {
 						model			: el.model,
 						mode			: el.mode,
@@ -116,7 +113,6 @@ tool_import_files.prototype.build = async function(autoload=false) {
 						section_id		: 'tmp',
 						lang			: self.lang,
 						type			: el.type,
-						context			: context,
 						id_variant		: self.model,  // id_variant prevents id conflicts
 						caller			: self // set tool as caller of the component :-)
 					}

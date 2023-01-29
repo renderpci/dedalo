@@ -181,6 +181,19 @@ class menu extends common {
 			$lang	= $this->get_lang();
 			$model	= get_class($this);
 
+		// tools
+			$tools		= [];
+			$tools_list	= $this->get_tools();
+
+			foreach ($tools_list as $tool_object) {
+				$tool_config	= isset($properties->tool_config->{$tool_object->name})
+					? $properties->tool_config->{$tool_object->name}
+					: null;
+				$current_tool_section_tipo = $this->section_tipo ?? $this->tipo;
+				$tool_context	= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
+				$tools[]		= $tool_context;
+			}//end foreach ($tools_list as $item)
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'			=> $label,
@@ -188,7 +201,8 @@ class menu extends common {
 				'model'			=> $model,
 				'lang'			=> $lang,
 				'mode'			=> $mode,
-				'permissions'	=> $permissions
+				'permissions'	=> $permissions,
+				'tools'			=> $tools
 			]);
 
 		return $dd_object;

@@ -44,6 +44,7 @@ export const paginator = function() {
 
 	this.id_variant			= null
 
+
 	return true
 }//end paginator
 
@@ -130,6 +131,9 @@ paginator.prototype.build = async function() {
 		self.offset_prev		= (offset>limit) ? offset - limit : 0
 		self.offset_next		= offset + limit
 		self.offset_last		= limit * (self.total_pages -1)
+
+	// permissions from caller
+		self.permissions 		= self.caller.permissions
 
 	// debug
 		// if(SHOW_DEBUG===true) {

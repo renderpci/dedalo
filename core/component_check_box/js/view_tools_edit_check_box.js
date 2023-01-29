@@ -75,7 +75,12 @@ const get_content_data = function(self) {
 	// build options
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			const input_element_node = get_input_element(i, datalist[i], self)
+			const current_datalist = datalist[i]
+			// do not render tool always_active, they are for all users ans profiles
+			if(current_datalist.always_active){
+				continue
+			}
+			const input_element_node = get_input_element(i, current_datalist, self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -99,8 +104,9 @@ const get_input_element = (i, current_value, self) => {
 		const value_length		= value.length
 		const datalist_item		= current_value
 		const datalist_value	= datalist_item.value
-		const label				= datalist_item.label // string e.g. 'Tool posterframe | <mark>tool_posterframe</mark>'
 		const section_id		= datalist_item.section_id
+		const tool_name			= datalist_item.tool_name
+		const label				= datalist_item.label
 
 	// create content_value
 		const content_value = ui.create_dom_element({
@@ -109,14 +115,10 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// label
-		const label_parts		= label.split(' | ')
-		const tool_label		= label_parts[0]
-		const tool_name			= strip_tags(label_parts[1])
-		// const label_string	= (SHOW_DEBUG===true) ? tool_label + ` [${tool_name} - ${section_id}]` : tool_label
 		const option_label	= ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'input_label',
-			inner_html		: '<span>'+tool_label+'</span>',
+			inner_html		: '<span>'+label+'</span>',
 			parent			: content_value
 		})
 
@@ -134,43 +136,6 @@ const get_input_element = (i, current_value, self) => {
 			}
 		})
 		input_checkbox.addEventListener('change', function(e) {
-
-			// add style modified to wrapper node
-				// if (!self.node.classList.contains('modified')) {
-				// 	self.node.classList.add('modified')
-				// }
-
-			// // change data vars
-			// 	const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-			// 	// changed key. Find the data.value key (could be different of datalist key)
-			// 	const changed_key	= self.get_changed_key(
-			// 		action,
-			// 		datalist_value,
-			// 		self.data.value
-			// 	)
-			// 	const changed_value	= (action==='insert') ? datalist_value : null
-
-			// // change data array
-			// 	const changed_data = [Object.freeze({
-			// 		action	: action,
-			// 		key		: changed_key,
-			// 		value	: changed_value
-			// 	})]
-
-			// // fix instance changed_data
-			// 	self.data.changed_data = changed_data
-
-			// // force to save on every change. Needed to recalculate the value keys
-			// 	self.change_value({
-			// 		changed_data	: changed_data,
-			// 		refresh			: false,
-			// 		remove_dialog	: ()=>{
-			// 			return true
-			// 		}
-			// 	})
-			// 	.then(()=>{
-			// 		self.selected_key = i
-			// 	})
 
 			self.change_handler({
 				self			: self,
@@ -191,12 +156,15 @@ const get_input_element = (i, current_value, self) => {
 		}
 
 	// developer_info
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'developer_info show_on_active',
-			text_content	: `[${tool_name} - ${section_id}]`,
-			parent			: content_value
-		})
+		if(SHOW_DEBUG===true){
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'developer_info show_on_active',
+				text_content	: `[${tool_name} - ${section_id}]`,
+				parent			: content_value
+			})
+		}
+
 
 	// tool_icon
 		const icon_url	= DEDALO_TOOLS_URL + '/' + tool_name + '/img/icon.svg'
