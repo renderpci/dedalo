@@ -217,16 +217,37 @@ const render_content_data = function(self) {
 					parent 		 : ul,
 				})
 			// typology_header
-				ui.create_dom_element({
+				const typology_name = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		:'typology_name',
+					class_name		:'typology_name icon_arrow',
 					dataset			: {
-						state		: 'show',
 						section_id	: typology_nodes[i].section_id
 					},
 					inner_html		: typology_nodes[i].label,
 					parent			: li
 				})
+			// children_container
+				const children_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		:'children_container',
+					parent			: li
+				})
+			//collapse children
+				ui.collapse_toggle_track({
+					toggler				: typology_name,
+					container			: children_container,
+					collapsed_id		: 'collapsed_area_thesaurus_'+typology_nodes[i].section_id,
+					collapse_callback	: collapse,
+					expose_callback		: expose,
+					default_state		: 'opened'
+				})
+				function collapse() {
+					typology_name.classList.remove('up')
+				}
+				function expose() {
+					typology_name.classList.add('up')
+				}
+
 			// hierarchy sections
 				const hierarchy_sections = hierarchy_nodes.filter(node => node.typology_section_id===typology_nodes[i].section_id)
 
@@ -246,7 +267,7 @@ const render_content_data = function(self) {
 												section_id			: hierarchy_sections[j].section_id,
 												target_section_tipo	: hierarchy_sections[j].target_section_tipo,
 											 },
-							parent			: li
+							parent			: children_container
 						})
 
 					// hierarchy elements container
