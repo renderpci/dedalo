@@ -1883,7 +1883,7 @@ class section extends common {
 	public function set_modified_date(string $timestamp) : void {
 
 		$date = dd_date::get_date_with_format(
-			$timestamp, $
+			$timestamp,
 			'Y-m-d H:i:s' // string format
 		);
 
