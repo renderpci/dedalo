@@ -1182,13 +1182,10 @@ final class dd_core_api {
 
 
 
-	// search methods ///////////////////////////////////
-
-
-
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get all components of current section (used in section search filter)
+	* Used by filter and tool_export
 	* @param object $options
 	*	array $options->ar_section_tipo
 	* @return object $response

@@ -300,7 +300,8 @@ const get_buttons = function(self) {
 			inner_html		: get_label.buscar || 'Search',
 			parent			: buttons_container
 		})
-		filter_button.addEventListener('mousedown', function() {
+		filter_button.addEventListener('mousedown', function(e) {
+			e.stopPropagation()
 			event_manager.publish('toggle_search_panel', this)
 		})
 
