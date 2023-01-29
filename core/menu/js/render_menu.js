@@ -243,6 +243,11 @@ render_menu.prototype.edit = async function() {
 				// console.log("------ instances:", instances.filter(el => el.type==='section'));
 				if((instance.type==='section' || instance.type==='area') && instance.mode!=='tm'){
 
+					// search presets section case
+						if (instance.tipo==='dd623') {
+							return
+						}
+
 					if (current_instance && instance.tipo===current_instance.tipo && current_instance.mode!=='edit') {
 						// nothing to do. We are already on a list
 					}else{
