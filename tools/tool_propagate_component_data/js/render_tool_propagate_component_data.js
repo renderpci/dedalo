@@ -139,7 +139,6 @@ const get_content_data = async function(self) {
 			parent			: buttons_container
 		})
 
-
 	// button_replace
 		const button_replace = ui.create_dom_element({
 			element_type	: 'button',
@@ -148,8 +147,11 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
 			parent			: buttons_container
 		})
-		button_replace.addEventListener("click", function(e){
+		button_replace.addEventListener("click", async function(e){
 			e.preventDefault()
+
+			await ui.component.deactivate(self.component_to_propagate)
+
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
@@ -159,15 +161,6 @@ const get_content_data = async function(self) {
 					response_text.innerHTML = response.msg
 				})
 			}
-		})
-	// use_current_data_check
-		const use_current_data_check = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			class_name		: 'checkbox use_current_data_check',
-			// inner_html	: get_label.tool_do_add || 'Add',
-			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
-			parent			: buttons_container
 		})
 
 	// button_add
