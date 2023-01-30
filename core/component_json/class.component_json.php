@@ -138,8 +138,30 @@ class component_json extends component_common {
 
 			case '6.0.0':
 				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
+					// update search presets of component_json (temp and user presets has the same component_tipo)
+					if($options->tipo==='dd625'){
+						// replace the sqo of search to new component models for v6
+						$dato_unchanged = str_replace(
+							[
+								'"modelo"',
+								'"component_autocomplete"',
+								'"component_autocomplete_hi"',
+								'"component_input_text_large"',
+								'"component_html_text"'
+							],
+							[
+								'"model"',
+								'"component_portal"',
+								'"component_portal"',
+								'"component_text_area"',
+								'"component_text_area"'
+							],
+							$dato_unchanged);
+					}
 
+					// decode old string data to json
 					$new_dato = json_decode($dato_unchanged);
+					$new_dato = [$new_dato];
 
 					$response = new stdClass();
 						$response->result	= 1;
