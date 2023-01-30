@@ -1102,26 +1102,26 @@ search.prototype.get_panels_status = async function() {
 
 
 
-/**
-* SEARCH_FROM_ENTER_KEY
-* @return bool
-*/
-search.prototype.search_from_enter_key = function(button_submit) {
+// /**
+// * SEARCH_FROM_ENTER_KEY
+// * @return bool
+// */
+// search.prototype.search_from_enter_key = function(button_submit) {
 
-	if(SHOW_DEBUG===true) {
-		//console.log("[saerch2.search_from_enter_key] search_panel_is_open:",button_submit, search2.search_panel_is_open);
-	}
+// 	if(SHOW_DEBUG===true) {
+// 		//console.log("[saerch2.search_from_enter_key] search_panel_is_open:",button_submit, search2.search_panel_is_open);
+// 	}
 
-	// button_submit.click()
+// 	// button_submit.click()
 
-	if (search.search_panel_is_open===true) {
-		button_submit.click()
-	}else{
-		this.toggle_search_panel()
-	}
+// 	if (search.search_panel_is_open===true) {
+// 		button_submit.click()
+// 	}else{
+// 		this.toggle_search_panel()
+// 	}
 
-	return true
-}//end search_from_enter_key
+// 	return true
+// }//end search_from_enter_key
 
 
 
