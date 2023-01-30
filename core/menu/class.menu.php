@@ -81,16 +81,49 @@ class menu extends common {
 		// all process use the target_section_tipo, because it has the information inside the db and the instances need to be connected to these section_tipo
 		// menu replace the model and the tipo with the target section, and add the config for use to change the behavior of the real section.
 			$tree_datalist = [];
-			$ar_areas_length = sizeof($ar_areas);
+
+			// retrieve the skip parents, used to skip tipo and transfer to his parent-> grandparent etc
+			$skip_parents = array_filter($ar_areas, function($item) {
+				return in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
+			});
+			// retrieve the access areas without the skip tipos
+			$acces_areas = array_filter($ar_areas, function($item) {
+				return !in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
+			});
+			// rearrange the array to remunerate the arrays
+			$skip_parents	= array_values($skip_parents);
+			$acces_areas	= array_values($acces_areas);
+
+			// get parents recursively to get the show parent
+			if (!function_exists('get_my_parent')) {
+				function get_my_parent($area, $skip_parents){
+					// find if the my parent is in skip parents
+					$current_parent = array_find($skip_parents, function($item) use ($area){
+						return $area->parent === $item->tipo;
+					});
+					// if my parent is in skip recursion to search if his parent is in skip parents
+					// else the parent is the current area->parent, the last parent in the chain
+					if(!empty($current_parent)){
+						return get_my_parent($current_parent, $skip_parents);
+					}else{
+						return $area->parent;
+					}
+				}
+			}
+
+			$ar_areas_length = sizeof($acces_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
 
-				$current_area = $ar_areas[$i];
+				$current_area = $acces_areas[$i];
+
+				// get my parent recursively
+				$parent = get_my_parent($current_area, $skip_parents);
 
 				// item
 					$datalist_item = (object)[
 						'tipo'		=> $current_area->tipo,
 						'model'		=> $current_area->model,
-						'parent'	=> $current_area->parent,
+						'parent'	=> $parent,
 						'label'		=> $current_area->label
 					];
 
@@ -135,7 +168,6 @@ class menu extends common {
 				__METHOD__.' Resolved get_tree_datalist (total: '.count($tree_datalist).') in  '.exec_time_unit($start_time,'ms').' ms',
 				logger::DEBUG
 			);
-
 
 		return $tree_datalist;
 	}//end get_tree_datalist
