@@ -1,4 +1,4 @@
-/* global get_label, page_globals, SHOW_DEBUG, flatpickr */
+/* global */
 /*eslint no-undef: "error"*/
 
 
@@ -8,6 +8,8 @@
 	import {view_default_edit_geolocation} from './view_default_edit_geolocation.js'
 	// import {view_text_geolocation} from './view_text_geolocation.js'
 	import {view_mini_geolocation} from './view_mini_geolocation.js'
+
+
 
 /**
 * RENDER_EDIT_COMPONENT_geolocation

@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global */
 /*eslint no-undef: "error"*/
 
 
@@ -17,20 +17,25 @@ export const view_text_list_geolocation = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
+* @param object self
+* @param object options
 * @return DOM node
 */
-view_text_list_geolocation.render = async function(self, options) {
+view_text_list_geolocation.render = async function(self) {
 
-	// Value as string
+	// value fallback
 		const data	= self.data || {}
 		const value	= data.value || []
 
-	const string_values = value.map(el => {
-		return JSON.stringify(el)
-	})
-	const value_string = string_values.join(self.context.fields_separator)
+	// value as string
+		const string_values = value.map(el => {
+			return JSON.stringify(el)
+		})
+		const value_string = string_values.join(self.context.fields_separator)
 
-	const text_node = document.createTextNode(value_string)
+	// text node
+		const text_node = document.createTextNode(value_string)
+
 
 	return text_node
 }//end render
