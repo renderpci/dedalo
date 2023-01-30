@@ -197,7 +197,10 @@ const get_content_data = async function(self) {
 					placeholder		: page_number,
 					parent			: paginator_info
 				})
+				// NOTE: this event could open/close filter because page has a global keyup listener
+				// see page.js add_events to prevent double fire
 				input_go_to_page.addEventListener('keyup', function(e) {
+					event.stopPropagation();
 					e.preventDefault()
 					if (e.key==='Enter' && input_go_to_page.value.length>0) {
 						const page		= parseInt(input_go_to_page.value)
