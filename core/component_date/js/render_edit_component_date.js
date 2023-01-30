@@ -251,6 +251,7 @@ export const input_element_period = (i, current_value, self) => {
 			})
 			input_year.addEventListener('keyup', function(e) {
 				if (e.key==='Enter') {
+					e.preventDefault()
 					this.dispatchEvent(new Event('change'));
 				}
 			})

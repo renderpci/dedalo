@@ -201,7 +201,7 @@ search.prototype.build = async function() {
 				// debug
 					if(SHOW_DEBUG===true) {
 						if (!json_filter) {
-							console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, json_filter);
+							console.log("[search.build] No preset was found (search editing_preset). Using default filter:", self.section_tipo, json_filter);
 						}
 					}
 				// fix value
