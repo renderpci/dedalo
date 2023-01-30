@@ -584,7 +584,7 @@ final class dd_core_api {
 	* }
 	* @return array $result
 	*/
-	public static function duplicate (object $rqo) : object {
+	public static function duplicate(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1184,7 +1184,7 @@ final class dd_core_api {
 
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
-	* Get all components of current section (used in section search filter)
+	* Get all components of current section (used in section search filter and tool export)
 	* Used by filter and tool_export
 	* @param object $options
 	*	array $options->ar_section_tipo
@@ -1194,15 +1194,15 @@ final class dd_core_api {
 
 		session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
 		// options
 			$ar_section_tipo		= (array)$options->ar_section_tipo;
 			$context_type			= $options->context_type;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// section_elements_context_options
 			$section_elements_context_options = (object)[
@@ -1233,67 +1233,67 @@ final class dd_core_api {
 
 
 	/**
-	* FILTER_SET_EDITING_PRESET
+	* FILTER_SET_EDITING_PRESET (!) Deactivated 01-30-2023 because nobody uses it
 	* Saves given filter in temp preset section
 	* @param object $options
 	* @return object $response
 	*/
-	public static function filter_set_editing_preset(object $options) : object {
+		// public static function filter_set_editing_preset(object $options) : object {
 
-		// options
-			$section_tipo	= $options->section_tipo;
-			$filter_obj		= $options->filter_obj;
+		// 	// options
+		// 		$section_tipo	= $options->section_tipo;
+		// 		$filter_obj		= $options->filter_obj;
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// 		$response->error	= null;
 
-		// save_temp_preset
-			$result = search::save_temp_preset(
-				navigator::get_user_id(),
-				$section_tipo,
-				$filter_obj
-			);
+		// 	// save_temp_preset
+		// 		$result = search::save_temp_preset(
+		// 			navigator::get_user_id(),
+		// 			$section_tipo,
+		// 			$filter_obj
+		// 		);
 
-		// response
-			$response->result	= $result;
-			$response->msg		= 'OK. Request done';
+		// 	// response
+		// 		$response->result	= $result;
+		// 		$response->msg		= 'OK. Request done';
 
 
-		return $response;
-	}//end filter_set_editing_preset
+		// 	return $response;
+		// }//end filter_set_editing_preset
 
 
 
 	/**
-	* ONTOLOGY_GET_CHILDREN_RECURSIVE
+	* ONTOLOGY_GET_CHILDREN_RECURSIVE (!) Deactivated 01-30-2023 because nobody uses it
 	* Calculate recursively the children of given term
 	* @param object $options
 	* @return object $response
 	*/
-	public static function ontology_get_children_recursive(object $options) : object {
+		// public static function ontology_get_children_recursive(object $options) : object {
 
-		// session_write_close();
+		// 	// session_write_close();
 
-		// options
-			$target_tipo = $options->target_tipo;
+		// 	// options
+		// 		$target_tipo = $options->target_tipo;
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// 		$response->error	= null;
 
-		// ontology call
-			$children = ontology::get_children_recursive($target_tipo);
+		// 	// ontology call
+		// 		$children = ontology::get_children_recursive($target_tipo);
 
-		// response
-			$response->result	= $children;
-			$response->msg		= 'OK. Request done';
+		// 	// response
+		// 		$response->result	= $children;
+		// 		$response->msg		= 'OK. Request done';
 
 
-		return $response;
-	}//end ontology_get_children_recursive
+		// 	return $response;
+		// }//end ontology_get_children_recursive
 
 
 

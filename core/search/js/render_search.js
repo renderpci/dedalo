@@ -14,6 +14,7 @@
 		create_new_search_preset,
 		edit_user_search_preset,
 		save_preset,
+		save_temp_preset,
 		load_user_search_presets
 	} from './search_user_presets.js'
 
@@ -412,8 +413,9 @@ render_search.prototype.render_search_buttons = function(){
 		reset_button.addEventListener('click', async function(e){
 			e.stopPropagation()
 
-			const ar_promises = []
-			for (let i = self.ar_instances.length - 1; i >= 0; i--) {
+			const ar_promises			= []
+			const ar_instances_length	= self.ar_instances.length
+			for (let i = ar_instances_length - 1; i >= 0; i--) {
 				const instance = self.ar_instances[i]
 				ar_promises.push(
 					new Promise(async function(resolve){
@@ -425,11 +427,9 @@ render_search.prototype.render_search_buttons = function(){
 					})
 				)
 			}
-			const values = await Promise.all(ar_promises)
-
-			const section_tipo = self.search_container_selection_presets.dataset.section_tipo
-			self.save_temp_preset(section_tipo)
-
+			await Promise.all(ar_promises)
+			// save_temp_preset. Temp preset section_id and section_tipo are solved and fixed on the first load
+			save_temp_preset(self)
 		})
 	// Show all
 		const show_all_button = ui.create_dom_element({
